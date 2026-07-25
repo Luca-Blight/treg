@@ -917,13 +917,67 @@ SEMRUSH = OAuthProvider(
     probe_url="https://www.semrush.com/users/countapiunits.html",
 )
 
+CRUNCHBASE = OAuthProvider(
+    service="crunchbase",
+    display_name="Crunchbase",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Crunchbase user key",
+    token_header="X-cb-user-key",
+    token_format="{secret}",
+    setup_url="https://data.crunchbase.com/docs/using-the-api",
+    setup_action_label="Find your Crunchbase API key",
+    setup_steps=(
+        "Crunchbase issues API keys with an Enterprise/Applications license — a Team Owner finds it "
+        "under Integrations settings.",
+        "Paste it here.",
+    ),
+    setup_note="Requires a paid Crunchbase API license; keys are not self-service.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Company, funding, acquisition and people data from Crunchbase.",
+    base_url="https://api.crunchbase.com/v4/data",
+    docs_url="https://data.crunchbase.com/docs/using-the-api",
+    probe_path="/autocompletes?query=google&limit=1",  # rate-limited, no per-call credit
+)
+
+JUSTONEAPI = OAuthProvider(
+    service="justoneapi",
+    display_name="Just One API",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Just One API token",
+    token_location="query",  # token rides as ?token=…, not a header
+    token_param="token",
+    token_format="{secret}",
+    setup_url="https://dashboard.justoneapi.com/en",
+    setup_action_label="Get your Just One API token",
+    setup_steps=(
+        "Sign in to the Just One API dashboard and open Token management.",
+        "Copy your token.",
+    ),
+    setup_note="Data calls are billed only on success (code 0); errors and empty results are free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Social media",
+    summary="A second social-scraping backend — TikTok, Instagram, YouTube, X, Weibo, Xiaohongshu and more.",
+    base_url="https://api.justoneapi.com",
+    docs_url="https://docs.justoneapi.com/en/usage",
+    # A bad token returns HTTP 401 {"code":100,"message":"TOKEN INVALID/UNACTIVATE"} (verified live), so
+    # the standard status check rejects it. A valid token on this endpoint returns code:0 (~1 credit).
+    probe_path="/api/tiktok/get-user-detail/v1?unique_id=tiktok",
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
         GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, YOUTUBE,
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
         # API-key providers
-        APOLLO, PDL, AKTA, HUNTER, TIKHUB, BRIGHTDATA, SEMRUSH,
+        APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
     )
 }
 
