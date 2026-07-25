@@ -105,7 +105,7 @@ module symbols:
 - `auth_kind` = `"oauth"` (treg's app), `"token"` (Slack — a workspace-scoped bot the user creates and
   pastes; `is_token_kind`), or `"key"` (an **API-key provider** connected by pasting a key: Apollo, PDL,
   Akta, Hunter, Crunchbase on a new **Enrichment** shelf, TikHub + Bright Data + Just One API under
-  Social, Semrush under SEO). A
+  Social, and under **SEO** Semrush + DataForSEO, SE Ranking, Moz, Majestic, Serpstat). A
   `token` and a `key` share ONE connect/verify/auto-provision path, so `uses_pasted_secret` (`token | key`)
   gates it while `is_token_kind` stays narrow for Slack's bot-only copy; a key provider needs nothing from
   treg, so `is_configured` is always true for it. The pasted credential rides in a header
@@ -113,8 +113,11 @@ module symbols:
   (`token_location="query"` + `token_param` — Semrush spells its key `?key=`); the connect probe hits
   `base_url`+`probe_path`, or an absolute `probe_url` when the cheapest key-check lives on another host
   (Semrush's balance endpoint on `www.semrush.com`). Validity is read from the HTTP status, a truthy JSON
-  `token_verify_field` (Slack's `ok`, Apollo's `is_logged_in` — both answer 200 even on a **bad** key), or
-  the absence of an `ERROR`-prefixed text body (Semrush). `can_autoprovision` (has a `base_url` and either needs no
+  `token_verify_field` (Slack's `ok`, Apollo's `is_logged_in` — both answer 200 even on a **bad** key), a
+  `token_ok_field`==`token_ok_value` match (Majestic's `Code`=="OK"), a `token_reject_field` present
+  (Serpstat's `error`), or an `ERROR`-prefixed text body (Semrush). The connect probe may be a POST with a
+  `probe_json` body (Serpstat's JSON-RPC), and `token_encode="base64"` turns a pasted `login:password` into
+  the Basic blob for `Basic {secret}` (DataForSEO, Moz). `can_autoprovision` (has a `base_url` and either needs no
   second credential or treg holds it) drives auto-building a callable tool on a successful connect;
   `needs_extra_credential` covers Google Ads' `developer-token` header (a second binding the operator supplies).
 - Post-connect helpers the dashboard/CLI drive: resource **discovery** (`supports_discovery`,

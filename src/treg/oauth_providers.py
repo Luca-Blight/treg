@@ -92,6 +92,21 @@ class OAuthProvider:
     # that answer HTTP 200 even on a BAD key and signal validity only in the body (Slack: "ok";
     # Apollo: "is_logged_in"). Empty means trust the HTTP status (most providers 401/400 a bad key).
     token_verify_field: str = ""
+    # The INVERSE: reject if this JSON field is present/truthy — for providers that answer 200 with an
+    # error object on a bad key (Serpstat's JSON-RPC `error`).
+    token_reject_field: str = ""
+    # POST-style verify probe, for providers whose key-check needs a request body (Serpstat's JSON-RPC
+    # limits call). `probe_method` defaults to GET; `probe_json` is sent as the JSON body when set.
+    probe_method: str = "GET"
+    probe_json: dict | None = None
+    # Encode the pasted secret before storing: "base64" turns a pasted `login:password` into the Base64
+    # blob HTTP Basic needs (DataForSEO, Moz), so `token_format="Basic {secret}"` renders correctly and
+    # the stored value injects the same way on every proxy call.
+    token_encode: str = ""
+    # Accept only when a JSON field EQUALS a value — for providers that answer 200 with a status
+    # string (Majestic: {"Code":"OK"} on success vs {"Code":"FailedRequestViaAPI"} on a bad key).
+    token_ok_field: str = ""
+    token_ok_value: str = ""
 
     # Per-provider auth quirks. Defaults match Google, which is the common case.
     auth_params: dict[str, str] | None = None  # extra ?query on the consent URL
@@ -971,6 +986,144 @@ JUSTONEAPI = OAuthProvider(
     probe_path="/api/tiktok/get-user-detail/v1?unique_id=tiktok",
 )
 
+# ---- SEO API-key providers -------------------------------------------------------------------
+
+DATAFORSEO = OAuthProvider(
+    service="dataforseo",
+    display_name="DataForSEO",
+    auth_kind="key",
+    token_label="API login:password",
+    token_placeholder="your DataForSEO login:password",
+    token_header="Authorization",
+    token_format="Basic {secret}",
+    token_encode="base64",  # paste "login:password"; we Base64 it for HTTP Basic
+    setup_url="https://app.dataforseo.com/api-access",
+    setup_action_label="Get your DataForSEO API credentials",
+    setup_steps=(
+        "Sign in to DataForSEO and open API access.",
+        "Copy your API login and the SEPARATE API password (not your account password).",
+        "Paste them here as login:password.",
+    ),
+    setup_note="Use the API password from the dashboard, not your account login password.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="SERP, keyword, backlink, on-page and traffic data across search engines.",
+    base_url="https://api.dataforseo.com/v3",
+    docs_url="https://docs.dataforseo.com/v3/auth/",
+    probe_path="/appendix/user_data",  # free account info (no credits)
+)
+
+SERANKING = OAuthProvider(
+    service="seranking",
+    display_name="SE Ranking",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your SE Ranking API key",
+    token_header="Authorization",
+    token_format="Token {secret}",  # the word "Token", not "Bearer"
+    setup_url="https://seranking.com/api/how-to-get-api/",
+    setup_action_label="Get your SE Ranking API key",
+    setup_steps=(
+        "Sign in to SE Ranking and open the API section.",
+        "Create an API key and copy it.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Rank tracking, keyword research, backlinks and competitor data.",
+    base_url="https://api.seranking.com",
+    docs_url="https://seranking.com/api/data/getting-started/",
+    probe_path="/v1/account/subscription",  # free key check + plan
+)
+
+MOZ = OAuthProvider(
+    service="moz",
+    display_name="Moz",
+    auth_kind="key",
+    token_label="AccessID:SecretKey",
+    token_placeholder="your Moz AccessID:SecretKey",
+    token_header="Authorization",
+    token_format="Basic {secret}",
+    token_encode="base64",  # paste "AccessID:SecretKey"; Base64 for HTTP Basic
+    setup_url="https://moz.com/api/dashboard",
+    setup_action_label="Get your Moz API credentials",
+    setup_steps=(
+        "Open the Moz API dashboard.",
+        "Copy your Access ID and Secret Key.",
+        "Paste them here as AccessID:SecretKey.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Domain Authority, Page Authority, backlinks and link metrics.",
+    base_url="https://lsapi.seomoz.com/v2",
+    docs_url="https://moz.com/api/docs",
+    probe_method="POST",
+    probe_path="/quota",
+    probe_json={"path": "api.limits.data.rows"},  # free quota lookup
+)
+
+MAJESTIC = OAuthProvider(
+    service="majestic",
+    display_name="Majestic",
+    auth_kind="key",
+    token_label="OpenApp API key",
+    token_placeholder="your Majestic app_api_key",
+    token_location="query",
+    token_param="app_api_key",
+    token_format="{secret}",
+    setup_url="https://developer-support.majestic.com/openapps/",
+    setup_action_label="Get your Majestic OpenApp key",
+    setup_steps=(
+        "Register an OpenApp in Majestic developer settings.",
+        "Copy the app_api_key.",
+    ),
+    setup_note="Requires a paid Majestic plan and a registered OpenApp.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Backlink metrics — Trust Flow, Citation Flow, referring domains and anchors.",
+    base_url="https://api.majestic.com",
+    docs_url="https://developer-support.majestic.com/api/",
+    probe_path="/api/json?cmd=GetSubscriptionInfo",  # free (0 Analysis Units)
+    # Answers HTTP 200 even on a bad key; validity is {"Code":"OK"} vs {"Code":"FailedRequestViaAPI"}.
+    token_ok_field="Code",
+    token_ok_value="OK",
+)
+
+SERPSTAT = OAuthProvider(
+    service="serpstat",
+    display_name="Serpstat",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Serpstat token",
+    token_location="query",
+    token_param="token",
+    token_format="{secret}",
+    setup_url="https://serpstat.com/api/660-how-to-get-create-token/",
+    setup_action_label="Get your Serpstat API token",
+    setup_steps=(
+        "Sign in to Serpstat and open the API page.",
+        "Create a token and copy it.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Keyword research, backlinks, rank tracking and domain analytics.",
+    base_url="https://api.serpstat.com/v4",
+    docs_url="https://api-docs.serpstat.com/",
+    # JSON-RPC over POST; a bad token answers HTTP 200 with an `error` object, so reject on that field.
+    probe_method="POST",
+    probe_json={"id": "1", "method": "SerpstatLimitsApiProcedure.getStats", "params": {}},
+    token_reject_field="error",
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
@@ -978,6 +1131,8 @@ REGISTRY: dict[str, OAuthProvider] = {
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
         # API-key providers
         APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
+        # SEO API-key providers
+        DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
     )
 }
 

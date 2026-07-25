@@ -18,7 +18,8 @@ from treg import oauth_providers as P
 def test_key_providers_are_offerable_without_deployment_credentials():
     """The user brings the key, so treg holds no app of its own — a key provider must be offerable,
     not shown as 'not configured' the way an unset OAuth provider is."""
-    for svc in ("apollo", "pdl", "akta", "hunter", "crunchbase", "tikhub", "brightdata", "semrush", "justoneapi"):
+    for svc in ("apollo", "pdl", "akta", "hunter", "crunchbase", "tikhub", "brightdata", "semrush",
+                "justoneapi", "dataforseo", "seranking", "moz", "majestic", "serpstat"):
         p = P.get(svc)
         assert p is not None, svc
         assert p.auth_kind == "key", svc

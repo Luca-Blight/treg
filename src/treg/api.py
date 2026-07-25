@@ -3921,9 +3921,15 @@ async def connect_with_token(
     token = body.token.strip()
     if not token:
         raise HTTPException(status_code=422, detail=f"{provider.token_label or 'Token'} is required")
+    # HTTP Basic providers (DataForSEO, Moz) take a pasted `login:password`; store the Base64 blob so
+    # `Basic {secret}` renders the same at connect and on every proxy call.
+    if provider.token_encode == "base64":
+        import base64
+        token = base64.b64encode(token.encode()).decode()
 
     # The credential rides in a header (default) or a query param (Semrush: ?key=…). The cheapest
-    # check may also live on a different host than base_url, so honor an absolute probe_url override.
+    # check may also live on a different host than base_url, so honor an absolute probe_url override,
+    # and a POST probe with a JSON body (Serpstat's JSON-RPC limits call).
     rendered = provider.token_format.format(secret=token)
     if provider.token_location == "query":
         headers, params = {}, {provider.token_param: rendered}
@@ -3931,7 +3937,10 @@ async def connect_with_token(
         headers, params = {provider.token_header: rendered}, {}
     probe_url = provider.probe_url or f"{provider.base_url.rstrip('/')}{provider.probe_path}"
     try:
-        resp = await request.app.state.http.get(probe_url, headers=headers, params=params)
+        resp = await request.app.state.http.request(
+            provider.probe_method or "GET", probe_url,
+            headers=headers, params=params, json=provider.probe_json,
+        )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"could not reach {provider.display_name}: {exc}") from None
     # Only parse JSON when the response actually is JSON — a key check may answer in CSV/text
@@ -3947,14 +3956,17 @@ async def connect_with_token(
     # field (Slack: "ok"; Apollo: "is_logged_in") or an "ERROR ..." text line (Semrush). An HTTP
     # status alone would happily accept a dead key, so check all three signals.
     field_bad = bool(provider.token_verify_field) and not payload.get(provider.token_verify_field)
+    field_reject = bool(provider.token_reject_field) and bool(payload.get(provider.token_reject_field))
+    equals_bad = bool(provider.token_ok_field) and str(payload.get(provider.token_ok_field)) != provider.token_ok_value
     text_error = (
         resp.status_code < 400
         and not ctype.startswith("application/json")
         and resp.text.lstrip().upper().startswith("ERROR")
     )
-    if resp.status_code >= 400 or field_bad or text_error:
+    if resp.status_code >= 400 or field_bad or field_reject or equals_bad or text_error:
         why = (
             payload.get("error")
+            or (payload.get("ErrorMessage") if equals_bad else None)
             or (f"{provider.token_verify_field}=false" if field_bad else None)
             or (resp.text.strip()[:80] if text_error else f"HTTP {resp.status_code}")
         )

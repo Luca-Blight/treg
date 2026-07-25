@@ -44,6 +44,7 @@ def test_every_provider_is_registered():
         "facebook", "instagram", "meta-ads",
         # API-key providers (auth_kind="key")
         "apollo", "pdl", "akta", "hunter", "crunchbase", "tikhub", "brightdata", "semrush", "justoneapi",
+        "dataforseo", "seranking", "moz", "majestic", "serpstat",
     }
 
 
