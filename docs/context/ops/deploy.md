@@ -49,8 +49,10 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   `google_ads_developer_token` (treg's token from OUR approved manager account, injected on every Ads
   call as a **platform binding** — see [proxy-model](../architecture/proxy-model.md)). The other
   providers each take a `<name>_client_id`/`_secret` pair: `linkedin_*`, `slack_*`, `x_*`, `tiktok_*`
-  (separate sandbox vs prod app), and `meta_*` (ONE Meta app backs both facebook + instagram). Empty for
-  a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
+  (separate sandbox vs prod app), `meta_*` (ONE Meta app backs both facebook + instagram), and the
+  Advertising OAuth platforms `microsoft_ads_*`, `snapchat_ads_*`, `tiktok_ads_*`, `pinterest_*` (all
+  unset by default, so those providers ship **unconfigured** until a deployment registers a dev app).
+  Empty for a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
 - **Landing live-wire (optional):** `demo_stripe_key` (`TREG_DEMO_STRIPE_KEY`, a Stripe **sandbox
   restricted** key) powers the landing sandbox's ONE real upstream call — a sandbox call to the exact
   seeded `stripe` tool relays for real with this key injected; the key exists in no sandbox org. Empty ⇒
