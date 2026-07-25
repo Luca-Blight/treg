@@ -106,7 +106,11 @@ module symbols:
   pastes; `is_token_kind`), or `"key"` (an **API-key provider** connected by pasting a key: Apollo, PDL,
   Akta, Hunter, Crunchbase, Lusha, Coresignal, Diffbot, The Companies API, LeadMagic on a new
   **Enrichment** shelf, TikHub + Bright Data + Just One API under
-  Social, and under **SEO** Semrush + DataForSEO, SE Ranking, Moz, Majestic, Serpstat). A
+  Social, under **SEO** Semrush + DataForSEO, SE Ranking, Moz, Majestic, Serpstat, and under
+  **Advertising** the ad-intel keys SpyFu, Apify, Meta Ad Library, SerpApi — alongside the OAuth ad
+  platforms Google Ads + Meta Ads and the **unconfigured** Microsoft Ads, Snapchat Ads, Pinterest Ads
+  (standard OAuth, live once this deployment sets their client credentials) and TikTok Ads (a
+  placeholder: its non-standard app_id/auth_code/Access-Token flow needs oauth.py work before it runs)). A
   `token` and a `key` share ONE connect/verify/auto-provision path, so `uses_pasted_secret` (`token | key`)
   gates it while `is_token_kind` stays narrow for Slack's bot-only copy; a key provider needs nothing from
   treg, so `is_configured` is always true for it. The pasted credential rides in a header

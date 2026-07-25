@@ -1244,6 +1244,191 @@ LEADMAGIC = OAuthProvider(
     probe_path="/v1/credits",  # free — no credits consumed
 )
 
+# ---- Advertising API-key providers (ad intelligence) -----------------------------------------
+
+SPYFU = OAuthProvider(
+    service="spyfu",
+    display_name="SpyFu",
+    auth_kind="key",
+    token_label="Secret key",
+    token_placeholder="your SpyFu secret key",
+    token_location="query",  # ?api_key=<SecretKey> (the secret alone; API id not needed for this form)
+    token_param="api_key",
+    token_format="{secret}",
+    setup_url="https://www.spyfu.com/account/api",
+    setup_action_label="Get your SpyFu API key",
+    setup_steps=("Open SpyFu Account settings → API.", "Copy your Secret Key."),
+    setup_note="API access is included with paid SpyFu plans; paste the Secret Key.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Advertising",
+    summary="Competitor search-ad keywords, estimated ad spend and PPC history.",
+    base_url="https://api.spyfu.com",
+    docs_url="https://developer.spyfu.com/",
+    probe_path="/apis/domain_stats_api/v2/getAllDomainStats?domain=spyfu.com",
+)
+
+APIFY = OAuthProvider(
+    service="apify",
+    display_name="Apify",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Apify API token",
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://console.apify.com/settings/integrations",
+    setup_action_label="Get your Apify API token",
+    setup_steps=("Open Apify Console → Settings → Integrations.", "Copy your API token."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Advertising",
+    summary="Run Facebook and TikTok ad-library scraper actors for ad creatives and targeting.",
+    base_url="https://api.apify.com/v2",
+    docs_url="https://docs.apify.com/api/v2",
+    probe_path="/users/me",  # free; 401 on bad token
+)
+
+META_AD_LIBRARY = OAuthProvider(
+    service="meta-ad-library",
+    display_name="Meta Ad Library",
+    auth_kind="key",
+    token_label="Access token",
+    token_placeholder="your Meta ad-library access token",
+    token_location="query",
+    token_param="access_token",
+    token_format="{secret}",
+    setup_url="https://www.facebook.com/ads/library/api/",
+    setup_action_label="Set up Meta Ad Library API access",
+    setup_steps=(
+        "Confirm your identity at facebook.com/ID (upload a government ID; 1–3 days).",
+        "Create a Meta app and generate an access token.",
+    ),
+    setup_note="Official free competitive ad data; requires one-time Meta identity verification.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Advertising",
+    summary="Official Meta ad library — anyone's live Facebook/Instagram ads and spend ranges.",
+    base_url="https://graph.facebook.com/v21.0",
+    docs_url="https://www.facebook.com/ads/library/api/",
+    # Required params baked in (ad_reached_countries is a URL-encoded JSON array); access_token injected.
+    probe_path='/ads_archive?search_terms=coffee&ad_reached_countries=%5B%22US%22%5D&limit=1&fields=id',
+)
+
+SERPAPI = OAuthProvider(
+    service="serpapi",
+    display_name="SerpApi",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your SerpApi key",
+    token_location="query",
+    token_param="api_key",
+    token_format="{secret}",
+    setup_url="https://serpapi.com/manage-api-key",
+    setup_action_label="Get your SerpApi key",
+    setup_steps=("Sign in to SerpApi.", "Copy your API key from the dashboard."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Advertising",
+    summary="Google search, Shopping and paid-ad results from live SERPs.",
+    base_url="https://serpapi.com",
+    docs_url="https://serpapi.com/search-api",
+    probe_path="/account",  # free account/plan snapshot; 401 on bad key
+)
+
+# ---- Advertising OAuth platforms (UNCONFIGURED until this deployment registers a dev app) ------
+# These list as `configured: false` until treg holds each platform's client id/secret. Microsoft +
+# Snapchat fit the existing OAuth machinery (Microsoft additionally needs the user's own developer
+# token, like Google Ads). TikTok Ads is NON-STANDARD OAuth and needs oauth.py + binding work before
+# it can actually run — it is a registry placeholder for now (see the comment on it).
+
+MICROSOFT_ADS = OAuthProvider(
+    service="microsoft-ads",
+    display_name="Microsoft Advertising",
+    auth_uri="https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+    token_uri="https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    # One combined read+write scope; offline_access buys a refresh token, openid the identity.
+    scopes={"manage": ["https://ads.microsoft.com/msads.manage", "offline_access", "openid"]},
+    client_id_setting="microsoft_ads_client_id",
+    client_secret_setting="microsoft_ads_client_secret",
+    category="Advertising",
+    summary="Run and report on your Microsoft (Bing) search-ad campaigns.",
+    base_url="https://campaign.api.bingads.microsoft.com/CampaignManagement/v13",
+    docs_url="https://learn.microsoft.com/en-us/advertising/guides/get-started",
+    token_endpoint_auth_method="client_secret_post",
+    auth_params={},  # Microsoft identity v2.0; don't send Google's access_type/prompt
+    # Bing REST needs a DeveloperToken header on every call besides the OAuth bearer — issued
+    # instantly for first-party use, so the user supplies it (like Google Ads' developer token).
+    extra_credential_note=(
+        "Microsoft Advertising needs a developer token (issued instantly in the Microsoft Advertising "
+        "Developer Portal). Add it under Secrets and bind it as a DeveloperToken header."
+    ),
+    extra_credential_label="Developer token",
+    extra_credential_header="DeveloperToken",
+)
+
+SNAPCHAT_ADS = OAuthProvider(
+    service="snapchat-ads",
+    display_name="Snapchat Ads",
+    auth_uri="https://accounts.snapchat.com/login/oauth2/authorize",
+    token_uri="https://accounts.snapchat.com/login/oauth2/access_token",
+    scopes={"manage": ["snapchat-marketing-api"]},
+    client_id_setting="snapchat_ads_client_id",
+    client_secret_setting="snapchat_ads_client_secret",
+    category="Advertising",
+    summary="Run and report on your Snapchat ad campaigns.",
+    base_url="https://adsapi.snapchat.com/v1",
+    docs_url="https://developers.snap.com/marketing-api/Ads-API/authentication",
+    token_endpoint_auth_method="client_secret_post",
+    auth_params={},
+    probe_path="/me",  # cheap token check once configured; auto-provisions a Bearer tool
+)
+
+# TikTok Ads is NON-STANDARD OAuth: the token exchange uses app_id/secret + auth_code in a JSON body
+# and returns a {"code":0,"data":{...}} envelope, and API calls authenticate with an `Access-Token`
+# header (NOT `Authorization: Bearer`). oauth.py (standard code/grant_type exchange) and the Bearer
+# auto-provision binding do NOT handle this yet, so this entry cannot be configured to work until that
+# code is added. Kept as a placeholder so the platform is visible on the shelf. See notes.
+TIKTOK_ADS = OAuthProvider(
+    service="tiktok-ads",
+    display_name="TikTok Ads",
+    auth_uri="https://business-api.tiktok.com/portal/auth",
+    token_uri="https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/",
+    scopes={"manage": ["ads.management"]},  # nominal; TikTok's real scopes are numeric ids set in the portal
+    client_id_setting="tiktok_ads_client_id",
+    client_secret_setting="tiktok_ads_client_secret",
+    category="Advertising",
+    summary="Run and report on your TikTok ad campaigns.",
+    base_url="https://business-api.tiktok.com/open_api/v1.3",
+    docs_url="https://business-api.tiktok.com/portal/docs",
+    token_endpoint_auth_method="client_secret_post",
+    client_id_param="app_id",  # TikTok spells the client id "app_id"
+    auth_params={},
+)
+
+PINTEREST_ADS = OAuthProvider(
+    service="pinterest-ads",
+    display_name="Pinterest Ads",
+    auth_uri="https://www.pinterest.com/oauth/",
+    token_uri="https://api.pinterest.com/v5/oauth/token",
+    scopes={
+        "read": ["ads:read", "user_accounts:read"],
+        "manage": ["ads:read", "ads:write", "user_accounts:read"],
+    },
+    client_id_setting="pinterest_client_id",
+    client_secret_setting="pinterest_client_secret",
+    category="Advertising",
+    summary="Run and report on your Pinterest ad campaigns.",
+    base_url="https://api.pinterest.com/v5",
+    docs_url="https://developers.pinterest.com/docs/api/v5/",
+    token_endpoint_auth_method="client_secret_basic",  # Pinterest posts Basic client auth
+    auth_params={},
+    probe_path="/user_account",  # cheap token check once configured; auto-provisions a Bearer tool
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
@@ -1255,6 +1440,9 @@ REGISTRY: dict[str, OAuthProvider] = {
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers
         LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC,
+        # Advertising: API-key ad intelligence + unconfigured OAuth ad platforms
+        SPYFU, APIFY, META_AD_LIBRARY, SERPAPI,
+        MICROSOFT_ADS, SNAPCHAT_ADS, TIKTOK_ADS, PINTEREST_ADS,
     )
 }
 
@@ -1353,6 +1541,17 @@ SCOPE_LABELS: dict[str, str] = {
     "ads_read": "Read your ad accounts, campaigns and performance",
     "business_management": "See the businesses and ad accounts you have access to",
     "ads_management": "Create and change campaigns, ad sets and ads",
+    # Microsoft Advertising
+    "https://ads.microsoft.com/msads.manage": "Manage your Microsoft Advertising campaigns and reports",
+    "offline_access": "Stay connected without asking you to sign in again",
+    # Snapchat Ads
+    "snapchat-marketing-api": "Manage your Snapchat ad campaigns and reporting",
+    # TikTok Ads (nominal — real scopes are numeric ids configured in the TikTok portal)
+    "ads.management": "Manage your TikTok ad campaigns and reporting",
+    # Pinterest Ads
+    "ads:read": "Read your ad accounts, campaigns and performance",
+    "ads:write": "Create and change your ad campaigns",
+    "user_accounts:read": "See which ad accounts you have access to",
 }
 
 

@@ -132,6 +132,16 @@ class Settings(BaseSettings):
     # will reject these credentials outright.
     meta_client_id: str = ""
     meta_client_secret: str = ""
+    # Advertising OAuth platforms — unset by default, so these providers list as "not configured"
+    # until this deployment registers its own developer app on each network.
+    microsoft_ads_client_id: str = ""
+    microsoft_ads_client_secret: str = ""
+    snapchat_ads_client_id: str = ""
+    snapchat_ads_client_secret: str = ""
+    tiktok_ads_client_id: str = ""
+    tiktok_ads_client_secret: str = ""
+    pinterest_client_id: str = ""
+    pinterest_client_secret: str = ""
 
     # Overridable for tests; real Google by default.
     google_authorize_url: str = "https://accounts.google.com/o/oauth2/v2/auth"
