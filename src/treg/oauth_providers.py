@@ -107,6 +107,10 @@ class OAuthProvider:
     # string (Majestic: {"Code":"OK"} on success vs {"Code":"FailedRequestViaAPI"} on a bad key).
     token_ok_field: str = ""
     token_ok_value: str = ""
+    # Status codes that mean INVALID KEY specifically (default: any >=400 rejects). Coresignal has no
+    # free probe, so we POST an empty body: a valid key answers 400/422 (bad request, no charge) while
+    # an invalid key answers 401 — so only 401/403 should count as a bad-key rejection there.
+    probe_reject_statuses: tuple[int, ...] = ()
 
     # Per-provider auth quirks. Defaults match Google, which is the common case.
     auth_params: dict[str, str] | None = None  # extra ?query on the consent URL
@@ -1124,6 +1128,122 @@ SERPSTAT = OAuthProvider(
     token_reject_field="error",
 )
 
+# ---- more Enrichment API-key providers -------------------------------------------------------
+
+LUSHA = OAuthProvider(
+    service="lusha",
+    display_name="Lusha",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Lusha API key",
+    token_header="api_key",  # literally "api_key", no scheme prefix
+    token_format="{secret}",
+    setup_url="https://dashboard.lusha.com/api",
+    setup_action_label="Get your Lusha API key",
+    setup_steps=("Sign in to Lusha and open the API settings.", "Copy your API key."),
+    setup_note="API access is generally on paid plans (Pro/Scale).",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Verified direct-dial and mobile phone numbers, plus person and company enrichment.",
+    base_url="https://api.lusha.com",
+    docs_url="https://docs.lusha.com/apis/openapi/section/authentication",
+    probe_path="/v3/account/usage",  # free account snapshot
+)
+
+CORESIGNAL = OAuthProvider(
+    service="coresignal",
+    display_name="Coresignal",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Coresignal API key",
+    token_header="apikey",  # one word, lowercase
+    token_format="{secret}",
+    setup_url="https://dashboard.coresignal.com/",
+    setup_action_label="Get your Coresignal API key",
+    setup_steps=("Sign in to the Coresignal dashboard and open API keys.", "Copy your key."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Large-scale employee, job-posting and company data via search and collect.",
+    base_url="https://api.coresignal.com/cdapi/v2",
+    docs_url="https://docs.coresignal.com/api-introduction/authorization",
+    # No free account endpoint: POST an empty body — a valid key answers 400 (no charge), an invalid
+    # key answers 401 — so only 401/403 count as a bad-key rejection (verified: bad key -> 401).
+    probe_method="POST",
+    probe_path="/company_base/search/es_dsl",
+    probe_json={},
+    probe_reject_statuses=(401, 403),
+)
+
+DIFFBOT = OAuthProvider(
+    service="diffbot",
+    display_name="Diffbot",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Diffbot token",
+    token_location="query",  # token is a query param on every call
+    token_param="token",
+    token_format="{secret}",
+    setup_url="https://app.diffbot.com/get-started/",
+    setup_action_label="Get your Diffbot token",
+    setup_steps=("Sign in to Diffbot and open your account.", "Copy your API token."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Knowledge-graph entities (organizations, people) and AI web extraction.",
+    # Enhance/enrich + DQL live on the KG host; the free account probe lives on the api host, so verify
+    # off-host. The provisioned tool points at the KG host (the enrichment value).
+    base_url="https://kg.diffbot.com/kg/v3",
+    docs_url="https://docs.diffbot.com/reference/authentication",
+    probe_url="https://api.diffbot.com/v4/account",  # token injected as ?token=…
+)
+
+THECOMPANIESAPI = OAuthProvider(
+    service="thecompaniesapi",
+    display_name="The Companies API",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Companies API token",
+    token_header="Authorization",
+    token_format="Basic {secret}",  # the RAW token after "Basic ", NOT base64 (no token_encode)
+    setup_url="https://www.thecompaniesapi.com/",
+    setup_action_label="Get your Companies API token",
+    setup_steps=("Sign up at thecompaniesapi.com.", "Copy your API token from the dashboard."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Firmographics and technology-stack detection across ~50M companies.",
+    base_url="https://api.thecompaniesapi.com/v2",
+    docs_url="https://www.thecompaniesapi.com/api/authentication",
+    probe_path="/companies?simplified=true&size=1",  # free (no credits), auth required
+)
+
+LEADMAGIC = OAuthProvider(
+    service="leadmagic",
+    display_name="LeadMagic",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your LeadMagic API key",
+    token_header="X-API-Key",
+    token_format="{secret}",
+    setup_url="https://app.leadmagic.io/dashboard/api-keys",
+    setup_action_label="Get your LeadMagic API key",
+    setup_steps=("Sign in to LeadMagic and open API keys.", "Copy your key."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and verify emails and mobile numbers, and enrich people and companies.",
+    base_url="https://api.leadmagic.io",
+    docs_url="https://leadmagic.io/docs/v1/authentication",
+    probe_path="/v1/credits",  # free — no credits consumed
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
@@ -1133,6 +1253,8 @@ REGISTRY: dict[str, OAuthProvider] = {
         APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
+        # more Enrichment API-key providers
+        LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC,
     )
 }
 

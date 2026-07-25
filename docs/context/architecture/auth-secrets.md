@@ -104,7 +104,8 @@ module symbols:
   `satisfied_capabilities()` decide when a later capability needs a re-consent.
 - `auth_kind` = `"oauth"` (treg's app), `"token"` (Slack — a workspace-scoped bot the user creates and
   pastes; `is_token_kind`), or `"key"` (an **API-key provider** connected by pasting a key: Apollo, PDL,
-  Akta, Hunter, Crunchbase on a new **Enrichment** shelf, TikHub + Bright Data + Just One API under
+  Akta, Hunter, Crunchbase, Lusha, Coresignal, Diffbot, The Companies API, LeadMagic on a new
+  **Enrichment** shelf, TikHub + Bright Data + Just One API under
   Social, and under **SEO** Semrush + DataForSEO, SE Ranking, Moz, Majestic, Serpstat). A
   `token` and a `key` share ONE connect/verify/auto-provision path, so `uses_pasted_secret` (`token | key`)
   gates it while `is_token_kind` stays narrow for Slack's bot-only copy; a key provider needs nothing from

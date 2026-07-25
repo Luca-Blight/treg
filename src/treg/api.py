@@ -3958,12 +3958,18 @@ async def connect_with_token(
     field_bad = bool(provider.token_verify_field) and not payload.get(provider.token_verify_field)
     field_reject = bool(provider.token_reject_field) and bool(payload.get(provider.token_reject_field))
     equals_bad = bool(provider.token_ok_field) and str(payload.get(provider.token_ok_field)) != provider.token_ok_value
+    # Usually any >=400 is a bad key; a provider with no free probe (Coresignal) POSTs an empty body so
+    # a VALID key answers 400 — there only 401/403 mean the key itself is bad.
+    status_reject = (
+        resp.status_code in provider.probe_reject_statuses
+        if provider.probe_reject_statuses else resp.status_code >= 400
+    )
     text_error = (
         resp.status_code < 400
         and not ctype.startswith("application/json")
         and resp.text.lstrip().upper().startswith("ERROR")
     )
-    if resp.status_code >= 400 or field_bad or field_reject or equals_bad or text_error:
+    if status_reject or field_bad or field_reject or equals_bad or text_error:
         why = (
             payload.get("error")
             or (payload.get("ErrorMessage") if equals_bad else None)
