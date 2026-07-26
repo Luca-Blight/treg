@@ -40,3 +40,6 @@ docs/hn-launch-post.md
 # Machine-local symlinks into .agents/skills — they resolve only on the machine that made them.
 /.claude/
 skills-lock.json
+
+# Local planning / handoffs — private, never committed.
+.context/
