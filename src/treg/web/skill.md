@@ -120,6 +120,19 @@ treg org invite bob@company.com --role member  # admin+; emails the invite (a on
 treg org members                               # admin+; who's in the active org
 treg org ls / treg org switch <slug>           # your orgs / switch active
 ```
+**Give an agent its own identity** (admin+). An agent doesn't have to borrow the human's token — mint
+it one, and every call it makes is capped, scoped and logged as *itself*:
+```bash
+treg org agent-new ci-bot                        # prints the token ONCE (run again to rotate)
+treg org agent-new ci-bot --tools stripe,gh --cap 500   # only these tools, 500 calls/day
+treg org agents                                  # who the team's agents are + today's usage
+treg org agent-rm <user_id>                      # revoke instantly
+```
+Put that token in the agent's `TREG_TOKEN` env var. An agent token can **call this team's tools and
+read** — it can never sign in, create a team, or be an owner. If you are an agent and you were given
+your own token, use it instead of the machine owner's: your work then shows up under your own name in
+`treg calls`.
+
 The invitee signs in with the invited email and runs `treg accept` — no code handling needed
 (the code path still works: `treg org join <code>`). A brand-new invitee also gets their own
 **personal org** (no empty state), so removing them from a team never locks them out. Give a tool

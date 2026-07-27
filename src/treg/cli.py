@@ -2897,6 +2897,35 @@ def cmd_org_set_role(args, cfg) -> None:
         _show(c.patch(f"/orgs/{org_id}/members/{args.user_id}", json={"role": args.role}))
 
 
+def cmd_org_agent_new(args, cfg) -> None:
+    """Mint (or rotate) an agent's own token. NOTE: an "agent" here is an IDENTITY that calls treg —
+    unrelated to `treg agents`, which lists the coding agents we can install skills for."""
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.post(f"/orgs/{org_id}/agents", json={
+            "name": args.name, "role": args.role, "daily_call_cap": args.cap,
+            "tool_access": _resolve_tool_access(c, org_id, args),
+            "local_run_enabled": getattr(args, "local_run", "on") != "off"}))
+
+
+def cmd_org_agents(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.get(f"/orgs/{org_id}/agents"))
+
+
+def cmd_org_agent_rm(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.delete(f"/orgs/{org_id}/agents/{args.user_id}"))
+
+
 def cmd_org_join(args, cfg) -> None:
     with _client(cfg, auth=False) as c:
         r = c.post("/invites/accept", json={"code": args.code, "email": args.email})
@@ -3184,6 +3213,25 @@ def build_parser() -> argparse.ArgumentParser:
     osr = mk(og, "set-role", "Change a member's role (owner only).", "treg org set-role 5 admin")
     osr.add_argument("user_id", type=int, help="the member's user id (from `org members`)")
     osr.add_argument("role", choices=["viewer", "member", "admin", "owner"], help="the new role"); osr.set_defaults(fn=cmd_org_set_role)
+    oan = mk(og, "agent-new", "Mint (or rotate) a token so an agent calls treg as ITSELF — its own "
+                              "cap, tool access and audit trail (admin+).",
+             "treg org agent-new ci-bot", "treg org agent-new ci-bot --tools stripe,gh --cap 500",
+             "treg org agent-new ci-bot   # run again to rotate: the old token dies")
+    oan.add_argument("name", help="a short name for the agent, e.g. ci-bot")
+    oan.add_argument("--role", default="member", choices=["viewer", "member", "admin"],
+                     help="role to grant (default: member; an agent can never be an owner)")
+    oan.add_argument("--cap", type=int, default=-1, help="daily call cap (-1 = unlimited, the default)")
+    oan.add_argument("--tools", help="comma-separated tool names this agent may use (default: prompt / all)")
+    oan.add_argument("--all-tools", dest="all_tools", action="store_true", help="allow every tool")
+    oan.add_argument("--local-run", dest="local_run", choices=["on", "off"], help="allow local CLI runs")
+    oan.set_defaults(fn=cmd_org_agent_new)
+    mk(og, "agents", "List this team's agent identities and their limits (admin+). "
+                     "(Different from `treg agents`, which lists coding agents for skill install.)",
+       "treg org agents").set_defaults(fn=cmd_org_agents)
+    oar = mk(og, "agent-rm", "Revoke an agent — its token stops working immediately.",
+             "treg org agent-rm 7")
+    oar.add_argument("user_id", type=int, help="the agent's user id (from `org agents`)")
+    oar.set_defaults(fn=cmd_org_agent_rm)
     oj = mk(og, "join", "Join a team using an invite code.", "treg org join <code> --email you@company.com")
     oj.add_argument("code", help="the one-time invite code"); oj.add_argument("--email", required=True, help="your email (creates you if new)"); oj.set_defaults(fn=cmd_org_join)
     mk(og, "leave", "Remove yourself from the active team.", "treg org leave").set_defaults(fn=cmd_org_leave)

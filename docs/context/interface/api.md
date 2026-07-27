@@ -57,6 +57,11 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `_cascade_delete_org`, which now also sweeps each org's `RunRecord` rows);
   `list_invites` / `revoke_invite` (`GET`/`DELETE /orgs/{id}/invites[/{id}]`, admin+). Full behavior:
   [multi-tenancy](../architecture/multi-tenancy.md).
+- **Agents (machine identities):** `create_agent` (`POST /orgs/{id}/agents`, admin+) mints/rotates a
+  member token for a machine caller — its own `daily_call_cap`, `tool_access` and audit trail, with no
+  new table; `list_agents` (`GET`, never returns a token) and `revoke_agent` (`DELETE …/{user_id}`).
+  An agent token is refused by `require_identity` and can never be an owner. See
+  [multi-tenancy](../architecture/multi-tenancy.md).
 - **Usage metering + caps** (usage-metering v1, `docs/USAGE-METERING-PLAN.md`): `org_usage`
   (`GET /orgs/{id}/usage?days=`, admin+) rolls up `CallRecord` + `RunRecord` since the window start into
   **by-user** (with a `call`/`local_run`/`server_run` split), **by-tool**, **by-day**, and totals — pure

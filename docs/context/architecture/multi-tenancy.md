@@ -37,6 +37,14 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   — the code is a shortcut, not a requirement. `email_token_hash` is the inbox-only **second secret** in
   the emailed link — it can sign the invitee in (`GET/POST /auth/invite-signin?t=`, one-time), while the
   admin-visible code never can.
+- **Machine identities** — a `User` on an **unroutable domain**, which is what makes it a machine
+  rather than a person. Two exist: the published demo token (`PUBLIC_DEMO_DOMAIN`) and an **agent**
+  (`AGENT_DOMAIN` = `agents.treg.local`). Both are minted by an admin and act ONLY by their token:
+  `_is_machine_email` gates them out of every login door and out of `require_identity` (below). An
+  agent needs **no new table and no migration** — it is a `Membership`, so it inherits `daily_call_cap`,
+  `tool_access`, `local_run_enabled` and per-identity audit for free, which is exactly what makes those
+  controls *per-agent*. NOTE: "agent" here is an IDENTITY; `agents.py` is the unrelated skill-directory
+  table ("where does each coding agent keep its skills").
 - Resource tables (`Secret`/`Tool`/`Bundle`/`CallRecord`/`PendingOAuth`) carry `org_id`; `owner`
   (creator email) is kept for audit + the member role gate. `Tool.name` is unique **per `(org_id, name)`**
   (`UniqueConstraint("org_id", "name")`), so two orgs may reuse a name.
@@ -60,6 +68,22 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   *customized* member does NOT auto-get a newly-registered tool (the dashboard toasts a reminder). `Invite`
   carries `tool_access`/`local_run_enabled` (validated at `create_invite`) → copied onto the membership at
   both accept doors. `list_members` returns both fields.
+- **Agents (`create_agent` / `list_agents` / `revoke_agent`, `/orgs/{id}/agents`, admin+).** Mints a
+  member identity for a machine caller, reusing the `create_public_token` recipe (re-POST the same name
+  **rotates** — the old token dies there; revoke deletes the membership). Three invariants, each closing
+  a real hole:
+  1. **An agent token can never act as a USER.** `create_org` depends on `require_identity`, so without
+     the `_is_machine_email` refusal there an agent could create a fresh org **in which it is owner** —
+     and owners are exempt from `_require_tool_access` / `_require_local_run`, escaping every limit on it.
+  2. **An agent can never be an owner** — blocked in `create_agent` AND in `set_member_role`, for the
+     same exemption reason.
+  3. **The address is org-scoped** (`agent-{org.slug}-{name}@…`, mirroring `_public_demo_email`): two
+     orgs must each own an agent called `deploy` without sharing one `User` row, or a superadmin
+     suspending one tenant's agent would kill the other's. Agents are always looked up by
+     *(org + domain)*, never by recomputing the address, so an org rename can't orphan them.
+  Every identity door is blocked at the shared choke point `_find_or_create_user`, plus `register_user`
+  (which predates it and creates a `User` directly) and `auth_email_start` (refuse early, mint no code).
+  `list_members` carries `is_agent` so one roster can show people and machines apart.
 - Every list filters by `caller.org_id`; every create stamps `org_id = caller.org_id` +
   `owner = caller.email`; `_resolve_call` scopes **both** the named lookup and the host/longest-prefix
   passthrough to the org; `call_tool` loads only same-org secrets. See [proxy-model](proxy-model.md).

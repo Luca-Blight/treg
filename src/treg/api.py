@@ -770,6 +770,8 @@ async def auth_email_start(
     email = _norm_email(body.email)
     if email.endswith("@" + demo_seed.DEMO_DOMAIN):  # fake onboarding teammates are roster-only — never a login
         raise HTTPException(status_code=400, detail="that's a demo address — pick a real email")
+    if _is_machine_email(email):  # agents / the public token act by token only — same rule, said early
+        raise HTTPException(status_code=403, detail="this address cannot be used to sign in")
     await ratestore.sweep(db, OTP_START_NS)  # bound the namespace before we add to it
     if not await ratestore.rate_check(
         db, OTP_START_NS,
@@ -1214,6 +1216,13 @@ async def require_identity(
                 raise HTTPException(status_code=403, detail=(
                     "this is a public demo token — it can only call the demo team's tools"))
         user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
+        # A machine token must never act as a USER. `create_org` depends on THIS dependency, so an
+        # agent could otherwise create a fresh org in which it is the OWNER — and owners are exempt
+        # from `_require_tool_access` and `_require_local_run`, escaping every limit set on it.
+        if user is not None and _is_machine_email(user.email):
+            raise HTTPException(status_code=403, detail=(
+                "this token belongs to a machine identity — it can call this team's tools, "
+                "but cannot act as a user"))
         if user is not None and not user.suspended:
             return user
         raise HTTPException(status_code=401, detail="invalid token")
@@ -1637,6 +1646,12 @@ async def _find_or_create_user(db: AsyncSession, email: str) -> User:
     token is user-scoped, so it works before they have any org (org chosen per-request via X-Treg-Org).
     Caller commits."""
     email = _norm_email(email)
+    # Machine identities (agents, the published demo token) are minted by an admin and act ONLY by
+    # their token. This is the single choke point every identity door shares, so blocking here means
+    # no door — GitHub, Google, email OTP, invite sign-in — can hand a human an agent's identity.
+    # (The domains are unroutable, so a code could never be delivered anyway; this makes it explicit.)
+    if _is_machine_email(email):
+        raise HTTPException(status_code=403, detail="this address cannot be used to sign in")
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if user is None:
         user = User(email=email)
@@ -1653,6 +1668,10 @@ async def _find_or_create_user(db: AsyncSession, email: str) -> User:
 @app.post("/users")
 async def register_user(body: UserIn, db: AsyncSession = Depends(get_session)) -> dict:
     email = _norm_email(body.email)
+    # This door creates a User directly (it predates `_find_or_create_user`), so it needs the same
+    # machine-domain block — otherwise open registration could squat an agent address.
+    if _is_machine_email(email):
+        raise HTTPException(status_code=403, detail="this address cannot be used to sign in")
     if body.webhook_url and not health.safe_webhook_url(body.webhook_url):  # SSRF guard on the alert URL
         raise HTTPException(status_code=422, detail="webhook_url must be a public http(s) URL")
     if (await db.execute(select(User).where(User.email == email))).scalar_one_or_none():
@@ -2300,7 +2319,9 @@ async def list_members(
         if user is not None:
             out.append({"user_id": user.id, "email": user.email, "role": m.role,
                         "daily_call_cap": m.daily_call_cap, "used_today": used.get(user.email, 0),
-                        "tool_access": m.tool_access, "local_run_enabled": m.local_run_enabled})
+                        "tool_access": m.tool_access, "local_run_enabled": m.local_run_enabled,
+                        # so the dashboard can separate people from machines in one roster
+                        "is_agent": _is_agent_email(user.email)})
     return out
 
 
@@ -2428,6 +2449,12 @@ async def set_member_role(
     ).scalar_one_or_none()
     if membership is None:
         raise HTTPException(status_code=404, detail="not a member of this org")
+    if body.role == "owner":
+        # Owners short-circuit `_tool_allowed` and `_require_local_run`, so an owner machine identity
+        # would silently bypass the tool ACL and the local-run gate placed on it.
+        target = await db.get(User, user_id)
+        if target is not None and _is_machine_email(target.email):
+            raise HTTPException(status_code=422, detail="a machine identity cannot be an owner")
     if membership.role == "owner" and body.role != "owner" and await _count_owners(org_id, db) <= 1:
         raise HTTPException(status_code=409, detail="cannot demote the last owner — promote another owner first")
     membership.role = body.role
@@ -2461,12 +2488,42 @@ async def delete_org(
     return {"deleted_org": org_id}
 
 
-# ---- public demo token: a publishable, call-only credential for this org -------------------
+# ---- machine identities: the publishable demo token, and agents ----------------------------
+# Both are Users on an UNROUTABLE domain, which is what makes them machines rather than people: no
+# login door can ever resolve one (guarded in `_find_or_create_user`) and neither may act as a USER
+# (guarded in `require_identity`). Everything else they inherit from Membership for free.
 PUBLIC_DEMO_DOMAIN = "public-demo.treg.local"  # unroutable — the public identity can never log in
+# NOTE: "agent" here is an IDENTITY — a coding agent / automation that calls treg. It is NOT the
+# skill-directory table in `agents.py` (which answers "where does each coding agent keep its skills").
+# The words collide, the concepts don't; kept apart deliberately.
+AGENT_DOMAIN = "agents.treg.local"  # unroutable — an agent acts only by its token
+
+
+def _is_agent_email(email: str) -> bool:
+    return _norm_email(email).endswith(f"@{AGENT_DOMAIN}")
+
+
+def _is_machine_email(email: str) -> bool:
+    """An identity minted by an admin for a machine — never a person who can sign in."""
+    return _is_agent_email(email) or _norm_email(email).endswith(f"@{PUBLIC_DEMO_DOMAIN}")
 
 
 def _public_demo_email(org: Org) -> str:
     return f"pub-{org.slug}@{PUBLIC_DEMO_DOMAIN}"
+
+
+def _agent_email(org: Org, name: str) -> str:
+    """Org-SCOPED on purpose: two orgs must each be able to own an agent called `deploy` without
+    sharing one User row (`User.email` is unique). Sharing would mean a superadmin suspending or
+    deleting one tenant's agent silently killed the other tenant's too."""
+    return f"agent-{org.slug}-{_slugify(name)}@{AGENT_DOMAIN}"
+
+
+def _agent_name(org: Org, email: str) -> str:
+    """The friendly name back out of the address (the name isn't stored — the address IS the id)."""
+    local = email.split("@", 1)[0]
+    prefix = f"agent-{org.slug}-"
+    return local[len(prefix):] if local.startswith(prefix) else local
 
 
 @app.post("/orgs/{org_id}/public-token")
@@ -2516,6 +2573,116 @@ async def delete_public_token(
     org.public_demo = False
     await db.commit()
     return {"public_token_revoked": True, "org": org.slug}
+
+
+# ---- agents: a member identity for a machine caller ----------------------------------------
+# An agent is JUST a Membership whose user lives on AGENT_DOMAIN, which is why this needs no new
+# table and no migration: it inherits every per-member control already in place — `daily_call_cap`
+# (enforced by `_enforce_daily_cap`), `tool_access` (`_require_tool_access`, on the proxy AND both run
+# tiers), `local_run_enabled`, and per-identity audit, since `CallRecord.user_email` already stamps
+# every call. Giving the agent its own identity is what makes all of that per-agent.
+class AgentIn(BaseModel):
+    name: str
+    role: str = "member"  # never "owner" (see below); "admin" is owner-granted only
+    daily_call_cap: int = -1  # -1 = unlimited, mirroring set_member_cap
+    tool_access: list[str] | None = None  # None = every tool, mirroring set_member_access
+    local_run_enabled: bool = True
+
+
+@app.post("/orgs/{org_id}/agents")
+async def create_agent(
+    org_id: int, body: AgentIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Mint (or ROTATE) an agent token: a member identity for a machine caller, with its own cap, tool
+    ACL and audit trail. Re-POSTing the same name rotates the token — the previous one dies here, the
+    same instant-revocation idiom as the public token. Admin+; only an owner may mint an admin agent."""
+    _require_admin_of(org_id, caller)
+    name = (body.name or "").strip()
+    if not name or not _slugify(name):
+        raise HTTPException(status_code=422, detail="name is required")
+    if body.role not in ROLE_RANK:
+        raise HTTPException(status_code=422, detail=f"role must be one of {sorted(ROLE_RANK)}")
+    if body.role == "owner":
+        raise HTTPException(status_code=422, detail="an agent cannot be an owner")
+    if body.role == "admin" and caller.role != "owner":
+        raise HTTPException(status_code=403, detail="only an owner can create an admin agent")
+    if body.daily_call_cap < -1:
+        raise HTTPException(status_code=422, detail="daily_call_cap must be -1 (unlimited) or >= 0")
+    tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
+
+    email = _agent_email(caller.org, name)
+    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if user is None:
+        user = User(email=email)  # NOT demo=True: unlike the public token, agent traffic counts in usage
+        db.add(user)
+        await db.flush()
+    token = crypto.new_token()
+    membership = (await db.execute(select(Membership).where(
+        Membership.user_id == user.id, Membership.org_id == org_id))).scalar_one_or_none()
+    if membership is None:
+        membership = Membership(user_id=user.id, org_id=org_id, role=body.role,
+                                token_hash=crypto.hash_token(token))
+        db.add(membership)
+    else:
+        membership.token_hash = crypto.hash_token(token)  # rotate: the previous token dies here
+        membership.role = body.role
+    membership.daily_call_cap = body.daily_call_cap
+    membership.tool_access = tool_access
+    membership.local_run_enabled = body.local_run_enabled
+    await db.commit()
+    return {"token": token, "name": name, "email": email, "org": caller.org.slug, "user_id": user.id,
+            "role": body.role, "daily_call_cap": body.daily_call_cap, "tool_access": tool_access,
+            "local_run_enabled": body.local_run_enabled,
+            "note": "save this token now — it is shown once; POST the same name again to rotate it"}
+
+
+@app.get("/orgs/{org_id}/agents")
+async def list_agents(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """Every agent identity in the org, with its limits and today's usage. Never the token."""
+    _require_admin_of(org_id, caller)
+    memberships = (await db.execute(select(Membership).where(Membership.org_id == org_id))).scalars().all()
+    users = {u.id: u for u in (await db.execute(
+        select(User).where(User.id.in_([m.user_id for m in memberships]))
+    )).scalars().all()}
+    used = await _used_today_by_user(db, org_id)
+    out: list[dict] = []
+    for m in memberships:
+        user = users.get(m.user_id)
+        if user is None or not _is_agent_email(user.email):
+            continue
+        out.append({"user_id": user.id, "name": _agent_name(caller.org, user.email),
+                    "email": user.email, "role": m.role, "daily_call_cap": m.daily_call_cap,
+                    "used_today": used.get(user.email, 0), "tool_access": m.tool_access,
+                    "local_run_enabled": m.local_run_enabled, "created_at": m.created_at})
+    return out
+
+
+@app.delete("/orgs/{org_id}/agents/{user_id}")
+async def revoke_agent(
+    org_id: int, user_id: int,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Revoke an agent: delete its membership, which kills its token immediately."""
+    _require_admin_of(org_id, caller)
+    user = await db.get(User, user_id)
+    if user is None or not _is_agent_email(user.email):
+        raise HTTPException(status_code=404, detail="unknown agent")
+    membership = (await db.execute(select(Membership).where(
+        Membership.user_id == user_id, Membership.org_id == org_id))).scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(status_code=404, detail="unknown agent")
+    email = user.email  # read before the delete — the row is expired after commit
+    await db.delete(membership)
+    await db.flush()
+    # The identity is org-scoped, so once its last membership is gone the User row has no purpose.
+    if (await db.execute(select(Membership).where(
+            Membership.user_id == user_id))).scalars().first() is None:
+        await db.delete(user)
+    await db.commit()
+    return {"revoked": True, "email": email}
 
 
 # ---- secrets (values are write-only — never returned) -------------------------------------
