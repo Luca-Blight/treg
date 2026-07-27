@@ -91,6 +91,14 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   Every identity door is blocked at the shared choke point `_find_or_create_user`, plus `register_user`
   (which predates it and creates a `User` directly) and `auth_email_start` (refuse early, mint no code).
   `list_members` carries `is_agent` so one roster can show people and machines apart.
+  **A rotate replaces the TOKEN, never the limits.** Because rotate is the same endpoint as create, an
+  absent optional field used to fall back to its permissive default — and the dashboard's Rotate button
+  sends only `{name, role, daily_call_cap}`, so a scoped agent silently became unrestricted
+  (`tool_access=None` = every tool) just by getting a new token: round-4 blocker #2. `create_agent` now
+  writes a field **only when the caller actually sent it** (`body.model_fields_set`, the shape
+  `set_member_access` already used for `project_access`); a brand-new agent, having nothing to keep,
+  still takes the documented defaults. `project_access` is preserved for free — `AgentIn` cannot even
+  express it, so it could previously only ever be lost.
 - **Two ACL axes, composed as AND** (`_tool_usable` = `_tool_allowed` AND `_project_allowed`). The
   project scope is the coarse dial, `tool_access` the fine one; both are NULL-means-everything and the
   owner is exempt from both. `project_access` holds project **IDs**, not slugs, so the hot-path check is
@@ -100,8 +108,13 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   accepts slugs or ids, 422s on an unknown one, and collapses an all-projects selection back to NULL
   (mirroring `_normalize_tool_access`). Endpoints: `create_project` / `list_projects` (a scoped member
   sees only their own) / `delete_project` (admin+) — deleting **frees** its tools back to org-wide rather
-  than hiding them, and drops the id from every member's scope, treating an emptied list as *unscoped*
-  so nobody is locked out of the whole team. Invites carry `project_access` onto the membership at both
+  than hiding them, and drops the id from every member's scope, **storing an emptied list as `[]`, never
+  NULL**. NULL means *every project*, so collapsing `[]` would hand a member scoped to only the deleted
+  project the run of every OTHER project's tools — a privilege escalation fired by an unrelated delete
+  (round-4 blocker #1, `test_security_round4.py`). `[]` already carries the intended meaning (org-wide
+  tools only), and nobody is locked out because the **freed tools** are what they keep: whatever the
+  member could reach before the delete they can still reach after it. That, not a widened scope, is
+  what "never lock anyone out" rests on. Invites carry `project_access` onto the membership at both
   accept doors, exactly as `tool_access` does.
 - Every list filters by `caller.org_id`; every create stamps `org_id = caller.org_id` +
   `owner = caller.email`; `_resolve_call` scopes **both** the named lookup and the host/longest-prefix
@@ -126,6 +139,14 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   `list_members`
   / `remove_member` (`GET`/`DELETE /orgs/{id}/members[/{user}]`, admin+; owners cannot be removed).
   `_require_admin_of(org_id, caller)` gates the admin endpoints (token must be for that org + role ≥ admin).
+- **An identity leaving takes its policy with it (`_drop_member_deny_rules`).** A `DenyRule` aimed at
+  one caller (`user_id` set) is meaningless once that caller is gone, and it lingers in the Policy
+  table naming a user id nobody can resolve. `remove_member`, `leave_org` and `revoke_agent` sweep the
+  rules for that `(user_id, org_id)`; `admin_delete_user` sweeps **every org's** rules for that user,
+  because `DenyRule.user_id` is a foreign key and a surviving row would dangle — Postgres rejects that
+  outright, while SQLite only hides it by not enforcing FKs (so the test suite alone cannot catch it).
+  ORG-wide rules (`user_id` NULL) are never touched: they are about the team, not about one caller.
+  Mirrors how `delete_project` sweeps the id it deletes out of every `project_access`.
 - **Org administration:** `set_member_role` (`PATCH /orgs/{id}/members/{user}`, **owner-only** via
   `_require_owner_of`; a `_count_owners` last-owner guard blocks demoting the sole owner — ownership
   transfer = promote another to owner, then step down), `leave_org` (`POST /orgs/{id}/leave`, self-removal,

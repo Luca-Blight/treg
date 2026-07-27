@@ -140,7 +140,10 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   - **Team settings** — leave / delete (the danger zone), acting on the team you are in.
 - **Agents** (`view==='agents'`, `canAdmin`) — its own sidebar entry rather than a row in Team, because an
   agent identity is how most people will actually use treg. Create (name / role / daily cap), **Rotate**
-  (re-POSTs the same name, so the old token dies), **Revoke**, and an inline cap editor. A minted token
+  (re-POSTs the same name, so the old token dies), **Revoke**, and an inline cap editor. Rotate sends
+  only `{name, role, daily_call_cap}` **on purpose**: `create_agent` leaves every field the client does
+  not send exactly as it was, so the agent's tool ACL and project scope survive the rotate. They used to
+  be silently cleared by this very button — see [multi-tenancy](../architecture/multi-tenancy.md). A minted token
   appears in an accented card that says it is shown **once**; under it are three paste-ready snippets
   (`agentSnip`: Environment / Give it to your agent / Verify) built by the `agentSnippet` computed, mirroring
   the Tools snippet block. Because a stored token is hashed and unrecoverable, each row also has a **Setup**

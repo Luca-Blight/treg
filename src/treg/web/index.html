@@ -2758,6 +2758,8 @@ createApp({
       catch(e){ this.agentErr='Create failed: '+(e.detail||e.status); }
       this.agentBusy=false; },
     // Rotate = create with the SAME name: the server replaces the token hash, so the old one dies.
+    // We deliberately send only name/role/cap — the server leaves every field we DON'T send as it is,
+    // so the agent's tool ACL and project scope survive a rotate (they used to be silently cleared).
     async rotateAgent(a){ this.agentBusy=true; this.agentErr='';
       try{ const r=await this.api('/orgs/'+this.activeOrgId+'/agents',{method:'POST',headers:{'content-type':'application/json'},
              body:JSON.stringify({name:a.name, role:a.role, daily_call_cap:a.daily_call_cap})});

@@ -68,7 +68,8 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
 - **URL-passthrough (agent-native):** `rest` is the real upstream URL (`/call/https://api.intercom.io/me`).
   `_normalize_scheme()` restores the `https://` a path param collapses to `https:/`. The tool is resolved
   by **host** (`_host_of()` = `urlsplit(...).netloc`, matched against the indexed `Tool.host`) then the
-  **longest `base_url` prefix**; a tie → `409`, no match → `404`.
+  **longest `base_url` prefix**; a tie → `409`, no match → `404` (or `403` when the caller's ACL is the
+  only thing that removed the match — see below).
 - **Named:** `rest = "<tool>/<path>"` (`rest.partition("/")`), looked up by `Tool.name`; upstream URL =
   `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
@@ -79,6 +80,14 @@ tool the caller cannot use must not be able to cause a `409` — or win the tieb
 cannot even see it in `list_tools`. This only NARROWS the candidate set, so it can never grant access:
 whatever resolves still passes `_require_tool_use`. The named shape needs no filter (it resolves one
 tool, then the gate runs).
+
+**"Not yours" is a `403`, not a `404`.** Narrowing the candidate set to empty first read as *nothing is
+registered here*, so a caller with no access was told the tool did not EXIST — which sends an admin
+hunting for a registration that is already there (round-4 finding #3). `_resolve_call` keeps the
+**unfiltered** host matches alongside the filtered ones: if a tool would have matched and only the ACL
+removed it, the answer is `403`, the same verdict the named shape has always given. A host with nothing
+registered is still `404`. The `403` names only the **host the caller typed**, never the tool name the
+ACL is there to hide.
 
 **Policy deny (`_enforce_deny`, `_deny_match`).** After resolution and the tool ACL, the resolved
 upstream is matched against the org's `DenyRule` rows (org-wide + the ones aimed at this caller) →

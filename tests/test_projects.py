@@ -166,13 +166,25 @@ async def test_deleting_a_project_frees_its_tools_rather_than_hiding_them(env):
     assert (await env.c.get("/call/a-tool/ok", headers=_h(env.member))).status_code == 200
 
 
-async def test_deleting_a_project_never_locks_a_member_out_of_everything(env):
-    """Dropping the last entry must read as 'unscoped', not 'no projects at all'."""
+async def test_deleting_a_project_neither_locks_a_member_out_nor_widens_them(env):
+    """Dropping the LAST entry must leave an empty scope, never NULL.
+
+    NULL reads as "every project", so collapsing `[]` to NULL would hand a member scoped to only
+    Apollo the run of Gemini's tools — a privilege escalation fired by an unrelated delete. The
+    member is still not locked out, because the freed tools became org-wide: what they could reach
+    before the delete they can still reach after it. That is the invariant, not the NULL.
+    """
     await _scope(env, [env.apollo["slug"]])
     await env.c.delete(f"/orgs/{env.org_id}/projects/{env.apollo['id']}", headers=_h(env.owner))
     members = (await env.c.get(f"/orgs/{env.org_id}/members", headers=_h(env.owner))).json()
-    assert next(m for m in members if m["user_id"] == env.member_uid)["project_access"] is None
-    assert (await env.c.get("/call/g-tool/ok", headers=_h(env.member))).status_code == 200
+    assert next(m for m in members if m["user_id"] == env.member_uid)["project_access"] == [], \
+        "an emptied scope must stay empty — NULL would mean 'every project'"
+    # kept: the tools they already had (a-tool was freed to org-wide, shared always was)
+    assert (await env.c.get("/call/a-tool/ok", headers=_h(env.member))).status_code == 200
+    assert (await env.c.get("/call/shared/ok", headers=_h(env.member))).status_code == 200
+    # NOT gained: a project they were deliberately kept out of
+    blocked = await env.c.get("/call/g-tool/ok", headers=_h(env.member))
+    assert blocked.status_code == 403, "deleting Apollo must not grant Gemini"
 
 
 async def test_a_tool_can_be_moved_between_projects_and_back(env):

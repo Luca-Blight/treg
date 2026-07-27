@@ -74,22 +74,29 @@ async def _bootstrap_single_user() -> None:
             user = User(email=LOCAL_USER_EMAIL, onboarded=True)
             db.add(user)
             await db.flush()
-        org = (await db.execute(select(Org).where(Org.slug == LOCAL_ORG_NAME))).scalar_one_or_none()
-        if org is None:
-            org = Org(name=LOCAL_ORG_NAME.title(), slug=LOCAL_ORG_NAME)
+        # Adopt an org ONLY through a membership this identity already has. Looking one up by the
+        # slug `personal` and joining it as owner would, on a database that is not fresh, hand the
+        # password-less local identity ownership of a team that belongs to someone else — and an
+        # owner is exempt from every ACL. A new team therefore takes a FREE slug (`personal-2`, …)
+        # rather than colliding with whatever already holds `personal`.
+        membership = (await db.execute(
+            select(Membership).where(Membership.user_id == user.id).order_by(Membership.id)
+        )).scalars().first()
+        token = ""
+        if membership is None:
+            org = Org(name=LOCAL_ORG_NAME.title(), slug=await _unique_slug(LOCAL_ORG_NAME, db))
             db.add(org)
             await db.flush()
-        membership = (await db.execute(select(Membership).where(
-            Membership.user_id == user.id, Membership.org_id == org.id))).scalar_one_or_none()
-        token = ""
-        if membership is None or not path.exists():
-            token = crypto.new_token()  # first boot, or the token file was removed
-            if membership is None:
-                membership = Membership(user_id=user.id, org_id=org.id, role="owner",
-                                        token_hash=crypto.hash_token(token))
-                db.add(membership)
-            else:
+            token = crypto.new_token()  # first boot
+            membership = Membership(user_id=user.id, org_id=org.id, role="owner",
+                                    token_hash=crypto.hash_token(token))
+            db.add(membership)
+        else:
+            org = await db.get(Org, membership.org_id)
+            if not path.exists():
+                token = crypto.new_token()  # the token file was removed — mint a replacement
                 membership.token_hash = crypto.hash_token(token)
+        team = org.slug if org is not None else LOCAL_ORG_NAME
         await db.commit()
     if token:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -98,7 +105,7 @@ async def _bootstrap_single_user() -> None:
     shown = token or "(unchanged — see " + str(path) + ")"
     print(f"\n  treg is ready — no account needed."
           f"\n  Dashboard  {s.public_url}/app"
-          f"\n  Team       {LOCAL_ORG_NAME}"
+          f"\n  Team       {team}"
           f"\n  Token      {shown}\n", flush=True)
 
 
@@ -2623,6 +2630,7 @@ async def remove_member(
     if membership.role == "owner":  # only an owner manages owners; an admin cannot remove one
         raise HTTPException(status_code=403, detail="owners cannot be removed")
     await db.delete(membership)  # revokes that user's token for this org
+    await _drop_member_deny_rules(db, user_id, org_id)
     await db.commit()
     return {"removed": user_id}
 
@@ -2664,6 +2672,7 @@ async def leave_org(
     if caller.role == "owner" and await _count_owners(org_id, db) <= 1:
         raise HTTPException(status_code=409, detail="you are the last owner — transfer ownership or delete the org")
     await db.delete(caller.membership)  # revokes the caller's token for this org
+    await _drop_member_deny_rules(db, caller.membership.user_id, org_id)  # same sweep as remove_member
     await db.commit()
     return {"left_org": org_id}
 
@@ -2789,7 +2798,13 @@ async def create_agent(
 ) -> dict:
     """Mint (or ROTATE) an agent token: a member identity for a machine caller, with its own cap, tool
     ACL and audit trail. Re-POSTing the same name rotates the token — the previous one dies here, the
-    same instant-revocation idiom as the public token. Admin+; only an owner may mint an admin agent."""
+    same instant-revocation idiom as the public token. Admin+; only an owner may mint an admin agent.
+
+    On a ROTATE, a field the caller did not send is LEFT AS IT IS — a rotate replaces the token, never
+    the agent's limits. Reading an absent field as its default would silently widen a scoped agent to
+    every tool (`tool_access=None`), to unlimited calls (`daily_call_cap=-1`) and back to local runs
+    (`local_run_enabled=True`) — the dashboard's Rotate button sends only {name, role, cap}, so this
+    would fire on the ordinary path. Same shape `set_member_access` already uses for `project_access`."""
     _require_admin_of(org_id, caller)
     name = (body.name or "").strip()
     if not name or not _slugify(name):
@@ -2802,7 +2817,6 @@ async def create_agent(
         raise HTTPException(status_code=403, detail="only an owner can create an admin agent")
     if body.daily_call_cap < -1:
         raise HTTPException(status_code=422, detail="daily_call_cap must be -1 (unlimited) or >= 0")
-    tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
 
     email = _agent_email(caller.org, name)
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
@@ -2813,20 +2827,30 @@ async def create_agent(
     token = crypto.new_token()
     membership = (await db.execute(select(Membership).where(
         Membership.user_id == user.id, Membership.org_id == org_id))).scalar_one_or_none()
-    if membership is None:
+    # A brand-new agent takes the defaults; a rotate keeps whatever it already had unless told otherwise.
+    is_new = membership is None
+    sent = body.model_fields_set
+
+    def _keep(field: str, current):
+        return getattr(body, field) if (is_new or field in sent) else current
+
+    if is_new:
         membership = Membership(user_id=user.id, org_id=org_id, role=body.role,
                                 token_hash=crypto.hash_token(token))
         db.add(membership)
     else:
         membership.token_hash = crypto.hash_token(token)  # rotate: the previous token dies here
-        membership.role = body.role
-    membership.daily_call_cap = body.daily_call_cap
-    membership.tool_access = tool_access
-    membership.local_run_enabled = body.local_run_enabled
+        membership.role = _keep("role", membership.role)
+    membership.daily_call_cap = _keep("daily_call_cap", membership.daily_call_cap)
+    if is_new or "tool_access" in sent:  # only re-validate what the caller actually sent
+        membership.tool_access = _normalize_tool_access(
+            body.tool_access, await _known_access_names(org_id, db))
+    membership.local_run_enabled = _keep("local_run_enabled", membership.local_run_enabled)
     await db.commit()
     return {"token": token, "name": name, "email": email, "org": caller.org.slug, "user_id": user.id,
-            "role": body.role, "daily_call_cap": body.daily_call_cap, "tool_access": tool_access,
-            "local_run_enabled": body.local_run_enabled,
+            "role": membership.role, "daily_call_cap": membership.daily_call_cap,
+            "tool_access": membership.tool_access, "project_access": membership.project_access,
+            "local_run_enabled": membership.local_run_enabled,
             "note": "save this token now — it is shown once; POST the same name again to rotate it"}
 
 
@@ -2870,6 +2894,7 @@ async def revoke_agent(
         raise HTTPException(status_code=404, detail="unknown agent")
     email = user.email  # read before the delete — the row is expired after commit
     await db.delete(membership)
+    await _drop_member_deny_rules(db, user_id, org_id)  # a rule aimed at a caller that no longer exists
     await db.flush()
     # The identity is org-scoped, so once its last membership is gone the User row has no purpose.
     if (await db.execute(select(Membership).where(
@@ -2982,7 +3007,11 @@ async def delete_project(
 ) -> dict:
     """Delete a project. Its tools are NOT deleted — they fall back to org-wide, which is the safe
     direction (a tool that quietly vanished from every listing would be far worse than one that
-    briefly becomes visible to the whole team). Members scoped to it lose that entry."""
+    briefly becomes visible to the whole team). Members scoped to it lose that entry.
+
+    The freed tools are what keeps a scoped member from being locked out: they were the member's only
+    tools and they are now org-wide, so the member keeps exactly what they had. The scope list itself
+    must NOT be widened to do that (see below)."""
     _require_admin_of(org_id, caller)
     project = await db.get(Project, project_id)
     if project is None or project.org_id != org_id:  # 404 across orgs — never confirm another org's ids
@@ -2993,10 +3022,11 @@ async def delete_project(
         freed += 1
     for m in (await db.execute(select(Membership).where(Membership.org_id == org_id))).scalars().all():
         if m.project_access and project_id in m.project_access:
-            remaining = [p for p in m.project_access if p != project_id]
-            # An empty list would mean "no projects at all" — treat it as "unscoped" instead of
-            # silently locking the member out of every tool in the team.
-            m.project_access = remaining or None
+            # Store the remaining ids AS THEY ARE, empty list included. Collapsing `[]` to NULL here
+            # would read as "every project" and hand a member scoped to only this project access to
+            # every OTHER project's tools — a privilege escalation triggered by an unrelated delete.
+            # `[]` is already the right meaning: org-wide tools only, which now include the freed ones.
+            m.project_access = [p for p in m.project_access if p != project_id]
     await db.delete(project)
     await db.commit()
     return {"deleted": project_id, "tools_made_org_wide": freed}
@@ -3012,6 +3042,28 @@ class DenyRuleIn(BaseModel):
     method: str = ""
     user_id: int | None = None  # None = the whole org; set = only that member/agent
     note: str = ""
+
+
+async def _drop_member_deny_rules(db: AsyncSession, user_id: int, org_id: int | None = None) -> int:
+    """Delete the member-scoped rules that named a member/agent who is going away — the caller they
+    were written for no longer exists, so the rule can never fire again. Left behind, they show up in
+    the Policy table as a row naming a user id the team can no longer see or clean up. Mirrors how
+    `delete_project` sweeps the id it deletes out of every `project_access`.
+
+    `org_id` set = that org only (the member left THIS team but may still be in others). `org_id`
+    None = every org, for when the USER row itself is deleted — `DenyRule.user_id` is a foreign key,
+    so a surviving rule would dangle, which Postgres rejects outright (SQLite does not enforce it by
+    default, which is why only a real deployment would have shown this).
+
+    ORG-wide rules (`user_id` NULL) are untouched: they are about the team, not about one caller.
+    The caller commits — this only stages the deletes, so it composes with the removal itself."""
+    q = select(DenyRule).where(DenyRule.user_id == user_id)
+    if org_id is not None:
+        q = q.where(DenyRule.org_id == org_id)
+    stale = (await db.execute(q)).scalars().all()
+    for rule in stale:
+        await db.delete(rule)
+    return len(stale)
 
 
 def _deny_view(r: DenyRule) -> dict:
@@ -4931,6 +4983,9 @@ async def admin_delete_user(
             # Deleting the sole owner would leave an ungovernable org (no one can pass _require_owner_of).
             # Promote the earliest-joined survivor so ownership never evaporates.
             survivors[0].role = "owner"
+    # The USER row is about to go, so member-scoped rules must go from EVERY org — `DenyRule.user_id`
+    # is a foreign key, and a surviving row would dangle (a hard error on Postgres).
+    await _drop_member_deny_rules(db, user_id)
     await db.delete(user)
     await db.commit()
     return {"deleted_user": user_id, "deleted_empty_orgs": emptied}
@@ -4984,12 +5039,10 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
             host = urlsplit(norm).netloc.lower()
         except ValueError:  # malformed passthrough URL (e.g. unbalanced IPv6 brackets) → 400, not 500
             raise HTTPException(status_code=400, detail="malformed upstream URL")
-        candidates = [
-            t for t in (await db.execute(
-                select(Tool).where(Tool.host == host, Tool.org_id == org_id)
-            )).scalars().all()
-            if _tool_usable(caller, t)  # a tool the caller can't use can't 409 them either
-        ]
+        on_host = (await db.execute(
+            select(Tool).where(Tool.host == host, Tool.org_id == org_id)
+        )).scalars().all()
+        candidates = [t for t in on_host if _tool_usable(caller, t)]  # can't use it → can't 409 on it
         # Match on a path-segment boundary, not a raw string prefix: base `.../v2` must NOT match
         # request `.../v20/...` (that would inject v2's credential onto an unregistered sibling path).
         def _prefix_match(base: str) -> bool:
@@ -4998,6 +5051,14 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
 
         matches = [t for t in candidates if _prefix_match(t.base_url)]
         if not matches:
+            # Tell "no such tool" and "not yours to use" apart. If the ACL filter above is the ONLY
+            # reason nothing matched, this is a 403 like the named shape would give — a 404 here
+            # would send an admin hunting for a registration that already exists. The message names
+            # the HOST the caller already typed, never the internal tool name the ACL hides.
+            if any(_prefix_match(t.base_url) for t in on_host):
+                raise HTTPException(status_code=403, detail=(
+                    f"you don't have access to the registered tool for {host!r} in this team — an "
+                    "admin can grant it (dashboard → Team, or `treg org access <you> …`)"))
             raise HTTPException(status_code=404, detail=f"no registered tool for upstream {host!r}")
         # Tiebreak on the NORMALIZED length so `.../v1` and `.../v1/` count equal (a real 409), not
         # one silently "longer" than the other.

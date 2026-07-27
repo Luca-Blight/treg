@@ -66,7 +66,12 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   email or password. `lifespan` calls `_bootstrap_single_user()`, which idempotently creates the
   `you@local.treg` owner + `personal` team and writes the token (0600) for the installer to hand to the
   CLI; the token is **stable across restarts** (re-minted only if the file is deleted), and `dashboard()`
-  attaches a session when there is none. Gated by **`single_user_ok`**, which mirrors `expose_dev_code`:
+  attaches a session when there is none. It adopts an org **only through a membership this identity
+  already has** — never by looking one up by the slug `personal`. On a database that is not fresh (a
+  restored dump, a hosted registry run locally) that lookup joined a team belonging to someone else **as
+  owner**, and an owner is exempt from every ACL (round-4 finding #5). A new team therefore takes a free
+  slug via `_unique_slug` (`personal-2`, …) instead of colliding; a fresh box still gets the clean name.
+  Gated by **`single_user_ok`**, which mirrors `expose_dev_code`:
   it demands a **local sqlite** DB **and** a **loopback `public_url`**, so a stray `TREG_SINGLE_USER=true`
   on a real deploy does nothing. A no-login dashboard on a public host would hand over the whole registry.
 - `github_client_id` / `github_client_secret` / `session_secret` — GitHub OAuth login for the dashboard

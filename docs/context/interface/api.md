@@ -59,11 +59,15 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   [multi-tenancy](../architecture/multi-tenancy.md).
 - **Agents (machine identities):** `create_agent` (`POST /orgs/{id}/agents`, admin+) mints/rotates a
   member token for a machine caller — its own `daily_call_cap`, `tool_access` and audit trail, with no
-  new table; `list_agents` (`GET`, never returns a token) and `revoke_agent` (`DELETE …/{user_id}`).
-  An agent token is refused by `require_identity` and can never be an owner. See
+  new table; `list_agents` (`GET`, never returns a token) and `revoke_agent` (`DELETE …/{user_id}`,
+  which also sweeps the deny rules aimed at that agent). An agent token is refused by
+  `require_identity` and can never be an owner. **Re-POSTing the same name ROTATES, and a field the
+  caller omits is left as it is** — a rotate changes the token, never the limits. See
   [multi-tenancy](../architecture/multi-tenancy.md).
 - **Projects (a sub-scope inside the org):** `create_project` / `list_projects` /
-  `delete_project` (`/orgs/{id}/projects`, admin+ to mutate). `POST /tools` and `PATCH /tools/{id}`
+  `delete_project` (`/orgs/{id}/projects`, admin+ to mutate) — deleting frees its tools to org-wide and
+  removes the id from every member's `project_access`, leaving an emptied list as `[]` (NULL would mean
+  *every* project). `POST /tools` and `PATCH /tools/{id}`
   take `project` (slug or id; null = org-wide), and `set_member_access` / `create_invite` take
   `project_access`. See [multi-tenancy](../architecture/multi-tenancy.md).
 - **Deny rules (org policy):** `create_deny_rule` (`POST /orgs/{id}/deny`, admin+) blocks a
