@@ -1192,13 +1192,44 @@ th{background:rgba(0,0,0,.25)}
           </div>
           <!-- settings for the ACTIVE team (switching lives in the sidebar) -->
           <div v-if="activeOrg" style="margin-top:20px">
-            <p v-if="!canAdmin" class="sub" style="margin-bottom:12px">Members, projects and policy are visible to admins.</p>
-            <div v-if="canAdmin" class="tabs" style="margin:4px 0 16px">
-              <button :class="{active:orgTab==='members'}" @click="orgTab='members'">Members</button>
-              <button :class="{active:orgTab==='projects'}" @click="orgTab='projects'">Projects</button>
-              <button :class="{active:orgTab==='policy'}" @click="orgTab='policy'">Policy</button>
-              <button :class="{active:orgTab==='danger'}" @click="orgTab='danger'">Team settings</button>
+            <div class="tabs" style="margin:4px 0 16px">
+              <button v-if="canAdmin" :class="{active:orgTab==='members'}" @click="orgTab='members'">Members</button>
+              <button :class="{active:orgTab==='teams'}" @click="orgTab='teams'">My teams</button>
+              <button v-if="canAdmin" :class="{active:orgTab==='projects'}" @click="orgTab='projects'">Projects</button>
+              <button v-if="canAdmin" :class="{active:orgTab==='policy'}" @click="orgTab='policy'">Policy</button>
+              <button v-if="canAdmin" :class="{active:orgTab==='danger'}" @click="orgTab='danger'">Team settings</button>
             </div>
+            <p v-if="!canAdmin && orgTab!=='teams'" class="sub" style="margin-bottom:12px">Members, projects and policy are visible to admins.</p>
+
+            <!-- MY TEAMS: the sidebar picker as a real page — every team you belong to, in one table -->
+            <template v-if="orgTab==='teams'">
+              <div class="lbl" style="margin-top:14px;display:flex;align-items:center;gap:10px">Your teams
+                <button v-if="sessionMode" class="btn sm" @click="newOrg=true; newOrgName=''">＋ New team</button>
+                <button v-if="sessionMode" class="btn sm" @click="showJoin=true; joinCode=''; joinErr=''">⤷ Join by code</button>
+                <button v-if="!sessionMode" class="btn sm" @click="addOrg=true">＋ Add team (paste token)</button>
+              </div>
+              <p class="sub" style="margin:-2px 0 8px;font-size:12px">A team owns its own tools, secrets and members. Switching here changes what the whole dashboard shows — the same as the picker at the top of the sidebar.</p>
+              <table>
+                <tr><th>Team</th><th>Your role</th><th style="text-align:right">Tools</th><th></th></tr>
+                <tr v-for="o in myOrgs" :key="o.slug">
+                  <td>
+                    <b>{{o.name}}</b>
+                    <span v-if="o.slug===activeSlugNow" class="chip ok" style="margin-left:8px">active</span>
+                    <span v-if="isPersonal(o)" class="chip" style="margin-left:6px">personal</span>
+                    <span v-if="o.demo" class="chip demo" style="margin-left:6px">demo</span>
+                    <div class="muted" style="font-size:11px;font-family:var(--mono)">{{o.slug}}</div>
+                  </td>
+                  <td><span class="role" :class="o.role">{{o.role}}</span></td>
+                  <td style="text-align:right" class="muted">{{o.tool_count}}</td>
+                  <td style="text-align:right;white-space:nowrap">
+                    <button v-if="o.slug!==activeSlugNow && (sessionMode || connected(o.slug))" class="btn sm" @click="switchTo(o)">Switch to</button>
+                    <button v-else-if="o.slug!==activeSlugNow" class="btn sm" @click="addOrg=true">Paste token</button>
+                    <button v-else class="btn sm" @click="orgTab='danger'">Settings</button>
+                  </td>
+                </tr>
+              </table>
+              <p class="sub" style="margin-top:10px;font-size:12px">To leave or delete a team, switch to it and open <b>Team settings</b>.</p>
+            </template>
             <p v-if="myUsage && myUsage.cap>=0" class="sub" style="margin:-6px 0 12px">Your usage today: <b>{{myUsage.used_today}} / {{myUsage.cap}}</b> calls.</p>
             <div v-if="orgErr" class="banner">{{orgErr}}</div>
 
@@ -2226,7 +2257,7 @@ createApp({
       orgMembers:[], orgInvites:[], inviteEmail:'', inviteRole:'member', lastInvite:null,
       editAccess:null, accessDraft:{}, inviteCustomize:false, inviteLocalRun:true, inviteToolSel:{}, accessNote:'',
       // agents (machine identities), projects (sub-scope) and deny rules (policy)
-      orgTab:'members', showInvite:false,   // Team page tabs; invites live inside Members
+      orgTab:'members', showInvite:false,   // Team page tabs; invites live inside Members (a non-admin is moved to 'teams' on open)
       agentSnip:'env',   // which paste-ready snippet the new-agent card shows
       agents:[], agentName:'', agentRole:'member', agentCap:-1, agentBusy:false, agentErr:'',
       newAgent:null, confirmAgent:null,
@@ -2691,6 +2722,7 @@ createApp({
         this.newOrg=false; this.newOrgName=''; await this.loadAll(); this.switchOrg({slug:o.org}); }
       catch(e){ this.orgErr='Could not create: '+(e.detail||e.status); } finally{ this.orgBusy=false; } },
     async loadOrgAdmin(){ this.orgMembers=[]; this.orgInvites=[]; this.lastInvite=null;
+      if(!this.canAdmin) this.orgTab='teams';  // the only tab a plain member can act on
       this.orgErr=''; this.confirmDel=''; this.confirmLeave=false; this.confirmRemove=null;
       if(!this.canAdmin || !this.activeOrgId) return; const id=this.activeOrgId;
       try{ this.orgMembers=await this.api('/orgs/'+id+'/members'); this.orgInvites=await this.api('/orgs/'+id+'/invites');
