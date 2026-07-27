@@ -46,14 +46,80 @@ from . import audit, crypto, demo as demo_seed, email as email_sender, health, i
 from . import oauth_providers
 from . import pubfeed, ratestore, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings
-from .db import get_session, init_db
-from .models import ROLE_RANK, Bundle, CallRecord, Invite, Membership, Org, PendingOAuth, RunRecord, Secret, Tool, User
+from .db import get_session, init_db, session_maker
+from .models import ROLE_RANK, Bundle, CallRecord, DenyRule, Invite, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User
 from .proxy import relay
+
+
+LOCAL_USER_EMAIL = "you@local.treg"   # the single-user identity; a real address is never needed
+LOCAL_ORG_NAME = "personal"
+
+
+async def _bootstrap_single_user() -> None:
+    """Frictionless local mode: make the machine's owner exist, so `curl … | sh` lands on a dashboard
+    that is already signed in — no account, no email, no password.
+
+    Idempotent, and the token is STABLE across restarts (rotating it every boot would break the CLI
+    config the installer just wrote). It is re-minted only when the token file is missing, i.e. the
+    user deleted it and needs a new one. Gated by `single_user_ok`, which refuses anything that isn't
+    a local sqlite box — see config.Settings.
+    """
+    s = get_settings()
+    if not s.single_user_ok:
+        return
+    path = Path(s.single_user_token_file).expanduser()
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == LOCAL_USER_EMAIL))).scalar_one_or_none()
+        if user is None:
+            user = User(email=LOCAL_USER_EMAIL, onboarded=True)
+            db.add(user)
+            await db.flush()
+        # Adopt an org ONLY through a membership this identity already has. Looking one up by the
+        # slug `personal` and joining it as owner would, on a database that is not fresh, hand the
+        # password-less local identity ownership of a team that belongs to someone else — and an
+        # owner is exempt from every ACL. A new team therefore takes a FREE slug (`personal-2`, …)
+        # rather than colliding with whatever already holds `personal`.
+        membership = (await db.execute(
+            select(Membership).where(Membership.user_id == user.id).order_by(Membership.id)
+        )).scalars().first()
+        token = ""
+        if membership is None:
+            org = Org(name=LOCAL_ORG_NAME.title(), slug=await _unique_slug(LOCAL_ORG_NAME, db))
+            db.add(org)
+            await db.flush()
+            token = crypto.new_token()  # first boot
+            membership = Membership(user_id=user.id, org_id=org.id, role="owner",
+                                    token_hash=crypto.hash_token(token))
+            db.add(membership)
+        else:
+            org = await db.get(Org, membership.org_id)
+            if not path.exists():
+                token = crypto.new_token()  # the token file was removed — mint a replacement
+                membership.token_hash = crypto.hash_token(token)
+        team = org.slug if org is not None else LOCAL_ORG_NAME
+        await db.commit()
+    if token:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(token)
+        path.chmod(0o600)  # the installer reads it; nobody else should
+    shown = token or "(unchanged — see " + str(path) + ")"
+    print(f"\n  treg is ready — no account needed."
+          f"\n  Dashboard  {s.public_url}/app"
+          f"\n  Team       {team}"
+          f"\n  Token      {shown}\n", flush=True)
+
+
+async def _local_owner(db: AsyncSession) -> User | None:
+    """The single-user identity, if this deployment is in that mode."""
+    if not get_settings().single_user_ok:
+        return None
+    return (await db.execute(select(User).where(User.email == LOCAL_USER_EMAIL))).scalar_one_or_none()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await _bootstrap_single_user()
     # One long-lived client for ALL upstream calls (rule 1: keepalive). The pool reuses
     # TCP+TLS connections across requests — the single biggest latency win for a relay.
     limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
@@ -770,6 +836,8 @@ async def auth_email_start(
     email = _norm_email(body.email)
     if email.endswith("@" + demo_seed.DEMO_DOMAIN):  # fake onboarding teammates are roster-only — never a login
         raise HTTPException(status_code=400, detail="that's a demo address — pick a real email")
+    if _is_machine_email(email):  # agents / the public token act by token only — same rule, said early
+        raise HTTPException(status_code=403, detail="this address cannot be used to sign in")
     await ratestore.sweep(db, OTP_START_NS)  # bound the namespace before we add to it
     if not await ratestore.rate_check(
         db, OTP_START_NS,
@@ -948,16 +1016,33 @@ async def landing(request: Request, treg_session: str = Cookie(default=""),
         if treg_session and await _user_from_session(treg_session, db):
             return RedirectResponse("/app", status_code=302)
         return FileResponse(page, headers={"Cache-Control": "no-cache"})
-    return await dashboard()
+    return await dashboard(request, treg_session, db)
 
 
 @app.get("/app", include_in_schema=False)
-async def dashboard():
-    """Serve the single-file dashboard (same-origin, so it calls this API directly)."""
+async def dashboard(
+    request: Request, treg_session: str = Cookie(default=""),
+    db: AsyncSession = Depends(get_session),
+):
+    """Serve the single-file dashboard (same-origin, so it calls this API directly).
+
+    In frictionless local mode the dashboard opens ALREADY SIGNED IN: with no valid session we
+    attach one for the machine's single user, so `curl … | sh` reaches a working dashboard without
+    an account. Only reachable when `single_user_ok` holds (local sqlite + loopback URL), so this
+    can never hand a session to a stranger on a real deploy.
+    """
     index = _WEB_DIR / "index.html"
     if not index.exists():
         return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
-    return FileResponse(index, headers={"Cache-Control": "no-cache"})
+    resp = FileResponse(index, headers={"Cache-Control": "no-cache"})
+    if not await _user_from_session(treg_session, db):
+        owner = await _local_owner(db)
+        if owner is not None:
+            resp.set_cookie(sess.COOKIE, sess.make(owner.id, token_version=owner.token_version),
+                            httponly=True, samesite="lax",
+                            secure=_is_https(request),
+                            max_age=sess.TTL_SECONDS)
+    return resp
 
 
 def _spa_with_og(kind: str, name: str):
@@ -982,10 +1067,13 @@ def _spa_with_og(kind: str, name: str):
 
 
 @app.get("/app/marketplace/{service}", include_in_schema=False)
-async def dashboard_marketplace(service: str):  # noqa: ARG001 — the SPA reads the path itself
+async def dashboard_marketplace(
+    service: str, request: Request, treg_session: str = Cookie(default=""),  # noqa: ARG001 — the SPA reads the path itself
+    db: AsyncSession = Depends(get_session),
+):
     """One integration's page. Served as the plain SPA: unlike /app/skills/<x> there is no og meta
     to add, because a marketplace page is only meaningful to a signed-in member of the org."""
-    return await dashboard()
+    return await dashboard(request, treg_session, db)
 
 
 @app.get("/app/skills/{name}", include_in_schema=False)
@@ -1020,6 +1108,21 @@ async def install_sh():
         raise HTTPException(status_code=404, detail="install.sh not bundled")
     base = get_settings().public_url.rstrip("/")
     return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base), media_type="text/x-shellscript; charset=utf-8")
+
+
+@app.get("/selfhost.sh", include_in_schema=False)
+async def selfhost_sh():
+    """`curl -fsSL {BASE}/selfhost.sh | sh` — run your OWN registry locally, with no account.
+
+    Different from install.sh, which only installs the CLI and points it at THIS server. This one
+    brings up a server on the caller's machine in single-user mode, so they land on a dashboard that
+    is already signed in. Value first, account later."""
+    f = _WEB_DIR / "selfhost.sh"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="selfhost.sh not bundled")
+    base = get_settings().public_url.rstrip("/")
+    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base),
+                             media_type="text/x-shellscript; charset=utf-8")
 
 
 def _serve_md(name: str) -> PlainTextResponse:
@@ -1214,6 +1317,13 @@ async def require_identity(
                 raise HTTPException(status_code=403, detail=(
                     "this is a public demo token — it can only call the demo team's tools"))
         user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
+        # A machine token must never act as a USER. `create_org` depends on THIS dependency, so an
+        # agent could otherwise create a fresh org in which it is the OWNER — and owners are exempt
+        # from `_require_tool_access` and `_require_local_run`, escaping every limit set on it.
+        if user is not None and _is_machine_email(user.email):
+            raise HTTPException(status_code=403, detail=(
+                "this token belongs to a machine identity — it can call this team's tools, "
+                "but cannot act as a user"))
         if user is not None and not user.suspended:
             return user
         raise HTTPException(status_code=401, detail="invalid token")
@@ -1348,7 +1458,7 @@ async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
 
 async def _cascade_delete_org(org: Org, db: AsyncSession) -> None:
     """Delete every org-scoped row then the org. Shared by owner delete_org + admin force-delete."""
-    for model in (Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, Membership):
+    for model in (Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project, Membership):
         for r in (await db.execute(select(model).where(model.org_id == org.id))).scalars().all():
             await db.delete(r)
     await db.delete(org)
@@ -1386,6 +1496,88 @@ def _require_tool_access(caller: Caller, tool_name: str) -> None:
             "(dashboard → Team, or `treg org access <you> --tools …`)"))
 
 
+def _project_allowed(caller: Caller, tool: Tool) -> bool:
+    """Per-member PROJECT scope, the coarse dial above the per-tool one.
+
+    NULL `project_access` = the whole org (the default, so nothing changed when projects landed), and a
+    tool with NULL `project_id` is ORG-WIDE and always in scope — which is every tool that existed
+    before projects. Owner is never restricted, matching `_tool_allowed`. Pure: `project_access` holds
+    project IDs, so this is a set test with no query, even on the proxy's hot path."""
+    if caller.role == "owner":
+        return True
+    access = caller.membership.project_access
+    return access is None or tool.project_id is None or tool.project_id in access
+
+
+def _tool_usable(caller: Caller, tool: Tool) -> bool:
+    """The two ACL axes compose as AND: the project scope AND the per-tool list must both allow it.
+    `project_access=[X]` with `tool_access=NULL` therefore means "every tool in project X, including
+    ones added later" — the composition that makes the coarse dial useful on its own."""
+    return _tool_allowed(caller, tool.name) and _project_allowed(caller, tool)
+
+
+def _require_tool_use(caller: Caller, tool: Tool) -> None:
+    """Gate any use of a tool (proxy call + both run tiers) on BOTH ACL axes."""
+    _require_tool_access(caller, tool.name)
+    if not _project_allowed(caller, tool):
+        raise HTTPException(status_code=403, detail=(
+            f"the tool {tool.name!r} belongs to a project you're not scoped to — an admin can grant it "
+            "(dashboard → Team, or `treg org access <you> --projects …`)"))
+
+
+def _deny_match(rules: list[DenyRule], host: str, path: str, method: str) -> DenyRule | None:
+    """The FIRST rule that matches — pure, so it unit-tests without a DB (like `localrun.check_deny`).
+
+    An empty field on a rule means "any", so `{method: "DELETE"}` blocks every delete and
+    `{host: "api.stripe.com"}` blocks that upstream entirely. Host is compared case-insensitively;
+    the path match is a prefix, anchored at `/` so `/v1/charges` cannot be dodged by `/v1/chargesX`.
+    """
+    host, method = host.lower(), method.upper()
+    path = path or "/"
+    for r in rules:
+        if r.host and r.host.lower() != host:
+            continue
+        if r.method and r.method.upper() != method:
+            continue
+        if r.path_prefix:
+            p = (r.path_prefix if r.path_prefix.startswith("/") else "/" + r.path_prefix).rstrip("/")
+            # Anchored at a segment boundary: `/v1/charges` must NOT match `/v1/chargesX`.
+            if not (path == p or path.startswith(p + "/")):
+                continue
+        return r
+    return None
+
+
+async def _org_deny_rules(caller: Caller, db: AsyncSession) -> list[DenyRule]:
+    """This caller's applicable rules: the org-wide ones plus the ones aimed at them specifically."""
+    return list((await db.execute(select(DenyRule).where(
+        DenyRule.org_id == caller.org_id,
+        or_(DenyRule.user_id.is_(None), DenyRule.user_id == caller.membership.user_id),
+    ))).scalars().all())
+
+
+async def _enforce_deny(caller: Caller, url: str, method: str, db: AsyncSession) -> None:
+    """Block a call the org's policy forbids. Deliberately applies to EVERY role including owner: a
+    deny rule is a guardrail, not a permission tier — an owner who disagrees deletes the rule rather
+    than quietly bypassing it. The refusal names the rule, mirroring `localrun.check_deny`'s
+    "a refusal can name its source"."""
+    rules = await _org_deny_rules(caller, db)
+    if not rules:
+        return  # the common path costs one indexed query and nothing else
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return
+    rule = _deny_match(rules, parts.netloc, parts.path, method)
+    if rule is None:
+        return
+    why = f" ({rule.note})" if rule.note else ""
+    scope = "this team" if rule.user_id is None else "you"
+    raise HTTPException(status_code=403, detail=(
+        f"blocked by a policy rule on {scope}{why} — "
+        f"{rule.method or 'any'} {rule.host or 'any host'}{rule.path_prefix or ''}"))
+
+
 async def _visible_secret_ids(caller: Caller, db: AsyncSession) -> set[int] | None:
     """The secret ids a tool-restricted member may SEE: the ones wired into their allowed tools
     (HTTP bindings + cli.inject). None = unrestricted (owner / NULL tool_access) — show all. The
@@ -1395,7 +1587,7 @@ async def _visible_secret_ids(caller: Caller, db: AsyncSession) -> set[int] | No
     tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
     ids: set[int] = set()
     for t in tools:
-        if not _tool_allowed(caller, t.name):
+        if not _tool_usable(caller, t):
             continue
         ids |= {b.get("secret_id") for b in (t.bindings or []) if b.get("secret_id") is not None}
         ids |= {e.get("secret_id") for e in ((t.cli or {}).get("inject") or []) if e.get("secret_id") is not None}
@@ -1427,6 +1619,7 @@ class InviteIn(BaseModel):
     # Access to seed onto the membership on accept: tool_access None = all tools, a list = the allowed
     # tool names; local_run may be turned off. Both default to the unrestricted state.
     tool_access: list[str] | None = None
+    project_access: list[str | int] | None = None  # None = the whole org; slugs/ids = the scoped set
     local_run_enabled: bool = True
     landing: str | None = None  # a shared detail page ("/app/skills/<name>") to land on after sign-in
 
@@ -1452,6 +1645,9 @@ class CapIn(BaseModel):
 class AccessIn(BaseModel):
     # tool_access: None = all tools (clear the restriction); a list = the ONLY tool names allowed.
     tool_access: list[str] | None = None
+    # project_access: None = the whole org; a list of project SLUGS or IDS = the only projects allowed.
+    # Accepts slugs because that's the human handle; stored as ids (see _normalize_project_access).
+    project_access: list[str | int] | None = None
     local_run_enabled: bool = True
 
 
@@ -1484,6 +1680,7 @@ class ToolIn(BaseModel):
     health_check: dict | None = None  # {method, path, expect_status}
     examples: list[dict] | None = None  # [{method, path, note}]
     cli: dict | None = None  # local-run profile for `treg run` (docs/CLI-RUN-PLAN.md)
+    project: str | int | None = None  # project slug or id; None = org-wide (the default)
 
 
 class ToolUpdate(BaseModel):
@@ -1492,6 +1689,7 @@ class ToolUpdate(BaseModel):
     health_check: dict | None = None
     examples: list[dict] | None = None
     cli: dict | None = None  # set/replace the local-run profile; explicit null clears it
+    project: str | int | None = None  # move between projects; explicit null makes it org-wide
 
 
 class GrantIn(BaseModel):
@@ -1637,6 +1835,12 @@ async def _find_or_create_user(db: AsyncSession, email: str) -> User:
     token is user-scoped, so it works before they have any org (org chosen per-request via X-Treg-Org).
     Caller commits."""
     email = _norm_email(email)
+    # Machine identities (agents, the published demo token) are minted by an admin and act ONLY by
+    # their token. This is the single choke point every identity door shares, so blocking here means
+    # no door — GitHub, Google, email OTP, invite sign-in — can hand a human an agent's identity.
+    # (The domains are unroutable, so a code could never be delivered anyway; this makes it explicit.)
+    if _is_machine_email(email):
+        raise HTTPException(status_code=403, detail="this address cannot be used to sign in")
     user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if user is None:
         user = User(email=email)
@@ -1653,6 +1857,10 @@ async def _find_or_create_user(db: AsyncSession, email: str) -> User:
 @app.post("/users")
 async def register_user(body: UserIn, db: AsyncSession = Depends(get_session)) -> dict:
     email = _norm_email(body.email)
+    # This door creates a User directly (it predates `_find_or_create_user`), so it needs the same
+    # machine-domain block — otherwise open registration could squat an agent address.
+    if _is_machine_email(email):
+        raise HTTPException(status_code=403, detail="this address cannot be used to sign in")
     if body.webhook_url and not health.safe_webhook_url(body.webhook_url):  # SSRF guard on the alert URL
         raise HTTPException(status_code=422, detail="webhook_url must be a public http(s) URL")
     if (await db.execute(select(User).where(User.email == email))).scalar_one_or_none():
@@ -1798,6 +2006,7 @@ async def create_invite(
     days = max(1, min(body.expires_days, 3650))  # clamp BOTH ends — a huge value overflows datetime → 500
     expires_at = _utcnow_naive() + timedelta(days=days)
     tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
+    project_access = await _normalize_project_access(body.project_access, org_id, db)
     if body.landing is not None and not _LANDING_RE.match(body.landing):
         raise HTTPException(status_code=422, detail="landing must be a detail path like /app/skills/<name>")
     code = crypto.new_token()
@@ -1809,7 +2018,8 @@ async def create_invite(
         org_id=org_id, email=email, role=body.role,
         code_hash=crypto.hash_token(code), email_token_hash=crypto.hash_token(email_token),
         invited_by=caller.email, expires_at=expires_at,
-        tool_access=tool_access, local_run_enabled=body.local_run_enabled, landing=body.landing,
+        tool_access=tool_access, project_access=project_access,
+        local_run_enabled=body.local_run_enabled, landing=body.landing,
     )
     db.add(invite)
     await db.commit()
@@ -1864,7 +2074,8 @@ async def accept_invite(body: AcceptIn, db: AsyncSession = Depends(get_session))
         raise HTTPException(status_code=409, detail="already a member of this org")
     token = crypto.new_token()
     db.add(Membership(user_id=user.id, org_id=invite.org_id, role=invite.role, token_hash=crypto.hash_token(token),
-                      tool_access=invite.tool_access, local_run_enabled=invite.local_run_enabled))
+                      tool_access=invite.tool_access, project_access=invite.project_access,
+                      local_run_enabled=invite.local_run_enabled))
     invite.status = "accepted"
     try:
         await db.commit()  # a concurrent double-accept trips uq_membership_user_org — 409, not 500
@@ -2237,7 +2448,8 @@ async def accept_my_invite(
     token = crypto.new_token()  # return the org-scoped token (was minted-then-discarded → an unusable membership)
     db.add(Membership(
         user_id=user.id, org_id=invite.org_id, role=invite.role, token_hash=crypto.hash_token(token),
-        tool_access=invite.tool_access, local_run_enabled=invite.local_run_enabled,
+        tool_access=invite.tool_access, project_access=invite.project_access,
+        local_run_enabled=invite.local_run_enabled,
     ))
     invite.status = "accepted"
     try:
@@ -2300,7 +2512,10 @@ async def list_members(
         if user is not None:
             out.append({"user_id": user.id, "email": user.email, "role": m.role,
                         "daily_call_cap": m.daily_call_cap, "used_today": used.get(user.email, 0),
-                        "tool_access": m.tool_access, "local_run_enabled": m.local_run_enabled})
+                        "tool_access": m.tool_access, "project_access": m.project_access,
+                        "local_run_enabled": m.local_run_enabled,
+                        # so the dashboard can separate people from machines in one roster
+                        "is_agent": _is_agent_email(user.email)})
     return out
 
 
@@ -2378,9 +2593,15 @@ async def set_member_access(
     if membership.role == "owner":
         raise HTTPException(status_code=403, detail="an owner always has full access; it can't be restricted")
     membership.tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
+    # Only touch the project scope when the caller actually SENT the field. Without this, any client
+    # that PATCHes just tool_access or local_run_enabled (the dashboard's local-run toggle does exactly
+    # that) would silently clear the member's project scoping, because the field defaults to None.
+    if "project_access" in body.model_fields_set:
+        membership.project_access = await _normalize_project_access(body.project_access, org_id, db)
     membership.local_run_enabled = body.local_run_enabled
     await db.commit()
     return {"user_id": user_id, "org_id": org_id, "tool_access": membership.tool_access,
+            "project_access": membership.project_access,
             "local_run_enabled": membership.local_run_enabled}
 
 
@@ -2409,6 +2630,7 @@ async def remove_member(
     if membership.role == "owner":  # only an owner manages owners; an admin cannot remove one
         raise HTTPException(status_code=403, detail="owners cannot be removed")
     await db.delete(membership)  # revokes that user's token for this org
+    await _drop_member_deny_rules(db, user_id, org_id)
     await db.commit()
     return {"removed": user_id}
 
@@ -2428,6 +2650,12 @@ async def set_member_role(
     ).scalar_one_or_none()
     if membership is None:
         raise HTTPException(status_code=404, detail="not a member of this org")
+    if body.role == "owner":
+        # Owners short-circuit `_tool_allowed` and `_require_local_run`, so an owner machine identity
+        # would silently bypass the tool ACL and the local-run gate placed on it.
+        target = await db.get(User, user_id)
+        if target is not None and _is_machine_email(target.email):
+            raise HTTPException(status_code=422, detail="a machine identity cannot be an owner")
     if membership.role == "owner" and body.role != "owner" and await _count_owners(org_id, db) <= 1:
         raise HTTPException(status_code=409, detail="cannot demote the last owner — promote another owner first")
     membership.role = body.role
@@ -2444,6 +2672,7 @@ async def leave_org(
     if caller.role == "owner" and await _count_owners(org_id, db) <= 1:
         raise HTTPException(status_code=409, detail="you are the last owner — transfer ownership or delete the org")
     await db.delete(caller.membership)  # revokes the caller's token for this org
+    await _drop_member_deny_rules(db, caller.membership.user_id, org_id)  # same sweep as remove_member
     await db.commit()
     return {"left_org": org_id}
 
@@ -2461,12 +2690,42 @@ async def delete_org(
     return {"deleted_org": org_id}
 
 
-# ---- public demo token: a publishable, call-only credential for this org -------------------
+# ---- machine identities: the publishable demo token, and agents ----------------------------
+# Both are Users on an UNROUTABLE domain, which is what makes them machines rather than people: no
+# login door can ever resolve one (guarded in `_find_or_create_user`) and neither may act as a USER
+# (guarded in `require_identity`). Everything else they inherit from Membership for free.
 PUBLIC_DEMO_DOMAIN = "public-demo.treg.local"  # unroutable — the public identity can never log in
+# NOTE: "agent" here is an IDENTITY — a coding agent / automation that calls treg. It is NOT the
+# skill-directory table in `agents.py` (which answers "where does each coding agent keep its skills").
+# The words collide, the concepts don't; kept apart deliberately.
+AGENT_DOMAIN = "agents.treg.local"  # unroutable — an agent acts only by its token
+
+
+def _is_agent_email(email: str) -> bool:
+    return _norm_email(email).endswith(f"@{AGENT_DOMAIN}")
+
+
+def _is_machine_email(email: str) -> bool:
+    """An identity minted by an admin for a machine — never a person who can sign in."""
+    return _is_agent_email(email) or _norm_email(email).endswith(f"@{PUBLIC_DEMO_DOMAIN}")
 
 
 def _public_demo_email(org: Org) -> str:
     return f"pub-{org.slug}@{PUBLIC_DEMO_DOMAIN}"
+
+
+def _agent_email(org: Org, name: str) -> str:
+    """Org-SCOPED on purpose: two orgs must each be able to own an agent called `deploy` without
+    sharing one User row (`User.email` is unique). Sharing would mean a superadmin suspending or
+    deleting one tenant's agent silently killed the other tenant's too."""
+    return f"agent-{org.slug}-{_slugify(name)}@{AGENT_DOMAIN}"
+
+
+def _agent_name(org: Org, email: str) -> str:
+    """The friendly name back out of the address (the name isn't stored — the address IS the id)."""
+    local = email.split("@", 1)[0]
+    prefix = f"agent-{org.slug}-"
+    return local[len(prefix):] if local.startswith(prefix) else local
 
 
 @app.post("/orgs/{org_id}/public-token")
@@ -2516,6 +2775,358 @@ async def delete_public_token(
     org.public_demo = False
     await db.commit()
     return {"public_token_revoked": True, "org": org.slug}
+
+
+# ---- agents: a member identity for a machine caller ----------------------------------------
+# An agent is JUST a Membership whose user lives on AGENT_DOMAIN, which is why this needs no new
+# table and no migration: it inherits every per-member control already in place — `daily_call_cap`
+# (enforced by `_enforce_daily_cap`), `tool_access` (`_require_tool_access`, on the proxy AND both run
+# tiers), `local_run_enabled`, and per-identity audit, since `CallRecord.user_email` already stamps
+# every call. Giving the agent its own identity is what makes all of that per-agent.
+class AgentIn(BaseModel):
+    name: str
+    role: str = "member"  # never "owner" (see below); "admin" is owner-granted only
+    daily_call_cap: int = -1  # -1 = unlimited, mirroring set_member_cap
+    tool_access: list[str] | None = None  # None = every tool, mirroring set_member_access
+    local_run_enabled: bool = True
+
+
+@app.post("/orgs/{org_id}/agents")
+async def create_agent(
+    org_id: int, body: AgentIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Mint (or ROTATE) an agent token: a member identity for a machine caller, with its own cap, tool
+    ACL and audit trail. Re-POSTing the same name rotates the token — the previous one dies here, the
+    same instant-revocation idiom as the public token. Admin+; only an owner may mint an admin agent.
+
+    On a ROTATE, a field the caller did not send is LEFT AS IT IS — a rotate replaces the token, never
+    the agent's limits. Reading an absent field as its default would silently widen a scoped agent to
+    every tool (`tool_access=None`), to unlimited calls (`daily_call_cap=-1`) and back to local runs
+    (`local_run_enabled=True`) — the dashboard's Rotate button sends only {name, role, cap}, so this
+    would fire on the ordinary path. Same shape `set_member_access` already uses for `project_access`."""
+    _require_admin_of(org_id, caller)
+    name = (body.name or "").strip()
+    if not name or not _slugify(name):
+        raise HTTPException(status_code=422, detail="name is required")
+    if body.role not in ROLE_RANK:
+        raise HTTPException(status_code=422, detail=f"role must be one of {sorted(ROLE_RANK)}")
+    if body.role == "owner":
+        raise HTTPException(status_code=422, detail="an agent cannot be an owner")
+    if body.role == "admin" and caller.role != "owner":
+        raise HTTPException(status_code=403, detail="only an owner can create an admin agent")
+    if body.daily_call_cap < -1:
+        raise HTTPException(status_code=422, detail="daily_call_cap must be -1 (unlimited) or >= 0")
+
+    email = _agent_email(caller.org, name)
+    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+    if user is None:
+        user = User(email=email)  # NOT demo=True: unlike the public token, agent traffic counts in usage
+        db.add(user)
+        await db.flush()
+    token = crypto.new_token()
+    membership = (await db.execute(select(Membership).where(
+        Membership.user_id == user.id, Membership.org_id == org_id))).scalar_one_or_none()
+    # A brand-new agent takes the defaults; a rotate keeps whatever it already had unless told otherwise.
+    is_new = membership is None
+    sent = body.model_fields_set
+
+    def _keep(field: str, current):
+        return getattr(body, field) if (is_new or field in sent) else current
+
+    if is_new:
+        membership = Membership(user_id=user.id, org_id=org_id, role=body.role,
+                                token_hash=crypto.hash_token(token))
+        db.add(membership)
+    else:
+        membership.token_hash = crypto.hash_token(token)  # rotate: the previous token dies here
+        membership.role = _keep("role", membership.role)
+    membership.daily_call_cap = _keep("daily_call_cap", membership.daily_call_cap)
+    if is_new or "tool_access" in sent:  # only re-validate what the caller actually sent
+        membership.tool_access = _normalize_tool_access(
+            body.tool_access, await _known_access_names(org_id, db))
+    membership.local_run_enabled = _keep("local_run_enabled", membership.local_run_enabled)
+    await db.commit()
+    return {"token": token, "name": name, "email": email, "org": caller.org.slug, "user_id": user.id,
+            "role": membership.role, "daily_call_cap": membership.daily_call_cap,
+            "tool_access": membership.tool_access, "project_access": membership.project_access,
+            "local_run_enabled": membership.local_run_enabled,
+            "note": "save this token now — it is shown once; POST the same name again to rotate it"}
+
+
+@app.get("/orgs/{org_id}/agents")
+async def list_agents(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """Every agent identity in the org, with its limits and today's usage. Never the token."""
+    _require_admin_of(org_id, caller)
+    memberships = (await db.execute(select(Membership).where(Membership.org_id == org_id))).scalars().all()
+    users = {u.id: u for u in (await db.execute(
+        select(User).where(User.id.in_([m.user_id for m in memberships]))
+    )).scalars().all()}
+    used = await _used_today_by_user(db, org_id)
+    out: list[dict] = []
+    for m in memberships:
+        user = users.get(m.user_id)
+        if user is None or not _is_agent_email(user.email):
+            continue
+        out.append({"user_id": user.id, "name": _agent_name(caller.org, user.email),
+                    "email": user.email, "role": m.role, "daily_call_cap": m.daily_call_cap,
+                    "used_today": used.get(user.email, 0), "tool_access": m.tool_access,
+                    "project_access": m.project_access,  # the dashboard renders this column
+                    "local_run_enabled": m.local_run_enabled, "created_at": m.created_at})
+    return out
+
+
+@app.delete("/orgs/{org_id}/agents/{user_id}")
+async def revoke_agent(
+    org_id: int, user_id: int,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Revoke an agent: delete its membership, which kills its token immediately."""
+    _require_admin_of(org_id, caller)
+    user = await db.get(User, user_id)
+    if user is None or not _is_agent_email(user.email):
+        raise HTTPException(status_code=404, detail="unknown agent")
+    membership = (await db.execute(select(Membership).where(
+        Membership.user_id == user_id, Membership.org_id == org_id))).scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(status_code=404, detail="unknown agent")
+    email = user.email  # read before the delete — the row is expired after commit
+    await db.delete(membership)
+    await _drop_member_deny_rules(db, user_id, org_id)  # a rule aimed at a caller that no longer exists
+    await db.flush()
+    # The identity is org-scoped, so once its last membership is gone the User row has no purpose.
+    if (await db.execute(select(Membership).where(
+            Membership.user_id == user_id))).scalars().first() is None:
+        await db.delete(user)
+    await db.commit()
+    return {"revoked": True, "email": email}
+
+
+# ---- projects: an optional sub-scope inside an org ------------------------------------------
+class ProjectIn(BaseModel):
+    name: str
+
+
+def _project_view(p: Project, tool_count: int | None = None) -> dict:
+    out = {"id": p.id, "name": p.name, "slug": p.slug, "created_by": p.created_by,
+           "created_at": p.created_at}
+    if tool_count is not None:
+        out["tool_count"] = tool_count
+    return out
+
+
+async def _normalize_project_access(
+    refs: list[str | int] | None, org_id: int, db: AsyncSession
+) -> list[int] | None:
+    """Turn slugs/ids into the stored list of project IDS, mirroring `_normalize_tool_access`:
+    validate against the org's own projects (422 on unknown — never silently ignore a typo) and
+    **collapse an all-projects selection back to NULL**, so a fully-scoped member keeps
+    auto-inheriting projects created later."""
+    if refs is None:
+        return None
+    known = (await db.execute(select(Project).where(Project.org_id == org_id))).scalars().all()
+    by_slug = {p.slug: p.id for p in known}
+    by_id = {p.id for p in known}
+    ids: set[int] = set()
+    for ref in refs:
+        if isinstance(ref, int) or (isinstance(ref, str) and ref.isdigit()):
+            pid = int(ref)
+            if pid not in by_id:
+                raise HTTPException(status_code=422, detail=f"unknown project {ref!r} in this team")
+            ids.add(pid)
+        elif ref in by_slug:
+            ids.add(by_slug[ref])
+        else:
+            raise HTTPException(status_code=422, detail=f"unknown project {ref!r} in this team")
+    if known and ids >= by_id:
+        return None  # every project selected = unrestricted, so store it as such
+    return sorted(ids)
+
+
+async def _resolve_project(ref: str | int | None, org_id: int, db: AsyncSession) -> Project | None:
+    """A project by slug or id, scoped to the org (404 across orgs). None/'' = org-wide."""
+    if ref is None or ref == "":
+        return None
+    q = select(Project).where(Project.org_id == org_id)
+    if isinstance(ref, int) or (isinstance(ref, str) and str(ref).isdigit()):
+        q = q.where(Project.id == int(ref))
+    else:
+        q = q.where(Project.slug == _slugify(str(ref)))
+    project = (await db.execute(q)).scalar_one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404, detail=f"no project {ref!r} in this team")
+    return project
+
+
+@app.post("/orgs/{org_id}/projects")
+async def create_project(
+    org_id: int, body: ProjectIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Create a project — a sub-scope inside the team (admin+). Tools can then be filed under it and
+    members scoped to it. Creating one changes nothing on its own: existing tools stay org-wide."""
+    _require_admin_of(org_id, caller)
+    name = (body.name or "").strip()
+    slug = _slugify(name)
+    if not name or not slug:
+        raise HTTPException(status_code=422, detail="name is required")
+    if (await db.execute(select(Project).where(
+            Project.org_id == org_id, Project.slug == slug))).scalar_one_or_none():
+        raise HTTPException(status_code=409, detail=f"a project {slug!r} already exists in this team")
+    project = Project(org_id=org_id, name=name, slug=slug, created_by=caller.email)
+    db.add(project)
+    await db.commit()
+    await db.refresh(project)
+    return _project_view(project, tool_count=0)
+
+
+@app.get("/orgs/{org_id}/projects")
+async def list_projects(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """The team's projects. A member scoped to some of them sees only those (the ACL hides what it
+    gates, matching how `list_tools` behaves)."""
+    if caller.org_id != org_id:
+        raise HTTPException(status_code=403, detail="use this team's token")
+    projects = (await db.execute(select(Project).where(Project.org_id == org_id))).scalars().all()
+    access = caller.membership.project_access
+    if caller.role != "owner" and access is not None:
+        projects = [p for p in projects if p.id in access]
+    counts = dict((await db.execute(
+        select(Tool.project_id, func.count(Tool.id)).where(Tool.org_id == org_id).group_by(Tool.project_id)
+    )).all())
+    return [_project_view(p, tool_count=counts.get(p.id, 0)) for p in projects]
+
+
+@app.delete("/orgs/{org_id}/projects/{project_id}")
+async def delete_project(
+    org_id: int, project_id: int,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Delete a project. Its tools are NOT deleted — they fall back to org-wide, which is the safe
+    direction (a tool that quietly vanished from every listing would be far worse than one that
+    briefly becomes visible to the whole team). Members scoped to it lose that entry.
+
+    The freed tools are what keeps a scoped member from being locked out: they were the member's only
+    tools and they are now org-wide, so the member keeps exactly what they had. The scope list itself
+    must NOT be widened to do that (see below)."""
+    _require_admin_of(org_id, caller)
+    project = await db.get(Project, project_id)
+    if project is None or project.org_id != org_id:  # 404 across orgs — never confirm another org's ids
+        raise HTTPException(status_code=404, detail="unknown project")
+    freed = 0
+    for tool in (await db.execute(select(Tool).where(Tool.project_id == project_id))).scalars().all():
+        tool.project_id = None
+        freed += 1
+    for m in (await db.execute(select(Membership).where(Membership.org_id == org_id))).scalars().all():
+        if m.project_access and project_id in m.project_access:
+            # Store the remaining ids AS THEY ARE, empty list included. Collapsing `[]` to NULL here
+            # would read as "every project" and hand a member scoped to only this project access to
+            # every OTHER project's tools — a privilege escalation triggered by an unrelated delete.
+            # `[]` is already the right meaning: org-wide tools only, which now include the freed ones.
+            m.project_access = [p for p in m.project_access if p != project_id]
+    await db.delete(project)
+    await db.commit()
+    return {"deleted": project_id, "tools_made_org_wide": freed}
+
+
+# ---- deny rules: org policy over what may be called ----------------------------------------
+PROXY_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
+
+
+class DenyRuleIn(BaseModel):
+    host: str = ""  # a bare netloc or a full URL (we take its host)
+    path_prefix: str = ""
+    method: str = ""
+    user_id: int | None = None  # None = the whole org; set = only that member/agent
+    note: str = ""
+
+
+async def _drop_member_deny_rules(db: AsyncSession, user_id: int, org_id: int | None = None) -> int:
+    """Delete the member-scoped rules that named a member/agent who is going away — the caller they
+    were written for no longer exists, so the rule can never fire again. Left behind, they show up in
+    the Policy table as a row naming a user id the team can no longer see or clean up. Mirrors how
+    `delete_project` sweeps the id it deletes out of every `project_access`.
+
+    `org_id` set = that org only (the member left THIS team but may still be in others). `org_id`
+    None = every org, for when the USER row itself is deleted — `DenyRule.user_id` is a foreign key,
+    so a surviving rule would dangle, which Postgres rejects outright (SQLite does not enforce it by
+    default, which is why only a real deployment would have shown this).
+
+    ORG-wide rules (`user_id` NULL) are untouched: they are about the team, not about one caller.
+    The caller commits — this only stages the deletes, so it composes with the removal itself."""
+    q = select(DenyRule).where(DenyRule.user_id == user_id)
+    if org_id is not None:
+        q = q.where(DenyRule.org_id == org_id)
+    stale = (await db.execute(q)).scalars().all()
+    for rule in stale:
+        await db.delete(rule)
+    return len(stale)
+
+
+def _deny_view(r: DenyRule) -> dict:
+    return {"id": r.id, "host": r.host, "path_prefix": r.path_prefix, "method": r.method,
+            "user_id": r.user_id, "scope": "org" if r.user_id is None else "member",
+            "verdict": r.verdict, "note": r.note, "created_by": r.created_by,
+            "created_at": r.created_at}
+
+
+@app.post("/orgs/{org_id}/deny")
+async def create_deny_rule(
+    org_id: int, body: DenyRuleIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Block calls to a host / path / method for the whole team, or for one member or agent (admin+).
+
+    Enforced on the proxy AND both run tiers, and it applies to every role including owner — a deny
+    rule is a guardrail, not a permission tier."""
+    _require_admin_of(org_id, caller)
+    host = (body.host or "").strip().lower()
+    if "://" in host:  # pasting a base_url is the obvious thing to try, so accept it
+        host = urlsplit(host).netloc.lower()
+    method = (body.method or "").strip().upper()
+    path_prefix = (body.path_prefix or "").strip()
+    if method and method not in PROXY_METHODS:
+        raise HTTPException(status_code=422, detail=f"method must be one of {list(PROXY_METHODS)}")
+    if not (host or path_prefix or method):
+        # An all-empty rule matches every request — refuse it rather than silently freezing the org.
+        raise HTTPException(status_code=422, detail="give at least one of host, path_prefix or method")
+    if body.user_id is not None:
+        target = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id, Membership.user_id == body.user_id))).scalar_one_or_none()
+        if target is None:
+            raise HTTPException(status_code=404, detail="not a member of this org")
+    rule = DenyRule(org_id=org_id, user_id=body.user_id, host=host, path_prefix=path_prefix,
+                    method=method, note=(body.note or "").strip(), created_by=caller.email)
+    db.add(rule)
+    await db.commit()
+    await db.refresh(rule)
+    return _deny_view(rule)
+
+
+@app.get("/orgs/{org_id}/deny")
+async def list_deny_rules(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    _require_admin_of(org_id, caller)
+    rules = (await db.execute(select(DenyRule).where(DenyRule.org_id == org_id))).scalars().all()
+    return [_deny_view(r) for r in rules]
+
+
+@app.delete("/orgs/{org_id}/deny/{rule_id}")
+async def delete_deny_rule(
+    org_id: int, rule_id: int,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    _require_admin_of(org_id, caller)
+    rule = await db.get(DenyRule, rule_id)
+    if rule is None or rule.org_id != org_id:  # 404 across orgs — never confirm another org's ids
+        raise HTTPException(status_code=404, detail="unknown rule")
+    await db.delete(rule)
+    await db.commit()
+    return {"deleted": rule_id}
 
 
 # ---- secrets (values are write-only — never returned) -------------------------------------
@@ -2754,10 +3365,12 @@ async def create_tool(
     await _validate_bundle_id(body.bundle_id, caller.org_id, db)
     _validate_cli_profile(body.cli)
     await _validate_cli_secrets(body.cli, caller, db)
+    project = await _resolve_project(body.project, caller.org_id, db)
     tool = Tool(
         org_id=caller.org_id, name=body.name, owner=caller.email, base_url=body.base_url,
         host=_host_of(body.base_url), bindings=bindings, health_check=body.health_check,
         examples=body.examples or [], cli=body.cli, bundle_id=body.bundle_id,
+        project_id=project.id if project else None,
     )
     db.add(tool)
     try:
@@ -2773,7 +3386,7 @@ async def list_tools(
 ) -> list[dict]:
     rows = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
     # The per-member tool ACL hides what it gates: a restricted member's listing shows only their tools.
-    return [_tool_view(t) for t in rows if _tool_allowed(caller, t.name)]
+    return [_tool_view(t) for t in rows if _tool_usable(caller, t)]
 
 
 @app.get("/tools/by-name/{name}")
@@ -2786,7 +3399,7 @@ async def get_tool_by_name(
     )).scalars().first()
     if tool is None:
         raise HTTPException(status_code=404, detail="tool not found")
-    _require_tool_access(caller, tool.name)  # a 403 names the fix (ask an admin) — clearer than a fake 404
+    _require_tool_use(caller, tool)  # a 403 names the fix (ask an admin) — clearer than a fake 404
     return _tool_view(tool)
 
 
@@ -2819,6 +3432,9 @@ async def update_tool(
     if "cli" in fields:  # explicit null clears the profile (turns local runs off entirely)
         _validate_cli_profile(fields["cli"])
         await _validate_cli_secrets(fields["cli"], caller, db, grandfather)
+    if "project" in fields:  # slug/id in, column out; explicit null = back to org-wide
+        project = await _resolve_project(fields.pop("project"), caller.org_id, db)
+        tool.project_id = project.id if project else None
     for k, v in fields.items():
         setattr(tool, k, v)
     if "base_url" in fields:
@@ -2902,8 +3518,9 @@ async def grant_local_run(
     tool = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id, Tool.name == name))).scalar_one_or_none()
     if tool is None:
         raise HTTPException(status_code=404, detail="tool not found")
-    _require_tool_access(caller, tool.name)  # per-member tool ACL (call + both run tiers)
+    _require_tool_use(caller, tool)  # per-member tool + project ACL (call + both run tiers)
     _require_local_run(caller)               # local tier may be disabled for this member (server-only)
+    await _enforce_deny(caller, tool.base_url, "", db)  # host-level policy (see run_tool_server)
     await _enforce_daily_cap(caller, db)  # a local run counts toward the per-user daily cap
     catalog_cli = (prov.match_skill(tool.name) or {}).get("cli")
     profile = localrun.effective_profile(tool, catalog_cli)
@@ -3456,13 +4073,20 @@ async def _autoprovision_provider_tool(
             select(Tool).where(Tool.org_id == secret.org_id, Tool.name == tool_name)
         )
     ).scalars().first()
-    # A token provider's secret is a plain string, not an oauth blob — injecting it with
-    # secret_field="access_token" would try to read a JSON field that isn't there.
-    if provider.is_token_kind:
-        bindings = [{
-            "secret_id": secret.id, "injector": "env", "location": "header",
-            "name": provider.token_header, "format": provider.token_format,
-        }]
+    # A pasted-secret provider's value is a plain string, not an oauth blob — injecting it with
+    # secret_field="access_token" would try to read a JSON field that isn't there. A key may ride in
+    # a header (default) or a query param (Semrush's ?key=…).
+    if provider.uses_pasted_secret:
+        if provider.token_location == "query":
+            bindings = [{
+                "secret_id": secret.id, "injector": "env", "location": "query",
+                "name": provider.token_param, "format": provider.token_format,
+            }]
+        else:
+            bindings = [{
+                "secret_id": secret.id, "injector": "env", "location": "header",
+                "name": provider.token_header, "format": provider.token_format,
+            }]
     else:
         bindings = [{
             "secret_id": secret.id, "injector": "oauth", "location": "header",
@@ -3797,9 +4421,11 @@ async def connection_resources(
             detail=f"{secret.provider or 'this provider'} has nothing to choose between — it acts on your whole account",
         )
     await oauth.ensure_fresh(secret, db, request.app.state.http)  # no-op for a non-oauth secret
-    # A bring-your-own-token secret is a PLAIN STRING, not an oauth blob — json.loads on it throws.
+    # A pasted-secret (bot token / API key) secret is a PLAIN STRING, not an oauth blob — json.loads
+    # on it throws. (Only header-auth pasted providers reach here; a query-key provider like Semrush
+    # has nothing to discover, so supports_discovery is False and this endpoint 422s earlier.)
     raw = crypto.decrypt(secret.value)
-    if provider.is_token_kind:
+    if provider.uses_pasted_secret:
         disc_headers = {provider.token_header: provider.token_format.format(secret=raw)}
     else:
         blob = json.loads(raw)
@@ -3899,31 +4525,74 @@ async def connect_with_token(
     body: TokenConnectIn, request: Request,
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
-    """Connect a provider where the user brings their own bot token (Slack).
+    """Connect a provider the user brings a pasted credential for — a bot token (Slack) or an API
+    key (Apollo, TikHub, Semrush, …).
 
-    The token is VERIFIED against the provider's probe before anything is stored. Saving an
+    The credential is VERIFIED against the provider's probe before anything is stored. Saving an
     unverified credential just moves the failure to the first real call, by which point the user
-    has left the setup screen and has no idea which of the three steps they got wrong."""
+    has left the setup screen and has no idea which of the steps they got wrong."""
     _require_can_register(caller)
     provider = oauth_providers.get(body.provider)
-    if provider is None or not provider.is_token_kind:
+    if provider is None or not provider.uses_pasted_secret:
         raise HTTPException(status_code=422, detail="this provider is connected by consent, not a token")
     token = body.token.strip()
     if not token:
         raise HTTPException(status_code=422, detail=f"{provider.token_label or 'Token'} is required")
+    # HTTP Basic providers (DataForSEO, Moz) take a pasted `login:password`; store the Base64 blob so
+    # `Basic {secret}` renders the same at connect and on every proxy call.
+    if provider.token_encode == "base64":
+        import base64
+        token = base64.b64encode(token.encode()).decode()
 
-    headers = {provider.token_header: provider.token_format.format(secret=token)}
+    # The credential rides in a header (default) or a query param (Semrush: ?key=…). The cheapest
+    # check may also live on a different host than base_url, so honor an absolute probe_url override,
+    # and a POST probe with a JSON body (Serpstat's JSON-RPC limits call).
+    rendered = provider.token_format.format(secret=token)
+    if provider.token_location == "query":
+        headers, params = {}, {provider.token_param: rendered}
+    else:
+        headers, params = {provider.token_header: rendered}, {}
+    probe_url = provider.probe_url or f"{provider.base_url.rstrip('/')}{provider.probe_path}"
     try:
-        resp = await request.app.state.http.get(
-            f"{provider.base_url.rstrip('/')}{provider.probe_path}", headers=headers
+        resp = await request.app.state.http.request(
+            provider.probe_method or "GET", probe_url,
+            headers=headers, params=params, json=provider.probe_json,
         )
-        payload = resp.json() if resp.status_code < 500 else {}
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"could not reach {provider.display_name}: {exc}") from None
-    # Slack answers 200 with {"ok": false, "error": "invalid_auth"} — an HTTP status alone would
-    # happily accept a dead token.
-    if resp.status_code >= 400 or payload.get("ok") is False:
-        why = payload.get("error") or f"HTTP {resp.status_code}"
+    # Only parse JSON when the response actually is JSON — a key check may answer in CSV/text
+    # (Semrush's balance endpoint), where resp.json() would throw and mask a valid key as unreachable.
+    ctype = resp.headers.get("content-type", "")
+    payload: dict = {}
+    if resp.status_code < 500 and ctype.startswith("application/json"):
+        try:
+            payload = resp.json()
+        except Exception:  # noqa: BLE001
+            payload = {}
+    # Some providers answer HTTP 200 even for a BAD key and signal validity only in the body: a JSON
+    # field (Slack: "ok"; Apollo: "is_logged_in") or an "ERROR ..." text line (Semrush). An HTTP
+    # status alone would happily accept a dead key, so check all three signals.
+    field_bad = bool(provider.token_verify_field) and not payload.get(provider.token_verify_field)
+    field_reject = bool(provider.token_reject_field) and bool(payload.get(provider.token_reject_field))
+    equals_bad = bool(provider.token_ok_field) and str(payload.get(provider.token_ok_field)) != provider.token_ok_value
+    # Usually any >=400 is a bad key; a provider with no free probe (Coresignal) POSTs an empty body so
+    # a VALID key answers 400 — there only 401/403 mean the key itself is bad.
+    status_reject = (
+        resp.status_code in provider.probe_reject_statuses
+        if provider.probe_reject_statuses else resp.status_code >= 400
+    )
+    text_error = (
+        resp.status_code < 400
+        and not ctype.startswith("application/json")
+        and resp.text.lstrip().upper().startswith("ERROR")
+    )
+    if status_reject or field_bad or field_reject or equals_bad or text_error:
+        why = (
+            payload.get("error")
+            or (payload.get("ErrorMessage") if equals_bad else None)
+            or (f"{provider.token_verify_field}=false" if field_bad else None)
+            or (resp.text.strip()[:80] if text_error else f"HTTP {resp.status_code}")
+        )
         raise HTTPException(status_code=422, detail=f"{provider.display_name} rejected that token ({why})")
 
     secret = (await db.execute(
@@ -4314,6 +4983,9 @@ async def admin_delete_user(
             # Deleting the sole owner would leave an ungovernable org (no one can pass _require_owner_of).
             # Promote the earliest-joined survivor so ownership never evaporates.
             survivors[0].role = "owner"
+    # The USER row is about to go, so member-scoped rules must go from EVERY org — `DenyRule.user_id`
+    # is a foreign key, and a surviving row would dangle (a hard error on Postgres).
+    await _drop_member_deny_rules(db, user_id)
     await db.delete(user)
     await db.commit()
     return {"deleted_user": user_id, "deleted_empty_orgs": emptied}
@@ -4344,7 +5016,7 @@ async def admin_delete_org(
 
 
 # ---- the proxy: call a tool without holding its credential --------------------------------
-async def _resolve_call(rest: str, org_id: int, db: AsyncSession) -> tuple[Tool, str]:
+async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[Tool, str]:
     """Resolve `/call/<rest>` to (tool, full upstream URL), scoped to the caller's org. Shapes:
 
     - URL-passthrough (agent-facing): rest is the real upstream URL. Resolve the tool by host
@@ -4353,16 +5025,24 @@ async def _resolve_call(rest: str, org_id: int, db: AsyncSession) -> tuple[Tool,
 
     Both lookups are constrained to `org_id`, so two orgs resolve independently (and may reuse
     a tool name or an upstream host without colliding).
+
+    Passthrough candidates are additionally filtered by the caller's ACL (project scope AND the
+    per-tool list) *before* the longest-prefix tiebreak. That ordering matters: a same-host tool the
+    caller cannot use must not be able to cause a 409 — or win the tiebreak — for someone who can't
+    even see it in `list_tools`. This narrows the candidate set, so it can never grant access: whatever
+    resolves still passes `_require_tool_use`. The named shape needs no filter (it resolves one tool).
     """
+    org_id = caller.org_id
     norm = _normalize_scheme(rest)
     if norm.startswith("http://") or norm.startswith("https://"):
         try:
             host = urlsplit(norm).netloc.lower()
         except ValueError:  # malformed passthrough URL (e.g. unbalanced IPv6 brackets) → 400, not 500
             raise HTTPException(status_code=400, detail="malformed upstream URL")
-        candidates = (
-            await db.execute(select(Tool).where(Tool.host == host, Tool.org_id == org_id))
-        ).scalars().all()
+        on_host = (await db.execute(
+            select(Tool).where(Tool.host == host, Tool.org_id == org_id)
+        )).scalars().all()
+        candidates = [t for t in on_host if _tool_usable(caller, t)]  # can't use it → can't 409 on it
         # Match on a path-segment boundary, not a raw string prefix: base `.../v2` must NOT match
         # request `.../v20/...` (that would inject v2's credential onto an unregistered sibling path).
         def _prefix_match(base: str) -> bool:
@@ -4371,6 +5051,14 @@ async def _resolve_call(rest: str, org_id: int, db: AsyncSession) -> tuple[Tool,
 
         matches = [t for t in candidates if _prefix_match(t.base_url)]
         if not matches:
+            # Tell "no such tool" and "not yours to use" apart. If the ACL filter above is the ONLY
+            # reason nothing matched, this is a 403 like the named shape would give — a 404 here
+            # would send an admin hunting for a registration that already exists. The message names
+            # the HOST the caller already typed, never the internal tool name the ACL hides.
+            if any(_prefix_match(t.base_url) for t in on_host):
+                raise HTTPException(status_code=403, detail=(
+                    f"you don't have access to the registered tool for {host!r} in this team — an "
+                    "admin can grant it (dashboard → Team, or `treg org access <you> …`)"))
             raise HTTPException(status_code=404, detail=f"no registered tool for upstream {host!r}")
         # Tiebreak on the NORMALIZED length so `.../v1` and `.../v1/` count equal (a real 409), not
         # one silently "longer" than the other.
@@ -4448,8 +5136,12 @@ async def call_tool(
         _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
         if sep:
             rest = raw_rest
-    tool, upstream_url = await _resolve_call(rest, caller.org_id, db)
-    _require_tool_access(caller, tool.name)  # per-member tool ACL (NULL access = all; admins exempt)
+    tool, upstream_url = await _resolve_call(rest, caller, db)
+    _require_tool_use(caller, tool)  # per-member tool + project ACL (NULL access = all; admins exempt)
+    # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
+    # shape the caller used (named or URL-passthrough), and the relay never follows redirects, so a
+    # blocked host can't be reached via a 3xx bounce.
+    await _enforce_deny(caller, upstream_url, request.method, db)
     await _enforce_daily_cap(caller, db)  # per-user daily cap (skips sandbox + unmetered members)
     if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
         await _enforce_public_demo_ip_cap(request, db)  # shared token → meter by client IP, not user
@@ -4544,7 +5236,10 @@ async def run_tool_server(
     ).scalar_one_or_none()
     if tool is None:
         raise HTTPException(status_code=404, detail=f"no tool {body.tool!r} in this org")
-    _require_tool_access(caller, tool.name)  # per-member tool ACL
+    _require_tool_use(caller, tool)  # per-member tool + project ACL
+    # A run executes a CLI, so there is no request path to match — evaluate the tool's own upstream
+    # host, which is what a host-level rule ("nobody may reach api.stripe.com") is really saying.
+    await _enforce_deny(caller, tool.base_url, "", db)
     await _enforce_daily_cap(caller, db)  # a server run counts toward the per-user daily cap
     try:
         exec_bin = runner.resolve_exec_bin(tool)  # the SAME resolution run_tool execs — never diverges
@@ -4599,6 +5294,7 @@ def _tool_view(t: Tool) -> dict:
         # every pre-auth_mechanism tool server-runnable as before).
         "server_runnable": (bool(t.cli) and (t.cli.get("bin") or t.name) in _allowed_server_bins()
                             and (t.cli.get("auth_mechanism") or "env") in ("env", "argv")),
+        "project_id": t.project_id,  # None = org-wide
         "bundle_id": t.bundle_id,
     }
 

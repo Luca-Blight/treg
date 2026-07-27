@@ -2864,6 +2864,7 @@ def cmd_org_invite(args, cfg) -> None:
             access = None  # full vault access — the dashboard Share modal's default
         body = {"email": args.email, "role": args.role, "expires_days": args.expires_days,
                 "tool_access": access,
+                "project_access": _projects_arg(args),
                 "local_run_enabled": getattr(args, "local_run", "on") != "off",
                 "landing": landing}
         r = c.post(f"/orgs/{org_id}/invites", json=body)
@@ -2896,7 +2897,8 @@ def cmd_org_access(args, cfg) -> None:
         local = cur.get("local_run_enabled", True) if getattr(args, "local_run", None) is None \
             else args.local_run != "off"
         _show(c.patch(f"/orgs/{org_id}/members/{args.user_id}/access",
-                      json={"tool_access": access, "local_run_enabled": local}))
+                      json={"tool_access": access, "project_access": _projects_arg(args),
+                            "local_run_enabled": local}))
 
 
 def cmd_org_invites(args, cfg) -> None:
@@ -2929,6 +2931,94 @@ def cmd_org_set_role(args, cfg) -> None:
         if org_id is None:
             sys.exit("no active org")
         _show(c.patch(f"/orgs/{org_id}/members/{args.user_id}", json={"role": args.role}))
+
+
+def cmd_org_agent_new(args, cfg) -> None:
+    """Mint (or rotate) an agent's own token. NOTE: an "agent" here is an IDENTITY that calls treg —
+    unrelated to `treg agents`, which lists the coding agents we can install skills for."""
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.post(f"/orgs/{org_id}/agents", json={
+            "name": args.name, "role": args.role, "daily_call_cap": args.cap,
+            "tool_access": _resolve_tool_access(c, org_id, args),
+            "local_run_enabled": getattr(args, "local_run", "on") != "off"}))
+
+
+def cmd_org_agents(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.get(f"/orgs/{org_id}/agents"))
+
+
+def cmd_org_agent_rm(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.delete(f"/orgs/{org_id}/agents/{args.user_id}"))
+
+
+def _projects_arg(args) -> list | None:
+    """--projects a,b → the list; --all-projects → None (unrestricted); neither → leave unset."""
+    if getattr(args, "all_projects", False):
+        return None
+    if getattr(args, "projects", None):
+        return [p.strip() for p in args.projects.split(",") if p.strip()]
+    return None
+
+
+def cmd_org_project_new(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.post(f"/orgs/{org_id}/projects", json={"name": args.name}))
+
+
+def cmd_org_projects(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.get(f"/orgs/{org_id}/projects"))
+
+
+def cmd_org_project_rm(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.delete(f"/orgs/{org_id}/projects/{args.project_id}"))
+
+
+def cmd_org_deny(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.post(f"/orgs/{org_id}/deny", json={
+            "host": args.host or "", "path_prefix": args.path or "", "method": args.method or "",
+            "user_id": args.user, "note": args.note or ""}))
+
+
+def cmd_org_deny_ls(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.get(f"/orgs/{org_id}/deny"))
+
+
+def cmd_org_deny_rm(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.delete(f"/orgs/{org_id}/deny/{args.rule_id}"))
 
 
 def cmd_org_join(args, cfg) -> None:
@@ -3203,6 +3293,8 @@ def build_parser() -> argparse.ArgumentParser:
     oi.add_argument("--tools", help="comma-separated tool names this member may use (default: prompt / all)")
     oi.add_argument("--all-tools", dest="all_tools", action="store_true", help="grant access to every tool (skip the prompt)")
     oi.add_argument("--local-run", dest="local_run", choices=["on", "off"], help="allow local CLI runs (default: on)")
+    oi.add_argument("--projects", help="comma-separated project slugs to scope them to (default: all)")
+    oi.add_argument("--all-projects", dest="all_projects", action="store_true", help="every project (the default)")
     oi.set_defaults(fn=cmd_org_invite)
     oa = mk(og, "access", "Set which tools a member may use + whether they can run locally (admin+).",
             "treg org access 5 --tools stripe,gh", "treg org access 5 --all-tools", "treg org access 5 --local-run off")
@@ -3210,6 +3302,8 @@ def build_parser() -> argparse.ArgumentParser:
     oa.add_argument("--tools", help="comma-separated tool names to allow (replaces their current list)")
     oa.add_argument("--all-tools", dest="all_tools", action="store_true", help="give access to every tool")
     oa.add_argument("--local-run", dest="local_run", choices=["on", "off"], help="allow/forbid local CLI runs for this member")
+    oa.add_argument("--projects", help="comma-separated project slugs this member may use")
+    oa.add_argument("--all-projects", dest="all_projects", action="store_true", help="give access to every project")
     oa.set_defaults(fn=cmd_org_access)
     mk(og, "invites", "List pending invites for the active team (admin+).", "treg org invites").set_defaults(fn=cmd_org_invites)
     orv = mk(og, "revoke", "Revoke a pending invite before it's used.", "treg org revoke 3")
@@ -3218,6 +3312,47 @@ def build_parser() -> argparse.ArgumentParser:
     osr = mk(og, "set-role", "Change a member's role (owner only).", "treg org set-role 5 admin")
     osr.add_argument("user_id", type=int, help="the member's user id (from `org members`)")
     osr.add_argument("role", choices=["viewer", "member", "admin", "owner"], help="the new role"); osr.set_defaults(fn=cmd_org_set_role)
+    oan = mk(og, "agent-new", "Mint (or rotate) a token so an agent calls treg as ITSELF — its own "
+                              "cap, tool access and audit trail (admin+).",
+             "treg org agent-new ci-bot", "treg org agent-new ci-bot --tools stripe,gh --cap 500",
+             "treg org agent-new ci-bot   # run again to rotate: the old token dies")
+    oan.add_argument("name", help="a short name for the agent, e.g. ci-bot")
+    oan.add_argument("--role", default="member", choices=["viewer", "member", "admin"],
+                     help="role to grant (default: member; an agent can never be an owner)")
+    oan.add_argument("--cap", type=int, default=-1, help="daily call cap (-1 = unlimited, the default)")
+    oan.add_argument("--tools", help="comma-separated tool names this agent may use (default: prompt / all)")
+    oan.add_argument("--all-tools", dest="all_tools", action="store_true", help="allow every tool")
+    oan.add_argument("--local-run", dest="local_run", choices=["on", "off"], help="allow local CLI runs")
+    oan.set_defaults(fn=cmd_org_agent_new)
+    mk(og, "agents", "List this team's agent identities and their limits (admin+). "
+                     "(Different from `treg agents`, which lists coding agents for skill install.)",
+       "treg org agents").set_defaults(fn=cmd_org_agents)
+    oar = mk(og, "agent-rm", "Revoke an agent — its token stops working immediately.",
+             "treg org agent-rm 7")
+    oar.add_argument("user_id", type=int, help="the agent's user id (from `org agents`)")
+    oar.set_defaults(fn=cmd_org_agent_rm)
+    opn = mk(og, "project-new", "Create a project — a sub-scope inside the team (admin+).",
+             'treg org project-new "Apollo"')
+    opn.add_argument("name", help="the project's display name"); opn.set_defaults(fn=cmd_org_project_new)
+    mk(og, "projects", "List the team's projects and how many tools each holds.",
+       "treg org projects").set_defaults(fn=cmd_org_projects)
+    oprm = mk(og, "project-rm", "Delete a project (its tools become org-wide, they are not deleted).",
+              "treg org project-rm 2")
+    oprm.add_argument("project_id", type=int, help="the project id (from `org projects`)")
+    oprm.set_defaults(fn=cmd_org_project_rm)
+    od2 = mk(og, "deny", "Block calls to a host / path / method — for the team, or one member (admin+).",
+             "treg org deny --method DELETE --note 'no deletes'",
+             "treg org deny --host api.stripe.com", "treg org deny --path /admin --user 7")
+    od2.add_argument("--host", help="upstream host to block (a full URL works too); omit = any host")
+    od2.add_argument("--path", help="path prefix to block, e.g. /admin; omit = any path")
+    od2.add_argument("--method", help="HTTP method to block, e.g. DELETE; omit = any method")
+    od2.add_argument("--user", type=int, help="apply to ONE member/agent (from `org members`); omit = whole team")
+    od2.add_argument("--note", help="why — shown in the refusal so it names its source")
+    od2.set_defaults(fn=cmd_org_deny)
+    mk(og, "deny-ls", "List this team's deny rules (admin+).", "treg org deny-ls").set_defaults(fn=cmd_org_deny_ls)
+    odr = mk(og, "deny-rm", "Remove a deny rule.", "treg org deny-rm 3")
+    odr.add_argument("rule_id", type=int, help="the rule id (from `org deny-ls`)")
+    odr.set_defaults(fn=cmd_org_deny_rm)
     oj = mk(og, "join", "Join a team using an invite code.", "treg org join <code> --email you@company.com")
     oj.add_argument("code", help="the one-time invite code"); oj.add_argument("--email", required=True, help="your email (creates you if new)"); oj.set_defaults(fn=cmd_org_join)
     mk(og, "leave", "Remove yourself from the active team.", "treg org leave").set_defaults(fn=cmd_org_leave)

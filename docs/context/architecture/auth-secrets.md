@@ -5,6 +5,7 @@ sources:
   - src/treg/injectors.py
   - src/treg/crypto.py
   - src/treg/oauth.py
+  - src/treg/oauth_providers.py
   - src/treg/health.py
 related:
   - architecture/proxy-model.md
@@ -55,10 +56,80 @@ provider that omits `expires_in` doesn't force a refresh on every call), coerces
 and raises a clear error when a 200 body carries no `access_token`; `_expires_at` treats a naive ISO
 `expiry` as UTC.
 
+`refresh()` posts the credential's recorded `client_id_param` dialect (TikTok reads `client_key`, not
+`client_id`), snapshotted onto the blob at mint time so a refresh months later still speaks the dialect
+the grant was minted with.
+
 **Connect flow (mint the first token):** `consent_url(pending)` builds the provider consent URL
-(`access_type=offline` + `prompt=consent` so a refresh token comes back); `exchange_code(pending, code,
-client)` trades the auth code for tokens and returns a self-refreshable blob. Driven by the
-`/oauth/*` endpoints ([interface/api.md](../interface/api.md)).
+(default `access_type=offline` + `prompt=consent` so a refresh token comes back); `exchange_code(pending,
+code, client)` trades the auth code for tokens and returns a self-refreshable blob. Both honor
+per-provider quirks carried on the `PendingOAuth` (snapshotted from the registry entry, below): a provider's
+`auth_params` **replaces** the Google defaults entirely (LinkedIn/X/TikTok/Meta reject `access_type`);
+PKCE (`pkce_challenge()` — X requires a verifier); `token_endpoint_auth_method` = `client_secret_basic`
+(X puts the secret in HTTP Basic, not the body); the `client_id_param`/`scope_separator` dialect; and
+`long_lived_exchange` (`_extend_meta_token()` swaps Meta's ~1-hour code-exchange token for its ~60-day
+one, non-fatal on failure). Driven by the `/oauth/*` endpoints ([interface/api.md](../interface/api.md)).
+
+**Expiry as a separate axis (`expiry_of` / `expiry_state` / `connection_view`).** Health answers "does
+this credential work"; expiry answers "how long will it keep working" — different questions for a
+**non-refreshable** token (a LinkedIn non-partner token reads healthy right up until it silently dies at
+~60 days). `secret_is_refreshable(secret)` decrypts server-side (blob never leaves the function) to tell
+auto from manual; `expiry_state(expires_at, refreshable)` returns `fresh|expiring|expired|unknown` — a
+refreshable credential is **always** `fresh` (treg mints on demand, so the user is never nagged), only an
+unrenewable one earns a warning (`EXPIRING_SOON_DAYS=7`). `connection_view()` is the metadata-only shape
+(no token material) the dashboard/CLI read, with a single actionable `needs_reconnect` flag.
+
+## Curated OAuth provider registry (`oauth_providers.py`)
+Two ways to connect a provider. **Bring-your-own (BYO):** `POST /oauth/start` takes a caller-supplied
+`client_id`/`client_secret`/URIs — works for any OAuth2 provider. **Curated:** for the providers where
+**treg itself holds the approved app** (Google Search Console/Analytics/Business Profile/Ads, YouTube,
+LinkedIn, X, TikTok, Facebook, Instagram, Meta Ads — added PRs #20/#21), the user picks a provider and
+consents, supplying nothing. The asymmetry is the point of a hosted registry: the gating cost on these
+platforms is the *approval* (a Google Ads developer token, Meta App Review), not the OAuth dance — treg
+has already cleared it. treg's own client id/secret load from `Settings` (named by
+`client_id_setting`/`client_secret_setting`, so they come from `.env` like every other setting).
+
+Each entry is a frozen `OAuthProvider` dataclass; `REGISTRY` is the `{service: provider}` map. Key
+module symbols:
+- `get(service)` — look up one provider. `credentials(provider)` — treg's own id/secret (raises if this
+  deployment hasn't set them). `is_configured(provider)` — whether this deployment can offer it (a
+  `token`-kind provider needs nothing from treg, so always offerable).
+- `listing()` — the marketplace payload (`GET /oauth/providers`): every provider, grouped by
+  `CATEGORY_ORDER`, each flagged `configured`, with per-capability scopes already in plain English via
+  `scope_label()`/`SCOPE_LABELS` (a lookup keyed by the raw scope string;
+  `test_every_requested_scope_has_a_plain_english_label` guards it).
+- **Scopes are per CAPABILITY, not per provider** (`scopes: dict[capability -> list[scope]]`). Capabilities
+  are cumulative supersets (write ⊇ read); `default_capability` is the **broadest** (an agent product needs
+  write eventually, so one honest consent screen beats connecting twice). `scopes_for()` /
+  `satisfied_capabilities()` decide when a later capability needs a re-consent.
+- `auth_kind` = `"oauth"` (treg's app), `"token"` (Slack — a workspace-scoped bot the user creates and
+  pastes; `is_token_kind`), or `"key"` (an **API-key provider** connected by pasting a key: Apollo, PDL,
+  Akta, Hunter, Crunchbase, Lusha, Coresignal, Diffbot, The Companies API, LeadMagic on a new
+  **Enrichment** shelf, TikHub + Bright Data + Just One API under
+  Social, under **SEO** Semrush + DataForSEO, SE Ranking, Moz, Majestic, Serpstat, and under
+  **Advertising** the ad-intel keys SpyFu, Apify, Meta Ad Library, SerpApi — alongside the OAuth ad
+  platforms Google Ads + Meta Ads and the **unconfigured** Microsoft Ads, Snapchat Ads, Pinterest Ads
+  (standard OAuth, live once this deployment sets their client credentials) and TikTok Ads (a
+  placeholder: its non-standard app_id/auth_code/Access-Token flow needs oauth.py work before it runs)). A
+  `token` and a `key` share ONE connect/verify/auto-provision path, so `uses_pasted_secret` (`token | key`)
+  gates it while `is_token_kind` stays narrow for Slack's bot-only copy; a key provider needs nothing from
+  treg, so `is_configured` is always true for it. The pasted credential rides in a header
+  (`token_header`/`token_format`, default `Authorization: Bearer {secret}`) or a **query param**
+  (`token_location="query"` + `token_param` — Semrush spells its key `?key=`); the connect probe hits
+  `base_url`+`probe_path`, or an absolute `probe_url` when the cheapest key-check lives on another host
+  (Semrush's balance endpoint on `www.semrush.com`). Validity is read from the HTTP status, a truthy JSON
+  `token_verify_field` (Slack's `ok`, Apollo's `is_logged_in` — both answer 200 even on a **bad** key), a
+  `token_ok_field`==`token_ok_value` match (Majestic's `Code`=="OK"), a `token_reject_field` present
+  (Serpstat's `error`), or an `ERROR`-prefixed text body (Semrush). The connect probe may be a POST with a
+  `probe_json` body (Serpstat's JSON-RPC), and `token_encode="base64"` turns a pasted `login:password` into
+  the Basic blob for `Basic {secret}` (DataForSEO, Moz). `can_autoprovision` (has a `base_url` and either needs no
+  second credential or treg holds it) drives auto-building a callable tool on a successful connect;
+  `needs_extra_credential` covers Google Ads' `developer-token` header (a second binding the operator supplies).
+- Post-connect helpers the dashboard/CLI drive: resource **discovery** (`supports_discovery`,
+  `discover_*` — which site/property/account this connection acts on), row **enrichment**
+  (`supports_enrichment`, `enrich_*` — Google Ads returns bare ids, so a per-row lookup fills the human name),
+  and **identity** (`has_identity`, `identity_*` — providers with nothing to pick, like LinkedIn/X/TikTok,
+  capture who consented instead). A `probe_path` gives registry tools a real health check.
 
 ## Credential health (`health.py`)
 `run_all(db, client, org_id=None)` iterates tools (filtered to `org_id` when set, so `/health/run` never
@@ -81,7 +152,13 @@ probe just marked `invalid`), a transport error / `5xx` / `429` maps to `unknown
 + webhook spam), an injection failure maps to `invalid`, and only secrets **evaluated this run** are
 notified/reported. The run also calls `gc_expired_invites(db, org_id)` + `gc_stale_pending_oauth(db,
 org_id)` (abandoned OAuth connects hold an encrypted client_secret + a replayable `state`, so they
-expire after `OAUTH_PENDING_TTL_MIN`).
+expire after `OAUTH_PENDING_TTL_MIN`). Alongside the probe verdicts the run sweeps an **expiring** list
+over **every** oauth secret via `needs_reconnect()` (built on `oauth.expiry_state`) — not just the ones a
+tool probe touched — because an unbound, unprobed, perfectly-healthy credential can still be days from
+silent death (the LinkedIn shape). `_view()` now carries `provider`/`refreshable`/`expiry_state`/`expires_at`
+so the caller sees both axes. `_probe()` merges a binding's query onto the URL with `copy_add_param` rather
+than passing `params=` (httpx would otherwise **replace** a probe path's own query string, e.g. YouTube's
+`?part=snippet&mine=true`, and fail a healthy credential).
 
 ## Storage / security posture (MVP)
 TLS-only in transit (paste/upload over https, like GitHub/Vercel secrets); Fernet at rest. Per-membership

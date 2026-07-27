@@ -19,7 +19,10 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
 `docs/MULTI-TENANCY-PLAN.md` (standalone plan).
 
 ## The model (`models.py`)
-- **`Org`** — `id, name, slug (unique), created_at`. The tenant that owns secrets/tools/bundles.
+- **`Org`** — `id, name, slug (unique), suspended, demo, public_demo, created_at`. The tenant that owns
+  secrets/tools/bundles. **`public_demo`** marks a team whose member token is PUBLISHED (e.g. on the
+  landing page): non-admin members are locked to `/call` + reads and may never act as a user — enforced in
+  `require_member` / `require_identity`.
 - **`User`** — identity only: `id, email (unique), created_at`. No token, no role.
 - **`Membership`** — `user_id, org_id, role (owner|admin|member|viewer), token_hash (idx), webhook_url,
   daily_call_cap` (per-user daily usage cap; `-1` = unlimited, admin-set — see the API fragment's
@@ -34,6 +37,21 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   — the code is a shortcut, not a requirement. `email_token_hash` is the inbox-only **second secret** in
   the emailed link — it can sign the invitee in (`GET/POST /auth/invite-signin?t=`, one-time), while the
   admin-visible code never can.
+- **`Project`** — an OPTIONAL sub-scope inside an org (`org_id`, `name`, `slug`, unique `(org_id, slug)`).
+  The org stays the hard isolation boundary; a project is a softer grouping on top. Deliberately a
+  **label + ACL scope, NOT a namespace**: `Tool.name` stays unique per `(org_id, name)`, so no unique
+  constraint had to be rebuilt (`_fix_tool_uniqueness` had to do that once already, and SQLite cannot
+  alter constraints portably). `Tool.project_id` NULL = **org-wide**, which is every tool that predates
+  projects — so this shipped purely additive. Secrets stay org-level on purpose: one shared credential
+  legitimately backs tools in several projects.
+- **Machine identities** — a `User` on an **unroutable domain**, which is what makes it a machine
+  rather than a person. Two exist: the published demo token (`PUBLIC_DEMO_DOMAIN`) and an **agent**
+  (`AGENT_DOMAIN` = `agents.treg.local`). Both are minted by an admin and act ONLY by their token:
+  `_is_machine_email` gates them out of every login door and out of `require_identity` (below). An
+  agent needs **no new table and no migration** — it is a `Membership`, so it inherits `daily_call_cap`,
+  `tool_access`, `local_run_enabled` and per-identity audit for free, which is exactly what makes those
+  controls *per-agent*. NOTE: "agent" here is an IDENTITY; `agents.py` is the unrelated skill-directory
+  table ("where does each coding agent keep its skills").
 - Resource tables (`Secret`/`Tool`/`Bundle`/`CallRecord`/`PendingOAuth`) carry `org_id`; `owner`
   (creator email) is kept for audit + the member role gate. `Tool.name` is unique **per `(org_id, name)`**
   (`UniqueConstraint("org_id", "name")`), so two orgs may reuse a name.
@@ -57,6 +75,47 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   *customized* member does NOT auto-get a newly-registered tool (the dashboard toasts a reminder). `Invite`
   carries `tool_access`/`local_run_enabled` (validated at `create_invite`) → copied onto the membership at
   both accept doors. `list_members` returns both fields.
+- **Agents (`create_agent` / `list_agents` / `revoke_agent`, `/orgs/{id}/agents`, admin+).** Mints a
+  member identity for a machine caller, reusing the `create_public_token` recipe (re-POST the same name
+  **rotates** — the old token dies there; revoke deletes the membership). Three invariants, each closing
+  a real hole:
+  1. **An agent token can never act as a USER.** `create_org` depends on `require_identity`, so without
+     the `_is_machine_email` refusal there an agent could create a fresh org **in which it is owner** —
+     and owners are exempt from `_require_tool_access` / `_require_local_run`, escaping every limit on it.
+  2. **An agent can never be an owner** — blocked in `create_agent` AND in `set_member_role`, for the
+     same exemption reason.
+  3. **The address is org-scoped** (`agent-{org.slug}-{name}@…`, mirroring `_public_demo_email`): two
+     orgs must each own an agent called `deploy` without sharing one `User` row, or a superadmin
+     suspending one tenant's agent would kill the other's. Agents are always looked up by
+     *(org + domain)*, never by recomputing the address, so an org rename can't orphan them.
+  Every identity door is blocked at the shared choke point `_find_or_create_user`, plus `register_user`
+  (which predates it and creates a `User` directly) and `auth_email_start` (refuse early, mint no code).
+  `list_members` carries `is_agent` so one roster can show people and machines apart.
+  **A rotate replaces the TOKEN, never the limits.** Because rotate is the same endpoint as create, an
+  absent optional field used to fall back to its permissive default — and the dashboard's Rotate button
+  sends only `{name, role, daily_call_cap}`, so a scoped agent silently became unrestricted
+  (`tool_access=None` = every tool) just by getting a new token: round-4 blocker #2. `create_agent` now
+  writes a field **only when the caller actually sent it** (`body.model_fields_set`, the shape
+  `set_member_access` already used for `project_access`); a brand-new agent, having nothing to keep,
+  still takes the documented defaults. `project_access` is preserved for free — `AgentIn` cannot even
+  express it, so it could previously only ever be lost.
+- **Two ACL axes, composed as AND** (`_tool_usable` = `_tool_allowed` AND `_project_allowed`). The
+  project scope is the coarse dial, `tool_access` the fine one; both are NULL-means-everything and the
+  owner is exempt from both. `project_access` holds project **IDs**, not slugs, so the hot-path check is
+  a pure set test (no id→slug query per call) and a rename cannot strand an access list.
+  `project_access=[X]` with `tool_access=NULL` means "every tool in project X, **including ones added
+  later**" — the composition that makes the coarse dial useful alone. `_normalize_project_access`
+  accepts slugs or ids, 422s on an unknown one, and collapses an all-projects selection back to NULL
+  (mirroring `_normalize_tool_access`). Endpoints: `create_project` / `list_projects` (a scoped member
+  sees only their own) / `delete_project` (admin+) — deleting **frees** its tools back to org-wide rather
+  than hiding them, and drops the id from every member's scope, **storing an emptied list as `[]`, never
+  NULL**. NULL means *every project*, so collapsing `[]` would hand a member scoped to only the deleted
+  project the run of every OTHER project's tools — a privilege escalation fired by an unrelated delete
+  (round-4 blocker #1, `test_security_round4.py`). `[]` already carries the intended meaning (org-wide
+  tools only), and nobody is locked out because the **freed tools** are what they keep: whatever the
+  member could reach before the delete they can still reach after it. That, not a widened scope, is
+  what "never lock anyone out" rests on. Invites carry `project_access` onto the membership at both
+  accept doors, exactly as `tool_access` does.
 - Every list filters by `caller.org_id`; every create stamps `org_id = caller.org_id` +
   `owner = caller.email`; `_resolve_call` scopes **both** the named lookup and the host/longest-prefix
   passthrough to the org; `call_tool` loads only same-org secrets. See [proxy-model](proxy-model.md).
@@ -80,6 +139,14 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   `list_members`
   / `remove_member` (`GET`/`DELETE /orgs/{id}/members[/{user}]`, admin+; owners cannot be removed).
   `_require_admin_of(org_id, caller)` gates the admin endpoints (token must be for that org + role ≥ admin).
+- **An identity leaving takes its policy with it (`_drop_member_deny_rules`).** A `DenyRule` aimed at
+  one caller (`user_id` set) is meaningless once that caller is gone, and it lingers in the Policy
+  table naming a user id nobody can resolve. `remove_member`, `leave_org` and `revoke_agent` sweep the
+  rules for that `(user_id, org_id)`; `admin_delete_user` sweeps **every org's** rules for that user,
+  because `DenyRule.user_id` is a foreign key and a surviving row would dangle — Postgres rejects that
+  outright, while SQLite only hides it by not enforcing FKs (so the test suite alone cannot catch it).
+  ORG-wide rules (`user_id` NULL) are never touched: they are about the team, not about one caller.
+  Mirrors how `delete_project` sweeps the id it deletes out of every `project_access`.
 - **Org administration:** `set_member_role` (`PATCH /orgs/{id}/members/{user}`, **owner-only** via
   `_require_owner_of`; a `_count_owners` last-owner guard blocks demoting the sole owner — ownership
   transfer = promote another to owner, then step down), `leave_org` (`POST /orgs/{id}/leave`, self-removal,
@@ -117,7 +184,25 @@ silently drops them and, because a re-run short-circuits, permanently 500s every
 upgrade. (`"user"` is quoted in the `ALTER` — a reserved word in Postgres, where this runs in-place.)
 (A12) adds `tool_access` (JSON, nullable) + `local_run_enabled` (`BOOLEAN NOT NULL DEFAULT true`) to
 **both** `membership` and `invite`; the legacy owner-backfill INSERT names `local_run_enabled` explicitly
-(create_all builds it NOT NULL with no server default). Verified in-place on Postgres.
+(create_all builds it NOT NULL with no server default). Verified in-place on Postgres. Later additive steps
+follow the same guarded pattern: (A14) `invite.landing`, (A15) `org.public_demo`, (A16) the seven `secret`
+connection-metadata columns (`provider`/`granted_scopes`/`resource_ref`/`resource_name`/`expires_at`/
+`last_refresh_at`/`last_error`), (A17–A20) the eight `pendingoauth` OAuth-marketplace/quirk columns
+(`provider`/`code_verifier`/`auth_params`/`token_endpoint_auth_method`/`client_id_param`/`scope_separator`/
+`long_lived_exchange`/`replaces_secret_id`). **Postgres BOOLEAN default fix (PR #22):** every boolean added
+in-place uses `DEFAULT false`, never `DEFAULT 0` — Postgres rejects an integer default on a `BOOLEAN`
+column (SQLite accepts both, so the test suite alone cannot catch it); `pendingoauth.long_lived_exchange`
+is spelled `BOOLEAN NOT NULL DEFAULT false`, and the legacy `INSERT INTO org (…)` backfill names
+`public_demo` explicitly with a `false` literal. **(A21) PROJECTS** follows the same shape: the `project`
+table itself needs no ALTER (a brand-new table is created by `create_all`), so the step only adds the three
+columns that hang off it — `tool.project_id` (INTEGER, nullable) plus `project_access` (JSON, nullable) on
+**both** `membership` and `invite`. Every one is nullable and NULL means *org-wide / unrestricted*, so an
+existing deployment behaves exactly as before until someone creates a project; and because none of them is a
+BOOLEAN, the Postgres integer-default trap does not apply here. Note what (A21) deliberately does NOT do:
+`Tool.name` keeps its `(org_id, name)` unique constraint, because projects are a **label + ACL scope, not a
+namespace** — making them a namespace would have meant rebuilding that constraint, which `_fix_tool_uniqueness`
+already had to do once and which SQLite cannot express portably. **`DenyRule`** (policy) needs no migration
+step at all for the same new-table reason.
 
 > Health (`run_all`) takes an `org_id` filter so `/health/run` never leaks other orgs' credentials, and
 > alerts resolve the owner's per-org membership webhook. See [auth-secrets](auth-secrets.md).

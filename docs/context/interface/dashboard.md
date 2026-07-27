@@ -34,7 +34,8 @@ The **authed** shell is sidebar-first. The **top bar** is just brand + search. T
 stacks: (top) an **org block** — role + team name — that on click opens a switcher **dropdown** where
 each team carries its own **⚙ Settings** (`orgSettings` → switch into it, then open its settings) and
 **Switch** (`switchTo`) button (long names truncate, actions pinned right; the click-outside handler
-keys on `.orgblock`); (middle) the nav — Tools · Activity · **Usage** (admin/owner) · Team · Getting
+keys on `.orgblock`); (middle) the nav — Tools · **Secrets** (member+) · **Marketplace** (member+, the
+OAuth-connect view — `go('connections')`) · Activity · **Usage** (admin/owner) · Team · Getting
 started · Tutorial · Admin; (bottom)
 the **account** block — avatar · email · theme · sign out. The old top-bar org dropdown and top-right
 account controls are gone.
@@ -119,10 +120,38 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   balanced quote pair removed). A single-line `NAME=value` splits only in the *name* field — a value
   containing `=` (base64 pad, connection strings) pastes untouched into the value field; multi-line
   splits from either field.
-- **Team settings** (`view==='orgs'`) — the **active** team's settings, not an all-teams list (switching
-  now lives in the sidebar dropdown). Renders `Manage {activeName}` — members / invite / pending / danger
-  zone for admins (`canAdmin`); a **personal** org shows a focused page with the invite + danger blocks
-  hidden. Reached via the sidebar org-dropdown ⚙.
+- **Team** (`view==='orgs'`) — the active team, now split into **tabs** (`orgTab`) because it had grown
+  into one scroll of unrelated things: **Members · My teams · Projects · Policy · Team settings**.
+  Header reads `Team: {activeName} — you are {activeRole}` and points at the sidebar picker for switching.
+  - **Members** — the roster (role, daily cap, today's usage, tool ACL, project scope, local-run toggle).
+    Inviting is no longer a separate section: it sits here behind an **"＋ Add member"** toggle
+    (`showInvite`), which is where people look for it. The inline access editor now carries **project
+    checkboxes** (`projDraft`) beside the tool ones, each collapsing "all checked" back to *all* so future
+    tools/projects are inherited. `list_members` returns `is_agent`, so people and machines are
+    distinguishable in one roster.
+  - **My teams** — the sidebar picker rendered as a real table (name, slug, your role, tool count, which
+    is active) with **Switch to** per row plus **New team** / **Join by code** / **Paste token**. The ONE
+    tab not gated on `canAdmin`: a plain member has teams too and the dropdown was their only way to see
+    them, so `loadOrgAdmin` moves a non-admin onto this tab instead of showing a permission notice.
+  - **Projects** — create / list (with tool counts) / delete, with the delete button stating that its
+    tools become team-wide rather than being deleted.
+  - **Policy** — deny rules (host / path / method / who / note), listed and removable. The "who" select
+    labels agents so a per-agent rule is one click.
+  - **Team settings** — leave / delete (the danger zone), acting on the team you are in.
+- **Agents** (`view==='agents'`, `canAdmin`) — its own sidebar entry rather than a row in Team, because an
+  agent identity is how most people will actually use treg. Create (name / role / daily cap), **Rotate**
+  (re-POSTs the same name, so the old token dies), **Revoke**, and an inline cap editor. Rotate sends
+  only `{name, role, daily_call_cap}` **on purpose**: `create_agent` leaves every field the client does
+  not send exactly as it was, so the agent's tool ACL and project scope survive the rotate. They used to
+  be silently cleared by this very button — see [multi-tenancy](../architecture/multi-tenancy.md). A minted token
+  appears in an accented card that says it is shown **once**; under it are three paste-ready snippets
+  (`agentSnip`: Environment / Give it to your agent / Verify) built by the `agentSnippet` computed, mirroring
+  the Tools snippet block. Because a stored token is hashed and unrecoverable, each row also has a **Setup**
+  button (`showAgentSetup`) that reopens those snippets for an existing agent using `$TREG_TOKEN` as a
+  placeholder, telling the user to Rotate if the token was lost. Choosing `role=admin` raises a
+  confirmation spelling out that an admin agent can register/delete tools and secrets and manage members.
+- **Tool form** — Add/Edit now carries a **Project** dropdown (default "team-wide"); `loadProjectsIfNeeded`
+  fetches the list on demand so it works even if the Team page was never opened.
 - **Getting started** (`view==='start'`, under Help) — the CLI path: install (`{BASE}/install.sh`),
   `treg login`, `treg onboard`, register-a-tool + no-key call, and links to the interactive tutorial +
   `/llms.txt`. Per-block copy via `copyStart`.
@@ -165,11 +194,81 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   `/tutorial` mirrors it and opens a panel from the URL hash (`/tutorial#auth`, `#skills`); the onboarding
   stepper deep-links each step's "Read more" there via `readMore(onbSection)`. See below.
 
+## Marketplace — the in-browser OAuth-connect UI (`view==='connections'` / `'provider'`)
+The dashboard now runs the whole **hosted connect flow** in the browser, so a member can attach a
+provider account (Google Analytics, Search Console, Google Ads, Slack, Meta/Facebook/Instagram, X,
+TikTok, LinkedIn, YouTube, …) without touching the CLI. `loadConnections` fetches **`GET /oauth/providers`**
+(server route `oauth_providers_list` → `oauth_providers.listing()`, each row carrying `service`,
+`display_name`, `category`, `summary`, `capabilities`, `scope_detail`, `auth_kind`, `supports_discovery`,
+and a **`configured`** flag = whether *this* deployment holds the provider's client credentials) plus
+**`GET /connections`** (`list_connections` — the org's existing grants). The list view groups providers by
+category (`providerGroups` computed → `shownGroups` filtered by the `mkCat` chip row), rendering a card
+grid; the whole card is the click target (`openProvider(service)`). Each card shows a **provider logo**
+served by convention from **`/logos/<service>.svg`** (`.plogo-tile`/`.plogo`, `@error` hides a missing
+file) — the `StaticFiles` mount `_LOGO_DIR` (`src/treg/web/logos/`). `connCount` labels how many accounts
+are already connected.
+
+**One integration** is its own view (`view==='provider'`, `mkProvider`/`mkConns` keyed on `mkService`) at a
+shareable path **`/app/marketplace/<service>`** (server route `dashboard_marketplace` — plain SPA, **no**
+og meta, since the page is only meaningful to a signed-in member; client route `mkFromPath`/`openProvider`
+push `/app/marketplace/<service>` into history). It lists the connected accounts (each account = its own
+tool name so an agent can call a specific one), their health/expiry chips, and a **Permissions** panel
+(`mkGranted` marks which capabilities are already granted; `scope_detail` gives the exact upstream scopes
+on hover).
+
+**Connecting** (`startConnect` picks the shape): a **token** provider (`auth_kind==='token'` — "bring your
+own bot") opens the `tokenAsk` modal → `submitToken` → **`POST /connections/token`** (`connect_with_token`);
+a provider with 2+ capabilities opens the `capAsk` modal (`capLabel`/`capHelp` explain each, e.g. TikTok's
+weaker `draft`) → `chooseCapability`; otherwise it goes straight to `connectProvider`. `connectProvider`
+does **`POST /oauth/start`** then opens the consent screen in a **popup** and **polls** `GET /oauth/status/{state}`
+every 2s (state stays in the dashboard rather than relying on the popup talking back); on `done` it re-reads
+`/connections` + `loadAll`, and if the provider `supports_discovery` and no resource is chosen yet it opens
+the resource picker. **Post-connect setup:** `openResources` (**`GET /connections/{id}/resources`**,
+`connection_resources` — a live upstream round-trip, so the modal opens first with a spinner) → `chooseResource`
+(**`POST /connections/{id}/resource`**) sets the default account/property; `saveExtraCred` (**`POST
+/connections/{id}/extra-credential`**, `set_extra_credential`) supplies a second credential a grant needs to
+be callable (e.g. Google Ads' developer token — surfaced by the `needSecondCred`/`mkNeedsCred` banners);
+`enableCapability`/`reconnect` re-run consent to widen scopes or refresh a `staleConns` credential; `disconnect`
+(inline-confirm → **`DELETE /connections/{id}`**, `revoke_connection`). Server-side, a successful connect
+**auto-provisions the tool** (`_autoprovision_provider_tool`) and records the account identity/resource labels
+(`_record_connected_identity`, `_enrich_resource_labels`). The three post-connect dialogs (`tokenAsk`, `capAsk`,
+`resPick`) live at **app-root level**, not nested in the view — a nested copy failed to render on an integration
+page (Connect looked dead).
+
+## Shareable detail pages (`/app/skills/<name>`, `/app/tools/<name>`)
+A skill or a tool has its own deep-linkable page so a member can **share** the exact thing (`view==='detail'`,
+`detail={kind,name}`). Server routes `dashboard_skill_page` (`/app/skills/{name}`) and `dashboard_tool_page`
+(`/app/tools/{name}`) both call **`_spa_with_og`**, which serves the same SPA but injects per-resource
+`og:`/`twitter:` meta so a pasted link unfurls — the meta echoes **only the URL's own name segment**
+(HTML-escaped via `_esc_html`, **no DB read**, so an unauthenticated crawler learns nothing). The client
+resolves the record by **name** (not id, so the URL is stable): `openDetail`/`loadDetail` fetch
+**`/bundles/by-name/{name}`** (`get_bundle_by_name`) for a skill or **`/tools/by-name/{name}`**
+(`get_tool_by_name`) for a tool. A **skill** page renders a "Use with your agent" copy-prompt (`detailPrompt`
+— no token embedded), a bundled-tools/secrets chip row, and a file browser over the SKILL package
+(`detailTree`/`detailFileContent`, `detailFile`); a **tool** page shows upstream + credential chips
+(`credChips`), examples, and the CLI/guardrails block, linking back to its parent skill (`detailParentSkill`).
+Actions: **⧉ Copy link** (`detailShareUrl`), **▶ Try it** / **⚙ Configure** (`tryDetailTool`/`configureTool`
+via `fullTool`, which resolves the full record from a skill's tool summary), and **Share…** (`canAdmin` only).
+
+The Tools list routes its rows through `rowTarget`/`rowHref`/`rowOpen` — a skill-born tool (has `bundle_id`)
+opens its **skill** page (the shareable thing), a bare endpoint opens its **tool** page. **Share…**
+(`openShare`/`sendShare`) invites someone by email with a **`landing`** field on the invite
+(`POST /orgs/{id}/invites`, server-validated to a `/app/skills|tools/<name>` path) plus optional scoped
+`tool_access` (unchecked "full access" → the skill + its bundled tools only). The emailed one-click link IS
+the consent: on arrival `autoAcceptShare` accepts the matching pending invite silently and enters that team.
+If the link resolves to a team the caller is **already** in but a different one, `findDetailOrg` probes the
+caller's other teams and switches silently on a unique hit; a 404 with no match shows an "ask for an invite"
+message. Boot + `popstate` route these paths (`routeFromPath`); a detail/marketplace path is stashed in
+`localStorage['treg-next']` across an OAuth sign-in hop (the callback always lands on `/app`, which would
+otherwise drop the path).
+
 ## The tutorial (one source, two renderers)
 `src/treg/web/tutorial.js` is the **single source of truth**: `window.TREG_TUTORIAL` (`concepts`, `roles`,
 `personas`, `steps[]` = `{part,who,title,explain,cmd,out,notice}`, plus the two focused arrays
 `importShell[]` and `access[]`, same step shape) + a self-contained `tregHL(text,lang)` shell/json
-highlighter. It's served at `/tutorial.js` and consumed by **both** the dashboard Help view (native Vue
+highlighter. (The `CONCEPTS` proxy analogy was reworded from "a coat check" to **"a bank teller"** — you
+hand over your token, the teller fetches the real secret from the vault and makes the call for you; the key
+never crosses the counter.) It's served at `/tutorial.js` and consumed by **both** the dashboard Help view (native Vue
 render) and the **standalone** `src/treg/web/tutorial.html` (vanilla render, served at `/tutorial`;
 renders `steps` only) — so they can never drift. `docs/tutorial.html` is now a redirect to `/tutorial`;
 the prose walkthrough is `docs/TUTORIAL.md`. Editing steps means editing `tutorial.js` only.
@@ -244,8 +343,9 @@ error banner on success. `+ Skill` (`openAddSkill`/`addSkill`) registers a **bun
 with client-side JSON validation.
 
 ## Not yet
-OAuth-connect in-browser (the hosted consent + poll flow, `/oauth/*`). Everything else in DASHBOARD-PLAN
-(org lifecycle, resource registration incl. multi-binding + edit, skill bundles, super-admin mutations)
-has shipped. Packaging: `src/treg/web` lives inside the `treg` package, so the wheel's `packages`
+OAuth-connect in-browser (the hosted consent + poll flow, `/oauth/*`) **has now shipped** — see the
+Marketplace section above. Everything in DASHBOARD-PLAN (org lifecycle, resource registration incl.
+multi-binding + edit, skill bundles, super-admin mutations, OAuth connect, shareable detail pages) has
+shipped. Packaging: `src/treg/web` lives inside the `treg` package, so the wheel's `packages`
 inclusion ships every asset (incl. `tutorial.js`/`tutorial.html`) — no `force-include` (a redundant
 one double-adds each file and breaks the wheel build).

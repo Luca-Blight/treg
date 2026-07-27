@@ -57,6 +57,24 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `_cascade_delete_org`, which now also sweeps each org's `RunRecord` rows);
   `list_invites` / `revoke_invite` (`GET`/`DELETE /orgs/{id}/invites[/{id}]`, admin+). Full behavior:
   [multi-tenancy](../architecture/multi-tenancy.md).
+- **Agents (machine identities):** `create_agent` (`POST /orgs/{id}/agents`, admin+) mints/rotates a
+  member token for a machine caller — its own `daily_call_cap`, `tool_access` and audit trail, with no
+  new table; `list_agents` (`GET`, never returns a token) and `revoke_agent` (`DELETE …/{user_id}`,
+  which also sweeps the deny rules aimed at that agent). An agent token is refused by
+  `require_identity` and can never be an owner. **Re-POSTing the same name ROTATES, and a field the
+  caller omits is left as it is** — a rotate changes the token, never the limits. See
+  [multi-tenancy](../architecture/multi-tenancy.md).
+- **Projects (a sub-scope inside the org):** `create_project` / `list_projects` /
+  `delete_project` (`/orgs/{id}/projects`, admin+ to mutate) — deleting frees its tools to org-wide and
+  removes the id from every member's `project_access`, leaving an emptied list as `[]` (NULL would mean
+  *every* project). `POST /tools` and `PATCH /tools/{id}`
+  take `project` (slug or id; null = org-wide), and `set_member_access` / `create_invite` take
+  `project_access`. See [multi-tenancy](../architecture/multi-tenancy.md).
+- **Deny rules (org policy):** `create_deny_rule` (`POST /orgs/{id}/deny`, admin+) blocks a
+  host / path_prefix / method for the whole org or one member (`user_id`); an all-empty rule is
+  refused (it would freeze the org) and a full URL is reduced to its host. Plus `list_deny_rules`
+  (`GET`) and `delete_deny_rule` (`DELETE …/{rule_id}`, 404 across orgs). Enforced on the proxy and
+  both run tiers — see [proxy-model](../architecture/proxy-model.md).
 - **Usage metering + caps** (usage-metering v1, `docs/USAGE-METERING-PLAN.md`): `org_usage`
   (`GET /orgs/{id}/usage?days=`, admin+) rolls up `CallRecord` + `RunRecord` since the window start into
   **by-user** (with a `call`/`local_run`/`server_run` split), **by-tool**, **by-day**, and totals — pure
@@ -218,16 +236,46 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `web/llms.txt` as `text/plain` with `{BASE}` templated from `public_url` — the [llms.txt](https://llmstxt.org)
   agent-onboarding file (call protocol + discovery + auth + CLI + skills + doc links). See [dashboard](dashboard.md).
   `install_sh` (`GET /install.sh`, `{BASE}`-templated) serves the CLI installer (`web/install.sh`).
+  `terms_page` (`GET /terms`) + `privacy_page` (`GET /privacy`) serve the hosted registry's legal pages
+  (`_legal_page`, no-cache) with `legal_css` (`GET /legal.css`) as the shared skin — `/privacy` is also
+  the URL given to OAuth providers at app-verification time, so don't rename it. Provider brand marks are
+  mounted at `/logos` (`StaticFiles` over `web/logos/`, resolved by convention `logos/<service>.svg`).
+  `dashboard_marketplace` (`GET /app/marketplace/{service}`) serves the plain SPA (a connect page is only
+  meaningful to a signed-in member, so no OG meta).
   `_serve_md` backs `quickstart_md` (`GET /quickstart.md`) + `tutorial_md` (`GET /tutorial.md`) —
   `{BASE}`-templated markdown served as inline `text/plain` (so "open in new tab" shows it, not a
   download); the docs pages' **Copy markdown** dropdowns (copy / open-in-tab) fetch these.
   Browser-facing auth pages (GitHub callback, OAuth-connect result) render via `_auth_page` (brand card).
 - **Landing sandbox + hosted skills:** `demo_sandbox_mint` (`POST /demo/sandbox`, open, per-IP
-  rate-limited) mints an anonymous throwaway team; `demo_sandbox_skill` (`GET /demo/sandbox/skill`)
-  exports what the visitor built. `skill_samples` (`GET /skills/samples`, open) + `skill_install`
+  rate-limited) mints an anonymous throwaway team (its response now carries `live` = whether the seeded
+  stripe tool is a real wire); `demo_sandbox_skill` (`GET /demo/sandbox/skill`) exports what the visitor
+  built. `skill_samples` (`GET /skills/samples`, open) + `skill_install`
   (`GET /skills/{name}/install.sh?token=`) host sample skills. `call_tool` short-circuits **sandbox**
   orgs to `sandbox.synthesize` (real injection, no network). Caps via `_enforce_sandbox_cap`. Full
   behavior: [landing-sandbox](landing-sandbox.md).
+  - **The one live wire (real Stripe demo).** When `demo_stripe_key` is set, a sandbox call to the exact
+    seeded `stripe` tool (fingerprint-matched by `demo_sandbox.is_live_tool`, GET/POST only) is relayed
+    for real to Stripe's test API via `_relay_live_demo` — a deliberately narrower relay: the auth header
+    is built from the env key (never from a sandbox secret, which doesn't hold it), the body is
+    form-encoded, and `metadata[visitor]` is overridden server-side. Metered per client IP
+    (`_enforce_public_demo_ip_cap`) since the wire is one shared credential. `demo_sandbox_live`
+    (`GET /demo/sandbox/live`) reports `live` + the visitor's feed name for an existing sandbox.
+    `_require_not_live_demo_tool`/`_require_not_live_demo_secret` freeze the seeded `stripe` tool and its
+    `STRIPE_KEY` against edit/delete so a visitor can't break their own live pane. The public payments
+    feed: `stripe_webhook` (`POST /stripe/webhook`, 404 when `demo_stripe_webhook_secret` unset, verifies
+    the signature via `pubfeed.verify_signature`, pushes a `charge.succeeded` into `pubfeed.push_charge`)
+    and `landing_stripe_feed` (`GET /landing/stripe-feed`, unauthenticated SSE via `pubfeed.stream`,
+    server-chosen fields only).
+- **Public demo token (publishable, call-only credential):** `create_public_token`
+  (`POST /orgs/{id}/public-token`, owner-only) flips the org to `public_demo` and mints a **viewer-role**
+  token bound to a dedicated can't-log-in identity (`pub-<slug>@public-demo.treg.local`) — safe to print
+  on a web page. Re-POSTing **rotates** (instant revocation of the old one); `delete_public_token`
+  (`DELETE …`) revokes and lifts the lockdown. **Lockdown is centralized in the auth deps:** when
+  `org.public_demo` and the role is below admin, `require_member` allows only `/call/*` + GET/HEAD/OPTIONS
+  (every mutation is frozen no matter what routes are added later), and `require_identity` refuses the
+  token entirely (it must never act as a user — mint identity tokens, create orgs, accept invites). Its
+  `/call` traffic is metered per client IP (`_enforce_public_demo_ip_cap`, `PUBLIC_DEMO_HIT_NS`,
+  ~10 calls/min/IP) since one token stands in for thousands of strangers.
 - **Skills / bundles:** `register_skill` (`POST /skills`) composes a `Bundle` + its secrets + tools
   atomically, resolving each binding's `secret` local-name to the created secret id; the shared core is
   `_register_skill_bundle` (also used by the folder importer). `list_bundles`, `get_bundle`,
@@ -242,20 +290,65 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   selected ones (`_materialize_skill_files` sandboxes the upload). `list_orgs` now carries `tool_count`.
 - **Audit:** `list_calls` (`GET /calls`, limit clamped 1–500; each row carries its `kind` —
   `call`/`local_run` — for the Activity + Usage views).
-- **OAuth connect:** `oauth_start` (`POST /oauth/start`) creates a `PendingOAuth` and returns
-  `consent_url` + `state` + `redirect_uri`; `oauth_callback` (`GET /oauth/callback`, open) exchanges the
-  code and creates the oauth secret; `oauth_status` polls. See [auth-secrets](../architecture/auth-secrets.md).
-- **Health:** `run_health` (`POST /health/run`) → `health.run_all`; `get_health` (`GET /health`).
+- **OAuth connect + the provider marketplace:** `oauth_start` (`POST /oauth/start`) creates a
+  `PendingOAuth` and returns `consent_url` + `state` + `redirect_uri`; `oauth_callback`
+  (`GET /oauth/callback`, open) exchanges the code and creates/updates the oauth secret; `oauth_status`
+  polls. **Two modes** (`OAuthStartIn`): **BYO** (supply `client_id`/`client_secret`/`auth_uri`/
+  `token_uri`/`scopes`) or **REGISTRY** (supply `provider` + optional `capability`) where treg fills
+  everything from **its own approved OAuth app** — the marketplace. `oauth_providers_list`
+  (`GET /oauth/providers`) lists the providers treg holds an app for, each flagged `configured` (false
+  when this deployment hasn't set that provider's client credentials). In registry mode `oauth_start`
+  reads the provider from `oauth_providers.get`, resolves scopes via `scopes_for(capability)`, and
+  stashes every per-provider auth quirk on the `PendingOAuth` (PKCE `code_verifier`, `auth_params`,
+  `token_endpoint_auth_method`, `client_id_param`, `scope_separator`, `long_lived_exchange`) so the
+  callback exchanges the code exactly the way the consent URL was built. `connection_id` (BYO or
+  registry) targets ONE existing connection to **reconnect/widen** it — scoped to the caller's org and
+  matched to the provider, recorded as `replaces_secret_id` — instead of adding another account.
+  **Callback does the real work:** it either replaces the named connection (`replaces_secret_id`) or
+  adds a new one named by `_free_connection_name` (the first account for a provider keeps the bare
+  service name — `google-search-console` — later ones get `-2`/`-3`), normalizes `granted_scopes` to
+  space-joined, sets `expires_at` (`oauth.expiry_of`), then `_autoprovision_provider_tool` binds the
+  fresh credential to the provider's API as a callable tool (idempotent by (org, name); a token-kind
+  provider gets an `env` header binding, an oauth one gets a `Bearer {access_token}` binding; a provider
+  needing treg's own second credential — Google Ads' developer token — also gets a **platform binding**,
+  see [proxy-model](../architecture/proxy-model.md)) and `_record_connected_identity` best-effort asks
+  the provider who connected. See [auth-secrets](../architecture/auth-secrets.md).
+- **Connections (the marketplace's dashboard surface):** `list_connections` (`GET /connections`) returns
+  every OAuth/registry credential in the org — metadata only, no token material — with health, expiry,
+  and (for a known provider) `capabilities`/`missing_capabilities` + extra-credential notes. The filter
+  is `kind=="oauth" OR provider!=""` so a bring-your-own-token provider (a plain `env` string, e.g.
+  Slack) still lists. `connection_resources` (`GET /connections/{id}/resources`) **live-fetches** what a
+  connection can act on (GSC sites, GA properties, Ads accounts), enriching id-only rows with the
+  upstream's human name concurrently (`_enrich_resource_labels`) and recording the successful upstream
+  call as proof of health; `set_connection_resource` (`POST …/resource`) pins the chosen `resource_ref`
+  + `resource_name`. `connect_with_token` (`POST /connections/token`) connects any **pasted-secret**
+  provider — a bring-your-own bot token (Slack) or an **API key** (Apollo, Hunter, TikHub, Semrush, …) —
+  **verifying the credential against the provider's probe before storing** (a header- OR query-param probe,
+  an off-host `probe_url`, tolerating a CSV/text body or a 200-with-false-`token_verify_field` reply), then
+  auto-provisioning its tool with a header or query binding. See
+  [auth-secrets](../architecture/auth-secrets.md). `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
+  the second credential a provider needs when treg does NOT hold it centrally (rare) and finishes the
+  tool with BOTH bindings. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and
+  cleans up: it removes the tool treg auto-provisioned for the provider and drops the dead binding from
+  any user-built tool, leaving that tool's other bindings intact. All `require_can_register`
+  (member+). Helpers: `_owned_connection`, `_dig` (dotted-path walk).
+- **Health:** `run_health` (`POST /health/run`) → `health.run_all`; `get_health` (`GET /health`) now
+  returns `health._view(s)` plus a `needs_reconnect` flag (`health.needs_reconnect`) so a credential treg
+  can't renew announces itself before it dies.
 - **The proxy:** `call_tool` (`* /call/{rest:path}`) → `_resolve_call` → `_enforce_daily_cap` (the
-  per-user daily cap; 429 when over) → load secrets (+ `ensure_fresh`) → `relay()` → `audit.record_call`.
-  Detail in [proxy-model](../architecture/proxy-model.md).
+  per-user daily cap; 429 when over) → (public-demo token → `_enforce_public_demo_ip_cap`) → load secrets
+  (+ `ensure_fresh`) → `relay()` → `audit.record_call`. A **platform binding** carries no `secret_id`
+  (its value comes from settings at relay time), so secret-loading now skips `secret_id is None`. Detail
+  in [proxy-model](../architecture/proxy-model.md).
 
 ## Schemas
 Pydantic input models: `UserIn`, `OrgIn` / `InviteIn` / `AcceptIn`, `EmailStartIn` / `EmailVerifyIn`,
 `SecretIn` / `SecretUpdate`,
 `ToolIn` (flat single-binding sugar + optional `bindings` + `health_check` + `cli`) / `ToolUpdate` (incl.
 `cli`), `SkillIn` (`SkillSecretIn` + `SkillToolIn`, whose `cli` inject entries reference secrets by
-local_name), `GrantIn` (argv) / `RunReportIn` (audit_id + exit_code + verdict), `OAuthStartIn`. Output
+local_name), `GrantIn` (argv) / `RunReportIn` (audit_id + exit_code + verdict), `OAuthStartIn` (now
+BYO-or-registry: `provider` / `capability` / `connection_id` plus the BYO `client_id`/`secret`/URIs/
+`scopes`), and the connection models `ResourceRefIn`, `TokenConnectIn`, `ExtraCredentialIn`. Output
 helpers `_secret_view` / `_tool_view` / `_bundle_view` never leak secret values — `_tool_view` returns
 `health_check` + `examples` + `cli` (it once omitted `health_check`, so a tool's probe was stored but never
 surfaced by `GET /tools` / `/bundles/{id}`).

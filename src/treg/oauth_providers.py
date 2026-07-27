@@ -58,6 +58,11 @@ class OAuthProvider:
     token_placeholder: str = ""  # "xoxb-…"
     token_header: str = "Authorization"
     token_format: str = "Bearer {secret}"
+    # Where the pasted credential rides. "header" (default) injects it as token_header; "query"
+    # injects it as the token_param query parameter — Semrush authenticates the classic API with
+    # `?key=…`, not a header. Drives both the connect-time probe and the provisioned tool's binding.
+    token_location: str = "header"  # "header" | "query"
+    token_param: str = ""  # query-param name when token_location == "query" (Semrush: "key")
     setup_url: str = ""  # one-click app creation, pre-filled where the platform supports it
     setup_action_label: str = ""
     setup_steps: tuple[str, ...] = ()
@@ -78,6 +83,34 @@ class OAuthProvider:
     # page forever — health could never say more than "nothing has called this yet". It must live on
     # base_url, NOT discover_base_url: the probe runs against the provisioned tool's own host.
     probe_path: str = ""
+    # An ABSOLUTE URL to verify a pasted key against, used only at connect time when the cheapest
+    # key-check lives on a DIFFERENT host than base_url — Semrush's free unit-balance endpoint is on
+    # www.semrush.com, not the api.semrush.com data host. When empty the connect probe is
+    # base_url + probe_path. This does not become the tool's ongoing health probe (that is probe_path).
+    probe_url: str = ""
+    # A JSON field in the probe response that must be TRUTHY for the key to be valid — for providers
+    # that answer HTTP 200 even on a BAD key and signal validity only in the body (Slack: "ok";
+    # Apollo: "is_logged_in"). Empty means trust the HTTP status (most providers 401/400 a bad key).
+    token_verify_field: str = ""
+    # The INVERSE: reject if this JSON field is present/truthy — for providers that answer 200 with an
+    # error object on a bad key (Serpstat's JSON-RPC `error`).
+    token_reject_field: str = ""
+    # POST-style verify probe, for providers whose key-check needs a request body (Serpstat's JSON-RPC
+    # limits call). `probe_method` defaults to GET; `probe_json` is sent as the JSON body when set.
+    probe_method: str = "GET"
+    probe_json: dict | None = None
+    # Encode the pasted secret before storing: "base64" turns a pasted `login:password` into the Base64
+    # blob HTTP Basic needs (DataForSEO, Moz), so `token_format="Basic {secret}"` renders correctly and
+    # the stored value injects the same way on every proxy call.
+    token_encode: str = ""
+    # Accept only when a JSON field EQUALS a value — for providers that answer 200 with a status
+    # string (Majestic: {"Code":"OK"} on success vs {"Code":"FailedRequestViaAPI"} on a bad key).
+    token_ok_field: str = ""
+    token_ok_value: str = ""
+    # Status codes that mean INVALID KEY specifically (default: any >=400 rejects). Coresignal has no
+    # free probe, so we POST an empty body: a valid key answers 400/422 (bad request, no charge) while
+    # an invalid key answers 401 — so only 401/403 should count as a bad-key rejection there.
+    probe_reject_statuses: tuple[int, ...] = ()
 
     # Per-provider auth quirks. Defaults match Google, which is the common case.
     auth_params: dict[str, str] | None = None  # extra ?query on the consent URL
@@ -163,6 +196,15 @@ class OAuthProvider:
     @property
     def is_token_kind(self) -> bool:
         return self.auth_kind == "token"
+
+    @property
+    def uses_pasted_secret(self) -> bool:
+        """A provider the user connects by PASTING a credential — a bring-your-own bot token
+        (Slack, `auth_kind="token"`) or a plain API key (`auth_kind="key"`). Both share one connect
+        path: verify the credential against a probe, store it as an env secret, auto-provision the
+        tool. They differ only in the marketplace copy and, for a key, the header/query it rides in.
+        `is_token_kind` stays narrower — it gates the Slack-only bot-setup wording."""
+        return self.auth_kind in ("token", "key")
 
     @property
     def has_identity(self) -> bool:
@@ -484,6 +526,7 @@ SLACK = OAuthProvider(
     ),
     setup_note="Public channels work immediately. For a private channel, /invite the bot first.",
     token_scopes_header="x-oauth-scopes",
+    token_verify_field="ok",  # Slack answers 200 with {"ok": false} for a dead token
     auth_uri="", token_uri="",
     scopes={},  # scopes live in the manifest above; there is no consent screen to size
     client_id_setting="", client_secret_setting="",
@@ -697,11 +740,709 @@ META_ADS = OAuthProvider(
     probe_path="/me?fields=id,name",
 )
 
+# ---- API-key providers (auth_kind="key") ------------------------------------------------------
+# The user pastes an API key instead of consenting through an OAuth app treg owns. Same connect
+# mechanic as Slack's bot token — verify against a probe, store as an env secret, auto-provision the
+# tool — differing only in the header (or query param) the key rides in and the "where do I get a
+# key" copy. A key provider needs nothing from treg, so it is always offerable (is_configured=True).
+# No `scopes`: there is no consent screen to size, so the marketplace card leans on `summary`.
+
+APOLLO = OAuthProvider(
+    service="apollo",
+    display_name="Apollo.io",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Apollo API key",
+    token_header="X-Api-Key",
+    token_format="{secret}",  # raw key, no Bearer prefix
+    setup_url="https://developers.apollo.io/keys",
+    setup_action_label="Get your Apollo API key",
+    setup_steps=(
+        "Sign in to Apollo and open Settings → Integrations → API.",
+        "Create an API key (a master key reaches every endpoint) and copy it.",
+    ),
+    setup_note="Enrichment calls spend Apollo credits; the health check does not.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Enrich people and companies and search Apollo's 200M+ B2B contact database.",
+    base_url="https://api.apollo.io/api/v1",
+    docs_url="https://docs.apollo.io/reference/authentication",
+    # Free auth check. It answers HTTP 200 even for a BAD key ({"healthy":true,"is_logged_in":false});
+    # validity is the is_logged_in field, so the probe must read it, not the status (verified live).
+    probe_path="/auth/health",
+    token_verify_field="is_logged_in",
+)
+
+PDL = OAuthProvider(
+    service="pdl",
+    display_name="People Data Labs",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your People Data Labs API key",
+    token_header="X-Api-Key",
+    token_format="{secret}",
+    setup_url="https://dashboard.peopledatalabs.com/main/api-keys",
+    setup_action_label="Get your People Data Labs API key",
+    setup_steps=(
+        "Sign in to the People Data Labs dashboard and open API Keys.",
+        "Copy your API key.",
+    ),
+    setup_note="Enrichment and search spend credits; the autocomplete health check is free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Enrich a person or company, or search PDL's people and company datasets.",
+    base_url="https://api.peopledatalabs.com/v5",
+    docs_url="https://docs.peopledatalabs.com/docs/authentication",
+    probe_path="/autocomplete?field=title&text=data",  # Autocomplete API is free (no credits)
+)
+
+AKTA = OAuthProvider(
+    service="akta",
+    display_name="Akta by Wokelo",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Akta API key",
+    token_header="x-api-key",
+    token_format="{secret}",
+    setup_url="https://akta.pro",
+    setup_action_label="Get your Akta API key",
+    setup_steps=(
+        "Request an API key for your Akta account (support@akta.pro).",
+        "Paste it here.",
+    ),
+    setup_note="Company enrichment spends credits; company search is free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Company intelligence — enrichment, industry resolution, reviews and news monitoring.",
+    # base_url is api.akta.pro/api and every path carries its OWN /v1 prefix, so the effective path is
+    # /api/v1/…. Setting base_url to /api/v1 would double the version to /api/v1/v1.
+    base_url="https://api.akta.pro/api",
+    docs_url="https://docs.akta.pro",
+    # Trailing slash matters: /company/search (no slash) 307-redirects to /company/search/, and we
+    # don't follow redirects with the key attached. Hitting the slashed path directly returns a clean
+    # 401 {"detail":"Invalid API key"} for a bad key (verified live).
+    probe_path="/v1/company/search/?query=canva.com",
+)
+
+HUNTER = OAuthProvider(
+    service="hunter",
+    display_name="Hunter",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Hunter API key",
+    # Hunter accepts the key as ?api_key=…, an X-API-KEY header, or a Bearer header. Use the header
+    # so the key never lands in a URL (the proxy records request paths; a query key could leak there).
+    token_header="X-API-KEY",
+    token_format="{secret}",
+    setup_url="https://hunter.io/api-keys",
+    setup_action_label="Get your Hunter API key",
+    setup_steps=(
+        "Sign in to Hunter and open API → API Keys.",
+        "Copy your API key.",
+    ),
+    setup_note="Searches and verifications spend credits; the account check is free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and verify professional email addresses, and enrich people and companies.",
+    base_url="https://api.hunter.io/v2",
+    docs_url="https://hunter.io/api-documentation/v2",
+    probe_path="/account",  # free — consumes no search/verification/enrichment credits
+)
+
+TIKHUB = OAuthProvider(
+    service="tikhub",
+    display_name="TikHub",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your TikHub API key",
+    # token_header / token_format default to Authorization: Bearer {secret}
+    setup_url="https://tikhub.io/users/api_keys",
+    setup_action_label="Get your TikHub API key",
+    setup_steps=(
+        "Sign in to TikHub and open the API Keys page.",
+        "Create a key and copy it.",
+    ),
+    setup_note="Data calls are billed per successful request; the account check is not.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Social media",
+    summary="Read TikTok, Instagram, YouTube, X and more social platforms through one unified API.",
+    base_url="https://api.tikhub.io",
+    docs_url="https://docs.tikhub.io/",
+    probe_path="/api/v1/tikhub/user/get_user_info",  # account info — the natural key check
+)
+
+BRIGHTDATA = OAuthProvider(
+    service="brightdata",
+    display_name="Bright Data",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Bright Data API token",
+    # Authorization: Bearer {secret} (defaults)
+    setup_url="https://brightdata.com/cp/setting/users",
+    setup_action_label="Get your Bright Data API token",
+    setup_steps=(
+        "Sign in to Bright Data and open Account settings → API tokens.",
+        "Create a token and copy it.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Social media",
+    summary="Scrape social platforms and the web through Bright Data's Web Scraper API.",
+    # Several product APIs share one host and one Bearer scheme; the social entry is pinned to the
+    # Web Scraper API (/datasets/v3/…).
+    base_url="https://api.brightdata.com",
+    docs_url="https://docs.brightdata.com/api-reference/authentication",
+    # Lightweight dataset listing — inferred (medium confidence). Verify with a real token; adjust if it 404s.
+    probe_path="/datasets/v3/datasets",
+)
+
+SEMRUSH = OAuthProvider(
+    service="semrush",
+    display_name="Semrush",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Semrush API key",
+    token_location="query",  # Semrush authenticates the classic API with ?key=…, not a header
+    token_param="key",
+    token_format="{secret}",
+    setup_url="https://www.semrush.com/accounts/subscription-info/api-units/",
+    setup_action_label="Get your Semrush API key",
+    setup_steps=(
+        "Sign in to Semrush and open Subscription info → API units.",
+        "Copy your API key.",
+    ),
+    setup_note="Reports spend API units; the key check reads your unit balance for free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Domain, keyword and backlink analytics across Semrush's SEO database.",
+    base_url="https://api.semrush.com/",
+    docs_url="https://developer.semrush.com/api/v3/analytics/basic-docs/",
+    # The free unit-balance check lives on a DIFFERENT host than the data API, so verify against it
+    # directly. No probe_path: the classic API is CSV-only with no free GET on api.semrush.com, so the
+    # provisioned tool carries no ongoing health probe (one would spend API units on every run).
+    probe_url="https://www.semrush.com/users/countapiunits.html",
+)
+
+CRUNCHBASE = OAuthProvider(
+    service="crunchbase",
+    display_name="Crunchbase",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Crunchbase user key",
+    token_header="X-cb-user-key",
+    token_format="{secret}",
+    setup_url="https://data.crunchbase.com/docs/using-the-api",
+    setup_action_label="Find your Crunchbase API key",
+    setup_steps=(
+        "Crunchbase issues API keys with an Enterprise/Applications license — a Team Owner finds it "
+        "under Integrations settings.",
+        "Paste it here.",
+    ),
+    setup_note="Requires a paid Crunchbase API license; keys are not self-service.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Company, funding, acquisition and people data from Crunchbase.",
+    base_url="https://api.crunchbase.com/v4/data",
+    docs_url="https://data.crunchbase.com/docs/using-the-api",
+    probe_path="/autocompletes?query=google&limit=1",  # rate-limited, no per-call credit
+)
+
+JUSTONEAPI = OAuthProvider(
+    service="justoneapi",
+    display_name="Just One API",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Just One API token",
+    token_location="query",  # token rides as ?token=…, not a header
+    token_param="token",
+    token_format="{secret}",
+    setup_url="https://dashboard.justoneapi.com/en",
+    setup_action_label="Get your Just One API token",
+    setup_steps=(
+        "Sign in to the Just One API dashboard and open Token management.",
+        "Copy your token.",
+    ),
+    setup_note="Data calls are billed only on success (code 0); errors and empty results are free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Social media",
+    summary="A second social-scraping backend — TikTok, Instagram, YouTube, X, Weibo, Xiaohongshu and more.",
+    base_url="https://api.justoneapi.com",
+    docs_url="https://docs.justoneapi.com/en/usage",
+    # A bad token returns HTTP 401 {"code":100,"message":"TOKEN INVALID/UNACTIVATE"} (verified live), so
+    # the standard status check rejects it. A valid token on this endpoint returns code:0 (~1 credit).
+    probe_path="/api/tiktok/get-user-detail/v1?unique_id=tiktok",
+)
+
+# ---- SEO API-key providers -------------------------------------------------------------------
+
+DATAFORSEO = OAuthProvider(
+    service="dataforseo",
+    display_name="DataForSEO",
+    auth_kind="key",
+    token_label="API login:password",
+    token_placeholder="your DataForSEO login:password",
+    token_header="Authorization",
+    token_format="Basic {secret}",
+    token_encode="base64",  # paste "login:password"; we Base64 it for HTTP Basic
+    setup_url="https://app.dataforseo.com/api-access",
+    setup_action_label="Get your DataForSEO API credentials",
+    setup_steps=(
+        "Sign in to DataForSEO and open API access.",
+        "Copy your API login and the SEPARATE API password (not your account password).",
+        "Paste them here as login:password.",
+    ),
+    setup_note="Use the API password from the dashboard, not your account login password.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="SERP, keyword, backlink, on-page and traffic data across search engines.",
+    base_url="https://api.dataforseo.com/v3",
+    docs_url="https://docs.dataforseo.com/v3/auth/",
+    probe_path="/appendix/user_data",  # free account info (no credits)
+)
+
+SERANKING = OAuthProvider(
+    service="seranking",
+    display_name="SE Ranking",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your SE Ranking API key",
+    token_header="Authorization",
+    token_format="Token {secret}",  # the word "Token", not "Bearer"
+    setup_url="https://seranking.com/api/how-to-get-api/",
+    setup_action_label="Get your SE Ranking API key",
+    setup_steps=(
+        "Sign in to SE Ranking and open the API section.",
+        "Create an API key and copy it.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Rank tracking, keyword research, backlinks and competitor data.",
+    base_url="https://api.seranking.com",
+    docs_url="https://seranking.com/api/data/getting-started/",
+    probe_path="/v1/account/subscription",  # free key check + plan
+)
+
+MOZ = OAuthProvider(
+    service="moz",
+    display_name="Moz",
+    auth_kind="key",
+    token_label="AccessID:SecretKey",
+    token_placeholder="your Moz AccessID:SecretKey",
+    token_header="Authorization",
+    token_format="Basic {secret}",
+    token_encode="base64",  # paste "AccessID:SecretKey"; Base64 for HTTP Basic
+    setup_url="https://moz.com/api/dashboard",
+    setup_action_label="Get your Moz API credentials",
+    setup_steps=(
+        "Open the Moz API dashboard.",
+        "Copy your Access ID and Secret Key.",
+        "Paste them here as AccessID:SecretKey.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Domain Authority, Page Authority, backlinks and link metrics.",
+    base_url="https://lsapi.seomoz.com/v2",
+    docs_url="https://moz.com/api/docs",
+    probe_method="POST",
+    probe_path="/quota",
+    probe_json={"path": "api.limits.data.rows"},  # free quota lookup
+)
+
+MAJESTIC = OAuthProvider(
+    service="majestic",
+    display_name="Majestic",
+    auth_kind="key",
+    token_label="OpenApp API key",
+    token_placeholder="your Majestic app_api_key",
+    token_location="query",
+    token_param="app_api_key",
+    token_format="{secret}",
+    setup_url="https://developer-support.majestic.com/openapps/",
+    setup_action_label="Get your Majestic OpenApp key",
+    setup_steps=(
+        "Register an OpenApp in Majestic developer settings.",
+        "Copy the app_api_key.",
+    ),
+    setup_note="Requires a paid Majestic plan and a registered OpenApp.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Backlink metrics — Trust Flow, Citation Flow, referring domains and anchors.",
+    base_url="https://api.majestic.com",
+    docs_url="https://developer-support.majestic.com/api/",
+    probe_path="/api/json?cmd=GetSubscriptionInfo",  # free (0 Analysis Units)
+    # Answers HTTP 200 even on a bad key; validity is {"Code":"OK"} vs {"Code":"FailedRequestViaAPI"}.
+    token_ok_field="Code",
+    token_ok_value="OK",
+)
+
+SERPSTAT = OAuthProvider(
+    service="serpstat",
+    display_name="Serpstat",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Serpstat token",
+    token_location="query",
+    token_param="token",
+    token_format="{secret}",
+    setup_url="https://serpstat.com/api/660-how-to-get-create-token/",
+    setup_action_label="Get your Serpstat API token",
+    setup_steps=(
+        "Sign in to Serpstat and open the API page.",
+        "Create a token and copy it.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary="Keyword research, backlinks, rank tracking and domain analytics.",
+    base_url="https://api.serpstat.com/v4",
+    docs_url="https://api-docs.serpstat.com/",
+    # JSON-RPC over POST; a bad token answers HTTP 200 with an `error` object, so reject on that field.
+    probe_method="POST",
+    probe_json={"id": "1", "method": "SerpstatLimitsApiProcedure.getStats", "params": {}},
+    token_reject_field="error",
+)
+
+# ---- more Enrichment API-key providers -------------------------------------------------------
+
+LUSHA = OAuthProvider(
+    service="lusha",
+    display_name="Lusha",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Lusha API key",
+    token_header="api_key",  # literally "api_key", no scheme prefix
+    token_format="{secret}",
+    setup_url="https://dashboard.lusha.com/api",
+    setup_action_label="Get your Lusha API key",
+    setup_steps=("Sign in to Lusha and open the API settings.", "Copy your API key."),
+    setup_note="API access is generally on paid plans (Pro/Scale).",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Verified direct-dial and mobile phone numbers, plus person and company enrichment.",
+    base_url="https://api.lusha.com",
+    docs_url="https://docs.lusha.com/apis/openapi/section/authentication",
+    probe_path="/v3/account/usage",  # free account snapshot
+)
+
+CORESIGNAL = OAuthProvider(
+    service="coresignal",
+    display_name="Coresignal",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Coresignal API key",
+    token_header="apikey",  # one word, lowercase
+    token_format="{secret}",
+    setup_url="https://dashboard.coresignal.com/",
+    setup_action_label="Get your Coresignal API key",
+    setup_steps=("Sign in to the Coresignal dashboard and open API keys.", "Copy your key."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Large-scale employee, job-posting and company data via search and collect.",
+    base_url="https://api.coresignal.com/cdapi/v2",
+    docs_url="https://docs.coresignal.com/api-introduction/authorization",
+    # No free account endpoint: POST an empty body — a valid key answers 400 (no charge), an invalid
+    # key answers 401 — so only 401/403 count as a bad-key rejection (verified: bad key -> 401).
+    probe_method="POST",
+    probe_path="/company_base/search/es_dsl",
+    probe_json={},
+    probe_reject_statuses=(401, 403),
+)
+
+DIFFBOT = OAuthProvider(
+    service="diffbot",
+    display_name="Diffbot",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Diffbot token",
+    token_location="query",  # token is a query param on every call
+    token_param="token",
+    token_format="{secret}",
+    setup_url="https://app.diffbot.com/get-started/",
+    setup_action_label="Get your Diffbot token",
+    setup_steps=("Sign in to Diffbot and open your account.", "Copy your API token."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Knowledge-graph entities (organizations, people) and AI web extraction.",
+    # Enhance/enrich + DQL live on the KG host; the free account probe lives on the api host, so verify
+    # off-host. The provisioned tool points at the KG host (the enrichment value).
+    base_url="https://kg.diffbot.com/kg/v3",
+    docs_url="https://docs.diffbot.com/reference/authentication",
+    probe_url="https://api.diffbot.com/v4/account",  # token injected as ?token=…
+)
+
+THECOMPANIESAPI = OAuthProvider(
+    service="thecompaniesapi",
+    display_name="The Companies API",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Companies API token",
+    token_header="Authorization",
+    token_format="Basic {secret}",  # the RAW token after "Basic ", NOT base64 (no token_encode)
+    setup_url="https://www.thecompaniesapi.com/",
+    setup_action_label="Get your Companies API token",
+    setup_steps=("Sign up at thecompaniesapi.com.", "Copy your API token from the dashboard."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Firmographics and technology-stack detection across ~50M companies.",
+    base_url="https://api.thecompaniesapi.com/v2",
+    docs_url="https://www.thecompaniesapi.com/api/authentication",
+    probe_path="/companies?simplified=true&size=1",  # free (no credits), auth required
+)
+
+LEADMAGIC = OAuthProvider(
+    service="leadmagic",
+    display_name="LeadMagic",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your LeadMagic API key",
+    token_header="X-API-Key",
+    token_format="{secret}",
+    setup_url="https://app.leadmagic.io/dashboard/api-keys",
+    setup_action_label="Get your LeadMagic API key",
+    setup_steps=("Sign in to LeadMagic and open API keys.", "Copy your key."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and verify emails and mobile numbers, and enrich people and companies.",
+    base_url="https://api.leadmagic.io",
+    docs_url="https://leadmagic.io/docs/v1/authentication",
+    probe_path="/v1/credits",  # free — no credits consumed
+)
+
+# ---- Advertising API-key providers (ad intelligence) -----------------------------------------
+
+SPYFU = OAuthProvider(
+    service="spyfu",
+    display_name="SpyFu",
+    auth_kind="key",
+    token_label="Secret key",
+    token_placeholder="your SpyFu secret key",
+    token_location="query",  # ?api_key=<SecretKey> (the secret alone; API id not needed for this form)
+    token_param="api_key",
+    token_format="{secret}",
+    setup_url="https://www.spyfu.com/account/api",
+    setup_action_label="Get your SpyFu API key",
+    setup_steps=("Open SpyFu Account settings → API.", "Copy your Secret Key."),
+    setup_note="API access is included with paid SpyFu plans; paste the Secret Key.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Advertising",
+    summary="Competitor search-ad keywords, estimated ad spend and PPC history.",
+    base_url="https://api.spyfu.com",
+    docs_url="https://developer.spyfu.com/",
+    probe_path="/apis/domain_stats_api/v2/getAllDomainStats?domain=spyfu.com",
+)
+
+APIFY = OAuthProvider(
+    service="apify",
+    display_name="Apify",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Apify API token",
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://console.apify.com/settings/integrations",
+    setup_action_label="Get your Apify API token",
+    setup_steps=("Open Apify Console → Settings → Integrations.", "Copy your API token."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Advertising",
+    summary="Run Facebook and TikTok ad-library scraper actors for ad creatives and targeting.",
+    base_url="https://api.apify.com/v2",
+    docs_url="https://docs.apify.com/api/v2",
+    probe_path="/users/me",  # free; 401 on bad token
+)
+
+META_AD_LIBRARY = OAuthProvider(
+    service="meta-ad-library",
+    display_name="Meta Ad Library",
+    auth_kind="key",
+    token_label="Access token",
+    token_placeholder="your Meta ad-library access token",
+    token_location="query",
+    token_param="access_token",
+    token_format="{secret}",
+    setup_url="https://www.facebook.com/ads/library/api/",
+    setup_action_label="Set up Meta Ad Library API access",
+    setup_steps=(
+        "Confirm your identity at facebook.com/ID (upload a government ID; 1–3 days).",
+        "Create a Meta app and generate an access token.",
+    ),
+    setup_note="Official free competitive ad data; requires one-time Meta identity verification.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Advertising",
+    summary="Official Meta ad library — anyone's live Facebook/Instagram ads and spend ranges.",
+    base_url="https://graph.facebook.com/v21.0",
+    docs_url="https://www.facebook.com/ads/library/api/",
+    # Required params baked in (ad_reached_countries is a URL-encoded JSON array); access_token injected.
+    probe_path='/ads_archive?search_terms=coffee&ad_reached_countries=%5B%22US%22%5D&limit=1&fields=id',
+)
+
+SERPAPI = OAuthProvider(
+    service="serpapi",
+    display_name="SerpApi",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your SerpApi key",
+    token_location="query",
+    token_param="api_key",
+    token_format="{secret}",
+    setup_url="https://serpapi.com/manage-api-key",
+    setup_action_label="Get your SerpApi key",
+    setup_steps=("Sign in to SerpApi.", "Copy your API key from the dashboard."),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Advertising",
+    summary="Google search, Shopping and paid-ad results from live SERPs.",
+    base_url="https://serpapi.com",
+    docs_url="https://serpapi.com/search-api",
+    probe_path="/account",  # free account/plan snapshot; 401 on bad key
+)
+
+# ---- Advertising OAuth platforms (UNCONFIGURED until this deployment registers a dev app) ------
+# These list as `configured: false` until treg holds each platform's client id/secret. Microsoft +
+# Snapchat fit the existing OAuth machinery (Microsoft additionally needs the user's own developer
+# token, like Google Ads). TikTok Ads is NON-STANDARD OAuth and needs oauth.py + binding work before
+# it can actually run — it is a registry placeholder for now (see the comment on it).
+
+MICROSOFT_ADS = OAuthProvider(
+    service="microsoft-ads",
+    display_name="Microsoft Advertising",
+    auth_uri="https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+    token_uri="https://login.microsoftonline.com/common/oauth2/v2.0/token",
+    # One combined read+write scope; offline_access buys a refresh token, openid the identity.
+    scopes={"manage": ["https://ads.microsoft.com/msads.manage", "offline_access", "openid"]},
+    client_id_setting="microsoft_ads_client_id",
+    client_secret_setting="microsoft_ads_client_secret",
+    category="Advertising",
+    summary="Run and report on your Microsoft (Bing) search-ad campaigns.",
+    base_url="https://campaign.api.bingads.microsoft.com/CampaignManagement/v13",
+    docs_url="https://learn.microsoft.com/en-us/advertising/guides/get-started",
+    token_endpoint_auth_method="client_secret_post",
+    auth_params={},  # Microsoft identity v2.0; don't send Google's access_type/prompt
+    # Bing REST needs a DeveloperToken header on every call besides the OAuth bearer — issued
+    # instantly for first-party use, so the user supplies it (like Google Ads' developer token).
+    extra_credential_note=(
+        "Microsoft Advertising needs a developer token (issued instantly in the Microsoft Advertising "
+        "Developer Portal). Add it under Secrets and bind it as a DeveloperToken header."
+    ),
+    extra_credential_label="Developer token",
+    extra_credential_header="DeveloperToken",
+)
+
+SNAPCHAT_ADS = OAuthProvider(
+    service="snapchat-ads",
+    display_name="Snapchat Ads",
+    auth_uri="https://accounts.snapchat.com/login/oauth2/authorize",
+    token_uri="https://accounts.snapchat.com/login/oauth2/access_token",
+    scopes={"manage": ["snapchat-marketing-api"]},
+    client_id_setting="snapchat_ads_client_id",
+    client_secret_setting="snapchat_ads_client_secret",
+    category="Advertising",
+    summary="Run and report on your Snapchat ad campaigns.",
+    base_url="https://adsapi.snapchat.com/v1",
+    docs_url="https://developers.snap.com/marketing-api/Ads-API/authentication",
+    token_endpoint_auth_method="client_secret_post",
+    auth_params={},
+    probe_path="/me",  # cheap token check once configured; auto-provisions a Bearer tool
+)
+
+# TikTok Ads is NON-STANDARD OAuth: the token exchange uses app_id/secret + auth_code in a JSON body
+# and returns a {"code":0,"data":{...}} envelope, and API calls authenticate with an `Access-Token`
+# header (NOT `Authorization: Bearer`). oauth.py (standard code/grant_type exchange) and the Bearer
+# auto-provision binding do NOT handle this yet, so this entry cannot be configured to work until that
+# code is added. Kept as a placeholder so the platform is visible on the shelf. See notes.
+TIKTOK_ADS = OAuthProvider(
+    service="tiktok-ads",
+    display_name="TikTok Ads",
+    auth_uri="https://business-api.tiktok.com/portal/auth",
+    token_uri="https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/",
+    scopes={"manage": ["ads.management"]},  # nominal; TikTok's real scopes are numeric ids set in the portal
+    client_id_setting="tiktok_ads_client_id",
+    client_secret_setting="tiktok_ads_client_secret",
+    category="Advertising",
+    summary="Run and report on your TikTok ad campaigns.",
+    base_url="https://business-api.tiktok.com/open_api/v1.3",
+    docs_url="https://business-api.tiktok.com/portal/docs",
+    token_endpoint_auth_method="client_secret_post",
+    client_id_param="app_id",  # TikTok spells the client id "app_id"
+    auth_params={},
+)
+
+PINTEREST_ADS = OAuthProvider(
+    service="pinterest-ads",
+    display_name="Pinterest Ads",
+    auth_uri="https://www.pinterest.com/oauth/",
+    token_uri="https://api.pinterest.com/v5/oauth/token",
+    scopes={
+        "read": ["ads:read", "user_accounts:read"],
+        "manage": ["ads:read", "ads:write", "user_accounts:read"],
+    },
+    client_id_setting="pinterest_client_id",
+    client_secret_setting="pinterest_client_secret",
+    category="Advertising",
+    summary="Run and report on your Pinterest ad campaigns.",
+    base_url="https://api.pinterest.com/v5",
+    docs_url="https://developers.pinterest.com/docs/api/v5/",
+    token_endpoint_auth_method="client_secret_basic",  # Pinterest posts Basic client auth
+    auth_params={},
+    probe_path="/user_account",  # cheap token check once configured; auto-provisions a Bearer tool
+)
+
 REGISTRY: dict[str, OAuthProvider] = {
     p.service: p
     for p in (
         GOOGLE_SEARCH_CONSOLE, GOOGLE_ANALYTICS, GOOGLE_BUSINESS_PROFILE, GOOGLE_ADS, YOUTUBE,
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
+        # API-key providers
+        APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
+        # SEO API-key providers
+        DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
+        # more Enrichment API-key providers
+        LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC,
+        # Advertising: API-key ad intelligence + unconfigured OAuth ad platforms
+        SPYFU, APIFY, META_AD_LIBRARY, SERPAPI,
+        MICROSOFT_ADS, SNAPCHAT_ADS, TIKTOK_ADS, PINTEREST_ADS,
     )
 }
 
@@ -709,7 +1450,7 @@ DEFAULT_CAPABILITY = "read"
 
 # Shelf order in the marketplace. Anything carrying a category not named here sorts last, so a
 # provider added without one is visible rather than lost between the shelves.
-CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Community", "Other")
+CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Community", "Other")
 
 
 def get(service: str) -> OAuthProvider | None:
@@ -732,9 +1473,9 @@ def credentials(provider: OAuthProvider) -> tuple[str, str]:
 
 
 def is_configured(provider: OAuthProvider) -> bool:
-    """Whether THIS deployment can offer the provider. A token provider needs nothing from us —
-    the user brings their own — so it is always offerable."""
-    if provider.is_token_kind:
+    """Whether THIS deployment can offer the provider. A pasted-secret provider (bot token or API
+    key) needs nothing from us — the user brings their own — so it is always offerable."""
+    if provider.uses_pasted_secret:
         return True
     try:
         credentials(provider)
@@ -800,6 +1541,17 @@ SCOPE_LABELS: dict[str, str] = {
     "ads_read": "Read your ad accounts, campaigns and performance",
     "business_management": "See the businesses and ad accounts you have access to",
     "ads_management": "Create and change campaigns, ad sets and ads",
+    # Microsoft Advertising
+    "https://ads.microsoft.com/msads.manage": "Manage your Microsoft Advertising campaigns and reports",
+    "offline_access": "Stay connected without asking you to sign in again",
+    # Snapchat Ads
+    "snapchat-marketing-api": "Manage your Snapchat ad campaigns and reporting",
+    # TikTok Ads (nominal — real scopes are numeric ids configured in the TikTok portal)
+    "ads.management": "Manage your TikTok ad campaigns and reporting",
+    # Pinterest Ads
+    "ads:read": "Read your ad accounts, campaigns and performance",
+    "ads:write": "Create and change your ad campaigns",
+    "user_accounts:read": "See which ad accounts you have access to",
 }
 
 

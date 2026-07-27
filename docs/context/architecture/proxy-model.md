@@ -47,8 +47,20 @@ Faithfulness mechanics inside `relay()`:
 A request may carry several credentials: `relay()` loops `tool.bindings` and calls
 `injectors.inject(headers, params, binding, crypto.decrypt(secret.value))` per binding.
 
+**Platform bindings — injecting treg's OWN credential.** A binding with a `platform_setting` key (instead
+of a `secret_id`) injects one of treg's own credentials read from `get_settings()` — the Google Ads
+developer token is the case that exists. The value never lives in the org's secret store, so a tenant
+can't read it or extract it through a local run; a missing setting is a clean `502`
+(`this server has no <setting> configured`). Used by the OAuth-marketplace auto-provisioner for a provider
+that needs a second credential treg holds centrally (see [api](../interface/api.md)).
+
+**Accept-Encoding is normalized to `identity`** when the caller sent none. `relay()` streams the upstream
+body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would otherwise add its own
+`Accept-Encoding: gzip` and hand a plain HTTP client / agent compressed bytes it never requested. Asking
+for `identity` keeps what the caller receives matching what the caller requested.
+
 ## Tool resolution (`_resolve_call` in api.py)
-`* /call/{rest:path}` → `call_tool()` → `_resolve_call(rest, caller.org_id, db)` returns
+`* /call/{rest:path}` → `call_tool()` → `_resolve_call(rest, caller, db)` returns
 `(tool, upstream_url)`. **Both shapes are scoped to the caller's org** (`Tool.org_id == org_id`), so two
 orgs resolve independently and may reuse a tool name or upstream host; `call_tool` then loads only
 same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the per-user daily usage cap —
@@ -56,9 +68,37 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
 - **URL-passthrough (agent-native):** `rest` is the real upstream URL (`/call/https://api.intercom.io/me`).
   `_normalize_scheme()` restores the `https://` a path param collapses to `https:/`. The tool is resolved
   by **host** (`_host_of()` = `urlsplit(...).netloc`, matched against the indexed `Tool.host`) then the
-  **longest `base_url` prefix**; a tie → `409`, no match → `404`.
+  **longest `base_url` prefix**; a tie → `409`, no match → `404` (or `403` when the caller's ACL is the
+  only thing that removed the match — see below).
 - **Named:** `rest = "<tool>/<path>"` (`rest.partition("/")`), looked up by `Tool.name`; upstream URL =
-  `base_url + path`.
+  `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
+  full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
+
+**ACL-filtered candidates.** `_resolve_call` takes the **caller** and filters passthrough candidates by
+`_tool_usable` (project scope AND the per-tool list) **before** the longest-prefix tiebreak. A same-host
+tool the caller cannot use must not be able to cause a `409` — or win the tiebreak — for someone who
+cannot even see it in `list_tools`. This only NARROWS the candidate set, so it can never grant access:
+whatever resolves still passes `_require_tool_use`. The named shape needs no filter (it resolves one
+tool, then the gate runs).
+
+**"Not yours" is a `403`, not a `404`.** Narrowing the candidate set to empty first read as *nothing is
+registered here*, so a caller with no access was told the tool did not EXIST — which sends an admin
+hunting for a registration that is already there (round-4 finding #3). `_resolve_call` keeps the
+**unfiltered** host matches alongside the filtered ones: if a tool would have matched and only the ACL
+removed it, the answer is `403`, the same verdict the named shape has always given. A host with nothing
+registered is still `404`. The `403` names only the **host the caller typed**, never the tool name the
+ACL is there to hide.
+
+**Policy deny (`_enforce_deny`, `_deny_match`).** After resolution and the tool ACL, the resolved
+upstream is matched against the org's `DenyRule` rows (org-wide + the ones aimed at this caller) →
+`403` naming the rule. Evaluating the **resolved** upstream is what makes both call shapes equally
+gated — a caller cannot dodge a rule by switching to URL-passthrough — and the relay does not follow
+redirects, so a blocked host is not reachable via a 3xx bounce. The path match is anchored at a
+segment boundary (`/v1/charges` must not match `/v1/chargesX`), the same trap `_resolve_call` guards.
+It applies to **every role including owner** (a guardrail, not a permission tier) and to both run
+tiers, where the tool's own `base_url` host stands in for the request path. `_deny_match` is pure, so
+it unit-tests without a DB — mirroring `localrun.check_deny`, which is the same idea one layer down
+(argv instead of URL). Zero rules = one indexed query and no behavior change.
 
 `call_tool()` loads every bound secret (running `oauth.ensure_fresh` on oauth secrets first — see
 [auth-secrets](auth-secrets.md)), calls `relay()`, then fires `audit.record_call(...)` off the response
@@ -67,7 +107,11 @@ path. Methods allowed: GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS.
 **Resolution + error hardening:** the URL-passthrough prefix match respects a **path-segment boundary**
 (`norm == base` or `base + "/"`), so `.../v1` no longer matches `.../v10/...` and inject the wrong
 credential; the longest-prefix tiebreak compares rstripped lengths (a trailing-slash duplicate is a real
-`409`, not a silent winner). Binding validity is checked at **registration** (`_validate_bindings` rejects
+`409`, not a silent winner). When two same-host tools still tie on prefix length, `_resolve_call`
+**prefers the registry-provider-backed tool** (one whose binding points at a `Secret` with a `provider`)
+over a hand-registered one that often holds a stale credential — a `409` there would break exactly the
+agent-facing URL-passthrough callers who never typed a tool name; only a genuine ambiguity (neither or
+both provider-owned) still `409`s. Binding validity is checked at **registration** (`_validate_bindings` rejects
 an unknown `injector` and a cross-org/dangling `secret_id`; `register_skill` runs the same gate), and
 `call_tool` translates a call-time injector `ValueError` and an upstream `httpx.RequestError` into a
 `502` instead of an unhandled 500 (and audits the failed attempt, not just successes). A binding
