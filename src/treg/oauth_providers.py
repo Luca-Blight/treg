@@ -434,7 +434,6 @@ GOOGLE_ADS = OAuthProvider(
 # succeeds but the video is locked to private no matter what privacyStatus we send.
 _YOUTUBE_READ = [
     "https://www.googleapis.com/auth/youtube.readonly",
-    "https://www.googleapis.com/auth/yt-analytics.readonly",
 ]
 
 YOUTUBE = OAuthProvider(
@@ -459,7 +458,7 @@ YOUTUBE = OAuthProvider(
     client_secret_setting="google_client_secret",
     category="Social media",
     summary=(
-        "Channel, video and playlist data with watch time and revenue reports. Upload and manage videos too."
+        "Channel, video and playlist data with view counts and statistics. Upload and manage videos too."
     ),
     base_url="https://youtube.googleapis.com",
     docs_url="https://developers.google.com/youtube/v3/docs",
