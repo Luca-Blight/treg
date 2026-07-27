@@ -2926,6 +2926,32 @@ def cmd_org_agent_rm(args, cfg) -> None:
         _show(c.delete(f"/orgs/{org_id}/agents/{args.user_id}"))
 
 
+def cmd_org_deny(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.post(f"/orgs/{org_id}/deny", json={
+            "host": args.host or "", "path_prefix": args.path or "", "method": args.method or "",
+            "user_id": args.user, "note": args.note or ""}))
+
+
+def cmd_org_deny_ls(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.get(f"/orgs/{org_id}/deny"))
+
+
+def cmd_org_deny_rm(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.delete(f"/orgs/{org_id}/deny/{args.rule_id}"))
+
+
 def cmd_org_join(args, cfg) -> None:
     with _client(cfg, auth=False) as c:
         r = c.post("/invites/accept", json={"code": args.code, "email": args.email})
@@ -3232,6 +3258,19 @@ def build_parser() -> argparse.ArgumentParser:
              "treg org agent-rm 7")
     oar.add_argument("user_id", type=int, help="the agent's user id (from `org agents`)")
     oar.set_defaults(fn=cmd_org_agent_rm)
+    od2 = mk(og, "deny", "Block calls to a host / path / method — for the team, or one member (admin+).",
+             "treg org deny --method DELETE --note 'no deletes'",
+             "treg org deny --host api.stripe.com", "treg org deny --path /admin --user 7")
+    od2.add_argument("--host", help="upstream host to block (a full URL works too); omit = any host")
+    od2.add_argument("--path", help="path prefix to block, e.g. /admin; omit = any path")
+    od2.add_argument("--method", help="HTTP method to block, e.g. DELETE; omit = any method")
+    od2.add_argument("--user", type=int, help="apply to ONE member/agent (from `org members`); omit = whole team")
+    od2.add_argument("--note", help="why — shown in the refusal so it names its source")
+    od2.set_defaults(fn=cmd_org_deny)
+    mk(og, "deny-ls", "List this team's deny rules (admin+).", "treg org deny-ls").set_defaults(fn=cmd_org_deny_ls)
+    odr = mk(og, "deny-rm", "Remove a deny rule.", "treg org deny-rm 3")
+    odr.add_argument("rule_id", type=int, help="the rule id (from `org deny-ls`)")
+    odr.set_defaults(fn=cmd_org_deny_rm)
     oj = mk(og, "join", "Join a team using an invite code.", "treg org join <code> --email you@company.com")
     oj.add_argument("code", help="the one-time invite code"); oj.add_argument("--email", required=True, help="your email (creates you if new)"); oj.set_defaults(fn=cmd_org_join)
     mk(og, "leave", "Remove yourself from the active team.", "treg org leave").set_defaults(fn=cmd_org_leave)

@@ -73,6 +73,17 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
   `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
 
+**Policy deny (`_enforce_deny`, `_deny_match`).** After resolution and the tool ACL, the resolved
+upstream is matched against the org's `DenyRule` rows (org-wide + the ones aimed at this caller) →
+`403` naming the rule. Evaluating the **resolved** upstream is what makes both call shapes equally
+gated — a caller cannot dodge a rule by switching to URL-passthrough — and the relay does not follow
+redirects, so a blocked host is not reachable via a 3xx bounce. The path match is anchored at a
+segment boundary (`/v1/charges` must not match `/v1/chargesX`), the same trap `_resolve_call` guards.
+It applies to **every role including owner** (a guardrail, not a permission tier) and to both run
+tiers, where the tool's own `base_url` host stands in for the request path. `_deny_match` is pure, so
+it unit-tests without a DB — mirroring `localrun.check_deny`, which is the same idea one layer down
+(argv instead of URL). Zero rules = one indexed query and no behavior change.
+
 `call_tool()` loads every bound secret (running `oauth.ensure_fresh` on oauth secrets first — see
 [auth-secrets](auth-secrets.md)), calls `relay()`, then fires `audit.record_call(...)` off the response
 path. Methods allowed: GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS.

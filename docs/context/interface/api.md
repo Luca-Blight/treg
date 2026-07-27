@@ -62,6 +62,11 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   new table; `list_agents` (`GET`, never returns a token) and `revoke_agent` (`DELETE …/{user_id}`).
   An agent token is refused by `require_identity` and can never be an owner. See
   [multi-tenancy](../architecture/multi-tenancy.md).
+- **Deny rules (org policy):** `create_deny_rule` (`POST /orgs/{id}/deny`, admin+) blocks a
+  host / path_prefix / method for the whole org or one member (`user_id`); an all-empty rule is
+  refused (it would freeze the org) and a full URL is reduced to its host. Plus `list_deny_rules`
+  (`GET`) and `delete_deny_rule` (`DELETE …/{rule_id}`, 404 across orgs). Enforced on the proxy and
+  both run tiers — see [proxy-model](../architecture/proxy-model.md).
 - **Usage metering + caps** (usage-metering v1, `docs/USAGE-METERING-PLAN.md`): `org_usage`
   (`GET /orgs/{id}/usage?days=`, admin+) rolls up `CallRecord` + `RunRecord` since the window start into
   **by-user** (with a `call`/`local_run`/`server_run` split), **by-tool**, **by-day**, and totals — pure

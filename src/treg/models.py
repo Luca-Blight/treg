@@ -298,3 +298,34 @@ class Tool(SQLModel, table=True):
     cli: dict | None = Field(default=None, sa_column=Column("cli", JSON))
     bundle_id: int | None = Field(default=None, foreign_key="bundle.id", index=True)
     created_at: datetime = Field(default_factory=_now)
+
+
+class DenyRule(SQLModel, table=True):
+    """A policy rule evaluated on every proxied call: block this host / path / method.
+
+    treg now denies at three layers, deliberately kept apart because each sees something different:
+      - `egress.py`   — the OS firewall around an isolated LOCAL run (which hosts that uid may reach),
+      - `localrun.check_deny` — the ARGV of a local CLI run (`--live`, `auth token`, …),
+      - **this**      — the HTTP request the PROXY is about to relay (host + path + method).
+
+    Scope: `user_id` NULL = the whole org; set = only that member (so one agent can be held tighter
+    than the rest of the team). An empty `host`/`path_prefix`/`method` means "any" — so a rule with
+    only `method="DELETE"` blocks every delete in the org.
+
+    `verdict` is `deny` today. It exists so approval-required actions ("hold the call, ask a human")
+    can land in this same table later without a migration — mirroring the `verdict` vocabulary
+    `localrun.py` already uses for its argv errors.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int | None = Field(default=None, foreign_key="org.id", index=True)
+    # NULL = applies to everyone in the org. Set = only this member/agent (identified the same way
+    # every other member endpoint does, by user id — org_id + user_id IS the membership).
+    user_id: int | None = Field(default=None, foreign_key="user.id", index=True)
+    host: str = Field(default="")  # netloc, case-insensitive; "" = any host
+    path_prefix: str = Field(default="")  # "" = any path
+    method: str = Field(default="")  # "" = any method
+    verdict: str = Field(default="deny")  # deny | approve (approve = reserved, see docstring)
+    note: str = Field(default="")  # why this exists — shown in the refusal so it names its source
+    created_by: str = Field(default="")  # admin email (audit)
+    created_at: datetime = Field(default_factory=_now)

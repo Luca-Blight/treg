@@ -47,7 +47,7 @@ from . import oauth_providers
 from . import pubfeed, ratestore, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings
 from .db import get_session, init_db
-from .models import ROLE_RANK, Bundle, CallRecord, Invite, Membership, Org, PendingOAuth, RunRecord, Secret, Tool, User
+from .models import ROLE_RANK, Bundle, CallRecord, DenyRule, Invite, Membership, Org, PendingOAuth, RunRecord, Secret, Tool, User
 from .proxy import relay
 
 
@@ -1357,7 +1357,7 @@ async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
 
 async def _cascade_delete_org(org: Org, db: AsyncSession) -> None:
     """Delete every org-scoped row then the org. Shared by owner delete_org + admin force-delete."""
-    for model in (Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, Membership):
+    for model in (Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Membership):
         for r in (await db.execute(select(model).where(model.org_id == org.id))).scalars().all():
             await db.delete(r)
     await db.delete(org)
@@ -1393,6 +1393,59 @@ def _require_tool_access(caller: Caller, tool_name: str) -> None:
         raise HTTPException(status_code=403, detail=(
             f"you don't have access to the tool {tool_name!r} in this team — an admin can grant it "
             "(dashboard → Team, or `treg org access <you> --tools …`)"))
+
+
+def _deny_match(rules: list[DenyRule], host: str, path: str, method: str) -> DenyRule | None:
+    """The FIRST rule that matches — pure, so it unit-tests without a DB (like `localrun.check_deny`).
+
+    An empty field on a rule means "any", so `{method: "DELETE"}` blocks every delete and
+    `{host: "api.stripe.com"}` blocks that upstream entirely. Host is compared case-insensitively;
+    the path match is a prefix, anchored at `/` so `/v1/charges` cannot be dodged by `/v1/chargesX`.
+    """
+    host, method = host.lower(), method.upper()
+    path = path or "/"
+    for r in rules:
+        if r.host and r.host.lower() != host:
+            continue
+        if r.method and r.method.upper() != method:
+            continue
+        if r.path_prefix:
+            p = (r.path_prefix if r.path_prefix.startswith("/") else "/" + r.path_prefix).rstrip("/")
+            # Anchored at a segment boundary: `/v1/charges` must NOT match `/v1/chargesX`.
+            if not (path == p or path.startswith(p + "/")):
+                continue
+        return r
+    return None
+
+
+async def _org_deny_rules(caller: Caller, db: AsyncSession) -> list[DenyRule]:
+    """This caller's applicable rules: the org-wide ones plus the ones aimed at them specifically."""
+    return list((await db.execute(select(DenyRule).where(
+        DenyRule.org_id == caller.org_id,
+        or_(DenyRule.user_id.is_(None), DenyRule.user_id == caller.membership.user_id),
+    ))).scalars().all())
+
+
+async def _enforce_deny(caller: Caller, url: str, method: str, db: AsyncSession) -> None:
+    """Block a call the org's policy forbids. Deliberately applies to EVERY role including owner: a
+    deny rule is a guardrail, not a permission tier — an owner who disagrees deletes the rule rather
+    than quietly bypassing it. The refusal names the rule, mirroring `localrun.check_deny`'s
+    "a refusal can name its source"."""
+    rules = await _org_deny_rules(caller, db)
+    if not rules:
+        return  # the common path costs one indexed query and nothing else
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return
+    rule = _deny_match(rules, parts.netloc, parts.path, method)
+    if rule is None:
+        return
+    why = f" ({rule.note})" if rule.note else ""
+    scope = "this team" if rule.user_id is None else "you"
+    raise HTTPException(status_code=403, detail=(
+        f"blocked by a policy rule on {scope}{why} — "
+        f"{rule.method or 'any'} {rule.host or 'any host'}{rule.path_prefix or ''}"))
 
 
 async def _visible_secret_ids(caller: Caller, db: AsyncSession) -> set[int] | None:
@@ -2685,6 +2738,81 @@ async def revoke_agent(
     return {"revoked": True, "email": email}
 
 
+# ---- deny rules: org policy over what may be called ----------------------------------------
+PROXY_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
+
+
+class DenyRuleIn(BaseModel):
+    host: str = ""  # a bare netloc or a full URL (we take its host)
+    path_prefix: str = ""
+    method: str = ""
+    user_id: int | None = None  # None = the whole org; set = only that member/agent
+    note: str = ""
+
+
+def _deny_view(r: DenyRule) -> dict:
+    return {"id": r.id, "host": r.host, "path_prefix": r.path_prefix, "method": r.method,
+            "user_id": r.user_id, "scope": "org" if r.user_id is None else "member",
+            "verdict": r.verdict, "note": r.note, "created_by": r.created_by,
+            "created_at": r.created_at}
+
+
+@app.post("/orgs/{org_id}/deny")
+async def create_deny_rule(
+    org_id: int, body: DenyRuleIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Block calls to a host / path / method for the whole team, or for one member or agent (admin+).
+
+    Enforced on the proxy AND both run tiers, and it applies to every role including owner — a deny
+    rule is a guardrail, not a permission tier."""
+    _require_admin_of(org_id, caller)
+    host = (body.host or "").strip().lower()
+    if "://" in host:  # pasting a base_url is the obvious thing to try, so accept it
+        host = urlsplit(host).netloc.lower()
+    method = (body.method or "").strip().upper()
+    path_prefix = (body.path_prefix or "").strip()
+    if method and method not in PROXY_METHODS:
+        raise HTTPException(status_code=422, detail=f"method must be one of {list(PROXY_METHODS)}")
+    if not (host or path_prefix or method):
+        # An all-empty rule matches every request — refuse it rather than silently freezing the org.
+        raise HTTPException(status_code=422, detail="give at least one of host, path_prefix or method")
+    if body.user_id is not None:
+        target = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id, Membership.user_id == body.user_id))).scalar_one_or_none()
+        if target is None:
+            raise HTTPException(status_code=404, detail="not a member of this org")
+    rule = DenyRule(org_id=org_id, user_id=body.user_id, host=host, path_prefix=path_prefix,
+                    method=method, note=(body.note or "").strip(), created_by=caller.email)
+    db.add(rule)
+    await db.commit()
+    await db.refresh(rule)
+    return _deny_view(rule)
+
+
+@app.get("/orgs/{org_id}/deny")
+async def list_deny_rules(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    _require_admin_of(org_id, caller)
+    rules = (await db.execute(select(DenyRule).where(DenyRule.org_id == org_id))).scalars().all()
+    return [_deny_view(r) for r in rules]
+
+
+@app.delete("/orgs/{org_id}/deny/{rule_id}")
+async def delete_deny_rule(
+    org_id: int, rule_id: int,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    _require_admin_of(org_id, caller)
+    rule = await db.get(DenyRule, rule_id)
+    if rule is None or rule.org_id != org_id:  # 404 across orgs — never confirm another org's ids
+        raise HTTPException(status_code=404, detail="unknown rule")
+    await db.delete(rule)
+    await db.commit()
+    return {"deleted": rule_id}
+
+
 # ---- secrets (values are write-only — never returned) -------------------------------------
 @app.post("/secrets")
 async def create_secret(
@@ -3071,6 +3199,7 @@ async def grant_local_run(
         raise HTTPException(status_code=404, detail="tool not found")
     _require_tool_access(caller, tool.name)  # per-member tool ACL (call + both run tiers)
     _require_local_run(caller)               # local tier may be disabled for this member (server-only)
+    await _enforce_deny(caller, tool.base_url, "", db)  # host-level policy (see run_tool_server)
     await _enforce_daily_cap(caller, db)  # a local run counts toward the per-user daily cap
     catalog_cli = (prov.match_skill(tool.name) or {}).get("cli")
     profile = localrun.effective_profile(tool, catalog_cli)
@@ -4669,6 +4798,10 @@ async def call_tool(
             rest = raw_rest
     tool, upstream_url = await _resolve_call(rest, caller.org_id, db)
     _require_tool_access(caller, tool.name)  # per-member tool ACL (NULL access = all; admins exempt)
+    # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
+    # shape the caller used (named or URL-passthrough), and the relay never follows redirects, so a
+    # blocked host can't be reached via a 3xx bounce.
+    await _enforce_deny(caller, upstream_url, request.method, db)
     await _enforce_daily_cap(caller, db)  # per-user daily cap (skips sandbox + unmetered members)
     if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
         await _enforce_public_demo_ip_cap(request, db)  # shared token → meter by client IP, not user
@@ -4764,6 +4897,9 @@ async def run_tool_server(
     if tool is None:
         raise HTTPException(status_code=404, detail=f"no tool {body.tool!r} in this org")
     _require_tool_access(caller, tool.name)  # per-member tool ACL
+    # A run executes a CLI, so there is no request path to match — evaluate the tool's own upstream
+    # host, which is what a host-level rule ("nobody may reach api.stripe.com") is really saying.
+    await _enforce_deny(caller, tool.base_url, "", db)
     await _enforce_daily_cap(caller, db)  # a server run counts toward the per-user daily cap
     try:
         exec_bin = runner.resolve_exec_bin(tool)  # the SAME resolution run_tool execs — never diverges
