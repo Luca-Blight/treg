@@ -2492,7 +2492,11 @@ async def set_member_access(
     if membership.role == "owner":
         raise HTTPException(status_code=403, detail="an owner always has full access; it can't be restricted")
     membership.tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
-    membership.project_access = await _normalize_project_access(body.project_access, org_id, db)
+    # Only touch the project scope when the caller actually SENT the field. Without this, any client
+    # that PATCHes just tool_access or local_run_enabled (the dashboard's local-run toggle does exactly
+    # that) would silently clear the member's project scoping, because the field defaults to None.
+    if "project_access" in body.model_fields_set:
+        membership.project_access = await _normalize_project_access(body.project_access, org_id, db)
     membership.local_run_enabled = body.local_run_enabled
     await db.commit()
     return {"user_id": user_id, "org_id": org_id, "tool_access": membership.tool_access,
@@ -2751,6 +2755,7 @@ async def list_agents(
         out.append({"user_id": user.id, "name": _agent_name(caller.org, user.email),
                     "email": user.email, "role": m.role, "daily_call_cap": m.daily_call_cap,
                     "used_today": used.get(user.email, 0), "tool_access": m.tool_access,
+                    "project_access": m.project_access,  # the dashboard renders this column
                     "local_run_enabled": m.local_run_enabled, "created_at": m.created_at})
     return out
 

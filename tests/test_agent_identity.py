@@ -221,3 +221,13 @@ async def test_a_plain_member_cannot_mint_or_list_agents(env):
     assert (await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(member),
                              json={"name": "sneaky"})).status_code == 403
     assert (await env.c.get(f"/orgs/{env.org_id}/agents", headers=_h(member))).status_code == 403
+
+
+async def test_the_agent_listing_carries_everything_the_dashboard_renders(env):
+    """The Agents screen renders role, cap, usage and BOTH access axes — a missing field would show
+    as a blank column, so pin the shape here."""
+    await _agent(env, name="ui-bot")
+    row = (await env.c.get(f"/orgs/{env.org_id}/agents", headers=_h(env.owner))).json()[0]
+    for field in ("user_id", "name", "email", "role", "daily_call_cap", "used_today",
+                  "tool_access", "project_access", "local_run_enabled"):
+        assert field in row, f"{field} missing from the agent listing"

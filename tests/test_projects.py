@@ -223,3 +223,16 @@ async def test_an_invite_carries_the_project_scope_onto_the_membership(env):
     assert joined.status_code == 200, joined.text
     names = {t["name"] for t in (await env.c.get("/tools", headers=_h(joined.json()["token"]))).json()}
     assert names == {"a-tool", "shared"}
+
+
+async def test_an_access_patch_without_projects_keeps_the_scope(env):
+    """The dashboard's local-run toggle PATCHes only tool_access + local_run_enabled. That must not
+    silently clear the member's project scoping (the field defaults to None on the way in)."""
+    await _scope(env, [env.apollo["slug"]])
+    r = await env.c.patch(f"/orgs/{env.org_id}/members/{env.member_uid}/access", headers=_h(env.owner),
+                          json={"tool_access": None, "local_run_enabled": False})
+    assert r.status_code == 200, r.text
+    members = (await env.c.get(f"/orgs/{env.org_id}/members", headers=_h(env.owner))).json()
+    me = next(m for m in members if m["user_id"] == env.member_uid)
+    assert me["project_access"] == [env.apollo["id"]], "project scope must survive an unrelated PATCH"
+    assert (await env.c.get("/call/g-tool/ok", headers=_h(env.member))).status_code == 403
