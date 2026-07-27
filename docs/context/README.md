@@ -36,11 +36,17 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Shell mode (treg shell) — transparent CLI interception](interface/shell.md) | shipped | shell.py, cli.py |
 | [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md |
 
+## Guides (how-to)
+
+| Fragment | Status | Covers |
+|---|---|---|
+| [Expanding a marketplace category — the add-a-provider playbook](guides/expanding-a-category.md) | guide | oauth_providers.py, api.py, config.py |
+
 ## Ops (deploy, scale)
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [Running & deploying the server](ops/deploy.md) | shipped | __main__.py, config.py, db.py, email.py, … |
+| [Running & deploying the server](ops/deploy.md) | shipped | __main__.py, selfhost.sh, config.py, db.py, … |
 
 ## Reference
 

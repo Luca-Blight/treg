@@ -91,6 +91,13 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   `ratestore.py` (`kv_put`/`kv_get`/`kv_pop`, `rate_check` sliding-window, `sweep`). NOT the CLI-login
   handshake — that is deliberately still in-process (`api._cli_pending`, short-lived, self-heals on retry).
 
+- **`DenyRule`** — org policy over what may be CALLED: `org_id`, nullable `user_id` (NULL = the whole
+  org, set = one member/agent), `host` / `path_prefix` / `method` (an empty field means **any**, so a
+  rule carrying only `method="DELETE"` blocks every delete), `verdict`, `note`, `created_by`. A new
+  table, so `create_all` makes it — **no migration step**. `verdict` is `deny` today and exists so
+  approval-required actions can land here later without one, mirroring the `verdict` vocabulary
+  `localrun.py` already uses. Enforcement: [proxy-model](proxy-model.md).
+
 ## Bindings (the multi-credential shape)
 `Tool.bindings` is a JSON list; each entry is
 `{secret_id, injector, location, name, format, secret_field}` — one credential injection. A request

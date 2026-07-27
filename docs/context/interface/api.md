@@ -57,6 +57,24 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `_cascade_delete_org`, which now also sweeps each org's `RunRecord` rows);
   `list_invites` / `revoke_invite` (`GET`/`DELETE /orgs/{id}/invites[/{id}]`, admin+). Full behavior:
   [multi-tenancy](../architecture/multi-tenancy.md).
+- **Agents (machine identities):** `create_agent` (`POST /orgs/{id}/agents`, admin+) mints/rotates a
+  member token for a machine caller — its own `daily_call_cap`, `tool_access` and audit trail, with no
+  new table; `list_agents` (`GET`, never returns a token) and `revoke_agent` (`DELETE …/{user_id}`,
+  which also sweeps the deny rules aimed at that agent). An agent token is refused by
+  `require_identity` and can never be an owner. **Re-POSTing the same name ROTATES, and a field the
+  caller omits is left as it is** — a rotate changes the token, never the limits. See
+  [multi-tenancy](../architecture/multi-tenancy.md).
+- **Projects (a sub-scope inside the org):** `create_project` / `list_projects` /
+  `delete_project` (`/orgs/{id}/projects`, admin+ to mutate) — deleting frees its tools to org-wide and
+  removes the id from every member's `project_access`, leaving an emptied list as `[]` (NULL would mean
+  *every* project). `POST /tools` and `PATCH /tools/{id}`
+  take `project` (slug or id; null = org-wide), and `set_member_access` / `create_invite` take
+  `project_access`. See [multi-tenancy](../architecture/multi-tenancy.md).
+- **Deny rules (org policy):** `create_deny_rule` (`POST /orgs/{id}/deny`, admin+) blocks a
+  host / path_prefix / method for the whole org or one member (`user_id`); an all-empty rule is
+  refused (it would freeze the org) and a full URL is reduced to its host. Plus `list_deny_rules`
+  (`GET`) and `delete_deny_rule` (`DELETE …/{rule_id}`, 404 across orgs). Enforced on the proxy and
+  both run tiers — see [proxy-model](../architecture/proxy-model.md).
 - **Usage metering + caps** (usage-metering v1, `docs/USAGE-METERING-PLAN.md`): `org_usage`
   (`GET /orgs/{id}/usage?days=`, admin+) rolls up `CallRecord` + `RunRecord` since the window start into
   **by-user** (with a `call`/`local_run`/`server_run` split), **by-tool**, **by-day**, and totals — pure
@@ -303,9 +321,12 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   connection can act on (GSC sites, GA properties, Ads accounts), enriching id-only rows with the
   upstream's human name concurrently (`_enrich_resource_labels`) and recording the successful upstream
   call as proof of health; `set_connection_resource` (`POST …/resource`) pins the chosen `resource_ref`
-  + `resource_name`. `connect_with_token` (`POST /connections/token`) connects a bring-your-own-bot-token
-  provider (Slack), **verifying the token against the provider's probe before storing** and then
-  auto-provisioning its tool. `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
+  + `resource_name`. `connect_with_token` (`POST /connections/token`) connects any **pasted-secret**
+  provider — a bring-your-own bot token (Slack) or an **API key** (Apollo, Hunter, TikHub, Semrush, …) —
+  **verifying the credential against the provider's probe before storing** (a header- OR query-param probe,
+  an off-host `probe_url`, tolerating a CSV/text body or a 200-with-false-`token_verify_field` reply), then
+  auto-provisioning its tool with a header or query binding. See
+  [auth-secrets](../architecture/auth-secrets.md). `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
   the second credential a provider needs when treg does NOT hold it centrally (rare) and finishes the
   tool with BOTH bindings. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and
   cleans up: it removes the tool treg auto-provisioned for the provider and drops the dead binding from

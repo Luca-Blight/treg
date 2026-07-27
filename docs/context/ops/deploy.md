@@ -3,6 +3,7 @@ title: Running & deploying the server
 status: shipped
 sources:
   - src/treg/__main__.py
+  - src/treg/web/selfhost.sh
   - src/treg/config.py
   - src/treg/db.py
   - src/treg/email.py
@@ -49,8 +50,10 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   `google_ads_developer_token` (treg's token from OUR approved manager account, injected on every Ads
   call as a **platform binding** — see [proxy-model](../architecture/proxy-model.md)). The other
   providers each take a `<name>_client_id`/`_secret` pair: `linkedin_*`, `slack_*`, `x_*`, `tiktok_*`
-  (separate sandbox vs prod app), and `meta_*` (ONE Meta app backs both facebook + instagram). Empty for
-  a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
+  (separate sandbox vs prod app), `meta_*` (ONE Meta app backs both facebook + instagram), and the
+  Advertising OAuth platforms `microsoft_ads_*`, `snapchat_ads_*`, `tiktok_ads_*`, `pinterest_*` (all
+  unset by default, so those providers ship **unconfigured** until a deployment registers a dev app).
+  Empty for a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
 - **Landing live-wire (optional):** `demo_stripe_key` (`TREG_DEMO_STRIPE_KEY`, a Stripe **sandbox
   restricted** key) powers the landing sandbox's ONE real upstream call — a sandbox call to the exact
   seeded `stripe` tool relays for real with this key injected; the key exists in no sandbox org. Empty ⇒
@@ -58,6 +61,19 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   (`TREG_DEMO_STRIPE_WEBHOOK_SECRET`, `whsec_…`) signs the landing payments feed; empty ⇒ `POST
   /stripe/webhook` is off (`404`, so a deploy without it exposes no unauthenticated POST surface). See
   [api](../interface/api.md).
+- **Frictionless local mode** (`single_user`, `single_user_token_file`): `curl {BASE}/selfhost.sh | sh`
+  brings up a registry on the caller's own machine that they are **already signed into** — no account,
+  email or password. `lifespan` calls `_bootstrap_single_user()`, which idempotently creates the
+  `you@local.treg` owner + `personal` team and writes the token (0600) for the installer to hand to the
+  CLI; the token is **stable across restarts** (re-minted only if the file is deleted), and `dashboard()`
+  attaches a session when there is none. It adopts an org **only through a membership this identity
+  already has** — never by looking one up by the slug `personal`. On a database that is not fresh (a
+  restored dump, a hosted registry run locally) that lookup joined a team belonging to someone else **as
+  owner**, and an owner is exempt from every ACL (round-4 finding #5). A new team therefore takes a free
+  slug via `_unique_slug` (`personal-2`, …) instead of colliding; a fresh box still gets the clean name.
+  Gated by **`single_user_ok`**, which mirrors `expose_dev_code`:
+  it demands a **local sqlite** DB **and** a **loopback `public_url`**, so a stray `TREG_SINGLE_USER=true`
+  on a real deploy does nothing. A no-login dashboard on a public host would hand over the whole registry.
 - `github_client_id` / `github_client_secret` / `session_secret` — GitHub OAuth login for the dashboard
   (`TREG_GITHUB_*`, `TREG_SESSION_SECRET`); empty hides the GitHub button. Callback must be
   `<public_url>/auth/github/callback`. See [dashboard](../interface/dashboard.md).

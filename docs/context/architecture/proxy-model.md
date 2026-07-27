@@ -60,7 +60,7 @@ body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would
 for `identity` keeps what the caller receives matching what the caller requested.
 
 ## Tool resolution (`_resolve_call` in api.py)
-`* /call/{rest:path}` → `call_tool()` → `_resolve_call(rest, caller.org_id, db)` returns
+`* /call/{rest:path}` → `call_tool()` → `_resolve_call(rest, caller, db)` returns
 `(tool, upstream_url)`. **Both shapes are scoped to the caller's org** (`Tool.org_id == org_id`), so two
 orgs resolve independently and may reuse a tool name or upstream host; `call_tool` then loads only
 same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the per-user daily usage cap —
@@ -68,10 +68,37 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
 - **URL-passthrough (agent-native):** `rest` is the real upstream URL (`/call/https://api.intercom.io/me`).
   `_normalize_scheme()` restores the `https://` a path param collapses to `https:/`. The tool is resolved
   by **host** (`_host_of()` = `urlsplit(...).netloc`, matched against the indexed `Tool.host`) then the
-  **longest `base_url` prefix**; a tie → `409`, no match → `404`.
+  **longest `base_url` prefix**; a tie → `409`, no match → `404` (or `403` when the caller's ACL is the
+  only thing that removed the match — see below).
 - **Named:** `rest = "<tool>/<path>"` (`rest.partition("/")`), looked up by `Tool.name`; upstream URL =
   `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
+
+**ACL-filtered candidates.** `_resolve_call` takes the **caller** and filters passthrough candidates by
+`_tool_usable` (project scope AND the per-tool list) **before** the longest-prefix tiebreak. A same-host
+tool the caller cannot use must not be able to cause a `409` — or win the tiebreak — for someone who
+cannot even see it in `list_tools`. This only NARROWS the candidate set, so it can never grant access:
+whatever resolves still passes `_require_tool_use`. The named shape needs no filter (it resolves one
+tool, then the gate runs).
+
+**"Not yours" is a `403`, not a `404`.** Narrowing the candidate set to empty first read as *nothing is
+registered here*, so a caller with no access was told the tool did not EXIST — which sends an admin
+hunting for a registration that is already there (round-4 finding #3). `_resolve_call` keeps the
+**unfiltered** host matches alongside the filtered ones: if a tool would have matched and only the ACL
+removed it, the answer is `403`, the same verdict the named shape has always given. A host with nothing
+registered is still `404`. The `403` names only the **host the caller typed**, never the tool name the
+ACL is there to hide.
+
+**Policy deny (`_enforce_deny`, `_deny_match`).** After resolution and the tool ACL, the resolved
+upstream is matched against the org's `DenyRule` rows (org-wide + the ones aimed at this caller) →
+`403` naming the rule. Evaluating the **resolved** upstream is what makes both call shapes equally
+gated — a caller cannot dodge a rule by switching to URL-passthrough — and the relay does not follow
+redirects, so a blocked host is not reachable via a 3xx bounce. The path match is anchored at a
+segment boundary (`/v1/charges` must not match `/v1/chargesX`), the same trap `_resolve_call` guards.
+It applies to **every role including owner** (a guardrail, not a permission tier) and to both run
+tiers, where the tool's own `base_url` host stands in for the request path. `_deny_match` is pure, so
+it unit-tests without a DB — mirroring `localrun.check_deny`, which is the same idea one layer down
+(argv instead of URL). Zero rules = one indexed query and no behavior change.
 
 `call_tool()` loads every bound secret (running `oauth.ensure_fresh` on oauth secrets first — see
 [auth-secrets](auth-secrets.md)), calls `relay()`, then fires `audit.record_call(...)` off the response
