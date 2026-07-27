@@ -47,7 +47,7 @@ from . import oauth_providers
 from . import pubfeed, ratestore, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings
 from .db import get_session, init_db
-from .models import ROLE_RANK, Bundle, CallRecord, DenyRule, Invite, Membership, Org, PendingOAuth, RunRecord, Secret, Tool, User
+from .models import ROLE_RANK, Bundle, CallRecord, DenyRule, Invite, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User
 from .proxy import relay
 
 
@@ -1357,7 +1357,7 @@ async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
 
 async def _cascade_delete_org(org: Org, db: AsyncSession) -> None:
     """Delete every org-scoped row then the org. Shared by owner delete_org + admin force-delete."""
-    for model in (Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Membership):
+    for model in (Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project, Membership):
         for r in (await db.execute(select(model).where(model.org_id == org.id))).scalars().all():
             await db.delete(r)
     await db.delete(org)
@@ -1393,6 +1393,35 @@ def _require_tool_access(caller: Caller, tool_name: str) -> None:
         raise HTTPException(status_code=403, detail=(
             f"you don't have access to the tool {tool_name!r} in this team — an admin can grant it "
             "(dashboard → Team, or `treg org access <you> --tools …`)"))
+
+
+def _project_allowed(caller: Caller, tool: Tool) -> bool:
+    """Per-member PROJECT scope, the coarse dial above the per-tool one.
+
+    NULL `project_access` = the whole org (the default, so nothing changed when projects landed), and a
+    tool with NULL `project_id` is ORG-WIDE and always in scope — which is every tool that existed
+    before projects. Owner is never restricted, matching `_tool_allowed`. Pure: `project_access` holds
+    project IDs, so this is a set test with no query, even on the proxy's hot path."""
+    if caller.role == "owner":
+        return True
+    access = caller.membership.project_access
+    return access is None or tool.project_id is None or tool.project_id in access
+
+
+def _tool_usable(caller: Caller, tool: Tool) -> bool:
+    """The two ACL axes compose as AND: the project scope AND the per-tool list must both allow it.
+    `project_access=[X]` with `tool_access=NULL` therefore means "every tool in project X, including
+    ones added later" — the composition that makes the coarse dial useful on its own."""
+    return _tool_allowed(caller, tool.name) and _project_allowed(caller, tool)
+
+
+def _require_tool_use(caller: Caller, tool: Tool) -> None:
+    """Gate any use of a tool (proxy call + both run tiers) on BOTH ACL axes."""
+    _require_tool_access(caller, tool.name)
+    if not _project_allowed(caller, tool):
+        raise HTTPException(status_code=403, detail=(
+            f"the tool {tool.name!r} belongs to a project you're not scoped to — an admin can grant it "
+            "(dashboard → Team, or `treg org access <you> --projects …`)"))
 
 
 def _deny_match(rules: list[DenyRule], host: str, path: str, method: str) -> DenyRule | None:
@@ -1457,7 +1486,7 @@ async def _visible_secret_ids(caller: Caller, db: AsyncSession) -> set[int] | No
     tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
     ids: set[int] = set()
     for t in tools:
-        if not _tool_allowed(caller, t.name):
+        if not _tool_usable(caller, t):
             continue
         ids |= {b.get("secret_id") for b in (t.bindings or []) if b.get("secret_id") is not None}
         ids |= {e.get("secret_id") for e in ((t.cli or {}).get("inject") or []) if e.get("secret_id") is not None}
@@ -1489,6 +1518,7 @@ class InviteIn(BaseModel):
     # Access to seed onto the membership on accept: tool_access None = all tools, a list = the allowed
     # tool names; local_run may be turned off. Both default to the unrestricted state.
     tool_access: list[str] | None = None
+    project_access: list[str | int] | None = None  # None = the whole org; slugs/ids = the scoped set
     local_run_enabled: bool = True
     landing: str | None = None  # a shared detail page ("/app/skills/<name>") to land on after sign-in
 
@@ -1514,6 +1544,9 @@ class CapIn(BaseModel):
 class AccessIn(BaseModel):
     # tool_access: None = all tools (clear the restriction); a list = the ONLY tool names allowed.
     tool_access: list[str] | None = None
+    # project_access: None = the whole org; a list of project SLUGS or IDS = the only projects allowed.
+    # Accepts slugs because that's the human handle; stored as ids (see _normalize_project_access).
+    project_access: list[str | int] | None = None
     local_run_enabled: bool = True
 
 
@@ -1546,6 +1579,7 @@ class ToolIn(BaseModel):
     health_check: dict | None = None  # {method, path, expect_status}
     examples: list[dict] | None = None  # [{method, path, note}]
     cli: dict | None = None  # local-run profile for `treg run` (docs/CLI-RUN-PLAN.md)
+    project: str | int | None = None  # project slug or id; None = org-wide (the default)
 
 
 class ToolUpdate(BaseModel):
@@ -1554,6 +1588,7 @@ class ToolUpdate(BaseModel):
     health_check: dict | None = None
     examples: list[dict] | None = None
     cli: dict | None = None  # set/replace the local-run profile; explicit null clears it
+    project: str | int | None = None  # move between projects; explicit null makes it org-wide
 
 
 class GrantIn(BaseModel):
@@ -1870,6 +1905,7 @@ async def create_invite(
     days = max(1, min(body.expires_days, 3650))  # clamp BOTH ends — a huge value overflows datetime → 500
     expires_at = _utcnow_naive() + timedelta(days=days)
     tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
+    project_access = await _normalize_project_access(body.project_access, org_id, db)
     if body.landing is not None and not _LANDING_RE.match(body.landing):
         raise HTTPException(status_code=422, detail="landing must be a detail path like /app/skills/<name>")
     code = crypto.new_token()
@@ -1881,7 +1917,8 @@ async def create_invite(
         org_id=org_id, email=email, role=body.role,
         code_hash=crypto.hash_token(code), email_token_hash=crypto.hash_token(email_token),
         invited_by=caller.email, expires_at=expires_at,
-        tool_access=tool_access, local_run_enabled=body.local_run_enabled, landing=body.landing,
+        tool_access=tool_access, project_access=project_access,
+        local_run_enabled=body.local_run_enabled, landing=body.landing,
     )
     db.add(invite)
     await db.commit()
@@ -1936,7 +1973,8 @@ async def accept_invite(body: AcceptIn, db: AsyncSession = Depends(get_session))
         raise HTTPException(status_code=409, detail="already a member of this org")
     token = crypto.new_token()
     db.add(Membership(user_id=user.id, org_id=invite.org_id, role=invite.role, token_hash=crypto.hash_token(token),
-                      tool_access=invite.tool_access, local_run_enabled=invite.local_run_enabled))
+                      tool_access=invite.tool_access, project_access=invite.project_access,
+                      local_run_enabled=invite.local_run_enabled))
     invite.status = "accepted"
     try:
         await db.commit()  # a concurrent double-accept trips uq_membership_user_org — 409, not 500
@@ -2309,7 +2347,8 @@ async def accept_my_invite(
     token = crypto.new_token()  # return the org-scoped token (was minted-then-discarded → an unusable membership)
     db.add(Membership(
         user_id=user.id, org_id=invite.org_id, role=invite.role, token_hash=crypto.hash_token(token),
-        tool_access=invite.tool_access, local_run_enabled=invite.local_run_enabled,
+        tool_access=invite.tool_access, project_access=invite.project_access,
+        local_run_enabled=invite.local_run_enabled,
     ))
     invite.status = "accepted"
     try:
@@ -2372,7 +2411,8 @@ async def list_members(
         if user is not None:
             out.append({"user_id": user.id, "email": user.email, "role": m.role,
                         "daily_call_cap": m.daily_call_cap, "used_today": used.get(user.email, 0),
-                        "tool_access": m.tool_access, "local_run_enabled": m.local_run_enabled,
+                        "tool_access": m.tool_access, "project_access": m.project_access,
+                        "local_run_enabled": m.local_run_enabled,
                         # so the dashboard can separate people from machines in one roster
                         "is_agent": _is_agent_email(user.email)})
     return out
@@ -2452,9 +2492,11 @@ async def set_member_access(
     if membership.role == "owner":
         raise HTTPException(status_code=403, detail="an owner always has full access; it can't be restricted")
     membership.tool_access = _normalize_tool_access(body.tool_access, await _known_access_names(org_id, db))
+    membership.project_access = await _normalize_project_access(body.project_access, org_id, db)
     membership.local_run_enabled = body.local_run_enabled
     await db.commit()
     return {"user_id": user_id, "org_id": org_id, "tool_access": membership.tool_access,
+            "project_access": membership.project_access,
             "local_run_enabled": membership.local_run_enabled}
 
 
@@ -2736,6 +2778,129 @@ async def revoke_agent(
         await db.delete(user)
     await db.commit()
     return {"revoked": True, "email": email}
+
+
+# ---- projects: an optional sub-scope inside an org ------------------------------------------
+class ProjectIn(BaseModel):
+    name: str
+
+
+def _project_view(p: Project, tool_count: int | None = None) -> dict:
+    out = {"id": p.id, "name": p.name, "slug": p.slug, "created_by": p.created_by,
+           "created_at": p.created_at}
+    if tool_count is not None:
+        out["tool_count"] = tool_count
+    return out
+
+
+async def _normalize_project_access(
+    refs: list[str | int] | None, org_id: int, db: AsyncSession
+) -> list[int] | None:
+    """Turn slugs/ids into the stored list of project IDS, mirroring `_normalize_tool_access`:
+    validate against the org's own projects (422 on unknown — never silently ignore a typo) and
+    **collapse an all-projects selection back to NULL**, so a fully-scoped member keeps
+    auto-inheriting projects created later."""
+    if refs is None:
+        return None
+    known = (await db.execute(select(Project).where(Project.org_id == org_id))).scalars().all()
+    by_slug = {p.slug: p.id for p in known}
+    by_id = {p.id for p in known}
+    ids: set[int] = set()
+    for ref in refs:
+        if isinstance(ref, int) or (isinstance(ref, str) and ref.isdigit()):
+            pid = int(ref)
+            if pid not in by_id:
+                raise HTTPException(status_code=422, detail=f"unknown project {ref!r} in this team")
+            ids.add(pid)
+        elif ref in by_slug:
+            ids.add(by_slug[ref])
+        else:
+            raise HTTPException(status_code=422, detail=f"unknown project {ref!r} in this team")
+    if known and ids >= by_id:
+        return None  # every project selected = unrestricted, so store it as such
+    return sorted(ids)
+
+
+async def _resolve_project(ref: str | int | None, org_id: int, db: AsyncSession) -> Project | None:
+    """A project by slug or id, scoped to the org (404 across orgs). None/'' = org-wide."""
+    if ref is None or ref == "":
+        return None
+    q = select(Project).where(Project.org_id == org_id)
+    if isinstance(ref, int) or (isinstance(ref, str) and str(ref).isdigit()):
+        q = q.where(Project.id == int(ref))
+    else:
+        q = q.where(Project.slug == _slugify(str(ref)))
+    project = (await db.execute(q)).scalar_one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404, detail=f"no project {ref!r} in this team")
+    return project
+
+
+@app.post("/orgs/{org_id}/projects")
+async def create_project(
+    org_id: int, body: ProjectIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Create a project — a sub-scope inside the team (admin+). Tools can then be filed under it and
+    members scoped to it. Creating one changes nothing on its own: existing tools stay org-wide."""
+    _require_admin_of(org_id, caller)
+    name = (body.name or "").strip()
+    slug = _slugify(name)
+    if not name or not slug:
+        raise HTTPException(status_code=422, detail="name is required")
+    if (await db.execute(select(Project).where(
+            Project.org_id == org_id, Project.slug == slug))).scalar_one_or_none():
+        raise HTTPException(status_code=409, detail=f"a project {slug!r} already exists in this team")
+    project = Project(org_id=org_id, name=name, slug=slug, created_by=caller.email)
+    db.add(project)
+    await db.commit()
+    await db.refresh(project)
+    return _project_view(project, tool_count=0)
+
+
+@app.get("/orgs/{org_id}/projects")
+async def list_projects(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """The team's projects. A member scoped to some of them sees only those (the ACL hides what it
+    gates, matching how `list_tools` behaves)."""
+    if caller.org_id != org_id:
+        raise HTTPException(status_code=403, detail="use this team's token")
+    projects = (await db.execute(select(Project).where(Project.org_id == org_id))).scalars().all()
+    access = caller.membership.project_access
+    if caller.role != "owner" and access is not None:
+        projects = [p for p in projects if p.id in access]
+    counts = dict((await db.execute(
+        select(Tool.project_id, func.count(Tool.id)).where(Tool.org_id == org_id).group_by(Tool.project_id)
+    )).all())
+    return [_project_view(p, tool_count=counts.get(p.id, 0)) for p in projects]
+
+
+@app.delete("/orgs/{org_id}/projects/{project_id}")
+async def delete_project(
+    org_id: int, project_id: int,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Delete a project. Its tools are NOT deleted — they fall back to org-wide, which is the safe
+    direction (a tool that quietly vanished from every listing would be far worse than one that
+    briefly becomes visible to the whole team). Members scoped to it lose that entry."""
+    _require_admin_of(org_id, caller)
+    project = await db.get(Project, project_id)
+    if project is None or project.org_id != org_id:  # 404 across orgs — never confirm another org's ids
+        raise HTTPException(status_code=404, detail="unknown project")
+    freed = 0
+    for tool in (await db.execute(select(Tool).where(Tool.project_id == project_id))).scalars().all():
+        tool.project_id = None
+        freed += 1
+    for m in (await db.execute(select(Membership).where(Membership.org_id == org_id))).scalars().all():
+        if m.project_access and project_id in m.project_access:
+            remaining = [p for p in m.project_access if p != project_id]
+            # An empty list would mean "no projects at all" — treat it as "unscoped" instead of
+            # silently locking the member out of every tool in the team.
+            m.project_access = remaining or None
+    await db.delete(project)
+    await db.commit()
+    return {"deleted": project_id, "tools_made_org_wide": freed}
 
 
 # ---- deny rules: org policy over what may be called ----------------------------------------
@@ -3049,10 +3214,12 @@ async def create_tool(
     await _validate_bundle_id(body.bundle_id, caller.org_id, db)
     _validate_cli_profile(body.cli)
     await _validate_cli_secrets(body.cli, caller, db)
+    project = await _resolve_project(body.project, caller.org_id, db)
     tool = Tool(
         org_id=caller.org_id, name=body.name, owner=caller.email, base_url=body.base_url,
         host=_host_of(body.base_url), bindings=bindings, health_check=body.health_check,
         examples=body.examples or [], cli=body.cli, bundle_id=body.bundle_id,
+        project_id=project.id if project else None,
     )
     db.add(tool)
     try:
@@ -3068,7 +3235,7 @@ async def list_tools(
 ) -> list[dict]:
     rows = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
     # The per-member tool ACL hides what it gates: a restricted member's listing shows only their tools.
-    return [_tool_view(t) for t in rows if _tool_allowed(caller, t.name)]
+    return [_tool_view(t) for t in rows if _tool_usable(caller, t)]
 
 
 @app.get("/tools/by-name/{name}")
@@ -3081,7 +3248,7 @@ async def get_tool_by_name(
     )).scalars().first()
     if tool is None:
         raise HTTPException(status_code=404, detail="tool not found")
-    _require_tool_access(caller, tool.name)  # a 403 names the fix (ask an admin) — clearer than a fake 404
+    _require_tool_use(caller, tool)  # a 403 names the fix (ask an admin) — clearer than a fake 404
     return _tool_view(tool)
 
 
@@ -3114,6 +3281,9 @@ async def update_tool(
     if "cli" in fields:  # explicit null clears the profile (turns local runs off entirely)
         _validate_cli_profile(fields["cli"])
         await _validate_cli_secrets(fields["cli"], caller, db, grandfather)
+    if "project" in fields:  # slug/id in, column out; explicit null = back to org-wide
+        project = await _resolve_project(fields.pop("project"), caller.org_id, db)
+        tool.project_id = project.id if project else None
     for k, v in fields.items():
         setattr(tool, k, v)
     if "base_url" in fields:
@@ -3197,7 +3367,7 @@ async def grant_local_run(
     tool = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id, Tool.name == name))).scalar_one_or_none()
     if tool is None:
         raise HTTPException(status_code=404, detail="tool not found")
-    _require_tool_access(caller, tool.name)  # per-member tool ACL (call + both run tiers)
+    _require_tool_use(caller, tool)  # per-member tool + project ACL (call + both run tiers)
     _require_local_run(caller)               # local tier may be disabled for this member (server-only)
     await _enforce_deny(caller, tool.base_url, "", db)  # host-level policy (see run_tool_server)
     await _enforce_daily_cap(caller, db)  # a local run counts toward the per-user daily cap
@@ -4692,7 +4862,7 @@ async def admin_delete_org(
 
 
 # ---- the proxy: call a tool without holding its credential --------------------------------
-async def _resolve_call(rest: str, org_id: int, db: AsyncSession) -> tuple[Tool, str]:
+async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[Tool, str]:
     """Resolve `/call/<rest>` to (tool, full upstream URL), scoped to the caller's org. Shapes:
 
     - URL-passthrough (agent-facing): rest is the real upstream URL. Resolve the tool by host
@@ -4701,16 +4871,26 @@ async def _resolve_call(rest: str, org_id: int, db: AsyncSession) -> tuple[Tool,
 
     Both lookups are constrained to `org_id`, so two orgs resolve independently (and may reuse
     a tool name or an upstream host without colliding).
+
+    Passthrough candidates are additionally filtered by the caller's ACL (project scope AND the
+    per-tool list) *before* the longest-prefix tiebreak. That ordering matters: a same-host tool the
+    caller cannot use must not be able to cause a 409 — or win the tiebreak — for someone who can't
+    even see it in `list_tools`. This narrows the candidate set, so it can never grant access: whatever
+    resolves still passes `_require_tool_use`. The named shape needs no filter (it resolves one tool).
     """
+    org_id = caller.org_id
     norm = _normalize_scheme(rest)
     if norm.startswith("http://") or norm.startswith("https://"):
         try:
             host = urlsplit(norm).netloc.lower()
         except ValueError:  # malformed passthrough URL (e.g. unbalanced IPv6 brackets) → 400, not 500
             raise HTTPException(status_code=400, detail="malformed upstream URL")
-        candidates = (
-            await db.execute(select(Tool).where(Tool.host == host, Tool.org_id == org_id))
-        ).scalars().all()
+        candidates = [
+            t for t in (await db.execute(
+                select(Tool).where(Tool.host == host, Tool.org_id == org_id)
+            )).scalars().all()
+            if _tool_usable(caller, t)  # a tool the caller can't use can't 409 them either
+        ]
         # Match on a path-segment boundary, not a raw string prefix: base `.../v2` must NOT match
         # request `.../v20/...` (that would inject v2's credential onto an unregistered sibling path).
         def _prefix_match(base: str) -> bool:
@@ -4796,8 +4976,8 @@ async def call_tool(
         _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
         if sep:
             rest = raw_rest
-    tool, upstream_url = await _resolve_call(rest, caller.org_id, db)
-    _require_tool_access(caller, tool.name)  # per-member tool ACL (NULL access = all; admins exempt)
+    tool, upstream_url = await _resolve_call(rest, caller, db)
+    _require_tool_use(caller, tool)  # per-member tool + project ACL (NULL access = all; admins exempt)
     # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
     # shape the caller used (named or URL-passthrough), and the relay never follows redirects, so a
     # blocked host can't be reached via a 3xx bounce.
@@ -4896,7 +5076,7 @@ async def run_tool_server(
     ).scalar_one_or_none()
     if tool is None:
         raise HTTPException(status_code=404, detail=f"no tool {body.tool!r} in this org")
-    _require_tool_access(caller, tool.name)  # per-member tool ACL
+    _require_tool_use(caller, tool)  # per-member tool + project ACL
     # A run executes a CLI, so there is no request path to match — evaluate the tool's own upstream
     # host, which is what a host-level rule ("nobody may reach api.stripe.com") is really saying.
     await _enforce_deny(caller, tool.base_url, "", db)
@@ -4954,6 +5134,7 @@ def _tool_view(t: Tool) -> dict:
         # every pre-auth_mechanism tool server-runnable as before).
         "server_runnable": (bool(t.cli) and (t.cli.get("bin") or t.name) in _allowed_server_bins()
                             and (t.cli.get("auth_mechanism") or "env") in ("env", "argv")),
+        "project_id": t.project_id,  # None = org-wide
         "bundle_id": t.bundle_id,
     }
 

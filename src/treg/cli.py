@@ -2830,6 +2830,7 @@ def cmd_org_invite(args, cfg) -> None:
             access = None  # full vault access — the dashboard Share modal's default
         body = {"email": args.email, "role": args.role, "expires_days": args.expires_days,
                 "tool_access": access,
+                "project_access": _projects_arg(args),
                 "local_run_enabled": getattr(args, "local_run", "on") != "off",
                 "landing": landing}
         r = c.post(f"/orgs/{org_id}/invites", json=body)
@@ -2862,7 +2863,8 @@ def cmd_org_access(args, cfg) -> None:
         local = cur.get("local_run_enabled", True) if getattr(args, "local_run", None) is None \
             else args.local_run != "off"
         _show(c.patch(f"/orgs/{org_id}/members/{args.user_id}/access",
-                      json={"tool_access": access, "local_run_enabled": local}))
+                      json={"tool_access": access, "project_access": _projects_arg(args),
+                            "local_run_enabled": local}))
 
 
 def cmd_org_invites(args, cfg) -> None:
@@ -2924,6 +2926,39 @@ def cmd_org_agent_rm(args, cfg) -> None:
         if org_id is None:
             sys.exit("no active org")
         _show(c.delete(f"/orgs/{org_id}/agents/{args.user_id}"))
+
+
+def _projects_arg(args) -> list | None:
+    """--projects a,b → the list; --all-projects → None (unrestricted); neither → leave unset."""
+    if getattr(args, "all_projects", False):
+        return None
+    if getattr(args, "projects", None):
+        return [p.strip() for p in args.projects.split(",") if p.strip()]
+    return None
+
+
+def cmd_org_project_new(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.post(f"/orgs/{org_id}/projects", json={"name": args.name}))
+
+
+def cmd_org_projects(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.get(f"/orgs/{org_id}/projects"))
+
+
+def cmd_org_project_rm(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.delete(f"/orgs/{org_id}/projects/{args.project_id}"))
 
 
 def cmd_org_deny(args, cfg) -> None:
@@ -3224,6 +3259,8 @@ def build_parser() -> argparse.ArgumentParser:
     oi.add_argument("--tools", help="comma-separated tool names this member may use (default: prompt / all)")
     oi.add_argument("--all-tools", dest="all_tools", action="store_true", help="grant access to every tool (skip the prompt)")
     oi.add_argument("--local-run", dest="local_run", choices=["on", "off"], help="allow local CLI runs (default: on)")
+    oi.add_argument("--projects", help="comma-separated project slugs to scope them to (default: all)")
+    oi.add_argument("--all-projects", dest="all_projects", action="store_true", help="every project (the default)")
     oi.set_defaults(fn=cmd_org_invite)
     oa = mk(og, "access", "Set which tools a member may use + whether they can run locally (admin+).",
             "treg org access 5 --tools stripe,gh", "treg org access 5 --all-tools", "treg org access 5 --local-run off")
@@ -3231,6 +3268,8 @@ def build_parser() -> argparse.ArgumentParser:
     oa.add_argument("--tools", help="comma-separated tool names to allow (replaces their current list)")
     oa.add_argument("--all-tools", dest="all_tools", action="store_true", help="give access to every tool")
     oa.add_argument("--local-run", dest="local_run", choices=["on", "off"], help="allow/forbid local CLI runs for this member")
+    oa.add_argument("--projects", help="comma-separated project slugs this member may use")
+    oa.add_argument("--all-projects", dest="all_projects", action="store_true", help="give access to every project")
     oa.set_defaults(fn=cmd_org_access)
     mk(og, "invites", "List pending invites for the active team (admin+).", "treg org invites").set_defaults(fn=cmd_org_invites)
     orv = mk(og, "revoke", "Revoke a pending invite before it's used.", "treg org revoke 3")
@@ -3258,6 +3297,15 @@ def build_parser() -> argparse.ArgumentParser:
              "treg org agent-rm 7")
     oar.add_argument("user_id", type=int, help="the agent's user id (from `org agents`)")
     oar.set_defaults(fn=cmd_org_agent_rm)
+    opn = mk(og, "project-new", "Create a project — a sub-scope inside the team (admin+).",
+             'treg org project-new "Apollo"')
+    opn.add_argument("name", help="the project's display name"); opn.set_defaults(fn=cmd_org_project_new)
+    mk(og, "projects", "List the team's projects and how many tools each holds.",
+       "treg org projects").set_defaults(fn=cmd_org_projects)
+    oprm = mk(og, "project-rm", "Delete a project (its tools become org-wide, they are not deleted).",
+              "treg org project-rm 2")
+    oprm.add_argument("project_id", type=int, help="the project id (from `org projects`)")
+    oprm.set_defaults(fn=cmd_org_project_rm)
     od2 = mk(og, "deny", "Block calls to a host / path / method — for the team, or one member (admin+).",
              "treg org deny --method DELETE --note 'no deletes'",
              "treg org deny --host api.stripe.com", "treg org deny --path /admin --user 7")

@@ -62,6 +62,10 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   new table; `list_agents` (`GET`, never returns a token) and `revoke_agent` (`DELETE …/{user_id}`).
   An agent token is refused by `require_identity` and can never be an owner. See
   [multi-tenancy](../architecture/multi-tenancy.md).
+- **Projects (a sub-scope inside the org):** `create_project` / `list_projects` /
+  `delete_project` (`/orgs/{id}/projects`, admin+ to mutate). `POST /tools` and `PATCH /tools/{id}`
+  take `project` (slug or id; null = org-wide), and `set_member_access` / `create_invite` take
+  `project_access`. See [multi-tenancy](../architecture/multi-tenancy.md).
 - **Deny rules (org policy):** `create_deny_rule` (`POST /orgs/{id}/deny`, admin+) blocks a
   host / path_prefix / method for the whole org or one member (`user_id`); an all-empty rule is
   refused (it would freeze the org) and a full URL is reduced to its host. Plus `list_deny_rules`

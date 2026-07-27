@@ -192,6 +192,17 @@ def _migrate_to_orgs(conn) -> None:
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE pendingoauth ADD COLUMN {col} {ddl}"))
 
+    # (A21) additive: PROJECTS — an optional sub-scope inside an org. The `project` table itself is made
+    # by create_all (a brand-new table needs no ALTER); these are the three columns that hang off it.
+    # All nullable, and NULL everywhere means "org-wide / unrestricted" — so an existing deployment
+    # behaves exactly as before until someone creates a project. No BOOLEAN here, so the Postgres
+    # integer-default trap (PR #22) doesn't apply. See api._project_allowed / models.Project.
+    if "tool" in tables and "project_id" not in {c["name"] for c in insp.get_columns("tool")}:
+        conn.execute(text("ALTER TABLE tool ADD COLUMN project_id INTEGER"))  # NULL = org-wide tool
+    for tbl in ("membership", "invite"):
+        if tbl in tables and "project_access" not in {c["name"] for c in insp.get_columns(tbl)}:
+            conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN project_access JSON"))  # NULL = whole org
+
     # (B) legacy backfill — guarded
     if "org" not in tables:
         return  # defensive: create_all should have made it

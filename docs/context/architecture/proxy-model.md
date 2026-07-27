@@ -60,7 +60,7 @@ body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would
 for `identity` keeps what the caller receives matching what the caller requested.
 
 ## Tool resolution (`_resolve_call` in api.py)
-`* /call/{rest:path}` → `call_tool()` → `_resolve_call(rest, caller.org_id, db)` returns
+`* /call/{rest:path}` → `call_tool()` → `_resolve_call(rest, caller, db)` returns
 `(tool, upstream_url)`. **Both shapes are scoped to the caller's org** (`Tool.org_id == org_id`), so two
 orgs resolve independently and may reuse a tool name or upstream host; `call_tool` then loads only
 same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the per-user daily usage cap —
@@ -72,6 +72,13 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
 - **Named:** `rest = "<tool>/<path>"` (`rest.partition("/")`), looked up by `Tool.name`; upstream URL =
   `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
+
+**ACL-filtered candidates.** `_resolve_call` takes the **caller** and filters passthrough candidates by
+`_tool_usable` (project scope AND the per-tool list) **before** the longest-prefix tiebreak. A same-host
+tool the caller cannot use must not be able to cause a `409` — or win the tiebreak — for someone who
+cannot even see it in `list_tools`. This only NARROWS the candidate set, so it can never grant access:
+whatever resolves still passes `_require_tool_use`. The named shape needs no filter (it resolves one
+tool, then the gate runs).
 
 **Policy deny (`_enforce_deny`, `_deny_match`).** After resolution and the tool ACL, the resolved
 upstream is matched against the org's `DenyRule` rows (org-wide + the ones aimed at this caller) →

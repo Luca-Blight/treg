@@ -37,6 +37,13 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   — the code is a shortcut, not a requirement. `email_token_hash` is the inbox-only **second secret** in
   the emailed link — it can sign the invitee in (`GET/POST /auth/invite-signin?t=`, one-time), while the
   admin-visible code never can.
+- **`Project`** — an OPTIONAL sub-scope inside an org (`org_id`, `name`, `slug`, unique `(org_id, slug)`).
+  The org stays the hard isolation boundary; a project is a softer grouping on top. Deliberately a
+  **label + ACL scope, NOT a namespace**: `Tool.name` stays unique per `(org_id, name)`, so no unique
+  constraint had to be rebuilt (`_fix_tool_uniqueness` had to do that once already, and SQLite cannot
+  alter constraints portably). `Tool.project_id` NULL = **org-wide**, which is every tool that predates
+  projects — so this shipped purely additive. Secrets stay org-level on purpose: one shared credential
+  legitimately backs tools in several projects.
 - **Machine identities** — a `User` on an **unroutable domain**, which is what makes it a machine
   rather than a person. Two exist: the published demo token (`PUBLIC_DEMO_DOMAIN`) and an **agent**
   (`AGENT_DOMAIN` = `agents.treg.local`). Both are minted by an admin and act ONLY by their token:
@@ -84,6 +91,18 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   Every identity door is blocked at the shared choke point `_find_or_create_user`, plus `register_user`
   (which predates it and creates a `User` directly) and `auth_email_start` (refuse early, mint no code).
   `list_members` carries `is_agent` so one roster can show people and machines apart.
+- **Two ACL axes, composed as AND** (`_tool_usable` = `_tool_allowed` AND `_project_allowed`). The
+  project scope is the coarse dial, `tool_access` the fine one; both are NULL-means-everything and the
+  owner is exempt from both. `project_access` holds project **IDs**, not slugs, so the hot-path check is
+  a pure set test (no id→slug query per call) and a rename cannot strand an access list.
+  `project_access=[X]` with `tool_access=NULL` means "every tool in project X, **including ones added
+  later**" — the composition that makes the coarse dial useful alone. `_normalize_project_access`
+  accepts slugs or ids, 422s on an unknown one, and collapses an all-projects selection back to NULL
+  (mirroring `_normalize_tool_access`). Endpoints: `create_project` / `list_projects` (a scoped member
+  sees only their own) / `delete_project` (admin+) — deleting **frees** its tools back to org-wide rather
+  than hiding them, and drops the id from every member's scope, treating an emptied list as *unscoped*
+  so nobody is locked out of the whole team. Invites carry `project_access` onto the membership at both
+  accept doors, exactly as `tool_access` does.
 - Every list filters by `caller.org_id`; every create stamps `org_id = caller.org_id` +
   `owner = caller.email`; `_resolve_call` scopes **both** the named lookup and the host/longest-prefix
   passthrough to the org; `call_tool` loads only same-org secrets. See [proxy-model](proxy-model.md).

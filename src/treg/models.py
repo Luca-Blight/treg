@@ -79,6 +79,11 @@ class Membership(SQLModel, table=True):
     # Per-member tool ACL: NULL = ALL tools in the org (the default — no restriction, no regression); a
     # JSON list of tool NAMES = the ONLY tools this member may call or run. See api._require_tool_access.
     tool_access: list | None = Field(default=None, sa_column=Column("tool_access", JSON, nullable=True))
+    # Per-member PROJECT scope: NULL = the whole org (the default); a JSON list of project IDS = the
+    # only projects whose tools this member may use. IDs, not slugs, so the hot-path check stays a pure
+    # set test (no id→slug query per call) and a project rename can't strand an access list.
+    # Composes with tool_access as AND — see api._project_allowed.
+    project_access: list | None = Field(default=None, sa_column=Column("project_access", JSON, nullable=True))
     # May this member use the LOCAL run tier (`treg run --local`, the grant)? False → server runs only.
     local_run_enabled: bool = Field(default=True)
     created_at: datetime = Field(default_factory=_now)
@@ -107,6 +112,8 @@ class Invite(SQLModel, table=True):
     # Access to seed onto the membership when this invite is accepted (requirement: set access at invite
     # time, modify later). NULL tool_access = all tools; a list = the allowed tool names.
     tool_access: list | None = Field(default=None, sa_column=Column("tool_access", JSON, nullable=True))
+    # NULL = the whole org; a list of project IDS = the projects to scope them to (see Membership).
+    project_access: list | None = Field(default=None, sa_column=Column("project_access", JSON, nullable=True))
     local_run_enabled: bool = Field(default=True)
     # Where the invitee lands after sign-in — a shared detail page ("/app/skills/<name>") when the
     # invite was minted from a share, else NULL for the plain dashboard. Path-only, validated on create.
@@ -297,6 +304,10 @@ class Tool(SQLModel, table=True):
     # (disabled until the owner opts in). See docs/CLI-RUN-PLAN.md.
     cli: dict | None = Field(default=None, sa_column=Column("cli", JSON))
     bundle_id: int | None = Field(default=None, foreign_key="bundle.id", index=True)
+    # Optional sub-scope inside the org. NULL = ORG-WIDE — which is every tool that existed before
+    # projects, so adding this changed nothing. A project is a LABEL + ACL scope, never a namespace:
+    # `name` stays unique per (org_id, name), so no unique constraint had to be rebuilt. See models.Project.
+    project_id: int | None = Field(default=None, foreign_key="project.id", index=True)
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -328,4 +339,27 @@ class DenyRule(SQLModel, table=True):
     verdict: str = Field(default="deny")  # deny | approve (approve = reserved, see docstring)
     note: str = Field(default="")  # why this exists — shown in the refusal so it names its source
     created_by: str = Field(default="")  # admin email (audit)
+    created_at: datetime = Field(default_factory=_now)
+
+
+class Project(SQLModel, table=True):
+    """An optional sub-scope INSIDE an org — "one team roster, several projects".
+
+    The org stays the hard isolation boundary (every query is still scoped by `org_id`); a project is
+    a softer grouping on top of it. Deliberately a **label + ACL scope, not a namespace**: `Tool.name`
+    remains unique per `(org_id, name)`, so no unique constraint had to be rebuilt and two projects
+    cannot hold a same-named tool. `Tool.project_id` NULL means org-wide, which is what every tool
+    that predates projects is — so this was purely additive.
+
+    Secrets stay org-level on purpose: one shared credential legitimately backs tools in several
+    projects, so scoping it would pose a question with no good answer.
+    """
+
+    __table_args__ = (UniqueConstraint("org_id", "slug", name="uq_project_org_slug"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int | None = Field(default=None, foreign_key="org.id", index=True)
+    name: str
+    slug: str = Field(index=True)  # the human handle inside the org
+    created_by: str = Field(default="")
     created_at: datetime = Field(default_factory=_now)
