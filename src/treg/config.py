@@ -5,6 +5,8 @@ from __future__ import annotations
 from functools import lru_cache
 
 from pydantic import field_validator
+from urllib.parse import urlsplit
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -152,6 +154,27 @@ class Settings(BaseSettings):
     # response, which is an unauthenticated account-takeover vector in prod — so it defaults OFF and
     # must be explicitly enabled (TREG_EMAIL_DEV_MODE=true) for local testing without a mail sender.
     email_dev_mode: bool = False
+
+    # Frictionless local mode: `curl … | sh` brings up a server you are already signed into, with no
+    # account, email or password. Only takes effect when `single_user_ok` allows it (see below).
+    single_user: bool = False
+    # Where the bootstrapped token is written so the CLI/installer can pick it up (0600).
+    single_user_token_file: str = "~/.treg/local-token"
+
+    @property
+    def single_user_ok(self) -> bool:
+        """No-login mode: ONE person on ONE machine, so the dashboard opens already signed in.
+
+        Guarded exactly like `expose_dev_code`, because a no-login dashboard reachable from the
+        internet would hand the whole registry to anyone who found it. Both must hold:
+          - a LOCAL sqlite database (a Postgres URL means a real deploy), and
+          - a loopback `public_url` (so it is not fronted by a public domain).
+        A stray TREG_SINGLE_USER=true in production therefore does nothing.
+        """
+        if not self.single_user or "sqlite" not in self.database_url:
+            return False
+        host = (urlsplit(self.public_url).hostname or "").lower()
+        return host in ("localhost", "127.0.0.1", "0.0.0.0", "::1", "")
 
     @property
     def expose_dev_code(self) -> bool:

@@ -46,14 +46,73 @@ from . import audit, crypto, demo as demo_seed, email as email_sender, health, i
 from . import oauth_providers
 from . import pubfeed, ratestore, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings
-from .db import get_session, init_db
+from .db import get_session, init_db, session_maker
 from .models import ROLE_RANK, Bundle, CallRecord, DenyRule, Invite, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User
 from .proxy import relay
+
+
+LOCAL_USER_EMAIL = "you@local.treg"   # the single-user identity; a real address is never needed
+LOCAL_ORG_NAME = "personal"
+
+
+async def _bootstrap_single_user() -> None:
+    """Frictionless local mode: make the machine's owner exist, so `curl … | sh` lands on a dashboard
+    that is already signed in — no account, no email, no password.
+
+    Idempotent, and the token is STABLE across restarts (rotating it every boot would break the CLI
+    config the installer just wrote). It is re-minted only when the token file is missing, i.e. the
+    user deleted it and needs a new one. Gated by `single_user_ok`, which refuses anything that isn't
+    a local sqlite box — see config.Settings.
+    """
+    s = get_settings()
+    if not s.single_user_ok:
+        return
+    path = Path(s.single_user_token_file).expanduser()
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == LOCAL_USER_EMAIL))).scalar_one_or_none()
+        if user is None:
+            user = User(email=LOCAL_USER_EMAIL, onboarded=True)
+            db.add(user)
+            await db.flush()
+        org = (await db.execute(select(Org).where(Org.slug == LOCAL_ORG_NAME))).scalar_one_or_none()
+        if org is None:
+            org = Org(name=LOCAL_ORG_NAME.title(), slug=LOCAL_ORG_NAME)
+            db.add(org)
+            await db.flush()
+        membership = (await db.execute(select(Membership).where(
+            Membership.user_id == user.id, Membership.org_id == org.id))).scalar_one_or_none()
+        token = ""
+        if membership is None or not path.exists():
+            token = crypto.new_token()  # first boot, or the token file was removed
+            if membership is None:
+                membership = Membership(user_id=user.id, org_id=org.id, role="owner",
+                                        token_hash=crypto.hash_token(token))
+                db.add(membership)
+            else:
+                membership.token_hash = crypto.hash_token(token)
+        await db.commit()
+    if token:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(token)
+        path.chmod(0o600)  # the installer reads it; nobody else should
+    shown = token or "(unchanged — see " + str(path) + ")"
+    print(f"\n  treg is ready — no account needed."
+          f"\n  Dashboard  {s.public_url}/app"
+          f"\n  Team       {LOCAL_ORG_NAME}"
+          f"\n  Token      {shown}\n", flush=True)
+
+
+async def _local_owner(db: AsyncSession) -> User | None:
+    """The single-user identity, if this deployment is in that mode."""
+    if not get_settings().single_user_ok:
+        return None
+    return (await db.execute(select(User).where(User.email == LOCAL_USER_EMAIL))).scalar_one_or_none()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await _bootstrap_single_user()
     # One long-lived client for ALL upstream calls (rule 1: keepalive). The pool reuses
     # TCP+TLS connections across requests — the single biggest latency win for a relay.
     limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
@@ -950,16 +1009,33 @@ async def landing(request: Request, treg_session: str = Cookie(default=""),
         if treg_session and await _user_from_session(treg_session, db):
             return RedirectResponse("/app", status_code=302)
         return FileResponse(page, headers={"Cache-Control": "no-cache"})
-    return await dashboard()
+    return await dashboard(request, treg_session, db)
 
 
 @app.get("/app", include_in_schema=False)
-async def dashboard():
-    """Serve the single-file dashboard (same-origin, so it calls this API directly)."""
+async def dashboard(
+    request: Request, treg_session: str = Cookie(default=""),
+    db: AsyncSession = Depends(get_session),
+):
+    """Serve the single-file dashboard (same-origin, so it calls this API directly).
+
+    In frictionless local mode the dashboard opens ALREADY SIGNED IN: with no valid session we
+    attach one for the machine's single user, so `curl … | sh` reaches a working dashboard without
+    an account. Only reachable when `single_user_ok` holds (local sqlite + loopback URL), so this
+    can never hand a session to a stranger on a real deploy.
+    """
     index = _WEB_DIR / "index.html"
     if not index.exists():
         return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
-    return FileResponse(index, headers={"Cache-Control": "no-cache"})
+    resp = FileResponse(index, headers={"Cache-Control": "no-cache"})
+    if not await _user_from_session(treg_session, db):
+        owner = await _local_owner(db)
+        if owner is not None:
+            resp.set_cookie(sess.COOKIE, sess.make(owner.id, token_version=owner.token_version),
+                            httponly=True, samesite="lax",
+                            secure=_is_https(request),
+                            max_age=sess.TTL_SECONDS)
+    return resp
 
 
 def _spa_with_og(kind: str, name: str):
@@ -984,10 +1060,13 @@ def _spa_with_og(kind: str, name: str):
 
 
 @app.get("/app/marketplace/{service}", include_in_schema=False)
-async def dashboard_marketplace(service: str):  # noqa: ARG001 — the SPA reads the path itself
+async def dashboard_marketplace(
+    service: str, request: Request, treg_session: str = Cookie(default=""),  # noqa: ARG001 — the SPA reads the path itself
+    db: AsyncSession = Depends(get_session),
+):
     """One integration's page. Served as the plain SPA: unlike /app/skills/<x> there is no og meta
     to add, because a marketplace page is only meaningful to a signed-in member of the org."""
-    return await dashboard()
+    return await dashboard(request, treg_session, db)
 
 
 @app.get("/app/skills/{name}", include_in_schema=False)
@@ -1022,6 +1101,21 @@ async def install_sh():
         raise HTTPException(status_code=404, detail="install.sh not bundled")
     base = get_settings().public_url.rstrip("/")
     return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base), media_type="text/x-shellscript; charset=utf-8")
+
+
+@app.get("/selfhost.sh", include_in_schema=False)
+async def selfhost_sh():
+    """`curl -fsSL {BASE}/selfhost.sh | sh` — run your OWN registry locally, with no account.
+
+    Different from install.sh, which only installs the CLI and points it at THIS server. This one
+    brings up a server on the caller's machine in single-user mode, so they land on a dashboard that
+    is already signed in. Value first, account later."""
+    f = _WEB_DIR / "selfhost.sh"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="selfhost.sh not bundled")
+    base = get_settings().public_url.rstrip("/")
+    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base),
+                             media_type="text/x-shellscript; charset=utf-8")
 
 
 def _serve_md(name: str) -> PlainTextResponse:
