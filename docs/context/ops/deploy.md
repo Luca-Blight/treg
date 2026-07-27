@@ -3,6 +3,7 @@ title: Running & deploying the server
 status: shipped
 sources:
   - src/treg/__main__.py
+  - src/treg/web/selfhost.sh
   - src/treg/config.py
   - src/treg/db.py
   - src/treg/email.py

@@ -120,10 +120,35 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   balanced quote pair removed). A single-line `NAME=value` splits only in the *name* field — a value
   containing `=` (base64 pad, connection strings) pastes untouched into the value field; multi-line
   splits from either field.
-- **Team settings** (`view==='orgs'`) — the **active** team's settings, not an all-teams list (switching
-  now lives in the sidebar dropdown). Renders `Manage {activeName}` — members / invite / pending / danger
-  zone for admins (`canAdmin`); a **personal** org shows a focused page with the invite + danger blocks
-  hidden. Reached via the sidebar org-dropdown ⚙.
+- **Team** (`view==='orgs'`) — the active team, now split into **tabs** (`orgTab`) because it had grown
+  into one scroll of unrelated things: **Members · My teams · Projects · Policy · Team settings**.
+  Header reads `Team: {activeName} — you are {activeRole}` and points at the sidebar picker for switching.
+  - **Members** — the roster (role, daily cap, today's usage, tool ACL, project scope, local-run toggle).
+    Inviting is no longer a separate section: it sits here behind an **"＋ Add member"** toggle
+    (`showInvite`), which is where people look for it. The inline access editor now carries **project
+    checkboxes** (`projDraft`) beside the tool ones, each collapsing "all checked" back to *all* so future
+    tools/projects are inherited. `list_members` returns `is_agent`, so people and machines are
+    distinguishable in one roster.
+  - **My teams** — the sidebar picker rendered as a real table (name, slug, your role, tool count, which
+    is active) with **Switch to** per row plus **New team** / **Join by code** / **Paste token**. The ONE
+    tab not gated on `canAdmin`: a plain member has teams too and the dropdown was their only way to see
+    them, so `loadOrgAdmin` moves a non-admin onto this tab instead of showing a permission notice.
+  - **Projects** — create / list (with tool counts) / delete, with the delete button stating that its
+    tools become team-wide rather than being deleted.
+  - **Policy** — deny rules (host / path / method / who / note), listed and removable. The "who" select
+    labels agents so a per-agent rule is one click.
+  - **Team settings** — leave / delete (the danger zone), acting on the team you are in.
+- **Agents** (`view==='agents'`, `canAdmin`) — its own sidebar entry rather than a row in Team, because an
+  agent identity is how most people will actually use treg. Create (name / role / daily cap), **Rotate**
+  (re-POSTs the same name, so the old token dies), **Revoke**, and an inline cap editor. A minted token
+  appears in an accented card that says it is shown **once**; under it are three paste-ready snippets
+  (`agentSnip`: Environment / Give it to your agent / Verify) built by the `agentSnippet` computed, mirroring
+  the Tools snippet block. Because a stored token is hashed and unrecoverable, each row also has a **Setup**
+  button (`showAgentSetup`) that reopens those snippets for an existing agent using `$TREG_TOKEN` as a
+  placeholder, telling the user to Rotate if the token was lost. Choosing `role=admin` raises a
+  confirmation spelling out that an admin agent can register/delete tools and secrets and manage members.
+- **Tool form** — Add/Edit now carries a **Project** dropdown (default "team-wide"); `loadProjectsIfNeeded`
+  fetches the list on demand so it works even if the Team page was never opened.
 - **Getting started** (`view==='start'`, under Help) — the CLI path: install (`{BASE}/install.sh`),
   `treg login`, `treg onboard`, register-a-tool + no-key call, and links to the interactive tutorial +
   `/llms.txt`. Per-block copy via `copyStart`.

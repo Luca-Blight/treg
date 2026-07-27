@@ -166,13 +166,22 @@ upgrade. (`"user"` is quoted in the `ALTER` — a reserved word in Postgres, whe
 (create_all builds it NOT NULL with no server default). Verified in-place on Postgres. Later additive steps
 follow the same guarded pattern: (A14) `invite.landing`, (A15) `org.public_demo`, (A16) the seven `secret`
 connection-metadata columns (`provider`/`granted_scopes`/`resource_ref`/`resource_name`/`expires_at`/
-`last_refresh_at`/`last_error`), and (A17–A20) the eight `pendingoauth` OAuth-marketplace/quirk columns
+`last_refresh_at`/`last_error`), (A17–A20) the eight `pendingoauth` OAuth-marketplace/quirk columns
 (`provider`/`code_verifier`/`auth_params`/`token_endpoint_auth_method`/`client_id_param`/`scope_separator`/
 `long_lived_exchange`/`replaces_secret_id`). **Postgres BOOLEAN default fix (PR #22):** every boolean added
 in-place uses `DEFAULT false`, never `DEFAULT 0` — Postgres rejects an integer default on a `BOOLEAN`
 column (SQLite accepts both, so the test suite alone cannot catch it); `pendingoauth.long_lived_exchange`
 is spelled `BOOLEAN NOT NULL DEFAULT false`, and the legacy `INSERT INTO org (…)` backfill names
-`public_demo` explicitly with a `false` literal.
+`public_demo` explicitly with a `false` literal. **(A21) PROJECTS** follows the same shape: the `project`
+table itself needs no ALTER (a brand-new table is created by `create_all`), so the step only adds the three
+columns that hang off it — `tool.project_id` (INTEGER, nullable) plus `project_access` (JSON, nullable) on
+**both** `membership` and `invite`. Every one is nullable and NULL means *org-wide / unrestricted*, so an
+existing deployment behaves exactly as before until someone creates a project; and because none of them is a
+BOOLEAN, the Postgres integer-default trap does not apply here. Note what (A21) deliberately does NOT do:
+`Tool.name` keeps its `(org_id, name)` unique constraint, because projects are a **label + ACL scope, not a
+namespace** — making them a namespace would have meant rebuilding that constraint, which `_fix_tool_uniqueness`
+already had to do once and which SQLite cannot express portably. **`DenyRule`** (policy) needs no migration
+step at all for the same new-table reason.
 
 > Health (`run_all`) takes an `org_id` filter so `/health/run` never leaks other orgs' credentials, and
 > alerts resolve the owner's per-org membership webhook. See [auth-secrets](auth-secrets.md).

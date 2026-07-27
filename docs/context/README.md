@@ -46,7 +46,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [Running & deploying the server](ops/deploy.md) | shipped | __main__.py, config.py, db.py, email.py, … |
+| [Running & deploying the server](ops/deploy.md) | shipped | __main__.py, selfhost.sh, config.py, db.py, … |
 
 ## Reference
 
