@@ -1,0 +1,57 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "15.0452 sec.",
+  "cost": 0.004,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0629-0000-32eb34de35c2",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "15.0334 sec.",
+      "cost": 0.004,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "llm_scraper",
+        "se": "gemini",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "albert einstein",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "albert einstein",
+          "location_code": 2840,
+          "language_code": "en",
+          "model": "3.5 Flash-Lite",
+          "datetime": "2026-07-28 10:34:36 +00:00",
+          "markdown": "## Albert Einstein (1879–1955)\n\n**Albert Einstein** was a German-born theoretical physicist widely acknowledged as one of the most brilliant and influential scientists of all time.[www.ebsco.com](http… [3130 chars]",
+          "sources": [
+            "… {9 field(s) truncated}",
+            "… 8 more item(s) truncated"
+          ],
+          "se_results_count": 0,
+          "item_types": [
+            "gemini_text",
+            "… 1 more item(s) truncated"
+          ],
+          "items_count": 6,
+          "items": [
+            "… {6 field(s) truncated}",
+            "… 5 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

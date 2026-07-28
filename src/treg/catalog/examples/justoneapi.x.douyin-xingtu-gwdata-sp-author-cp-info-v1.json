@@ -1,0 +1,28 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "expect_cpe": {
+      "cpe_1_20": "818",
+      "cpe_21_60": "1292",
+      "cpe_60": "1723"
+    },
+    "expect_cpm": {
+      "cpm_1_20": "31621",
+      "cpm_21_60": "49927",
+      "cpm_60": "66570"
+    },
+    "expect_vv": {
+      "value": 60085
+    },
+    "hot_item": {
+      "value": 1000
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:15.755973369",
+  "requestId": "fe9aa4e266ef490e802a8725b0ec3854"
+}

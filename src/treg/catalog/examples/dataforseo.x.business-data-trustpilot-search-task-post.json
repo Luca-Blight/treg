@@ -1,0 +1,34 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0096 sec.",
+  "cost": 0.0015,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0374-0000-d1a0307cae01",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0038 sec.",
+      "cost": 0.0015,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "business_data",
+        "function": "search",
+        "keyword": "pizza restaurant",
+        "depth": 20,
+        "se_type": "search",
+        "se": "trustpilot",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

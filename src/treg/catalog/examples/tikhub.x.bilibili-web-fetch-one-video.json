@@ -1,0 +1,51 @@
+{
+  "code": 200,
+  "request_id": "095d14a0-0482-4c68-80bb-ed224ff0738e",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:44",
+  "time_stamp": 1785220064,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_one_video_api… [96 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/095d14a0-0482-4c… [150 chars]",
+  "router": "/api/v1/bilibili/web/fetch_one_video",
+  "params": {
+    "bv_id": "BV1M1421t7hT"
+  },
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "bvid": "BV1M1421t7hT",
+      "aid": 1556386640,
+      "videos": 1,
+      "tid": 85,
+      "tid_v2": 2154,
+      "tname": "",
+      "tname_v2": "",
+      "copyright": 1,
+      "pic": "http://i2.hdslb.com/bfs/archive/149821b536849b6ad802a8a5e1c4… [76 chars]",
+      "title": "陈翔六点半：恶语伤人六月寒",
+      "pubdate": 1723372800,
+      "ctime": 1723355942,
+      "desc": "",
+      "desc_v2": null,
+      "state": 0,
+      "duration": 353,
+      "mission_id": 4016832,
+      "rights": "… {18 field(s) truncated}",
+      "owner": "… {3 field(s) truncated}",
+      "stat": "… {13 field(s) truncated}",
+      "argue_info": "… {3 field(s) truncated}",
+      "dynamic": "",
+      "cid": 1645628975,
+      "dimension": "… {3 field(s) truncated}",
+      "premiere": null,
+      "…": "20 more field(s) truncated"
+    }
+  }
+}

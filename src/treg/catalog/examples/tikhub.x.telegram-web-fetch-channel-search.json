@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "request_id": "f23eef3f-e63e-4141-8851-a24f40004fed",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:57",
+  "time_stamp": 1785220197,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Telegram-Web-API/fetch_channel_search_api_v1_telegram_web_fetch_channel_search_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f23eef3f-e63e-4141-8851-a24f40004fed?sign=2ae9b74888f0e98ccac618294b5223bce94f31bf74117f9dc5c5226e5cc6e241",
+  "router": "/api/v1/telegram/web/fetch_channel_search",
+  "params": {
+    "channel": "durov",
+    "query": "TON",
+    "limit": "5"
+  },
+  "data": {
+    "channel": "durov",
+    "query": "TON",
+    "backend": "web",
+    "scanned": 100,
+    "matched": 5,
+    "messages": [
+      "… {15 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "note": "网页预览无原生搜索，此为近期历史的尽力过滤；完整搜索需启用 MTProto 后端"
+  }
+}

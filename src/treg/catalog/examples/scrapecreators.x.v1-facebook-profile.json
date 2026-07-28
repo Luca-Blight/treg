@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "credits_remaining": 19831,
+  "credits_charged": 1,
+  "adLibrary": {
+    "adStatus": "This Page is currently running ads.",
+    "pageId": "104359362513119"
+  },
+  "creationDate": "November 25, 2022",
+  "id": "100088017857524",
+  "name": "Mantraindian",
+  "url": "https://www.facebook.com/mantraindianfolsom",
+  "gender": "UNKNOWN",
+  "coverPhoto": {
+    "focus": {
+      "x": 0.5,
+      "y": 0
+    },
+    "photo": {
+      "id": "204402652503662",
+      "image": "… {3 field(s) truncated}",
+      "viewer_image": "… {2 field(s) truncated}",
+      "blurred_image": "… {3 field(s) truncated}",
+      "url": "https://www.facebook.com/photo/?fbid=204402652503662&set=a.113593838251211"
+    }
+  },
+  "…": "19 more field(s) truncated"
+}

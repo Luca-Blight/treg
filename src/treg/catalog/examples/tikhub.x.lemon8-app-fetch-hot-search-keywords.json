@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "request_id": "6b376bc6-2542-474b-89fd-66b417f3b26a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:10",
+  "time_stamp": 1785220150,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Lemon8-App-API/fetch_hot_search_keywords_api_v1_lemon8_app_fetch_hot_search_keywords_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/6b376bc6-2542-474b-89fd-66b417f3b26a?sign=953f885a0c12fddd2e233a0067207dcb992816dd3422a3313e01d7d64f2710ae",
+  "router": "/api/v1/lemon8/app/fetch_hot_search_keywords",
+  "params": {},
+  "data": {
+    "message": "success",
+    "data": {
+      "hot_words": [
+        "… {7 field(s) truncated}",
+        "… 9 more item(s) truncated"
+      ],
+      "hot_random_words": null,
+      "hot_word_search_type": 2,
+      "impr_id": "20260728062910CE1A24B9FA117D2387ED",
+      "guess_hit_id": ""
+    },
+    "server_time": "1785220150.5",
+    "code": 0,
+    "result_status": 0
+  }
+}

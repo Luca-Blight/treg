@@ -1,0 +1,45 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "daily": [
+      {
+        "date": "2026-07-01",
+        "fans_cnt": "1250778"
+      },
+      {
+        "date": "2026-07-02",
+        "fans_cnt": "1250624"
+      },
+      "… 18 more item(s) truncated"
+    ],
+    "delta": [
+      {
+        "date": "2026-07-01",
+        "fans_cnt": "-169"
+      },
+      {
+        "date": "2026-07-02",
+        "fans_cnt": "-154"
+      },
+      "… 18 more item(s) truncated"
+    ],
+    "description": "",
+    "fans_advice": "",
+    "fans_growth": "0",
+    "fans_growth_rate": 0,
+    "fans_growth_rate_v2": {
+      "value": -49
+    },
+    "fans_growth_v2": {
+      "value": -6150
+    },
+    "raw_play_rate": {}
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:31.130511246",
+  "requestId": "6fe1389b13334028a9fe4e6c00d56d16"
+}

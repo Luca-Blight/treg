@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "89c8477c-136e-4cb2-b933-6f336e87932d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:36",
+  "time_stamp": 1785220176,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/PiPiXia-App-API/fetch_hashtag_post_list_api_v1_pipixia_app_fetch_hashtag_post_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/89c8477c-136e-4cb2-b933-6f336e87932d?sign=a0702db592416d40e6e5b609b799aa384be3e6567cd0e1a761ad97baefcfbf29",
+  "router": "/api/v1/pipixia/app/fetch_hashtag_post_list",
+  "params": {
+    "hashtag_id": "129559",
+    "cursor": "0",
+    "feed_count": "0",
+    "hashtag_request_type": "0",
+    "hashtag_sort_type": "3"
+  },
+  "data": {
+    "status_code": 0,
+    "message": "success",
+    "prompt": "",
+    "time": 1785220176209,
+    "data": {
+      "cursor": {
+        "refresh_cursor": 0,
+        "loadmore_cursor": 1398012000,
+        "has_more": true,
+        "feed_len": 0
+      },
+      "tips": "有12条新内容",
+      "data": [
+        "… {12 field(s) truncated}",
+        "… 11 more item(s) truncated"
+      ],
+      "play_sound": true,
+      "play_defer_time": 0,
+      "video_aspect_ratio_style": 0
+    }
+  }
+}

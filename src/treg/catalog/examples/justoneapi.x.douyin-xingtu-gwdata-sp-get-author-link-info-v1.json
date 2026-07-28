@@ -1,0 +1,54 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "cooperate_index": {
+      "avg_value": 75.56,
+      "link_relative_ratio": 0,
+      "rank": "32011",
+      "rank_percent": 0.015,
+      "value": 76.54
+    },
+    "cp_index": {
+      "avg_value": 64.03,
+      "link_relative_ratio": 0,
+      "rank": "124869",
+      "rank_percent": 0.0585,
+      "value": 65.79
+    },
+    "link_convert_index": {
+      "avg_value": 55.16,
+      "link_relative_ratio": -0.1669,
+      "rank": "324144",
+      "rank_percent": 0.1518,
+      "value": 44.89
+    },
+    "link_shopping_index": {
+      "avg_value": 53.32,
+      "link_relative_ratio": 0.187,
+      "rank": "24827",
+      "rank_percent": 0.0116,
+      "value": 78.72
+    },
+    "link_spread_index": {
+      "avg_value": 53.1,
+      "link_relative_ratio": 0.2272,
+      "rank": "50926",
+      "rank_percent": 0.0238,
+      "value": 73.5
+    },
+    "link_star_index": {
+      "avg_value": 56.27,
+      "link_relative_ratio": 0.0529,
+      "rank": "76345",
+      "rank_percent": 0.0357,
+      "value": 67.89
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:27.663794201",
+  "requestId": "1b47154ee09c452b844b30cb952d963f"
+}

@@ -1,0 +1,88 @@
+[
+  {
+    "url": "https://play.google.com/store/apps/details/YouTube?id=com.google.android.youtube&hl=en",
+    "title": "YouTube",
+    "developer": "Google LLC",
+    "monetization_features": [
+      "Users Interact",
+      "In-App Purchases",
+      "… 1 more item(s) truncated"
+    ],
+    "images": [
+      "https://play-lh.googleusercontent.com/jVRIwf6mm4cUtprTFhNOd4YEeu1jyO0yiZ92U3rlZ9ohVojYDc4ijfrdzy1ORbdXzu-pLS7gh5b8XmkSavyjtQ",
+      "https://play-lh.googleusercontent.com/Bgpxh4XK6pa2H26tDuNiviRmY8JSFsK4nlALuQkmwmGKltRm3g6_jt_aogLbvEmkh-O080dmyxIPeGDeVs8KkRQ",
+      "… 3 more item(s) truncated"
+    ],
+    "about": {
+      "about_app": "Get the official YouTube app on Android phones and tablets. See what the world is watching -- from the hottest music videos to what’s popular in gaming, fashion, beauty, news, learning and more. Subscribe to channels you love, create content of your own, share with friends, and watch on any device.<br><br>Watch and subscribe <br>● Browse personal recommendations on Home<br>● See the latest from your favorite channels in Subscriptions <br>● Look up videos you’ve watched, liked, and saved for late… [2219 chars total]",
+      "updated_on": "Jul 25, 2026",
+      "tags": [
+        "N/A",
+        "Video Players & Editors"
+      ]
+    },
+    "data_safety": {
+      "safety ": "Safety starts with understanding how developers collect and share your data. Data privacy and security practices may vary based on your use, region, and age. The developer provided this information and may update it over time.",
+      "data_privacy": [
+        "No data shared with third parties",
+        "This app may collect these data types",
+        "… 3 more item(s) truncated"
+      ]
+    },
+    "rating": 4.1,
+    "number_of_reviews": 171174340,
+    "star_reviews": {
+      "one_stars": 23485230,
+      "two_stars": 7453154,
+      "three_stars": 8147334,
+      "four_stars": 11311761,
+      "five_stars": 108991835
+    },
+    "reviews": [
+      {
+        "reviewer_name": "The Lilinator",
+        "review_rating": 1,
+        "review_date": "2026-07-06T00:04:24.000Z",
+        "review": "So many ads. All the time. Everywhere. So many. I can't watch a ten minute video without three sets of ads. 2 15 second unskippable ads in a row and then a few minutes later there's more. The ads have become so insufferable that I'd rather use other platforms. So disappointed in the devolution of YouTube. $16/month for YouTube premium is absolutely ludicrous.",
+        "found_helpful": 609
+      },
+      {
+        "reviewer_name": "Fabio Henrique",
+        "review_rating": 2,
+        "review_date": "2026-02-25T17:10:54.000Z",
+        "review": "It was never that good, but it wasn't that bad either, until recently. The video screen gets very dark on mobile for no reason, and clearing the cache, enabling or disabling the image thingy mode. Even changing the device's theme from light to dark doesn't fix it. the only way is by closing and reopening the app. Fix this or I'm canceling my Premium subscription. I shouldn't have to keep looking for solutions for something I pay for, and it wasn't like this in the previous version.",
+        "found_helpful": 75
+      },
+      "… 18 more item(s) truncated"
+    ],
+    "what_new": "For new features, look for in-product education & notifications sharing the feature and how to use it!",
+    "more_by_this_developer": [
+      {
+        "app_name": "Google Gemini",
+        "app_rating": "4.57458",
+        "app_link": "https://play.google.com/store/apps/details?id=com.google.android.apps.bard"
+      },
+      {
+        "app_name": "Google Wallet",
+        "app_rating": "4.296204",
+        "app_link": "https://play.google.com/store/apps/details?id=com.google.android.apps.walletnfcrel"
+      },
+      "… 4 more item(s) truncated"
+    ],
+    "content_rating": "Parental guidance",
+    "downloads": 23085365117,
+    "country": "US",
+    "app_category": "Video Players & Editors",
+    "id": "com.google.android.youtube",
+    "version": "N/A",
+    "app_icon": "https://play-lh.googleusercontent.com/QNmuZQc9I6Zbe3mWnSr0hycnENqGFCI5p3yE29Hkxtf22T0IWS6zTrpxULLyyjWpB7ONAXDsDQXnXcVWokl3eg",
+    "price": null,
+    "currency": "EUR",
+    "developer_email": "support@google.com",
+    "timestamp": "2026-07-28T12:13:03.521Z",
+    "input": {
+      "url": "https://play.google.com/store/apps/details?id=com.google.android.youtube",
+      "country": ""
+    }
+  }
+]

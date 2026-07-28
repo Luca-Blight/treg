@@ -1,0 +1,54 @@
+{
+  "code": 200,
+  "request_id": "582df4a6-764e-4499-9c10-b22dd53fae56",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:46",
+  "time_stamp": 1785220126,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Xingtu-V2-API/get_author_content_hot_keywords_api_v1_douyin_xingtu_v2_get_author_content_… [136 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/582df4a6-764e-4499-9c10-b22dd53fae56?sign=0f5a3ea18a79361f3e517a90a5ec484dfe… [150 chars]",
+  "router": "/api/v1/douyin/xingtu_v2/get_author_content_hot_keywords",
+  "params": {
+    "author_id": "7589271892177518598",
+    "keyword_type": "0"
+  },
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "keyword_item_distribution": {
+      "iphone": 1,
+      "充电头": 1,
+      "手表": 1,
+      "无线充": 1,
+      "苹果": 1
+    },
+    "keyword_map": {
+      "iphone": 2,
+      "便携性": 1,
+      "充电头": 2,
+      "原价": 1,
+      "同时充电": 1,
+      "同款": 1,
+      "品牌方": 1,
+      "官方": 1,
+      "小伙伴": 1,
+      "手表": 2,
+      "折叠收纳": 1,
+      "拉满": 1,
+      "数码产品": 1,
+      "无线充": 2,
+      "苹果": 3,
+      "苹果官方": 1,
+      "苹果设备": 1,
+      "轻便": 1,
+      "铝合金": 1,
+      "颜值在线": 1
+    }
+  }
+}

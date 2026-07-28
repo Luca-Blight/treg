@@ -1,0 +1,418 @@
+{
+  "code": 200,
+  "request_id": "546957a…",
+  "message": "Request…",
+  "message_zh": "请求成功，本次…",
+  "support": "Discord…",
+  "time": "2026-07…",
+  "time_stamp": 1785210906,
+  "time_zone": "America…",
+  "docs": "https:/…",
+  "cache_message": "This re…",
+  "cache_message_zh": "本次响应已缓存…",
+  "cache_url": "https:/…",
+  "router": "/api/v1…",
+  "params": {
+    "itemId": "7606449…"
+  },
+  "data": {
+    "extra": {
+      "fatal_item_ids": [],
+      "logid": "2026072…",
+      "now": 1785210906000
+    },
+    "itemInfo": {
+      "itemStruct": {
+        "AIGCDescription": "",
+        "CategoryType": 119,
+        "IsHDBitrate": false,
+        "ShowAIGC": true,
+        "author": {
+          "UserStoryStatus": 0,
+          "avatarLarger": "https:/…",
+          "avatarMedium": "https:/…",
+          "avatarThumb": "https:/…",
+          "commentSetting": 0,
+          "downloadSetting": 0,
+          "duetSetting": 0,
+          "ftc": false,
+          "id": "2464515…",
+          "isADVirtual": false,
+          "isEmbedBanned": false,
+          "nickname": "flighth…",
+          "openFavorite": false,
+          "privateAccount": false,
+          "relation": 0,
+          "secUid": "MS4wLjA…",
+          "secret": false,
+          "shortDramaCreator": {},
+          "signature": "New epi…",
+          "stitchSetting": 0,
+          "uniqueId": "flighth…",
+          "verified": true
+        },
+        "authorStats": {
+          "diggCount": 23400,
+          "followerCount": 28800000,
+          "followingCount": 1343,
+          "friendCount": 0,
+          "heart": 2600000000,
+          "heartCount": -1694967296,
+          "videoCount": 6398
+        },
+        "authorStatsV2": {
+          "diggCount": "23400",
+          "followerCount": "2880000…",
+          "followingCount": "1343",
+          "friendCount": "0",
+          "heart": "2600000…",
+          "heartCount": "2600000…",
+          "videoCount": "6398"
+        },
+        "backendSourceEventTracking": "",
+        "challenges": [
+          {
+            "coverLarger": "",
+            "coverMedium": "",
+            "coverThumb": "",
+            "desc": "",
+            "id": "7025606…",
+            "profileLarger": "",
+            "profileMedium": "",
+            "profileThumb": "",
+            "title": "zoedang"
+          },
+          {
+            "coverLarger": "",
+            "coverMedium": "",
+            "coverThumb": "",
+            "desc": "",
+            "id": "3691206…",
+            "profileLarger": "",
+            "profileMedium": "",
+            "profileThumb": "",
+            "title": "kimberl…"
+          },
+          "… 3 mor…"
+        ],
+        "collected": false,
+        "contents": [
+          {
+            "desc": "The bes…",
+            "textExtra": [
+              {
+                "awemeId": "",
+                "end": 40,
+                "hashtagName": "",
+                "isCommerce": false,
+                "secUid": "MS4wLjA…",
+                "start": 31,
+                "subType": 0,
+                "type": 0,
+                "userId": "6674116…",
+                "userUniqueId": "zoedang…"
+              },
+              {
+                "awemeId": "",
+                "end": 54,
+                "hashtagName": "",
+                "isCommerce": false,
+                "secUid": "MS4wLjA…",
+                "start": 41,
+                "subType": 0,
+                "type": 0,
+                "userId": "7441393…",
+                "userUniqueId": "kimberl…"
+              },
+              "… 5 mor…"
+            ]
+          }
+        ],
+        "createTime": 1771014494,
+        "creatorAIComment": {
+          "eligibleVideo": false,
+          "hasAITopic": false,
+          "notEligibleReason": 101
+        },
+        "desc": "The bes…",
+        "digged": false,
+        "diversificationId": 10080,
+        "duetDisplay": 0,
+        "duetEnabled": true,
+        "forFriend": false,
+        "id": "7606449…",
+        "isAd": false,
+        "isReviewing": false,
+        "itemCommentStatus": 0,
+        "item_control": {
+          "can_repost": true
+        },
+        "music": {
+          "album": "SAGITAR…",
+          "authorName": "El Alfa…",
+          "coverLarge": "https:/…",
+          "coverMedium": "https:/…",
+          "coverThumb": "https:/…",
+          "duration": 60,
+          "id": "7240110…",
+          "isCopyrighted": true,
+          "is_commerce_music": false,
+          "is_unlimited_music": false,
+          "original": false,
+          "playUrl": "https:/…",
+          "private": false,
+          "shoot_duration": 60,
+          "title": "La Mamá…",
+          "tt2dsp": {
+            "tt_to_dsp_song_infos": [
+              {
+                "meta_song_id": "7240110…",
+                "platform": 1,
+                "song_id": "1690523…",
+                "token": {
+                  "apple_music_token": {
+                    "developer_token": "eyJhbGc…"
+                  }
+                }
+              },
+              {
+                "meta_song_id": "7240110…",
+                "platform": 3,
+                "song_id": "2BxnnDE…"
+              }
+            ]
+          }
+        },
+        "officalItem": false,
+        "originalItem": false,
+        "poi": {
+          "address": "Hollywo…",
+          "category": "Outdoor…",
+          "city": "East Lo…",
+          "cityCode": "1160236…",
+          "country": "",
+          "countryCode": "6252001",
+          "fatherPoiId": "",
+          "fatherPoiName": "East Lo…",
+          "id": "4220386…",
+          "name": "Hollywo…",
+          "province": "",
+          "ttTypeCode": "08a4a4",
+          "ttTypeNameMedium": "Attract…",
+          "ttTypeNameSuper": "Outdoor…",
+          "ttTypeNameTiny": "Attract…",
+          "type": 0,
+          "typeCode": ""
+        },
+        "privateItem": false,
+        "secret": false,
+        "shareEnabled": true,
+        "stats": {
+          "collectCount": 90600,
+          "commentCount": 1064,
+          "diggCount": 2100000,
+          "playCount": 33300000,
+          "shareCount": 9817
+        },
+        "statsV2": {
+          "collectCount": "90626",
+          "commentCount": "1064",
+          "diggCount": "2100000",
+          "playCount": "3330000…",
+          "repostCount": "0",
+          "shareCount": "9817"
+        },
+        "stitchDisplay": 0,
+        "stitchEnabled": true,
+        "suggestedWords": [
+          "kimberl…",
+          "flighth…",
+          "… 8 mor…"
+        ],
+        "textExtra": [
+          {
+            "awemeId": "",
+            "end": 40,
+            "hashtagName": "",
+            "isCommerce": false,
+            "secUid": "MS4wLjA…",
+            "start": 31,
+            "subType": 0,
+            "type": 0,
+            "userId": "6674116…",
+            "userUniqueId": "zoedang…"
+          },
+          {
+            "awemeId": "",
+            "end": 54,
+            "hashtagName": "",
+            "isCommerce": false,
+            "secUid": "MS4wLjA…",
+            "start": 41,
+            "subType": 0,
+            "type": 0,
+            "userId": "7441393…",
+            "userUniqueId": "kimberl…"
+          },
+          "… 5 mor…"
+        ],
+        "textLanguage": "en",
+        "textTranslatable": true,
+        "video": {
+          "PlayAddrStruct": {
+            "DataSize": 3610947,
+            "FileCs": "c:0-155…",
+            "FileHash": "bb41414…",
+            "Height": 1280,
+            "Uri": "v12044g…",
+            "UrlKey": "v12044g…",
+            "UrlList": [
+              "https:/…",
+              "https:/…",
+              "… 1 mor…"
+            ],
+            "Width": 720
+          },
+          "VQScore": "73.61",
+          "bitrate": 1254182,
+          "bitrateInfo": [
+            {
+              "Bitrate": 1254182,
+              "BitrateFPS": 23,
+              "CodecType": "h264",
+              "Format": "mp4",
+              "GearName": "normal_…",
+              "MVMAF": "{\"v2.0\"…",
+              "PlayAddr": {
+                "DataSize": 3610947,
+                "FileCs": "c:0-155…",
+                "FileHash": "bb41414…",
+                "Height": 1280,
+                "Uri": "v12044g…",
+                "UrlKey": "v12044g…",
+                "UrlList": [
+                  "https:/…",
+                  "https:/…",
+                  "… 1 mor…"
+                ],
+                "Width": 720
+              },
+              "QualityType": 10,
+              "VideoExtra": "{\"PktOf…"
+            },
+            {
+              "Bitrate": 1214919,
+              "BitrateFPS": 23,
+              "CodecType": "h265_hv…",
+              "Format": "mp4",
+              "GearName": "adapt_l…",
+              "MVMAF": "{\"v2.0\"…",
+              "PlayAddr": {
+                "DataSize": 3497906,
+                "FileCs": "c:0-157…",
+                "FileHash": "72d071c…",
+                "Height": 1920,
+                "Uri": "v12044g…",
+                "UrlKey": "v12044g…",
+                "UrlList": [
+                  "https:/…",
+                  "https:/…",
+                  "… 1 mor…"
+                ],
+                "Width": 1080
+              },
+              "QualityType": 2,
+              "VideoExtra": "{\"PktOf…"
+            },
+            "… 3 mor…"
+          ],
+          "claInfo": {
+            "captionInfos": [
+              {
+                "captionFormat": "webvtt",
+                "claSubtitleID": "7606449…",
+                "expire": "1785383…",
+                "isAutoGen": true,
+                "isOriginalCaption": true,
+                "language": "eng-US",
+                "languageCode": "",
+                "languageID": "2",
+                "subID": "1204417…",
+                "subtitleType": "1",
+                "translationType": "0",
+                "url": "https:/…",
+                "urlList": [
+                  "https:/…",
+                  "https:/…",
+                  "… 1 mor…"
+                ],
+                "variant": "big_cap…"
+              }
+            ],
+            "captionsType": 1,
+            "enableAutoCaption": true,
+            "hasOriginalAudio": true,
+            "originalLanguageInfo": {
+              "canTranslateRealTimeNoCheck": true,
+              "language": "eng-US",
+              "languageCode": "",
+              "languageID": "2"
+            }
+          },
+          "codecType": "h264",
+          "cover": "https:/…",
+          "definition": "720p",
+          "downloadAddr": "https:/…",
+          "duration": 23,
+          "dynamicCover": "https:/…",
+          "encodeUserTag": "",
+          "encodedType": "normal",
+          "format": "mp4",
+          "height": 1280,
+          "id": "7606449…",
+          "originCover": "https:/…",
+          "playAddr": "https:/…",
+          "ratio": "720p",
+          "size": 3610947,
+          "subtitleInfos": [
+            {
+              "Format": "webvtt",
+              "LanguageCodeName": "eng-US",
+              "LanguageID": "2",
+              "Size": 258,
+              "Source": "ASR",
+              "Url": "https:/…",
+              "UrlExpire": 1785383729,
+              "Version": "1:big_c…"
+            }
+          ],
+          "videoID": "v12044g…",
+          "videoQuality": "normal",
+          "volumeInfo": {
+            "Loudness": -23.2,
+            "Peak": 0.26002
+          },
+          "width": 720,
+          "zoomCover": {
+            "240": "https:/…",
+            "480": "https:/…",
+            "720": "https:/…",
+            "960": "https:/…"
+          }
+        }
+      }
+    },
+    "log_pb": {
+      "impr_id": "2026072…"
+    },
+    "shareMeta": {
+      "desc": "The bes…",
+      "title": "flighth…"
+    },
+    "statusCode": 0,
+    "status_code": 0,
+    "status_msg": "",
+    "tt_chain_token": "rKYdYDt…",
+    "cookie": "tt_chai…"
+  }
+}

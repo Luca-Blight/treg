@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "credits_remaining": 19820,
+  "credits_charged": 1,
+  "reels": [
+    {
+      "id": "3950005077473412921_482800315",
+      "pk": "3950005077473412921",
+      "shortcode": "DbRPLCfysc5",
+      "url": "https://www.instagram.com/reel/DbRPLCfysc5/",
+      "caption": "Welp @ewangela #food",
+      "taken_at": "2026-07-26T20:25:40.000Z",
+      "media_type": 2,
+      "product_type": "clips",
+      "video_url": "https://scontent-lax3-2.cdninstagram.com/o1/v/t2/f2/m86/AQOqHwOBn6L6sEuRC6Bq88TX3daUVn1Bb-4VmfKTcWw7OeMms8DZdbaGiTuKK1Wh-LSIRKHJPTFuYUWV1c4aPzwYELox9MyZQ-8aR2s.mp4?_nc_cat=111&_nc_sid=5e9851&_nc_ht=sc… [1058 chars]",
+      "video_versions": [
+        "… {2 field(s) truncated}",
+        "… 2 more item(s) truncated"
+      ],
+      "image_url": "https://scontent-lax3-2.cdninstagram.com/v/t51.71878-15/755228214_1527393285740036_506656593650425256_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=107&ig_cache_key=Mzk1MDAwNTA3NzQ3MzQxMjkyMQ%3D%3D.3-ccb7-5&ccb=7… [597 chars]",
+      "image_versions2": {
+        "candidates": "… [11 item(s) truncated]",
+        "additional_candidates": "… {1 field(s) truncated}"
+      },
+      "original_width": 1080,
+      "original_height": 1920,
+      "has_audio": true,
+      "…": "6 more field(s) truncated"
+    },
+    "… 12 more item(s) truncated"
+  ]
+}

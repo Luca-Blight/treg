@@ -1,0 +1,72 @@
+{
+  "search_metadata": {
+    "id": "6a6898db8c60ca63d9e505b3",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/LpAVnw6b0h16-RDBG210kg/6a6898db… [81 chars]",
+    "created_at": "2026-07-28 11:56:11 UTC",
+    "processed_at": "2026-07-28 11:56:11 UTC",
+    "yahoo_url": "https://search.yahoo.com/search?vc=us&p=coffee+mug&ei=UTF-8&… [69 chars]",
+    "raw_html_file": "https://serpapi.com/searches/LpAVnw6b0h16-RDBG210kg/6a6898db… [81 chars]",
+    "total_time_taken": 1.96
+  },
+  "search_parameters": {
+    "engine": "yahoo",
+    "p": "coffee mug",
+    "vc": "us",
+    "device": "desktop"
+  },
+  "search_information": {
+    "error_message": "Yahoo! has returned malformed or illegal request error. Chec… [80 chars]"
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "Amazon.com: Coffee Cups & Mugs: Home & Kitchen",
+      "link": "https://www.amazon.com/Mugs/b?node=367142011",
+      "displayed_link": "Amazonhttps://www.amazon.com › Mugs › b",
+      "snippet": "Amazonhttps://www.amazon.com › Mugs › b"
+    },
+    "… 6 more item(s) truncated"
+  ],
+  "related_searches": {
+    "bottom": [
+      "… {3 field(s) truncated}",
+      "… 7 more item(s) truncated"
+    ]
+  },
+  "trending_searches": {
+    "results": [
+      "… {4 field(s) truncated}",
+      "… 5 more item(s) truncated"
+    ]
+  },
+  "inline_images": {
+    "items": [
+      "… {3 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "see_more_link": "https://images.search.yahoo.com/search/images;_ylt=AwrErtncm… [140 chars]",
+    "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=yahoo_… [79 chars]"
+  },
+  "pagination": {
+    "current": 1,
+    "next": "https://search.yahoo.com/search;_ylt=AwrErtncmGhqQwIAiJxXNyo… [170 chars]",
+    "other_pages": {
+      "2": "https://search.yahoo.com/search;_ylt=AwrErtncmGhqQwIAhJxXNyo… [170 chars]",
+      "3": "https://search.yahoo.com/search;_ylt=AwrErtncmGhqQwIAhZxXNyo… [171 chars]",
+      "4": "https://search.yahoo.com/search;_ylt=AwrErtncmGhqQwIAhpxXNyo… [171 chars]",
+      "5": "https://search.yahoo.com/search;_ylt=AwrErtncmGhqQwIAh5xXNyo… [171 chars]"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?b=8&device=desktop&engine=ya… [82 chars]",
+    "next": "https://serpapi.com/search.json?b=8&device=desktop&engine=ya… [82 chars]",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?b=8&device=desktop&engine=ya… [82 chars]",
+      "3": "https://serpapi.com/search.json?b=15&device=desktop&engine=y… [83 chars]",
+      "4": "https://serpapi.com/search.json?b=22&device=desktop&engine=y… [83 chars]",
+      "5": "https://serpapi.com/search.json?b=29&device=desktop&engine=y… [83 chars]"
+    }
+  }
+}

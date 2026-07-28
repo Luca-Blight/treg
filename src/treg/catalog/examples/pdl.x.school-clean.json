@@ -1,0 +1,22 @@
+{
+  "status": 200,
+  "name": "stanford university",
+  "type": "post-secondary institution",
+  "id": "BSM1IysRhkmGuy-iD6OHSA_0000",
+  "location": {
+    "name": "stanford, california, united states",
+    "locality": "stanford",
+    "region": "california",
+    "country": "united states",
+    "continent": "north america"
+  },
+  "linkedin_url": "linkedin.com/school/stanford-university",
+  "facebook_url": "facebook.com/stanford",
+  "twitter_url": "twitter.com/stanford",
+  "linkedin_id": "1792",
+  "website": "stanford.edu",
+  "domain": "stanford.edu",
+  "matched_on": [
+    "name_match_exact"
+  ]
+}

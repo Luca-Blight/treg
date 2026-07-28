@@ -1,0 +1,35 @@
+{
+  "code": 200,
+  "request_id": "b3f26ebb-79ce-4ea8-89be-75a0b47fcc4c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:13",
+  "time_stamp": 1785220093,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Creator-API/fetch_mission_task_list_api_v1_douyin_creator_fetch_mission_task_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/b3f26ebb-79ce-4ea8-89be-75a0b47fcc4c?sign=17a3b4cf67df4aa8f4be4103210d02620d10b6f96b9d970d6a9cb259e0201266",
+  "router": "/api/v1/douyin/creator/fetch_mission_task_list",
+  "params": {
+    "cursor": "0",
+    "limit": "5",
+    "mission_type": "1",
+    "tab_scene": "1",
+    "industry_lv1": "1913",
+    "industry_lv2": "191301",
+    "platform_channel": "1",
+    "pay_type": "4",
+    "greater_than_cost_progress": "20",
+    "publish_time_start": "1757097636"
+  },
+  "data": {
+    "has_more": false,
+    "mission_cards": null,
+    "next_cursor": 5,
+    "status_code": 0,
+    "status_msg": "",
+    "total_num": 0
+  }
+}

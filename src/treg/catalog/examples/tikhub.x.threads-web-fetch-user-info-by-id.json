@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "7f40d60a-6e2a-4e83-8d5d-99adfff5ea0d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:52",
+  "time_stamp": 1785220312,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Threads-Web-API/fetch_user_info_by_i… [106 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/7f40d60a-6e2a-4e… [150 chars]",
+  "router": "/api/v1/threads/web/fetch_user_info_by_id",
+  "params": {
+    "user_id": "67027868801"
+  },
+  "data": {
+    "user": {
+      "pk": "67027868801",
+      "text_post_app_is_private": false,
+      "hd_profile_pic_versions": "… [2 item(s) truncated]",
+      "profile_pic_url": "https://instagram.fccp6-1.fna.fbcdn.net/v/t51.2885-19/573323… [544 chars]",
+      "username": "lilbieber",
+      "friendship_status": null,
+      "account_warning": null,
+      "follower_count": 15743620,
+      "profile_context_facepile_users": null,
+      "text_app_last_visited_time": 0,
+      "biography": "",
+      "text_app_biography": "… {1 field(s) truncated}",
+      "account_badges": "… [0 item(s) truncated]",
+      "text_post_app_remove_mention_entrypoint": null,
+      "show_text_post_app_replies_tab": true,
+      "…": "11 more field(s) truncated"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "success": true,
+  "credits_remaining": 19837,
+  "credits_charged": 1,
+  "id": "1656586118821988",
+  "url": "https://www.facebook.com/marketplace/item/1656586118821988/",
+  "title": "‘95 Specialized Hardrock GSX - Super Clean Vintage Gravel Restomod - INCLUDES FREE TUNE UP",
+  "description": "Was going to hang on to this one bc I absolutely love how it looks, but the 20” frame is just bit too large for me. Riders over 6’ would be comfy on this one. Currently in a 3x7, drop bar mtb set up w… [932 chars]",
+  "creation_time": "2026-05-15T16:57:39.000Z",
+  "listing_date_text": "Listed 2 months ago",
+  "availability_text": null,
+  "location_text": "Austin, TX",
+  "location": {
+    "latitude": 30.401916503906,
+    "longitude": -97.761840820312
+  },
+  "price": {
+    "formatted_amount_zeros_stripped": "$220",
+    "amount_with_offset_in_currency": 22000,
+    "amount": 220,
+    "currency": "USD"
+  },
+  "mileage": null,
+  "strikethrough_price": {
+    "formattedAmountWithoutDecimals": "$380"
+  },
+  "category_id": "1658310421102081",
+  "attributes": [
+    {
+      "attribute_name": "Condition",
+      "value": "used_good",
+      "label": "Used - Good"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "photos": [
+    {
+      "id": "2810586442651711",
+      "url": "https://scontent-sjc6-1.xx.fbcdn.net/v/t39.84726-6/701290950_2810586459318376_3780262866029042186_n.jpg?stp=dst-jpg_s960x960_tt6&_nc_cat=111&ccb=1-7&_nc_sid=92e707&_nc_ohc=RX1pBg0-oewQ7kNvwGE1bjq&_nc_… [415 chars]",
+      "width": 960,
+      "height": 720,
+      "accessibility_caption": "No photo description available."
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "is_hidden": false,
+  "is_live": true,
+  "is_pending": false,
+  "is_sold": true,
+  "is_viewer_seller": false,
+  "is_shipping_offered": false,
+  "is_buy_now_enabled": false,
+  "messaging_enabled": true,
+  "delivery_types": [
+    "IN_PERSON"
+  ],
+  "share_uri": "https://www.facebook.com/marketplace/item/1656586118821988/",
+  "seller": null
+}

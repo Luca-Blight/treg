@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "data": {
+    "author_tags_detail": {
+      "is_curated": "0"
+    },
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:09:59.854520309",
+  "requestId": "622b2c4899ab4d80918567249039b0ca"
+}

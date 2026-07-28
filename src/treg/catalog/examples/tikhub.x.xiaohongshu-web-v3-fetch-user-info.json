@@ -1,0 +1,33 @@
+{
+  "code": 200,
+  "request_id": "ba22d3a1-f8a7-4b56-a31f-019da54e72ac",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:24",
+  "time_stamp": 1785220404,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-Web-V3-API/fetch_user_info_api_v1_xiaohongshu_web_v3_fetch_user_info_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ba22d3a1-f8a7-4b56-a31f-019da54e72ac?sign=8cf7544d1db479618bc077a4a718717fce94ac347117f40de115bfb5e21452ab",
+  "router": "/api/v1/xiaohongshu/web_v3/fetch_user_info",
+  "params": {
+    "user_id": "5e3a8ee700000000010070c6"
+  },
+  "data": {
+    "ok": true,
+    "status": 200,
+    "code": 0,
+    "success": true,
+    "msg": "成功",
+    "data": {
+      "basic_info": "… {7 field(s) truncated}",
+      "interactions": "… [3 item(s) truncated]",
+      "tags": "… [2 item(s) truncated]",
+      "tab_public": "… {4 field(s) truncated}",
+      "extra_info": "… {2 field(s) truncated}",
+      "result": "… {3 field(s) truncated}"
+    }
+  }
+}

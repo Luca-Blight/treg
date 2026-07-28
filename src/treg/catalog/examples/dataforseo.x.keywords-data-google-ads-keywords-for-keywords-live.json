@@ -1,0 +1,59 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "39.4900 sec.",
+  "cost": 0.09,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0368-0000-8099e2ccedf3",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "39.4776 sec.",
+      "cost": 0.09,
+      "result_count": 1888,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "keywords_for_keywords",
+        "se": "google_ads",
+        "location_code": 2840,
+        "keywords": [
+          "phone",
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "keyword": "phone",
+          "location_code": 2840,
+          "language_code": null,
+          "search_partners": false,
+          "competition": "HIGH",
+          "competition_index": 87,
+          "search_volume": 550000,
+          "low_top_of_page_bid": 1.9,
+          "high_top_of_page_bid": 7,
+          "cpc": 4.22,
+          "monthly_searches": [
+            {
+              "year": 2026,
+              "month": 6,
+              "search_volume": 550000
+            },
+            "… 11 more item(s) truncated"
+          ],
+          "keyword_annotations": {
+            "concepts": null
+          }
+        },
+        "… 1887 more item(s) truncated"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "id": "tt0111161",
+      "metacritic": {
+        "__typename": "Metacritic",
+        "metascore": {
+          "reviewCount": 22,
+          "score": 82
+        },
+        "url": "https://www.metacritic.com/movie/the-shawshank-redemption?ftag=MCD-06-10aaa1c",
+        "reviews": {
+          "edges": [
+            {
+              "node": {
+                "quote": {
+                  "language": "en",
+                  "value": "It's the no-bull performances that hold back the flood of banalities. Robbins and Freeman connect with the bruised souls of Andy and Red to create something undeniably powerful and moving."
+                },
+                "reviewer": "Peter Travers",
+                "site": "Rolling Stone",
+                "score": 90,
+                "url": "https://www.rollingstone.com/tv-movies/tv-movie-reviews/"
+              }
+            },
+            "… 9 more item(s) truncated"
+          ]
+        }
+      },
+      "externalLinks": {
+        "__typename": "ExternalLinkConnection",
+        "total": 155,
+        "edges": [
+          {
+            "node": {
+              "label": "Rogerebert.com - Dec 2012 [Gerardo Valero]",
+              "url": "https://www.rogerebert.com/far-flung-correspondents/the-shawshank-greatness",
+              "externalLinkLanguages": null
+            }
+          },
+          "… 3 more item(s) truncated"
+        ],
+        "pageInfo": {
+          "__typename": "PageInfo",
+          "hasNextPage": true,
+          "hasPreviousPage": false,
+          "startCursor": "<omitted: expires>",
+          "endCursor": "<omitted: expires>"
+        }
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:59.898073566",
+  "requestId": "4a0bf1823b2643118a6636648efd575f"
+}

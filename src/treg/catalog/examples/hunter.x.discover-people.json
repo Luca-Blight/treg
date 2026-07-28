@@ -1,0 +1,45 @@
+{
+  "data": [
+    {
+      "domain": "amazon.com",
+      "organization": "Amazon",
+      "emails_count": {
+        "personal": 82000,
+        "generic": 881,
+        "total": 82881
+      }
+    },
+    "… 99 more item(s) truncated"
+  ],
+  "meta": {
+    "results": 94773,
+    "total_emails": {
+      "personal": 990500,
+      "generic": 197615,
+      "total": 1188115
+    },
+    "limit": 100,
+    "offset": 0,
+    "params": {
+      "query": "B2B SaaS companies in the United States"
+    },
+    "filters": {
+      "headquarters_location": {
+        "include": [
+          {
+            "country": "US"
+          }
+        ]
+      },
+      "industry": {
+        "include": [
+          "Software Development"
+        ]
+      },
+      "headcount": [
+        "1-10",
+        "… 7 more item(s) truncated"
+      ]
+    }
+  }
+}

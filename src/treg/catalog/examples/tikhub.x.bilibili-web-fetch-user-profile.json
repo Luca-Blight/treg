@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "1310fccb-27f0-4c5f-8229-cbb3d34ad41f",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:36:43",
+  "time_stamp": 1785220603,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_collect_folders_api_v1_bilibili_web_fetch_user_profile_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/1310fccb-27f0-4c5f-8229-cbb3d34ad41f?sign=18b8c83473b1f8265cd5c0993eaa37630b04721ac439c71db18d10601b08adcf",
+  "router": "/api/v1/bilibili/web/fetch_user_profile",
+  "params": {
+    "uid": "178360345"
+  },
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "mid": 178360345,
+      "name": "Azulsolitan",
+      "sex": "男",
+      "face": "https://i1.hdslb.com/bfs/face/f31765ab779958c5e90ce4b6ff84d468f5342090.jpg",
+      "face_nft": 0,
+      "face_nft_type": 0,
+      "sign": "",
+      "rank": 10000,
+      "level": 6,
+      "jointime": 0,
+      "moral": 0,
+      "silence": 0,
+      "control": 0,
+      "coins": 0,
+      "fans_badge": true,
+      "…": "27 more field(s) truncated"
+    }
+  }
+}

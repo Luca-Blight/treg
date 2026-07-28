@@ -1,0 +1,54 @@
+{
+  "0": {
+    "data": {
+      "clip": {
+        "id": "387484507",
+        "slug": "CloudySavageMarjoramRuleFive--ErzsYbE7UWvgCMQ",
+        "url": "https://www.twitch.tv/staryuuki/clip/CloudySavageMarjoramRuleFive--ErzsYbE7UWvgCMQ",
+        "embedURL": "https://clips.twitch.tv/embed?clip=CloudySavageMarjoramRuleFive--ErzsYbE7UWvgCMQ",
+        "title": "un grande el mesero",
+        "viewCount": 67206,
+        "language": "ES",
+        "isFeatured": true,
+        "assets": "… [1 item(s) truncated]",
+        "curator": "… {5 field(s) truncated}",
+        "game": "… {6 field(s) truncated}",
+        "broadcast": "… {3 field(s) truncated}",
+        "broadcaster": "… {11 field(s) truncated}",
+        "thumbnailURL": "https://static-cdn.jtvnw.net/twitch-video-assets/twitch-vap-video-assets-prod-us-west-2/4a27063d-e870-4963-bf40-c206f65a233c/landscape/thumb/thumb-0000000000-1920x1080.jpg",
+        "createdAt": "2024-03-30T21:52:12Z",
+        "…": "11 more field(s) truncated"
+      }
+    },
+    "extensions": {
+      "durationMilliseconds": 87,
+      "operationName": "ShareClipRenderStatus",
+      "requestID": "01KYM9A36YW9GMFY99HJKY7HNJ"
+    }
+  },
+  "1": {
+    "errors": [
+      {
+        "message": "PersistedQueryNotFound"
+      }
+    ],
+    "extensions": {
+      "durationMilliseconds": 3,
+      "operationName": "ClipsCards__User",
+      "requestID": "01KYM9A36YW9GMFY99HJKY7HNJ"
+    }
+  },
+  "2": {
+    "data": {
+      "user": null
+    },
+    "extensions": {
+      "durationMilliseconds": 2,
+      "operationName": "GetDisplayName",
+      "requestID": "01KYM9A36YW9GMFY99HJKY7HNJ"
+    }
+  },
+  "success": true,
+  "credits_remaining": 19844,
+  "credits_charged": 1
+}

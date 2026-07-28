@@ -1,0 +1,51 @@
+{
+  "search_metadata": {
+    "id": "6a6898ce52acc60fd9c96240",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/sbB8w8mk12lAxXI_tpzEzg/6a6898ce… [81 chars]",
+    "created_at": "2026-07-28 11:55:58 UTC",
+    "processed_at": "2026-07-28 11:55:58 UTC",
+    "google_videos_url": "https://www.google.com/search?q=coffee&hl=en&gl=us&udm=7",
+    "raw_html_file": "https://serpapi.com/searches/sbB8w8mk12lAxXI_tpzEzg/6a6898ce… [81 chars]",
+    "total_time_taken": 3.34
+  },
+  "search_parameters": {
+    "engine": "google_videos",
+    "q": "coffee",
+    "google_domain": "google.com",
+    "hl": "en",
+    "gl": "us",
+    "device": "desktop"
+  },
+  "search_information": {
+    "video_results_state": "Results for exact spelling",
+    "query_displayed": "coffee",
+    "total_results": 387000000,
+    "time_taken_displayed": 0.17
+  },
+  "video_results": [
+    {
+      "position": 1,
+      "title": "Stop Paying $6 for Coffee — This 30-Cent Cold Brew Tastes ..… [61 chars]",
+      "link": "https://www.youtube.com/watch?v=TRU57yymyi8",
+      "displayed_link": "www.youtube.com › watch",
+      "thumbnail": "https://serpapi.com/searches/6a6898ce52acc60fd9c96240/images… [109 chars]",
+      "snippet": "First make the concentrate: one cup of coarse ground coffee … [148 chars]",
+      "duration": "6:43",
+      "rich_snippet": "… {1 field(s) truncated}",
+      "about_this_result": "… {1 field(s) truncated}",
+      "about_page_link": "https://www.google.com/search?q=About+https://www.youtube.co… [89 chars]",
+      "…": "2 more field(s) truncated"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "block_position": 1,
+      "query": "coffee song",
+      "link": "https://www.google.com/search?sca_esv=fbf2635dd64e7c8e&gl=us… [140 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google… [118 chars]"
+    },
+    "… 7 more item(s) truncated"
+  ]
+}

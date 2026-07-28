@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "2a51e365-0f7f-4776-8b43-9ae5c65f42d4",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:03",
+  "time_stamp": 1785220203,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_user_follower_list_api_v1_tiktok_app_v3_fetch_user_follower_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2a51e365-0f7f-4776-8b43-9ae5c65f42d4?sign=e494dd02fbc47b534c84e10805f0485471… [150 chars]",
+  "router": "/api/v1/tiktok/app/v3/fetch_user_follower_list",
+  "params": {
+    "user_id": "7486586574684881927",
+    "sec_user_id": "MS4wLjABAAAA0lKrE0cVLLZCnVil-n-YEZlOoik9oeO3zOYQ08dqOEOw2pRSXWJdcSFw7lZeZcSP",
+    "count": "5",
+    "min_time": "0"
+  },
+  "data": {
+    "extra": {
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "logid": "202607280630033F05F90BD1F844C61785",
+      "now": 1785220203000
+    },
+    "followers": [
+      "… {120 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "has_more": true,
+    "log_pb": {
+      "impr_id": "202607280630033F05F90BD1F844C61785"
+    },
+    "max_time": 1785220203,
+    "min_time": 1785194102,
+    "myself_user_id": "0",
+    "next_page_token": "<omitted: expires>",
+    "offset": 0,
+    "status_code": 0,
+    "status_msg": "",
+    "total": 52157,
+    "version": "v2"
+  }
+}

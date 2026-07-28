@@ -1,0 +1,40 @@
+{
+  "code": 0,
+  "data": {
+    "ai_mode_enable": false,
+    "can_cut": false,
+    "cur_cut_number": 0,
+    "dqa_authorized_user_by_shared": false,
+    "is_broad_query": true,
+    "items": [
+      {
+        "model_type": "note",
+        "note": "… 31 field(s) truncated"
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "query_debug_info": {
+      "is_forbidden": false
+    },
+    "query_intent": {
+      "goodsIntent": 3,
+      "low_supply_intent": false,
+      "search_ask_intent": false
+    },
+    "query_type": 0,
+    "request_dqa": 0,
+    "request_dqa_instant": false,
+    "search_dqa_new_page_exp": 0,
+    "search_pull_down_opt_exp": 1,
+    "search_request_id": "3db1d6a226303469",
+    "service_status": "{\"filter\":\"not_required\",\"note\":\"success… [100 chars total]",
+    "show_single_col": false,
+    "strategy_info": {
+      "query_average_impression_count": 19,
+      "query_can_guide_to_feed": true
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:55.571068792",
+  "requestId": "9f5adf33edc14dbbb72ba8126bc7d045"
+}

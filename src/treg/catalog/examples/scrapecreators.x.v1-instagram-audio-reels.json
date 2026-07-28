@@ -1,0 +1,38 @@
+{
+  "success": true,
+  "credits_remaining": 19823,
+  "credits_charged": 1,
+  "reels": [
+    {
+      "gen_ai_chat_with_ai_cta_info": null,
+      "collaborator_edit_eligibility": false,
+      "number_of_qualities": 8,
+      "related_ads_pivots_media_info": "USER_NOT_IN_TEST_GROUP",
+      "translated_langs_for_autodub": [],
+      "subtype_name_for_REST__": "XDTClipsMedia",
+      "is_eligible_for_poe": false,
+      "original_lang_for_translations": "en",
+      "eligible_insights_entrypoints": "NONE",
+      "igbio_product": null,
+      "hidden_likes_string_variant": -1,
+      "is_social_ufi_disabled": false,
+      "boost_unavailable_reason": null,
+      "boost_unavailable_identifier": null,
+      "boost_unavailable_reason_v2": [],
+      "client_cache_key": "<omitted: expires>",
+      "can_reply": false,
+      "photo_of_you": false,
+      "media_attributions_data": [],
+      "can_view_more_preview_comments": false,
+      "mezql_token": "",
+      "has_tagged_users": false,
+      "is_eligible_content_for_post_roll_ad": false,
+      "is_cutout_sticker_allowed": false,
+      "is_photo_comments_composer_enabled_for_author": true,
+      "…": "80 more field(s) truncated"
+    },
+    "… 11 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>",
+  "has_more": true
+}

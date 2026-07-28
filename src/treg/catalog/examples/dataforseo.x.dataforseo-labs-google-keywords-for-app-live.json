@@ -1,0 +1,46 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "3.6142 sec.",
+  "cost": 0.0132,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0451-0000-7ffe42f5500a",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "3.6082 sec.",
+      "cost": 0.0132,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "keywords_for_app",
+        "se_type": "google",
+        "app_id": "org.telegram.messenger",
+        "language_name": "English",
+        "location_code": 2840,
+        "limit": 10
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "app_id": "org.telegram.messenger",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 152179,
+          "items_count": 10,
+          "items": [
+            "… {3 field(s) truncated}",
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

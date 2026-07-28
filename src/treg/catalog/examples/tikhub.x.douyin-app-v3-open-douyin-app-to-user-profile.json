@@ -1,0 +1,25 @@
+{
+  "code": 200,
+  "request_id": "955a33f9-9300-46c4-a90c-b1bd03bc883b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:06",
+  "time_stamp": 1785220086,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/open_douyin_app_to_user_profile_api_v1_douyin_app_v3_open_douyin_app_to_user_profile_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/955a33f9-9300-46c4-a90c-b1bd03bc883b?sign=0a7e906161e5f18535222f5a12142112b6612f8a82f78efc5592ed1c19471809",
+  "router": "/api/v1/douyin/app/v3/open_douyin_app_to_user_profile",
+  "params": {
+    "uid": "96874812426",
+    "sec_uid": "MS4wLjABAAAA9y04iBlVdeMQqTJbqsQZKb-tqWqWW29jPVJqideHT70"
+  },
+  "data": {
+    "uid": "96874812426",
+    "sec_uid": "MS4wLjABAAAA9y04iBlVdeMQqTJbqsQZKb-tqWqWW29jPVJqideHT70",
+    "status": "success",
+    "short_url": "https://v.douyin.com/Vgzvg4a4PZg/"
+  }
+}

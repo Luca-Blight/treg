@@ -1,0 +1,69 @@
+{
+  "code": 0,
+  "data": {
+    "data": [
+      {
+        "boxExtraInfo": {
+          "real_type": 262208,
+          "resultType": 0,
+          "subType": 0,
+          "title": "小程序"
+        },
+        "subBoxes": [
+          {
+            "boxExtraInfo": null,
+            "boxID": "split-0x40-0-3978567686",
+            "boxMergeTag": 0,
+            "boxMergeType": 109,
+            "boxMergeValue": 3,
+            "boxPos": 1,
+            "boxPosMerge": 1,
+            "count": 1,
+            "items": "… 1 item(s) truncated",
+            "real_type": 262208,
+            "resultType": 0,
+            "subType": 0,
+            "title": "小程序",
+            "totalCount": 170,
+            "type": 91,
+            "useNativeRender": false
+          },
+          "… 20 more item(s) truncated"
+        ],
+        "type": 109
+      }
+    ],
+    "category": [
+      {
+        "type": 0,
+        "word": "全部"
+      },
+      "… 14 more item(s) truncated"
+    ],
+    "continueFlag": 1,
+    "cookies": "<omitted: expires>",
+    "direction": 2,
+    "enableQuestionClosely": false,
+    "experiment": [
+      {
+        "key": "s1s_all_prefetch_next_page",
+        "value": "2"
+      },
+      "… 2 more item(s) truncated"
+    ],
+    "isAutoPlayVideo": 1,
+    "isDivide": 0,
+    "isHomePage": 0,
+    "lang": "zh_CN",
+    "offset": 20,
+    "pageNumber": 1,
+    "query": "人工智能",
+    "resultType": 0,
+    "ret": 0,
+    "searchID": "1785219100923128940",
+    "timeStamp": 1785219100
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:11:41.185879434",
+  "requestId": "017be60a86864cdebc2f121e0a873686"
+}

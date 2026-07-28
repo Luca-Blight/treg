@@ -1,0 +1,60 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "7.5128 sec.",
+  "cost": 0.103,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0650-0000-cdc2b413c068",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "7.4994 sec.",
+      "cost": 0.103,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "search_mentions",
+        "language_name": "English",
+        "location_code": 2840,
+        "target": [
+          {
+            "domain": "dataforseo.com",
+            "search_filter": "exclude"
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "platform": "google",
+        "filters": [
+          [
+            "ai_search_volume",
+            "… 2 more item(s) truncated"
+          ]
+        ],
+        "order_by": [
+          "ai_search_volume,desc"
+        ],
+        "offset": 0,
+        "limit": 3
+      },
+      "result": [
+        {
+          "total_count": 12641,
+          "offset": 0,
+          "search_after_token": "<omitted: expires>",
+          "items_count": 3,
+          "items": [
+            "… {15 field(s) truncated}",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

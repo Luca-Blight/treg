@@ -584,7 +584,8 @@ def plan_actions(detections: list[Detection]) -> list[Action]:
                                       tool_name=_slug(d.provider or ""), reason="incomplete Basic pair"))
         elif d.kind == "unknown_secret":
             actions.append(Action(detection=d, supported=False, secret_name=d.vars[0],
-                                  reason="no provider match — base_url needed (LLM/manual, Phase 4)"))
+                                  reason="no provider match — resolve with `treg upload --llm`, or register by hand: "
+                                         "`treg secret add <name> --env-var <VAR>` + `treg tool add <name> --base-url …`"))
     # Disambiguate tool-name collisions among registerable actions — two matched vars for one provider
     # (e.g. GITHUB_TOKEN + GH_TOKEN → both "github") would clash at register (unique tool name per org).
     used: set[str] = set()

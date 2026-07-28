@@ -1,0 +1,15 @@
+{
+  "total": 1,
+  "successful": 0,
+  "failed": 1,
+  "results": [
+    {
+      "index": 0,
+      "success": false,
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "Subscription with id '000000000000000000000000' not found"
+      }
+    }
+  ]
+}

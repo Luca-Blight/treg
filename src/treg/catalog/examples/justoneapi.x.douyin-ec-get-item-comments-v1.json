@@ -1,0 +1,52 @@
+{
+  "code": 0,
+  "data": {
+    "Comments": [
+      {
+        "AppId": 2329,
+        "AppealStatus": 0,
+        "BrowseCount": 0,
+        "CanAppend": true,
+        "CommentTime": "2026-07-28 10:18:04",
+        "CommentType": 0,
+        "Content": "物品已收到与描逑的一样直得购买，快递员送货快",
+        "Id": 2270952393392947483,
+        "IsAbnormalOrder": 0,
+        "IsAnonymous": false,
+        "KolId": 75321613749,
+        "Liked": false,
+        "Likes": 0,
+        "Order": "{\"shop_name\":\"联邦电器\",\"create_time\":178511… [120 chars total]",
+        "OrderSnapshot": "… 13 field(s) truncated",
+        "OrigContent": "",
+        "ParentId": 0,
+        "PhotoPoster": "… 6 field(s) truncated",
+        "Photos": "… 2 item(s) truncated",
+        "Product": "{\"name\":\"【柏林之声】2026新款运动蓝牙耳机开放式不入耳高音质骨传超长… [324 chars total]",
+        "ProductChannelId": "",
+        "ProductChannelType": "0",
+        "ProductId": 3833249427875823701,
+        "Rank": 4,
+        "RankLogistic": 0,
+        "RankProduct": 4,
+        "RankShop": 0,
+        "Recommend": false,
+        "ShopId": 251094601,
+        "ShopReply": "",
+        "Sku": "至尊版-骑士黑【千元柏林音效+无感延迟+蓝牙5.4+智能降噪+超长续航】",
+        "SourceFrom": 0,
+        "Status": 0,
+        "StoreId": 0,
+        "UserAvatar": "https://p26-product-comment-sign.byteimg… [509 chars total]",
+        "UserName": "薛**4",
+        "UserType": 12,
+        "WordTags": "… 3 item(s) truncated"
+      }
+    ],
+    "Count": 1,
+    "HasMore": false
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:07.63536926",
+  "requestId": "4ab4706d409648e7b61f213acea7b3e7"
+}

@@ -1,0 +1,37 @@
+{
+  "code": 200,
+  "request_id": "522a0737-8ec8-4d85-bdac-8a827c91e5e9",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:58",
+  "time_stamp": 1785220258,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Twitter-Web-API/fetch_user_media_api_v1_twitter_web_fetch_user_media_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/522a0737-8ec8-4d85-bdac-8a827c91e5e9?sign=8d36e074c9fae9d7fc9fd49fb1e37e0af9aca6c78278fe448b4f9bee853cb8d8",
+  "router": "/api/v1/twitter/web/fetch_user_media",
+  "params": {
+    "screen_name": "elonmusk",
+    "rest_id": "44196397"
+  },
+  "data": {
+    "timeline": [
+      "… {15 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "next_cursor": "<omitted: expires>",
+    "status": "ok",
+    "user": {
+      "profile": "elonmusk",
+      "id": "44196397",
+      "avatar": null,
+      "desc": "",
+      "name": "Elon Musk",
+      "friends": 1376,
+      "sub_count": 241035338,
+      "pinned_tweet_ids_str": null
+    }
+  }
+}

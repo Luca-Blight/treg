@@ -1,0 +1,22 @@
+{
+  "code": 200,
+  "request_id": "63059604-f318-41f5-98af-88194d7cf90c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:01",
+  "time_stamp": 1785220201,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_shop_home_api_v1_tiktok_app_v3_fetch_shop_home_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/63059604-f318-41f5-98af-88194d7cf90c?sign=2202681cfa5d6f3fd28651cb95363b2fe0ffce706b48cdef880c32e811a66359",
+  "router": "/api/v1/tiktok/app/v3/fetch_shop_home",
+  "params": {
+    "page_id": "7314705727611930410",
+    "seller_id": "8646929864612614278"
+  },
+  "data": {
+    "code": 100000
+  }
+}

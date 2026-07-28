@@ -1,0 +1,47 @@
+{
+  "data": {
+    "leads": [
+      {
+        "id": 405843456,
+        "email": "person@example.com",
+        "first_name": null,
+        "last_name": null,
+        "position": null,
+        "company": "Close",
+        "company_industry": null,
+        "confidence_score": 90,
+        "website": "close.io",
+        "country_code": null,
+        "company_size": null,
+        "source": "Hunter (Email Verifier)",
+        "linkedin_url": null,
+        "phone_number": null,
+        "twitter": null,
+        "sync_status": null,
+        "notes": null,
+        "sending_status": null,
+        "last_activity_at": null,
+        "last_contacted_at": null,
+        "verification": {
+          "date": null,
+          "status": null
+        },
+        "leads_list": {
+          "id": null,
+          "name": null,
+          "leads_count": null
+        },
+        "created_at": "2026-07-28 11:55:42 UTC"
+      }
+    ]
+  },
+  "meta": {
+    "count": 2,
+    "total": 2,
+    "params": {
+      "limit": 1,
+      "offset": 0
+    }
+  },
+  "_scrubbed": true
+}

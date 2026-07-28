@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "d0f77762-8eff-4813-96c6-070252c3f277",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:40",
+  "time_stamp": 1785220060,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-App-API/fetch_search_by_type_api_v1_bilibili_app_fetch_search_by_type_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d0f77762-8eff-4813-96c6-070252c3f277?sign=767c8198da80ee7bcd70079e9d6046af97f88e9f8b695980c0b72c8c27de967c",
+  "router": "/api/v1/bilibili/app/fetch_search_by_type",
+  "params": {
+    "keyword": "原神",
+    "page_size": "5"
+  },
+  "data": {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "trackid": "2103279188680420483",
+      "pages": 200,
+      "exp_str": "100010#5514#6609#9902#9911#9924#9931#9949#9961#9971#9980",
+      "keyword": "原神",
+      "result_is_recommend": 1000,
+      "items": [
+        "… {5 field(s) truncated}",
+        "… 4 more item(s) truncated"
+      ],
+      "pagination": {
+        "next": "CAISIGZmZmQ0ZGFkOGNjZjQ3NjY5ZTViMDAxNDcwZjdlYjVj"
+      },
+      "annotation": {
+        "qv_id": "fffd4dad8ccf47669e5b001470f7eb5c"
+      },
+      "real_exposure_ratio": 0.8,
+      "page": "1"
+    }
+  }
+}

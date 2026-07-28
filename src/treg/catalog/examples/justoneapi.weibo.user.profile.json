@@ -1,0 +1,89 @@
+{
+  "code": 0,
+  "data": {
+    "ok": 1,
+    "data": {
+      "user": {
+        "id": 2803301701,
+        "idstr": "2803301701",
+        "pc_new": 7,
+        "screen_name": "人民日报",
+        "profile_image_url": "https://tvax4.sinaimg.cn/crop.0.0.1018.1018.50/0033ImPzly8h8vgemh8kxj60sa0sadgw02.jpg?KID=imgbed,tva&Expires=1785213723&ssig=xq8SwslKcZ",
+        "profile_url": "/u/2803301701",
+        "verified": true,
+        "verified_type": 3,
+        "domain": "rmrb",
+        "weihao": "",
+        "verified_type_ext": 53,
+        "status_total_counter": {
+          "total_cnt_format": "39.63亿",
+          "comment_cnt": "274,863,197",
+          "repost_cnt": "1,171,230,044",
+          "like_cnt": "2,517,245,395",
+          "total_cnt": "3,963,338,636"
+        },
+        "avatar_large": "https://tvax4.sinaimg.cn/crop.0.0.1018.1018.180/0033ImPzly8h8vgemh8kxj60sa0sadgw02.jpg?KID=imgbed,tva&Expires=1785213723&ssig=VZVulWErN8",
+        "avatar_hd": "https://tvax4.sinaimg.cn/crop.0.0.1018.1018.1024/0033ImPzly8h8vgemh8kxj60sa0sadgw02.jpg?KID=imgbed,tva&Expires=1785213723&ssig=1yQlUI%2Byej",
+        "follow_me": false,
+        "following": false,
+        "mbrank": 3,
+        "mbtype": 12,
+        "v_plus": 0,
+        "user_ability": -2135620852,
+        "planet_video": false,
+        "verified_reason": "《人民日报》法人微博",
+        "description": "人民日报法人微博。参与、沟通、记录时代。",
+        "location": "北京",
+        "gender": "m",
+        "followers_count": 157881942,
+        "followers_count_str": "1.58亿",
+        "friends_count": 3096,
+        "statuses_count": 151360,
+        "url": "",
+        "svip": 1,
+        "vvip": 1,
+        "cover_image_phone": "https://wx1.sinaimg.cn/crop.0.0.640.640.640/0033ImPzly1gs64jwa7uyj60v90v9n1r02.jpg",
+        "icon_list": [
+          {
+            "type": "vip",
+            "data": {
+              "mbrank": 3,
+              "mbtype": 12,
+              "svip": 1,
+              "vvip": 1
+            }
+          },
+          {
+            "type": "icon",
+            "data": {
+              "value": "1",
+              "icon_img": "https://d.sinaimg.cn/prd/106/1683/2026/06/05/feed_icon_yijuduokui2x.png",
+              "title": "一举夺魁",
+              "url": "http://s.weibo.com/weibo?q=%23高考加油%23"
+            }
+          }
+        ],
+        "top_user": 1,
+        "user_type": 0,
+        "is_star": "0",
+        "is_muteuser": false,
+        "special_follow": false
+      },
+      "tabList": [
+        {
+          "name": "home",
+          "tabName": "精选"
+        },
+        {
+          "name": "feed",
+          "tabName": "微博"
+        },
+        "… 1 more item(s) truncated"
+      ],
+      "blockText": ""
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T09:42:03.505573883",
+  "requestId": "cd48cd338f03429ab24667dc0007479f"
+}

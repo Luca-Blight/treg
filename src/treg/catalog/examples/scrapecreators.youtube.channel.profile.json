@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "credits_remaining": 19852,
+  "credits_charged": 1,
+  "channelId": "UC-9-kyTW8ZkZNDHQJ6FgpwQ",
+  "channel": "http://www.youtube.com/channel/UC-9-kyTW8ZkZNDHQJ6FgpwQ",
+  "handle": "@undefined",
+  "isVerified": false,
+  "name": "Music",
+  "description": "Visit the YouTube Music Channel to find today’s top talent, featured artists, and playlists. Subscribe to see the latest in the music world.\nThis channel was generated automatically by YouTube's video… [218 chars]",
+  "subscriberCount": 127000000,
+  "subscriberCountText": "127M subscribers",
+  "videoCount": null,
+  "viewCount": null,
+  "joinedDateText": "Joined Sep 24, 2013",
+  "tags": null,
+  "email": null,
+  "auto-generated_by_youtube": "https://support.google.com/youtube/answer/2579942",
+  "links": [
+    "https://support.google.com/youtube/answer/2579942"
+  ],
+  "isFamilySafe": true,
+  "avatar": {
+    "image": {
+      "sources": [
+        {
+          "url": "https://yt3.googleusercontent.com/vib9Uvdi0I6KjXHwd1om9_hX6uJmFKlJOvZ7c03xlicZPd8xgZiF2oR31F7w7M_vPNTYe0GfAQ=s88-c-k-c0x00ffffff-no-rj",
+          "width": 68,
+          "height": 68
+        }
+      ]
+    },
+    "avatarImageSize": "AVATAR_SIZE_M"
+  }
+}

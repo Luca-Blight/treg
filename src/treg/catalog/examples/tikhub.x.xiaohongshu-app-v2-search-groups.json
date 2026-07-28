@@ -1,0 +1,39 @@
+{
+  "code": 200,
+  "request_id": "6821b5b4-052f-4a33-b2f3-a0933ca42b85",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:20",
+  "time_stamp": 1785220400,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/search_groups_api_v1_xiaohongshu_app_v2_search_groups_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/6821b5b4-052f-4a33-b2f3-a0933ca42b85?sign=843d5967f693a6043fab6d6950a5b6062cd6f574a9b17161b51e7d5d764d0a24",
+  "router": "/api/v1/xiaohongshu/app_v2/search_groups",
+  "params": {
+    "keyword": "上海",
+    "page_no": "0",
+    "source": "unifiedSearchGroup",
+    "is_recommend": "0"
+  },
+  "data": {
+    "code": 0,
+    "success": true,
+    "data": {
+      "has_more": false,
+      "group_search_filters": [
+        "… {3 field(s) truncated}",
+        "… 1 more item(s) truncated"
+      ],
+      "group_info_list": [
+        "… {31 field(s) truncated}",
+        "… 19 more item(s) truncated"
+      ]
+    },
+    "msg": "成功",
+    "debug_id": "ad0a7580",
+    "debug_info": "gAAAAABqaE0weMy4ZcGNdQwRcfWIq6MGWXA-2864ce6ZPf2LjlAbRWK4eU6sUYgIvZc8kSNBOuJ51E1ECQVMYrF2WVQxps0-ai7oUFr8k4BsbAtpnXl7k1p27cyRfLO5UaLhu7Q58GXXDtpecGIBLpzmRSh01R3QZ8Qym5EZMP0091ir9NeyDonSlO64D1E8eZCCqfgx… [440 chars]"
+  }
+}

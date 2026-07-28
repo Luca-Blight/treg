@@ -1,0 +1,30 @@
+{
+  "data": {
+    "uuid": "00000l1",
+    "location": {
+      "hq": {
+        "city": "Sydney",
+        "country": "AUS",
+        "region": "Oceania"
+      },
+      "market_served": {
+        "is_global": true
+      },
+      "offices": [
+        {
+          "city": "Sydney",
+          "country": "AUS",
+          "description": "Canva's global headquarters located in Sydney, Australia. The company was founded in Australia and maintains its primary operations there.",
+          "source": [
+            "https://tech-insider.org/au/australian-tech-startups-2026/"
+          ],
+          "type": {
+            "code": "headquarters",
+            "label": "Headquarters"
+          }
+        }
+      ]
+    }
+  },
+  "credits_consumed": 0.5
+}

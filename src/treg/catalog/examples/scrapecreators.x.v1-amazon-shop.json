@@ -1,0 +1,41 @@
+{
+  "success": true,
+  "credits_remaining": 19834,
+  "credits_charged": 1,
+  "avatar": "https://m.media-amazon.com/images/I/A1rW00V-tHL._CR0%2C0%2C2560%2C2560_._US500_SCLZZZZZZZ_.jpg",
+  "isTopCreator": true,
+  "name": "sydney del rey",
+  "description": "sharing all of my favorite Amazon finds ᥫ᭡ click the icons below to follow me on socials! all photo & video content is also shoppable x",
+  "socials": [
+    "https://vm.tiktok.com/ZTFrowSpg/",
+    "… 1 more item(s) truncated"
+  ],
+  "lists": [
+    {
+      "title": "vacay fitspo (from videos)",
+      "itemCount": 268,
+      "image": "https://m.media-amazon.com/images/G/01/Influencer/full_bleed_pin_2x.png",
+      "url": "https://www.amazon.com/shop/sydneydelrey/list/KUGNMP73CKST?tag=sydneybertonc-20"
+    },
+    "… 19 more item(s) truncated"
+  ],
+  "trendingPicks": [
+    {
+      "url": "https://www.amazon.com/shop/sydneydelrey/getProductDetails/B0GGXZKDT8?showRelatedPost=true&tag_override=sydneybertonc-20",
+      "image": "https://m.media-amazon.com/images/I/41zhtHKtyuL._AC_.jpg",
+      "price": 63.74,
+      "discount": null
+    },
+    "… 15 more item(s) truncated"
+  ],
+  "curations": [
+    {
+      "title": "styled fits (non try on)",
+      "postCount": 121,
+      "image": "https://m.media-amazon.com/images/S/shoppable-media-external-prod-iad-us-east-1/3520061e-8329-48e2-94aa-879edff35c67/a07df-6366-4871-9447-4eb791a01._SX225_SCLZZZZZZZ_.jpeg",
+      "url": "https://www.amazon.com/shop/sydneydelrey/curation/45a32943-0bd5-495a-8630-2390fac635c4"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "pageToken": "<omitted: expires>"
+}

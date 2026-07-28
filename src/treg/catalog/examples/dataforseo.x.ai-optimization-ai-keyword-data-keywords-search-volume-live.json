@@ -1,0 +1,77 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.7902 sec.",
+  "cost": 0.0102,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280920-2171-0619-0000-38bc8038f125",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.7299 sec.",
+      "cost": 0.0102,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "ai_optimization",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "keywords_search_volume",
+        "language_name": "English",
+        "location_code": 2840,
+        "keywords": [
+          "iphone",
+          "seo"
+        ]
+      },
+      "result": [
+        {
+          "location_code": 2840,
+          "language_code": "en",
+          "items_count": 2,
+          "items": [
+            {
+              "keyword": "iphone",
+              "ai_search_volume": 1639139,
+              "ai_monthly_searches": [
+                {
+                  "year": 2026,
+                  "month": 6,
+                  "ai_search_volume": 1639139
+                },
+                {
+                  "year": 2026,
+                  "month": 5,
+                  "ai_search_volume": 2034683
+                },
+                "… 10 more item(s) truncated"
+              ]
+            },
+            {
+              "keyword": "seo",
+              "ai_search_volume": 86763,
+              "ai_monthly_searches": [
+                {
+                  "year": 2026,
+                  "month": 6,
+                  "ai_search_volume": 86763
+                },
+                {
+                  "year": 2026,
+                  "month": 5,
+                  "ai_search_volume": 117383
+                },
+                "… 10 more item(s) truncated"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "87f6312c-af9d-47fd-8395-0798dc001387",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:29",
+  "time_stamp": 1785220229,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-App-API/fetch_status_detail_api_v1_weibo_app_fetch_status_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/87f6312c-af9d-47fd-8395-0798dc001387?sign=106d5a26ebe5b57bf846953d091ef4f1d7a7342cc29259252b16496f7a85e9d0",
+  "router": "/api/v1/weibo/app/fetch_status_detail",
+  "params": {
+    "status_id": "5016922058656962"
+  },
+  "data": {
+    "channelInfo": {
+      "channelConfig": "… {1 field(s) truncated}",
+      "channels": "… [3 item(s) truncated]"
+    },
+    "refreshInfo": "{}",
+    "loadedInfo": "{}",
+    "config": "{}",
+    "pageHeader": "{}",
+    "pageFooter": {
+      "type": "detail_default"
+    },
+    "pageTitle": "{}",
+    "pageTabBar": "{}",
+    "pageRefresh": "{}",
+    "detailInfo": {
+      "status": "… {81 field(s) truncated}",
+      "extend": "… {60 field(s) truncated}"
+    }
+  }
+}

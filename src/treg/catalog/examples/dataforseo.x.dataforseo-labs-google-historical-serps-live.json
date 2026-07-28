@@ -1,0 +1,46 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.1349 sec.",
+  "cost": 0.00012,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0408-0000-fcf7ca45fffc",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.1294 sec.",
+      "cost": 0.00012,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "historical_serps",
+        "se_type": "google",
+        "keyword": "albert einstein",
+        "location_code": 2840,
+        "language_code": "en",
+        "date_from": "2026-04-24",
+        "date_to": "2026-06-24"
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "keyword": "albert einstein",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 1,
+          "items_count": 1,
+          "items": [
+            "… {13 field(s) truncated}"
+          ]
+        }
+      ]
+    }
+  ]
+}

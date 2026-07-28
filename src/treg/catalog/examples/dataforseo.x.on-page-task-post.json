@@ -1,0 +1,35 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0250 sec.",
+  "cost": 0.018,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0216-0000-d6c8dd77c5dc",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0063 sec.",
+      "cost": 0.018,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 2 more item(s) truncated"
+      ],
+      "data": {
+        "api": "on_page",
+        "function": "task_post",
+        "target": "dataforseo.com",
+        "max_crawl_pages": 10,
+        "load_resources": true,
+        "enable_javascript": true,
+        "custom_js": "meta = {}; meta.url = document.URL; meta;",
+        "tag": "some_string_123",
+        "pingback_url": "https://your-server.com/pingscript?id=$id&tag=$tag"
+      },
+      "result": null
+    }
+  ]
+}

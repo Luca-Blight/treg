@@ -1,0 +1,63 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "6.4455 sec.",
+  "cost": 0.101,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0657-0000-15475a195f22",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "6.4373 sec.",
+      "cost": 0.101,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "target_metrics_lite",
+        "language_code": "es",
+        "location_code": 2840,
+        "platform": "google",
+        "target": [
+          {
+            "domain": "en.wikipedia.org",
+            "search_filter": "exclude"
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "initial_dataset_filters": [
+          [
+            "ai_search_volume",
+            "… 2 more item(s) truncated"
+          ]
+        ],
+        "limit": 6
+      },
+      "result": [
+        {
+          "total_count": 1,
+          "offset": 0,
+          "items_count": 1,
+          "aggregated_metrics": null,
+          "items": [
+            {
+              "location": 2840,
+              "language": "es",
+              "platform": "google",
+              "metrics": {
+                "mentions": 3262,
+                "ai_search_volume": 22401580
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

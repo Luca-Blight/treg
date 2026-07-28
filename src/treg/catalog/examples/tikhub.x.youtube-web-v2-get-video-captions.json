@@ -1,0 +1,28 @@
+{
+  "code": 200,
+  "request_id": "20e5a831-8fc8-4ac3-8df4-d56ec051e66a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:44",
+  "time_stamp": 1785220364,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_video_captions_api_v1_youtube_web_v2_get_video_captions_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/20e5a831-8fc8-4ac3-8df4-d56ec051e66a?sign=59af7c67cef677c814a398302ff1490e740d1f45aa5f11ac11cd7ea9528e16e0",
+  "router": "/api/v1/youtube/web_v2/get_video_captions",
+  "params": {
+    "video_id": "dQw4w9WgXcQ",
+    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "language_code": "en",
+    "format": "srt"
+  },
+  "data": {
+    "video_id": "dQw4w9WgXcQ",
+    "language_code": "en",
+    "language_name": "English",
+    "format": "srt",
+    "content": "1\n00:00:01,360 --> 00:00:03,040\n[♪♪♪]\n\n2\n00:00:18,640 --> 00:00:21,880\n♪ We're no strangers to love ♪\n\n3\n00:00:22,640 --> 00:00:26,960\n♪ You know the rules and so do I ♪\n\n4\n00:00:27,040 --> 00:00:31,0… [4153 chars]"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0151 sec.",
+  "cost": 0.006,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0425-0000-59dcea7d7832",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0037 sec.",
+      "cost": 0.006,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "app_data",
+        "function": "app_reviews",
+        "se": "apple",
+        "app_id": "835599320",
+        "location_code": 2840,
+        "language_code": "en",
+        "depth": 200,
+        "se_type": "app_reviews",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "distributions": [
+      {
+        "description": "31到40岁居多,占比46%",
+        "distribution_list": [
+          {
+            "distribution_key": "24-30",
+            "distribution_value": "315912"
+          },
+          {
+            "distribution_key": "50+",
+            "distribution_value": "50003"
+          },
+          "… 3 more item(s) truncated"
+        ],
+        "image": [
+          "31到40岁居多"
+        ],
+        "origin_type": 1,
+        "type": 2,
+        "type_display": "年龄分布"
+      },
+      {
+        "description": "分布最多的3个省份广东(21%),浙江(7%),江苏(7%)",
+        "distribution_list": [
+          {
+            "distribution_key": "湖南",
+            "distribution_value": "45541"
+          },
+          {
+            "distribution_key": "宁夏",
+            "distribution_value": "3129"
+          },
+          "… 32 more item(s) truncated"
+        ],
+        "image": [
+          "广东,浙江,江苏居多"
+        ],
+        "origin_type": 2,
+        "type": 4,
+        "type_display": "省份分布"
+      },
+      "… 8 more item(s) truncated"
+    ],
+    "last_update_time": "1785219029"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:30.253358961",
+  "requestId": "3a75b64b178e4e8c87dcbf639ab32fb1"
+}

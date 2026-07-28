@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "request_id": "adfaf13f-8be2-443d-9337-470bd2d25c4e",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:27",
+  "time_stamp": 1785220107,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_home_feed_api_v1_douyin_web_fetch_home_feed_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/adfaf13f-8be2-443d-9337-470bd2d25c4e?sign=bd8671775d0f4ed0b1f2b05e61abe0d921177bae44bd499069d81184b4c5f9fc",
+  "router": "/api/v1/douyin/web/fetch_home_feed",
+  "params": {},
+  "data": {
+    "aweme_list": [
+      "… {89 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "has_more": 1,
+    "log_pb": {
+      "impr_id": "2026072814282666759AEE1B8CB4E4380E"
+    },
+    "status_code": 0
+  }
+}

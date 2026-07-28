@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "abaf773c-4ac8-4b86-830d-ad9a6c590d26",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:49",
+  "time_stamp": 1785220249,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-V2-API/fetch_user_basic_info_api_v1_weibo_web_v2_fetch_user_basic_info_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/abaf773c-4ac8-4b86-830d-ad9a6c590d26?sign=205755920d92776da5d0250eec60fbe9e3… [150 chars]",
+  "router": "/api/v1/weibo/web_v2/fetch_user_basic_info",
+  "params": {
+    "uid": "7277477906"
+  },
+  "data": {
+    "data": {
+      "id": 7277477906,
+      "idstr": "7277477906",
+      "screen_name": "喝多的学姐",
+      "avatar": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.180/007WvyrUly1i6hjoob2z4j30u00u0gmj.jpg?KID=imgbed,tva&Expires=1785231048&s… [136 chars]",
+      "descText": "微博认证：微博原创视频博主",
+      "cover": "https://wx4.sinaimg.cn/mw690/007WvyrUly1i60fe7499gj30qn0qndhc.jpg",
+      "verified": true,
+      "verified_type": 0,
+      "verified_type_ext": 1,
+      "followers_count_str": "43.4万",
+      "friends_count_str": 342,
+      "remark": "",
+      "following": false,
+      "follow_me": false,
+      "gender": "f",
+      "genderText": "她",
+      "profile_url": "u/7277477906",
+      "special_follow": false,
+      "block": false
+    },
+    "ok": 1
+  }
+}

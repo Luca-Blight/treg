@@ -1,0 +1,72 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "4.2597 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280924-2171-0139-0000-3b31a75edcd0",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "4.1741 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "youtube",
+        "se_type": "organic",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "audi",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "audi",
+          "se_domain": "youtube.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.youtube.com/results?search_query=audi",
+          "datetime": "2026-07-28 06:24:18 +00:00",
+          "spell": null,
+          "item_types": [
+            "youtube_channel",
+            "… 1 more item(s) truncated"
+          ],
+          "se_results_count": 5992258,
+          "items_count": 40,
+          "items": [
+            {
+              "type": "youtube_channel",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "block_rank": 2,
+              "block_name": null,
+              "channel_id": "UCO5ujNeWRIwP4DbCZqZWcLw",
+              "name": "Audi",
+              "url": "https://www.youtube.com/@audi",
+              "logo": "https://yt3.ggpht.com/7nC_s9uwIveejQy85f-rmcMLfjVV_3sO7ui-btbaeaWp1SPT9ByC3mvelhMETl608cC68ETu1A=s176-c-k-c0x00ffffff-no-rj-mo",
+              "video_count": 0,
+              "is_verified": true,
+              "description": "Welcome to the official Audi YouTube Channel. From the very beginning, advanced technology has been at the heart of Audi's ...",
+              "highlighted": [
+                "Audi",
+                "… 1 more item(s) truncated"
+              ]
+            },
+            "… 39 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

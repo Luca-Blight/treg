@@ -1,0 +1,67 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "31.0406 sec.",
+  "cost": 0.006,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0139-0000-98e8de252f7c",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "30.9975 sec.",
+      "cost": 0.006,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "youtube",
+        "se_type": "video_subtitles",
+        "language_code": "en",
+        "location_code": 2840,
+        "video_id": "Y8Wu4rSNJms",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "video_id": "Y8Wu4rSNJms",
+          "se_domain": "youtube.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.youtube.com/watch?v=Y8Wu4rSNJms",
+          "datetime": "2026-07-28 10:34:59 +00:00",
+          "spell": null,
+          "item_types": [
+            "youtube_subtitles"
+          ],
+          "unsupported_language": false,
+          "translate_language": null,
+          "origin_language": "en",
+          "category": null,
+          "subtitles_count": 31,
+          "title": "How to set up BMW eDrive Modes in the New Generation of BMW Plug-In Hybrids",
+          "items_count": 31,
+          "items": [
+            {
+              "type": "youtube_subtitles",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "text": "electrify your driving efficiency",
+              "start_time": 1.12,
+              "end_time": 6,
+              "duration_time": 4.88
+            },
+            "… 30 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

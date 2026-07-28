@@ -1,0 +1,39 @@
+{
+  "code": 200,
+  "request_id": "81318e8d-0328-488f-8025-43d896395c34",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:11",
+  "time_stamp": 1785220211,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Shop-Web-API/fetch_products_category_list_api_v1_tiktok_shop_web_fetch_products_category_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/81318e8d-0328-488f-8025-43d896395c34?sign=cc45ed365077059344f345fa070e956a86d6cbe9773b1cca809c430ff9b38e64",
+  "router": "/api/v1/tiktok/shop/web/fetch_products_category_list",
+  "params": {
+    "region": "US"
+  },
+  "data": [
+    {
+      "self": {
+        "category_id": "601450",
+        "category_level": 1,
+        "is_leaf": false,
+        "parent_category_id": "0",
+        "category_name": "Beauty & Personal Care",
+        "category_name_en": "beauty-personal-care",
+        "image_url": "https://lf16-tiktok-common.tiktokcdn-us.com/obj/tiktok-web-common-tx/i18n_ecom_fe/tiktok_shop_web_mono/apps/homepage_desktop/static/image/beauty-personal.fdbc446c.png"
+      },
+      "children": [
+        {
+          "self": "… {7 field(s) truncated}",
+          "children": "… [0 item(s) truncated]"
+        },
+        "… 11 more item(s) truncated"
+      ]
+    },
+    "… 27 more item(s) truncated"
+  ]
+}

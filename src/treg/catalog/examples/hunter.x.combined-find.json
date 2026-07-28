@@ -1,0 +1,34 @@
+{
+  "data": {
+    "person": {
+      "id": "706205e2-a15b-5a86-b73c-81ae8b60969d",
+      "name": "… {3 field(s) truncated}",
+      "email": "person@example.com",
+      "location": null,
+      "timeZone": null,
+      "utcOffset": null,
+      "geo": "… {7 field(s) truncated}",
+      "bio": null,
+      "site": null,
+      "avatar": null,
+      "…": "13 more field(s) truncated"
+    },
+    "company": {
+      "id": "b4c426e5-4566-5180-b866-183823b9e31b",
+      "name": "Close",
+      "legalName": "Close",
+      "domain": "close.io",
+      "domainAliases": "… [0 item(s) truncated]",
+      "site": "… {2 field(s) truncated}",
+      "category": "… {10 field(s) truncated}",
+      "tags": "… [14 item(s) truncated]",
+      "description": "Close is a CRM that focuses on sales software and enables remote work with a strong emphasis on customer relationship management.",
+      "foundedYear": 2013,
+      "…": "24 more field(s) truncated"
+    }
+  },
+  "meta": {
+    "email": "person@example.com"
+  },
+  "_scrubbed": true
+}

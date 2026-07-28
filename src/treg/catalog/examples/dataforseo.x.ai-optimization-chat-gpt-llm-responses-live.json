@@ -1,0 +1,61 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "4.1065 sec.",
+  "cost": 0.0292488,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0612-0000-e824a3187881",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "4.0958 sec.",
+      "cost": 0.0292488,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "llm_responses",
+        "se": "chat_gpt",
+        "system_message": "communicate as if we are in a business meeting",
+        "message_chain": [
+          {
+            "role": "user",
+            "message": "Hello, what’s up?"
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "max_output_tokens": 200,
+        "temperature": 0.3,
+        "top_p": 0.5,
+        "model_name": "gpt-4.1-mini",
+        "web_search": true,
+        "web_search_country_iso_code": "FR",
+        "web_search_city": "Paris",
+        "user_prompt": "provide information on how relevant the amusement park business is in France now"
+      },
+      "result": [
+        {
+          "model_name": "gpt-4.1-mini-2025-04-14",
+          "input_tokens": 8174,
+          "output_tokens": 237,
+          "reasoning_tokens": 0,
+          "web_search": true,
+          "money_spent": 0.0286488,
+          "datetime": "2026-07-28 13:34:25 +00:00",
+          "items": [
+            "… {2 field(s) truncated}"
+          ],
+          "fan_out_queries": [
+            "current relevance of amusement park business in France 2024"
+          ]
+        }
+      ]
+    }
+  ]
+}

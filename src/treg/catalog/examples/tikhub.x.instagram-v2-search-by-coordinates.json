@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "2354e5f8-7abb-462e-9bb3-ed16ad68c760",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:43",
+  "time_stamp": 1785220303,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V2-API/search_by_coordinates_api_v1_instagram_v2_search_by_coordinates_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2354e5f8-7abb-462e-9bb3-ed16ad68c760?sign=1a1a631740cfddcc738581aeac90e7b3827f0d0b3a68372374ed15079366f54c",
+  "router": "/api/v1/instagram/v2/search_by_coordinates",
+  "params": {
+    "latitude": "40.7",
+    "longitude": "-74"
+  },
+  "data": {
+    "data": {
+      "count": 30,
+      "items": [
+        {
+          "address": "1.2mi",
+          "category": "",
+          "city": null,
+          "hours": [],
+          "id": "110334498996314",
+          "id_source": "facebook_places",
+          "latitude": 40.711272,
+          "longitude": -73.98159,
+          "name": "Manhattan, New York",
+          "phone": "",
+          "website": "",
+          "zip": null
+        },
+        "… 29 more item(s) truncated"
+      ]
+    }
+  }
+}

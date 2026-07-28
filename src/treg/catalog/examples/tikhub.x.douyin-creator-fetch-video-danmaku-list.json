@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "8b0b717a-6af7-4a58-a14d-c5e43f139339",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:13",
+  "time_stamp": 1785220093,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Creator-API/fetch_video_danmaku_list_api_v1_douyin_creator_fetch_video_danmaku_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/8b0b717a-6af7-4a58-a14d-c5e43f139339?sign=bb73fb502f59b467c1bd52bb628dac9c7420a70fe594b95b771b6bce2b5d06e6",
+  "router": "/api/v1/douyin/creator/fetch_video_danmaku_list",
+  "params": {
+    "item_id": "7545659154417896746",
+    "count": "5",
+    "offset": "0",
+    "order_type": "1",
+    "is_blocked": "false"
+  },
+  "data": {
+    "danmaku_list": [
+      {
+        "danmaku_id": "7666651352521605945",
+        "item_id": "7545659154417896746",
+        "user_id": "73369418568",
+        "offset_time": 643667,
+        "text": "哎，这一幕太真实了 我到现在还在用前同事留下来的门卡[尬笑]",
+        "status": 1,
+        "digg_type": 0,
+        "digg_count": 0,
+        "create_time": 1785035451,
+        "danmaku_logos": null,
+        "text_extra": null,
+        "extra": "… {8 field(s) truncated}"
+      },
+      "… 1 more item(s) truncated"
+    ],
+    "total_count": 756,
+    "has_more": true,
+    "status_code": 0
+  }
+}

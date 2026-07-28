@@ -1,0 +1,40 @@
+{
+  "code": 0,
+  "data": {
+    "object": [
+      "… 19 field(s) truncated",
+      "… 11 more item(s) truncated"
+    ],
+    "contact": {
+      "username": "v2_060000231003b20faec8c4e68b1… [86 chars total]",
+      "nickname": "婷姐的厨房日记",
+      "head_url": "https://wx.qlogo.cn/finderhead… [175 chars total]",
+      "signature": "<omitted: expires>",
+      "follow_flag": 0,
+      "auth_info": "… 6 field(s) truncated",
+      "cover_img_url": "",
+      "spam_status": 0,
+      "ext_flag": 262156,
+      "ext_info": "… 4 field(s) truncated",
+      "live_status": 2,
+      "live_cover_img_url": "http://wxapp.tc.qq.com/251/203… [314 chars total]",
+      "live_info": "… 8 field(s) truncated",
+      "bind_info": "… 0 item(s) truncated",
+      "menu": "… 0 item(s) truncated",
+      "status": "0",
+      "additional_flag": "1",
+      "reference_info": "… 3 item(s) truncated"
+    },
+    "ip_region_info": {
+      "region_text": "浙江"
+    },
+    "original_count": 12,
+    "feeds_count": 12,
+    "last_buffer": "CLqS9K2Xv/HXzwEQARgAIPaSqIf7ht… [216 chars total]",
+    "continue_flag": 0,
+    "req_p": "192.168.130.85:2020, 192.168.1… [39 chars total]"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:14:41.413935702",
+  "requestId": "95f558e224974be1ab95a88dc9c8e6… [32 chars total]"
+}

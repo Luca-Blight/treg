@@ -1,0 +1,59 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "10.0081 sec.",
+  "cost": 0.02418,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0287-0000-fcb8b470ac1b",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "10.0019 sec.",
+      "cost": 0.02418,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "page_intersection",
+        "targets": {
+          "1": "football.com",
+          "2": "fifa.com"
+        },
+        "exclude_targets": [
+          "skysports.com"
+        ],
+        "limit": 5,
+        "order_by": [
+          "1.rank,desc"
+        ],
+        "filters": [
+          [
+            "2.domain_from_rank",
+            "… 2 more item(s) truncated"
+          ],
+          "… 2 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "targets": {
+            "1": "football.com",
+            "2": "fifa.com"
+          },
+          "total_count": 27,
+          "items_count": 5,
+          "items": [
+            "… {2 field(s) truncated}",
+            "… 4 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

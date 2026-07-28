@@ -1,0 +1,36 @@
+{
+  "version": 3,
+  "hits": 90,
+  "results": 1,
+  "kgversion": "478",
+  "diffbot_type": "Person",
+  "facet": false,
+  "textFallback": false,
+  "data": [
+    {
+      "score": 1961.6490478515625,
+      "entity": {
+        "twitterUri": "twitter.com/skydayton",
+        "educations": "… [3 item(s) truncated]",
+        "nationalities": "… [2 item(s) truncated]",
+        "type": "Person",
+        "allNames": "… [11 item(s) truncated]",
+        "skills": "… [65 item(s) truncated]",
+        "youtubeUri": "youtube.com/channel/UC1-Infrq0_IXLcbogpz-KiQ",
+        "id": "EejFD9_fcNgGOFaWoKTKtgw",
+        "nbOrigins": 35,
+        "image": "https://kg.diffbot.com/image/api/get?fetch=yes&urls=g%3Cj7guSasW.%3AXqGm%7CU1Dgq%5B%7BGQ8_.%7Dg6%5E-AqQNTOV%3DkY%7CaQr8Q%2FPf%2F%5D%7ELK%3B%5Cr%3Bi%3APiGwT50g97lVaTv5%5BoAq5V-%3D-g-i0YxA%5E%7CU.7V%7B,… [422 chars]",
+        "images": "… [10 item(s) truncated]",
+        "wikipediaUri": "en.wikipedia.org/wiki/Sky_Dayton",
+        "diffbotUri": "http://diffbot.com/entity/EejFD9_fcNgGOFaWoKTKtgw",
+        "nbIncomingEdges": 111,
+        "wikipediaPageviewsLastQuarterGrowth": 0.04155593,
+        "…": "37 more field(s) truncated"
+      },
+      "entity_ctx": {
+        "inner_hits": "… {2 field(s) truncated}",
+        "matched_clauses": "… [0 item(s) truncated]"
+      }
+    }
+  ]
+}

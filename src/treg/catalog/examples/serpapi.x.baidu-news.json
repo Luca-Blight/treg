@@ -1,0 +1,63 @@
+{
+  "search_metadata": {
+    "id": "6a6898a7d0a88f7ae0d11b5a",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/UkABFWN_QI7cElaoR5hyxg/6a6898a7… [81 chars]",
+    "created_at": "2026-07-28 11:55:19 UTC",
+    "processed_at": "2026-07-28 11:55:19 UTC",
+    "baidu_news_url": "https://www.baidu.com/s?wd=coffee&tn=news&bsst=1&cl=2&rtt=1",
+    "raw_html_file": "https://serpapi.com/searches/UkABFWN_QI7cElaoR5hyxg/6a6898a7… [81 chars]",
+    "total_time_taken": 2.6
+  },
+  "search_parameters": {
+    "engine": "baidu_news",
+    "q": "coffee",
+    "rtt": "1"
+  },
+  "search_information": {
+    "total_results": 26
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "冠军入筑探啡香!咖啡冠军探访贵阳“五精”",
+      "link": "https://baijiahao.baidu.com/s?id=1871316565706304825&wfr=spi… [70 chars]",
+      "date": "7天前",
+      "snippet": "当天上午，探访组走进云岩区老城街巷的LOW LIGHT咖啡馆、福禄咖啡以及251COFFEE，这些扎根文昌阁、电台街老城… [98 chars]",
+      "source": "动静新闻",
+      "thumbnail": "https://t7.baidu.com/it/u=4109184986,2264107497&fm=3035&app=… [179 chars]"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "query": "coffee咖啡",
+      "link": "https://www.baidu.com/s?bsst=1&wd=coffee%E5%92%96%E5%95%A1&t… [191 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?engine=baidu_news&q=coffee%E… [82 chars]"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "top_searches": [
+    {
+      "position": 1,
+      "text": "习近平对侨务工作作出重要指示",
+      "link": "https://www.baidu.com/s?wd=%E4%B9%A0%E8%BF%91%E5%B9%B3%E5%AF… [415 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?engine=baidu_news&q=%E4%B9%A… [184 chars]"
+    },
+    "… 30 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "other_pages": {
+      "2": "https://www.baidu.com/s?bsst=1&wd=coffee&tn=news&cl=2&rtt=1&… [179 chars]",
+      "3": "https://www.baidu.com/s?bsst=1&wd=coffee&tn=news&cl=2&rtt=1&… [179 chars]"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?engine=baidu_news&pn=10&q=co… [70 chars]",
+      "3": "https://serpapi.com/search.json?engine=baidu_news&pn=20&q=co… [70 chars]"
+    }
+  }
+}

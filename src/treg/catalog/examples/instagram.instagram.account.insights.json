@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "name": "reach",
+      "period": "day",
+      "title": "Accounts reached",
+      "description": "The number of unique accounts that have seen your content, at least once, including in ads. Content includes posts, stories, reels, videos and live videos. Reach is different from impressions, which may include multiple views of your content by the same accounts. This metric is estimated and in development.",
+      "total_value": {
+        "value": 1234
+      },
+      "id": "17841439917904520/insights/reach/day"
+    },
+    {
+      "name": "accounts_engaged",
+      "period": "day",
+      "title": "Accounts engaged",
+      "description": "The number of accounts that have interacted with your content, including in ads. Content includes posts, stories, reels, videos and live videos. Interactions can include actions such as likes, saves, comments, shares or replies. These metrics are estimated and in development.",
+      "total_value": {
+        "value": 1234
+      },
+      "id": "17841439917904520/insights/accounts_engaged/day"
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "paging": {
+    "previous": "https://graph.facebook.com/v25.0/<ig_user_id>/insights?…",
+    "next": "https://graph.facebook.com/v25.0/<ig_user_id>/insights?…"
+  },
+  "_scrubbed": true
+}

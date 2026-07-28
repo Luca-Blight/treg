@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "db44d93a-68ff-4169-a3dd-c6ff1cab4fd7",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:56",
+  "time_stamp": 1785220256,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Twitter-Web-API/fetch_tweet_detail_a… [100 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/db44d93a-68ff-41… [150 chars]",
+  "router": "/api/v1/twitter/web/fetch_tweet_detail",
+  "params": {
+    "tweet_id": "1808168603721650364"
+  },
+  "data": {
+    "likes": 285157,
+    "created_at": "Tue Jul 02 15:59:23 +0000 2024",
+    "status": "active",
+    "text": "The New York Times is attacking *your* freedom of speech! ht… [81 chars]",
+    "display_text": "The New York Times is attacking *your* freedom of speech!",
+    "retweets": 52852,
+    "bookmarks": 6669,
+    "quotes": 3934,
+    "reply_to": null,
+    "replies": 26967,
+    "lang": "en",
+    "in_reply_to_screen_name": null,
+    "in_reply_to_status_id_str": null,
+    "in_reply_to_user_id_str": null,
+    "sensitive": false,
+    "…": "8 more field(s) truncated"
+  }
+}

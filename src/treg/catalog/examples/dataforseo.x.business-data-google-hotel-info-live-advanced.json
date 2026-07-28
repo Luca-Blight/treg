@@ -1,0 +1,53 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "10.2286 sec.",
+  "cost": 0.004,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0285-0000-ecd0dbd5f98c",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "10.0145 sec.",
+      "cost": 0.004,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "business_data",
+        "function": "hotel_info",
+        "se": "google",
+        "language_code": "en",
+        "location_name": "New York,New York,United States",
+        "hotel_identifier": "CgoI-KWyzenM_MV3EAE",
+        "se_type": "hotel_info",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "hotel_identifier": "ChcI-KWyzenM_MV3GgsvZy8xdGh0cTIxZxAB",
+          "location_code": 1023191,
+          "language_code": "en",
+          "check_url": "https://www.google.com/travel/hotels/entity/CgoI-KWyzenM_MV3EAE?hl=en&gl=US&gws_rd=cr&uule=w+CAIQIFISCTsIP9OlT8KJEWL-d-EGjwvI&ts=CAESCAoCCAMKAggDGiAKAhoAEhoSFAoHCOoPEAcYHRIHCOoPEAcYHhgBMgIQACoJCgU6A1V… [205 chars]",
+          "datetime": "2026-07-28 10:34:17 +00:00",
+          "title": "Wildwood Suites",
+          "stars": 0,
+          "stars_description": null,
+          "address": "120 Sawmill Rd #303, Breckenridge, CO 80424",
+          "phone": "+19705474800",
+          "about": "… {9 field(s) truncated}",
+          "location": "… {8 field(s) truncated}",
+          "reviews": "… {5 field(s) truncated}",
+          "overview_images": "… [9 item(s) truncated]",
+          "prices": "… {9 field(s) truncated}"
+        }
+      ]
+    }
+  ]
+}

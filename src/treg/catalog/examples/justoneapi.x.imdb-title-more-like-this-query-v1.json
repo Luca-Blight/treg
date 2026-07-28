@@ -1,0 +1,28 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "connections": {
+        "edges": []
+      },
+      "moreLikeThisTitles": {
+        "edges": [
+          {
+            "node": {
+              "id": "tt0468569"
+            }
+          },
+          {
+            "node": {
+              "id": "tt0068646"
+            }
+          },
+          "… 13 more item(s) truncated"
+        ]
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:01.809089471",
+  "requestId": "43f737f776b849f6843a40534a62442e"
+}

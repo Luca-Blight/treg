@@ -1,0 +1,49 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "content_list": [
+      {
+        "attribute_datas": {
+          "comment_cnt_all": "7282",
+          "core_user_id": "801982706640040",
+          "cover_image_uri": "tos-cn-p-0015/o4PgsACohDCfwEQq6VFfABgoVMqpjgIR9pDhAq",
+          "finish_rate": "0.480678",
+          "interact_cnt": "50251",
+          "interact_rate": "0.038438",
+          "is_star_item": "0",
+          "item_create_time": "1784027400",
+          "item_title": "#说真话#美食 #踩雷",
+          "like_cnt_all": "17656",
+          "quality_score": "83.333333",
+          "score": "1.4475",
+          "share_cnt_all": "25313",
+          "v2_first_tag_id": "[611]",
+          "v2_second_tag_id": "[61101]",
+          "vv_all": "1307339"
+        },
+        "id": "7662339338633804398",
+        "object_type": 2,
+        "user_info": {
+          "avatar_url": "https://p3.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-avt-0015_da381a4e1a6e71af0ab10397a342490d.jpeg?from=3782654143",
+          "core_user_id": "801982706640040",
+          "follower": "4431",
+          "name": "二狗肉夹馍"
+        }
+      },
+      "… 9 more item(s) truncated"
+    ],
+    "pagination": {
+      "has_more": true,
+      "limit": 10,
+      "page": 1,
+      "total_count": 2000
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:53.00276704",
+  "requestId": "c59055fa40574eb4b0595ca9e1bbd3e1"
+}

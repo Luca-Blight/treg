@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "id": "17953960824194864",
+      "caption": "Example post caption.",
+      "media_type": "VIDEO",
+      "permalink": "https://www.instagram.com/reel/EXAMPLE0/",
+      "timestamp": "2026-07-27T05:22:30+0000",
+      "like_count": 1234,
+      "comments_count": 12
+    },
+    {
+      "id": "18120873550588764",
+      "caption": "Example post caption.",
+      "media_type": "VIDEO",
+      "permalink": "https://www.instagram.com/reel/EXAMPLE1/",
+      "timestamp": "2026-05-22T03:35:39+0000",
+      "like_count": 1234,
+      "comments_count": 12
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "QVFIU<cursor>",
+      "after": "QVFIU<cursor>"
+    },
+    "next": "https://graph.facebook.com/v25.0/17841439917904520/media?fields=…&limit=2&after=QVFIU<cursor>"
+  },
+  "_scrubbed": true
+}

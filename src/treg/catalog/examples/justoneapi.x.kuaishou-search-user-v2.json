@@ -1,0 +1,52 @@
+{
+  "code": 0,
+  "data": {
+    "result": 1,
+    "userFoldIndex": -1,
+    "recoPcursor": "no_more",
+    "ussid": "MV80NzA1NjEwMzMyXzE3ODUyMTg2NDk1MDJfXzE3… [43 chars total]",
+    "portalFlag": true,
+    "extParams": {
+      "disablePhotoInsert": false,
+      "rsRecoAfterPlayInterval": 2,
+      "dynamicShard": false,
+      "isShowPymkUserPhotos": true,
+      "searchTaskParam": {},
+      "streamExtParams": "{\"single\":false,\"predict\":false,\"searchD… [80 chars total]",
+      "isShowScrollTopButton": false,
+      "subtagWithPic": false
+    },
+    "pcursor": "1",
+    "llsid": "2006114286391458258",
+    "host-name": "public-bjmt-c26-kce-node382.idchb1az4.hb… [52 chars total]",
+    "recoPymkFlag": false,
+    "users": [
+      {
+        "kwaiId": "kuaishoumeishi",
+        "extra": "… 1 field(s) truncated",
+        "isBanned": false,
+        "fansCount": 1236175,
+        "fans": false,
+        "messageLink": "kwai://message/40300058",
+        "following": false,
+        "verified": true,
+        "verifiedDetail": "… 6 field(s) truncated",
+        "user_name": "快手美食",
+        "feedLogCtx": "… 1 field(s) truncated",
+        "headurl": "http://p4.a.yximgs.com/uhead/AB/2021/02/… [101 chars total]",
+        "headurls": "… 2 item(s) truncated",
+        "is_followed": 0,
+        "user_text": "快手平台美食账号(♡◡♡)\n在这里，食妹精心挖掘实力亮眼的美食选手，欢迎有实力的… [79 chars total]",
+        "user_id": 40300058,
+        "user_sex": "F",
+        "visitorBeFollowed": false,
+        "isFavorited": false
+      },
+      "… 29 more item(s) truncated"
+    ],
+    "responseCode": 0
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:10.365416413",
+  "requestId": "2fce5f16a5604c30a54d87d678b4366c"
+}

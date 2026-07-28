@@ -1,0 +1,38 @@
+{
+  "code": 0,
+  "data": {
+    "status_code": 0,
+    "comments": [
+      "… 38 field(s) truncated",
+      "… 7 more item(s) truncated"
+    ],
+    "cursor": 20,
+    "has_more": 1,
+    "reply_style": 2,
+    "total": 369180,
+    "extra": {
+      "now": 1785218582000,
+      "fatal_item_ids": null,
+      "scenes": null
+    },
+    "log_pb": {
+      "impr_id": "20260728140302066416539AA20B5E… [34 chars total]"
+    },
+    "hotsoon_filtered_count": 0,
+    "user_commented": 0,
+    "fast_response_comment": {
+      "constant_response_words": "… 3 item(s) truncated",
+      "timed_response_words": "… 3 item(s) truncated"
+    },
+    "comment_config": {},
+    "general_comment_config": {},
+    "show_management_entry_point": 0,
+    "comment_common_data": "MS4wLjAAAAAAUU6uX0t-qE7uQxD_fg… [2786 chars total]",
+    "folded_comment_count": 0,
+    "comment_insert_bars": null,
+    "sort_tags_report_map": "{\"eco_level_10\":\"interest_comm… [84 chars total]"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:03.382294932",
+  "requestId": "d91f0b82b04947b3b243d6617ef4fb… [32 chars total]"
+}

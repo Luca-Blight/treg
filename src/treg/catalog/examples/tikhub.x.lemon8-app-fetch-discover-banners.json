@@ -1,0 +1,34 @@
+{
+  "code": 200,
+  "request_id": "4f5547ca-5671-401e-ade5-42935e87ea0b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:09",
+  "time_stamp": 1785220149,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Lemon8-App-API/fetch_discover_banners_api_v1_lemon8_app_fetch_discover_banners_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/4f5547ca-5671-401e-ade5-42935e87ea0b?sign=e1f29d3e53f4feb0b1b21c51d302a5c0cdbbcf685c0c598a39707f6ce675850b",
+  "router": "/api/v1/lemon8/app/fetch_discover_banners",
+  "params": {},
+  "data": {
+    "code": 0,
+    "data": {
+      "banners": [
+        {
+          "banner_click_url": "sslocal://webview?url=https%3A%2F%2Fv.lemon8-app.com%2Foxygen%2Fpage%2Frelease%2F7667212807574489863%3FappType%3Dlemon8_otter%26pid%3D524008451%26otter_uid%3D2876%26magic_source%3Ddiscover_banner",
+          "collection_banner_url": "… {4 field(s) truncated}",
+          "id": "25485",
+          "profile_banner_url": "… {4 field(s) truncated}",
+          "title": "Join #MyHairType to win $500! "
+        },
+        "… 5 more item(s) truncated"
+      ]
+    },
+    "message": "success",
+    "result_status": 0,
+    "server_time": "1785220148.91"
+  }
+}

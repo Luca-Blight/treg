@@ -1,0 +1,80 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "14.0848 sec.",
+  "cost": 0.09,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0593-0000-8bdc2676e6a3",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "13.9818 sec.",
+      "cost": 0.09,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "audience_estimation",
+        "se": "bing",
+        "location_coordinate": "29.6821525,-82.4098881,100",
+        "age": [
+          "twenty_five_to_thirty_four",
+          "… 2 more item(s) truncated"
+        ],
+        "bid": 1,
+        "daily_budget": 24,
+        "gender": [
+          "male"
+        ],
+        "industry": [
+          "806303407",
+          "… 1 more item(s) truncated"
+        ],
+        "job_function": [
+          "806298607"
+        ]
+      },
+      "result": [
+        {
+          "est_impressions": {
+            "high": null,
+            "low": null
+          },
+          "est_audience_size": {
+            "high": null,
+            "low": null
+          },
+          "est_clicks": {
+            "high": null,
+            "low": null
+          },
+          "est_spend": {
+            "high": null,
+            "low": null
+          },
+          "est_cost_per_event": {
+            "high": null,
+            "low": null
+          },
+          "est_ctr": {
+            "high": null,
+            "low": null
+          },
+          "suggested_bid": null,
+          "suggested_budget": null,
+          "events_lost_to_bid": null,
+          "events_lost_to_budget": null,
+          "est_reach_audience_size": 282.17,
+          "est_reach_impressions": 64350,
+          "currency": null
+        }
+      ]
+    }
+  ]
+}

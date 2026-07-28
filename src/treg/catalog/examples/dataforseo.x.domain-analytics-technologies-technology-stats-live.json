@@ -1,0 +1,43 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0376 sec.",
+  "cost": 0.0144,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280923-2171-0558-0000-9a6f854ed181",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0115 sec.",
+      "cost": 0.0144,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "domain_analytics",
+        "function": "technology_stats",
+        "se": "technologies",
+        "technology": "jQuery",
+        "date_from": "2026-04-24",
+        "date_to": "2026-06-24"
+      },
+      "result": [
+        {
+          "technology": "jQuery",
+          "date_from": "2026-04-24",
+          "date_to": "2026-06-24",
+          "items_count": 2,
+          "items": [
+            "… 6 field(s) truncated",
+            "… 1 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

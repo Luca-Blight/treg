@@ -1,0 +1,55 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "23.3394 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0139-0000-6c1ca973b4d9",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "23.2935 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "youtube",
+        "se_type": "video_comments",
+        "language_code": "en",
+        "location_code": 2840,
+        "video_id": "vQXvyV0zIP4",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "video_id": "vQXvyV0zIP4",
+          "se_domain": "youtube.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.youtube.com/watch?v=vQXvyV0zIP4",
+          "datetime": "2026-07-28 10:34:49 +00:00",
+          "spell": null,
+          "item_types": [
+            "youtube_comment"
+          ],
+          "title": "The first-ever BMW M5 CS.",
+          "comments_count": 4942,
+          "items_count": 20,
+          "items": [
+            "… {11 field(s) truncated}",
+            "… 19 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

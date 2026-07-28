@@ -1,0 +1,309 @@
+provider: seranking
+source:
+  docs: https://seranking.com/api/data/
+  openapi: null # SE Ranking publishes a Postman collection and HTML reference, no fetchable spec
+  curated: 2026-07-28
+
+# UNVERIFIED — no credential available at curation time; every path, parameter and price below is
+# transcribed from SE Ranking's official Data API docs 2026-07-28. Nothing here has been called.
+#
+# House rules for this provider (they apply to EVERY endpoint below, so they are stated once):
+#
+#  1. TWO DIFFERENT APIs SHARE THIS HOST. SE Ranking sells a DATA API (the research endpoints
+#     catalogued here: backlinks, domain analysis, keyword research, SERP) and a separate PROJECT
+#     API (rank tracking for sites you have added as projects). Their keys are NOT interchangeable
+#     — a Project API key on these paths fails authentication. Everything below is Data API.
+#  2. The key rides as `Authorization: Token <key>` and is INJECTED by treg — never list it as user
+#     input. (The docs also accept `?apikey=…`; treg uses the header form.)
+#  3. `source` IS THE REGIONAL DATABASE and it is required on every keyword and domain-analysis
+#     endpoint: a two-letter code such as `us`, `uk`, `de`. It selects which country's index answers,
+#     so the same keyword returns different volumes per `source`. The backlinks endpoints are
+#     index-wide and take `target` instead.
+#  4. BILLING IS IN CREDITS, and each endpoint charges a PER-REQUEST amount, a PER-RECORD amount,
+#     or both — the two are independent. Domain-analysis endpoints are flat 100 credits per request
+#     no matter how many rows come back (so ask for a big `limit`, it is free at the margin);
+#     backlink LIST endpoints are 0 per request and 1 per row (so `limit` is the whole cost, keep it
+#     small). Getting these backwards is the expensive mistake on this provider. Credits are sold
+#     annually — 12M for $2,148/yr up to 120M for $10,200/yr, i.e. roughly $179 down to $85 per
+#     million — so `cost.value` is null and the credit arithmetic lives in `cost.note`.
+#     Credits are consumed ONLY on a successful 2xx response; errors are free.
+#  5. RATE LIMIT: the key is capped at 10 requests per second. A parallel sweep across the per-row
+#     backlink endpoints will hit this well before it exhausts credits — throttle the caller.
+#
+# NO google.serp.organic ENTRY — SE Ranking's Data API has NO SERP endpoint. A /v1/serp/… family
+# was referenced by older material and by search-engine summaries, but the SERP docs page
+# (seranking.com/api/data/serp/) 404s as of 2026-07-28 and the service appears withdrawn; it is
+# also absent from the published per-endpoint credit table. An earlier draft of this file
+# catalogued a POST-then-poll task pair from those stale references — it was removed rather than
+# shipped unproven. If SE Ranking reinstates a SERP product, that is the gap to fill here.
+#
+# WRONG-KEY TRAP: SE Ranking issues Data API keys and Project API keys separately and they are not
+# interchangeable. A Project API key on the paths below fails authentication in a way that looks
+# exactly like an invalid or expired key, so "the key is bad" is usually "the key is the wrong
+# type" — check which product issued it before rotating anything.
+
+
+pricing_url: https://seranking.com/pricing.html
+endpoints:
+  # --- Account (free) ---------------------------------------------------------------------------
+  # Worth calling before any sweep: it reports credits remaining, so an agent can refuse a job it
+  # cannot pay for. It is also the credential health-check and costs nothing.
+  - id: seranking.account.usage
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v1/account/subscription
+    name: "Check account plan and credit balance"
+    summary: "Check the calling account's plan status, credit allowance and credits remaining"
+    input:
+      queryParams:
+        output: {type: string, required: false, note: "json (default) | xml"}
+      note: "returns subscription_info: status (active|inactive|expired|disabled), start_date, expiration_date, units_limit, units_left. Any captured example should have the account's real balances masked before commit."
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      note: "0 credits per request and 0 per record — the docs list it explicitly as free. Correct liveness probe for an SE Ranking Data API key, and what treg's registry already probes."
+    docs_url: https://seranking.com/api/data/account-system/#subscription
+
+  # --- Keyword research -------------------------------------------------------------------------
+  - id: seranking.google.keywords.volume
+    capability: google.keywords.volume
+    platform: google
+    scope: any_account
+    method: POST
+    path: /v1/keywords/export
+    name: "Get Google keyword volume and metrics in bulk"
+    summary: "Google volume, CPC, difficulty, competition and intent for up to 5,000 keywords"
+    input:
+      bodyType: json
+      queryParams:
+        source: {type: string, required: true, note: "regional database code — selects which country's index answers", example: "us"}
+      body:
+        keywords: {type: "array[string]", required: true, note: "1 to 5,000 keywords", example: ["seo platform"]}
+        sort: {type: string, required: false, note: "volume | cpc | difficulty | competition"}
+        sort_order: {type: string, required: false, note: "asc | desc"}
+        history_from: {type: string, required: false, note: "first month of volume history, YYYY-MM-DD"}
+        history_to: {type: string, required: false, note: "last month of volume history, YYYY-MM-DD"}
+      note: "note the split: `source` rides in the QUERY STRING while the keyword list rides in the JSON body. Returns volume, cpc, difficulty, competition, intents and history_trend per keyword."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "10 credits per keyword RETURNED, 0 per request. Batching 5,000 keywords into one call costs the same as 5,000 single-keyword calls (50,000 credits) but saves the round trips — batch for latency, not for price."
+    docs_url: https://seranking.com/api/data/keyword-research/#export
+
+  - id: seranking.google.keywords.ideas
+    capability: google.keywords.ideas
+    platform: google
+    scope: any_account
+    method: GET
+    path: /v1/keywords/related
+    name: "List related keyword ideas for a seed"
+    summary: "Keywords related to a seed, each with volume, CPC, difficulty and relevance"
+    input:
+      queryParams:
+        source: {type: string, required: true, note: "regional database code", example: "us"}
+        keyword: {type: string, required: true, note: "the seed keyword", example: "avocado"}
+        limit: {type: integer, required: false, note: "COST DIAL — rows to return; default 100 at 10 credits each = 1,000 credits", example: 10}
+        offset: {type: integer, required: false, note: "default 0"}
+        sort: {type: string, required: false, note: "keyword | volume | cpc | difficulty | competition"}
+        sort_order: {type: string, required: false, note: "asc | desc"}
+        history_trend: {type: boolean, required: false, note: "attach 12-month volume history to each keyword"}
+        "filter[volume_from]": {type: integer, required: false, note: "the filter family is bracketed: filter[volume_from], filter[volume_to], filter[difficulty_from], filter[cpc_to], filter[serp_features], filter[intents], filter[multi_keyword_included], filter[multi_keyword_excluded] …"}
+      note: |
+        Three sibling endpoints share this exact parameter shape and price and differ only in how
+        they pick the ideas: /v1/keywords/related (semantically related, this entry),
+        /v1/keywords/similar (same-SERP overlap) and /v1/keywords/questions (question phrasings).
+        /v1/keywords/longtail is the cheap one at 1 credit per keyword, but returns bare strings
+        with no metrics.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "10 credits per keyword RETURNED, 0 per request — so `limit` is the entire cost. The default limit of 100 spends 1,000 credits; always set it explicitly."
+    docs_url: https://seranking.com/api/data/keyword-research/#related
+
+  # --- Domain analysis (flat per-request pricing — a large `limit` is free at the margin) --------
+  - id: seranking.google.domain.overview
+    capability: google.domain.overview
+    platform: google
+    scope: any_account
+    method: GET
+    path: /v1/domain/overview/db
+    name: "Get a domain's Google search overview"
+    summary: "A domain's Google presence in one country — keyword counts, traffic and traffic cost"
+    input:
+      queryParams:
+        source: {type: string, required: true, note: "regional database code", example: "us"}
+        domain: {type: string, required: true, note: "bare domain, no scheme", example: "seranking.com"}
+        with_subdomains: {type: integer, required: false, note: "1 (default) includes subdomains, 0 restricts to the exact host"}
+        url: {type: string, required: false, note: "narrow the overview to a single URL on the domain"}
+      note: "returns an `organic` and an `adv` block. /v1/domain/overview/worldwide is the same job aggregated across every country at the same price, and /v1/domain/overview/history returns the traffic/keyword trend."
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "100 credits per REQUEST, 0 per record — the charge does not scale with the response, so there is no cost reason to narrow this call."
+    docs_url: https://seranking.com/api/data/domain-analysis/#regional-database
+
+  - id: seranking.google.domain.ranked_keywords
+    capability: google.domain.ranked_keywords
+    platform: google
+    scope: any_account
+    method: GET
+    path: /v1/domain/keywords
+    name: "List keywords a domain ranks for"
+    summary: "Google keywords a domain ranks for, with position, volume, traffic and ranking URL"
+    input:
+      queryParams:
+        source: {type: string, required: true, note: "regional database code", example: "us"}
+        domain: {type: string, required: false, note: "the domain to analyse — supply either domain or url", example: "seranking.com"}
+        url: {type: string, required: false, note: "analyse one page instead of the whole domain"}
+        type: {type: string, required: false, note: "organic (default) | adv — `adv` returns the paid keywords instead"}
+        with_subdomains: {type: boolean, required: false, note: "default true"}
+        page: {type: integer, required: false, note: "1-based page number; default 1"}
+        limit: {type: integer, required: false, note: "1 to 1,000, default 100. Pricing is flat per request, so a LARGE limit is the cheap choice here", example: 100}
+        order_field: {type: string, required: false, note: "column to sort by"}
+        order_type: {type: string, required: false, note: "asc | desc (default desc)"}
+        cols: {type: string, required: false, note: "comma-separated column selection"}
+        year: {type: integer, required: false, note: "with `month`, returns a historical snapshot"}
+        month: {type: integer, required: false, note: "1-12"}
+      note: "one of `domain` or `url` is required. Set `type=adv` to get the domain's paid keywords from the same endpoint."
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "100 credits per REQUEST, 0 per record. Because rows are free, pull `limit: 1000` per page rather than paging in small chunks — small pages multiply the per-request charge."
+    docs_url: https://seranking.com/api/data/domain-analysis/#domain-keywords
+
+  - id: seranking.google.domain.competitors
+    capability: google.domain.competitors
+    platform: google
+    scope: any_account
+    method: GET
+    path: /v1/domain/competitors
+    name: "List a domain's Google search competitors"
+    summary: "Find the domains competing with a target in Google search, ranked by shared keywords"
+    input:
+      queryParams:
+        source: {type: string, required: true, note: "regional database code", example: "us"}
+        domain: {type: string, required: true, note: "bare domain, no scheme", example: "seranking.com"}
+        type: {type: string, required: false, note: "organic (default) | adv — `adv` returns paid-search competitors"}
+        limit: {type: integer, required: false, note: "rows to return; flat per-request pricing means a large limit costs no more", example: 100}
+        order_field: {type: string, required: false}
+        order_type: {type: string, required: false, note: "asc | desc"}
+      note: "the competitor set is derived from keyword overlap in the chosen `source` database, so a domain's competitors differ per country."
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "100 credits per REQUEST, 0 per record."
+    docs_url: https://seranking.com/api/data/domain-analysis/#competitors
+
+  # --- Backlinks (per-ROW pricing — `limit` is the entire cost) ----------------------------------
+  - id: seranking.web.backlinks.summary
+    capability: web.backlinks.summary
+    platform: web
+    scope: any_account
+    method: GET
+    path: /v1/backlinks/summary
+    name: "Get a domain's backlink profile summary"
+    summary: "Aggregate backlink profile — backlinks, referring domains, IPs, subnets, follow split"
+    input:
+      queryParams:
+        target: {type: string, required: true, note: "domain, host or URL — must match `mode`", example: "seranking.com"}
+        mode: {type: string, required: false, note: "domain | host | url — what the target is interpreted as", example: "domain"}
+      note: "returns a `summary` object. This is the most expensive per-target backlinks call in the file, so read it once per domain rather than per page."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "100 credits per TARGET, 0 per request. Ten times the price of /v1/backlinks/metrics (10 credits), which returns the headline counts without the full breakdown — use metrics when you only need totals."
+    docs_url: https://seranking.com/api/data/backlinks/#summary
+
+  - id: seranking.web.backlinks.list
+    capability: web.backlinks.list
+    platform: web
+    scope: any_account
+    method: GET
+    path: /v1/backlinks/all
+    name: "List individual backlinks to a target"
+    summary: "Individual backlinks to a domain or URL, with source page, anchor and follow status"
+    input:
+      queryParams:
+        target: {type: string, required: true, note: "domain, host or URL", example: "seranking.com"}
+        mode: {type: string, required: false, note: "domain | host | url"}
+        limit: {type: integer, required: false, note: "COST DIAL — 1 to 10,000, and every returned row costs a credit", example: 10}
+        order_by: {type: string, required: false, note: "column to sort the backlinks by"}
+      note: "returns a `backlinks` array. For bulk extraction use /v1/backlinks/raw instead — same 1-credit-per-row price but a cursor (`next`) and a 100,000 ceiling per page."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 credit per BACKLINK returned, 0 per request — `limit` is the entire cost. Pulling a 10,000-link profile costs 10,000 credits."
+    docs_url: https://seranking.com/api/data/backlinks/#all
+
+  - id: seranking.web.linking_domains.list
+    capability: web.linking_domains.list
+    platform: web
+    scope: any_account
+    method: GET
+    path: /v1/backlinks/refdomains
+    name: "List domains linking to a target"
+    summary: "Referring domains linking to a target, with each source's link count and authority"
+    input:
+      queryParams:
+        target: {type: string, required: true, note: "domain, host or URL", example: "seranking.com"}
+        mode: {type: string, required: false, note: "domain | host | url"}
+        limit: {type: integer, required: false, note: "COST DIAL — 1 to 10,000, one credit per returned domain", example: 10}
+        order_by: {type: string, required: false}
+      note: "returns a `refdomains` array. /v1/backlinks/refdomains/count is the 2-credit way to get just the total when you do not need the list."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 credit per REFERRING DOMAIN returned, 0 per request — `limit` is the entire cost."
+    docs_url: https://seranking.com/api/data/backlinks/#refdomains
+
+  - id: seranking.web.anchors.list
+    capability: web.anchors.list
+    platform: web
+    scope: any_account
+    method: GET
+    path: /v1/backlinks/anchors
+    name: "List anchor texts in a target's backlinks"
+    summary: "Anchor texts across a target's backlink profile, with link and domain counts"
+    input:
+      queryParams:
+        target: {type: string, required: true, note: "domain, host or URL", example: "seranking.com"}
+        mode: {type: string, required: false, note: "domain | host | url"}
+        limit: {type: integer, required: false, note: "COST DIAL — 1 to 10,000, one credit per returned anchor", example: 10}
+        order_by: {type: string, required: false}
+      note: "returns an `anchors` array."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 credit per ANCHOR returned, 0 per request — `limit` is the entire cost."
+    docs_url: https://seranking.com/api/data/backlinks/#anchors
+
+  - id: seranking.web.url.metrics
+    capability: web.url.metrics
+    platform: web
+    scope: any_account
+    method: GET
+    path: /v1/backlinks/authority
+    name: "Get page and domain authority scores"
+    summary: "Get SE Ranking's page and domain authority scores for a URL or domain"
+    input:
+      queryParams:
+        target: {type: string, required: true, note: "domain, host or URL", example: "seranking.com"}
+      note: "returns a `pages` array carrying the authority scores — SE Ranking's answer to Moz's Domain Authority and Majestic's Trust Flow, and the join point for cross-provider authority comparison. /v1/backlinks/authority/page and /v1/backlinks/authority/domain are the cheaper 5-credit variants when you only need one side."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "10 credits per TARGET, 0 per request."
+    docs_url: https://seranking.com/api/data/backlinks/#authority

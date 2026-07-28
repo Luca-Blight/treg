@@ -1,0 +1,192 @@
+{
+  "code": 0,
+  "data": {
+    "extra": {
+      "fatal_item_ids": [],
+      "logid": "20260728014138E654AE0533E98C3D4C55",
+      "now": 1785202898000
+    },
+    "itemInfo": {
+      "itemStruct": {
+        "AIGCDescription": "",
+        "CategoryType": 120,
+        "IsHDBitrate": false,
+        "ShowAIGC": true,
+        "author": {
+          "UserStoryStatus": 0,
+          "avatarLarger": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/ba67b11de451691939223e9d978e613a~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=<omitted: expires>&x-expires=1785373200&x-signature=<omitted: expires>&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+          "avatarMedium": "https://p19-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/ba67b11de451691939223e9d978e613a~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=<omitted: expires>&x-expires=1785373200&x-signature=<omitted: expires>&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+          "avatarThumb": "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/ba67b11de451691939223e9d978e613a~tplv-tiktokx-cropcenter:100:100.jpeg?dr=9640&refresh_token=<omitted: expires>&x-expires=1785373200&x-signature=<omitted: expires>&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=81f88b70&idc=useast5",
+          "commentSetting": 0,
+          "downloadSetting": 0,
+          "duetSetting": 0,
+          "ftc": false,
+          "id": "107955",
+          "isADVirtual": false,
+          "isEmbedBanned": false,
+          "nickname": "TikTok",
+          "openFavorite": false,
+          "privateAccount": false,
+          "relation": 0,
+          "secUid": "MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM",
+          "secret": false,
+          "shortDramaCreator": {},
+          "signature": "<omitted: expires>",
+          "stitchSetting": 0,
+          "uniqueId": "tiktok",
+          "verified": true
+        },
+        "authorStats": {
+          "diggCount": 4198,
+          "followerCount": 95000000,
+          "followingCount": 0,
+          "friendCount": 0,
+          "heart": 462100000,
+          "heartCount": 462100000,
+          "videoCount": 1484
+        },
+        "authorStatsV2": {
+          "diggCount": "4198",
+          "followerCount": "95000000",
+          "followingCount": "0",
+          "friendCount": "0",
+          "heart": "462100000",
+          "heartCount": "462100000",
+          "videoCount": "1484"
+        },
+        "backendSourceEventTracking": "",
+        "collected": false,
+        "contents": [
+          {
+            "desc": "for 39 days, the For You Feed made the whole world feel like next door🏆⚽"
+          }
+        ],
+        "createTime": 1784929701,
+        "creatorAIComment": {
+          "eligibleVideo": false,
+          "hasAITopic": false,
+          "notEligibleReason": 101
+        },
+        "desc": "for 39 days, the For You Feed made the whole world feel like next door🏆⚽",
+        "digged": false,
+        "duetDisplay": 0,
+        "forFriend": false,
+        "id": "7666214645006421278",
+        "imagePost": {
+          "cover": {
+            "imageHeight": 1450,
+            "imageURL": {
+              "urlList": [
+                "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/b27f773af3eb4aeabeaf589d56ac953c~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=jhNOqwnBeATs5qtI4iwrYsmAPNA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1",
+                "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/b27f773af3eb4aeabeaf589d56ac953c~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=A66iLYWpDrVvdNRgY5zyCQ7V3Is%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1"
+              ]
+            },
+            "imageWidth": 1080
+          },
+          "images": [
+            {
+              "imageHeight": 1450,
+              "imageURL": {
+                "urlList": [
+                  "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/b27f773af3eb4aeabeaf589d56ac953c~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=A66iLYWpDrVvdNRgY5zyCQ7V3Is%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1",
+                  "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/b27f773af3eb4aeabeaf589d56ac953c~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=jhNOqwnBeATs5qtI4iwrYsmAPNA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1"
+                ]
+              },
+              "imageWidth": 1080
+            },
+            {
+              "imageHeight": 1450,
+              "imageURL": {
+                "urlList": [
+                  "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/1db4a262a899427c9e32afaeccab1d31~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=1kY0l5I7oGzb6iDCkJynN1rmKDQ%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1",
+                  "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/1db4a262a899427c9e32afaeccab1d31~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=2YfYFKAwa5rpAOrveimzzhFeA%2B0%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1"
+                ]
+              },
+              "imageWidth": 1080
+            },
+            "… 1 more item(s) truncated"
+          ],
+          "shareCover": {
+            "imageHeight": 1450,
+            "imageURL": {
+              "urlList": [
+                "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/b27f773af3eb4aeabeaf589d56ac953c~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=jhNOqwnBeATs5qtI4iwrYsmAPNA%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1",
+                "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/b27f773af3eb4aeabeaf589d56ac953c~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=A66iLYWpDrVvdNRgY5zyCQ7V3Is%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1"
+              ]
+            },
+            "imageWidth": 1080
+          },
+          "title": ""
+        },
+        "isAd": false,
+        "isReviewing": false,
+        "itemCommentStatus": 0,
+        "item_control": {
+          "can_repost": true
+        },
+        "music": {
+          "coverLarge": "",
+          "coverMedium": "",
+          "coverThumb": "",
+          "id": "0",
+          "isCopyrighted": false,
+          "original": false,
+          "title": "original sound - TikTok"
+        },
+        "officalItem": false,
+        "originalItem": false,
+        "privateItem": false,
+        "secret": false,
+        "shareEnabled": true,
+        "stats": {
+          "collectCount": 281,
+          "commentCount": 1003,
+          "diggCount": 3990,
+          "playCount": 251200,
+          "shareCount": 251
+        },
+        "statsV2": {
+          "collectCount": "281",
+          "commentCount": "1003",
+          "diggCount": "3990",
+          "playCount": "251200",
+          "repostCount": "0",
+          "shareCount": "251"
+        },
+        "stitchDisplay": 0,
+        "suggestedWords": [
+          "Food On TikTok"
+        ],
+        "textLanguage": "en",
+        "textTranslatable": true,
+        "titleLanguage": "un",
+        "titleTranslatable": false,
+        "video": {
+          "cover": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/b27f773af3eb4aeabeaf589d56ac953c~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=<omitted: expires>&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1",
+          "duration": 0,
+          "height": 0,
+          "id": "7666214645006421278",
+          "originCover": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-i-photomode-tx2/b27f773af3eb4aeabeaf589d56ac953c~tplv-photomode-image.jpeg?dr=9616&x-expires=1785373200&x-signature=<omitted: expires>&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=useast5&ftpl=1",
+          "ratio": "",
+          "volumeInfo": {},
+          "width": 0
+        }
+      }
+    },
+    "log_pb": {
+      "impr_id": "20260728014138E654AE0533E98C3D4C55"
+    },
+    "shareMeta": {
+      "desc": "for 39 days, the For You Feed made the whole world feel like next door🏆⚽",
+      "title": "TikTok on TikTok"
+    },
+    "statusCode": 0,
+    "status_code": 0,
+    "status_msg": "",
+    "tt_chain_token": "<omitted: expires>",
+    "cookie": "<masked>"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T09:41:39.169953363",
+  "requestId": "2beb2bba42c543aab072201df7799836"
+}

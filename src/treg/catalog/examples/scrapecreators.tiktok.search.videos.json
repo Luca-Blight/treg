@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "credits_remaining": 19856,
+  "credits_charged": 1,
+  "search_item_list": [
+    {
+      "aweme_info": {
+        "added_sound_music_info": "… {77 field(s) truncated}",
+        "ai_remix_info": "… {1 field(s) truncated}",
+        "aigc_info": "… {2 field(s) truncated}",
+        "anchors": null,
+        "anchors_extras": "",
+        "animated_image_info": "… {2 field(s) truncated}",
+        "author": "… {96 field(s) truncated}",
+        "author_user_id": 7586985384128103000,
+        "aweme_acl": "… {7 field(s) truncated}",
+        "aweme_id": "7644299…",
+        "aweme_type": 0,
+        "banners": "… [1 item(s) truncated]",
+        "behind_the_song_music_ids": null,
+        "behind_the_song_video_music_ids": null,
+        "bodydance_score": 0,
+        "…": "150 more field(s) truncated"
+      }
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "cursor": 30,
+  "has_more": 1
+}

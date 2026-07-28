@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "request_id": "ca62783b-4f80-4464-83b1-97a53764f3be",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:36:45",
+  "time_stamp": 1785220605,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_video_detail_api_v1_bilibili_web_fetch_video_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "…": "5 more field(s) truncated"
+}

@@ -1,0 +1,23 @@
+{
+  "code": 200,
+  "request_id": "55dfc6d1-e1fe-4895-af36-31789f4f0970",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:04",
+  "time_stamp": 1785220264,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_channel_url_api_v1_youtube_web_v2_get_channel_url_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/55dfc6d1-e1fe-4895-af36-31789f4f0970?sign=2d7a69c1c3984e2dd856514fd09f82a67b69587cabbb4a8b300f7c3923414aa8",
+  "router": "/api/v1/youtube/web_v2/get_channel_url",
+  "params": {
+    "channel_id": "UCeu6U67OzJhV1KwBansH3Dg"
+  },
+  "data": {
+    "channel_id": "UCeu6U67OzJhV1KwBansH3Dg",
+    "channel_url": "https://www.youtube.com/channel/UCeu6U67OzJhV1KwBansH3Dg",
+    "vanity_url": "http://www.youtube.com/@CozyCraftYT"
+  }
+}

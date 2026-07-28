@@ -1,0 +1,47 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "8.4643 sec.",
+  "cost": 0.024036,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0465-0000-941f641b9447",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "8.4529 sec.",
+      "cost": 0.024036,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "content_analysis",
+        "function": "sentiment_analysis",
+        "keyword": "logitech",
+        "internal_list_limit": 1
+      },
+      "result": [
+        {
+          "type": "content_analysis_sentiment_analysis",
+          "positive_connotation_distribution": {
+            "positive": "… {11 field(s) truncated}",
+            "negative": "… {11 field(s) truncated}",
+            "neutral": "… {11 field(s) truncated}"
+          },
+          "sentiment_connotation_distribution": {
+            "anger": "… {11 field(s) truncated}",
+            "happiness": "… {11 field(s) truncated}",
+            "love": "… {11 field(s) truncated}",
+            "sadness": "… {11 field(s) truncated}",
+            "share": "… {11 field(s) truncated}",
+            "fun": "… {11 field(s) truncated}"
+          }
+        }
+      ]
+    }
+  ]
+}

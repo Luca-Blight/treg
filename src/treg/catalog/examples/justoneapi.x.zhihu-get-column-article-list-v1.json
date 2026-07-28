@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "data": {
+    "error": {
+      "message": "资源不存在",
+      "code": 4041,
+      "name": "ResourceNotFoundException"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:05:00.682699664",
+  "requestId": "dc0f1f649a1a452b9345867e402562ae"
+}

@@ -1,0 +1,50 @@
+{
+  "dimensions": [
+    {
+      "apiName": "achievementId",
+      "uiName": "Achievement ID",
+      "description": "The achievement ID in a game for an event. Populated by the event parameter `achievement_id`.",
+      "category": "Other"
+    },
+    {
+      "apiName": "adFormat",
+      "uiName": "Ad format",
+      "description": "Describes the way ads looked and where they were located. Typical formats include `Interstitial`, `Banner`, `Rewarded`, and `Native advanced`.",
+      "category": "Publisher"
+    },
+    "… 373 more item(s) truncated"
+  ],
+  "metrics": [
+    {
+      "apiName": "active1DayUsers",
+      "uiName": "1-day active users",
+      "description": "The number of distinct active users on your site or app within a 1 day period. The 1 day period includes the last day in the report's date range. Note: this is the same as Active Users.",
+      "type": "TYPE_INTEGER",
+      "category": "User"
+    },
+    {
+      "apiName": "active28DayUsers",
+      "uiName": "28-day active users",
+      "description": "The number of distinct active users on your site or app within a 28 day period. The 28 day period includes the last day in the report's date range.",
+      "type": "TYPE_INTEGER",
+      "category": "User"
+    },
+    "… 93 more item(s) truncated"
+  ],
+  "name": "properties/483566226/metadata",
+  "comparisons": [
+    {
+      "apiName": "comparisons/allUsers",
+      "uiName": "All Users",
+      "description": "Includes all your data."
+    },
+    {
+      "apiName": "comparisons/directTraffic",
+      "uiName": "Direct traffic",
+      "description": "Sessions acquired directly."
+    },
+    "… 7 more item(s) truncated"
+  ],
+  "_scrubbed": true,
+  "_scrubbed_note": "public-figure or reference data; account-specific values masked where present"
+}

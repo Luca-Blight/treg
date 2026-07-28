@@ -1,0 +1,51 @@
+{
+  "code": 0,
+  "data": {
+    "noteList": [
+      {
+        "noteInfo": {
+          "noteId": "6a62e328000000000f01fc16",
+          "noteImages": [
+            {
+              "imageUrl": "http://ci.xiaohongshu.com/1040g2sg3230s5tso6se05o3194p08b6vpq3dr48?imageView2/2/w/1080/format/jpg",
+              "imageWidth": 1080,
+              "imageHeight": 1440
+            }
+          ],
+          "notePublishTime": "2026-07-24 11:59:36",
+          "favNum": 26210,
+          "cmtNum": 37128,
+          "isAdNote": 1,
+          "noteType": 2,
+          "likeNum": 375197,
+          "videoDuration": 64,
+          "noteLink": "https://www.xiaohongshu.com/explore/6a62e328000000000f01fc16?xsec_token=<omitted: expires>&xsec_source=pc_pgy",
+          "bizType": 0,
+          "bindType": 4,
+          "title": "Hey～我是诗诗👋🏻",
+          "readNum": 6391009,
+          "videoUrl": "http://v.xiaohongshu.com/stream/79/110/258/01ea62e29758e3464f0370019f9247c2fc_258.mp4?sign=ad30ee3bf3d1eb8141e6177ede837d87&t=6a6a2380"
+        },
+        "userInfo": {
+          "userId": "606149320000000001002cdf",
+          "fansNum": 291213,
+          "currentLevel": 0,
+          "userType": 4,
+          "nickName": "刘诗诗",
+          "avatar": "https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo323073iop70005o3194p08b6v4jeg5m8?imageView2/2/w/120/format/jpg"
+        }
+      },
+      "… 9 more item(s) truncated"
+    ],
+    "total": 1000,
+    "pageInfoDto": {
+      "pageNum": 1,
+      "pageSize": 10,
+      "total": 1000,
+      "totalPage": 0
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:31.447961627",
+  "requestId": "72e92d0780f34995a54d3e6da6d1cfc9"
+}

@@ -1,0 +1,55 @@
+{
+  "code": 200,
+  "request_id": "cb1c2e48-afaa-4767-bffb-0b06144b6f78",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:53",
+  "time_stamp": 1785220193,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Analytics-API/fetch_video_met… [112 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/cb1c2e48-afaa-47… [150 chars]",
+  "router": "/api/v1/tiktok/analytics/fetch_video_metrics",
+  "params": {
+    "item_id": "7502551047378832671"
+  },
+  "data": {
+    "item_id": "7502551047378832671",
+    "comments": {
+      "message": "… {3 field(s) truncated}",
+      "value": 6366
+    },
+    "comments_14_days": {
+      "message": "… {2 field(s) truncated}"
+    },
+    "favorites": {
+      "message": "… {3 field(s) truncated}",
+      "value": 2156
+    },
+    "favorites_14_days": {
+      "message": "… {2 field(s) truncated}"
+    },
+    "likes": {
+      "message": "… {3 field(s) truncated}",
+      "value": 19234
+    },
+    "likes_14_days": {
+      "message": "… {2 field(s) truncated}"
+    },
+    "video_summary": {
+      "content": "This post received more comments per view than most other po… [158 chars]",
+      "message": "… {3 field(s) truncated}",
+      "summary_type": 3,
+      "title": "Overview"
+    },
+    "video_views": {
+      "message": "… {3 field(s) truncated}",
+      "value": 1849623
+    },
+    "video_views_14_days": {
+      "message": "… {2 field(s) truncated}"
+    }
+  }
+}

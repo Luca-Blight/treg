@@ -1,0 +1,51 @@
+{
+  "code": 200,
+  "request_id": "02857500-6249-4141-8b4c-09e1361a1f54",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:43",
+  "time_stamp": 1785220123,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_video_comments_… [102 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/02857500-6249-41… [150 chars]",
+  "router": "/api/v1/douyin/web/fetch_video_comments",
+  "params": {
+    "aweme_id": "7372484719365098803",
+    "count": "20"
+  },
+  "data": {
+    "status_code": 0,
+    "comments": [
+      "… {37 field(s) truncated}",
+      "… 19 more item(s) truncated"
+    ],
+    "cursor": 20,
+    "has_more": 1,
+    "reply_style": 2,
+    "total": 4083,
+    "extra": {
+      "now": 1785220123000,
+      "fatal_item_ids": null,
+      "scenes": null
+    },
+    "log_pb": {
+      "impr_id": "20260728142843E4D31149084091358438"
+    },
+    "hotsoon_filtered_count": 0,
+    "user_commented": 0,
+    "fast_response_comment": {
+      "constant_response_words": "… [3 item(s) truncated]",
+      "timed_response_words": "… [3 item(s) truncated]"
+    },
+    "comment_config": {},
+    "general_comment_config": {},
+    "show_management_entry_point": 0,
+    "comment_common_data": "MS4wLjAAAAAASDzqjk0koKfLvtebtqP79S35WvViL5g1msG4e-mQujgHRHm3… [2658 chars]",
+    "folded_comment_count": 0,
+    "comment_insert_bars": null,
+    "sort_tags_report_map": "{\"eco_level_10\":\"interest_comment_v4_view\",\"eco_level_8\":\"in… [84 chars]"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "request_id": "4258ebc1-12e5-4098-b354-b4104ec5d550",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:09",
+  "time_stamp": 1785220329,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/generate_xgnarly_and_xbogus_api_v1_tiktok_web_generate_xgnarly_and_xbogus_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/4258ebc1-12e5-4098-b354-b4104ec5d550?sign=0122e90a3bfc0811f03ec59ec305301066… [150 chars]",
+  "router": "/api/v1/tiktok/web/generate_xgnarly_and_xbogus",
+  "params": {
+    "url": "https://www.tiktok.com/api/search/user/full/?WebIdLastTime=1756087650&aid=1988&app_language=zh-Hans&app_name=tiktok_web&… [1024 chars]",
+    "body": ""
+  },
+  "data": {
+    "status": "success",
+    "signature": {
+      "signedUrl": "https://www.tiktok.com/api/search/user/full/?WebIdLastTime=1756087650&aid=1988&app_language=zh-Hans&app_name=tiktok_web&… [1395 chars]",
+      "xBogus": "DFSzKIVLFvXANHdACUnKiTLQRQiJ",
+      "xGnarly": "MaU8bbM4J2eGTaA4e60DTaugRKbowtwD-7S6FgkURX9NusJcck7wLSfoZhK48RHiKGinjR5Yg7NVsh3FoduVMGgVc27Ur5Z1hd3som1hEFojMOnZpk4A3IgC… [324 chars]"
+    },
+    "body": "",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:146.0) Gecko/20100101 Firefox/146.0",
+    "version": "5.2.0"
+  }
+}

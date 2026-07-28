@@ -1,0 +1,222 @@
+# Live-verified 2026-07-28 through the treg /call proxy (connection: instagram). Every READ
+# endpoint passes; the publishing routes below are marked separately and were not called.
+#
+# Instagram Graph API, served from the Meta host (graph.facebook.com/v25.0) with the connected
+# person's user token. It reaches only a PROFESSIONAL (Business or Creator) Instagram account that
+# is linked to a Facebook Page the member administers — a personal Instagram account is invisible
+# to this API entirely.
+#
+# instagram.user.profile and instagram.user.posts are the same jobs tikhub.yaml scrapes
+# any_account; the difference is that these return the account's own private metrics (reach,
+# saves, profile views) that no scraper can see.
+#
+# Scopes granted: instagram_basic, instagram_manage_insights, pages_show_list,
+# pages_read_engagement (+ instagram_content_publish on `post`). Absent for that reason: replying
+# to or deleting comments (instagram_manage_comments) and DMs (instagram_manage_messages).
+#
+# The IG user id is NOT the @handle and not the Page id: read it from
+# /me/accounts?fields=instagram_business_account{id,username} — the same call treg's connection
+# picker uses.
+provider: instagram
+source:
+  docs: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api
+  openapi: null
+  curated: 2026-07-28
+
+limits: "Graph API business-use-case limits"
+pricing_url: https://developers.facebook.com/docs/instagram-api/
+endpoints:
+  - id: instagram.instagram.user.profile
+    capability: instagram.user.profile
+    platform: instagram
+    scope: own_account
+    method: GET
+    path: /{ig_user_id}
+    name: "Get your account profile and followers"
+    summary: "Get your Instagram professional account's profile and follower counts"
+    input:
+      pathParams:
+        ig_user_id: {type: string, required: true, note: "numeric Instagram professional account id (from /me/accounts?fields=instagram_business_account{id,username}) — not the @handle", example: "17841400000000000"}
+      queryParams:
+        fields: {type: string, required: true, note: "comma-separated", example: "id,username,name,biography,website,profile_picture_url,followers_count,follows_count,media_count"}
+      note: "the same shape reads ANOTHER public professional account through the business_discovery edge: fields=business_discovery.username(their_handle){followers_count,media_count} on YOUR id — public metrics only, and only for professional accounts"
+    cost: {type: free, note: "included with the connected account; Meta rate-limits per app and per account rather than charging per call"}
+    test_request:
+      pathParams: {ig_user_id: "17841439917904520"}
+      queryParams: {fields: "id,username,name,biography,website,profile_picture_url,followers_count,follows_count,media_count"}
+    verified: 2026-07-28
+    example_response: examples/instagram.instagram.user.profile.json
+    docs_url: https://developers.facebook.com/docs/instagram-platform/reference/instagram-user
+
+  - id: instagram.instagram.user.posts
+    capability: instagram.user.posts
+    platform: instagram
+    scope: own_account
+    method: GET
+    path: /{ig_user_id}/media
+    name: "List your posts"
+    summary: "List your Instagram posts with captions, permalinks and like/comment counts"
+    input:
+      pathParams:
+        ig_user_id: {type: string, required: true, example: "17841400000000000"}
+      queryParams:
+        fields: {type: string, required: true, example: "id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count"}
+        limit: {type: integer, required: false, note: "default 25", example: 25}
+        since: {type: string, required: false, note: "Unix timestamp"}
+        until: {type: string, required: false}
+      note: "media_type is IMAGE | VIDEO | CAROUSEL_ALBUM; a carousel's frames come from the children{media_url} sub-field. Stories are a different edge (/stories) and expire after 24h"
+    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    test_request:
+      pathParams: {ig_user_id: "17841439917904520"}
+      queryParams: {fields: "id,caption,media_type,permalink,timestamp,like_count,comments_count", limit: 2}
+    verified: 2026-07-28
+    example_response: examples/instagram.instagram.user.posts.json
+    docs_url: https://developers.facebook.com/docs/instagram-platform/reference/instagram-user/media
+
+  - id: instagram.instagram.post.comments
+    capability: instagram.post.comments
+    platform: instagram
+    scope: own_account
+    method: GET
+    path: /{ig_media_id}/comments
+    summary: "List the comments on one of your Instagram posts"
+    input:
+      pathParams:
+        ig_media_id: {type: string, required: true, note: "media id from instagram.user.posts", example: "17900000000000000"}
+      queryParams:
+        fields: {type: string, required: false, example: "id,text,username,timestamp,like_count,replies{id,text,username,timestamp}"}
+        limit: {type: integer, required: false, example: 25}
+      note: "reads comments on YOUR OWN media only — instagram_basic does not open other accounts' comment threads (use the scraped any_account route for those). Replying needs instagram_manage_comments, which treg does not request"
+    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    test_request:
+      pathParams: {ig_media_id: "17953960824194864"}
+      queryParams: {fields: "id,text,username,timestamp,like_count", limit: 5}
+    verified: 2026-07-28
+    example_response: examples/instagram.instagram.post.comments.json
+    docs_url: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media/comments
+
+  - id: instagram.instagram.account.insights
+    capability: instagram.account.insights
+    platform: instagram
+    scope: own_account
+    method: GET
+    path: /{ig_user_id}/insights
+    name: "Get account reach and audience metrics"
+    summary: "Get reach, profile views and audience metrics for your Instagram account"
+    input:
+      pathParams:
+        ig_user_id: {type: string, required: true, example: "17841400000000000"}
+      queryParams:
+        metric: {type: string, required: true, note: "comma-separated", example: "reach,accounts_engaged,total_interactions"}
+        period: {type: string, required: true, note: "day | week | days_28 | lifetime", example: "day"}
+        metric_type: {type: string, required: false, note: "set to total_value for the newer aggregate metrics (accounts_engaged, total_interactions)", example: "total_value"}
+        since: {type: string, required: false, note: "Unix timestamp; a single call spans at most 30 days and cannot reach back beyond 2 years", example: "1751328000"}
+        until: {type: string, required: false}
+      note: "needs instagram_manage_insights. `impressions` and `profile_views` are RETIRED on v25 — asking for them fails the whole call; use the metric_type=total_value trio (reach, accounts_engaged, total_interactions) instead, as the test_request does. Demographic breakdowns (follower_demographics) require metric_type=total_value plus a breakdown parameter and are only returned once the account has 100+ followers"
+    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    test_request:
+      pathParams: {ig_user_id: "17841439917904520"}
+      queryParams: {metric: "reach,accounts_engaged,total_interactions", period: "day", metric_type: "total_value"}
+    verified: 2026-07-28
+    example_response: examples/instagram.instagram.account.insights.json
+    docs_url: https://developers.facebook.com/docs/instagram-platform/insights
+
+  - id: instagram.instagram.media.insights
+    capability: instagram.media.insights
+    platform: instagram
+    scope: own_account
+    method: GET
+    path: /{ig_media_id}/insights
+    name: "Get engagement metrics for a post"
+    summary: "Get reach, saves and engagement for a single one of your Instagram posts"
+    input:
+      pathParams:
+        ig_media_id: {type: string, required: true, example: "17900000000000000"}
+      queryParams:
+        metric: {type: string, required: true, note: "supported names depend on media_type — reach/saved/likes/comments/shares apply broadly; video and reel media add views and watch-time metrics", example: "reach,saved,likes,comments,shares,total_interactions"}
+      note: "needs instagram_manage_insights. Asking for a metric the media type does not support fails the whole call, so branch on media_type from instagram.user.posts first"
+    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    test_request:
+      pathParams: {ig_media_id: "17953960824194864"}
+      queryParams: {metric: "reach,saved,likes,comments,shares"}
+    verified: 2026-07-28
+    example_response: examples/instagram.instagram.media.insights.json
+    docs_url: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media/insights
+
+  # --- publishing (the `post` capability, scope instagram_content_publish) --------------------
+  #
+  # Instagram has NO single "publish" call. Every post is at least two steps, and a carousel is
+  # four, so the three endpoints below are one flow rather than three alternatives:
+  #
+  #   single image / video / reel / story:  media (container) → [poll status] → media_publish
+  #   carousel (2–10 items):                media × N with is_carousel_item=true → media
+  #                                         (media_type=CAROUSEL, children=id1,id2,…)
+  #                                         → [poll status] → media_publish
+  #
+  # The API NEVER takes bytes. Media is referenced by a publicly reachable image_url / video_url
+  # that Meta downloads server-side — so anything behind auth, on localhost, or on a signed URL
+  # that expires within minutes fails at container creation with an unhelpful error.
+  #
+  # Meta caps an account at 50 published posts per rolling 24 hours; the remaining allowance is
+  # readable at GET /{ig_user_id}/content_publishing_limit. Containers expire 24h after creation.
+  - id: instagram.instagram.media.container.create
+    capability: instagram.media.container.create
+    platform: instagram
+    scope: own_account
+    method: POST
+    path: /{ig_user_id}/media
+    name: "Create a post media container"
+    summary: "Stage an Instagram post by creating the media container it will be published from"
+    input:
+      pathParams:
+        ig_user_id: {type: string, required: true, note: "numeric Instagram professional account id — the same one instagram.user.profile takes", example: "17841400000000000"}
+      queryParams:
+        image_url: {type: string, required: false, note: "public JPEG URL. Use this OR video_url, never both", example: "https://example.com/photo.jpg"}
+        video_url: {type: string, required: false, note: "public MP4 URL", example: "https://example.com/clip.mp4"}
+        media_type: {type: string, required: false, note: "omit for a plain feed image; REELS for a video in the feed, STORIES for a 24-hour story, CAROUSEL for the parent container that groups children", example: "REELS"}
+        caption: {type: string, required: false, note: "up to 2,200 characters and 30 hashtags. On a carousel the caption belongs on the PARENT container — set it on a child and the post publishes captionless", example: "Three things we learned this week."}
+        is_carousel_item: {type: boolean, required: false, note: "true on each child container of a carousel; children carry no caption and are never published on their own", example: true}
+        children: {type: string, required: false, note: "CAROUSEL parent only: comma-separated child container ids, 2 to 10 of them, in display order", example: "17890000000000001,17890000000000002"}
+        thumb_offset: {type: integer, required: false, note: "video only — milliseconds into the clip to take the cover frame from", example: 0}
+        collaborators: {type: string, required: false, note: "JSON array of @handles invited as collaborators; not allowed on stories"}
+        location_id: {type: string, required: false, note: "a Facebook Page id that has a location"}
+      note: "step 1 of the publish flow. Needs instagram_content_publish (treg's `post` capability — a `read` connection 403s here) and returns {id: <container id>}. A VIDEO container is not ready when this returns: poll instagram.media.container.status until status_code is FINISHED before publishing, or the publish call fails. Stories have no carousel — publish each story as its own container"
+    cost: {type: free, note: "included with the connected account; Meta caps publishing at 50 posts per rolling 24h per account rather than charging per call"}
+    unverified: "write action — part of publishing to a real account; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://developers.facebook.com/docs/instagram-platform/content-publishing
+
+  - id: instagram.instagram.media.container.status
+    capability: instagram.media.container.status
+    platform: instagram
+    scope: own_account
+    method: GET
+    path: /{ig_container_id}
+    name: "Check media container processing status"
+    summary: "Check whether a staged Instagram container has finished processing"
+    input:
+      pathParams:
+        ig_container_id: {type: string, required: true, note: "the id returned by instagram.media.container.create", example: "17890000000000000"}
+      queryParams:
+        fields: {type: string, required: true, note: "status_code is the one that matters; add `status` for the human-readable failure reason", example: "status_code,status"}
+      note: "step 2, skippable only for a plain image. status_code is EXPIRED | ERROR | FINISHED | IN_PROGRESS | PUBLISHED. Video transcoding takes tens of seconds to several minutes — poll at ~30s intervals and give up after ~9 minutes rather than hammering it. ERROR is terminal: build a new container, do not retry the publish"
+    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    unverified: "part of the publish flow — only reachable with a container id that a write call produced"
+    docs_url: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media
+
+  - id: instagram.instagram.post.publish
+    capability: instagram.post.create
+    platform: instagram
+    scope: own_account
+    method: POST
+    path: /{ig_user_id}/media_publish
+    summary: "Publish a post to your own Instagram business account"
+    input:
+      pathParams:
+        ig_user_id: {type: string, required: true, example: "17841400000000000"}
+      queryParams:
+        creation_id: {type: string, required: true, note: "the container id from instagram.media.container.create — for a carousel this is the PARENT container, never a child", example: "17890000000000000"}
+      note: "step 3, and the point of no return. Returns {id: <media id>}; the shareable link needs a second call, GET /{media_id}?fields=permalink. A container that was already published, has expired (24h) or errored answers with an error rather than republishing. Meta's 50-posts-per-24h limit is enforced here — read the remaining allowance at GET /{ig_user_id}/content_publishing_limit before a batch"
+    cost: {type: free, note: "included with the connected account; counts against the 50-per-24h publishing quota rather than a per-call price"}
+    unverified: "write action — this publishes to a real account; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://developers.facebook.com/docs/instagram-platform/content-publishing
+

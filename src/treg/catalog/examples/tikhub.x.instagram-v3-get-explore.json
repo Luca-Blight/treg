@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "request_id": "bcbbfc3c-064d-4db7-9750-6b425c79ab1b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:40:44",
+  "time_stamp": 1785220844,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V3-API/get_explore_api_v1_instagram_v3_get_explore_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "…": "5 more field(s) truncated"
+}

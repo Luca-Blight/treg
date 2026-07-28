@@ -1,0 +1,93 @@
+{
+  "search_metadata": {
+    "id": "6a6898b5683863d7b42210f1",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/hXkE-E50etfVqQ-J0J8DWQ/6a6898b5… [81 chars]",
+    "created_at": "2026-07-28 11:55:33 UTC",
+    "processed_at": "2026-07-28 11:55:33 UTC",
+    "bing_shopping_url": "https://www.bing.com/shop?q=coffee+maker",
+    "raw_html_file": "https://serpapi.com/searches/hXkE-E50etfVqQ-J0J8DWQ/6a6898b5… [81 chars]",
+    "total_time_taken": 2.59
+  },
+  "search_parameters": {
+    "engine": "bing_shopping",
+    "q": "coffee maker",
+    "device": "desktop"
+  },
+  "shopping_results": [
+    {
+      "link": "https://www.bing.com/ck/a?!&&p=7b13dfedc77c76f4534f7cbf633d0… [276 chars]",
+      "title": "®14-Cup Programmable Coffee Maker Xl Pro Permanent Filter, 4… [109 chars]",
+      "thumbnails": "… [1 item(s) truncated]",
+      "seller": "ModeSens-US",
+      "price": "$120.00",
+      "extracted_price": 120.0,
+      "external_link": "https://modesens.com/product/ninja-14cup-programmable-coffee… [207 chars]"
+    },
+    "… 35 more item(s) truncated"
+  ],
+  "filters": [
+    {
+      "type": "Show Only",
+      "options": "… [1 item(s) truncated]"
+    },
+    "… 24 more item(s) truncated"
+  ],
+  "ads_results": [
+    {
+      "title": "10 Best Coffee Makers (2026) | Best Coffee Maker (2026)",
+      "link": "https://www.bing.com/aclick?ld=e8q0x0cq5vyoQ0EFM71M2LazVUCUw… [639 chars]",
+      "displayed_link": "https://buyersguide.org › Top-10-Guide",
+      "snippet": "Removable Drip Tray · Brew Strength Control · One-Touch Brew… [63 chars]",
+      "extensions": "… [1 item(s) truncated]",
+      "sitelinks": "… [4 item(s) truncated]"
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "inline_ads_results": [
+    {
+      "link": "https://www.bing.com/aclick?ld=e8Gt399vyg3IZaORkyZ-1OgDVUCUz… [1327 chars]",
+      "external_link": "https://www.nespresso.com/us/en/order/machines/vertuo/vertuo… [179 chars]",
+      "thumbnail": "https://th.bing.com/th/id/OPHS.sP6GA7cQ6PDexw474C474?w=179&h… [78 chars]",
+      "price": "$219.99",
+      "extracted_price": 219.99,
+      "title": "Nespresso - Vertuo Matte Black In Black - Coffee Machine",
+      "seller": "Nespresso US",
+      "tag": "… {1 field(s) truncated}",
+      "rating": 5,
+      "reviews": "1K+",
+      "…": "1 more field(s) truncated"
+    },
+    "… 54 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://www.bing.com/shop?q=coffee+maker&filters=scenario%3a… [234 chars]",
+    "other_pages": {
+      "2": "https://www.bing.com/shop?q=coffee+maker&filters=scenario%3a… [234 chars]",
+      "3": "https://www.bing.com/shop?q=coffee+maker&filters=scenario%3a… [234 chars]",
+      "4": "https://www.bing.com/shop?q=coffee+maker&filters=scenario%3a… [235 chars]",
+      "5": "https://www.bing.com/shop?q=coffee+maker&filters=scenario%3a… [235 chars]"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?device=desktop&efirst=37&eng… [231 chars]",
+    "next": "https://serpapi.com/search.json?device=desktop&efirst=37&eng… [231 chars]",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?device=desktop&efirst=37&eng… [231 chars]",
+      "3": "https://serpapi.com/search.json?device=desktop&efirst=73&eng… [231 chars]",
+      "4": "https://serpapi.com/search.json?device=desktop&efirst=109&en… [232 chars]",
+      "5": "https://serpapi.com/search.json?device=desktop&efirst=145&en… [232 chars]"
+    }
+  },
+  "related_searches": [
+    {
+      "text": "Keurig Coffee Maker",
+      "link": "https://www.bing.com/shop?q=Keurig+Coffee+Maker&FORM=SHOPA2",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=bing_s… [89 chars]",
+      "highlighted_words": "… [1 item(s) truncated]"
+    },
+    "… 14 more item(s) truncated"
+  ]
+}

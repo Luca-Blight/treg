@@ -1,0 +1,39 @@
+{
+  "code": 200,
+  "request_id": "ff9f12c2-f560-454e-a187-c1f7d76ca619",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:58",
+  "time_stamp": 1785220258,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xigua-App-V2-API/fetch_one_video_api… [96 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ff9f12c2-f560-45… [150 chars]",
+  "router": "/api/v1/xigua/app/v2/fetch_one_video",
+  "params": {
+    "item_id": "7354954305222377999"
+  },
+  "data": {
+    "message": "success",
+    "data": {
+      "is_original": false,
+      "content": "<p>\n<p>\n<div class=\"custom-video\" data-sp=\"0\" data-vid=\"v020… [838 chars]",
+      "group_flags": 1,
+      "share_url": "https://m.ixigua.com/video/7354954305222377999/?app=video_ar… [86 chars]",
+      "user_digg": 0,
+      "user_bury": 0,
+      "video_like_count": 42601,
+      "group_id": 7354954305222377999,
+      "video_user_like": 0,
+      "digg_control": null,
+      "super_digg_control": null,
+      "video_play_info": "{\"status\":10,\"message\":\"success\",\"video_duration\":189.569,\"v… [14796 chars]",
+      "ban_danmaku": 0,
+      "ban_danmaku_reason": "",
+      "ban_danmaku_send": 0,
+      "…": "23 more field(s) truncated"
+    }
+  }
+}

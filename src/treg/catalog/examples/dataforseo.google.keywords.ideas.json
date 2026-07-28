@@ -1,0 +1,223 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0580 sec.",
+  "cost": 0.01224,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280654-2171-0387-0000-d160814e85e9",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0482 sec.",
+      "cost": 0.01224,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "dataforseo_labs",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "related_keywords",
+        "se_type": "google",
+        "keyword": "coffee",
+        "location_code": 2840,
+        "language_code": "en",
+        "depth": 1,
+        "limit": 2
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "seed_keyword": "coffee",
+          "seed_keyword_data": null,
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 9,
+          "items_count": 2,
+          "items": [
+            {
+              "se_type": "google",
+              "keyword_data": {
+                "se_type": "google",
+                "keyword": "coffee",
+                "location_code": 2840,
+                "language_code": "en",
+                "keyword_info": {
+                  "se_type": "google",
+                  "last_updated_time": "2026-07-12 17:44:47 +00:00",
+                  "competition": 0.17,
+                  "competition_level": "LOW",
+                  "cpc": 0.65,
+                  "search_volume": 6120000,
+                  "low_top_of_page_bid": 1.12,
+                  "high_top_of_page_bid": 24.3,
+                  "categories": [
+                    10010,
+                    10083,
+                    "… 2 more item(s) truncated"
+                  ],
+                  "monthly_searches": [
+                    {
+                      "year": 2026,
+                      "month": 6,
+                      "search_volume": 6120000
+                    },
+                    {
+                      "year": 2026,
+                      "month": 5,
+                      "search_volume": 6120000
+                    },
+                    "… 10 more item(s) truncated"
+                  ],
+                  "search_volume_trend": {
+                    "monthly": 0,
+                    "quarterly": 0,
+                    "yearly": -33
+                  }
+                },
+                "keyword_info_normalized_with_bing": null,
+                "keyword_info_normalized_with_clickstream": null,
+                "clickstream_keyword_info": null,
+                "keyword_properties": {
+                  "se_type": "google",
+                  "core_keyword": null,
+                  "synonym_clustering_algorithm": "text_processing",
+                  "keyword_difficulty": 42,
+                  "detected_language": "en",
+                  "is_another_language": false
+                },
+                "serp_info": {
+                  "se_type": "google",
+                  "check_url": "https://www.google.com/search?q=coffee&hl=en&gl=US&ie=UTF-8&uule=w+CAIQIFISCQs2MuSEtepUEUK33kOSuTsc",
+                  "serp_item_types": [
+                    "organic",
+                    "product_considerations",
+                    "… 6 more item(s) truncated"
+                  ],
+                  "se_results_count": 117,
+                  "last_updated_time": "2026-06-17 05:01:45 +00:00",
+                  "previous_updated_time": "2026-04-18 06:33:57 +00:00"
+                },
+                "avg_backlinks_info": {
+                  "se_type": "google",
+                  "backlinks": 3560.8,
+                  "dofollow": 3016.4,
+                  "referring_pages": 3290.7,
+                  "referring_domains": 618.2,
+                  "referring_main_domains": 528,
+                  "rank": 247.4,
+                  "main_domain_rank": 460,
+                  "last_updated_time": "2026-06-17 02:01:46 +00:00"
+                },
+                "search_intent_info": {
+                  "se_type": "google",
+                  "main_intent": "informational",
+                  "foreign_intent": null,
+                  "last_updated_time": "2026-04-29 06:39:30 +00:00"
+                }
+              },
+              "depth": 0,
+              "related_keywords": [
+                "coffee types",
+                "coffee nearby",
+                "… 6 more item(s) truncated"
+              ]
+            },
+            {
+              "se_type": "google",
+              "keyword_data": {
+                "se_type": "google",
+                "keyword": "coffee beans",
+                "location_code": 2840,
+                "language_code": "en",
+                "keyword_info": {
+                  "se_type": "google",
+                  "last_updated_time": "2026-07-13 16:05:06 +00:00",
+                  "competition": 0.97,
+                  "competition_level": "HIGH",
+                  "cpc": 1.09,
+                  "search_volume": 201000,
+                  "low_top_of_page_bid": 0.17,
+                  "high_top_of_page_bid": 3.68,
+                  "categories": [
+                    10010,
+                    10083,
+                    "… 2 more item(s) truncated"
+                  ],
+                  "monthly_searches": [
+                    {
+                      "year": 2026,
+                      "month": 6,
+                      "search_volume": 165000
+                    },
+                    {
+                      "year": 2026,
+                      "month": 5,
+                      "search_volume": 165000
+                    },
+                    "… 10 more item(s) truncated"
+                  ],
+                  "search_volume_trend": {
+                    "monthly": 0,
+                    "quarterly": 0,
+                    "yearly": -18
+                  }
+                },
+                "keyword_info_normalized_with_bing": null,
+                "keyword_info_normalized_with_clickstream": null,
+                "clickstream_keyword_info": null,
+                "keyword_properties": {
+                  "se_type": "google",
+                  "core_keyword": "coffee bean",
+                  "synonym_clustering_algorithm": "text_processing",
+                  "keyword_difficulty": 17,
+                  "detected_language": "en",
+                  "is_another_language": false
+                },
+                "serp_info": {
+                  "se_type": "google",
+                  "check_url": "https://www.google.com/search?q=coffee%20beans&hl=en&gl=US&ie=UTF-8&uule=w+CAIQIFISCQs2MuSEtepUEUK33kOSuTsc",
+                  "serp_item_types": [
+                    "popular_products",
+                    "people_also_ask",
+                    "… 5 more item(s) truncated"
+                  ],
+                  "se_results_count": 247000000,
+                  "last_updated_time": "2026-05-14 21:30:37 +00:00",
+                  "previous_updated_time": "2026-03-28 17:58:37 +00:00"
+                },
+                "avg_backlinks_info": {
+                  "se_type": "google",
+                  "backlinks": 1927.5,
+                  "dofollow": 1581.8,
+                  "referring_pages": 1739.2,
+                  "referring_domains": 447.3,
+                  "referring_main_domains": 392.5,
+                  "rank": 130.4,
+                  "main_domain_rank": 521.3,
+                  "last_updated_time": "2026-05-14 18:30:38 +00:00"
+                },
+                "search_intent_info": {
+                  "se_type": "google",
+                  "main_intent": "transactional",
+                  "foreign_intent": null,
+                  "last_updated_time": "2026-04-29 03:59:09 +00:00"
+                }
+              },
+              "depth": 1,
+              "related_keywords": [
+                "coffee beans nearby",
+                "coffee beans plant",
+                "… 6 more item(s) truncated"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

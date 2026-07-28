@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "3201705a-72a7-4ccf-9e47-7538ba2570e0",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:41",
+  "time_stamp": 1785220061,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_collect_folders_api_v1_bilibili_web_fetch_all_live_areas_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/3201705a-72a7-4ccf-9e47-7538ba2570e0?sign=a90be34ce0d33dd19af3fca78f43cc2b02362077048ae6879d1bd73d08ee8f35",
+  "router": "/api/v1/bilibili/web/fetch_all_live_areas",
+  "params": {},
+  "data": {
+    "code": 0,
+    "msg": "success",
+    "message": "success",
+    "data": [
+      {
+        "id": 2,
+        "name": "网游",
+        "list": [
+          {
+            "id": "86",
+            "parent_id": "2",
+            "old_area_id": "4",
+            "name": "英雄联盟",
+            "act_id": "0",
+            "pk_status": "1",
+            "hot_status": 0,
+            "lock_status": "0",
+            "pic": "https://i0.hdslb.com/bfs/vc/0e808167886ad2299971ea49aade69b3663db9b9.png",
+            "complex_area_name": "",
+            "parent_name": "网游",
+            "area_type": 0
+          },
+          "… 110 more item(s) truncated"
+        ]
+      },
+      "… 10 more item(s) truncated"
+    ]
+  }
+}

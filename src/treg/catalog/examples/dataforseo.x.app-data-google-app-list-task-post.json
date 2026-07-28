@@ -1,0 +1,36 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0345 sec.",
+  "cost": 0.0012,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0422-0000-ae878e2ecc8c",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0036 sec.",
+      "cost": 0.0012,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "app_data",
+        "function": "app_list",
+        "se": "google",
+        "app_collection": "topselling_free",
+        "location_code": 2840,
+        "language_code": "en",
+        "depth": 100,
+        "se_type": "app_list",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

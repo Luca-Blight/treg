@@ -1,0 +1,69 @@
+{
+  "code": 0,
+  "data": {
+    "id": "f9de84865e3e8455a09af78bfe4d1da5",
+    "url_token": "<omitted: expires>",
+    "name": "张佳玮",
+    "use_default_avatar": false,
+    "avatar_url": "https://picx.zhimg.com/v2-d626957872f9b3… [98 chars total]",
+    "avatar_url_template": "https://pic1.zhimg.com/v2-d626957872f9b3… [97 chars total]",
+    "is_org": false,
+    "type": "people",
+    "url": "https://www.zhihu.com/api/v4/people/zhan… [49 chars total]",
+    "user_type": "people",
+    "headline": "公号：张佳玮写字的地方",
+    "headline_render": "公号：张佳玮写字的地方",
+    "gender": 1,
+    "is_advertiser": false,
+    "ip_info": "IP 属地法国",
+    "vip_info": {
+      "is_vip": false,
+      "vip_type": 0,
+      "rename_days": "0",
+      "entrance_v2": null,
+      "rename_frequency": 0,
+      "rename_await_days": 0
+    },
+    "kvip_info": {
+      "is_vip": false
+    },
+    "badge": [
+      {
+        "type": "best_answerer",
+        "description": "优秀回答者",
+        "topics": "… 9 item(s) truncated"
+      }
+    ],
+    "badge_v2": {
+      "title": "2023 年度新知答主",
+      "merged_badges": [
+        "… 9 field(s) truncated"
+      ],
+      "detail_badges": [
+        "… 9 field(s) truncated",
+        "… 5 more item(s) truncated"
+      ],
+      "icon": "https://picx.zhimg.com/v2-4a07bc69c4bb04… [80 chars total]",
+      "night_icon": "https://picx.zhimg.com/v2-4a07bc69c4bb04… [80 chars total]"
+    },
+    "allow_message": true,
+    "is_following": false,
+    "is_followed": false,
+    "is_blocking": false,
+    "follower_count": 3463828,
+    "answer_count": 6226,
+    "articles_count": 1514,
+    "project_count": 0,
+    "available_medals_count": 0,
+    "employments": [],
+    "org_verify_status": null,
+    "is_realname": true,
+    "has_applying_column": false,
+    "is_new_rename": false,
+    "has_agent_content": false,
+    "ai_assistant_info": null
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:49.822902242",
+  "requestId": "0323f6f464f44160886e331cb3ccc9c4"
+}

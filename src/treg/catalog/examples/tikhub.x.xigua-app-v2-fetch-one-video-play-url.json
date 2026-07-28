@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "request_id": "f53b42fd-d691-4f31-9a56-e1b1df3ac94b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:59",
+  "time_stamp": 1785220259,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xigua-App-V2-API/fetch_one_video_pla… [114 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "…": "5 more field(s) truncated"
+}

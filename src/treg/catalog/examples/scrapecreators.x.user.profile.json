@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "credits_remaining": 19849,
+  "credits_charged": 1,
+  "__typename": "User",
+  "affiliates_highlighted_label": {},
+  "avatar": {
+    "image_url": "https://pbs.twimg.com/profile_images/2077111020305162240/PwddgOau_normal.jpg"
+  },
+  "business_account": {},
+  "core": {
+    "created_at": "Mon Jul 08 09:31:59 +0000 2013",
+    "name": "@levelsio",
+    "screen_name": "levelsio"
+  },
+  "creator_subscriptions_count": 1,
+  "dm_permissions": {
+    "can_dm": false
+  },
+  "has_graduated_access": true,
+  "has_hidden_subscriptions_on_profile": false,
+  "highlights_info": {
+    "can_highlight_tweets": true,
+    "highlighted_tweets": "625"
+  },
+  "id": "VXNlcjoxNTc3MjQxNDAz",
+  "is_blue_verified": true,
+  "…": "18 more field(s) truncated"
+}

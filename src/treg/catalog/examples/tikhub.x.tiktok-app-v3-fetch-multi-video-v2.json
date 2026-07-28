@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "2f988871-e9e9-4271-8dc8-d646c3f3266b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:27",
+  "time_stamp": 1785220407,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_multi_video_… [109 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2f988871-e9e9-42… [150 chars]",
+  "router": "/api/v1/tiktok/app/v3/fetch_multi_video_v2",
+  "params": {},
+  "data": [
+    {
+      "add_yours_info": "… {1 field(s) truncated}",
+      "added_sound_music_info": "… {79 field(s) truncated}",
+      "ai_remix_info": "… {1 field(s) truncated}",
+      "aigc_info": "… {2 field(s) truncated}",
+      "anchors": null,
+      "anchors_extras": "",
+      "animated_image_info": "… {2 field(s) truncated}",
+      "author": "… {120 field(s) truncated}",
+      "author_user_id": 6594381147932196870,
+      "aweme_acl": "… {7 field(s) truncated}",
+      "aweme_id": "7339393672959757570",
+      "aweme_type": 0,
+      "banners": "… [1 item(s) truncated]",
+      "behind_the_song_music_ids": null,
+      "behind_the_song_video_music_ids": null,
+      "…": "129 more field(s) truncated"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "code": 200,
+  "request_id": "0646b382-f800-450e-83ce-b18edce502b4",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:04",
+  "time_stamp": 1785220264,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_post_detail_a… [100 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/0646b382-f800-45… [150 chars]",
+  "router": "/api/v1/youtube/web_v2/get_post_detail",
+  "params": {
+    "post_id": "UgkxiCSRfD6g7SPlWGPDa3vbP7aIsytXRkvy",
+    "language_code": "zh-CN",
+    "country_code": "US"
+  },
+  "data": {
+    "post": {
+      "post_id": "UgkxiCSRfD6g7SPlWGPDa3vbP7aIsytXRkvy",
+      "post_url": "https://www.youtube.com/post/UgkxiCSRfD6g7SPlWGPDa3vbP7aIsyt… [65 chars]",
+      "author_name": "YouTube Creators",
+      "author_channel_id": "UCkRfArvrzheW2E7b6SVT7vQ",
+      "author_url": "/@youtubecreators",
+      "author_thumbnails": "… [3 item(s) truncated]",
+      "content_text": "🎉 Posts are rolling out to more creators than ever before!! … [998 chars]",
+      "published_time": "2年前（修改过）",
+      "vote_count": "4360",
+      "comment_count": "",
+      "attachment": "… {2 field(s) truncated}"
+    },
+    "channel_metadata": {
+      "title": "YouTube Creators",
+      "description": "",
+      "channel_url": "",
+      "channel_id": "UCkRfArvrzheW2E7b6SVT7vQ",
+      "avatar_url": ""
+    },
+    "comments_continuation_token": "<omitted: expires>"
+  }
+}

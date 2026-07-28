@@ -1,0 +1,57 @@
+{
+  "code": 0,
+  "data": {
+    "paging": {
+      "is_end": true,
+      "totals": 1,
+      "previous": "http://www.zhihu.com/api/v4/members/zhang-jia-wei/following-columns?include=data%5B%2A%5D.intro%2Cfollowers%2Carticles_c… [200 chars total]",
+      "is_start": true,
+      "next": "http://www.zhihu.com/api/v4/members/zhang-jia-wei/following-columns?include=data%5B%2A%5D.intro%2Cfollowers%2Carticles_c… [201 chars total]"
+    },
+    "data": [
+      {
+        "updated": 1599023708,
+        "column_type": "normal",
+        "excerpt": "一个读书笔记专栏，推荐看过的好书",
+        "intro": "一个读书笔记专栏，推荐看过的好书",
+        "id": "Paper",
+        "voteup_count": 4396,
+        "accept_submission": true,
+        "items_count": 30,
+        "purchase_count": 0,
+        "title": "如何处理一千张废纸",
+        "url": "http://www.zhihu.com/api/v4/columns/Paper",
+        "comment_permission": "all",
+        "author": {
+          "avatar_url_template": "https://picx.zhimg.com/be2ef715f9b5c436247a816470edf6a7.jpg?source=d16d100b",
+          "badge": [],
+          "badge_v2": {
+            "icon": "",
+            "detail_badges": [],
+            "night_icon": "",
+            "merged_badges": [],
+            "title": ""
+          },
+          "name": "顾惜朝",
+          "url": "http://www.zhihu.com/api/v4/people/131093c59617bff67f1b6af29108581b",
+          "gender": 0,
+          "user_type": "people",
+          "is_advertiser": false,
+          "type": "people",
+          "avatar_url": "https://pic1.zhimg.com/be2ef715f9b5c436247a816470edf6a7_l.jpg?source=d16d100b",
+          "is_org": false,
+          "headline": "曾运行在知乎服务器上，永远的知乎少年",
+          "url_token": "guxizhao",
+          "id": "131093c59617bff67f1b6af29108581b"
+        },
+        "image_url": "https://pic1.zhimg.com/6503963e6_l.jpg?source=d16d100b",
+        "followers": 39342,
+        "articles_count": 30,
+        "type": "column"
+      }
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:45.660721902",
+  "requestId": "ab78248b50c641838ea8c9a19ac5bfe7"
+}

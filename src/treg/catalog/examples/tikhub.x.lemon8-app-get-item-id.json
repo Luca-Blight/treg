@@ -1,0 +1,21 @@
+{
+  "code": 200,
+  "request_id": "834ba9dd-ba54-43a5-9718-a6d3e088b300",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:13",
+  "time_stamp": 1785220153,
+  "time_zone": "America/Los_Angeles",
+  "docs": null,
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/834ba9dd-ba54-43a5-9718-a6d3e088b300?sign=f9b9cffaa2105356edd8a2525583ba2a06a3cbd7cc08fb2b36f59fd6f20379fe",
+  "router": "/api/v1/lemon8/app/get_item_id",
+  "params": {
+    "share_text": "https://v.lemon8-app.com/al/OghwFTppx"
+  },
+  "data": {
+    "item_id": null
+  }
+}

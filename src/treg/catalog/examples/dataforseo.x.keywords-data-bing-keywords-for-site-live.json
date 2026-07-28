@@ -1,0 +1,53 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "14.4505 sec.",
+  "cost": 0.09,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0441-0000-5058fac2c128",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "14.4371 sec.",
+      "cost": 0.09,
+      "result_count": 595,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "keywords_for_site",
+        "se": "bing",
+        "language_code": "en",
+        "location_code": 2840,
+        "target": "dataforseo.com"
+      },
+      "result": [
+        {
+          "keyword": "api analytics",
+          "location_code": 2840,
+          "language_code": "en",
+          "search_partners": false,
+          "device": "all",
+          "competition": 0.1,
+          "cpc": 0,
+          "search_volume": 10,
+          "categories": null,
+          "monthly_searches": [
+            {
+              "year": 2026,
+              "month": 6,
+              "search_volume": 10
+            },
+            "… 12 more item(s) truncated"
+          ]
+        },
+        "… 594 more item(s) truncated"
+      ]
+    }
+  ]
+}

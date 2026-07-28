@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "d790e407-c108-49bc-aeab-8fc3eca27e1f",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:09",
+  "time_stamp": 1785220149,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-Web-API/fetch_kuaishou_hot_list_v1_api_v1_kuaishou_web_fetch_kuaishou_hot_list_v1_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d790e407-c108-49bc-aeab-8fc3eca27e1f?sign=bdeec1d8f35132658db79b476312d959805196aa1b9bb478a0faadc14f754abf",
+  "router": "/api/v1/kuaishou/web/fetch_kuaishou_hot_list_v1",
+  "params": {},
+  "data": [
+    {
+      "rank": 0,
+      "id": "加强海内外中华儿女大团结",
+      "name": "加强海内外中华儿女大团结",
+      "viewCount": null,
+      "hotValue": null,
+      "iconUrl": "https://hw2.a.kwimgs.com/udata/pkg/nebula-app/rank_tag_rising3x.png",
+      "poster": "http://v2-zj-bjun.kwaicdn.com/upic/2026/07/27/21/BMjAyNjA3MjcyMTU4MjdfMjM2OTY5NzI3Nl8yMDM1NzE5MzMyMThfMF8z_B0281c9b7839c97562cb616971de00b07.jpg?tag=1-1785220149-unknown-0-knfamcumdx-fab2344348ec0f2f&… [436 chars]",
+      "tagType": "置顶",
+      "photoIds": {
+        "type": "json",
+        "json": [
+          "3xkpq92vutr8uie"
+        ]
+      },
+      "__typename": "VisionHotRankItem"
+    },
+    "… 48 more item(s) truncated"
+  ]
+}

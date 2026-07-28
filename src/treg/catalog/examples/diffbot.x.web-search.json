@@ -1,0 +1,15 @@
+{
+  "query": [
+    "knowledge graph AI"
+  ],
+  "search_results": [
+    {
+      "score": 0.893,
+      "pageUrl": "https://www.ibm.com/think/topics/knowledge-graph",
+      "title": "What is a knowledge graph?",
+      "content": "A knowledge graph, also known as a semantic network, represents a network of real-world entities—such as objects, events, situations or concepts—and illustrates the relationship between them. This inf… [4763 chars]"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "timeMs": 520
+}

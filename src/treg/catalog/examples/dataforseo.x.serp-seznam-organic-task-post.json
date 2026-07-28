@@ -1,0 +1,35 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0245 sec.",
+  "cost": 0.0006,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0066-0000-df3c0e269f5a",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0040 sec.",
+      "cost": 0.0006,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "task_post",
+        "se": "seznam",
+        "se_type": "organic",
+        "language_code": "cs",
+        "location_code": 2203,
+        "keyword": "albert einstein",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

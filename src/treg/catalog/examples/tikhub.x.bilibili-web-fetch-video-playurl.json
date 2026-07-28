@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "request_id": "12e59e34-750d-4b42-aae1-625d82b6ae03",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:48",
+  "time_stamp": 1785220068,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_one_video_api_v1_bilibili_web_fetch_video_playurl_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/12e59e34-750d-4b42-aae1-625d82b6ae03?sign=ea344667fb01137fb05940fc18a7d85950… [150 chars]",
+  "router": "/api/v1/bilibili/web/fetch_video_playurl",
+  "params": {
+    "bv_id": "BV1y7411Q7Eq",
+    "cid": "171776208"
+  },
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "from": "local",
+      "result": "suee",
+      "message": "",
+      "quality": 64,
+      "format": "flv720",
+      "timelength": 283723,
+      "accept_format": "hdflv2,flv,flv720,flv480,mp4",
+      "accept_description": "… [5 item(s) truncated]",
+      "accept_quality": "… [5 item(s) truncated]",
+      "video_codecid": 7,
+      "seek_param": "start",
+      "seek_type": "offset",
+      "dash": "… {7 field(s) truncated}",
+      "support_formats": "… [5 item(s) truncated]",
+      "high_format": null,
+      "last_play_time": 0,
+      "last_play_cid": 0,
+      "view_info": null,
+      "play_conf": "… {1 field(s) truncated}",
+      "cur_language": "",
+      "cur_production_type": 0,
+      "auto_qn_resp": "… {1 field(s) truncated}"
+    }
+  }
+}

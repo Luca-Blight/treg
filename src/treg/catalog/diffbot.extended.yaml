@@ -1,0 +1,557 @@
+# diffbot — EXTENDED tier: the provider's full documented endpoint surface beyond the
+# Knowledge Graph enrich/search entries curated in diffbot.yaml. Diffbot ships no fetchable
+# OpenAPI/spec (readme.io docs only, as noted in the core file); every entry below is
+# transcribed by hand from docs.diffbot.com's reference pages, cited per-endpoint in `docs_url`.
+#
+# VERIFIED 2026-07-28 — 12 of 17 endpoints were live-tested against a real free-plan (kgfree) key
+# and passed (the 9 Extract APIs, web-search, nl-process, account); the 5 Crawl/Bulk-job endpoints
+# are `untestable` (Plus-plan gated, confirmed by Diffbot's own docs rather than a blind 4xx probe
+# that would burn a job slot for nothing). Neither catalog_verify.py nor catalog_verify_extended.py
+# understands this file's `host:` field — both always call `prov.base_url` (kg.diffbot.com), which
+# is the WRONG host for every entry below — so verification here was done with direct calls
+# against each entry's documented host and the results stamped by hand; re-verifying through
+# either script as-is will 404 against the KG host and must not be read as these routes breaking.
+#
+# Two auth surprises found only by calling, not documented anywhere:
+#   - diffbot.x.web-search (llm.diffbot.com) rejects `?token=` and requires an
+#     `Authorization: Bearer <token>` HEADER instead — the opposite of every other route in this
+#     provider. treg's registry configures diffbot with token_location=query for the whole
+#     provider, so the auto-provisioned tool CANNOT call this endpoint as-is; noted on the entry.
+#   - diffbot.x.nl-process (nl.diffbot.com) does accept `?token=` as documented; an initial attempt
+#     that put the token in the JSON body instead (matching a plausible reading of the docs) 401'd.
+#   - diffbot.x.extract-product's first probe target (a Micro Center SKU from the docs' own
+#     example) both 403'd and later 404'd — dead/blocked, not a broken endpoint. Retargeted to
+#     books.toscrape.com, a stable public scraping sandbox, which passed cleanly.
+#
+# FOUR HOSTS, ONE PROVIDER. `base_url` (kg.diffbot.com/kg/v3, see diffbot.yaml) covers only the
+# Knowledge Graph. Every entry below needs an explicit `host:` because none of them resolve
+# against base_url — same trap as the moz-account precedent, times three:
+#   - api.diffbot.com/v3/...  — the Extract APIs (analyze, article, product, image, video,
+#     discussion, job, list, event), the Crawl API, the Bulk Extract API, and /v4/account.
+#   - llm.diffbot.com         — Web Search API.
+#   - nl.diffbot.com          — Natural Language API (POST-only, JSON body).
+# Auth on every route below is the same `?token=` query parameter used on the KG host.
+#
+# Billing: Diffbot's published credit table (diffbot.com/pricing) prices a single Extract API
+# page fetch at 1 credit (2 credits if `useProxy=default` routes it through Diffbot's datacenter
+# proxy). Crawl and Bulk jobs are billed per PAGE PROCESSED through whichever Extract API
+# `apiUrl` names, at that API's per-page rate — not a flat per-job charge, so `cost.value` stays
+# null and the rate lives in the note. Natural Language API is 1 credit per 10,000 characters of
+# input (document cap 100,000 chars, request cap 1,000,000 chars). Web Search API pricing is not
+# broken out on the credit table. Access to Crawl and Bulk is gated to Plus plans and up, per
+# their docs pages — expect 4xx on the Free plan this key was created under.
+
+provider: diffbot
+source:
+  method: official docs (no OpenAPI/spec published)
+  ingested: '2026-07-28'
+  spec_urls:
+    - https://docs.diffbot.com/reference/extract-analyze
+    - https://docs.diffbot.com/reference/article
+    - https://docs.diffbot.com/reference/product
+    - https://docs.diffbot.com/reference/image
+    - https://docs.diffbot.com/reference/video
+    - https://docs.diffbot.com/reference/discussion
+    - https://docs.diffbot.com/reference/job
+    - https://docs.diffbot.com/reference/list
+    - https://docs.diffbot.com/reference/event
+    - https://docs.diffbot.com/reference/crawl-introduction
+    - https://docs.diffbot.com/reference/create-a-crawl
+    - https://docs.diffbot.com/reference/manage-a-crawl-job
+    - https://docs.diffbot.com/reference/retrieve-crawl-job-data
+    - https://docs.diffbot.com/reference/bulk-job-introduction
+    - https://docs.diffbot.com/reference/create-a-bulk-job
+    - https://docs.diffbot.com/reference/retrieve-bulk-job-data
+    - https://docs.diffbot.com/reference/web-search-get
+    - https://docs.diffbot.com/reference/introduction-to-natural-language-api
+    - https://docs.diffbot.com/reference/nl-post
+    - https://docs.diffbot.com/reference/account
+    - https://www.diffbot.com/pricing/
+endpoints:
+  - id: diffbot.x.extract-analyze
+    tier: extended
+    capability: web.scrape.structured
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/analyze
+    name: "Auto-detect and extract any page"
+    summary: "Automatically identifies the type of page being processed and routes it through the relevant Diffbot API"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "target URL to extract, URL-encoded", example: "https://www.technologyreview.com/2020/09/04/1008156/knowledge-graph-ai-reads-web-machine-learning-natural-language-processing/"}
+        mode: {type: string, required: false, note: "restrict extraction to one page type: article, product, discussion, image, video, list, event"}
+        fallback: {type: string, required: false, note: "which API to fall back to if page type cannot be determined"}
+        fields: {type: string, required: false, note: "comma-delimited optional fields: links, extlinks, meta, querystring, breadcrumb"}
+        discussion: {type: boolean, required: false, note: "pass false to disable automatic comment/review extraction", example: true}
+        timeout: {type: integer, required: false, note: "ms to wait for content retrieval", example: 30000}
+        proxy: {type: string, required: false, note: "custom proxy IP for fetching the target page"}
+        proxyAuth: {type: string, required: false, note: "username:password for the custom proxy"}
+        useProxy: {type: string, required: false, note: "'default' routes through Diffbot's datacenter proxy (2 credits/page instead of 1); 'none' disables proxies"}
+        renderDelay: {type: integer, required: false, note: "extra rendering ms before DOM extraction, max 180000"}
+        scroll: {type: string, required: false, note: "'slow' or 'fast' — triggers lazy-loaded content"}
+        callback: {type: string, required: false, note: "JSONP callback for cross-domain AJAX"}
+      note: "different HOST than base_url — api.diffbot.com, not kg.diffbot.com"
+    test_request:
+      queryParams: {url: "https://www.diffbot.com/products/extract/"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit per page (2 with useProxy=default)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.extract-analyze.json
+    docs_url: https://docs.diffbot.com/reference/extract-analyze
+
+  - id: diffbot.x.extract-article
+    tier: extended
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/article
+    name: "Extract an article page"
+    summary: "Extracts clean article text, author, date, images, tags, sentiment and NLP facts from a news or blog page"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "target URL to extract", example: "https://www.technologyreview.com/2020/09/04/1008156/knowledge-graph-ai-reads-web-machine-learning-natural-language-processing/"}
+        fields: {type: string, required: false, note: "comma-delimited optional fields: links, extlinks, meta, querystring, breadcrumb, quotes"}
+        paging: {type: boolean, required: false, note: "pass false to disable automatic concatenation of multi-page articles", example: true}
+        maxTags: {type: integer, required: false, note: "max automatically-generated tags to return", example: 10}
+        tagConfidence: {type: number, required: false, note: "minimum tag relevance score 0.0-1.0", example: 0.5}
+        categoryConfidence: {type: number, required: false, note: "minimum category relevance score 0.0-1.0", example: 0.5}
+        discussion: {type: boolean, required: false, note: "pass false to disable automatic comment extraction", example: true}
+        naturalLanguage: {type: string, required: false, note: "run text through the NLP API: entities, sentiment, summary, facts, etc."}
+        summaryNumSentences: {type: integer, required: false, note: "max sentences in the generated summary", example: 3}
+        renderDelay: {type: integer, required: false, note: "extra rendering ms before DOM extraction, max 180000"}
+        scroll: {type: string, required: false, note: "'slow' or 'fast' — triggers lazy-loaded content"}
+        timeout: {type: integer, required: false, example: 30000}
+        proxy: {type: string, required: false}
+        proxyAuth: {type: string, required: false}
+        useProxy: {type: string, required: false, note: "'default' = datacenter proxy (2 credits/page); 'none' disables"}
+        callback: {type: string, required: false}
+      note: "different HOST than base_url — api.diffbot.com, not kg.diffbot.com"
+    test_request:
+      queryParams: {url: "https://www.technologyreview.com/2020/09/04/1008156/knowledge-graph-ai-reads-web-machine-learning-natural-language-processing/"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit per page (2 with useProxy=default)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.extract-article.json
+    docs_url: https://docs.diffbot.com/reference/article
+
+  - id: diffbot.x.extract-product
+    tier: extended
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/product
+    name: "Extract a product page"
+    summary: "Extracts product name, price, SKU, images, specs and reviews from an e-commerce page"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "target URL to extract", example: "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"}
+        fields: {type: string, required: false, note: "comma-delimited optional fields: links, extlinks, meta, querystring, breadcrumb"}
+        discussion: {type: boolean, required: false, note: "pass false to disable automatic extraction of product reviews", example: true}
+        renderDelay: {type: integer, required: false, note: "extra rendering ms before DOM extraction, max 180000"}
+        scroll: {type: string, required: false, note: "'slow' or 'fast' — triggers lazy-loaded content"}
+        timeout: {type: integer, required: false, example: 30000}
+        proxy: {type: string, required: false}
+        proxyAuth: {type: string, required: false}
+        useProxy: {type: string, required: false, note: "'default' = datacenter proxy (2 credits/page); 'none' disables"}
+        callback: {type: string, required: false}
+      note: "different HOST than base_url — api.diffbot.com, not kg.diffbot.com. The docs' own example URL (a Micro Center SKU) is dead (403, then 404) — retargeted to books.toscrape.com, a stable public scraping sandbox"
+    test_request:
+      queryParams: {url: "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit per page (2 with useProxy=default)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.extract-product.json
+    docs_url: https://docs.diffbot.com/reference/product
+
+  - id: diffbot.x.extract-image
+    tier: extended
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/image
+    name: "Extract images from a page"
+    summary: "Extracts the primary and secondary images from a page, with dimensions and metadata"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "target URL to extract", example: "https://www.diffbot.com/products/extract/"}
+        fields: {type: string, required: false, note: "comma-delimited optional fields: links, extlinks, meta, querystring, breadcrumb, displayHeight, displayWidth"}
+        renderDelay: {type: integer, required: false, note: "extra rendering ms before DOM extraction, max 180000"}
+        scroll: {type: string, required: false, note: "'slow' or 'fast' — triggers lazy-loaded content"}
+        timeout: {type: integer, required: false, example: 30000}
+        proxy: {type: string, required: false}
+        proxyAuth: {type: string, required: false}
+        useProxy: {type: string, required: false, note: "'default' = datacenter proxy (2 credits/page); 'none' disables"}
+        callback: {type: string, required: false}
+      note: "different HOST than base_url — api.diffbot.com, not kg.diffbot.com"
+    test_request:
+      queryParams: {url: "https://www.diffbot.com/products/extract/"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit per page (2 with useProxy=default)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.extract-image.json
+    docs_url: https://docs.diffbot.com/reference/image
+
+  - id: diffbot.x.extract-video
+    tier: extended
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/video
+    name: "Extract video page metadata"
+    summary: "Extracts title, embed/player URL, duration, thumbnail and metadata from a video page"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "target URL to extract", example: "https://www.youtube.com/watch?v=hFZFjoX2cGg"}
+        fields: {type: string, required: false, note: "comma-delimited optional fields: links, extlinks, meta, querystring, breadcrumb"}
+        renderDelay: {type: integer, required: false, note: "extra rendering ms before DOM extraction, max 180000"}
+        scroll: {type: string, required: false, note: "'slow' or 'fast' — triggers lazy-loaded content"}
+        timeout: {type: integer, required: false, example: 30000}
+        proxy: {type: string, required: false}
+        proxyAuth: {type: string, required: false}
+        useProxy: {type: string, required: false, note: "'default' = datacenter proxy (2 credits/page); 'none' disables"}
+        callback: {type: string, required: false}
+      note: "different HOST than base_url — api.diffbot.com, not kg.diffbot.com"
+    test_request:
+      queryParams: {url: "https://www.youtube.com/watch?v=hFZFjoX2cGg"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit per page (2 with useProxy=default)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.extract-video.json
+    docs_url: https://docs.diffbot.com/reference/video
+
+  - id: diffbot.x.extract-discussion
+    tier: extended
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/discussion
+    name: "Extract a forum or comment thread"
+    summary: "Extracts individual posts, authors, dates and sentiment from a forum thread or comment section"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "target URL to extract", example: "https://forum.gl-inet.com/t/ssh-connection-protocol-does-not-work-well-between-vpn-clients/22779"}
+        fields: {type: string, required: false, note: "comma-delimited optional fields: links, extlinks, meta, querystring, breadcrumb, sentiment"}
+        paging: {type: boolean, required: false, note: "pass false to disable automatic multi-page concatenation", example: true}
+        maxPages: {type: integer, required: false, note: "max pages in a thread to automatically concatenate", example: 20}
+        renderDelay: {type: integer, required: false, note: "extra rendering ms before DOM extraction, max 180000"}
+        scroll: {type: string, required: false, note: "'slow' or 'fast' — triggers lazy-loaded content"}
+        timeout: {type: integer, required: false, example: 30000}
+        proxy: {type: string, required: false}
+        proxyAuth: {type: string, required: false}
+        useProxy: {type: string, required: false, note: "'default' = datacenter proxy (2 credits/page); 'none' disables"}
+        callback: {type: string, required: false}
+      note: "different HOST than base_url — api.diffbot.com, not kg.diffbot.com"
+    test_request:
+      queryParams: {url: "https://forum.gl-inet.com/t/ssh-connection-protocol-does-not-work-well-between-vpn-clients/22779"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit per page (2 with useProxy=default)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.extract-discussion.json
+    docs_url: https://docs.diffbot.com/reference/discussion
+
+  - id: diffbot.x.extract-job
+    tier: extended
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/job
+    name: "Extract a job listing page"
+    summary: "Extracts job title, employer, location, salary and description from a job posting page"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "target URL to extract", example: "https://www.pathai.com/careers/DirectorClinicalOperations-6715804002"}
+        fields: {type: string, required: false, note: "optional fields to return from any fully-extracted pages"}
+        renderDelay: {type: integer, required: false, note: "extra rendering ms before DOM extraction, max 180000"}
+        scroll: {type: string, required: false, note: "'slow' or 'fast' — triggers lazy-loaded content"}
+        timeout: {type: integer, required: false, example: 30000}
+        proxy: {type: string, required: false}
+        proxyAuth: {type: string, required: false}
+        useProxy: {type: string, required: false, note: "'default' = datacenter proxy (2 credits/page); 'none' disables"}
+        callback: {type: string, required: false}
+      note: "different HOST than base_url — api.diffbot.com, not kg.diffbot.com"
+    test_request:
+      queryParams: {url: "https://www.pathai.com/careers/DirectorClinicalOperations-6715804002"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit per page (2 with useProxy=default)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.extract-job.json
+    docs_url: https://docs.diffbot.com/reference/job
+
+  - id: diffbot.x.extract-list
+    tier: extended
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/list
+    name: "Extract links from a list/index page"
+    summary: "Extracts the list of linked items (with titles, dates, images) from an index or category page"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "target URL to extract", example: "https://slashdot.org/"}
+        fields: {type: string, required: false, note: "optional fields to return from any fully-extracted pages"}
+        renderDelay: {type: integer, required: false, note: "extra rendering ms before DOM extraction, max 180000"}
+        scroll: {type: string, required: false, note: "'slow' or 'fast' — triggers lazy-loaded content"}
+        timeout: {type: integer, required: false, example: 30000}
+        proxy: {type: string, required: false}
+        proxyAuth: {type: string, required: false}
+        useProxy: {type: string, required: false, note: "'default' = datacenter proxy (2 credits/page); 'none' disables"}
+        callback: {type: string, required: false}
+      note: "different HOST than base_url — api.diffbot.com, not kg.diffbot.com"
+    test_request:
+      queryParams: {url: "https://slashdot.org/"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit per page (2 with useProxy=default)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.extract-list.json
+    docs_url: https://docs.diffbot.com/reference/list
+
+  - id: diffbot.x.extract-event
+    tier: extended
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/event
+    name: "Extract an event page"
+    summary: "Extracts event name, date, venue, price and organizer from an event listing page"
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "target URL to extract", example: "https://www.eventbrite.com/e/graphql-summit-2018-tickets-46601841362"}
+        fields: {type: string, required: false, note: "comma-delimited optional fields: links, extlinks, meta, querystring, breadcrumb"}
+        renderDelay: {type: integer, required: false, note: "extra rendering ms before DOM extraction, max 180000"}
+        scroll: {type: string, required: false, note: "'slow' or 'fast' — triggers lazy-loaded content"}
+        timeout: {type: integer, required: false, example: 30000}
+        proxy: {type: string, required: false}
+        proxyAuth: {type: string, required: false}
+        useProxy: {type: string, required: false, note: "'default' = datacenter proxy (2 credits/page); 'none' disables"}
+        callback: {type: string, required: false}
+      note: "different HOST than base_url — api.diffbot.com, not kg.diffbot.com"
+    test_request:
+      queryParams: {url: "https://www.eventbrite.com/e/graphql-summit-2018-tickets-46601841362"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit per page (2 with useProxy=default)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.extract-event.json
+    docs_url: https://docs.diffbot.com/reference/event
+
+  - id: diffbot.x.crawl-create
+    tier: extended
+    capability: web.scrape.job.start
+    platform: web
+    host: api.diffbot.com
+    method: POST
+    path: /v3/crawl
+    name: "Start a crawl job"
+    summary: "Spiders a site for links and pages, running each discovered page through an Extract API and compiling results into a searchable collection"
+    input:
+      bodyType: form
+      body:
+        name: {type: string, required: true, note: "unique job identifier", example: "test-crawl"}
+        seeds: {type: string, required: true, note: "URL-encoded seed URL(s), whitespace-separated for multiple", example: "https://example.com"}
+        apiUrl: {type: string, required: true, note: "full Extract API URL to process each discovered page through", example: "https://api.diffbot.com/v3/analyze"}
+        maxToCrawl: {type: integer, required: false, note: "cap on pages crawled"}
+        maxHops: {type: integer, required: false, note: "max link-hops from a seed URL"}
+        urlCrawlPattern: {type: string, required: false, note: "restrict which discovered links get crawled"}
+        urlProcessPattern: {type: string, required: false, note: "restrict which crawled pages get sent to the Extract API"}
+        crawlDelay: {type: number, required: false, note: "seconds between requests to the same domain"}
+        useProxies: {type: boolean, required: false}
+        obeyRobots: {type: boolean, required: false, note: "set 0 to bypass robots.txt"}
+        notifyEmail: {type: string, required: false}
+        notifyWebhook: {type: string, required: false}
+        repeat: {type: number, required: false, note: "days between automatic re-crawls"}
+      note: "different HOST than base_url — api.diffbot.com. ACCESS LIMITED TO PLUS PLANS AND UP per Diffbot's docs; expect 4xx on a Free-plan token"
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "no flat job charge — each page the crawl sends through apiUrl bills at that Extract API's per-page rate (1-2 credits)"
+    untestable: "requires a Plus-plan token (docs: 'Access to Crawl API is Limited to Plus Plans and Up') and starts an open-ended background job — not safe to blind-call on a free key"
+    docs_url: https://docs.diffbot.com/reference/create-a-crawl
+
+  - id: diffbot.x.crawl-manage
+    tier: extended
+    capability: web.scrape.job.status
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/crawl
+    name: "View, pause, resume, restart or delete a crawl job"
+    summary: "One endpoint for status, pause/resume, restart and delete of one or more crawl jobs"
+    input:
+      queryParams:
+        name: {type: string, required: false, note: "specific job name; omit to list all jobs"}
+        pause: {type: integer, required: false, note: "1 to pause, 0 to resume"}
+        restart: {type: integer, required: false, note: "1 to restart — erases prior data"}
+        delete: {type: integer, required: false, note: "1 to permanently remove the job"}
+        roundStart: {type: integer, required: false, note: "1 to manually trigger a new crawl cycle"}
+      note: "different HOST than base_url — api.diffbot.com. ACCESS LIMITED TO PLUS PLANS AND UP"
+    untestable: "requires a Plus-plan token and an existing job name to manage; no test target exists without one"
+    docs_url: https://docs.diffbot.com/reference/manage-a-crawl-job
+
+  - id: diffbot.x.crawl-data
+    tier: extended
+    capability: web.scrape.job.results
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/crawl/data
+    name: "Download crawl job results"
+    summary: "Downloads the extracted results of a crawl job as JSON or CSV, or a diagnostic URL report"
+    input:
+      queryParams:
+        name: {type: string, required: true, note: "which crawl job's data to download", example: "test-crawl"}
+        format: {type: string, required: false, note: "'csv' for CSV (top-level fields only); default json"}
+        type: {type: string, required: false, note: "'urls' returns a diagnostic URL Report in CSV instead of extraction output"}
+        num: {type: integer, required: false, note: "limit to N most-recently-processed URLs"}
+      note: "different HOST than base_url — api.diffbot.com. ACCESS LIMITED TO PLUS PLANS AND UP"
+    untestable: "requires a Plus-plan token and an existing completed crawl job; no test target exists without one"
+    docs_url: https://docs.diffbot.com/reference/retrieve-crawl-job-data
+
+  - id: diffbot.x.bulk-create
+    tier: extended
+    capability: web.scrape.job.start
+    platform: web
+    host: api.diffbot.com
+    method: POST
+    path: /v3/bulk/
+    name: "Start a bulk extract job"
+    summary: "Sends a large, explicit list of URLs through an Extract API asynchronously and compiles the results into one collection — unlike Crawl, it does not discover links"
+    input:
+      bodyType: form
+      body:
+        name: {type: string, required: true, note: "unique job identifier for tracking and management"}
+        urls: {type: string, required: true, note: "space-delimited list of URLs to process"}
+        apiUrl: {type: string, required: true, note: "which Extract API to run each URL through, e.g. the Article or Product API; can carry its own params"}
+        customHeaders: {type: string, required: false, note: "colon-delimited, URL-encoded custom HTTP headers"}
+        notifyEmail: {type: string, required: false}
+        notifyWebhook: {type: string, required: false}
+        obeyRobots: {type: integer, required: false, note: "set 0 to bypass robots.txt"}
+        repeat: {type: number, required: false, note: "days to repeat the job"}
+        pageProcessPattern: {type: string, required: false, note: "filter pages by HTML content strings"}
+      note: "different HOST than base_url — api.diffbot.com. ACCESS LIMITED TO PLUS PLANS AND UP; content-type is application/x-www-form-urlencoded"
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "no flat job charge — each URL processed bills at its apiUrl's per-page rate (1-2 credits)"
+    untestable: "requires a Plus-plan token (docs: 'Access to Bulk API is Limited to Plus Plans and Up') and starts a real background job — not safe to blind-call on a free key"
+    docs_url: https://docs.diffbot.com/reference/create-a-bulk-job
+
+  - id: diffbot.x.bulk-data
+    tier: extended
+    capability: web.scrape.job.results
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v3/bulk/data
+    name: "Download bulk job results"
+    summary: "Downloads the extracted results of a bulk job as JSON or CSV, or a diagnostic URL report"
+    input:
+      queryParams:
+        name: {type: string, required: true, note: "which bulk job's data to download"}
+        format: {type: string, required: false, note: "'csv' for CSV; default json"}
+        type: {type: string, required: false, note: "'urls' returns a diagnostic URL Report in CSV"}
+        num: {type: integer, required: false, note: "limit to N most-recently-processed URLs"}
+      note: "different HOST than base_url — api.diffbot.com. ACCESS LIMITED TO PLUS PLANS AND UP"
+    untestable: "requires a Plus-plan token and an existing completed bulk job; no test target exists without one"
+    docs_url: https://docs.diffbot.com/reference/retrieve-bulk-job-data
+
+  - id: diffbot.x.web-search
+    tier: extended
+    platform: web
+    host: llm.diffbot.com
+    method: GET
+    path: /api/v1/web_search/
+    name: "LLM-oriented web search"
+    summary: "Search the web and return results shaped for feeding into an LLM context window"
+    input:
+      queryParams:
+        text: {type: string, required: true, note: "the search query"}
+        size: {type: integer, required: false, note: "number of results to return", example: 10}
+        maxTokens: {type: integer, required: false, note: "caps the search response to this token budget; highlight chunks are reduced equitably"}
+      note: "different HOST than base_url — llm.diffbot.com, not kg.diffbot.com or api.diffbot.com. AUTH DIFFERS FROM EVERY OTHER DIFFBOT ROUTE: this one 401s on ?token= and requires an `Authorization: Bearer <token>` HEADER instead — confirmed live 2026-07-28. treg's registry has diffbot configured token_location=query provider-wide, so the auto-provisioned tool cannot reach this endpoint until that is special-cased"
+    test_request:
+      queryParams: {text: "knowledge graph AI", size: 3}
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.web-search.json
+    docs_url: https://docs.diffbot.com/reference/web-search-get
+
+  - id: diffbot.x.nl-process
+    tier: extended
+    platform: web
+    host: nl.diffbot.com
+    method: POST
+    path: /v1/
+    name: "Extract entities, sentiment & facts from text"
+    summary: "Runs a pre-trained classifier, named-entity recognizer, sentence tokenizer and sentiment analyzer over submitted text or a URL"
+    input:
+      bodyType: json
+      body:
+        content: {type: string, required: false, note: "raw text to analyze; alternative to url"}
+        url: {type: string, required: false, note: "source URL to fetch and analyze; alternative to content"}
+        lang: {type: string, required: false, note: "language hint; sentiment covers 100+ languages, entities/salience cover ~13, facts are English-only"}
+      queryParams:
+        fields: {type: string, required: false, note: "comma-delimited: entities, sentiment, facts, records, categories, sentences, language, summary", example: "entities,sentiment"}
+      note: "different HOST than base_url — nl.diffbot.com. content-type header may be application/json (default) or application/x-www-form-urlencoded. Token rides in the QUERY STRING as documented — putting it in the JSON body instead 401s"
+    test_request:
+      queryParams: {fields: "entities,sentiment"}
+      bodyType: json
+      body: {content: "Diffbot builds a knowledge graph of the web."}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 credit per 10,000 characters of input (document cap 100,000 chars; request cap 1,000,000 chars)"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.nl-process.json
+    docs_url: https://docs.diffbot.com/reference/introduction-to-natural-language-api
+
+  - id: diffbot.x.account
+    tier: extended
+    platform: web
+    host: api.diffbot.com
+    method: GET
+    path: /v4/account
+    name: "Check plan, usage and credit balance"
+    summary: "Retrieves account plan tier, monthly credit allowance, token status, child tokens and a daily usage breakdown by API"
+    input:
+      queryParams:
+        days: {type: integer, required: false, note: "number of days of call-volume history to return", example: 31}
+        invoices: {type: boolean, required: false, note: "include invoice and payment history"}
+      note: "different HOST than base_url — api.diffbot.com/v4, not kg.diffbot.com/kg/v3. This is the same URL OAuthProvider DIFFBOT uses as probe_url"
+    test_request:
+      queryParams: {days: 3}
+    cost:
+      type: free
+      currency: USD
+      note: "account/usage lookups are not metered"
+    verified: 2026-07-28
+    example_response: examples/diffbot.x.account.json
+    docs_url: https://docs.diffbot.com/reference/account

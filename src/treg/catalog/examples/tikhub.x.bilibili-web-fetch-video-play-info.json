@@ -1,0 +1,53 @@
+{
+  "code": 200,
+  "request_id": "8a0974a9-778c-4d73-816f-761e578997dd",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:48",
+  "time_stamp": 1785220068,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_video_play_in… [108 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/8a0974a9-778c-4d… [150 chars]",
+  "router": "/api/v1/bilibili/web/fetch_video_play_info",
+  "params": {
+    "url": "https://www.bilibili.com/video/BV1S5uKzzE4r"
+  },
+  "data": {
+    "from": "local",
+    "result": "suee",
+    "message": "",
+    "quality": 32,
+    "format": "flv480",
+    "timelength": 2176490,
+    "accept_format": "hdflv2,hdflv2,flv,flv720,flv480,mp4",
+    "accept_description": [
+      "超清 4K",
+      "… 1 more item(s) truncated"
+    ],
+    "accept_quality": [
+      120,
+      "… 1 more item(s) truncated"
+    ],
+    "video_codecid": 7,
+    "seek_param": "start",
+    "seek_type": "offset",
+    "dash": {
+      "duration": 2177,
+      "minBufferTime": 1.5,
+      "min_buffer_time": 1.5,
+      "video": "… [6 item(s) truncated]",
+      "audio": "… [3 item(s) truncated]",
+      "dolby": "… {2 field(s) truncated}",
+      "flac": null
+    },
+    "support_formats": [
+      "… {9 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "high_format": null,
+    "…": "8 more field(s) truncated"
+  }
+}

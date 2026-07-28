@@ -1,0 +1,39 @@
+{
+  "code": 200,
+  "request_id": "6aa966ee-a8da-48c1-885a-731c163cc659",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:39:53",
+  "time_stamp": 1785220793,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Threads-Web-API/search_recent_api_v1_threads_web_search_recent_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/6aa966ee-a8da-48c1-885a-731c163cc659?sign=579e2a606edf25273d99fa2e94d871edfb349db07e354b01b3b7ebc870460b6f",
+  "router": "/api/v1/threads/web/search_recent",
+  "params": {
+    "query": "bitcoin"
+  },
+  "data": {
+    "searchResults": {
+      "inform_module": null,
+      "edges": [
+        {
+          "node": {
+            "thread": "… {2 field(s) truncated}",
+            "__typename": "XDTSearchThread"
+          },
+          "cursor": ""
+        },
+        "… 11 more item(s) truncated"
+      ],
+      "page_info": {
+        "end_cursor": null,
+        "has_next_page": false,
+        "has_previous_page": false,
+        "start_cursor": null
+      }
+    }
+  }
+}

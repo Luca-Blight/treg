@@ -1,0 +1,52 @@
+{
+  "requestId": "d8b941c5-5aa8-4fa9-8e2d-f5ca439964df",
+  "pagination": {
+    "page": 0,
+    "size": 1,
+    "total": 1
+  },
+  "results": [
+    {
+      "id": "v1.A1gXjPYd63SSPjSvxO4uwqXqE5ilJV9S",
+      "name": "Lusha",
+      "domain": "www.lusha.com",
+      "employeeCount": {
+        "exact": 357,
+        "min": 201,
+        "max": 500
+      },
+      "industry": "Technology, Information & Media",
+      "location": {
+        "city": "Boston",
+        "state": "Massachusetts",
+        "country": "United States",
+        "countryIso2": "US",
+        "continent": "North America",
+        "stateCode": "MA"
+      },
+      "socialLinks": {
+        "linkedin": "https://www.linkedin.com/company/lushadata"
+      },
+      "has": [
+        "description",
+        "yearFounded",
+        "… 22 more item(s) truncated"
+      ],
+      "canReveal": [
+        {
+          "field": "employeesByDepartment",
+          "credits": 1
+        },
+        {
+          "field": "employeesByLocation",
+          "credits": 1
+        },
+        "… 4 more item(s) truncated"
+      ]
+    }
+  ],
+  "billing": {
+    "creditsCharged": 1,
+    "resultsReturned": 1
+  }
+}

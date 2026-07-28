@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "0ebc86a6-6144-4fe0-8f5f-8d02274afe65",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:19",
+  "time_stamp": 1785220099,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-DouPlus-API/search_video_api_v1_douyin_douplus_search_video_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/0ebc86a6-6144-4fe0-8f5f-8d02274afe65?sign=8ed47f0d5476092ef5b6c7373be0ca826e40e9a49cc200115b33e2c4ea56f195",
+  "router": "/api/v1/douyin/douplus/search_video",
+  "params": {},
+  "data": {
+    "code": 0,
+    "msg": "success",
+    "data": {
+      "hasMore": true,
+      "cursor": 12,
+      "itemList": [
+        {
+          "AwemeInfo": {
+            "AwemeId": "7653919611243360753",
+            "Desc": "NiKo 2026 cologne Major夺冠8min 纯享版#major夺冠 #cs2 #2026科隆 #NiKo",
+            "CreateTime": "1782067032000",
+            "Author": "… {9 field(s) truncated}",
+            "Video": "… {10 field(s) truncated}",
+            "Statistics": "… {4 field(s) truncated}",
+            "IsPhoto": false
+          },
+          "ItemSource": {
+            "SourceType": 1,
+            "ItemGeneraion": 0
+          },
+          "IsAd": false,
+          "HasLocalAnchor": false,
+          "PlayletType": 0
+        },
+        "… 10 more item(s) truncated"
+      ]
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "requestId": "92562ab7-752a-4276-9bb6-6763ff88767b",
+  "results": [
+    {
+      "id": "v1.EXAMPLE_CONTACT_ID_1",
+      "emails": [
+        {
+          "email": "person@example.com",
+          "type": "work",
+          "confidence": null,
+          "updateDate": "2026-07-28",
+          "dataSource": "lusha"
+        }
+      ],
+      "firstName": "Example",
+      "lastName": "Contact",
+      "fullName": "Example Contact",
+      "jobTitle": {
+        "title": "Head of Marketing and Business Development",
+        "departments": [
+          "Marketing",
+          "Business Development"
+        ],
+        "seniority": "Director"
+      },
+      "company": {
+        "id": "v1.EXAMPLE_COMPANY_ID_1",
+        "name": "Example Corp",
+        "domain": "www.example.com",
+        "industry": "Finance"
+      },
+      "location": {
+        "country": "United Kingdom",
+        "countryIso2": "GB",
+        "state": "England",
+        "stateCode": "ENG",
+        "city": "Manchester",
+        "continent": "Europe",
+        "isEuContact": true
+      },
+      "socialLinks": {
+        "linkedin": "https://www.linkedin.com/in/example-contact"
+      },
+      "previousEmployment": [
+        {
+          "company": {
+            "name": "Example Corp",
+            "domain": "example.com"
+          },
+          "jobTitle": {
+            "departments": [
+              "Marketing",
+              "Business Development"
+            ],
+            "title": "Head of Marketing & Business Development",
+            "seniority": "Director"
+          }
+        }
+      ],
+      "updateDate": "2026-07-28"
+    }
+  ],
+  "billing": {
+    "creditsCharged": 1,
+    "resultsReturned": 1
+  },
+  "_scrubbed": true
+}

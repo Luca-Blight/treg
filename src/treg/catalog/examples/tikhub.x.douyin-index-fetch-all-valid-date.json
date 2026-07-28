@@ -1,0 +1,29 @@
+{
+  "code": 200,
+  "request_id": "fe937618-8d04-42b2-9d43-fd964424088d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:18",
+  "time_stamp": 1785220098,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Index-API/fetch_all_valid_date_api_v1_douyin_index_fetch_all_valid_date_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/fe937618-8d04-42b2-9d43-fd964424088d?sign=509e1a1a8dca8eb3f5aa35724c8726c7272085d087d884fb35e6094228eae88d",
+  "router": "/api/v1/douyin/index/fetch_all_valid_date",
+  "params": {},
+  "data": {
+    "keyword_latest_day": "20260726",
+    "keyword_latest_week": "20260726",
+    "brand_latest_day": "20260726",
+    "brand_latest_week": "20260718",
+    "poi_latest_day": "20260726",
+    "poi_latest_week": "20260726",
+    "poi_latest_month": "202606",
+    "BaseResp": {
+      "StatusMessage": "",
+      "StatusCode": 0
+    }
+  }
+}

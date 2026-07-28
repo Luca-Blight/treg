@@ -1,0 +1,67 @@
+{
+  "code": 0,
+  "data": {
+    "ad_plugin_infos": [],
+    "atmosphere_voting_config": {
+      "daily_frequency": 1,
+      "frequency_interval": 3,
+      "min_num_of_root_comment": 10,
+      "location": 3,
+      "title": "你对该内容下的评论氛围是否满意？",
+      "detail": [
+        {
+          "emoji_level": "dissatisfied",
+          "title": "不满",
+          "normal_icon": "https://picx.zhimg.com/v2-1d5d094f0cd71f7da08e7e54d037c0b5.png",
+          "selected_icon": "https://picx.zhimg.com/v2-9af3c8aa46b63f2f840138b0ee6b0a99.png"
+        },
+        {
+          "emoji_level": "fair",
+          "title": "一般",
+          "normal_icon": "https://pica.zhimg.com/v2-706985b9364429bc4842b1027a8217ed.png",
+          "selected_icon": "https://picx.zhimg.com/v2-1e8b3f0e735d3f2a98d4b43bfe793118.png"
+        },
+        "… 1 more item(s) truncated"
+      ]
+    },
+    "comment_status": {
+      "type": 1,
+      "text": "评论区已关闭",
+      "induce_text": ""
+    },
+    "counts": {
+      "total_counts": 0,
+      "collapsed_counts": 0,
+      "reviewing_counts": 0,
+      "segment_comment_counts": 0
+    },
+    "data": [],
+    "edit_status": {
+      "can_reply": false,
+      "toast": "评论区已关闭"
+    },
+    "header": [],
+    "is_content_author": false,
+    "is_content_rewardable": false,
+    "paging": {
+      "is_end": true,
+      "is_start": true,
+      "next": "https://www.zhihu.com/api/v4/comment_v5/answers/2065109283218502614/root_comment?answer_id=2065109283218502614&limit=10&offset=&order_by=score",
+      "previous": "https://www.zhihu.com/api/v4/comment_v5/answers/2065109283218502614/root_comment?answer_id=2065109283218502614&limit=10&offset=&order_by=score",
+      "totals": 0
+    },
+    "sorter": [
+      {
+        "type": "score",
+        "text": "默认"
+      },
+      {
+        "type": "ts",
+        "text": "最新"
+      }
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:59.192928029",
+  "requestId": "fa29583307034c65a645464208cb2d00"
+}

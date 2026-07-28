@@ -1,0 +1,69 @@
+{
+  "success": true,
+  "credits_remaining": 19855,
+  "credits_charged": 1,
+  "data": {
+    "user": {
+      "pk": "787132",
+      "friendship_status": null,
+      "gating": null,
+      "fbid_v2": "1784140…",
+      "is_memorialized": false,
+      "is_private": false,
+      "has_story_archive": null,
+      "is_coppa_enforced": null,
+      "supervision_info": null,
+      "is_regulated_c18": false,
+      "regulated_news_in_locations": [],
+      "bio_links": [
+        {
+          "image_url": "",
+          "is_pinned": false,
+          "link_type": "externa…",
+          "lynx_url": "https:/…",
+          "media_accent_color_hex": "",
+          "media_type": "none",
+          "title": "",
+          "url": "http://…",
+          "creation_source": "NONE"
+        },
+        "… 1 more item(s) truncated"
+      ],
+      "linked_fb_info": null,
+      "text_post_app_badge_label": "natgeo",
+      "show_text_post_app_badge": true,
+      "username": "natgeo",
+      "live_broadcast_visibility": null,
+      "live_broadcast_id": null,
+      "profile_pic_url": "https:/…",
+      "hd_profile_pic_url_info": {
+        "url": "https:/…"
+      },
+      "is_unpublished": false,
+      "latest_reel_media": null,
+      "has_profile_pic": null,
+      "profile_pic_genai_tool_info": [],
+      "biography": "Step in…",
+      "full_name": "Nationa…",
+      "is_verified": true,
+      "show_account_transparency_details": true,
+      "account_type": 2,
+      "follower_count": 268927567,
+      "mutual_followers_count": null,
+      "profile_context_links_with_user_ids": null,
+      "profile_context_facepile_users": null,
+      "address_street": null,
+      "city_name": null,
+      "is_business": false,
+      "zip": null,
+      "biography_with_entities": {
+        "raw_text": "Step in…",
+        "entities": []
+      },
+      "category": "",
+      "should_show_category": false,
+      "…": "71 more field(s) truncated"
+    }
+  },
+  "status": "ok"
+}

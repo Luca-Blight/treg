@@ -1,0 +1,63 @@
+{
+  "code": 0,
+  "data": {
+    "author_info": {
+      "author_id": "6930060811712856071",
+      "avatar_uri": "https://p3.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-avt-0015_003386ba33… [123 chars total]",
+      "city": "三亚市",
+      "content_tags": {
+        "剧情搞笑": [
+          "剧情"
+        ]
+      },
+      "core_user_id": "62781260366",
+      "follower": "1244889",
+      "gender": 2,
+      "industry_tags": [],
+      "ink_cnt": "43681",
+      "is_star": 1,
+      "link_cnt": "162018",
+      "name": "💍Coffee"
+    },
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "video_info": {
+      "collect_cnt": "3044",
+      "comment_cnt": "279",
+      "create_time": "1775901600",
+      "duration": 13.767,
+      "finish_rate": 0.1877485608,
+      "head_image_uri": "tos-cn-i-0813c000-ce/ogMAJiCBwqAClF6ifAp9EAA1EwZYX2IWTf8Dhn",
+      "interact_cnt": "22152",
+      "interact_rate": 0.0412,
+      "item_id": "7627181871163557497",
+      "like_cnt": "17266",
+      "music_info": {
+        "album": "",
+        "author": "💍Coffee",
+        "cover_uri": "100x100/aweme-avatar/tos-cn-avt-0015_003386ba336e7c7d31ae3818c9f12a76",
+        "cover_url": [
+          "https://p26.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_003386ba336… [121 chars total]",
+          "… 2 more item(s) truncated"
+        ],
+        "create_time": "1775841666",
+        "duration": "13",
+        "music_id": "7627181493772634932",
+        "play_url": "https://lf9-music-east.douyinstatic.com/obj/ies-music-hj/7627181740531911461.mp3",
+        "source_platform": 0,
+        "title": "@💍Coffee创作的原声",
+        "used_count": "0"
+      },
+      "share_cnt": "4607",
+      "title": "🌋世界不在书里  在我脚下",
+      "url": "https://www.iesdouyin.com/share/video/7627181871163557497/?region=CN&mid=7627181… [458 chars total]",
+      "video_id": "v2700fgi0000d7cj1h7og65p38a0bv5g",
+      "vv_cnt": "536986"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:29.24615529",
+  "requestId": "194ca9c79ca64b9e9488e748cd30512b"
+}

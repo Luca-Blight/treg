@@ -1,0 +1,33 @@
+{
+  "code": 200,
+  "request_id": "2f5d2118-1b5e-47f4-b59f-8a4809b794ec",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:42",
+  "time_stamp": 1785220302,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V2-API/search_hashtags_api_v1_instagram_v2_search_hashtags_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2f5d2118-1b5e-47f4-b59f-8a4809b794ec?sign=ae87ecb6dceb459daaeba8b87bf8a19151d9e534097d7575a81dd2cf4431228f",
+  "router": "/api/v1/instagram/v2/search_hashtags",
+  "params": {
+    "keyword": "cat"
+  },
+  "data": {
+    "data": {
+      "count": 55,
+      "items": [
+        {
+          "allow_following": false,
+          "id": "17841562906103814",
+          "media_count": 313556262,
+          "name": "cat",
+          "profile_pic_url": null
+        },
+        "… 54 more item(s) truncated"
+      ]
+    }
+  }
+}

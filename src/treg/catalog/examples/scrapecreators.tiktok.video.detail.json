@@ -1,0 +1,58 @@
+{
+  "success": true,
+  "credits_remaining": 19858,
+  "credits_charged": 1,
+  "aweme_detail": {
+    "added_sound_music_info": {
+      "album": "",
+      "allow_offline_music_to_detail_page": false,
+      "artists": "… [0 item(s) truncated]",
+      "audition_duration": 210,
+      "author": "yourmus…",
+      "author_deleted": false,
+      "author_position": null,
+      "avatar_medium": "… {6 field(s) truncated}",
+      "avatar_thumb": "… {6 field(s) truncated}",
+      "binded_challenge_id": 0,
+      "…": "64 more field(s) truncated"
+    },
+    "ai_remix_info": {
+      "has_entrance": false
+    },
+    "aigc_info": {
+      "aigc_label_type": 0,
+      "created_by_ai": false
+    },
+    "anchors": null,
+    "anchors_extras": "",
+    "animated_image_info": {
+      "effect": 0,
+      "type": 0
+    },
+    "author": {
+      "accept_private_policy": false,
+      "account_labels": null,
+      "account_region": "",
+      "ad_cover_url": null,
+      "advance_feature_item_order": null,
+      "advanced_feature_info": null,
+      "apple_account": 0,
+      "authority_status": 0,
+      "avatar_168x168": "… {6 field(s) truncated}",
+      "avatar_300x300": "… {6 field(s) truncated}",
+      "…": "114 more field(s) truncated"
+    },
+    "author_user_id": 7198363676607530000,
+    "aweme_acl": {
+      "download_general": "… {4 field(s) truncated}",
+      "download_mask_panel": "… {4 field(s) truncated}",
+      "platform_list": null,
+      "press_action_list": null,
+      "share_action_list": null,
+      "share_general": "… {4 field(s) truncated}",
+      "share_list_status": 0
+    },
+    "aweme_id": "7251387…",
+    "…": "148 more field(s) truncated"
+  }
+}

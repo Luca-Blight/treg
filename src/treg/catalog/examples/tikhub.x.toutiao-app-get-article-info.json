@@ -1,0 +1,49 @@
+{
+  "code": 200,
+  "request_id": "688bf11c-9c7f-4b5d-ae33-e9bf94489e83",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:23",
+  "time_stamp": 1785220223,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Toutiao-App-API/get_article_info_api… [96 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/688bf11c-9c7f-4b… [150 chars]",
+  "router": "/api/v1/toutiao/app/get_article_info",
+  "params": {
+    "group_id": "7450114952884503059"
+  },
+  "data": {
+    "message": "success",
+    "data": {
+      "digg_count": 2,
+      "bury_count": 0,
+      "detail_show_flags": 0,
+      "group_id": 7450114952884503059,
+      "ban_comment": 0,
+      "user_repin": 0,
+      "user_digg": 0,
+      "user_bury": 0,
+      "dataType": 0,
+      "itemCellDebug": null,
+      "context": "{\"read_count\":95,\"tip\":\"\",\"approve_data\":{\"user_approve\":0,\"… [16041 chars]",
+      "filter_words": "… [2 item(s) truncated]",
+      "danmaku_count": 0,
+      "log_pb": "… {1 field(s) truncated}",
+      "share_info": "… {5 field(s) truncated}",
+      "ab_path": "0f35e2858fb36f23fab49cc74e768cf5",
+      "ban_digg": 0,
+      "display_flags": 0,
+      "repin_count": 1,
+      "share_url": "https://m.toutiao.com/article/7450114952884503059/?app=news_… [318 chars]",
+      "like_count": 2,
+      "ug_install_aid": 0,
+      "feed_labels": null,
+      "ignore_web_transform": 0,
+      "media_info": "… {15 field(s) truncated}",
+      "…": "16 more field(s) truncated"
+    }
+  }
+}

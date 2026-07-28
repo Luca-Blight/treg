@@ -1,0 +1,51 @@
+{
+  "search_metadata": {
+    "id": "6a6898aabcd927077fe9ea2e",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/F0mIW7QDewW31moELuCzxA/6a6898aa… [81 chars]",
+    "created_at": "2026-07-28 11:55:22 UTC",
+    "processed_at": "2026-07-28 11:55:22 UTC",
+    "bing_url": "https://www.bing.com/search?q=coffee&mkt=en-US",
+    "raw_html_file": "https://serpapi.com/searches/F0mIW7QDewW31moELuCzxA/6a6898aa… [81 chars]",
+    "total_time_taken": 11.57
+  },
+  "search_parameters": {
+    "q": "coffee",
+    "device": "desktop",
+    "mkt": "en-US",
+    "engine": "bing"
+  },
+  "search_information": {
+    "total_results": 256000
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "15 Best Coffee Shops in San Diego, CA (2026)",
+      "tracking_link": "https://www.bing.com/ck/a?!&&p=4b8363fcfc750c215a89f546e11c1… [260 chars]",
+      "link": "https://mycoffeeexplorer.com/guides/san-diego",
+      "date": "Jun 2, 2026",
+      "displayed_link": "https://mycoffeeexplorer.com › guides › san-diego",
+      "thumbnail": "https://th.bing.com/th/id/ODLS.A2450BEC-5595-40BA-9F13-D9EC6… [107 chars]",
+      "snippet": "Which coffee shops are worth visiting in San Diego, CA? Put … [189 chars]"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://www.bing.com/search?q=coffee&mkt=en-US&cvid=86a2a963… [264 chars]",
+    "other_pages": {
+      "2": "https://www.bing.com/search?q=coffee&mkt=en-US&cvid=86a2a963… [264 chars]",
+      "3": "https://www.bing.com/search?q=coffee&mkt=en-US&cvid=86a2a963… [265 chars]"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?device=desktop&engine=bing&f… [86 chars]",
+    "next": "https://serpapi.com/search.json?device=desktop&engine=bing&f… [86 chars]",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?device=desktop&engine=bing&f… [86 chars]",
+      "3": "https://serpapi.com/search.json?device=desktop&engine=bing&f… [86 chars]"
+    }
+  }
+}

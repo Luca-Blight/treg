@@ -1,0 +1,433 @@
+"""The endpoint catalog served over HTTP (`/catalog/*`) + stamped onto provisioned tools.
+
+The data lives in src/treg/catalog/*.yaml (see docs/context/architecture/catalog.md). These tests
+assert the API CONTRACT the dashboard and `treg catalog` are written against, plus the two things
+the loader has to get right on its own: merging a provider's `<service>.extended.yaml` into the same
+provider, and never letting a caller-supplied id reach the filesystem.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import json
+
+from httpx import AsyncClient
+
+from treg import catalog_store as cs
+from treg import oauth_providers as P
+
+
+# ---- platform listing --------------------------------------------------------------------
+async def test_platforms_lists_the_curated_shelves_busiest_first(clients: AsyncClient):
+    r = await clients.get("/catalog/platforms")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["generated_from"] == "catalog"
+    rows = {p["slug"]: p for p in body["platforms"]}
+    assert {"tiktok", "web"} <= set(rows), rows.keys()
+
+    tiktok = rows["tiktok"]
+    assert tiktok["label"] == "TikTok"
+    assert tiktok["endpoints"] >= 5
+    assert 0 < tiktok["capabilities"] <= tiktok["endpoints"]
+    assert 0 < tiktok["verified"] <= tiktok["endpoints"]
+    assert {"tikhub", "justoneapi"} <= set(tiktok["providers"]), "the social overlap pair is the point"
+    assert {"dataforseo", "moz"} <= set(rows["web"]["providers"]), "the SEO overlap pair is the point"
+
+    counts = [p["endpoints"] for p in body["platforms"]]
+    assert counts == sorted(counts, reverse=True)
+
+
+async def test_platform_listing_hides_taxonomy_entries_nobody_implements(clients: AsyncClient):
+    rows = (await clients.get("/catalog/platforms")).json()["platforms"]
+    assert all(p["endpoints"] > 0 for p in rows)
+
+
+# ---- platform detail ---------------------------------------------------------------------
+async def test_platform_detail_groups_the_same_job_across_providers(clients: AsyncClient):
+    """The capability is the join key: one row, both providers — that's what makes the catalog
+    comparable rather than four separate provider docs."""
+    r = await clients.get("/catalog/platforms/tiktok")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["platform"] == {"slug": "tiktok", "label": "TikTok", "category": "Social"}
+
+    caps = {c["id"]: c for c in body["capabilities"]}
+    assert [c["id"] for c in body["capabilities"]] == sorted(caps), "capabilities are sorted by id"
+    profile = caps["tiktok.user.profile"]
+    assert profile["description"]
+    assert {e["provider"] for e in profile["endpoints"]} >= {"tikhub", "justoneapi"}
+
+    ep = next(e for e in profile["endpoints"] if e["provider"] == "tikhub")
+    assert set(ep) == {"id", "provider", "provider_display", "name", "summary", "method", "path",
+                       "scope", "tier", "domain", "call_template", "cost", "verified", "docs_url",
+                       "has_example", "input"}
+    assert ep["provider_display"] == P.get("tikhub").display_name
+    assert ep["method"] == "GET" and ep["path"].startswith("/")
+    assert ep["tier"] == "core", "an endpoint with no explicit tier is core, not hidden"
+    assert ep["verified"] and ep["has_example"] is True
+    assert ep["cost"]["type"] == "per_success"
+
+
+async def test_every_listed_endpoint_carries_its_platform(clients: AsyncClient):
+    for slug in ("web", "google", "tiktok"):
+        body = (await clients.get(f"/catalog/platforms/{slug}")).json()
+        ids = {e["id"] for c in body["capabilities"] for e in c["endpoints"]}
+        ids |= {e["id"] for e in body["extended"]}
+        assert ids == {e["id"] for e in cs.load().for_platform(slug)}
+
+
+# ---- platform detail: the domain ledger the dashboard renders -----------------------------
+async def test_the_ledger_files_every_row_under_a_domain_with_other_last(clients: AsyncClient):
+    """A platform page is ONE table sectioned by subject. `other` is the junk drawer, so it is the
+    one section whose position carries meaning — it can never outrank a real subject, however big
+    it gets. The rest run busiest-first, because the biggest section is what a visitor came for."""
+    body = (await clients.get("/catalog/platforms/tiktok")).json()
+    doms = body["domains"]
+    assert [d["domain"] for d in doms].count("other") == 1
+    assert doms[-1]["domain"] == "other", "the junk drawer sorts last no matter its size"
+    sizes = [len(d["rows"]) for d in doms[:-1]]
+    assert sizes == sorted(sizes, reverse=True)
+
+    # every endpoint on the platform appears exactly once, in exactly one section
+    ids = [e["id"] for d in doms for r in d["rows"] for e in r["endpoints"]]
+    assert sorted(ids) == sorted(e["id"] for e in cs.load().for_platform("tiktok"))
+    assert len(ids) == len(set(ids))
+
+
+async def test_a_section_leads_with_the_jobs_several_providers_do(clients: AsyncClient):
+    """Merged rows first: a comparable job is worth more than a lone route, and burying the
+    comparison under fifty single endpoints is how the old page hid it."""
+    body = (await clients.get("/catalog/platforms/tiktok")).json()
+    for section in body["domains"]:
+        kinds = [r["kind"] for r in section["rows"]]
+        assert kinds == sorted(kinds, key=lambda k: k != "merged"), section["domain"]
+
+    user = next(d for d in body["domains"] if d["domain"] == "user")
+    merged = next(r for r in user["rows"] if r["capability"] == "tiktok.user.profile")
+    assert merged["kind"] == "merged"
+    assert merged["description"] == "Get a user's public profile", "the capability's plain-English job"
+    assert len({e["provider"] for e in merged["endpoints"]}) > 1, "one provider is not a comparison"
+
+
+async def test_a_single_row_is_led_by_the_endpoints_own_name(clients: AsyncClient):
+    """A row only one provider serves is led by the endpoint's curated `name` ("Get Showcase Product
+    List" says more than `tiktok.shop.showcase` ever could), falling back to its `summary` until a
+    name is written. `summary` is documentation prose — some of it runs to a paragraph — so it is a
+    fallback for the row and the description in the expansion, never the preferred title."""
+    body = (await clients.get("/catalog/platforms/tiktok")).json()
+    rows = [r for d in body["domains"] for r in d["rows"] if r["kind"] == "single"]
+    assert rows
+    for row in rows:
+        # exactly one endpoint: folding a provider's two takes on one job into a single row would
+        # show one route next to the OTHER one's price
+        assert len(row["endpoints"]) == 1, row["capability"]
+        ep = row["endpoints"][0]
+        assert row["description"] == (ep["name"] or ep["summary"] or row["capability"])
+
+
+def test_a_curated_name_beats_the_summary_on_a_row(tmp_path):
+    """The founder's fix for DataForSEO rows rendering doc paragraphs as titles: where a `name:` is
+    written, it wins, and the prose stays in the expansion."""
+    (tmp_path / "capabilities.yaml").write_text("platforms: {web: Web}\ncapabilities: {}\n")
+    (tmp_path / "dataforseo.extended.yaml").write_text(
+        "provider: dataforseo\nendpoints:\n"
+        "  - id: dataforseo.x.named\n    platform: web\n    tier: extended\n    method: POST\n"
+        "    path: /v3/backlinks/anchors/live\n    name: Anchor text overview\n"
+        "    summary: This endpoint will provide you with a detailed overview of anchors used when "
+        "linking to the specified website with relevant backlink data for each of them.\n"
+        "  - id: dataforseo.x.unnamed\n    platform: web\n    tier: extended\n    method: POST\n"
+        "    path: /v3/backlinks/domain_pages/live\n    summary: Domain pages with backlink data\n")
+    cat = cs.load(directory=tmp_path)
+    pairs = [(e, cs.endpoint_view(e, e["provider"], cat)) for e in cat.endpoints]
+    rows = {r["endpoints"][0]["id"]: r for s in cs.domain_rows(pairs, cat.capabilities) for r in s["rows"]}
+    assert rows["dataforseo.x.named"]["description"] == "Anchor text overview"
+    assert rows["dataforseo.x.unnamed"]["description"] == "Domain pages with backlink data"
+
+
+async def test_every_endpoint_carries_a_domain_and_a_call_line(clients: AsyncClient):
+    """The domain decides which section a row files under, and the `treg call` line is the reason
+    the row exists — both ride on the row rather than costing a second request."""
+    for slug in ("tiktok", "web"):
+        body = (await clients.get(f"/catalog/platforms/{slug}")).json()
+        eps = [e for c in body["capabilities"] for e in c["endpoints"]] + body["extended"]
+        assert eps
+        for e in eps:
+            assert e["domain"] and e["domain"] == e["domain"].lower().strip()
+            # The endpoint-ID form: callable with no registered tool (marketplace credential ladder).
+            assert e["call_template"].startswith(f"treg call {e['id']}")
+
+
+async def test_the_ledger_ships_the_provider_wide_facts_once(clients: AsyncClient):
+    """Limits and the rate card live once at the top of a provider's yaml. An expanded row needs
+    them, and copying them onto 2,000 endpoint rows to deliver them would be absurd."""
+    body = (await clients.get("/catalog/platforms/tiktok")).json()
+    assert set(body["providers"]) == {e["provider"] for e in cs.load().for_platform("tiktok")}
+    tikhub = body["providers"]["tikhub"]
+    assert tikhub["display_name"] == P.get("tikhub").display_name
+    assert tikhub["docs"]
+    assert body["providers"]["justoneapi"]["pricing_url"]
+
+
+def test_the_domain_is_curation_first_then_the_taxonomy_then_a_guess(tmp_path):
+    """Three sources, best first. An explicit `domain:` always wins; otherwise the capability id's
+    middle segment, which the taxonomy already encodes; and only then a keyword read off the path,
+    which is all an unmapped extended endpoint has to offer."""
+    (tmp_path / "capabilities.yaml").write_text(
+        "platforms: {tiktok: TikTok}\ncapabilities: {tiktok.video.comments: Comments}\n")
+    (tmp_path / "tikhub.yaml").write_text(
+        "provider: tikhub\nendpoints:\n"
+        "  - id: tikhub.tiktok.video.comments\n    capability: tiktok.video.comments\n"
+        "    platform: tiktok\n    method: GET\n    path: /a\n"
+        "  - id: tikhub.tiktok.override\n    platform: tiktok\n    domain: shop\n"
+        "    method: GET\n    path: /api/v1/tiktok/web/fetch_user_profile\n"
+        "  - id: tikhub.tiktok.guessed\n    platform: tiktok\n    method: GET\n"
+        "    path: /api/v1/tiktok/shop/web/fetch_product_detail\n    summary: Product detail\n"
+        "  - id: tikhub.tiktok.nothing\n    platform: tiktok\n    method: GET\n    path: /x\n")
+    by_id = cs.load(directory=tmp_path).by_id
+    assert by_id["tikhub.tiktok.video.comments"]["domain"] == "video"
+    assert by_id["tikhub.tiktok.override"]["domain"] == "shop", "curation beats the keyword guess"
+    assert by_id["tikhub.tiktok.guessed"]["domain"] == "shop"
+    assert by_id["tikhub.tiktok.nothing"]["domain"] == "other"
+
+
+def test_a_delivery_mode_in_the_path_is_not_a_subject(tmp_path):
+    """DataForSEO ends every synchronous route in `/live`, which read as a subject and filed 33
+    unrelated SEO endpoints under a "live" heading. A mode, a version and a format segment all say
+    how a route is CALLED — the grouping segment before them is what it is about."""
+    (tmp_path / "capabilities.yaml").write_text("platforms: {web: Web}\ncapabilities: {}\n")
+    (tmp_path / "dataforseo.extended.yaml").write_text(
+        "provider: dataforseo\nendpoints:\n"
+        "  - id: dataforseo.x.anchors\n    platform: web\n    tier: extended\n    method: POST\n"
+        "    path: /v3/backlinks/anchors/live\n    summary: Live anchors overview\n"
+        "  - id: dataforseo.x.lonely\n    platform: web\n    tier: extended\n    method: GET\n"
+        "    path: /v3/status\n    summary: Live API status\n")
+    by_id = cs.load(directory=tmp_path).by_id
+    assert by_id["dataforseo.x.anchors"]["domain"] == "backlinks"
+    # ...and a path with no grouping segment left is honest about it: the last segment is the
+    # OPERATION, and a section per operation is not a section at all.
+    assert by_id["dataforseo.x.lonely"]["domain"] == "other"
+
+
+async def test_unknown_platform_is_404(clients: AsyncClient):
+    r = await clients.get("/catalog/platforms/myspace")
+    assert r.status_code == 404
+    assert "myspace" in r.text
+
+
+# ---- search ------------------------------------------------------------------------------
+async def test_search_finds_the_job_across_providers_best_first(clients: AsyncClient):
+    """The discover half of the loop: an agent knows the JOB ("tiktok comments"), not the shelf it
+    sits on. Both providers implementing it must come back, core+verified ahead of the long tail."""
+    r = await clients.get("/catalog/search", params={"q": "tiktok comments"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    rows = body["results"]
+    assert body["count"] == len(rows) <= body["total"]
+
+    top = [e["id"] for e in rows[:3]]
+    assert set(top) == {
+        "justoneapi.tiktok.video.comments",
+        "tikhub.tiktok.video.comments",
+        "scrapecreators.tiktok.video.comments",
+    }
+    assert all(e["tier"] == "core" and e["verified"] for e in rows[:3])
+    # rank is total and stable: score desc, then core before extended, then verified before not
+    scores = [e["score"] for e in rows]
+    assert scores == sorted(scores, reverse=True)
+    assert [e["tier"] for e in rows] == sorted((e["tier"] for e in rows), key=lambda t: t != "core")
+
+    first = rows[0]
+    assert first["capability"] == "tiktok.video.comments" and first["capability_description"]
+    assert first["platform"] == "tiktok" and first["platform_label"] == "TikTok"
+    assert first["provider_display"] == P.get(first["provider"]).display_name
+    assert first["cost"]["usd"] is not None, "a search row prices in one currency or comparison is fiction"
+    assert any(h.startswith(f"treg catalog get {first['id']}") for h in body["hints"])
+
+
+async def test_search_requires_every_token_to_match(clients: AsyncClient):
+    """AND, not OR — a second word is a refinement, so it must be able to shrink the result set."""
+    broad = (await clients.get("/catalog/search", params={"q": "tiktok", "limit": 100})).json()
+    narrow = (await clients.get("/catalog/search", params={"q": "tiktok comments", "limit": 100})).json()
+    assert 0 < narrow["total"] < broad["total"]
+    for e in narrow["results"]:  # the second token really is a filter, not a scoring nudge
+        haystack = " ".join((e["id"], e["summary"], e["capability"], e["capability_description"])).lower()
+        assert "comment" in haystack, e["id"]
+
+    empty = (await clients.get("/catalog/search", params={"q": "tiktok flibbertigibbet"})).json()
+    assert empty["total"] == 0 and empty["results"] == []
+    assert empty["hints"], "a dead end still has to say what to try next"
+
+
+async def test_search_respects_limit_and_an_empty_query(clients: AsyncClient):
+    body = (await clients.get("/catalog/search", params={"q": "tiktok", "limit": 3})).json()
+    assert len(body["results"]) == 3 and body["total"] > 3
+    assert any("more matches" in h for h in body["hints"])
+    assert (await clients.get("/catalog/search", params={"q": "  "})).json()["results"] == []
+
+
+# ---- endpoint detail -----------------------------------------------------------------------
+async def test_endpoint_detail_answers_everything_in_one_call(clients: AsyncClient):
+    """The inspect half: params, price, the captured response and a paste-ready command — plus the
+    OTHER providers doing the same job, so comparing costs never needs a second request."""
+    r = await clients.get("/catalog/endpoints/justoneapi.tiktok.video.comments")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    e = body["endpoint"]
+    assert e["id"] == "justoneapi.tiktok.video.comments"
+    assert e["capability"] == "tiktok.video.comments" and e["platform_label"] == "TikTok"
+    assert e["input"]["queryParams"], "the detail view's whole job is showing what to SEND"
+
+    assert body["provider"]["service"] == "justoneapi"
+    assert body["provider"]["pricing_url"], "provider-wide facts live once at the top of the yaml file"
+
+    sibs = {s["id"] for s in body["siblings"]}
+    assert "tikhub.tiktok.video.comments" in sibs
+    assert e["id"] not in sibs, "an endpoint is not its own sibling"
+
+    tmpl = body["call_template"]
+    assert tmpl.startswith("treg call justoneapi.tiktok.video.comments")
+    assert "--query awemeId=" in tmpl, "the verifier's proven request is what makes it paste-ready"
+    assert isinstance(body["example_response"], (dict, list)), "inline, so parsing needs no second call"
+
+
+async def test_call_template_carries_method_and_body_for_a_post(clients: AsyncClient):
+    body = (await clients.get("/catalog/endpoints/dataforseo.web.backlinks.summary")).json()
+    tmpl = body["call_template"]
+    assert tmpl.startswith("treg call dataforseo.web.backlinks.summary --method POST")
+    assert "--data '[{\"target\":\"moz.com\"" in tmpl, "single-quoted JSON survives a shell paste"
+
+
+async def test_unknown_endpoint_is_404(clients: AsyncClient):
+    r = await clients.get("/catalog/endpoints/tikhub.tiktok.nope")
+    assert r.status_code == 404 and "tikhub.tiktok.nope" in r.text
+
+
+def test_call_template_falls_back_to_documented_examples(tmp_path):
+    """No test_request (an unverified endpoint) still yields a usable line: required params only,
+    valued by their documented example, or a typed placeholder when even that is missing."""
+    (tmp_path / "capabilities.yaml").write_text("platforms: {web: Web}\ncapabilities: {}\n")
+    (tmp_path / "moz.yaml").write_text(
+        "provider: moz\nendpoints:\n"
+        "  - id: moz.web.thing\n    platform: web\n    method: GET\n    path: /v1/{site}/links\n"
+        "    input:\n"
+        "      pathParams: {site: {type: string, required: true, example: moz.com}}\n"
+        "      queryParams:\n"
+        "        limit: {type: integer, required: true}\n"
+        "        offset: {type: integer, required: false}\n")
+    ep = cs.load(directory=tmp_path).by_id["moz.web.thing"]
+    # Path params ride as --query (the server folds them into the path), required query after.
+    assert cs.call_template(ep) == "treg call moz.web.thing --query site=moz.com --query limit=<integer>"
+
+
+# ---- example responses -------------------------------------------------------------------
+async def test_example_route_serves_a_captured_response(clients: AsyncClient):
+    r = await clients.get("/catalog/examples/tikhub.tiktok.user.profile")
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"].startswith("application/json")
+    assert isinstance(r.json(), (dict, list))
+
+
+async def test_example_route_404s_an_unknown_endpoint(clients: AsyncClient):
+    assert (await clients.get("/catalog/examples/tikhub.tiktok.nope")).status_code == 404
+
+
+async def test_example_route_refuses_path_traversal(clients: AsyncClient):
+    """The id is resolved through the catalog before any path is built, so a traversal attempt is
+    just a miss — it must never read a file, encoded or not."""
+    for probe in ("../../api.py", "..%2f..%2fapi.py", "%2e%2e%2f%2e%2e%2fconfig.py",
+                  "/etc/passwd", "tikhub.tiktok.user.profile/../../api.py"):
+        r = await clients.get(f"/catalog/examples/{probe}")
+        assert r.status_code == 404, (probe, r.status_code)
+        assert "def " not in r.text, probe
+
+
+# ---- loader ------------------------------------------------------------------------------
+def test_an_extended_file_merges_into_the_same_provider(tmp_path):
+    """Curation splits a provider across `<service>.yaml` and `<service>.extended.yaml`; both land
+    under one provider, and the extended tier is what keeps the long tail out of the capability view."""
+    (tmp_path / "capabilities.yaml").write_text(
+        "platforms: {tiktok: TikTok}\ncapabilities: {tiktok.user.profile: A profile}\n")
+    (tmp_path / "tikhub.yaml").write_text(
+        "provider: tikhub\nendpoints:\n"
+        "  - id: tikhub.tiktok.user.profile\n"
+        "    capability: tiktok.user.profile\n"
+        "    platform: tiktok\n    method: GET\n    path: /a\n")
+    (tmp_path / "tikhub.extended.yaml").write_text(
+        "provider: tikhub\nendpoints:\n"
+        "  - id: tikhub.tiktok.user.mix\n"
+        "    platform: tiktok\n    tier: extended\n    method: GET\n    path: /b\n"
+        "  - id: tikhub.tiktok.user.stats\n"
+        "    capability: tiktok.user.profile\n"
+        "    platform: tiktok\n    tier: extended\n    method: GET\n    path: /c\n")
+
+    cat = cs.load(directory=tmp_path)
+    assert {e["id"] for e in cat.for_provider("tikhub")} == {
+        "tikhub.tiktok.user.profile", "tikhub.tiktok.user.mix", "tikhub.tiktok.user.stats"}
+    tiers = {e["id"]: e["tier"] for e in cat.endpoints}
+    assert tiers["tikhub.tiktok.user.profile"] == "core"
+    assert tiers["tikhub.tiktok.user.mix"] == "extended"
+
+
+def test_a_missing_catalog_directory_is_an_empty_catalog_not_a_crash(tmp_path):
+    cat = cs.load(directory=tmp_path / "nope")
+    assert cat.endpoints == [] and cat.platforms == {}
+    # a half-written dir (no taxonomy, malformed provider file) must degrade the same way
+    (tmp_path / "capabilities.yaml").write_text("platforms: {tiktok: TikTok}\n")
+    (tmp_path / "broken.yaml").write_text("provider: broken\nendpoints: [{no_id: true}]\n")
+    assert cs.load(directory=tmp_path).endpoints == []
+
+
+def test_a_proposed_capability_still_gets_a_description(tmp_path):
+    (tmp_path / "capabilities.yaml").write_text("platforms: {web: Web}\ncapabilities: {}\n")
+    (tmp_path / "moz.yaml").write_text(
+        "provider: moz\nproposed_capabilities: {web.thing.new: A new job}\nendpoints:\n"
+        "  - id: moz.web.thing.new\n    capability: web.thing.new\n    platform: web\n"
+        "    method: POST\n    path: /x\n")
+    assert cs.load(directory=tmp_path).capabilities["web.thing.new"] == "A new job"
+
+
+# ---- stamping ----------------------------------------------------------------------------
+async def test_connecting_a_key_stamps_the_catalogs_verified_endpoints(clients: AsyncClient, monkeypatch):
+    """A fresh connection should arrive knowing what it can call — the catalog's verified core
+    endpoints ride onto the provisioned tool's examples, capped so the list stays scannable."""
+    monkeypatch.setitem(P.REGISTRY, "tikhub", dataclasses.replace(
+        P.REGISTRY["tikhub"], base_url="http://upstream", probe_url="", probe_path="/whoami",
+        token_verify_field=""))
+    r = await clients.post("/connections/token", json={"provider": "tikhub", "token": "tk-key"})
+    assert r.status_code == 200, r.text
+
+    tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "tikhub")
+    examples = tool["examples"]
+    assert 0 < len(examples) <= 12
+    assert all(set(e) == {"method", "path", "note"} for e in examples)
+    assert len({(e["method"], e["path"]) for e in examples}) == len(examples), "no duplicate paths"
+
+    profile = next(e for e in examples if e["path"] == "/api/v1/tiktok/web/fetch_user_profile")
+    assert "tiktok.user.profile" in profile["note"], "the capability travels with the example"
+    assert "uniqueId" in profile["note"], "the input hint is the part method+path can't show"
+
+    stamped = {(e["method"], e["path"]) for e in examples}
+    unverified = [e for e in cs.load().for_provider("tikhub") if not e["verified"]]
+    assert unverified, "fixture assumption: tikhub has at least one unverified endpoint"
+    assert not stamped & {(e["method"], e["path"]) for e in unverified}, "documented is not verified"
+
+
+async def test_stamping_keeps_the_registrys_own_examples_first(clients: AsyncClient, monkeypatch):
+    """The hand-written registry examples are the curated ones; the catalog appends, never displaces."""
+    provider = dataclasses.replace(
+        P.REGISTRY["tikhub"], base_url="http://upstream", probe_url="", probe_path="/whoami",
+        token_verify_field="",
+        examples=({"method": "GET", "path": "/hand/written", "note": "from the registry"},))
+    monkeypatch.setitem(P.REGISTRY, "tikhub", provider)
+    assert (await clients.post("/connections/token",
+                               json={"provider": "tikhub", "token": "tk-key"})).status_code == 200
+
+    tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "tikhub")
+    assert tool["examples"][0]["path"] == "/hand/written"
+    assert len(tool["examples"]) == 12
+
+
+def test_a_provider_with_no_catalog_entry_stamps_nothing():
+    assert cs.tool_examples("slack") == []
+    assert json.dumps(cs.tool_examples("tikhub")), "the shape must be JSON-serializable for the Tool column"

@@ -1,0 +1,82 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "5.2046 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280654-2171-0121-0000-3ed89f638863",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "5.0832 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "serp",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "google",
+        "se_type": "organic",
+        "keyword": "coffee",
+        "location_code": 2840,
+        "language_code": "en",
+        "depth": 10,
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "coffee",
+          "type": "organic",
+          "se_domain": "google.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.google.com/search?q=coffee&hl=en&gl=US&ie=UTF-8&uule=w+CAIQIFISCQs2MuSEtepUEUK33kOSuTsc",
+          "datetime": "2026-07-28 03:54:53 +00:00",
+          "spell": null,
+          "refinement_chips": null,
+          "item_types": [
+            "local_pack",
+            "product_considerations",
+            "… 5 more item(s) truncated"
+          ],
+          "se_results_count": 3030000000,
+          "pages_count": 1,
+          "items_count": 9,
+          "items": [
+            {
+              "type": "organic",
+              "rank_group": 1,
+              "rank_absolute": 6,
+              "page": 1,
+              "domain": "en.wikipedia.org",
+              "title": "Coffee",
+              "description": "Coffee is a beverage brewed from roasted ground coffee beans. Darkly colored and bitter, coffee has a stimulating effect on humans due to its caffeine content,",
+              "url": "https://en.wikipedia.org/wiki/Coffee",
+              "breadcrumb": "https://en.wikipedia.org › wiki › Coffee"
+            },
+            {
+              "type": "organic",
+              "rank_group": 2,
+              "rank_absolute": 7,
+              "page": 1,
+              "domain": "www.reddit.com",
+              "title": "r/Coffee",
+              "description": "Welcome to the daily /r/Coffee question thread! There are no stupid questions here, ask a question and get an answer! Read more",
+              "url": "https://www.reddit.com/r/Coffee/",
+              "breadcrumb": "2.4M+ followers"
+            },
+            "… 7 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "code": 0,
+  "data": {
+    "comments": [
+      {
+        "cid": "4901589293",
+        "avatar": "https://img9.doubanio.com/icon/u49896471-4.jpg",
+        "username": "jxela_f",
+        "rating": "还行",
+        "time": "",
+        "location": "广东",
+        "content": "有点仓促地结束了童话故事…好想回到最初啊…",
+        "vote_count": 0
+      },
+      {
+        "cid": "4901520489",
+        "avatar": "https://img9.doubanio.com/icon/u142414066-5.jpg",
+        "username": "多几个二",
+        "rating": "推荐",
+        "time": "",
+        "location": "四川",
+        "content": "电影换导演了味道有点变，喜欢的群像也少之又少。结束了，乌托邦之旅，我的音乐歌单剧哈哈。",
+        "vote_count": 0
+      },
+      "… 18 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:00.335263737",
+  "requestId": "c4af74bf09564f34bc91242d8af4f419"
+}

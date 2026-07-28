@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "ef805d79-3f73-4dcb-af54-6b0687289171",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:46",
+  "time_stamp": 1785220186,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Reddit-APP-API/fetch_news_feed_api_v1_reddit_app_fetch_news_feed_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ef805d79-3f73-4dcb-af54-6b0687289171?sign=6fe3aa2e07766d8beb6de840decfcbbea4c3630b9956be988ad517387acb8397",
+  "router": "/api/v1/reddit/app/fetch_news_feed",
+  "params": {
+    "subtopic_ids": "all",
+    "need_format": "false"
+  },
+  "data": {
+    "newsV3": {
+      "elements": {
+        "dist": 5,
+        "pageInfo": {
+          "endCursor": "<omitted: expires>"
+        },
+        "edges": [
+          {
+            "__typename": "FeedElementEdge",
+            "node": "… {8 field(s) truncated}"
+          },
+          "… 7 more item(s) truncated"
+        ]
+      }
+    }
+  }
+}

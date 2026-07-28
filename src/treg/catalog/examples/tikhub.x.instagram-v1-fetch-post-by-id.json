@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "d5784a3a-bc8d-4cdc-b7e8-bb6ee94e5166",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:53",
+  "time_stamp": 1785220133,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V1-API/fetch_post_by_id_ap… [98 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d5784a3a-bc8d-4c… [150 chars]",
+  "router": "/api/v1/instagram/v1/fetch_post_by_id",
+  "params": {
+    "post_id": "3742637871112032100"
+  },
+  "data": {
+    "status": true,
+    "__typename": "GraphImage",
+    "id": "3742637871112032100",
+    "shortcode": "DPwhVB-jo9k",
+    "dimensions": {
+      "height": 1080,
+      "width": 1080
+    },
+    "gating_info": null,
+    "fact_check_overall_rating": null,
+    "fact_check_information": null,
+    "sensitivity_friction_info": null,
+    "sharing_friction_info": {
+      "should_have_sharing_friction": false,
+      "bloks_app_url": null
+    },
+    "media_overlay_info": null,
+    "media_preview": null,
+    "display_url": "https://instagram.fmil1-1.fna.fbcdn.net/v/t51.82787-15/56281… [519 chars]",
+    "display_resources": [
+      "… {3 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "accessibility_caption": null,
+    "…": "33 more field(s) truncated"
+  }
+}

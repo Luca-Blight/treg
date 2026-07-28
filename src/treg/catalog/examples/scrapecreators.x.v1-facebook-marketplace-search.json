@@ -1,0 +1,50 @@
+{
+  "success": true,
+  "credits_remaining": 19836,
+  "credits_charged": 1,
+  "listings": [
+    {
+      "id": "2097511571122884",
+      "url": "https://www.facebook.com/marketplace/item/2097511571122884/",
+      "title": "Bianchi Boardwalk Bike PICKUP TODAY 6/29",
+      "creation_time": null,
+      "listing_date_text": null,
+      "mileage": null,
+      "custom_subtitles": [],
+      "price": {
+        "formatted_amount": "$30",
+        "amount_with_offset_in_currency": 3000,
+        "amount": 30
+      },
+      "strikethrough_price": {
+        "formatted_amount": "$72",
+        "amount": "72.00"
+      },
+      "location": {
+        "city": "Austin",
+        "state": "TX",
+        "display_name": "Austin, Texas",
+        "city_page_id": "106224666074625"
+      },
+      "primary_photo": {
+        "id": "1812848859471155",
+        "url": "https://scontent-bos5-1.xx.fbcdn.net/v/t39.84726-6/734329944_1812848866137821_888992576234417209_n.jpg?stp=c43.0.260.260a_dst-jpg_p261x260_tt6&_nc_cat=107&ccb=1-7&_nc_sid=92e707&_nc_ohc=UQcaQVJBO2gQ7k… [429 chars]"
+      },
+      "category_id": "1658310421102081",
+      "is_hidden": false,
+      "is_live": true,
+      "is_pending": false,
+      "is_sold": false,
+      "is_viewer_seller": false,
+      "delivery_types": [
+        "IN_PERSON",
+        "… 1 more item(s) truncated"
+      ],
+      "story_type": "POST",
+      "story_key": "36555735980740593"
+    },
+    "… 15 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>",
+  "has_next_page": true
+}

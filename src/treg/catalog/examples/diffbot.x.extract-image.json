@@ -1,0 +1,31 @@
+{
+  "request": {
+    "pageUrl": "https://www.diffbot.com/products/extract/",
+    "api": "image",
+    "version": 3
+  },
+  "objects": [
+    {
+      "humanLanguage": "en",
+      "naturalHeight": 1023,
+      "pageUrl": "https://www.diffbot.com/products/extract/",
+      "type": "image",
+      "url": "https://www.diffbot.com/assets/img/products/extract_screenshot.png",
+      "naturalWidth": 897,
+      "tags": [
+        {
+          "typeHierarchy": [
+            "http://www.w3.org/2002/07/owl#Thing",
+            "… 2 more item(s) truncated"
+          ],
+          "id": 33898,
+          "label": "Website",
+          "type": "http://dbpedia.org/ontology/Website",
+          "uri": "https://www.diffbot.com/entity/Xd90vp_U4MJOoRHIja3quxg"
+        },
+        "… 1 more item(s) truncated"
+      ]
+    },
+    "… 2 more item(s) truncated"
+  ]
+}

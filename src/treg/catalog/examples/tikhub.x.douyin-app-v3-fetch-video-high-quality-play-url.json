@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "request_id": "5f18e738-5fca-47e0-8ea3-75dfe5ea088c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:13",
+  "time_stamp": 1785220333,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/fetch_video_high_quality_play_url_api_v1_douyin_app_v3_fetch_video_high_quality_play_url_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/5f18e738-5fca-47e0-8ea3-75dfe5ea088c?sign=52e314fad5b674826da1e84c809331dd4239edf368810613dc8f1c0cbdad5efe",
+  "router": "/api/v1/douyin/app/v3/fetch_video_high_quality_play_url",
+  "params": {
+    "aweme_id": "7512756548356492544",
+    "share_url": "https://www.douyin.com/video/7512756548356492544",
+    "region": "CN"
+  },
+  "data": {
+    "video_id": "7512756548356492544",
+    "original_video_url": "https://v5-se-bd-daily-cold.douyinvod.com/5819e0d450926976621f09a4343c00da/6a685b06/video/tos/cn/tos-cn-v-0015c800/ooEeAYuCeuIAzDrAghgYXL44gAeRABerCIVbU2/",
+    "file_size": "82274121",
+    "file_size_in_mb": 78.46,
+    "content_type": "video/mp4"
+  }
+}

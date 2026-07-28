@@ -1,0 +1,415 @@
+provider: lusha
+source:
+  method: official docs (client-rendered reference; read via markdown-rendered doc pages and search,
+    since the interactive OpenAPI viewer does not serve a fetchable spec document)
+  ingested: 2026-07-28
+  spec_urls:
+    - https://docs.lusha.com/apis/openapi.md
+    - https://docs.lusha.com/tutorials/v3-migration-guide
+    - https://docs.lusha.com/apis/openapi/lookalikes.md
+    - https://docs.lusha.com/apis/openapi/signals.md
+    - https://docs.lusha.com/apis/openapi/webhooks.md
+    - https://docs.lusha.com/apis/openapi/decision-makers.md
+    - https://docs.lusha.com/apis/openapi/website-visits.md
+    - https://docs.lusha.com/apis/openapi/account-usage-api/get-account-usage
+# Everything below is V3 (V2 sunsets 2026-11-18, see lusha.yaml's header note). These are the
+# routes the V3 surface exposes BEYOND the six curated in lusha.yaml (search-and-enrich x2,
+# prospecting search x2, contacts/enrich, account/usage) — filter/type discovery, lookalikes,
+# signals, decision-makers, website-visits and the webhook-subscription family. Auth is the same
+# `api_key` header, no scheme prefix. No calls were made while writing this file.
+endpoints:
+  - id: lusha.x.contacts-prospecting-filters
+    tier: extended
+    platform: people
+    method: GET
+    path: /v3/contacts/prospecting/filters/{filterType}
+    name: "List accepted values for a contact search filter"
+    summary: "Enumerate the accepted values for one contact-prospecting filter type (job titles, seniority, departments, locations, etc.)"
+    input:
+      pathParams:
+        filterType: {type: string, required: true, note: "which filter's accepted values to list. CORRECTED at verify time from the real OpenAPI bundle (https://docs.lusha.com/_bundle/apis/@v3/openapi.yaml, unreachable from the client-rendered reference pages): the enum is departments | seniority | existingDataPoints | countries | locations (locations additionally requires a `query` param)", example: "departments"}
+      note: "companion to POST /v3/contacts/prospecting — call this first to know what to pass into filters.contacts.include/exclude"
+    test_request:
+      pathParams: {filterType: "departments"}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.contacts-prospecting-filters.json
+    docs_url: https://docs.lusha.com/apis/openapi/prospecting-search-and-enrich
+
+  - id: lusha.x.companies-prospecting-filters
+    tier: extended
+    platform: companies
+    method: GET
+    path: /v3/companies/prospecting/filters/{filterType}
+    name: "List accepted values for a company search filter"
+    summary: "Enumerate the accepted values for one company-prospecting filter type (industry, size, revenue, technologies, intent topics, etc.)"
+    input:
+      pathParams:
+        filterType: {type: string, required: true, note: "CORRECTED at verify time from the real OpenAPI bundle: enum is names | sizes | revenues | locations | sics | naics | industriesLabels | intentTopics | technologies (names/technologies/locations additionally require a `query` param)", example: "sizes"}
+      note: "companion to POST /v3/companies/prospecting"
+    test_request:
+      pathParams: {filterType: "sizes"}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.companies-prospecting-filters.json
+    docs_url: https://docs.lusha.com/apis/openapi/company-filters
+
+  - id: lusha.x.companies-enrich-by-id
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v3/companies/enrich
+    name: "Reveal companies' full details by Lusha company id"
+    summary: "Enrich companies you already found in a prospecting search, by ids (max 100), into full firmographic records"
+    input:
+      bodyType: json
+      body:
+        ids: {type: "array[string]", required: true, note: "1-100 Lusha company ids from a prior prospecting search — CORRECTED at verify time: the field is `ids`, not `companyIds` as the doc prose paraphrases it", example: ["16303253"]}
+        tableId: {type: string, required: false, note: "persist results into a Lusha Table"}
+      note: "the id-based sibling of lusha.companies.enrich (which takes domain/name); use this once you already hold ids from POST /v3/companies/prospecting"
+    test_request:
+      body: {ids: ["v1.A1gXjPYd63SSPjSvxO4uwqXqE5ilJV9S"]}
+    cost: {type: per_result, value: null, currency: USD, note: "billed on the reveal_company action per company returned; a no-match is free"}
+    skipped: "field-name bug fixed and a real id (from lusha.companies.search) is in test_request, but not called to conserve budget — lusha.companies.enrich (core) already verifies this exact reveal_company billing path against the same company (domain-based instead of id-based); top up credits and re-run to confirm the id-based variant specifically"
+    docs_url: https://docs.lusha.com/apis/openapi/company-search-and-enrich
+
+  - id: lusha.x.contacts-lookalike
+    tier: extended
+    platform: people
+    method: POST
+    path: /v3/contacts/lookalike
+    name: "Find contacts similar to a seed list"
+    summary: "AI-powered recommendations for contacts who share similar roles, seniority and company profile to 5-100 seed contacts"
+    input:
+      bodyType: json
+      body:
+        seeds: {type: object, required: true, note: "CORRECTED at verify time from the real OpenAPI bundle: seeds is a single object {linkedinUrls, contacts, emails, ids}, NOT an array of per-seed objects. Combined items across the sub-arrays must total 5-100", example: {ids: ["4389064654", "4389064624"]}}
+        exclude: {type: object, required: false, note: "same ContactIdentifiersBatch shape as seeds"}
+        dedupeSessionId: {type: string, required: false, note: "omit on the first call — Lusha generates one and returns it; reuse it for 'get more' pagination (retained 30 days)"}
+        limit: {type: integer, required: false, note: "1-100, default 25"}
+        tableId: {type: string, required: false, note: "persist results into a Lusha Table"}
+      note: "returns lightweight previews; call lusha.people.contacts.enrich on the returned ids for full details"
+    test_request:
+      body: {seeds: {ids: ["v1.-R1YwK7SIvBv1FVAOW1zmel9bZ4XD9mxNQ", "v1.ujDPLE3res-lYBnt6iiLr3jwCe9wXPdmrg", "v1.n0ghmmrFpkVf6z0q-rKCjt4kTMVGydVe", "v1.Ex7lVhKX97ZmbbTTg4AumQqE0SPKKsw", "v1.AUMmbUKy3d9zrSEMaIog-hADfblVwPQCZQ"]}, limit: 1}
+    cost: {type: per_result, value: null, currency: USD, note: "OBSERVED live 2026-07-28: 1 credit for 1 returned result (lookalikeContact, perQuantity 5 per account/usage pricing)"}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.contacts-lookalike.json
+    docs_url: https://docs.lusha.com/apis/openapi/lookalikes
+
+  - id: lusha.x.companies-lookalike
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v3/companies/lookalike
+    name: "Find companies similar to a seed list"
+    summary: "AI-powered recommendations for companies of similar size, industry and profile to 5-100 seed companies"
+    input:
+      bodyType: json
+      body:
+        seeds: {type: object, required: true, note: "CORRECTED at verify time: seeds is a single object {domains, linkedinUrls}, NOT an array of per-seed objects. Combined items must total 5-100", example: {domains: ["salesforce.com", "hubspot.com", "zoominfo.com", "apollo.io", "clearbit.com"]}}
+        exclude: {type: object, required: false, note: "same CompanyIdentifiersBatch shape as seeds"}
+        dedupeSessionId: {type: string, required: false, note: "omit on the first call; reuse the returned id for 'get more' pagination (retained 30 days)"}
+        limit: {type: integer, required: false, note: "1-100, default 25"}
+        tableId: {type: string, required: false, note: "persist results into a Lusha Table"}
+      note: "returns lightweight previews; call lusha.companies.enrich / lusha.x.companies-enrich-by-id on the returned ids for full details"
+    test_request:
+      body: {seeds: {domains: ["salesforce.com", "hubspot.com", "zoominfo.com", "apollo.io", "clearbit.com"]}, limit: 1}
+    cost: {type: per_result, value: null, currency: USD, note: "OBSERVED live 2026-07-28: 1 credit for 1 returned result (lookalikeCompany, perQuantity 5 per account/usage pricing)"}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.companies-lookalike.json
+    docs_url: https://docs.lusha.com/apis/openapi/lookalikes
+
+  - id: lusha.x.contacts-signals
+    tier: extended
+    platform: people
+    method: POST
+    path: /v3/contacts/signals
+    name: "Get job-change signals for a list of contacts"
+    summary: "Retrieve signal events for a list of contacts — job changes and promotions"
+    input:
+      bodyType: json
+      body:
+        contactIds: {type: "array[string]", required: true, note: "up to 100 Lusha contact ids", example: ["12345"]}
+        signalTypes: {type: "array[string]", required: false, note: "promotion | companyChange | allSignals"}
+        startDate: {type: string, required: false, note: "ISO date; only signals on/after this date"}
+        tableId: {type: string, required: false, note: "persist results into a Lusha Table's Signals column"}
+      note: "standalone alternative to the signals filter on the search/prospecting endpoints"
+    cost: {type: per_result, value: null, currency: USD, note: "billed on the showSignalsContact action per matched signal"}
+    untestable: "requires contactIds minted by a prior search on this account; no public/stable id is documented to probe with"
+    docs_url: https://docs.lusha.com/apis/openapi/signals
+
+  - id: lusha.x.companies-signals
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v3/companies/signals
+    name: "Get activity signals for a list of companies"
+    summary: "Retrieve signal events for a list of companies — hiring activity, headcount changes, web traffic, IT spend and news"
+    input:
+      bodyType: json
+      body:
+        companyIds: {type: "array[string]", required: true, note: "up to 100 Lusha company ids", example: ["12345"]}
+        signalTypes: {type: "array[string]", required: false, note: "e.g. headcountIncrease1m, surgeInHiring, websiteTrafficIncrease, itSpendIncrease, riskNews, allSignals — see lusha.x.company-signal-types"}
+        startDate: {type: string, required: false, note: "ISO date; only signals on/after this date"}
+        tableId: {type: string, required: false, note: "persist results into a Lusha Table's Signals column"}
+      note: "standalone alternative to the signals filter on the search/prospecting endpoints"
+    cost: {type: per_result, value: null, currency: USD, note: "billed on the showSignalsCompany action per matched signal"}
+    untestable: "requires companyIds minted by a prior search on this account; no public/stable id is documented to probe with"
+    docs_url: https://docs.lusha.com/apis/openapi/signals
+
+  - id: lusha.x.contact-signal-types
+    tier: extended
+    platform: people
+    method: GET
+    path: /v3/contacts/signals/types
+    name: "List supported contact signal types"
+    summary: "Returns the list of supported contact signal types (promotion, companyChange, allSignals)"
+    input:
+      note: "no parameters"
+    cost: {type: free, value: 0, currency: USD, note: "type/filter discovery endpoint; not billed"}
+    test_request: {queryParams: {}}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.contact-signal-types.json
+    docs_url: https://docs.lusha.com/apis/openapi/signals
+
+  - id: lusha.x.company-signal-types
+    tier: extended
+    platform: companies
+    method: GET
+    path: /v3/companies/signals/types
+    name: "List supported company signal types"
+    summary: "Returns the list of supported company signal types (headcount changes, hiring surges, website traffic, IT spend, news categories)"
+    input:
+      note: "no parameters"
+    cost: {type: free, value: 0, currency: USD, note: "type/filter discovery endpoint; not billed"}
+    test_request: {queryParams: {}}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.company-signal-types.json
+    docs_url: https://docs.lusha.com/apis/openapi/signals
+
+  - id: lusha.x.company-signal-filters
+    tier: extended
+    platform: companies
+    method: GET
+    path: /v3/companies/signals/filters
+    name: "List the filter types available for company signals"
+    summary: "Returns the available filter types for company signals and their query requirements"
+    input:
+      note: "no parameters"
+    cost: {type: free, value: 0, currency: USD, note: "filter discovery endpoint; not billed"}
+    test_request: {queryParams: {}}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.company-signal-filters.json
+    docs_url: https://docs.lusha.com/apis/openapi/signals
+
+  - id: lusha.x.company-signal-filter-values
+    tier: extended
+    platform: companies
+    method: GET
+    path: /v3/companies/signals/filters/{filterType}
+    name: "List accepted values for one company signal filter"
+    summary: "Returns the valid values for a specific company-signals filter type"
+    input:
+      pathParams:
+        filterType: {type: string, required: true, note: "one of the filter type names returned by GET /v3/companies/signals/filters"}
+    cost: {type: free, value: 0, currency: USD, note: "filter discovery endpoint; not billed"}
+    test_request:
+      pathParams: {filterType: "newsEventTypes"}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.company-signal-filter-values.json
+    docs_url: https://docs.lusha.com/apis/openapi/signals
+
+  - id: lusha.x.decision-makers
+    tier: extended
+    platform: people
+    method: POST
+    path: /v3/contacts/decision-makers
+    name: "Find the buying-committee contacts at a company"
+    summary: "Resolve a company to a Lusha company id, rank the most relevant decision makers with the buying-committee-ranker model, and return them grouped per company"
+    input:
+      bodyType: json
+      body:
+        companies: {type: "array[object]", required: true, note: "each entry needs exactly one of domain (resolved server-side) or id (encrypted vN.… Lusha company id; legacy numeric ids also accepted during transition)", example: [{"domain": "lusha.com"}]}
+      note: "returns free previews (name, title, company, location, LinkedIn, seniority, department); call the contacts enrich endpoint on the returned ids for emails/phones"
+    test_request:
+      body: {companies: [{domain: "lusha.com"}]}
+    cost: {type: free, value: 0, currency: USD, note: "previews are free; only a subsequent enrich call on the returned contact ids is billed"}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.decision-makers.json
+    docs_url: https://docs.lusha.com/apis/openapi/decision-makers
+
+  - id: lusha.x.companies-website-visits
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v3/companies/website-visits
+    name: "Rank companies by website-visit signals"
+    summary: "Returns companies ranked by website-visit signals for your tracked domains, combining firmographics with visit metrics (score, sessions, unique visitors, avg session length)"
+    input:
+      bodyType: json
+      body:
+        domains: {type: "array[string]", required: true, note: "must already be configured for visitor tracking in the Lusha dashboard — an untracked domain 400s"}
+        dateRange: {type: object, required: false, note: "start/end dates; span limited to <= 3 months"}
+        limit: {type: integer, required: false, note: "1-150", example: 1}
+      note: "account-specific: the domains must be pre-configured as tracked sites in the caller's own Lusha dashboard, which no bare key can do"
+    untestable: "requires domains pre-configured for visitor tracking in the caller's own Lusha dashboard; no public target is possible"
+    docs_url: https://docs.lusha.com/apis/openapi/website-visits
+
+  - id: lusha.x.webhook-subscriptions-list
+    tier: extended
+    platform: account
+    method: GET
+    path: /api/subscriptions
+    name: "List webhook subscriptions"
+    summary: "List all webhook subscriptions on the account, with pagination"
+    input:
+      note: "no required parameters"
+    test_request: {queryParams: {}}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.webhook-subscriptions-list.json
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks/listsubscriptions
+
+  - id: lusha.x.webhook-subscriptions-create
+    tier: extended
+    platform: account
+    method: POST
+    path: /api/subscriptions
+    name: "Create webhook subscriptions"
+    summary: "Create one or more webhook subscriptions (bulk, up to 25 per request) that deliver signal events to your endpoint"
+    input:
+      bodyType: json
+      body:
+        defaults: {type: object, required: false, note: "shared entityType/signalTypes/url applied to every subscription entry that omits its own", example: {entityType: "company", signalTypes: ["headcountIncrease1m"], url: "https://example.com/webhooks/lusha"}}
+        subscriptions: {type: "array[object]", required: true, note: "up to 25 per request; each needs entityId (a real contact or company id owned by this account) plus name; entityType/signalTypes/url come from `defaults` unless overridden per entry", example: [{entityId: "16303253", name: "My Test Webhook"}]}
+      note: "deliveries are signed with HMAC-SHA256 (X-Lusha-Signature, X-Lusha-Timestamp) and must be acknowledged within 10s with a 2xx + {received, timestamp, webhookId} body. NOT free-standing — each subscription is bound to one entityId, so it needs a real contact/company id on hand (e.g. from lusha.companies.search)"
+    test_request:
+      body: {defaults: {entityType: "company", signalTypes: ["headcountIncrease1m"], url: "https://example.com/webhooks/lusha-catalog-test"}, subscriptions: [{entityId: "v1.A1gXjPYd63SSPjSvxO4uwqXqE5ilJV9S", name: "catalog-verify-test"}]}
+    cost: {type: free, value: 0, currency: USD, note: "webhook management is not metered against the data-credit balance"}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.webhook-subscriptions-create.json
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks
+
+  - id: lusha.x.webhook-subscription-get
+    tier: extended
+    platform: account
+    method: GET
+    path: /api/subscriptions/{id}
+    name: "Get a webhook subscription by id"
+    summary: "Retrieve a single webhook subscription by its id"
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "a subscription id returned by create/list"}
+    skipped: "verified live in-session (GET returned 200 with the subscription created by lusha.x.webhook-subscriptions-create) but the id is ephemeral — it was deleted again via lusha.x.webhook-subscriptions-delete in the same session and no stable id survives to ship as a replayable test_request. Re-verify by chaining: create -> read its returned id -> GET here -> delete"
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks
+
+  - id: lusha.x.webhook-subscription-update
+    tier: extended
+    platform: account
+    method: PATCH
+    path: /api/subscriptions/{id}
+    name: "Update a webhook subscription"
+    summary: "Modify an existing webhook subscription's settings"
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "a subscription id returned by create/list"}
+      bodyType: json
+      body:
+        note: {type: object, required: false, note: "partial update of the subscription's target/URL/signal-type fields"}
+    skipped: "not called — same ephemeral-id constraint as lusha.x.webhook-subscription-get, and a create -> list -> get -> delete cycle already exercised this session's throwaway subscription end to end; a 5th mutating call on the same resource added no new evidence about auth or routing"
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks
+
+  - id: lusha.x.webhook-subscriptions-delete
+    tier: extended
+    platform: account
+    method: POST
+    path: /api/subscriptions/delete
+    name: "Delete webhook subscriptions"
+    summary: "Delete one or more webhook subscriptions (bulk); each id is processed independently with per-item results, invalid ids reported as NOT_FOUND. Permanent."
+    input:
+      bodyType: json
+      body:
+        ids: {type: "array[string]", required: true, note: "subscription ids to delete; duplicates deduped", example: ["000000000000000000000000"]}
+      note: "idempotent and safe to probe blind: an id that does not exist is reported per-item as NOT_FOUND inside a 200, not an error, which is what the test_request below deliberately exercises"
+    test_request:
+      body: {ids: ["000000000000000000000000"]}
+    cost: {type: free, value: 0, currency: USD, note: "webhook management is not metered against the data-credit balance"}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.webhook-subscriptions-delete.json
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks
+
+  - id: lusha.x.webhook-subscription-test
+    tier: extended
+    platform: account
+    method: POST
+    path: /api/subscriptions/{id}/test
+    name: "Send a test delivery to a webhook subscription"
+    summary: "Trigger a mock signal delivery to a subscription to verify the endpoint receives and acknowledges it correctly"
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "a subscription id returned by create/list"}
+    skipped: "not called — same ephemeral-id constraint as lusha.x.webhook-subscription-get; triggering a mock delivery to example.com (the throwaway subscription's URL) also has no observable receiver on our side to confirm against"
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks
+
+  - id: lusha.x.webhook-audit-logs
+    tier: extended
+    platform: account
+    method: GET
+    path: /api/audit-logs
+    name: "View webhook delivery attempt logs"
+    summary: "Read the delivery attempt log for the account's webhook subscriptions — status, response time, error details"
+    input:
+      note: "success logs retained 90 days, failures 180 days"
+    test_request: {queryParams: {}}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.webhook-audit-logs.json
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks
+
+  - id: lusha.x.webhook-audit-log-stats
+    tier: extended
+    platform: account
+    method: GET
+    path: /api/audit-logs/stats
+    name: "Get webhook delivery performance stats"
+    summary: "Obtain delivery performance statistics for the account's webhook subscriptions"
+    input:
+      note: "no required parameters"
+    test_request: {queryParams: {}}
+    verified: 2026-07-28
+    example_response: examples/lusha.x.webhook-audit-log-stats.json
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks
+
+  - id: lusha.x.webhook-secret-get
+    tier: extended
+    platform: account
+    method: GET
+    path: /api/account/secret
+    name: "Get the current webhook signing secret"
+    summary: "Fetch the current HMAC-SHA256 signing secret used to sign webhook deliveries"
+    input:
+      note: "no required parameters"
+    test_request:
+      queryParams: {}
+    unverified: "http 404 — {\"message\":\"Account secret not found. Please generate one first.\"} on this account, called live 2026-07-28. This is an account-state fact, not a broken route: no secret has ever been generated (see lusha.x.webhook-secret-regenerate); the endpoint responded correctly to a real request"
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks
+
+  - id: lusha.x.webhook-secret-regenerate
+    tier: extended
+    platform: account
+    method: POST
+    path: /api/account/secret/regenerate
+    name: "Regenerate the webhook signing secret"
+    summary: "Generate a new HMAC-SHA256 signing secret, invalidating the previous one for signature verification"
+    input:
+      note: "no parameters; destructive — invalidates the current secret immediately"
+    skipped: "not called deliberately — this account has no signing secret yet (lusha.x.webhook-secret-get: unverified 404), so this call would be the FIRST generation, not a rotation, and there is no way to test 'invalidates the previous one' without first creating a secret something else may come to depend on"
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks
+
+  - id: lusha.x.webhook-opt-out-subscribe
+    tier: extended
+    platform: account
+    method: POST
+    path: /api/subscriptions/opt-out
+    name: "Subscribe to contact opt-out notifications"
+    summary: "Subscribe to notifications when a contact opts out, including which datapoints (emails/phones) must be deleted on your side"
+    input:
+      note: "same subscription shape as the signal webhooks (target URL, HTTPS required in production)"
+    skipped: "not called — creates a persistent opt-out subscription and the exact body schema is not confirmed from the reachable docs; lusha.x.webhook-subscriptions-create/list/get/delete already verify the family's auth, creation and deletion mechanics on the standard signal-subscription path"
+    docs_url: https://docs.lusha.com/apis/openapi/webhooks

@@ -1,0 +1,167 @@
+{
+  "code": 0,
+  "data": {
+    "id": "2065109283218502614",
+    "title": "剑光一闪，高手不用第二招？",
+    "type": "article",
+    "article_type": "normal",
+    "excerpt_title": "",
+    "url": "https://api.zhihu.com/articles… [50 chars total]",
+    "image_url": "",
+    "title_image": "",
+    "excerpt": "<img src=\"https://picx.zhimg.c… [583 chars total]",
+    "created": 1785140716,
+    "updated": 1785140716,
+    "author": {
+      "is_followed": false,
+      "avatar_url_template": "https://picx.zhimg.com/v2-d626… [78 chars total]",
+      "uid": "26731574460416",
+      "user_type": "people",
+      "is_following": false,
+      "url_token": "<omitted: expires>",
+      "id": "f9de84865e3e8455a09af78bfe4d1d… [32 chars total]",
+      "description": "",
+      "name": "张佳玮",
+      "is_advertiser": false,
+      "headline": "",
+      "gender": 1,
+      "url": "https://api.zhihu.com/people/f… [61 chars total]",
+      "avatar_url": "https://picx.zhimg.com/v2-d626… [80 chars total]",
+      "is_org": false,
+      "type": "people",
+      "badge": "… 1 item(s) truncated",
+      "badge_v2": "… 5 field(s) truncated",
+      "exposed_medal": "… 6 field(s) truncated"
+    },
+    "comment_permission": "all",
+    "copyright_permission": "need_review",
+    "state": "published",
+    "ip_info": "法国",
+    "image_width": 0,
+    "image_height": 0,
+    "content": "<p data-pid=\"ZM8enRlT\">京都有家老店，… [7471 chars total]",
+    "content_need_truncated": false,
+    "force_login_when_click_read_more": false,
+    "admin_closed_comment": false,
+    "topics": [
+      "… 4 field(s) truncated",
+      "… 2 more item(s) truncated"
+    ],
+    "voteup_count": 72,
+    "voting": 0,
+    "heavy_up_status": "allow_heavy_up",
+    "column": {
+      "description": "",
+      "can_manage": false,
+      "intro": "",
+      "is_following": false,
+      "url_token": "zhangjiawei",
+      "id": "zhangjiawei",
+      "articles_count": 1500,
+      "accept_submission": true,
+      "title": "张佳玮写字的地方",
+      "url": "https://api.zhihu.com/columns/… [41 chars total]",
+      "comment_permission": "all",
+      "created": 1375082249,
+      "updated": 1590739841,
+      "image_url": "https://pic1.zhimg.com/b69d8ce… [57 chars total]",
+      "author": "… 17 field(s) truncated",
+      "followers": 266784,
+      "type": "column",
+      "column_type": "normal"
+    },
+    "comment_count": 3,
+    "contributions": [
+      "… 4 field(s) truncated"
+    ],
+    "is_title_image_full_screen": false,
+    "upvoted_followees": [],
+    "commercial_info": {
+      "is_commercial": false,
+      "plugin": "… 0 field(s) truncated"
+    },
+    "suggest_edit": {
+      "status": false,
+      "reason": "",
+      "tip": "",
+      "url": "",
+      "title": ""
+    },
+    "reason": "",
+    "annotation_action": [],
+    "can_tip": false,
+    "tipjarors_count": 0,
+    "is_labeled": false,
+    "has_publishing_draft": false,
+    "is_favorited": false,
+    "favlists_count": 20,
+    "is_normal": true,
+    "status": 0,
+    "activity_topping_info": {
+      "state": "untopped"
+    },
+    "share_text": "剑光一闪，高手不用第二招？ - 来自知乎专栏「张佳玮写字的地… [140 chars total]",
+    "can_comment": {
+      "status": true,
+      "reason": ""
+    },
+    "linkbox": {
+      "url": "",
+      "category": "",
+      "pic": "",
+      "title": ""
+    },
+    "mcn_fp_show": -1,
+    "is_visible": true,
+    "is_liked": false,
+    "liked_count": 0,
+    "has_column": true,
+    "republishers": [],
+    "is_new_link_card": true,
+    "emoji_reaction": {
+      "like_count": 0,
+      "like_has_set": false
+    },
+    "ab_param": {
+      "qa_hidden_voteup": "",
+      "rs_interest1": "",
+      "zp_zhi_style": ""
+    },
+    "attached_info": "kgIuCgkyNzk5MTk0NTkSEzIwNjUxMD… [68 chars total]",
+    "share_guide": {
+      "has_positive_bubble": false,
+      "has_time_bubble": false,
+      "hit_share_guide_cluster": false
+    },
+    "settings": {
+      "table_of_contents": "… 1 field(s) truncated"
+    },
+    "can_reference": false,
+    "reaction_instruction": {},
+    "reaction": {
+      "statistics": "… 18 field(s) truncated",
+      "relation": "… 10 field(s) truncated",
+      "image_reactions": "… 8 field(s) truncated"
+    },
+    "interaction_bar_plugins": [
+      "… 2 field(s) truncated"
+    ],
+    "bar_plugins_flip_time": 3000,
+    "podcast_audio_enter": {
+      "text": "1 人听过",
+      "text_color": "MapBrand",
+      "text_size": 13,
+      "action_url": "zhihu://podcast/audio_player/8… [90 chars total]"
+    },
+    "endorsements": [
+      "… 6 field(s) truncated"
+    ],
+    "allow_segment_interaction": 1,
+    "is_navigator": false,
+    "navigator_vote": false,
+    "vote_next_step": "vote"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:05:00.704404022",
+  "requestId": "84d854587ab34d9abb3077cc1cde66… [32 chars total]"
+}

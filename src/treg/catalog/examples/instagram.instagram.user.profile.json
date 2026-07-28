@@ -1,0 +1,11 @@
+{
+  "id": "17841439917904520",
+  "username": "example_account",
+  "name": "Example Account",
+  "biography": "Example account biography.",
+  "profile_picture_url": "https://scontent.xx.fbcdn.net/v/<scrubbed>.jpg",
+  "followers_count": 1234,
+  "follows_count": 12,
+  "media_count": 3,
+  "_scrubbed": true
+}

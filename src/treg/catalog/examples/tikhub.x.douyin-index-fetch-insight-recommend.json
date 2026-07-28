@@ -1,0 +1,37 @@
+{
+  "code": 200,
+  "request_id": "4680a186-9ddc-4310-a20d-4f20a62a7b6a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:21",
+  "time_stamp": 1785220101,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Index-API/fetch_insight_recom… [112 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/4680a186-9ddc-43… [150 chars]",
+  "router": "/api/v1/douyin/index/fetch_insight_recommend",
+  "params": {},
+  "data": [
+    {
+      "id": "728",
+      "cover": [
+        "… {3 field(s) truncated}",
+        "… 1 more item(s) truncated"
+      ],
+      "category": "1",
+      "title": "动见首发 | 人群比流量更重要，品牌广告如何高效抓住“人”",
+      "summary": "品牌投放的关键是“真实的人”。企业需要放弃“品牌广告=曝光广告”的旧思维，建立“用户为中心”的投放思维，进行体系化、科学… [120 chars]",
+      "author": "动见",
+      "create_time": "2022-06-21 12:52:42",
+      "slot": "home-1",
+      "keywords": "品牌广告 ROI 长效经营",
+      "introduction": "营销是围绕“人”展开的经营活动，一切广告的背后都是真实的“人”，尤其是品牌广告，更需要围绕用户需求、用户心智展开。有用户… [75 chars]",
+      "coop_institution": "",
+      "result_type": "",
+      "visit_cnt": "0"
+    },
+    "… 68 more item(s) truncated"
+  ]
+}

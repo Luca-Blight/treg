@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "account_id": "1203093248302225",
+      "id": "act_1203093248302225"
+    },
+    {
+      "account_id": "607440816997902",
+      "id": "act_607440816997902"
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "NjkyNDQzNDgwMjE3MQZDZD",
+      "after": "MjM4NDk1MDA1NzczMDA2ODYZD"
+    },
+    "next": "https://graph.facebook.com/v25.0/3366873100139220/adaccounts?limit=2&after=MjM4NDk1MDA1NzczMDA2ODYZD"
+  },
+  "_scrubbed": true
+}

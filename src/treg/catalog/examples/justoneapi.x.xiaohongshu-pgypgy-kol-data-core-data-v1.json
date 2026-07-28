@@ -1,0 +1,44 @@
+{
+  "code": 0,
+  "data": {
+    "sumData": {
+      "read": 26645,
+      "thirdUserNum": 0,
+      "dateKey": "2026-07-26",
+      "cpe": 2.0048115477145148,
+      "engage": 1247,
+      "cpuv": 0,
+      "cpm": 17.005992911902155,
+      "cpv": 0.32912781130005486,
+      "imp": 147007
+    },
+    "dailyData": [
+      {
+        "cpm": 17.720191094540763,
+        "cpe": 2.787068004459309,
+        "read": 24401,
+        "cpuv": 0,
+        "dateKey": "2026-06-28",
+        "cpv": 0.5192557334487234,
+        "imp": 141082,
+        "engage": 897,
+        "thirdUserNum": 0
+      },
+      {
+        "cpm": 17.54090539137268,
+        "cpe": 2.7808676307007785,
+        "imp": 142524,
+        "cpuv": 0,
+        "dateKey": "2026-06-29",
+        "cpv": 0.5191209551825575,
+        "read": 24464,
+        "engage": 899,
+        "thirdUserNum": 0
+      },
+      "… 28 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:53.181255972",
+  "requestId": "f1965ba7154e40debea4fdbcc2f6afa4"
+}

@@ -1,0 +1,56 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "1.3558 sec.",
+  "cost": 0.0132,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0492-0000-7c43a7968116",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "1.3496 sec.",
+      "cost": 0.0132,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "domain_analytics",
+        "function": "technologies_summary",
+        "se": "technologies",
+        "mode": "entry",
+        "technologies": [
+          "Ngi"
+        ],
+        "keywords": [
+          "WordPress"
+        ],
+        "filters": [
+          [
+            "country_iso_code",
+            "… 2 more item(s) truncated"
+          ],
+          "… 2 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "countries": {
+            "US": 1
+          },
+          "languages": {
+            "de": 1
+          },
+          "content_languages": {
+            "de": 1
+          },
+          "keywords": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "request_id": "a3ddd20a-dbd0-4416-ad72-3a8ab552b563",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:13",
+  "time_stamp": 1785220333,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V3-API/general_search_api_v1_instagram_v3_general_search_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/a3ddd20a-dbd0-4416-ad72-3a8ab552b563?sign=3c8a0a8fcd30b81bb8d2ffdd287acab88d… [150 chars]",
+  "router": "/api/v1/instagram/v3/general_search",
+  "params": {
+    "query": "justin"
+  },
+  "data": {
+    "list": [
+      {
+        "position": 0,
+        "user": "… {22 field(s) truncated}"
+      }
+    ],
+    "rank_token": "<omitted: expires>",
+    "clear_client_cache": false,
+    "more_results_header": "Explore",
+    "entity_results_header": "Accounts",
+    "media_grid": {
+      "refinements": {},
+      "sections": [
+        "… {4 field(s) truncated}",
+        "… 5 more item(s) truncated"
+      ],
+      "rank_token": "<omitted: expires>",
+      "next_max_id": "<omitted: expires>",
+      "has_more": true,
+      "auto_load_more_enabled": true,
+      "grid_post_click_experience": "contextual",
+      "topic_status": -1,
+      "reels_max_id": "<omitted: expires>",
+      "has_more_reels": true,
+      "reels_page_index": null,
+      "autoplay_type": "disabled"
+    },
+    "status": "ok"
+  }
+}

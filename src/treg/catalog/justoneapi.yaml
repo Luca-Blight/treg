@@ -1,0 +1,252 @@
+provider: justoneapi
+source:
+  docs: https://docs.justoneapi.com/en/usage
+  openapi: null   # no single spec; each doc page links a per-endpoint OpenAPI JSON
+  curated: 2026-07-28
+
+# Jobs the shared taxonomy does not cover yet — reviewer merges these into capabilities.yaml.
+# Auth note: the API token rides as `?token=…` and is INJECTED by treg — never list it as user input.
+# Response convention: HTTP 200 always; the business result is `code` (0 = success, and only a
+# code-0 response is billed). Hence every endpoint expects code == 0.
+pricing_url: https://www.justoneapi.com/
+endpoints:
+  - id: justoneapi.tiktok.user.profile
+    capability: tiktok.user.profile
+    platform: tiktok
+    scope: any_account
+    method: GET
+    path: /api/tiktok/get-user-detail/v1
+    summary: "Public TikTok profile by username (uniqueId) or secUid"
+    input:
+      queryParams:
+        uniqueId: {type: string, required: false, note: "public handle from the profile URL", example: "tiktok"}
+        secUid: {type: string, required: false, note: "opaque user id; use when the handle is unknown"}
+      note: "one of uniqueId | secUid; uniqueId preferred. secUid in the response is the key needed by tiktok.user.videos."
+    test_request:
+      queryParams: {uniqueId: "tiktok"}
+    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.tiktok.user.profile.json
+    docs_url: https://docs.justoneapi.com/en/api/tiktok/user-profile-v1
+
+  - id: justoneapi.tiktok.user.videos
+    capability: tiktok.user.videos
+    platform: tiktok
+    scope: any_account
+    method: GET
+    path: /api/tiktok/get-user-post/v1
+    name: "List posts from a TikTok user"
+    summary: "Posts published by a TikTok user, by secUid, cursor-paginated"
+    input:
+      queryParams:
+        secUid: {type: string, required: true, note: "opaque user id; get it from tiktok.user.profile"}
+        cursor: {type: string, required: false, note: "'0' for the first page, then max_cursor from the previous response", example: "0"}
+        sort: {type: string, required: false, note: "LATEST (default) | MOST_POPULAR", example: "LATEST"}
+    test_request:
+      queryParams: {secUid: "MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM", cursor: "0"}
+    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.tiktok.user.videos.json
+    docs_url: https://docs.justoneapi.com/en/api/tiktok/user-published-posts-v1
+
+  - id: justoneapi.tiktok.video.detail
+    capability: tiktok.video.detail
+    platform: tiktok
+    scope: any_account
+    method: GET
+    path: /api/tiktok/get-post-detail/v1
+    name: "Get TikTok post details"
+    summary: "A single TikTok post's metadata and stats by post id"
+    input:
+      queryParams:
+        postId: {type: string, required: true, note: "numeric id from the video URL (/video/<postId>)", example: "7666214645006421278"}
+    test_request:
+      queryParams: {postId: "7666214645006421278"}
+    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.tiktok.video.detail.json
+    docs_url: https://docs.justoneapi.com/en/api/tiktok/post-details-v1
+
+  - id: justoneapi.tiktok.video.comments
+    capability: tiktok.video.comments
+    platform: tiktok
+    scope: any_account
+    method: GET
+    path: /api/tiktok/get-post-comment/v1
+    summary: "Comments on a TikTok post, cursor-paginated"
+    input:
+      queryParams:
+        awemeId: {type: string, required: true, note: "the post id (same numeric id as the video URL)", example: "7666214645006421278"}
+        cursor: {type: string, required: false, note: "start at '0'", example: "0"}
+      note: "page size is fixed by the provider; only the cursor advances"
+    test_request:
+      queryParams: {awemeId: "7666214645006421278", cursor: "0"}
+    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.tiktok.video.comments.json
+    docs_url: https://docs.justoneapi.com/en/api/tiktok/post-comments-v1
+
+  - id: justoneapi.tiktok.search.videos
+    capability: tiktok.search.videos
+    platform: tiktok
+    scope: any_account
+    method: GET
+    path: /api/tiktok/search-post/v1
+    name: "Search TikTok posts by keyword"
+    summary: "Search TikTok posts by keyword, with region, sort and publish-time filters"
+    input:
+      queryParams:
+        keyword: {type: string, required: true, example: "coffee"}
+        offset: {type: integer, required: false, note: "starts at 0, steps by 20", example: 0}
+        sortType: {type: string, required: false, note: "RELEVANCE (default) | MOST_LIKED"}
+        publishTime: {type: string, required: false, note: "ALL (default) | ONE_DAY | ONE_WEEK | ONE_MONTH | THREE_MONTH | SIX_MONTH"}
+        region: {type: string, required: false, note: "ISO 3166-1 alpha-2, default US", example: "US"}
+    test_request:
+      queryParams: {keyword: "coffee", offset: 0, region: "US"}
+    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.tiktok.search.videos.json
+    docs_url: https://docs.justoneapi.com/en/api/tiktok/post-search-v1
+
+  - id: justoneapi.xiaohongshu.search.notes
+    capability: xiaohongshu.search.notes
+    platform: xiaohongshu
+    scope: any_account
+    method: GET
+    path: /api/xiaohongshu/search-note/v4
+    name: "Search Xiaohongshu notes by keyword"
+    summary: "Search Xiaohongshu (RedNote) notes by keyword, with sort, note-type and time filters"
+    input:
+      queryParams:
+        keyword: {type: string, required: true, example: "咖啡"}
+        page: {type: integer, required: false, note: "1-based", example: 1}
+        searchId: {type: string, required: false, note: "data.api_info.search_id from the previous page — required for stable paging"}
+        sessionId: {type: string, required: false, note: "data.api_info.session_id from the previous page"}
+        sortType: {type: string, required: false, note: "general (default) | popularity_descending | time_descending"}
+        noteType: {type: string, required: false, note: "ALL (default) | VIDEO_NOTE | NORMAL_NOTE"}
+        timeFilter: {type: string, required: false, note: "ALL (default) | ONE_DAY | ONE_WEEK | HALF_YEAR"}
+    test_request:
+      queryParams: {keyword: "咖啡", page: 1}
+    cost: {type: per_success, value: 0.2, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.xiaohongshu.search.notes.json
+    docs_url: https://docs.justoneapi.com/en/api/xiaohongshu-rednote/note-search-v4
+
+  - id: justoneapi.xiaohongshu.note.detail
+    capability: xiaohongshu.note.detail
+    platform: xiaohongshu
+    scope: any_account
+    method: GET
+    path: /api/xiaohongshu/get-note-detail/v1
+    name: "Get Xiaohongshu note details"
+    summary: "A single Xiaohongshu (RedNote) note by note id or explore URL"
+    input:
+      queryParams:
+        noteId: {type: string, required: true, note: "24-hex note id, or an explore URL containing /explore/", example: "6a66f1df000000001101bf73"}
+      note: "v1 handles image and video notes; the separate /get-note-detail/v6 covers video notes only"
+    test_request:
+      queryParams: {noteId: "6a66f1df000000001101bf73"}
+    cost: {type: per_success, value: 0.15, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.xiaohongshu.note.detail.json
+    docs_url: https://docs.justoneapi.com/en/api/xiaohongshu-rednote/note-details-v1
+
+  - id: justoneapi.xiaohongshu.user.notes
+    capability: xiaohongshu.user.notes
+    platform: xiaohongshu
+    scope: any_account
+    method: GET
+    path: /api/xiaohongshu/get-user-note-list/v4
+    name: "List notes from a Xiaohongshu user"
+    summary: "Notes published by a Xiaohongshu (RedNote) user, cursor-paginated"
+    input:
+      queryParams:
+        userId: {type: string, required: true, note: "24-hex user id, or a profile URL containing /user/profile/", example: "60ab2a7c000000000100934a"}
+        lastCursor: {type: string, required: false, note: "cursor of the last note on the previous page"}
+    test_request:
+      queryParams: {userId: "60ab2a7c000000000100934a"}
+    cost: {type: per_success, value: 0.15, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.xiaohongshu.user.notes.json
+    docs_url: https://docs.justoneapi.com/en/api/xiaohongshu-rednote/user-published-notes-v4
+
+  - id: justoneapi.instagram.user.profile
+    capability: instagram.user.profile
+    platform: instagram
+    scope: any_account
+    method: GET
+    path: /api/instagram/get-user-detail/v2
+    summary: "Public Instagram profile by username"
+    input:
+      queryParams:
+        username: {type: string, required: true, example: "instagram"}
+    test_request:
+      queryParams: {username: "instagram"}
+    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.instagram.user.profile.json
+    docs_url: https://docs.justoneapi.com/en/api/instagram/user-profile-v2
+
+  - id: justoneapi.instagram.user.posts
+    capability: instagram.user.posts
+    platform: instagram
+    scope: any_account
+    method: GET
+    path: /api/instagram/get-user-posts/v1
+    summary: "Recent posts of an Instagram user, token-paginated"
+    input:
+      queryParams:
+        username: {type: string, required: true, example: "instagram"}
+        paginationToken: {type: string, required: false, note: "token returned by the previous page"}
+    test_request:
+      queryParams: {username: "instagram"}
+    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.instagram.user.posts.json
+    docs_url: https://docs.justoneapi.com/en/api/instagram/user-published-posts-v1
+
+  - id: justoneapi.youtube.video.detail
+    capability: youtube.video.detail
+    platform: youtube
+    scope: any_account
+    method: GET
+    path: /api/youtube/get-video-detail/v1
+    summary: "Public metadata and stats for a YouTube video by video id"
+    input:
+      queryParams:
+        videoId: {type: string, required: true, note: "the v= id from the watch URL", example: "jNQXAC9IVRw"}
+    test_request:
+      queryParams: {videoId: "jNQXAC9IVRw"}
+    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.youtube.video.detail.json
+    docs_url: https://docs.justoneapi.com/en/api/youtube/video-details-v1
+
+  - id: justoneapi.weibo.user.profile
+    capability: weibo.user.profile
+    platform: weibo
+    scope: any_account
+    method: GET
+    path: /api/weibo/get-user-detail/v3
+    summary: "Public Weibo profile by numeric UID"
+    input:
+      queryParams:
+        uid: {type: string, required: true, note: "numeric Weibo user id (from weibo.com/u/<uid>)", example: "2803301701"}
+    test_request:
+      queryParams: {uid: "2803301701"}
+    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    expect: {json_path: code, equals: 0}
+    verified: 2026-07-28
+    example_response: examples/justoneapi.weibo.user.profile.json
+    docs_url: https://docs.justoneapi.com/en/api/weibo/user-profile-v3

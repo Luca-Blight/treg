@@ -1,0 +1,151 @@
+# unverified — endpoints require a connected OAuth account; verify via a treg connection later.
+# Transcribed from official docs 2026-07-28; no credential was available at curation time, and the
+# registry entry is UNCONFIGURED (treg holds no Pinterest client id/secret yet).
+#
+# Pinterest API v5 on api.pinterest.com/v5 with a plain `Authorization: Bearer` — no second
+# credential, no developer token. Everything below is own_account.
+#
+# Scopes granted: ads:read + user_accounts:read on `read`, plus ads:write on `manage`. Only reads
+# are catalogued; a write call on a read-only connection returns 403 with a scope message.
+#
+# Two conventions worth knowing before the first call. Paging is BOOKMARK-based: the response's
+# `bookmark` goes back in as ?bookmark= and an absent bookmark means the end — there is no page
+# number and no total count. And the analytics endpoints require you to name the metrics: `columns`
+# is mandatory and there is no default set, so an omitted columns parameter is a 400, not a wide
+# default result.
+provider: pinterest-ads
+source:
+  docs: https://developers.pinterest.com/docs/api/v5/
+  openapi: null
+  curated: 2026-07-28
+
+pricing_url: https://developers.pinterest.com/docs/api/v5/introduction/
+endpoints:
+  - id: pinterest-ads.accounts
+    capability: pinterest-ads.accounts
+    platform: pinterest-ads
+    scope: own_account
+    method: GET
+    path: /ad_accounts
+    name: "List accessible ad accounts"
+    summary: "List the Pinterest ad accounts you can access"
+    input:
+      queryParams:
+        include_shared_accounts: {type: boolean, required: false, note: "true also returns accounts shared with you by other businesses; default true", example: true}
+        page_size: {type: integer, required: false, note: "max 250, default 25", example: 25}
+        bookmark: {type: string, required: false, note: "the previous response's bookmark"}
+      note: "returns items[] of {id, name, owner, country, currency, permissions}. The `id` is what every other path's ad_account_id takes. This is treg's connection resource picker"
+    cost: {type: free, note: "included with the connected account; Pinterest enforces per-app and per-endpoint rate limits (analytics endpoints are the tightest) rather than charging per call"}
+    docs_url: https://developers.pinterest.com/docs/api/v5/ad_accounts-list/
+
+  - id: pinterest-ads.query
+    capability: pinterest-ads.query
+    platform: pinterest-ads
+    scope: own_account
+    method: GET
+    path: /ad_accounts/{ad_account_id}/analytics
+    name: "Get ad account performance metrics"
+    summary: "Get spend, impressions, clicks and conversions for your Pinterest ad account"
+    input:
+      pathParams:
+        ad_account_id: {type: string, required: true, example: "549755885175"}
+      queryParams:
+        start_date: {type: string, required: true, note: "YYYY-MM-DD; the window may not exceed 90 days and may not start more than 90 days ago", example: "2026-06-28"}
+        end_date: {type: string, required: true, note: "YYYY-MM-DD", example: "2026-07-28"}
+        columns: {type: array, required: true, note: "REQUIRED, comma-separated metric names — there is no default. e.g. SPEND_IN_DOLLAR,IMPRESSION_1,CLICKTHROUGH_1,TOTAL_CONVERSIONS,CPC_IN_DOLLAR", example: ["SPEND_IN_DOLLAR", "IMPRESSION_1", "CLICKTHROUGH_1", "TOTAL_CONVERSIONS"]}
+        granularity: {type: string, required: true, note: "TOTAL | DAY | HOUR | WEEK | MONTH", example: "DAY"}
+        click_window_days: {type: integer, required: false, note: "conversion attribution window: 0 | 1 | 7 | 14 | 30 (default 30)", example: 30}
+        engagement_window_days: {type: integer, required: false, note: "0 | 1 | 7 | 14 | 30 (default 30)"}
+        view_window_days: {type: integer, required: false, note: "0 | 1 | 7 | 14 | 30 (default 1)"}
+        conversion_report_time: {type: string, required: false, note: "TIME_OF_AD_ACTION | TIME_OF_CONVERSION (default TIME_OF_AD_ACTION) — which date a conversion is booked against, and the usual reason two reports of the same period disagree", example: "TIME_OF_AD_ACTION"}
+      note: "metric names carry their unit: *_IN_DOLLAR fields are already in dollars (in the account currency), IMPRESSION_1 / CLICKTHROUGH_1 are the paid variants while IMPRESSION_2 / CLICKTHROUGH_2 are the earned/organic ones from the same promoted Pin — mixing them up double-counts"
+    cost: {type: free, note: "included with the connected account; analytics endpoints have the tightest rate limits in v5"}
+    docs_url: https://developers.pinterest.com/docs/api/v5/ad_account-analytics/
+
+  - id: pinterest-ads.campaigns
+    capability: pinterest-ads.campaigns
+    platform: pinterest-ads
+    scope: own_account
+    method: GET
+    path: /ad_accounts/{ad_account_id}/campaigns
+    name: "List campaigns in an ad account"
+    summary: "List the campaigns in your Pinterest ad account with objective, status and budget"
+    input:
+      pathParams:
+        ad_account_id: {type: string, required: true, example: "549755885175"}
+      queryParams:
+        campaign_ids: {type: array, required: false, note: "comma-separated ids; mutually exclusive with entity_statuses"}
+        entity_statuses: {type: array, required: false, note: "ACTIVE | PAUSED | ARCHIVED — defaults to ACTIVE and PAUSED, so archived campaigns are hidden unless asked for", example: ["ACTIVE"]}
+        page_size: {type: integer, required: false, note: "max 250", example: 25}
+        order: {type: string, required: false, note: "ASCENDING | DESCENDING by id"}
+        bookmark: {type: string, required: false}
+      note: "budgets are in MICRO-CURRENCY: daily_spend_cap 5000000 is $5.00. objective_type is AWARENESS | CONSIDERATION | VIDEO_VIEW | WEB_CONVERSION | CATALOG_SALES | WEB_SESSIONS"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://developers.pinterest.com/docs/api/v5/campaigns-list/
+
+  - id: pinterest-ads.campaign.analytics
+    capability: pinterest-ads.campaign.analytics
+    platform: pinterest-ads
+    scope: own_account
+    method: GET
+    path: /ad_accounts/{ad_account_id}/campaigns/analytics
+    name: "Get campaign performance metrics"
+    summary: "Get spend and performance per campaign in your Pinterest ad account"
+    input:
+      pathParams:
+        ad_account_id: {type: string, required: true, example: "549755885175"}
+      queryParams:
+        campaign_ids: {type: array, required: true, note: "REQUIRED — comma-separated campaign ids, max 500. There is no all-campaigns form; list the campaigns first", example: ["626746651239"]}
+        start_date: {type: string, required: true, note: "YYYY-MM-DD", example: "2026-06-28"}
+        end_date: {type: string, required: true, note: "YYYY-MM-DD", example: "2026-07-28"}
+        columns: {type: array, required: true, example: ["SPEND_IN_DOLLAR", "IMPRESSION_1", "CLICKTHROUGH_1", "TOTAL_CONVERSIONS"]}
+        granularity: {type: string, required: true, note: "TOTAL | DAY | HOUR | WEEK | MONTH", example: "TOTAL"}
+        click_window_days: {type: integer, required: false, example: 30}
+        conversion_report_time: {type: string, required: false, example: "TIME_OF_AD_ACTION"}
+      note: "same column vocabulary as the account-level report, one row per campaign (per period when granularity is not TOTAL). /ad_groups/analytics and /ads/analytics are the identical shape one and two levels down"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://developers.pinterest.com/docs/api/v5/campaigns-analytics/
+
+  - id: pinterest-ads.adgroups
+    capability: pinterest-ads.adgroups
+    platform: pinterest-ads
+    scope: own_account
+    method: GET
+    path: /ad_accounts/{ad_account_id}/ad_groups
+    name: "List ad groups in an ad account"
+    summary: "List the ad groups in your Pinterest ad account with budget, bid and targeting"
+    input:
+      pathParams:
+        ad_account_id: {type: string, required: true, example: "549755885175"}
+      queryParams:
+        campaign_ids: {type: array, required: false, note: "comma-separated, to scope to one campaign"}
+        ad_group_ids: {type: array, required: false}
+        entity_statuses: {type: array, required: false, example: ["ACTIVE"]}
+        page_size: {type: integer, required: false, example: 25}
+        bookmark: {type: string, required: false}
+      note: "targeting_spec (interests, keywords, geo, devices, audiences) lives on the ad group, as do bid_in_micro_currency and the daily/lifetime budget when the campaign does not own it"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://developers.pinterest.com/docs/api/v5/ad_groups-list/
+
+  - id: pinterest-ads.ads
+    capability: pinterest-ads.ads
+    platform: pinterest-ads
+    scope: own_account
+    method: GET
+    path: /ad_accounts/{ad_account_id}/ads
+    name: "List ads in an ad account"
+    summary: "List the ads in your Pinterest ad account with their promoted Pins and destinations"
+    input:
+      pathParams:
+        ad_account_id: {type: string, required: true, example: "549755885175"}
+      queryParams:
+        campaign_ids: {type: array, required: false}
+        ad_group_ids: {type: array, required: false}
+        ad_ids: {type: array, required: false}
+        entity_statuses: {type: array, required: false, example: ["ACTIVE"]}
+        page_size: {type: integer, required: false, example: 25}
+        bookmark: {type: string, required: false}
+      note: "a Pinterest ad is a promoted Pin: the creative itself is `pin_id`, which you resolve through GET /pins/{pin_id} for the image and description. destination_url and creative_type (REGULAR | VIDEO | CAROUSEL | IDEA | COLLECTION) are on the ad"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://developers.pinterest.com/docs/api/v5/ads-list/
+

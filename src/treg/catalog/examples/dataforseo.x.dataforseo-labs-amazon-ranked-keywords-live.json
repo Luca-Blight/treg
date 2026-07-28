@@ -1,0 +1,63 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.6224 sec.",
+  "cost": 0.01548,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280921-2171-0377-0000-77abafbcf9b5",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.6129 sec.",
+      "cost": 0.01548,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "ranked_keywords",
+        "se_type": "amazon",
+        "asin": "B00R92CL5E",
+        "location_code": 2840,
+        "language_code": "en"
+      },
+      "result": [
+        {
+          "se_type": "amazon",
+          "asin": "B00R92CL5E",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 29,
+          "items_count": 29,
+          "items": [
+            {
+              "se_type": "amazon",
+              "keyword_data": {
+                "se_type": "amazon",
+                "keyword": "netgear ex3700 wifi extender",
+                "location_code": 2840,
+                "language_code": "en",
+                "keyword_info": "… 3 field(s) truncated"
+              },
+              "ranked_serp_element": {
+                "se_type": "amazon",
+                "serp_item": "… 20 field(s) truncated",
+                "check_url": "https://www.amazon.com/s?k=netgear+ex3700+wifi+extender&crid=I3AWTDV3GLE8&sprefix=netgear%2Bex3700%2Bwifi%2Bextender%2Ca… [158 chars total]",
+                "serp_item_types": "… 2 item(s) truncated",
+                "se_results_count": 144,
+                "last_updated_time": "2026-06-02 00:42:30 +00:00",
+                "previous_updated_time": "2026-04-22 02:17:37 +00:00"
+              }
+            },
+            "… 28 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

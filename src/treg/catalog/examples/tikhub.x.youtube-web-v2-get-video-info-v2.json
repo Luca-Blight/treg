@@ -1,0 +1,46 @@
+{
+  "code": 200,
+  "request_id": "e702107a-f1c0-4446-b4d6-22ddf4ca6be8",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:10",
+  "time_stamp": 1785220270,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_video_info_v2… [104 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/e702107a-f1c0-44… [150 chars]",
+  "router": "/api/v1/youtube/web_v2/get_video_info_v2",
+  "params": {
+    "video_id": "dQw4w9WgXcQ",
+    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+  },
+  "data": {
+    "video_id": "dQw4w9WgXcQ",
+    "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K R… [68 chars]",
+    "author": "Rick Astley",
+    "channel_id": "UCuAXFkgsw1L7xaCfnd5JJOw",
+    "channel_url": "https://www.youtube.com/channel/UCuAXFkgsw1L7xaCfnd5JJOw",
+    "publish_date": "2009-10-24T23:57:33-07:00",
+    "description": "The official video for “Never Gonna Give You Up” by Rick Ast… [2375 chars]",
+    "length_seconds": 213,
+    "view_count": 1797340926,
+    "rating": null,
+    "keywords": [
+      "rick astley",
+      "… 26 more item(s) truncated"
+    ],
+    "thumbnail_url": "https://i.ytimg.com/vi/dQw4w9WgXcQ/sddefault.jpg",
+    "playability_status": "OK",
+    "captions": [
+      {
+        "language_code": "en",
+        "language_name": "English",
+        "url": "https://www.youtube.com/api/timedtext?v=dQw4w9WgXcQ&ei=rUxoa… [311 chars]"
+      },
+      "… 5 more item(s) truncated"
+    ],
+    "chapters": null
+  }
+}

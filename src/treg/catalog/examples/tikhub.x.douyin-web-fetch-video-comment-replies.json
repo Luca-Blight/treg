@@ -1,0 +1,39 @@
+{
+  "code": 200,
+  "request_id": "1edb7a15-9838-4757-b0e6-7c6ce929c72e",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:38",
+  "time_stamp": 1785220118,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_video_comments_reply_api_v1_douyin_web_fetch_video_comment_replies_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/1edb7a15-9838-4757-b0e6-7c6ce929c72e?sign=c6468e27a9dbbf04f72167fb49ecd29cae0eb895dc4c640751fdd9553a1d0b24",
+  "router": "/api/v1/douyin/web/fetch_video_comment_replies",
+  "params": {
+    "item_id": "7354666303006723354",
+    "comment_id": "7354669356632638218",
+    "count": "5"
+  },
+  "data": {
+    "status_code": 0,
+    "comments": [
+      "… {32 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "cursor": 5,
+    "has_more": 1,
+    "total": 289,
+    "extra": {
+      "now": 1785220118000,
+      "fatal_item_ids": null,
+      "scenes": null
+    },
+    "log_pb": {
+      "impr_id": "202607281428380B8AEAE053B052E9D7DE"
+    },
+    "merge_cursor": ""
+  }
+}

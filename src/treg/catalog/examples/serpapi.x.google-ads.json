@@ -1,0 +1,353 @@
+{
+  "search_metadata": {
+    "id": "6a68991…",
+    "status": "Success",
+    "json_endpoint": "https:/…",
+    "created_at": "2026-07…",
+    "processed_at": "2026-07…",
+    "google_ads_url": "https:/…",
+    "raw_html_file": "https:/…",
+    "total_time_taken": 3.63
+  },
+  "search_parameters": {
+    "engine": "google_…",
+    "q": "coffee",
+    "location_requested": "Austin,…",
+    "location_used": "Austin,…",
+    "google_domain": "google.…",
+    "gl": "us",
+    "device": "desktop"
+  },
+  "search_information": {
+    "query_displayed": "coffee",
+    "total_results": 3010000000,
+    "time_taken_displayed": 0.27,
+    "organic_results_state": "Results…",
+    "results_for": "Congres…"
+  },
+  "ads": [
+    {
+      "position": 1,
+      "block_position": "bottom",
+      "title": "Brew De…",
+      "link": "https:/…",
+      "displayed_link": "https:/…",
+      "tracking_link": "https:/…",
+      "description": "A World…",
+      "extensions": [
+        "1M+ vis…"
+      ],
+      "source": "Nespres…",
+      "sitelinks": [
+        {
+          "title": "Nespres…",
+          "link": "https:/…"
+        },
+        {
+          "title": "Explore…",
+          "link": "https:/…"
+        },
+        "… 3 mor…"
+      ]
+    }
+  ],
+  "local_map": {
+    "link": "https:/…",
+    "image": "https:/…",
+    "gps_coordinates": {
+      "latitude": 30.268000275560055,
+      "longitude": -97.74673461914062
+    }
+  },
+  "local_results": {
+    "places": [
+      {
+        "position": 1,
+        "rating": 4.5,
+        "reviews": 578,
+        "reviews_original": "(578)",
+        "thumbnail": "https:/…",
+        "place_id": "2866047…",
+        "place_id_search": "https:/…",
+        "provider_id": "/g/11gf…",
+        "gps_coordinates": {
+          "latitude": 30.26757,
+          "longitude": -97.7521
+        },
+        "ad": true,
+        "title": "Merit C…",
+        "type": "Coffee …",
+        "address": "0.3 mi …",
+        "hours": "Open · …",
+        "extensions": [
+          "Merit C…"
+        ]
+      },
+      {
+        "position": 2,
+        "rating": 4.5,
+        "reviews": 1200,
+        "reviews_original": "(1.2K)",
+        "price": "$1–10",
+        "description": "\"The ba…",
+        "thumbnail": "https:/…",
+        "thumbnail_large": "https:/…",
+        "place_id": "1126593…",
+        "place_id_search": "https:/…",
+        "provider_id": "/g/12hl…",
+        "gps_coordinates": {
+          "latitude": 30.266216,
+          "longitude": -97.743066
+        },
+        "title": "Houndst…",
+        "type": "Coffee …",
+        "address": "342 ft …"
+      },
+      "… 2 mor…"
+    ],
+    "more_locations_link": "https:/…"
+  },
+  "knowledge_graph": {
+    "title": "Coffee",
+    "type": "Beverag…",
+    "entity_type": "food",
+    "kgmid": "/m/02vq…",
+    "knowledge_graph_search_link": "https:/…",
+    "header_images": [
+      {
+        "image": "https:/…",
+        "source": "https:/…"
+      },
+      {
+        "image": "https:/…",
+        "source": "https:/…"
+      },
+      "… 2 mor…"
+    ],
+    "description": "Coffee …",
+    "source": {
+      "name": " Wikipe…",
+      "link": "https:/…"
+    },
+    "sources_include": "USDAUSD…",
+    "sources_include_links": [
+      {
+        "text": "USDA",
+        "link": "https:/…"
+      },
+      {
+        "text": "USDA",
+        "link": "https:/…"
+      },
+      "… 5 mor…"
+    ],
+    "people_also_search_for": [
+      {
+        "name": "Vegetab…",
+        "image": "https:/…",
+        "link": "https:/…",
+        "serpapi_link": "https:/…"
+      },
+      {
+        "name": "Pasta",
+        "image": "https:/…",
+        "link": "https:/…",
+        "serpapi_link": "https:/…"
+      },
+      "… 2 mor…"
+    ],
+    "people_also_search_for_link": "https:/…",
+    "people_also_search_for_stick": "H4sIAAA…"
+  },
+  "immersive_products": [
+    {
+      "thumbnail": "https:/…",
+      "source_logo": "https:/…",
+      "source": "Walmart",
+      "title": "Great V…",
+      "rating": 4.2,
+      "reviews": 2200,
+      "price": "$19.77",
+      "extracted_price": 19.77,
+      "original_price": "$0.49/o…",
+      "extracted_original_price": 0.49,
+      "location": "Nearby,…",
+      "delivery": "1 hour …",
+      "immersive_product_page_token": "i1YKK3i…",
+      "serpapi_link": "https:/…"
+    },
+    {
+      "thumbnail": "https:/…",
+      "source_logo": "https:/…",
+      "source": "Sam's C…",
+      "title": "Folgers…",
+      "rating": 4.6,
+      "reviews": 14000,
+      "price": "$19.67",
+      "extracted_price": 19.67,
+      "original_price": "$0.45/o…",
+      "extracted_original_price": 0.45,
+      "location": "Nearby,…",
+      "immersive_product_page_token": "cpicHHi…",
+      "serpapi_link": "https:/…"
+    },
+    "… 6 mor…"
+  ],
+  "related_questions": [
+    {
+      "question": "What is…",
+      "type": "ai_over…",
+      "page_token": "GtXgOXi…",
+      "serpapi_ai_overview_link": "https:/…",
+      "next_page_token": "eyJvbnM…",
+      "serpapi_link": "https:/…"
+    },
+    {
+      "question": "Why sho…",
+      "type": "ai_over…",
+      "page_token": "CutYuni…",
+      "serpapi_ai_overview_link": "https:/…",
+      "next_page_token": "eyJvbnM…",
+      "serpapi_link": "https:/…"
+    },
+    "… 2 mor…"
+  ],
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "Coffee",
+      "link": "https:/…",
+      "redirect_link": "https:/…",
+      "displayed_link": "https:/…",
+      "thumbnail": "https:/…",
+      "favicon": "https:/…",
+      "snippet": "Coffee …",
+      "snippet_highlighted_words": [
+        "a bever…"
+      ],
+      "about_this_result": {
+        "source": {
+          "description": "Coffee …",
+          "source_info_link": "https:/…",
+          "icon": "https:/…"
+        },
+        "languages": [
+          "en"
+        ],
+        "regions": [
+          "US"
+        ]
+      },
+      "about_page_link": "https:/…",
+      "about_page_serpapi_link": "https:/…",
+      "source": "Wikiped…"
+    },
+    {
+      "position": 2,
+      "title": "Jo's Co…",
+      "link": "https:/…",
+      "redirect_link": "https:/…",
+      "displayed_link": "https:/…",
+      "favicon": "https:/…",
+      "snippet": "Jo's Co…",
+      "snippet_highlighted_words": [
+        "an icon…"
+      ],
+      "about_this_result": {
+        "source": {
+          "description": "Jo's Co…",
+          "source_info_link": "https:/…",
+          "icon": "https:/…"
+        },
+        "languages": [
+          "en"
+        ],
+        "regions": [
+          "US"
+        ]
+      },
+      "about_page_link": "https:/…",
+      "about_page_serpapi_link": "https:/…",
+      "source": "Jo's Co…"
+    },
+    "… 6 mor…"
+  ],
+  "perspectives": [
+    {
+      "author": "Talking…",
+      "source": "YouTube",
+      "duration": "8:18",
+      "extensions": [
+        "42.9K+ …"
+      ],
+      "thumbnails": [
+        "https:/…"
+      ],
+      "title": "Is Coff…",
+      "date": "1 day a…"
+    },
+    {
+      "author": "pulland…",
+      "source": "Instagr…",
+      "duration": "0:30",
+      "extensions": [
+        "400+ li…"
+      ],
+      "thumbnails": [
+        "https:/…"
+      ],
+      "title": "Elevate…",
+      "date": "5 hours…"
+    },
+    "… 10 mo…"
+  ],
+  "local_news": [
+    {
+      "source": "MySA",
+      "thumbnail": "https:/…",
+      "title": "A major…",
+      "date": "1 day a…"
+    },
+    {
+      "source": "Sprudge",
+      "thumbnail": "https:/…",
+      "title": "Build-O…",
+      "date": "22 hour…"
+    }
+  ],
+  "top_stories": [
+    {
+      "title": "A major…",
+      "link": "https:/…",
+      "source": "MySA",
+      "source_logo": "https:/…",
+      "date": "1 day a…",
+      "thumbnail": "https:/…"
+    },
+    {
+      "title": "Build-O…",
+      "link": "https:/…",
+      "source": "Sprudge",
+      "source_logo": "https:/…",
+      "date": "22 hour…",
+      "thumbnail": "https:/…"
+    }
+  ],
+  "top_stories_link": "https:/…",
+  "top_stories_serpapi_link": "https:/…",
+  "related_searches": [
+    {
+      "block_position": 1,
+      "query": "Coffee …",
+      "link": "https:/…",
+      "serpapi_link": "https:/…"
+    },
+    {
+      "block_position": 1,
+      "query": "Coffee …",
+      "link": "https:/…",
+      "serpapi_link": "https:/…"
+    },
+    "… 6 mor…"
+  ]
+}

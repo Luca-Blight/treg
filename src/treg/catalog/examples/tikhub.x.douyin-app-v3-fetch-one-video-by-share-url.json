@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "6f5f13cc-96e8-4eb9-b70d-1b4f65c17e98",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:54",
+  "time_stamp": 1785220074,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/fetch_one_video_by… [124 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/6f5f13cc-96e8-4e… [150 chars]",
+  "router": "/api/v1/douyin/app/v3/fetch_one_video_by_share_url",
+  "params": {
+    "share_url": "https://v.douyin.com/e3x2fjE/"
+  },
+  "data": {
+    "aweme_detail": {
+      "duet_aggregate_in_music_tab": false,
+      "dislike_dimension_list": null,
+      "is_duet_sing": false,
+      "douplus_user_type": 0,
+      "user_recommend_status": 1,
+      "enable_comment_sticker_rec": false,
+      "bodydance_score": 0,
+      "series_paid_info": "… {2 field(s) truncated}",
+      "is_ads": false,
+      "can_cache_to_local": true,
+      "item_comment_settings": 0,
+      "is_in_scope": false,
+      "is_collects_selected": 0,
+      "entertainment_video_type": 3,
+      "visual_search_info": "… {7 field(s) truncated}",
+      "…": "169 more field(s) truncated"
+    }
+  }
+}

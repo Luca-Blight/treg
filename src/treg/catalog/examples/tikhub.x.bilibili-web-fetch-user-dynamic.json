@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "request_id": "fb929119-0fa9-4071-b4e7-9d2e398e4092",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:45",
+  "time_stamp": 1785220065,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_collect_folders_api_v1_bilibili_web_fetch_user_dynamic_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/fb929119-0fa9-4071-b4e7-9d2e398e4092?sign=d0e536a9f9200b8c88a34c7b22d95515b401b546240f78063cc4f4398427106d",
+  "router": "/api/v1/bilibili/web/fetch_user_dynamic",
+  "params": {
+    "uid": "16015678",
+    "offset": "953154282154098691"
+  },
+  "data": {
+    "code": 0,
+    "message": "0",
+    "data": {
+      "update_num": "0",
+      "update_baseline": "",
+      "offset": "",
+      "has_more": false,
+      "total": "0",
+      "items": []
+    },
+    "ttl": 1
+  }
+}

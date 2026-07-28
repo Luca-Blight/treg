@@ -1,0 +1,39 @@
+{
+  "code": 200,
+  "request_id": "a0a8ad22-44c8-4a03-a6b5-31ea22a62397",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:41",
+  "time_stamp": 1785220241,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-API/fetch_post_detail_api_… [94 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/a0a8ad22-44c8-4a… [150 chars]",
+  "router": "/api/v1/weibo/web/fetch_post_detail",
+  "params": {
+    "post_id": "5092682368025584"
+  },
+  "data": {
+    "ok": 1,
+    "data": {
+      "visible": "… {2 field(s) truncated}",
+      "created_at": "Wed Oct 23 16:52:36 +0800 2024",
+      "id": "5092682368025584",
+      "mid": "5092682368025584",
+      "edit_count": 2,
+      "can_edit": false,
+      "edit_at": "Wed Oct 23 17:10:52 +0800 2024",
+      "text": "<a  href=\"https://m.weibo.cn/search?containerid=231522type%3… [1474 chars]",
+      "textLength": 237,
+      "source": "",
+      "favorited": false,
+      "pic_ids": "… [3 item(s) truncated]",
+      "thumbnail_pic": "https://wx3.sinaimg.cn/thumbnail/006lO0scly1huwflhimgjj30u01… [69 chars]",
+      "bmiddle_pic": "http://wx3.sinaimg.cn/bmiddle/006lO0scly1huwflhimgjj30u0140a… [66 chars]",
+      "original_pic": "https://wx3.sinaimg.cn/large/006lO0scly1huwflhimgjj30u0140ag… [65 chars]",
+      "…": "39 more field(s) truncated"
+    }
+  }
+}

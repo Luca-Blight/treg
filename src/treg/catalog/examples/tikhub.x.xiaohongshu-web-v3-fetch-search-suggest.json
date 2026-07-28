@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "2b2d1abf-6567-4813-9c01-72e90837fe0c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:23",
+  "time_stamp": 1785220403,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-Web-V3-API/fetch_search_suggest_api_v1_xiaohongshu_web_v3_fetch_search_suggest_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2b2d1abf-6567-4813-9c01-72e90837fe0c?sign=a8e0951bac19669af4832619eefb359756a4cc748aefc50131320ae0d7444ad4",
+  "router": "/api/v1/xiaohongshu/web_v3/fetch_search_suggest",
+  "params": {
+    "keyword": "口红"
+  },
+  "data": {
+    "ok": true,
+    "status": 200,
+    "code": 1000,
+    "success": true,
+    "msg": "成功",
+    "data": {
+      "search_cpl_id": "2daf3575a8e996c16e129a9d6a684d33",
+      "word_request_id": "0ace6ece-58d0-4b84-b7ae-2e1f0f42171c#1785220403351",
+      "sug_items": [
+        {
+          "highlight_flags": [
+            true,
+            "… 3 more item(s) truncated"
+          ],
+          "search_type": "notes",
+          "type": "top_note",
+          "text": "口红推荐"
+        },
+        "… 9 more item(s) truncated"
+      ]
+    }
+  }
+}

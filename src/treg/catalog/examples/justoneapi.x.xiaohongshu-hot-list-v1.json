@@ -1,0 +1,31 @@
+{
+  "code": 0,
+  "data": {
+    "date": "2026-07-28",
+    "updated_at": "2026-06-07",
+    "items": [
+      {
+        "rank": 1,
+        "title": "用万能旅行拍照姿势美美出片",
+        "url": "https://www.xiaohongshu.com/search_result?keyword=%E7%94%A8%E4%B8%87%E8%83%BD%E6%97%85%E8%A1%8C%E6%8B%8D%E7%85%A7%E5%A7%BF%E5%8A%BF%E7%BE%8E%E7%BE%8E%E5%87%BA%E7%89%87&type=51",
+        "item_id": "231139944",
+        "hot": "918.6w",
+        "hot_value": 9186000,
+        "trend": "flat"
+      },
+      {
+        "rank": 2,
+        "title": "耗时三年拍下古诗词里的中国",
+        "url": "https://www.xiaohongshu.com/search_result?keyword=%E8%80%97%E6%97%B6%E4%B8%89%E5%B9%B4%E6%8B%8D%E4%B8%8B%E5%8F%A4%E8%AF%97%E8%AF%8D%E9%87%8C%E7%9A%84%E4%B8%AD%E5%9B%BD&type=51",
+        "item_id": "230858183",
+        "hot": "907w",
+        "hot_value": 9070000,
+        "trend": "flat"
+      },
+      "… 18 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:30.168416179",
+  "requestId": "a0c6aba94dec4933a0cacb8ccab77cdf"
+}

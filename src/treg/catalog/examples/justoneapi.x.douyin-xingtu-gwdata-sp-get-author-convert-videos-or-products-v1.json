@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "pagination": {
+      "has_more": false,
+      "limit": 10,
+      "page": 1,
+      "total_count": 0
+    },
+    "video_list": []
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:20.553265313",
+  "requestId": "f8036ee6b2864ac3aea2dbfa090bd104"
+}

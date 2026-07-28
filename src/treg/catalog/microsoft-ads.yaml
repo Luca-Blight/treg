@@ -1,0 +1,102 @@
+# unverified — endpoints require a connected OAuth account; verify via a treg connection later.
+# Transcribed from official docs 2026-07-28; no credential was available at curation time, and the
+# provider is additionally UNCONFIGURED in the registry (treg holds no Microsoft client id/secret
+# yet), so nothing here has been called.
+#
+# THREE THINGS ABOUT THIS API THAT LOOK LIKE BUGS BUT ARE NOT.
+#
+# 1. Every "get" is a POST. Bing Ads v13 is a SOAP service with a REST facade bolted on: the SOAP
+#    operation GetCampaignsByAccountId becomes POST /Campaigns/QueryByAccountId with a JSON body.
+#    There are no query-string reads, and a GET on these paths does not answer.
+# 2. FOUR credentials per call. Besides the OAuth bearer, every request carries a `DeveloperToken`
+#    header (issued instantly in the Microsoft Advertising Developer Portal — the registry entry
+#    tells the user to add it as a secret), plus `CustomerId` (the manager account) and
+#    `CustomerAccountId` (the ad account) headers. Omitting the developer token is an auth-shaped
+#    failure that is NOT a 401.
+# 3. Reporting is a different host. Spend/clicks/conversions come from the async report service at
+#    reporting.api.bingads.microsoft.com/Reporting/v13 (submit → poll → download a zipped CSV), and
+#    account discovery from clientcenter.api.bingads.microsoft.com/CustomerManagement/v13. Neither
+#    is reachable from this provider's base_url, so neither is catalogued here — the entries below
+#    are Campaign Management only, which is entity structure and settings, not performance.
+#
+# Scope granted: msads.manage — one combined read+write grant (Microsoft has no read-only ads
+# scope), so as with Google Ads the safety comes from which operations you call. Only reads are
+# catalogued here; Add*/Update*/Delete* live on the same paths with POST/PUT/DELETE.
+provider: microsoft-ads
+source:
+  docs: https://learn.microsoft.com/en-us/advertising/guides/get-started
+  openapi: null
+  curated: 2026-07-28
+
+pricing_url: https://learn.microsoft.com/advertising/guides/  # API free; requires a developer token.
+endpoints:
+  - id: microsoft-ads.query
+    capability: microsoft-ads.query
+    platform: microsoft-ads
+    scope: own_account
+    method: POST
+    path: /Campaigns/QueryByAccountId
+    name: "List campaigns in an account"
+    summary: "Campaigns in your Microsoft Advertising account, with status, budget and bid strategy"
+    input:
+      body:
+        AccountId: {type: integer, required: true, note: "the ad account id (a long). Must equal the CustomerAccountId header", example: 123456789}
+        CampaignType: {type: string, required: false, note: "SPACE-DELIMITED flags, not an array: \"Search Shopping DynamicSearchAds Audience PerformanceMax\". DEFAULTS TO Search — omit it and Shopping/PMax campaigns are silently missing from the result", example: "Search Shopping PerformanceMax"}
+        ReturnAdditionalFields: {type: string, required: false, note: "space-delimited opt-ins for newer properties, e.g. \"AdScheduleUseSearcherTimeZone BidStrategyId\"", example: "BidStrategyId"}
+      bodyType: json
+      note: "returns Campaigns[] with Id, Name, Status, DailyBudget, BudgetType, BiddingScheme, StartDate/EndDate, Languages and CampaignType. DailyBudget is a plain decimal in the ACCOUNT CURRENCY — not micros, not cents, unlike Google and Meta. No performance metrics: pair with the Reporting service for spend and clicks"
+    cost: {type: free, note: "the Microsoft Advertising API is free with the account; usage is bounded per developer token and per account by service-level rate limits, and abusive callers get 117/118 throttling errors rather than a bill"}
+    docs_url: https://learn.microsoft.com/en-us/advertising/campaign-management-service/getcampaignsbyaccountid?view=bingads-13
+
+  - id: microsoft-ads.adgroups
+    capability: microsoft-ads.adgroups
+    platform: microsoft-ads
+    scope: own_account
+    method: POST
+    path: /AdGroups/QueryByCampaignId
+    name: "List ad groups in a campaign"
+    summary: "List the ad groups in a Microsoft Advertising campaign with their bids and status"
+    input:
+      body:
+        CampaignId: {type: integer, required: true, note: "from Campaigns/QueryByAccountId", example: 987654321}
+        ReturnAdditionalFields: {type: string, required: false, note: "space-delimited, e.g. \"AdGroupType FrequencyCapSettings\""}
+      bodyType: json
+      note: "returns AdGroups[] with Id, Name, Status, CpcBid/CpmBid/CpvBid (each wrapped as {\"Amount\": 1.5}), Network, Language, StartDate/EndDate and AdGroupType. Bid amounts are decimals in the account currency"
+    cost: {type: free, note: "included with the account; service rate limits apply"}
+    docs_url: https://learn.microsoft.com/en-us/advertising/campaign-management-service/getadgroupsbycampaignid?view=bingads-13
+
+  - id: microsoft-ads.ads
+    capability: microsoft-ads.ads
+    platform: microsoft-ads
+    scope: own_account
+    method: POST
+    path: /Ads/QueryByAdGroupId
+    name: "List ads in an ad group"
+    summary: "List the ads in a Microsoft Advertising ad group with their headlines and final URLs"
+    input:
+      body:
+        AdGroupId: {type: integer, required: true, example: 1122334455}
+        AdTypes: {type: array, required: true, note: "which ad types to return — e.g. [\"ResponsiveSearch\",\"ExpandedText\",\"ResponsiveAd\",\"Product\"]. An ad type you do not ask for is simply absent from the result", example: ["ResponsiveSearch"]}
+        ReturnAdditionalFields: {type: string, required: false}
+      bodyType: json
+      note: "responsive search ads return Headlines[] and Descriptions[] as asset-link arrays rather than flat strings, so the creative text is nested a level deeper than in older ad types"
+    cost: {type: free, note: "included with the account; service rate limits apply"}
+    docs_url: https://learn.microsoft.com/en-us/advertising/campaign-management-service/getadsbyadgroupid?view=bingads-13
+
+  - id: microsoft-ads.keywords
+    capability: microsoft-ads.keywords
+    platform: microsoft-ads
+    scope: own_account
+    method: POST
+    path: /Keywords/QueryByAdGroupId
+    name: "List keywords in an ad group"
+    summary: "List the keywords in a Microsoft Advertising ad group with match types and bids"
+    input:
+      body:
+        AdGroupId: {type: integer, required: true, example: 1122334455}
+        ReturnAdditionalFields: {type: string, required: false, note: "space-delimited, e.g. \"FinalUrlSuffix\""}
+      bodyType: json
+      note: "returns Keywords[] with Id, Text, MatchType (Exact | Phrase | Broad), Bid {Amount}, Status and destination URLs. Negative keywords are NOT here — they are a separate NegativeKeywords entity on the campaign or ad group"
+    cost: {type: free, note: "included with the account; service rate limits apply"}
+    docs_url: https://learn.microsoft.com/en-us/advertising/campaign-management-service/getkeywordsbyadgroupid?view=bingads-13
+

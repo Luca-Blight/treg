@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "00c43d42-e852-4e00-8384-c8f9723fa92f",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:45",
+  "time_stamp": 1785220065,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_user_post_videos_api_v1_bilibili_web_fetch_user_post_videos_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/00c43d42-e852-4e00-8384-c8f9723fa92f?sign=1634ca5a6249cd6b0b8eb1d351d5300e8d69a332f93d046cc71c193f15b35ca2",
+  "router": "/api/v1/bilibili/web/fetch_user_post_videos",
+  "params": {
+    "uid": "178360345"
+  },
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "list": {
+        "slist": [],
+        "tlist": null,
+        "vlist": [
+          "… {38 field(s) truncated}",
+          "… 4 more item(s) truncated"
+        ]
+      },
+      "page": {
+        "pn": 1,
+        "ps": 25,
+        "count": 5
+      },
+      "episodic_button": {
+        "text": "播放全部",
+        "uri": "//www.bilibili.com/medialist/play/178360345?from=space"
+      },
+      "is_risk": false,
+      "gaia_res_type": 0,
+      "gaia_data": null
+    }
+  }
+}

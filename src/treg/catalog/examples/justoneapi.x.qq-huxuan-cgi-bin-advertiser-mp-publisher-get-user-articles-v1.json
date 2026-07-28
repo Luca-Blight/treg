@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "data": {
+    "ret": 0,
+    "msg": "",
+    "items": [],
+    "total": 0,
+    "page": 1,
+    "total_start_date": "",
+    "total_end_date": ""
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:13:52.551196566",
+  "requestId": "952b34f79d734a6d812fd110f3811f33"
+}

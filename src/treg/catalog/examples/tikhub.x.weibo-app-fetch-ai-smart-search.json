@@ -1,0 +1,46 @@
+{
+  "code": 200,
+  "request_id": "6060d697-3a12-46a6-b98d-4eb1db6c4a9f",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:26",
+  "time_stamp": 1785220226,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-App-API/fetch_ai_smart_search_api_v1_weibo_app_fetch_ai_smart_search_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/6060d697-3a12-46a6-b98d-4eb1db6c4a9f?sign=fdd07cc08b0a137759d9d8c37d20ce59a8da5d4e39984b9ceaff5d24e9af4ffe",
+  "router": "/api/v1/weibo/app/fetch_ai_smart_search",
+  "params": {
+    "query": "人工智能",
+    "page": "1"
+  },
+  "data": {
+    "items": [
+      "… {4 field(s) truncated}",
+      "… 5 more item(s) truncated"
+    ],
+    "pageData": "{}",
+    "refreshInfo": "{}",
+    "loadedInfo": "{}",
+    "config": "{}",
+    "footer": {
+      "type": "searchResult",
+      "data": "… {4 field(s) truncated}"
+    },
+    "channelInfo": {
+      "channelConfig": "… {5 field(s) truncated}",
+      "channels": "… [13 item(s) truncated]"
+    },
+    "navInfo": "{}",
+    "navigationBar": {
+      "type": "search_default",
+      "data": "… {1 field(s) truncated}",
+      "search_title": "… [1 item(s) truncated]"
+    },
+    "globalChannelConfig": {
+      "refreshInfo": "… {1 field(s) truncated}"
+    }
+  }
+}

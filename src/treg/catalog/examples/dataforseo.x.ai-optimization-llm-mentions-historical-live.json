@@ -1,0 +1,67 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "5.9712 sec.",
+  "cost": 0.101,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280920-2171-0662-0000-f9ba69800d8a",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "5.9106 sec.",
+      "cost": 0.101,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "ai_optimization",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "historical",
+        "language_code": "es",
+        "location_code": 2840,
+        "platform": "google",
+        "target": [
+          {
+            "domain": "en.wikipedia.org",
+            "search_filter": "exclude"
+          },
+          {
+            "keyword": "bmw",
+            "search_scope": [
+              "answer"
+            ]
+          }
+        ]
+      },
+      "result": [
+        {
+          "items_count": 12,
+          "items": [
+            {
+              "year": 2026,
+              "month": 7,
+              "metrics": {
+                "mentions": 831,
+                "ai_search_volume": 5700300
+              }
+            },
+            {
+              "year": 2026,
+              "month": 6,
+              "metrics": {
+                "mentions": 449,
+                "ai_search_volume": 3581500
+              }
+            },
+            "… 10 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

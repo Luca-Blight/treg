@@ -1,0 +1,22 @@
+{
+  "code": 200,
+  "request_id": "511d6bde-ca4f-4240-8356-26c6db057474",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:40",
+  "time_stamp": 1785220120,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/get_all_aweme_id_api_v1_douyin_web_get_all_aweme_id_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/511d6bde-ca4f-4240-8356-26c6db057474?sign=7796ea796954dd1c1c0fc2fc4938c6e1a557548d7c3e4766860fb7f6027c542d",
+  "router": "/api/v1/douyin/web/get_all_aweme_id",
+  "params": [
+    "0.53 02/26 person@example.com Fus:/ 你别太帅了郑润泽# 现场版live # 音乐节 # 郑润泽  https://v.douyin.com/iRNBho6u/ 复制此链接，打开Dou音搜索，直接观看视频!"
+  ],
+  "data": [
+    "7298145681699622182"
+  ],
+  "_scrubbed": true
+}

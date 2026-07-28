@@ -1,0 +1,66 @@
+{
+  "code": 0,
+  "data": {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "products": [
+        {
+          "product_id": "1731934212837643059",
+          "title": "Wireless/wired dual-use over-ear gaming surround sound headp… [244 chars total]",
+          "image": "… 4 field(s) truncated",
+          "product_price_info": "… 19 field(s) truncated",
+          "rate_info": "… 2 field(s) truncated",
+          "sold_info": "… 1 field(s) truncated",
+          "seller_info": "… 3 field(s) truncated",
+          "seo_url": "… 5 field(s) truncated",
+          "product_marketing_info": "… 2 field(s) truncated",
+          "sku_info": "… 3 item(s) truncated",
+          "transparent_image": "… 4 field(s) truncated"
+        },
+        "… 29 more item(s) truncated"
+      ],
+      "shops": [
+        {
+          "seller_id": "7495953750410889293",
+          "shop_name": "Skullcandy",
+          "shop_logo": "… 4 field(s) truncated",
+          "store_blueV_label": "… 2 field(s) truncated"
+        },
+        "… 3 more item(s) truncated"
+      ],
+      "has_more": true,
+      "load_more_params": {
+        "offset": 30,
+        "page_token": "<omitted: expires>",
+        "api_source": 2
+      },
+      "filter_sections": [
+        {
+          "id": "Sort by",
+          "title": "Sort by",
+          "filterGroupType": 8,
+          "options": "… 4 field(s) truncated",
+          "type": "radio",
+          "isOnePerLine": true,
+          "hasAllOption": false,
+          "isColorSection": false
+        },
+        "… 5 more item(s) truncated"
+      ],
+      "filter_quick_options": [
+        {
+          "displayName": "Sort by",
+          "sectionTitle": "Sort by",
+          "filterOptionId": "dropdown:8",
+          "filterGroupType": 8,
+          "quickFilterStyle": "dropdown"
+        },
+        "… 9 more item(s) truncated"
+      ]
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:25.885726116",
+  "requestId": "a5758d42bed2434ab92f1653cc67a6e5"
+}

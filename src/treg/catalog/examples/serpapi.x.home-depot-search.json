@@ -1,0 +1,79 @@
+{
+  "search_metadata": {
+    "id": "6a6898d7ab28c6b353c8e180",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/5assmDbeYbLggdbX0zUPcg/6a6898d7… [81 chars]",
+    "created_at": "2026-07-28 11:56:07 UTC",
+    "processed_at": "2026-07-28 11:56:07 UTC",
+    "home_depot_url": "https://apionline.homedepot.com/b/N-5yc1v/Ntt-hammer?Nao=0",
+    "raw_html_file": "https://serpapi.com/searches/5assmDbeYbLggdbX0zUPcg/6a6898d7… [81 chars]",
+    "prettify_html_file": "https://serpapi.com/searches/5assmDbeYbLggdbX0zUPcg/6a6898d7… [85 chars]",
+    "total_time_taken": 12.77
+  },
+  "search_parameters": {
+    "q": "hammer",
+    "nao": "0",
+    "ps": 24,
+    "delivery_zip": "04401",
+    "store_id": "2414",
+    "country": "us",
+    "engine": "home_depot"
+  },
+  "search_information": {
+    "results_state": "Results for exact spelling",
+    "total_results": 566,
+    "store_id": "2414",
+    "store_name": "Bangor"
+  },
+  "taxonomy": [
+    {
+      "title": "Tools",
+      "link": "https://apionline.homedepot.com/b/Tools/N-5yc1vZc1xy"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "products": [
+    {
+      "position": 1,
+      "product_id": "311335459",
+      "title": "16 oz. Rubber Mallet",
+      "thumbnails": "… [1 item(s) truncated]",
+      "link": "https://apionline.homedepot.com/p/Stanley-16-oz-Rubber-Malle… [81 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?delivery_zip=04401&engine=ho… [111 chars]",
+      "model_number": "STHT56144",
+      "brand": "Stanley",
+      "collection": "https://apionline.homedepot.com",
+      "favorite": 679,
+      "…": "6 more field(s) truncated"
+    },
+    "… 23 more item(s) truncated"
+  ],
+  "filters": [
+    {
+      "key": "Get It Fast",
+      "value": "… [2 item(s) truncated]"
+    },
+    "… 10 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://apionline.homedepot.com/b/N-5yc1v/Ntt-hammer?Nao=24",
+    "other_pages": {
+      "2": "https://apionline.homedepot.com/b/N-5yc1v/Ntt-hammer?Nao=24",
+      "3": "https://apionline.homedepot.com/b/N-5yc1v/Ntt-hammer?Nao=48",
+      "4": "https://apionline.homedepot.com/b/N-5yc1v/Ntt-hammer?Nao=72",
+      "5": "https://apionline.homedepot.com/b/N-5yc1v/Ntt-hammer?Nao=96"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?country=us&delivery_zip=0440… [115 chars]",
+    "next": "https://serpapi.com/search.json?country=us&delivery_zip=0440… [115 chars]",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?country=us&delivery_zip=0440… [115 chars]",
+      "3": "https://serpapi.com/search.json?country=us&delivery_zip=0440… [115 chars]",
+      "4": "https://serpapi.com/search.json?country=us&delivery_zip=0440… [115 chars]",
+      "5": "https://serpapi.com/search.json?country=us&delivery_zip=0440… [115 chars]"
+    }
+  }
+}

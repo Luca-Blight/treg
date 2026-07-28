@@ -1,0 +1,282 @@
+provider: serpapi
+source:
+  docs: https://serpapi.com/search-api
+  openapi: null # SerpApi documents each engine on its own HTML page; no machine-readable spec
+  curated: 2026-07-28
+
+# UNVERIFIED — no credential available at curation time; every parameter and price below is
+# transcribed from SerpApi's official per-engine docs 2026-07-28. Nothing here has been called.
+#
+# House rules for this provider (they apply to EVERY endpoint below, so they are stated once):
+#
+#  1. ONE PATH, MANY ENGINES. Every data call is `GET /search` and the target site is chosen by the
+#     `engine` query param. So every entry below shares `path: /search` and differs only in
+#     `engine`. (`/search.json` is the same route; `output=json` is already the default.)
+#  2. THE SEARCH TERM IS NOT ALWAYS `q`. Each engine names its query parameter differently —
+#     `q` on google, `search_query` on youtube, `term` on apple_app_store, `text` on the ads
+#     transparency center. Reusing `q` across engines is the most common way to get an empty
+#     result set back at full price. The right name is marked required in each entry below.
+#  3. The key rides as `?api_key=…` and is INJECTED by treg — never list it as user input.
+#  4. Every response shares an envelope: `search_metadata` (id, status, timings),
+#     `search_parameters` (an echo of what you sent), then the engine's own result arrays. The
+#     array that carries the answer differs per engine and is named in each entry's `input.note`.
+#  5. BILLING IS PER SUCCESSFUL SEARCH, FLAT ACROSS ENGINES. A Google SERP, a YouTube search and an
+#     App Store search each cost exactly one search — the engine does not change the price. Plans:
+#     Free 250 searches, Starter $25/1,000 ($0.025), Developer $75/5,000 ($0.015), Production
+#     $150/15,000 ($0.010), Big Data $275/30,000 (~$0.0092). The $0.015 recorded on each endpoint
+#     below is the entry-level PAID (Developer) rate; a different plan legitimately differs.
+#     Failed and CACHED searches are not billed — SerpApi's FAQ is explicit. Since `no_cache`
+#     defaults to false, a repeated identical query is free; setting `no_cache: true` forces a
+#     fresh billable search, so only set it when staleness actually matters.
+#     ONE CAVEAT: engine-flat pricing is inferred from the pricing page listing no per-engine rate,
+#     not from an explicit "all engines cost the same" statement.
+#  6. Universal optional params available on every engine below, omitted from each entry to avoid
+#     repetition: `output` (json|html), `no_cache` (bool, see above), `async` (bool — return a
+#     search id immediately and collect the result later), `json_restrictor` (trim the response to
+#     named fields), `zero_trace` (Enterprise only).
+
+
+limits: "concurrency and hourly throughput scale with plan"
+pricing_url: https://serpapi.com/pricing  # One request = one billed search regardless of result count. No pay-as-you-go; unused searches reset monthly. Throughput capped at ~20% of monthly volume per hour.; free tier: 2
+endpoints:
+  - id: serpapi.google.serp.organic
+    capability: google.serp.organic
+    platform: google
+    scope: any_account
+    method: GET
+    path: /search
+    name: "Get Google organic search results"
+    summary: "Live Google organic results for a keyword — position, title, URL, snippet, by location"
+    input:
+      queryParams:
+        engine: {type: string, required: true, note: "the engine selector — must be this literal string", example: "google"}
+        q: {type: string, required: true, note: "the search query; Google search operators work here", example: "coffee"}
+        location: {type: string, required: false, note: "city-level origin of the search, e.g. \"Austin, Texas, United States\". Mutually exclusive with uule and with lat/lon"}
+        uule: {type: string, required: false, note: "Google's encoded location, as an alternative to `location`"}
+        lat: {type: number, required: false, note: "latitude; requires lon and a matching gl"}
+        lon: {type: number, required: false, note: "longitude; requires lat"}
+        radius: {type: integer, required: false, note: "metres around lat/lon; 1-199 on desktop, 1-1000 on mobile"}
+        google_domain: {type: string, required: false, note: "default google.com; e.g. google.co.uk"}
+        gl: {type: string, required: false, note: "country code for the search, e.g. us, uk", example: "us"}
+        hl: {type: string, required: false, note: "interface language code, e.g. en", example: "en"}
+        cr: {type: string, required: false, note: "restrict to countries, e.g. countryUS; multiple joined by |"}
+        lr: {type: string, required: false, note: "restrict to languages, e.g. lang_en; multiple joined by |"}
+        device: {type: string, required: false, note: "desktop (default) | tablet | mobile"}
+        start: {type: integer, required: false, note: "result offset for pagination — 0, 10, 20 … This is how you page; see the note about `num`", example: 0}
+        tbm: {type: string, required: false, note: "switches the Google vertical: isch (images), vid, nws, shop, lcl, pts"}
+        tbs: {type: string, required: false, note: "advanced Google filters, e.g. date range"}
+        safe: {type: string, required: false, note: "active | off"}
+        nfpr: {type: string, required: false, note: "1 disables Google's auto-correction to a different spelling"}
+        filter: {type: string, required: false, note: "0 turns off Google's similar-results and omitted-results filters"}
+      note: |
+        Answers arrive in `organic_results`; the same response may also carry `knowledge_graph`,
+        `local_results`, `related_questions`, `related_searches` and `pagination`.
+        `num` IS NOT DOCUMENTED for this engine — Google dropped it upstream and SerpApi's google
+        parameter list does not include it. Page with `start`, not `num`; sending `num` is not a
+        supported way to widen a page.
+    cost:
+      type: per_success
+      value: 0.015
+      currency: USD
+      note: "1 search. $0.015 at the entry-level paid Developer plan ($75 / 5,000 searches); $0.010 on Production, $0.025 on Starter. Failed and cached searches are free."
+    test_request:
+      queryParams: {engine: "google", q: "coffee"}
+    verified: 2026-07-28
+    example_response: examples/serpapi.google.serp.organic.json
+    docs_url: https://serpapi.com/search-api
+
+  - id: serpapi.google.ads.transparency
+    capability: google.ads.transparency
+    platform: google
+    scope: any_account
+    method: GET
+    path: /search
+    name: "List a Google advertiser's running ads"
+    summary: "Ads a Google advertiser is running now, from the Ads Transparency Center"
+    input:
+      queryParams:
+        engine: {type: string, required: true, example: "google_ads_transparency_center"}
+        text: {type: string, required: false, note: "free-text advertiser or domain to search for. Supply either this OR advertiser_id — neither is individually mandatory but one is needed", example: "coffee"}
+        advertiser_id: {type: string, required: false, note: "a specific advertiser id, or several comma-separated"}
+        region: {type: string, required: false, note: "geographic region the search originates from. REQUIRED when political_ads is true"}
+        political_ads: {type: boolean, required: false, note: "restrict to political advertising; forces `region` to be set"}
+        platform: {type: string, required: false, note: "where the ad ran: PLAY | MAPS | SEARCH | SHOPPING | YOUTUBE"}
+        creative_format: {type: string, required: false, note: "text | image | video"}
+        start_date: {type: string, required: false, note: "YYYYMMDD"}
+        end_date: {type: string, required: false, note: "YYYYMMDD"}
+        num: {type: integer, required: false, note: "results to return; default 40. Unlike engine=google, `num` IS documented here", example: 10}
+        next_page_token: {type: string, required: false, note: "cursor from the previous response's serpapi_pagination"}
+      note: "answers arrive in `ad_creatives`. This is the one endpoint in the file whose query param is `text` rather than `q` — and it is optional, because you may identify the advertiser by id instead."
+    cost:
+      type: per_success
+      value: 0.015
+      currency: USD
+      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+    test_request:
+      queryParams: {engine: "google_ads_transparency_center", text: "coffee"}
+    verified: 2026-07-28
+    example_response: examples/serpapi.google.ads.transparency.json
+    docs_url: https://serpapi.com/google-ads-transparency-center-api
+
+  - id: serpapi.youtube.search.videos
+    capability: youtube.search.videos
+    platform: youtube
+    scope: any_account
+    method: GET
+    path: /search
+    name: "Search YouTube videos by keyword"
+    summary: "Search YouTube videos by keyword and get titles, channels, view counts and links"
+    input:
+      queryParams:
+        engine: {type: string, required: true, example: "youtube"}
+        search_query: {type: string, required: true, note: "THE QUERY PARAM IS `search_query`, NOT `q` — sending `q` to this engine returns nothing", example: "coffee"}
+        gl: {type: string, required: false, note: "country code, e.g. us", example: "us"}
+        hl: {type: string, required: false, note: "interface language code, e.g. en", example: "en"}
+        sp: {type: string, required: false, note: "YouTube's encoded filter/pagination token — carries sort order, upload date and result-type filters"}
+      note: "answers arrive in `video_results`; the response may also carry `channel_results`, `movie_results`, `ads_results` and `serpapi_pagination`."
+    cost:
+      type: per_success
+      value: 0.015
+      currency: USD
+      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+    test_request:
+      queryParams: {engine: "youtube", search_query: "coffee"}
+    verified: 2026-07-28
+    example_response: examples/serpapi.youtube.search.videos.json
+    docs_url: https://serpapi.com/youtube-search-api
+
+  - id: serpapi.app-store.search.apps
+    capability: app-store.search.apps
+    platform: app-store
+    scope: any_account
+    method: GET
+    path: /search
+    name: "Search App Store apps by keyword"
+    summary: "Search App Store apps by keyword — titles, developers, ratings and prices"
+    input:
+      queryParams:
+        engine: {type: string, required: true, example: "apple_app_store"}
+        term: {type: string, required: true, note: "THE QUERY PARAM IS `term`, NOT `q`", example: "coffee"}
+        country: {type: string, required: false, note: "two-letter store country; default us", example: "us"}
+        lang: {type: string, required: false, note: "four-letter locale; default en-us", example: "en-us"}
+        num: {type: integer, required: false, note: "results to return; default 10, max 200", example: 10}
+        page: {type: integer, required: false, note: "page number for pagination"}
+        device: {type: string, required: false, note: "desktop | tablet | mobile"}
+        property: {type: string, required: false, note: "search a different field, e.g. `developer` to match developer names"}
+        disallow_explicit: {type: boolean, required: false, note: "default false"}
+        category_id: {type: string, required: false, note: "restrict to an App Store category"}
+      note: |
+        Answers arrive in `organic_results`.
+        The engine slug `apple_app_store` is confirmed; note that the docs page is
+        serpapi.com/apple-app-store — the /apple-app-store-api form 404s.
+    cost:
+      type: per_success
+      value: 0.015
+      currency: USD
+      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+    test_request:
+      queryParams: {engine: "apple_app_store", term: "coffee"}
+    verified: 2026-07-28
+    example_response: examples/serpapi.app-store.search.apps.json
+    docs_url: https://serpapi.com/apple-app-store
+
+  - id: serpapi.google-play.search.apps
+    capability: google-play.search.apps
+    platform: google-play
+    scope: any_account
+    method: GET
+    path: /search
+    name: "Search Google Play apps or charts"
+    summary: "Search apps on Google Play by keyword, or pull a store chart without a keyword"
+    input:
+      queryParams:
+        engine: {type: string, required: true, example: "google_play"}
+        q: {type: string, required: false, note: "the search term. OPTIONAL on this engine — omit it and supply `chart` to browse top-charts instead of searching", example: "coffee"}
+        gl: {type: string, required: false, note: "country code, e.g. us", example: "us"}
+        hl: {type: string, required: false, note: "interface language code", example: "en"}
+        apps_category: {type: string, required: false, note: "restrict to a Play category"}
+        age: {type: string, required: false, note: "age bracket within the FAMILY category"}
+        store_device: {type: string, required: false, note: "phone | tablet | tv | chromebook | watch | car. NOTE: the param is `store_device`; there is no `store` param on this engine"}
+        chart: {type: string, required: false, note: "browse a chart instead of searching, e.g. topselling_free, topselling_paid"}
+        next_page_token: {type: string, required: false}
+        section_page_token: {type: string, required: false}
+        see_more_token: {type: string, required: false}
+      note: |
+        A keyword search answers in `organic_results`; a `chart` query answers in `top_charts`
+        instead, alongside `chart_options`. This is the only engine here where the query term is
+        optional — a bare engine=google_play call is a valid, BILLABLE request that returns the
+        store's default browse content, so always send `q` or `chart` deliberately.
+        For a single app's detail page SerpApi has a separate `google_play_product` engine.
+    cost:
+      type: per_success
+      value: 0.015
+      currency: USD
+      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+    test_request:
+      queryParams: {engine: "google_play", q: "coffee"}
+    verified: 2026-07-28
+    example_response: examples/serpapi.google-play.search.apps.json
+    docs_url: https://serpapi.com/google-play-api
+
+  - id: serpapi.google.keywords.ideas
+    capability: google.keywords.ideas
+    platform: google
+    scope: any_account
+    method: GET
+    path: /search
+    name: "Get Google autocomplete keyword ideas"
+    summary: "Get the keyword suggestions Google autocompletes for a seed term, with relevance scores"
+    input:
+      queryParams:
+        engine: {type: string, required: true, example: "google_autocomplete"}
+        q: {type: string, required: true, note: "the seed keyword", example: "coffee"}
+        gl: {type: string, required: false, note: "country code", example: "us"}
+        hl: {type: string, required: false, note: "interface language code", example: "en"}
+        cp: {type: integer, required: false, note: "cursor position within `q`, which changes what Google suggests"}
+        client: {type: string, required: false, note: "which autocomplete client to emulate"}
+      note: |
+        Answers arrive in `suggestions`, each with `value`, `relevance` and `type`.
+        SCOPE WARNING for cross-provider comparison: these are Google's live autocomplete
+        suggestions and they carry NO search volume, CPC or difficulty. Every other provider
+        implementing google.keywords.ideas returns metric-bearing keyword ideas from a research
+        index. SerpApi is the right choice for discovering real user phrasings cheaply, and the
+        wrong one when the next step needs volume — pair it with a keyword-metrics provider.
+    cost:
+      type: per_success
+      value: 0.015
+      currency: USD
+      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+    test_request:
+      queryParams: {engine: "google_autocomplete", q: "coffee"}
+    verified: 2026-07-28
+    example_response: examples/serpapi.google.keywords.ideas.json
+    docs_url: https://serpapi.com/google-autocomplete-api
+
+  # --- Account (free) ---------------------------------------------------------------------------
+  - id: serpapi.account.usage
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /account.json
+    name: "Get account plan and search usage"
+    summary: "Check the calling account's plan, searches used this month and searches remaining"
+    input:
+      note: |
+        No parameters beyond the injected api_key. This is the ONE endpoint in the file that is not
+        /search and does not take an `engine`.
+        Returns account_id, account_email, account_status, plan_id, plan_name, plan_monthly_price,
+        plan_renewal_date, searches_per_month, plan_searches_left, extra_credits,
+        total_searches_left, this_month_usage, this_hour_searches and account_rate_limit_per_hour.
+        Any captured example must have the account id, email and api_key fields masked before commit
+        — this response echoes the key back.
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      note: "FREE — the docs state that the Account API \"is free of charge, and using it will not be counted toward your monthly quota\". The correct liveness probe for a SerpApi key (which is what treg's registry probes) and the right call before a batch, since it reports total_searches_left."
+    test_request:
+      queryParams: {}
+    verified: 2026-07-28
+    example_response: examples/serpapi.account.usage.json
+    docs_url: https://serpapi.com/account-api

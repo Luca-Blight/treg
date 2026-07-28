@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "request_id": "d56ac80e-9b3f-4992-8a4c-20f32ef514f0",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:58",
+  "time_stamp": 1785220198,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_music_chart_list_api_v1_tiktok_app_v3_fetch_music_chart_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d56ac80e-9b3f-4992-8a4c-20f32ef514f0?sign=94425ae1bee48c13970728e4fcc06a83af… [150 chars]",
+  "router": "/api/v1/tiktok/app/v3/fetch_music_chart_list",
+  "params": {
+    "scene": "0",
+    "cursor": "0",
+    "count": "5"
+  },
+  "data": {
+    "chart_info": {
+      "id": 7245341979050396417,
+      "update_time": 1784764800
+    },
+    "cover_image_url": "https://p16-common.tiktokcdn-us.com/musically-maliva-obj/kvlvar5v7uskt34I89ixmil6SjPxHH.jpeg~tplv-tiktokx-cropcenter:720… [199 chars]",
+    "cursor": 5,
+    "extra": {
+      "fatal_item_ids": [],
+      "logid": "202607280629575B877B7602BC860E3E91",
+      "now": 1785220198000
+    },
+    "has_more": 1,
+    "log_pb": {
+      "impr_id": "202607280629575B877B7602BC860E3E91"
+    },
+    "msg": "success",
+    "music_list": [
+      {
+        "id": 7245341979050396417,
+        "music_info": "… {79 field(s) truncated}",
+        "trend": 4
+      },
+      "… 4 more item(s) truncated"
+    ],
+    "status_code": 0,
+    "status_msg": ""
+  }
+}

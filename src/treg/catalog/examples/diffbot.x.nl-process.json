@@ -1,0 +1,37 @@
+{
+  "sentiment": 0.0,
+  "entities": [
+    {
+      "name": "Diffbot",
+      "diffbotUri": "https://diffbot.com/entity/EYX1i02YVPsuT7fPLUYgRhQ",
+      "confidence": 0.97096896,
+      "salience": 0.86926085,
+      "sentiment": 0.88159525,
+      "isCustom": false,
+      "allUris": [
+        "http://www.wikidata.org/entity/Q17052069"
+      ],
+      "allTypes": [
+        {
+          "name": "organization",
+          "diffbotUri": "https://diffbot.com/entity/EN1ClYEdMMQCxB6AWTkT3mA",
+          "dbpediaUri": "http://dbpedia.org/ontology/Organisation"
+        }
+      ],
+      "mentions": [
+        {
+          "text": "Diffbot",
+          "beginOffset": 0,
+          "endOffset": 7,
+          "confidence": 0.97096896
+        }
+      ],
+      "location": {
+        "latitude": 37.456093,
+        "longitude": -122.17634,
+        "precision": 0.1
+      }
+    },
+    "… 2 more item(s) truncated"
+  ]
+}

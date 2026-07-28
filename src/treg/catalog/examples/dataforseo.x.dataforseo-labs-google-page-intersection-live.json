@@ -1,0 +1,54 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "2.4902 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0390-0000-eb4bb0f4c5f7",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.4830 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "page_intersection",
+        "se_type": "google",
+        "pages": {
+          "1": "https://forbes.com",
+          "2": "https://cnn.com/*"
+        },
+        "language_name": "English",
+        "location_code": 2840,
+        "include_serp_info": true,
+        "limit": 3
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "pages": {
+            "1": "https://forbes.com",
+            "2": "https://cnn.com/*"
+          },
+          "exclude_pages": null,
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 230,
+          "items_count": 3,
+          "items": [
+            "… {3 field(s) truncated}",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

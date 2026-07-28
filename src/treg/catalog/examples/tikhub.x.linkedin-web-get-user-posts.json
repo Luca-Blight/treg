@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "request_id": "19118894-0f9f-44a5-bcac-152bf442da12",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-28 00:22:02",
+  "time_stamp": 1785223322,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/get_user_posts_api_v1_linkedin_web_get_user_posts_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "…": "5 more field(s) truncated"
+}

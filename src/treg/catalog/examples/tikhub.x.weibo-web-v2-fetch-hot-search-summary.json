@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "request_id": "d879b89d-39cd-4cc3-85db-35fc132ce044",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:09",
+  "time_stamp": 1785220269,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-V2-API/fetch_hot_search_summary_api_v1_weibo_web_v2_fetch_hot_search_summary_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d879b89d-39cd-4cc3-85db-35fc132ce044?sign=145f6ccf69135095562d44d7fdc12a6adf8538cddc639348492ec2cee8657156",
+  "router": "/api/v1/weibo/web_v2/fetch_hot_search_summary",
+  "params": {},
+  "data": {
+    "total": 51,
+    "data": [
+      {
+        "rank": 0,
+        "is_top": true,
+        "keyword": "总书记引领推进高水平对外开放",
+        "keyword_url": "/weibo?q=%23%E6%80%BB%E4%B9%A6%E8%AE%B0%E5%BC%95%E9%A2%86%E6%8E%A8%E8%BF%9B%E9%AB%98%E6%B0%B4%E5%B9%B3%E5%AF%B9%E5%A4%96%E5%BC%80%E6%94%BE%23&Refer=new_time",
+        "tag": "热",
+        "heat": ""
+      },
+      "… 50 more item(s) truncated"
+    ]
+  }
+}

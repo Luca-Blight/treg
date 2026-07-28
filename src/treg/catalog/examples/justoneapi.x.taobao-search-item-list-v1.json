@@ -1,0 +1,40 @@
+{
+  "code": 0,
+  "data": {
+    "code": "SUCCESS",
+    "extraMap": {
+      "MtopCostMillis": 66
+    },
+    "model": {
+      "costMillis": 66,
+      "extraMap": {
+        "WorldsearchIP": "33.44.173.30",
+        "WorldsearchName": "worldsearch033044173030.center.na620",
+        "EndpointHost": "33.6.82.106",
+        "sp_status": "OK",
+        "Endpoint": "taobao_item",
+        "afterSearchCostMillis": 0
+      },
+      "itemList": [
+        "… 43 field(s) truncated",
+        "… 9 more item(s) truncated"
+      ],
+      "page": {
+        "nextNo": 2,
+        "pageNo": 1,
+        "pageSize": 10,
+        "prevNo": 1,
+        "showBegin": 1,
+        "showEnd": 3,
+        "totalItems": 125448,
+        "totalPages": 12545
+      },
+      "responseStatus": 0,
+      "success": true,
+      "traceList": []
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:21.154335623",
+  "requestId": "75c96cecb58642478250c7cc34c41963"
+}

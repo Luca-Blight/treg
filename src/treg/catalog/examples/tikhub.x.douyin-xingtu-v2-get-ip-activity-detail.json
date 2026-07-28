@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "request_id": "536f93c0-340c-4957-a0e2-f2c2a313b71f",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:48",
+  "time_stamp": 1785220128,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Xingtu-V2-API/get_ip_activity… [118 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "…": "5 more field(s) truncated"
+}

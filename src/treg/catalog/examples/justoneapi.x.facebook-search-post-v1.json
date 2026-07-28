@@ -1,0 +1,62 @@
+{
+  "code": 0,
+  "data": {
+    "results": [
+      {
+        "post_id": "1687224373404268",
+        "type": "post",
+        "url": "https://www.facebook.com/buttonwillowgeneralstore/posts/pfbi… [128 chars total]",
+        "message": "Another transformation outside….we love our freshly painted … [329 chars total]",
+        "message_rich": "Another transformation outside….we love our freshly painted … [329 chars total]",
+        "timestamp": 1785202291,
+        "comments_count": 3,
+        "reactions_count": 99,
+        "reshare_count": 0,
+        "reactions": {
+          "angry": 0,
+          "care": 0,
+          "haha": 0,
+          "like": 67,
+          "love": 32,
+          "sad": 0,
+          "wow": 0
+        },
+        "author": {
+          "id": "100063501642417",
+          "name": "Button Willow General Store & Coffee Shop",
+          "url": "https://www.facebook.com/buttonwillowgeneralstore",
+          "profile_picture_url": "https://scontent.fvlc6-1.fna.fbcdn.net/v/t39.30808-1/2993357… [420 chars total]",
+          "delegate_page_id": "151498005563206"
+        },
+        "author_title": null,
+        "image": {
+          "uri": "https://scontent.fvlc6-2.fna.fbcdn.net/v/t39.30808-6/7548725… [394 chars total]",
+          "height": 1366,
+          "width": 2048,
+          "id": "1687223556737683"
+        },
+        "video": null,
+        "video_view_count": null,
+        "album_preview": null,
+        "video_files": null,
+        "video_thumbnail": null,
+        "external_url": null,
+        "attached_event": null,
+        "attached_group": null,
+        "attached_post": null,
+        "attached_post_url": null,
+        "text_format_metadata": null,
+        "comments_id": "1687224373404268",
+        "shares_id": "1687224373404268",
+        "associated_group_id": null,
+        "associated_group": null,
+        "images_count": null
+      },
+      "… 4 more item(s) truncated"
+    ],
+    "cursor": "<omitted: expires>"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:55.823728761",
+  "requestId": "a10f089bc52d499eae5a9cfe9d6dbfa3"
+}

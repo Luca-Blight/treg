@@ -1,0 +1,91 @@
+{
+  "total": 259,
+  "limit": 1,
+  "offset": 0,
+  "count": 1,
+  "data": [
+    {
+      "id": 29561638,
+      "title": "Canva Code 2.0 is now available in the Philippines",
+      "url": "https://mb.com.ph/2026/07/27/canva-code-20-is-now-available-in-the-philippines",
+      "publisher": "Manila Bulletin",
+      "published_date": "2026-07-27T11:21:00",
+      "sentiment": "Positive",
+      "sentiment_score": 1.0,
+      "ai_summary": "Canva has launched Canva Code 2.0 in the Philippines, making AI-powered coding accessible to users with zero to minimal coding experience to build websites directly within Canva's editor. The platform reports significant performance improvements, with average code generation time reduced by 75% to 45 seconds and active users jumping 25% since its recent update, having powered the creation of more than six million websites globally in one year. Filipino educators and entrepreneurs are using the t… [615 chars total]",
+      "word_count": 781,
+      "original_language": "EN",
+      "author": "Manila Bulletin Newsroom",
+      "countries": [
+        "PHL"
+      ],
+      "industries": [
+        {
+          "name": "Low-Code/No-Code Application Development & Modernization",
+          "code": "BPAEAFAF",
+          "is_primary": true
+        },
+        {
+          "name": "Low-Code/No-Code Application Platforms",
+          "code": "HDAEAKAA",
+          "is_primary": false
+        }
+      ],
+      "tags": [
+        {
+          "name": "Product Launches & Enhancements",
+          "code": "SD01",
+          "is_primary": true
+        }
+      ],
+      "company_mentions": [
+        {
+          "uuid": "00000l1",
+          "name": "Canva",
+          "website": "http://www.canva.com"
+        }
+      ],
+      "article_type": "Explainer",
+      "is_press_release": true,
+      "is_opinion": false,
+      "is_breaking": true,
+      "iptc_codes": [
+        "20001298",
+        "20000231"
+      ],
+      "iab_categories": [
+        "621",
+        "614",
+        "… 1 more item(s) truncated"
+      ],
+      "naics_codes": [
+        "541511",
+        "541512",
+        "… 1 more item(s) truncated"
+      ],
+      "sic_codes": [
+        "7370",
+        "7371"
+      ],
+      "entities": {
+        "person": [],
+        "location": [
+          "spain",
+          "philippines"
+        ],
+        "product": [
+          "canva code 2.0",
+          "canva code",
+          "… 3 more item(s) truncated"
+        ],
+        "event": [
+          "world book day"
+        ]
+      },
+      "newsworthiness_score": 0.965399980545044,
+      "group_id": null,
+      "full_text": "Technews Canva Code 2.0 is now available in the Philippines By Manila Bulletin Newsroom\n\nWith the rollout of Canva Code 2.0 in the Philippines, Canva is making AI-powered coding more accessible, allowing Filipinos to build websites with zero to minimal coding experience. A decade ago, Canva transformed design with its intuitive drag-and-drop editor, making creativity accessible to everyone. Today, Canva is doing the same for coding. One of AI's most exciting capabilities is vibe coding—the pract… [5170 chars total]"
+    }
+  ],
+  "credits_consumed": 0.11
+}

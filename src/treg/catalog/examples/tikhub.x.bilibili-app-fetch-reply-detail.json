@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "c7a5c6c7-c547-4ae0-9527-180592769d7d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:40",
+  "time_stamp": 1785220060,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-App-API/fetch_reply_detail_api_v1_bilibili_app_fetch_reply_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c7a5c6c7-c547-4ae0-9527-180592769d7d?sign=3ae3e97d6fdaada7319d9ea3aca8ee48c534769dcc2b005704794d19f3646abf",
+  "router": "/api/v1/bilibili/app/fetch_reply_detail",
+  "params": {
+    "root": "241743663521",
+    "av_id": "113100682434775",
+    "bv_id": "BV18SCrBGE9E"
+  },
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "cursor": "<omitted: expires>",
+      "assist": 0,
+      "blacklist": 0,
+      "vote": 0,
+      "config": "… {3 field(s) truncated}",
+      "upper": "… {1 field(s) truncated}",
+      "control": "… {19 field(s) truncated}",
+      "note": 1,
+      "root": "… {35 field(s) truncated}",
+      "Mid": 0,
+      "Likes": null,
+      "SubjectTitle": null,
+      "MixedCards": null,
+      "FoldRpids": null
+    }
+  }
+}

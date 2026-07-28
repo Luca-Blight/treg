@@ -1,0 +1,10 @@
+# FX rates for unified-USD display of catalog costs. Source of truth for a cost stays in the
+# provider's BILLING currency (that is what the provider charges and what stays correct); the
+# server converts to USD at serve time with these rates, so a rate refresh instantly re-prices
+# every displayed cost without touching provider files.
+# Refresh: `uv run python scripts/catalog_fx_update.py` (open.er-api.com, free, no key).
+rates_to_usd:
+  USD: 1.0
+  CNY: 0.1476
+updated: 2026-07-28
+source: https://open.er-api.com/v6/latest/USD

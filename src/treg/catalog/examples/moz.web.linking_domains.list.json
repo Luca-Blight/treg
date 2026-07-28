@@ -1,0 +1,18 @@
+{
+  "results": [
+    {
+      "root_domain": "www.google.com",
+      "root_domains_to_root_domain": 16664959,
+      "domain_authority": 100,
+      "link_propensity": 0.01294698194,
+      "spam_score": 19,
+      "to_target": {
+        "pages": 3,
+        "nofollow_pages": 0,
+        "redirect_pages": 2,
+        "deleted_pages": 0
+      }
+    }
+  ],
+  "next_token": "<omitted: expires>"
+}

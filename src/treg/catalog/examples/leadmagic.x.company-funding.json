@@ -1,0 +1,63 @@
+{
+  "basicInfo": {
+    "companyName": "LeadMagic",
+    "description": "",
+    "shortName": "LeadMagic",
+    "founded": "2021",
+    "headquarters": {
+      "city": "Boston",
+      "state": "Massachusetts",
+      "country": "USA",
+      "fullAddress": "Boston, Massachusetts, USA"
+    },
+    "primaryDomain": "leadmagic.io",
+    "phone": "N/A",
+    "status": "NEW",
+    "followers": 7,
+    "ownership": "Private"
+  },
+  "financialInfo": {
+    "revenue": 1260000,
+    "formattedRevenue": "1.3M",
+    "totalFunding": "N/A",
+    "formattedFunding": "0",
+    "lastFundingRound": "N/A",
+    "fundingHistory": []
+  },
+  "companySize": {
+    "employees": 4,
+    "employeeRange": "1 - 25",
+    "employeeGrowth": "N/A"
+  },
+  "leadership": {
+    "ceo": {
+      "firstName": "Jesse",
+      "lastName": "Ouellette",
+      "designation": "Founder",
+      "linkedIn": "https://www.linkedin.com/in/jesseoue",
+      "twitter": "https://twitter.com/jesseogtm"
+    }
+  },
+  "industryAndSectors": {
+    "industrySectors": [
+      "SaaS"
+    ],
+    "industries": [
+      "Software, Internet & Computer Services"
+    ],
+    "technologyStack": "N/A"
+  },
+  "topCompetitors": [],
+  "acquisitions": [],
+  "socialMedia": [
+    {
+      "platform": "linkedIn",
+      "url": "https://www.linkedin.com/company/leadmagichq"
+    }
+  ],
+  "news": [],
+  "pressReleases": [],
+  "keyHighlights": [],
+  "summarySection": "LeadMagic was founded in 2021. LeadMagic's headquarters is located in Boston, Massachusetts, USA 02210.  LeadMagic's Founder, Jesse Ouellette, currently has an approval rating of 90%. LeadMagic has an estimated 5 employees and an estimated annual revenue of 1.3M.",
+  "credits_consumed": 0
+}

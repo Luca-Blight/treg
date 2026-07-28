@@ -1,0 +1,131 @@
+{
+  "code": 0,
+  "data": {
+    "level": {
+      "image_link": "",
+      "number": 0
+    },
+    "location": "",
+    "share_info": {
+      "content": "懒人出没。。。～",
+      "title": "刘诗诗"
+    },
+    "show_red_official_verify_icon": true,
+    "note_num_stat": {
+      "liked": 379453,
+      "collected": 26516,
+      "posted": 1
+    },
+    "interactions": [
+      "… 5 field(s) truncated",
+      "… 2 more item(s) truncated"
+    ],
+    "collected_tags_num": 0,
+    "hula_tabs": {
+      "all_show_tab_config": "… 1 item(s) truncated",
+      "tab_id_selected": "note"
+    },
+    "collected_notes_num": 0,
+    "red_club_info": {
+      "red_club": false,
+      "red_club_level": 0,
+      "red_club_url": "https://www.xiaohongshu.com/st… [44 chars total]",
+      "redclubscore": 0
+    },
+    "red_official_verify_type": 1,
+    "real_name_info": "",
+    "is_login_user_pro_account": false,
+    "recommend_info": "",
+    "is_recommend_level_illegal": false,
+    "real_name_deep_target": 1,
+    "nickname": "刘诗诗",
+    "blocking": false,
+    "desc": "懒人出没。。。～",
+    "location_jump": false,
+    "collected": 26516,
+    "gender": 2,
+    "userid": "606149320000000001002cdf",
+    "blocked": false,
+    "community_rule_url": "https://www.xiaohongshu.com/us… [47 chars total]",
+    "sec_account_deeplink": "xhsdiscover://rn/accounts/acco… [89 chars total]",
+    "ip_location": "上海",
+    "seller_info": {
+      "tab_goods_api_version": 1,
+      "tab_code_names": "… 0 item(s) truncated",
+      "is_tab_goods_first": true
+    },
+    "tags": [],
+    "follows": 0,
+    "red_official_verify_content": "演员",
+    "liked": 379453,
+    "collected_product_num": 0,
+    "collected_brand_num": 0,
+    "collected_book_num": 0,
+    "share_info_v2": {
+      "title": "@刘诗诗的个人主页",
+      "content": "粉丝: 291.2万\n获赞与收藏: 406.0万"
+    },
+    "identity_label_migrated": false,
+    "user_role_type": 0,
+    "block_view_from_user": false,
+    "nboards": 0,
+    "red_official_verified": true,
+    "avatar_pendant": {
+      "current_user_pendant": false,
+      "current_user_pet": false
+    },
+    "block_view_to_user": false,
+    "imageb": "https://sns-avatar-qc.xhscdn.c… [111 chars total]",
+    "red_id": "1167192938",
+    "result": {
+      "success": true,
+      "code": 0,
+      "message": "success"
+    },
+    "images": "https://sns-avatar-qc.xhscdn.c… [111 chars total]",
+    "ndiscovery": 1,
+    "default_collection_tab": "",
+    "desc_at_users": [],
+    "avatar_like_status": false,
+    "banner_info": {
+      "image": "https://sns-avatar-qc.xhscdn.c… [135 chars total]",
+      "bg_color": "91a29d",
+      "like_status": false
+    },
+    "fstatus": "none",
+    "collected_poi_num": 0,
+    "collected_movie_num": 0,
+    "recommend_info_icon": "",
+    "remark_name": "",
+    "mute_view_to_user": false,
+    "fans": 291219,
+    "share_link": "https://www.xiaohongshu.com/us… [145 chars total]",
+    "show_extra_info_button": false,
+    "red_official_verify_arrow": 0,
+    "zhong_tong_bar_info": {
+      "conversions": "… 0 item(s) truncated"
+    },
+    "user_widget_switch": false,
+    "user_desc_info": {
+      "desc": "懒人出没。。。～",
+      "desc_at_users": "… 0 item(s) truncated",
+      "desc_with_placeholder": "懒人出没。。。～",
+      "desc_keywords_switch": true
+    },
+    "tab_visible": {
+      "note": true,
+      "collect": false,
+      "like": false,
+      "seed": true
+    },
+    "tab_public": {
+      "collection_board": true,
+      "seed": true,
+      "collection": false,
+      "collection_note": true
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:54.608161445",
+  "requestId": "0b997444d85d4e84a3504ede3123b8… [32 chars total]"
+}

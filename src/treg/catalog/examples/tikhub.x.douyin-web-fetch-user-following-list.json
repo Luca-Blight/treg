@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "02d65f57-af28-4f9e-8ff3-c5c4cf24a407",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:35",
+  "time_stamp": 1785220115,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_user_following_list_api_v1_douyin_web_fetch_user_following_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/02d65f57-af28-4f9e-8ff3-c5c4cf24a407?sign=f707b53bc6d5b5c933f7d57adcc2366340a349e59aaaab0c4acc67cccac4b496",
+  "router": "/api/v1/douyin/web/fetch_user_following_list",
+  "params": {
+    "count": "5"
+  },
+  "data": {
+    "extra": {
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "logid": "20260728142834959904C25575C7ECD83F",
+      "now": 1785220115000
+    },
+    "followings": [
+      "… {344 field(s) truncated}",
+      "… 15 more item(s) truncated"
+    ],
+    "has_more": true,
+    "hotsoon_has_more": 0,
+    "hotsoon_text": "",
+    "log_pb": {
+      "impr_id": "20260728142834959904C25575C7ECD83F"
+    },
+    "max_time": 1785167875,
+    "min_time": 1778334326,
+    "mix_count": 409,
+    "myself_user_id": "7515681964004836410",
+    "offset": 0,
+    "rec_has_more": false,
+    "status_code": 0,
+    "store_page": "{\"hide_followx_filter\":true}",
+    "total": 409
+  }
+}

@@ -14,3 +14,24 @@ regexes = [
   '''sk_live_ABCDEFGHIJKLMNOP1234''',     # tests/test_localrun.py — proves output redaction masks a key
   '''sk_test_123''',                      # tests/*.py — generic fake test key
 ]
+
+# The catalog's captured example responses (src/treg/catalog/examples/) are real provider replies,
+# and providers hand back long opaque identifiers by the hundred: video ids, request ids, CDN
+# paths, ranking hints. Entropy alone cannot tell those from a credential, so the generic entropy
+# rules fire on ordinary data there.
+#
+# What keeps that directory safe is upstream of this file, not in it: values under a
+# credential-shaped key are redacted at capture time, session and cursor artifacts are dropped
+# (they expire in minutes and document nothing), scripts/catalog_validate.py scans the whole
+# catalog for credential shapes on every run, and docs/context/architecture/catalog.md states the
+# rules curation follows. The scoping below is therefore narrow — the entropy rules only, in that
+# one directory. Every provider-prefixed rule (Stripe, GitHub, Slack, Apify …) still applies there.
+[[rules]]
+id = "generic-api-key"
+[rules.allowlist]
+paths = ['''src/treg/catalog/examples/.*\.json''']
+
+[[rules]]
+id = "linkedin-client-id"
+[rules.allowlist]
+paths = ['''src/treg/catalog/.*''']

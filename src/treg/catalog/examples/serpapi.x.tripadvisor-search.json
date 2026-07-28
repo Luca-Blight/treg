@@ -1,0 +1,46 @@
+{
+  "search_metadata": {
+    "id": "6a6898d4054e5f730ec39bfe",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/Ul9ZmvcvwJe2vakmMOG5pA/6a6898d4054e5f730ec39bfe.json",
+    "created_at": "2026-07-28 11:56:04 UTC",
+    "processed_at": "2026-07-28 11:56:04 UTC",
+    "tripadvisor_url": "https://www.tripadvisor.com/Search?q=Rome&ssrc=r&geo=1&offset=0&limit=30",
+    "raw_html_file": "https://serpapi.com/searches/Ul9ZmvcvwJe2vakmMOG5pA/6a6898d4054e5f730ec39bfe.html",
+    "prettify_html_file": "https://serpapi.com/searches/Ul9ZmvcvwJe2vakmMOG5pA/6a6898d4054e5f730ec39bfe.prettify",
+    "total_time_taken": 0.62
+  },
+  "search_parameters": {
+    "engine": "tripadvisor",
+    "q": "Rome",
+    "tripadvisor_domain": "www.tripadvisor.com",
+    "ssrc": "r",
+    "offset": 0,
+    "limit": 30
+  },
+  "places": [
+    {
+      "position": 1,
+      "title": "Cipasso",
+      "place_type": "EATERY",
+      "place_id": "14121704",
+      "link": "https://www.tripadvisor.com/Restaurant_Review-g187791-d14121704-Reviews-Cipasso-Rome_Lazio.html",
+      "serpapi_link": "https://serpapi.com/search.json?engine=tripadvisor_place&place_id=14121704&tripadvisor_domain=www.tripadvisor.com",
+      "rating": 4.9,
+      "reviews": 4351,
+      "location": "Rome, Lazio, Italy",
+      "thumbnail": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/21/81/25/70/il-nostro-chef-adriano.jpg",
+      "highlighted_review": {
+        "text": "We are in Rome for 6 months and cannot wait to return.",
+        "highlighted_texts": [
+          "Rome"
+        ],
+        "mention_count": 823
+      }
+    },
+    "… 29 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "next": "https://serpapi.com/search.json?engine=tripadvisor&limit=30&offset=30&q=Rome&ssrc=r&tripadvisor_domain=www.tripadvisor.com"
+  }
+}

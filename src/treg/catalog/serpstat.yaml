@@ -1,0 +1,410 @@
+provider: serpstat
+source:
+  docs: https://api-docs.serpstat.com/
+  openapi: null # the Stoplight docs render client-side and expose no fetchable spec
+  curated: 2026-07-28
+
+# UNVERIFIED — no credential available at curation time; every method, parameter and price below is
+# transcribed from Serpstat's official v4 docs and its own open-source MCP server 2026-07-28.
+# Nothing here has been called.
+#
+# SOURCING NOTE: Serpstat's api-docs.serpstat.com is a Stoplight app that renders client-side, so
+# the reference pages could not be read directly. The method strings and `params` schemas below were
+# taken from Serpstat's OFFICIAL MCP server (github.com/SerpstatGlobal/serpstat-mcp-server-js —
+# src/services/*.ts for the method strings, src/utils/validation.ts for the zod schemas that
+# constrain each params object), cross-checked against the documented method names. That is
+# first-party source code, but it is not the docs and it is not a live call, so field-level details
+# are the weakest part of this file. The per-method credit costs come from Serpstat's published
+# pricing rather than the MCP source, and are recorded in credits (not dollars) in each cost.note.
+#
+# House rules for this provider (they apply to EVERY endpoint below, so they are stated once):
+#
+#  1. JSON-RPC, NOT REST — ONE PATH FOR EVERYTHING. Every call is `POST /` against base_url
+#     (https://api.serpstat.com/v4) with a body of {"id": "1", "method": "<Procedure.method>",
+#     "params": {…}}. So every entry below shares the SAME path and differs only in `body.method`.
+#     The `method` string is the operation; getting it wrong is the only way to call the wrong report.
+#  2. The token rides as `?token=…` and is INJECTED by treg — never list it as user input.
+#  3. HTTP 200 IS NOT SUCCESS. A bad token, an exhausted limit and a malformed params object all
+#     answer HTTP 200 with an `error` object in the envelope instead of `result`. treg's registry
+#     encodes exactly this via `token_reject_field: error` — any consumer must check for `error`
+#     before reading `result`, and any `expect:` block added later should assert on its absence.
+#     A successful envelope is {"id": "1", "result": {"data": [...], "summary_info": {…}}}, and
+#     `summary_info.left_lines` reports the credits remaining after the call.
+#  4. `se` IS THE SEARCH DATABASE and is required on every keyword and domain method: `g_us`,
+#     `g_uk`, `g_de` … (Google per country, ~200 values) plus `bing_us`. It selects which index
+#     answers, so the same keyword returns different volumes per `se`.
+#  5. BILLING IS IN API CREDITS ("lines"), metered per RESULT ROW on the list methods — the `size`
+#     parameter is therefore the cost dial on most of this file. Credits come with a plan rather
+#     than at a published per-credit price, so `cost.value` is null throughout and the per-method
+#     credit counts live in `cost.note`. Read `summary_info.left_lines` off any real response to
+#     confirm the rate against the account's own plan.
+#     ⚠️ EMPTY RESULTS ARE STILL BILLED: since 2025-06-15 every metered method charges a minimum of
+#     1 credit even when it matches nothing. A speculative sweep over domains that turn out to have
+#     no data is NOT free, which is the opposite of how most providers in this catalog behave.
+#  6. RESPONSE SHAPES ARE NOT UNIFORM. `result` is sometimes an object keyed by the thing you asked
+#     about and sometimes a `data` array, and getKeywordTop nests its rows one level deeper again
+#     (result.data.top[]). Each entry below records where its rows actually live — do not assume
+#     result.data[] across the file.
+#
+# REGISTRY DISCREPANCY worth reconciling: treg's oauth_providers.SERPSTAT probes with method
+# `SerpstatLimitsApiProcedure.getStats`, but Serpstat's own MCP server calls
+# `SerpstatLimitsProcedure.getStats` (no "Api" infix) — see src/services/credits_service.ts. Both
+# names appear in the wild. This file catalogues the MCP server's spelling; if the probe ever starts
+# failing with an unknown-method error, that infix is the first thing to check.
+
+
+pricing_url: https://serpstat.com/pay/
+endpoints:
+  # --- Domain analytics -------------------------------------------------------------------------
+  - id: serpstat.google.domain.overview
+    capability: google.domain.overview
+    platform: google
+    scope: any_account
+    method: POST
+    path: /
+    name: "Get Google domain visibility overview"
+    summary: "Google summary for up to 10 domains at once — visibility, keywords, traffic, ad keywords"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, note: "the JSON-RPC operation — this literal string selects the report", example: "SerpstatDomainProcedure.getDomainsInfo"}
+        params: {type: object, required: true, note: "see the fields below; they go INSIDE params, not at the top level"}
+        id: {type: string, required: false, note: "JSON-RPC correlation id echoed back in the response; any string", example: "1"}
+        "params.domains": {type: "array[string]", required: true, note: "1 to 10 bare domains", example: ["serpstat.com"]}
+        "params.se": {type: string, required: true, note: "search database, e.g. g_us, g_uk, g_de, bing_us", example: "g_us"}
+        "params.filters": {type: object, required: false, note: "optional narrowing: traff / traff_from / traff_to (estimated traffic) and visible / visible_from / visible_to (visibility score)"}
+      note: "the ONE method here that takes a batch of domains — up to 10 per call — but note the price is PER DOMAIN, so batching saves round trips, not credits. Body shape: {\"id\": \"1\", \"method\": \"SerpstatDomainProcedure.getDomainsInfo\", \"params\": {\"domains\": [\"serpstat.com\"], \"se\": \"g_us\"}}. Rows arrive in result.data[]."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "5 API credits per DOMAIN in `domains` — the most expensive per-row method in this file. A 10-domain batch is 50 credits, and an empty result still bills the 1-credit minimum."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/
+
+  - id: serpstat.google.domain.ranked_keywords
+    capability: google.domain.ranked_keywords
+    platform: google
+    scope: any_account
+    method: POST
+    path: /
+    name: "List keywords a domain ranks for"
+    summary: "Google keywords a domain ranks for, with position, volume, CPC and difficulty"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatDomainProcedure.getDomainKeywords"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.domain": {type: string, required: true, note: "bare domain, no scheme", example: "serpstat.com"}
+        "params.se": {type: string, required: true, note: "search database", example: "g_us"}
+        "params.withSubdomains": {type: boolean, required: false, note: "include subdomains in the result"}
+        "params.withIntents": {type: boolean, required: false, note: "attach the search intent of each keyword"}
+        "params.url": {type: string, required: false, note: "restrict to keywords ranking for one page of the domain"}
+        "params.keywords": {type: "array[string]", required: false, note: "only return these keywords"}
+        "params.minusKeywords": {type: "array[string]", required: false, note: "exclude keywords containing these"}
+        "params.page": {type: integer, required: false, note: "1-based page number; default 1"}
+        "params.size": {type: integer, required: false, note: "COST DIAL — rows per page, default 100, max 1,000", example: 10}
+        "params.sort": {type: object, required: false, note: "map of field to direction, e.g. {\"position\": \"asc\"}; fields: position, region_queries_count, cost, traff, difficulty, keyword_length, concurrency"}
+        "params.filters": {type: object, required: false, note: "position/cost/volume/difficulty ranges — each takes a bare value plus _from and _to variants, e.g. position_to: 10"}
+      note: "the workhorse domain report. `size` defaults to 100 rows and every row is metered, so set it explicitly."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 API credit per returned keyword — `size` (default 100, max 1,000) is the cost dial, and an empty result still bills the 1-credit minimum."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/
+
+  - id: serpstat.google.domain.competitors
+    capability: google.domain.competitors
+    platform: google
+    scope: any_account
+    method: POST
+    path: /
+    name: "List Google organic competitors"
+    summary: "Domains competing with a target in Google organic, ranked by keyword overlap"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, note: "SerpstatDomainProcedure.getCompetitors is the DEPRECATED spelling of this report — use the Page form below", example: "SerpstatDomainProcedure.getOrganicCompetitorsPage"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.domain": {type: string, required: true, note: "bare domain, no scheme", example: "serpstat.com"}
+        "params.se": {type: string, required: true, note: "search database", example: "g_us"}
+        "params.size": {type: integer, required: false, note: "COST DIAL — competitors to return, 1 to 100, default 20", example: 10}
+        "params.filters": {type: object, required: false, note: "visible (minimum visibility score), traff (minimum estimated traffic), minus_domains (array of domains to exclude)"}
+      note: "the competitor set is derived from keyword overlap in the chosen `se` database, so results differ per country. `SerpstatDomainProcedure.getCompetitors` is the deprecated predecessor of this method and should not be used in new work."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 API credit per returned competitor — `size` (default 20, max 100) is the cost dial, and an empty result still costs 1 credit."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/6vpejje0stt4k-get-competitors
+
+  # --- Keyword analytics ------------------------------------------------------------------------
+  - id: serpstat.google.keywords.volume
+    capability: google.keywords.volume
+    platform: google
+    scope: any_account
+    method: POST
+    path: /
+    name: "Get search volume for keywords"
+    summary: "Google volume, CPC, competition and difficulty for up to 1,000 keywords per call"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatKeywordProcedure.getKeywordsInfo"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.keywords": {type: "array[string]", required: true, note: "1 to 1,000 keywords", example: ["seo"]}
+        "params.se": {type: string, required: true, note: "search database", example: "g_us"}
+        "params.withIntents": {type: boolean, required: false, note: "attach the search intent of each keyword"}
+        "params.sort": {type: object, required: false, note: "map of field to direction; fields: region_queries_count, region_queries_count_wide, cost, concurrency, found_results, difficulty"}
+        "params.filters": {type: object, required: false, note: "cost / concurrency / found_results ranges, each with _from and _to variants"}
+      note: "the batch keyword-overview method — up to 1,000 keywords per call, which is the efficient way to price a keyword list."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 API credit per keyword RETURNED (Serpstat meters per result row), and an empty result still bills the 1-credit minimum."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/2brcbdgmr6rcx-get-keywords-info
+
+  - id: serpstat.google.keywords.ideas
+    capability: google.keywords.ideas
+    platform: google
+    scope: any_account
+    method: POST
+    path: /
+    name: "List related keyword ideas"
+    summary: "Keywords semantically related to a seed, with volume, CPC, difficulty and weight"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatKeywordProcedure.getRelatedKeywords"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.keyword": {type: string, required: true, note: "the seed keyword", example: "seo"}
+        "params.se": {type: string, required: true, note: "search database", example: "g_us"}
+        "params.withIntents": {type: boolean, required: false, note: "default false"}
+        "params.page": {type: integer, required: false, note: "1-based; default 1"}
+        "params.size": {type: integer, required: false, note: "COST DIAL — rows per page, default 100, max 1,000", example: 10}
+        "params.sort": {type: object, required: false, note: "fields: region_queries_count, cost, difficulty, concurrency, weight, keyword"}
+        "params.filters": {type: object, required: false, note: "cost/volume/difficulty/concurrency ranges, keyword_length, right_spelling, geo_names (contain|not_contain), intents_contain, and weight / weight_from / weight_to for relevance strength"}
+      note: |
+        `SerpstatKeywordProcedure.getKeywords` is the sibling that returns phrase-match (broad)
+        keywords rather than semantically related ones, with nearly the same params object;
+        `SerpstatKeywordProcedure.getSuggestions` returns search-suggestion keywords.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 API credit per returned keyword — `size` (default 100, max 1,000) is the cost dial, and an empty result still bills the 1-credit minimum."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/7yidbv07n5q9u-get-related-keywords
+
+  - id: serpstat.google.serp.organic
+    capability: google.serp.organic
+    platform: google
+    scope: any_account
+    method: POST
+    path: /
+    name: "List organic search results for a keyword"
+    summary: "URLs ranking in Google's top results for a keyword, with position, title and snippet"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatKeywordProcedure.getKeywordTop"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.keyword": {type: string, required: true, note: "the keyword whose SERP you want", example: "seo"}
+        "params.se": {type: string, required: true, note: "search database", example: "g_us"}
+        "params.size": {type: integer, required: false, note: "COST DIAL — rows to return, max 1,000", example: 10}
+        "params.filters": {type: object, required: false, note: "top_size (how deep into the SERP to look, max 100), position / position_from / position_to, and url, exact_url, domain, minus_domain, subdomain to restrict to one site"}
+      note: |
+        This is Serpstat's DATABASE view of the SERP, not a live scrape — positions come from
+        Serpstat's last crawl of that keyword in that `se` database, so it is cheap and fast but can
+        lag. Use a live SERP provider when freshness matters.
+        `SerpstatKeywordProcedure.getKeywordFullTop` returns the same SERP with the full element set.
+        RESPONSE SHAPE: rows are nested one level deeper than elsewhere in this file — they arrive
+        at `result.data.top[]`, not `result.data[]`.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 API credit per returned SERP row — `size` is the cost dial, and an empty result still bills the 1-credit minimum."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/env4osjb1ev9c-get-keyword-top
+
+  # --- Backlinks --------------------------------------------------------------------------------
+  # Every method here takes `query` + `searchType` instead of `domain` + `se`: the backlink index is
+  # global, not per-country. `searchType` decides what `query` means and therefore what you get back.
+  - id: serpstat.web.backlinks.summary
+    capability: web.backlinks.summary
+    platform: web
+    scope: any_account
+    method: POST
+    path: /
+    name: "Get backlink profile summary"
+    summary: "Aggregate backlink profile — external links, referring domains, IPs, domain authority"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatBacklinksProcedure.getSummaryV2"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.query": {type: string, required: true, note: "the domain to summarise", example: "serpstat.com"}
+        "params.searchType": {type: string, required: false, note: "domain (default) | domain_with_subdomains", example: "domain"}
+      note: "the V2 spelling is the current one — `getSummary` (no V2) is DEPRECATED and returns a different shape. Returns link counts, referring domain/IP/subnet counts, the domain authority indicator and link-type breakdown as a single OBJECT under `result.data`, not an array."
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "5 API credits FLAT per call — not per row, because it returns one summary. value stays null because credits come with the plan and have no published per-credit dollar price."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/xu9jnzib39dsn-backlinks-api
+
+  - id: serpstat.web.backlinks.list
+    capability: web.backlinks.list
+    platform: web
+    scope: any_account
+    method: POST
+    path: /
+    name: "List active backlinks"
+    summary: "Currently active backlinks to a domain or URL, with source page, anchor and link type"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatBacklinksProcedure.getNewBacklinks"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.query": {type: string, required: true, note: "the target — a domain or URL, matching searchType", example: "serpstat.com"}
+        "params.searchType": {type: string, required: false, note: "url | domain (default) | part_url | domain_with_subdomains", example: "domain"}
+        "params.page": {type: integer, required: false, note: "1-based; default 1"}
+        "params.size": {type: integer, required: false, note: "COST DIAL — rows per page, default 100, max 1,000", example: 10}
+        "params.sort": {type: string, required: false, note: "field to sort by; default `check` (last-checked date)"}
+        "params.order": {type: string, required: false, note: "asc | desc"}
+        "params.linkPerDomain": {type: integer, required: false, note: "set to 1 to return only the single best link from each referring domain"}
+        "params.complexFilter": {type: array, required: false, note: "nested array of {name, operator, value} conditions — outer array is OR, inner array is AND"}
+      note: |
+        Despite the name, `getNewBacklinks` is Serpstat's ACTIVE-backlinks list, not a new-links
+        delta — it is the general backlink listing. `SerpstatBacklinksProcedure.getLostBacklinks`
+        is the lost-links counterpart.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 API credit per returned backlink — `size` (default 100, max 1,000) is the cost dial, and an empty result still bills the 1-credit minimum."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/xu9jnzib39dsn-backlinks-api
+
+  - id: serpstat.web.linking_domains.list
+    capability: web.linking_domains.list
+    platform: web
+    scope: any_account
+    method: POST
+    path: /
+    name: "List referring domains to a target"
+    summary: "Referring domains linking to a target, with each source's link count and authority"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatBacklinksProcedure.getRefDomains"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.query": {type: string, required: true, note: "the target domain", example: "serpstat.com"}
+        "params.searchType": {type: string, required: false, note: "domain (default) | domain_with_subdomains — narrower than the backlink list, which also accepts url and part_url", example: "domain"}
+        "params.page": {type: integer, required: false, note: "1-based; default 1"}
+        "params.size": {type: integer, required: false, note: "COST DIAL — rows per page, default 100, max 1,000", example: 10}
+        "params.sort": {type: string, required: false, note: "field to sort by; default `check`"}
+        "params.order": {type: string, required: false, note: "asc | desc"}
+        "params.complexFilter": {type: array, required: false, note: "nested {name, operator, value} conditions — outer OR, inner AND"}
+      note: "note the narrower searchType enum here: this method accepts only domain-level targets."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 API credit per returned referring domain — `size` is the cost dial, and an empty result still bills the 1-credit minimum."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/xu9jnzib39dsn-backlinks-api
+
+  - id: serpstat.web.anchors.list
+    capability: web.anchors.list
+    platform: web
+    scope: any_account
+    method: POST
+    path: /
+    name: "List anchor texts linking to a target"
+    summary: "Anchor texts pointing at a target, with referring-domain and link counts per phrase"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatBacklinksProcedure.getAnchors"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.query": {type: string, required: true, note: "the target", example: "serpstat.com"}
+        "params.searchType": {type: string, required: true, note: "url | domain | part_url | domain_with_subdomains — REQUIRED here, unlike the sibling backlink methods where it defaults", example: "domain"}
+        "params.anchor": {type: string, required: false, note: "only anchors containing this text"}
+        "params.count": {type: string, required: false, note: "filter on the number of links per anchor"}
+        "params.page": {type: integer, required: false, note: "1-based; default 1"}
+        "params.size": {type: integer, required: false, note: "COST DIAL — rows per page, default 100, max 1,000", example: 10}
+        "params.sort": {type: string, required: false, note: "default refDomains"}
+        "params.order": {type: string, required: false, note: "asc | desc; default desc"}
+        "params.complexFilter": {type: array, required: false}
+      note: "`searchType` has no default on this method — omitting it is an error, where the other backlink methods would have assumed `domain`."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 API credit per returned anchor — `size` is the cost dial, and an empty result still bills the 1-credit minimum."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/xu9jnzib39dsn-backlinks-api
+
+  - id: serpstat.web.site.top_pages
+    capability: web.site.top_pages
+    platform: web
+    scope: any_account
+    method: POST
+    path: /
+    name: "List a site's top linked pages"
+    summary: "List a site's most-linked-to pages, ranked by backlinks and referring domains"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatBacklinksProcedure.getTopPages"}
+        params: {type: object, required: true}
+        id: {type: string, required: false, example: "1"}
+        "params.query": {type: string, required: true, note: "the target domain", example: "serpstat.com"}
+        "params.searchType": {type: string, required: false, note: "domain (default) | domain_with_subdomains", example: "domain"}
+        "params.page": {type: integer, required: false, note: "1-based; default 1"}
+        "params.size": {type: integer, required: false, note: "COST DIAL — rows per page, default 100, max 1,000", example: 10}
+        "params.sort": {type: string, required: false}
+        "params.order": {type: string, required: false, note: "asc | desc"}
+        "params.complexFilter": {type: array, required: false}
+      note: "the link-equity map of a site — which pages actually earned the backlinks."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 API credit per returned page — `size` is the cost dial, and an empty result still bills the 1-credit minimum."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/xu9jnzib39dsn-backlinks-api
+
+  # --- Account (free) ---------------------------------------------------------------------------
+  - id: serpstat.account.usage
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: POST
+    path: /
+    name: "Get API credit balance"
+    summary: "Check the calling account's API credit limits and how many credits are left"
+    input:
+      bodyType: json
+      body:
+        method: {type: string, required: true, example: "SerpstatLimitsProcedure.getStats"}
+        params: {type: object, required: true, note: "takes no fields — send an empty object {}"}
+        id: {type: string, required: false, example: "1"}
+      note: |
+        Takes no parameters but `params` must still be present as `{}`. This is the right call to
+        make BEFORE any large `size` sweep, since every list method in this file is metered per row.
+        See the registry-discrepancy note in the file header: treg's probe uses the
+        `SerpstatLimitsApiProcedure.getStats` spelling instead of this one.
+        Any captured example must have the account's real balances masked before commit.
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      note: "the limits/credits meter itself does not consume credits — the standard pattern for this class of endpoint, and what makes it the correct liveness probe for a Serpstat token. Not confirmed against a live call."
+    docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/

@@ -1,0 +1,58 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "2.0573 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0139-0000-83331c791f59",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.0104 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "yahoo",
+        "se_type": "organic",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "albert einstein",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "albert einstein",
+          "type": "organic",
+          "se_domain": "us.search.yahoo.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://us.search.yahoo.com/search?p=albert+einstein&vl=lang_en&ei=UTF-8&fl=1&lat=37.09024&lon=-95.712891&locupdate=1&radius=150&fr2=p%3As%2Cv%3Aw%2Cm%3Aloc",
+          "datetime": "2026-07-28 10:34:27 +00:00",
+          "spell": null,
+          "refinement_chips": null,
+          "item_types": [
+            "top_stories",
+            "… 3 more item(s) truncated"
+          ],
+          "se_results_count": 0,
+          "pages_count": 1,
+          "items_count": 11,
+          "items": [
+            "… {9 field(s) truncated}",
+            "… 10 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

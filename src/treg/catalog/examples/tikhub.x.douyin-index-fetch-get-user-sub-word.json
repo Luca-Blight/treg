@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "52f18ba3-ef10-4bea-bf79-08717a717380",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:19",
+  "time_stamp": 1785220099,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Index-API/fetch_get_user_sub_word_api_v1_douyin_index_fetch_get_user_sub_word_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/52f18ba3-ef10-4bea-bf79-08717a717380?sign=f89def03c4fad48d910cb29c5e3136fdc5fd22e75f654e50223a61442339abbb",
+  "router": "/api/v1/douyin/index/fetch_get_user_sub_word",
+  "params": {},
+  "data": {
+    "word_ratio": [
+      {
+        "rank": "1",
+        "keyword": "巨量算数",
+        "index_style": "搜索指数",
+        "ratio_status": "有异动",
+        "keyword_index": "26790",
+        "ratio": -0.025995273586620616,
+        "keyword_index_weekly": [
+          {
+            "datetime": "20260720",
+            "index": "31949"
+          },
+          "… 6 more item(s) truncated"
+        ],
+        "ratio_ex": 0.1,
+        "show": "搜索指数",
+        "sub_style": "搜索指数",
+        "sub_channel": 1
+      }
+    ],
+    "sub_num": "0",
+    "BaseResp": {
+      "StatusMessage": "",
+      "StatusCode": 0
+    }
+  }
+}

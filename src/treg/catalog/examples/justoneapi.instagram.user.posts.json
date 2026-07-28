@@ -1,0 +1,185 @@
+{
+  "code": 0,
+  "data": {
+    "data": {
+      "count": 12,
+      "items": [
+        {
+          "accessibility_caption": "Black background with white text",
+          "all_previous_submitters": [],
+          "boost_unavailable_identifier": null,
+          "boost_unavailable_reason": null,
+          "boost_unavailable_reason_v2": null,
+          "can_modify_carousel": true,
+          "can_reply": false,
+          "can_reshare": true,
+          "can_save": true,
+          "caption": {
+            "created_at": 1785169508,
+            "created_at_utc": 1785169508,
+            "did_report_as_spam": false,
+            "hashtags": [],
+            "id": "3950610611797980067",
+            "is_covered": false,
+            "is_ranked_comment": false,
+            "mentions": [],
+            "private_reply_status": 0,
+            "share_enabled": false,
+            "text": "we don’t make the rules 🙂‍↔️",
+            "type": 1,
+            "user": {
+              "fbid_v2": "17841400039600391",
+              "full_name": "Instagram",
+              "id": "25025320",
+              "is_private": false,
+              "is_unpublished": false,
+              "is_verified": true,
+              "profile_pic_id": "3725434617063385984",
+              "profile_pic_url": "https://scontent-bru2-1.cdninstagram.com/v/t51.82787-19/550891366_18667771684001321_1383210656577177067_n.jpg?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-bru2-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2gFmiRwJ_1tLjSJzY7gbgldWRi8N1MfePJfUl… [519 chars total]",
+              "username": "instagram"
+            },
+            "user_id": "25025320"
+          },
+          "caption_is_edited": false,
+          "carousel_media": [
+            {
+              "accessibility_caption": "Black background with white text",
+              "caption": null,
+              "carousel_parent_id": "3950610611797980067_25025320",
+              "commerciality_status": "not_commercial",
+              "creative_config": null,
+              "explore_pivot_grid": false,
+              "fb_user_tags": {
+                "in": []
+              },
+              "featured_products": [],
+              "id": "3950609506668983144",
+              "image_versions": {
+                "items": [
+                  {
+                    "height": 1456,
+                    "is_spatial_image": false,
+                    "url": "https://scontent-bru2-1.cdninstagram.com/v/t51.82787-15/757480759_18776524933001321_6532513175254635759_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=1&ig_cache_key=Mzk1MDYwOTUwNjY2ODk4MzE0NA%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTE3MC5zZHIucmVndWxhcl9waG90by… [519 chars total]",
+                    "width": 1170
+                  },
+                  {
+                    "height": 448,
+                    "is_spatial_image": false,
+                    "url": "https://scontent-bru2-1.cdninstagram.com/v/t51.82787-15/757480759_18776524933001321_6532513175254635759_n.jpg?stp=dst-jpg_e35_p360x360_tt6&_nc_cat=1&ig_cache_key=Mzk1MDYwOTUwNjY2ODk4MzE0NA%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTE3MC5zZHIucmVndWxhc… [519 chars total]",
+                    "width": 360
+                  }
+                ]
+              },
+              "is_video": false,
+              "location": null,
+              "media_format": "image",
+              "media_name": "album_item",
+              "media_overlay_info": null,
+              "media_type": 1,
+              "original_height": 1456,
+              "original_width": 1170,
+              "product_suggestions": [],
+              "product_type": "carousel_item",
+              "sharing_friction_info": {
+                "bloks_app_url": null,
+                "sharing_friction_payload": null,
+                "should_have_sharing_friction": false
+              },
+              "shop_routing_user_id": null,
+              "sponsor_tags": [],
+              "tagged_users": [],
+              "taken_at": 1785169505,
+              "taken_at_date": "2026-07-27T16:25:05+00:00",
+              "taken_at_ts": 1785169505,
+              "thumbnail_url": "https://scontent-bru2-1.cdninstagram.com/v/t51.82787-15/757480759_18776524933001321_6532513175254635759_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=1&ig_cache_key=Mzk1MDYwOTUwNjY2ODk4MzE0NA%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTE3MC5zZHIucmVndWxhcl9waG90by… [519 chars total]"
+            },
+            {
+              "accessibility_caption": "Black background with white text and zodiac emojis",
+              "caption": null,
+              "carousel_parent_id": "3950610611797980067_25025320",
+              "commerciality_status": "not_commercial",
+              "creative_config": null,
+              "explore_pivot_grid": false,
+              "fb_user_tags": {
+                "in": []
+              },
+              "featured_products": [],
+              "id": "3950609507298178233",
+              "image_versions": {
+                "items": [
+                  {
+                    "height": 1456,
+                    "is_spatial_image": false,
+                    "url": "https://scontent-bru2-1.cdninstagram.com/v/t51.82787-15/757602678_18776524906001321_778982560785175870_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=1&ig_cache_key=Mzk1MDYwOTUwNzI5ODE3ODIzMw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTE3MC5zZHIucmVndWxhcl9waG90by5… [519 chars total]",
+                    "width": 1170
+                  },
+                  {
+                    "height": 448,
+                    "is_spatial_image": false,
+                    "url": "https://scontent-bru2-1.cdninstagram.com/v/t51.82787-15/757602678_18776524906001321_778982560785175870_n.jpg?stp=dst-jpg_e35_p360x360_tt6&_nc_cat=1&ig_cache_key=Mzk1MDYwOTUwNzI5ODE3ODIzMw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTE3MC5zZHIucmVndWxhcl… [519 chars total]",
+                    "width": 360
+                  }
+                ]
+              },
+              "is_video": false,
+              "location": null,
+              "media_format": "image",
+              "media_name": "album_item",
+              "media_overlay_info": null,
+              "media_type": 1,
+              "original_height": 1456,
+              "original_width": 1170,
+              "product_suggestions": [],
+              "product_type": "carousel_item",
+              "sharing_friction_info": {
+                "bloks_app_url": null,
+                "sharing_friction_payload": null,
+                "should_have_sharing_friction": false
+              },
+              "shop_routing_user_id": null,
+              "sponsor_tags": [],
+              "tagged_users": [],
+              "taken_at": 1785169505,
+              "taken_at_date": "2026-07-27T16:25:05+00:00",
+              "taken_at_ts": 1785169505,
+              "thumbnail_url": "https://scontent-bru2-1.cdninstagram.com/v/t51.82787-15/757602678_18776524906001321_778982560785175870_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=1&ig_cache_key=Mzk1MDYwOTUwNzI5ODE3ODIzMw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTE3MC5zZHIucmVndWxhcl9waG90by5… [519 chars total]"
+            },
+            "… 1 more item(s) truncated"
+          ],
+          "carousel_media_count": 13,
+          "carousel_media_ids": [
+            "3950609506668983144",
+            "3950609507298178233",
+            "… 1 more item(s) truncated"
+          ],
+          "carousel_media_pending_post_count": 0,
+          "clips_tab_pinned_user_ids": [],
+          "coauthor_producer_can_see_organic_insights": false,
+          "coauthor_producers": [],
+          "code": "DbTY2uSG3Oj",
+          "collaborator_edit_eligibility": false,
+          "comment_count": 4159,
+          "comment_inform_treatment": {
+            "action_type": null,
+            "should_have_inform_treatment": false,
+            "text": "",
+            "url": null
+          },
+          "comment_likes_enabled": true,
+          "community_notes_info": {
+            "enable_submission_friction": false,
+            "has_viewer_submitted_note": false,
+            "is_eligible_for_request_a_note": true,
+            "note_submission_disabled": false
+          },
+          "creative_config": null,
+          "crosspost_metadata": {
+            "fb_downstream_use_xpost_metadata": {
+              "downstream_use_xpost_deny_reason": "NONE"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

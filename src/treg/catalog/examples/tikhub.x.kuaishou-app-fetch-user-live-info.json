@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "c24b592f-a219-4623-b7a1-017fdc783580",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:06",
+  "time_stamp": 1785220146,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-App-API/fetch_user_live_info_api_v1_kuaishou_app_fetch_user_live_info_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c24b592f-a219-4623-b7a1-017fdc783580?sign=986b46c299cd6ad56b1c461fd2c62a2b961713eb0c743d6989d60d136144c8e9",
+  "router": "/api/v1/kuaishou/app/fetch_user_live_info",
+  "params": {
+    "user_id": "1377082950"
+  },
+  "data": {
+    "result": 1,
+    "dynamicIconV2": {
+      "result": 1,
+      "displayLiveHead": true,
+      "isLive": true,
+      "headFlicker": true,
+      "circleFlicker": true,
+      "dynamicEffectMarker": "… {3 field(s) truncated}",
+      "liveStream": "… {48 field(s) truncated}",
+      "type": 1,
+      "liveFontTips": 9,
+      "photoCount": 85531
+    },
+    "llsid": 2009908556991815457,
+    "host-name": "public-bjy-c91-kce-node-arm27.idchb1az2.hb1.kwaidc.com",
+    "shieldNextPhoto": false
+  }
+}

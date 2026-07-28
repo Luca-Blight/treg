@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "4aa23684-6abc-4738-b97e-c33752384843",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:53",
+  "time_stamp": 1785220073,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/fetch_one_video_v2… [104 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/4aa23684-6abc-47… [150 chars]",
+  "router": "/api/v1/douyin/app/v3/fetch_one_video_v2",
+  "params": {
+    "aweme_id": "7448118827402972455"
+  },
+  "data": {
+    "aweme_detail": {
+      "nearby_level": 0,
+      "is_from_ad_auth": false,
+      "is_pgcshow": false,
+      "label_top_text": null,
+      "cha_list": "… [1 item(s) truncated]",
+      "packed_clips": null,
+      "text_extra": "… [2 item(s) truncated]",
+      "interaction_stickers": null,
+      "can_cache_to_local": true,
+      "author": "… {179 field(s) truncated}",
+      "select_ug_bar": "… {5 field(s) truncated}",
+      "item_comment_settings": 0,
+      "video_control": "… {24 field(s) truncated}",
+      "entertainment_ui_config": "… {3 field(s) truncated}",
+      "douplus_user_type": 0,
+      "…": "177 more field(s) truncated"
+    }
+  }
+}

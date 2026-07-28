@@ -1,0 +1,21 @@
+{
+  "search_metadata": {
+    "id": "6a6898705c018fcae8606142",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/NSGpIyADHSMKdpOUCZBx5A/6a6898705c018fcae8606142.json",
+    "created_at": "2026-07-28 11:54:24 UTC",
+    "processed_at": "2026-07-28 11:54:24 UTC",
+    "google_ads_transparency_center_url": "https://adstransparency.google.com?region=anywhere&domain=coffee",
+    "raw_html_file": "https://serpapi.com/searches/NSGpIyADHSMKdpOUCZBx5A/6a6898705c018fcae8606142.html",
+    "prettify_html_file": "https://serpapi.com/searches/NSGpIyADHSMKdpOUCZBx5A/6a6898705c018fcae8606142.prettify",
+    "total_time_taken": 6.18
+  },
+  "search_parameters": {
+    "engine": "google_ads_transparency_center",
+    "text": "coffee"
+  },
+  "search_information": {
+    "results_state": "Fully empty"
+  },
+  "error": "Google Ads Transparency Center hasn't returned any results for this search."
+}

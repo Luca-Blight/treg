@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "request_id": "9ea68445-3b9f-4a1b-8998-5970125e9cf9",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:09",
+  "time_stamp": 1785220149,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Lemon8-App-API/fetch_discover_tab_information_tabs_api_v1_lemon8_app_fetch_discover_tab_information_tabs_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/9ea68445-3b9f-4a1b-8998-5970125e9cf9?sign=4e872240828619e969aa53f070c1d7c8b87fd8f1299fcd62849a57cb658c910f",
+  "router": "/api/v1/lemon8/app/fetch_discover_tab_information_tabs",
+  "params": {},
+  "data": {
+    "data": {
+      "impression_id": "7667461034671786253",
+      "informations": [
+        "… {10 field(s) truncated}",
+        "… 2 more item(s) truncated"
+      ]
+    },
+    "message": "success",
+    "server_time": "1785220149.81"
+  }
+}

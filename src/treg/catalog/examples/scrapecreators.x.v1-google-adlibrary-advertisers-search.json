@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "credits_remaining": 19829,
+  "credits_charged": 1,
+  "advertisers": [
+    {
+      "name": "LULULEMON MEXICO",
+      "advertiser_id": "AR02903092099014459393",
+      "region": "MX",
+      "number_of_ads_estimate": 16
+    },
+    "… 5 more item(s) truncated"
+  ],
+  "websites": [
+    {
+      "domain": "lululemon.de"
+    },
+    "… 9 more item(s) truncated"
+  ]
+}

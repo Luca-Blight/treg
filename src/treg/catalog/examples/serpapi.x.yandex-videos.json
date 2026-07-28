@@ -1,0 +1,36 @@
+{
+  "search_metadata": {
+    "id": "6a6898e43ee4c2e1a7d7cfee",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/OuaLFmu5hn4WqT1I-Hs8YQ/6a6898e43ee4c2e1a7d7cfee.json",
+    "created_at": "2026-07-28 11:56:20 UTC",
+    "processed_at": "2026-07-28 11:56:20 UTC",
+    "yandex_videos_url": "https://yandex.com/video/search?text=coffee",
+    "raw_html_file": "https://serpapi.com/searches/OuaLFmu5hn4WqT1I-Hs8YQ/6a6898e43ee4c2e1a7d7cfee.html",
+    "total_time_taken": 2.03
+  },
+  "search_parameters": {
+    "engine": "yandex_videos",
+    "text": "coffee",
+    "device": "desktop"
+  },
+  "videos_results": [
+    {
+      "position": 1,
+      "thumbnail": "https://avatars.mds.yandex.net/get-vthumb/3217182/ffb2d20a1c056e3e302776cdf5c11bfc/564x318_1",
+      "preview": {
+        "url": "https://video-preview.s3.yandex.net/vkJV1gEAAAA.mp4",
+        "type": "video/mp4"
+      },
+      "description": "Coffee production is the industrial process of converting the raw fruit of the coffee plant into the finished coffee.  The coffee cherry has the fruit or pulp removed leaving the seed or bean..."
+    },
+    "… 16 more item(s) truncated"
+  ],
+  "search_information": {
+    "within": null
+  },
+  "serpapi_pagination": {
+    "next": "https://serpapi.com/search.json?device=desktop&engine=yandex_videos&p=1&text=coffee",
+    "current": "https://serpapi.com/search.json?device=desktop&engine=yandex_videos&text=coffee"
+  }
+}

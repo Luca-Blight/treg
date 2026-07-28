@@ -1,0 +1,58 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "2.0189 sec.",
+  "cost": 0.18,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0589-0000-096f4cce3d1c",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.0040 sec.",
+      "cost": 0.18,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "dataforseo_search_volume",
+        "se": "clickstream_data",
+        "location_code": 2840,
+        "language_code": "en",
+        "tag": "test-tag",
+        "keywords": [
+          "you tube",
+          "… 2 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "location_code": 2840,
+          "language_code": "en",
+          "use_clickstream": true,
+          "items_count": 3,
+          "items": [
+            {
+              "keyword": "you tube",
+              "search_volume": 4694414,
+              "monthly_searches": [
+                {
+                  "year": 2026,
+                  "month": 6,
+                  "search_volume": 3842773
+                },
+                "… 11 more item(s) truncated"
+              ]
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

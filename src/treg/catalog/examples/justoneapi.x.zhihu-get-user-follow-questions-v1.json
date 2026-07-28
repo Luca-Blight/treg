@@ -1,0 +1,51 @@
+{
+  "code": 0,
+  "data": {
+    "paging": {
+      "is_end": false,
+      "totals": 6081,
+      "previous": "https://www.zhihu.com/api/v4/members/zhang-jia-wei/following-questions?include=d… [188 chars total]",
+      "is_start": true,
+      "next": "https://www.zhihu.com/api/v4/members/zhang-jia-wei/following-questions?include=d… [189 chars total]"
+    },
+    "data": [
+      {
+        "author": {
+          "avatar_url_template": "https://picx.zhimg.com/v2-9c5d57cba7b70284dbf7115f930652e3.jpg?source=c8b7c179",
+          "badge_v2": {
+            "icon": "https://picx.zhimg.com/v2-4a07bc69c4bb04444721f35b32125c75_l.png?source=32738c0c",
+            "detail_badges": "… 1 item(s) truncated",
+            "night_icon": "https://pica.zhimg.com/v2-4a07bc69c4bb04444721f35b32125c75_l.png?source=32738c0c",
+            "merged_badges": "… 1 item(s) truncated",
+            "title": "知势榜影响力榜体育竞技领域上榜答主"
+          },
+          "name": "名叫小c读作小c",
+          "headline": "恭喜你，居然发现我了",
+          "badge": [],
+          "user_type": "people",
+          "is_advertiser": false,
+          "type": "people",
+          "avatar_url": "https://pica.zhimg.com/v2-9c5d57cba7b70284dbf7115f930652e3_l.jpg?source=c8b7c179",
+          "is_org": false,
+          "gender": 1,
+          "url": "https://www.zhihu.com/api/v4/people/08027b7aeb2fb40cffe2f916dce2b09c",
+          "url_token": "<omitted: expires>",
+          "id": "08027b7aeb2fb40cffe2f916dce2b09c"
+        },
+        "url": "https://www.zhihu.com/api/v4/questions/2064281439982576241",
+        "title": "詹姆斯降薪 4875 万美元加盟后，费城的阵容如何调整才能避免球权冲突？球队有哪些隐患？",
+        "answer_count": 156,
+        "created": 1784943047,
+        "question_type": "normal",
+        "follower_count": 208,
+        "updated_time": 1784960925,
+        "type": "question",
+        "id": "2064281439982576241"
+      },
+      "… 19 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:05:08.640160304",
+  "requestId": "23b6e05583fb425e9875a35bf24ade33"
+}

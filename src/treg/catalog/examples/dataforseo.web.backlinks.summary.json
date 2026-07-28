@@ -1,0 +1,127 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0669 sec.",
+  "cost": 0.024036,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280654-2171-0265-0000-847cf1002732",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0077 sec.",
+      "cost": 0.024036,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "backlinks",
+        "… 2 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "summary",
+        "target": "moz.com",
+        "internal_list_limit": 10
+      },
+      "result": [
+        {
+          "target": "moz.com",
+          "first_seen": "2019-01-15 22:55:49 +00:00",
+          "lost_date": null,
+          "rank": 549,
+          "backlinks": 3800873,
+          "backlinks_spam_score": 26,
+          "crawled_pages": 248751,
+          "info": {
+            "server": "cloudflare",
+            "cms": null,
+            "platform_type": null,
+            "ip_address": "104.16.127.24",
+            "country": "US",
+            "is_ip": false,
+            "target_spam_score": 0
+          },
+          "internal_links_count": 1563556,
+          "external_links_count": 195710,
+          "broken_backlinks": 101503,
+          "broken_pages": 20185,
+          "referring_domains": 123009,
+          "referring_domains_nofollow": 23073,
+          "referring_main_domains": 112440,
+          "referring_main_domains_nofollow": 20419,
+          "referring_ips": 60646,
+          "referring_subnets": 26728,
+          "referring_pages": 3200654,
+          "referring_pages_nofollow": 1475965,
+          "referring_links_tld": {
+            "com": 1573433,
+            "co.za": 566444,
+            "blogspot.com": 479439,
+            "net": 131582,
+            "org": 80512,
+            "in": 34662,
+            "io": 29113,
+            "de": 26041,
+            "fr": 25680,
+            "jp": 24321
+          },
+          "referring_links_types": {
+            "anchor": 2012129,
+            "image": 1169044,
+            "redirect": 13369,
+            "canonical": 5962,
+            "alternate": 150
+          },
+          "referring_links_attributes": {
+            "nofollow": 1475401,
+            "noopener": 615597,
+            "noreferrer": 216809,
+            "external": 55174,
+            "ugc": 28984,
+            "sponsored": 1493,
+            "author": 298,
+            "bookmark": 31,
+            "alternate": 21,
+            "canonical": 4
+          },
+          "referring_links_platform_types": {
+            "unknown": 1733414,
+            "blogs": 967066,
+            "organization": 521321,
+            "cms": 480069,
+            "message-boards": 209967,
+            "news": 38061,
+            "ecommerce": 20901,
+            "wikis": 835
+          },
+          "referring_links_semantic_locations": {
+            "": 2094569,
+            "article": 359679,
+            "main": 264921,
+            "section": 192754,
+            "aside": 129700,
+            "footer": 87559,
+            "nav": 41735,
+            "header": 17733,
+            "figure": 6585,
+            "details": 3597
+          },
+          "referring_links_countries": {
+            "": 1656752,
+            "ZA": 566513,
+            "US": 470304,
+            "WW": 146275,
+            "IN": 52737,
+            "JP": 30277,
+            "IO": 30160,
+            "FR": 30024,
+            "DE": 28382,
+            "GB": 24985
+          }
+        }
+      ]
+    }
+  ]
+}

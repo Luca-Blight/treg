@@ -1,0 +1,46 @@
+{
+  "code": 200,
+  "request_id": "5ea3462c-f2e1-42bf-8cb7-18543b58842a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:39",
+  "time_stamp": 1785220239,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-API/fetch_channel_feed_api_v1_weibo_web_fetch_channel_feed_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/5ea3462c-f2e1-42bf-8cb7-18543b58842a?sign=a1631191cf817d45ed5940a3eb5c87b7ebe18be5d12ba51c6e365797268f9964",
+  "router": "/api/v1/weibo/web/fetch_channel_feed",
+  "params": {
+    "channel_name": "热门",
+    "page": "1"
+  },
+  "data": {
+    "data": {
+      "cardlistInfo": {
+        "v_p": "56",
+        "statistics_from": "hotweibo",
+        "containerid": "102803",
+        "title_top": "热门推荐",
+        "show_style": 1,
+        "total": 300,
+        "can_shared": 1,
+        "since_id": 1,
+        "cardlist_title": "",
+        "desc": "",
+        "hot_request_id": "178522023859278900000020498448745137",
+        "focus_model_id": "000",
+        "cardlist_head_cards": "… [1 item(s) truncated]"
+      },
+      "cards": [
+        "… {8 field(s) truncated}",
+        "… 14 more item(s) truncated"
+      ],
+      "statuses": false,
+      "page": 2
+    },
+    "ok": 1,
+    "http_code": 200
+  }
+}

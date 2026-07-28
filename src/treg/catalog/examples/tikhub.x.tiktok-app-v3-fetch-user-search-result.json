@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "request_id": "b95e36bc-e33d-416e-b898-5475f24f0acb",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:06",
+  "time_stamp": 1785220206,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_user_search_… [116 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "…": "5 more field(s) truncated"
+}

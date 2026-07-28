@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "request_id": "55e83ecf-58c4-4448-9fc1-7a01e3951c41",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:37",
+  "time_stamp": 1785220117,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_user_profile_by_short_id_api_v1_douyin_web_fetch_user_profile_by_short_id_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/55e83ecf-58c4-4448-9fc1-7a01e3951c41?sign=bbe35502d838acaf6758e76e0456a185269ba43d5eaeac61be0e70e2dbefceff",
+  "router": "/api/v1/douyin/web/fetch_user_profile_by_short_id",
+  "params": {
+    "short_id": "114131058"
+  },
+  "data": {
+    "data": {
+      "data": [],
+      "enter_room_id": "",
+      "user": {
+        "id_str": "68141954464",
+        "sec_uid": "MS4wLjABAAAAUW22yKkqlra1vrTebmrdhVWb2tOYW6jX7wElmeRERQ8",
+        "nickname": "葱不帅",
+        "avatar_thumb": {
+          "url_list": "… [3 item(s) truncated]"
+        },
+        "follow_info": {
+          "follow_status": 0,
+          "follow_status_str": "0"
+        },
+        "foreign_user": 0,
+        "open_id_str": ""
+      },
+      "qrcode_url": "",
+      "enter_mode": 0,
+      "room_status": 2,
+      "similar_rooms": [],
+      "shark_decision_conf": "",
+      "auth_cert_info": ""
+    },
+    "extra": {
+      "now": 1785220117460
+    },
+    "status_code": 0
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "6d9c2a48-c949-4354-9603-84ea6414fd14",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:17",
+  "time_stamp": 1785220157,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-V2-API/get_company_prof… [110 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/6d9c2a48-c949-43… [150 chars]",
+  "router": "/api/v1/linkedin/web_v2/get_company_profile",
+  "params": {
+    "url": "https://www.linkedin.com/company/microsoft/"
+  },
+  "data": {
+    "id": "microsoft",
+    "name": "Microsoft",
+    "country_code": "US,AU,CA,FR,DE,JP,GB,DK,BE,FI,IT,KR,NL,NO,ES,SE,CH,BR,CN,IN,… [134 chars]",
+    "locations": [
+      "1 Microsoft Way Redmond, Washington 98052, US",
+      "… 1 more item(s) truncated"
+    ],
+    "followers": 28726206,
+    "employees_in_linkedin": 233268,
+    "about": "Every company has a mission. What's ours? To empower every p… [745 chars]",
+    "specialties": "Business Software, Developer Tools, Home & Educational Softw… [370 chars]",
+    "company_size": "10,001+ employees",
+    "organization_type": "Public Company",
+    "industries": "Software Development",
+    "website": "https://news.microsoft.com/",
+    "company_id": "1035",
+    "employees": [
+      "… {3 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "headquarters": "Redmond, Washington",
+    "…": "17 more field(s) truncated"
+  }
+}

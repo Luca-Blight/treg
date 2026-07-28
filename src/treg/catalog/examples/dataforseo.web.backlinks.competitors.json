@@ -1,0 +1,50 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "3.0243 sec.",
+  "cost": 0.024072,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280654-2171-0461-0000-2da8e59bcf7f",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.9681 sec.",
+      "cost": 0.024072,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "backlinks",
+        "… 2 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "competitors",
+        "target": "moz.com",
+        "limit": 2
+      },
+      "result": [
+        {
+          "total_count": 12451,
+          "items_count": 2,
+          "items": [
+            {
+              "type": "backlinks_competitors",
+              "target": "ahrefs.com",
+              "rank": 416,
+              "intersections": 5239
+            },
+            {
+              "type": "backlinks_competitors",
+              "target": "semrush.com",
+              "rank": 375,
+              "intersections": 4537
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

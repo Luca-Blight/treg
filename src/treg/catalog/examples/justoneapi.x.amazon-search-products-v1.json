@@ -1,0 +1,34 @@
+{
+  "code": 0,
+  "data": {
+    "total_products": 131234,
+    "country": "US",
+    "domain": "www.amazon.com",
+    "products": [
+      {
+        "asin": "B0FQFB8FMG",
+        "product_title": "Apple AirPods Pro 3 Wireless Earbuds, Active Noise Cancellation, Live Translation, Heart Rate Sensing, Hearing Aid Feature, Bluetooth Headphones, Spatial Audio, High-Fidelity Sound, USB-C Charging",
+        "product_price": "$199.99",
+        "product_original_price": "$249.00",
+        "currency": "USD",
+        "product_star_rating": "4.5",
+        "product_num_ratings": 12448,
+        "product_url": "https://www.amazon.com/dp/B0FQFB8FMG",
+        "product_photo": "https://m.media-amazon.com/images/I/61solmQSSlL._AC_UY654_QL65_.jpg",
+        "product_num_offers": 7,
+        "product_minimum_offer_price": "$157.99",
+        "is_best_seller": false,
+        "is_amazon_choice": false,
+        "is_prime": true,
+        "climate_pledge_friendly": false,
+        "sales_volume": "10K+ bought in past month",
+        "delivery": "Join Prime to get FREE delivery Overnight 7 AM - 11 AMOr Non-members get FREE delivery Sat, Aug 1",
+        "has_variations": false
+      },
+      "… 15 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:44.048630164",
+  "requestId": "2e5e0249307a45258dec611eb0921288"
+}

@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "47221984-90a0-48af-ab57-bd9564972b07",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:04",
+  "time_stamp": 1785220144,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-App-API/fetch_shopping_top_list_api_v1_kuaishou_app_fetch_shopping_top_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/47221984-90a0-48af-ab57-bd9564972b07?sign=7b671207bb4487d7704511b7c291da45308433224b55f852168234ab417f473f",
+  "router": "/api/v1/kuaishou/app/fetch_shopping_top_list",
+  "params": {},
+  "data": {
+    "result": 1,
+    "topList": {
+      "moduleType": 3,
+      "data": [
+        {
+          "backGroundImage": "… [0 item(s) truncated]",
+          "list": "… [50 item(s) truncated]",
+          "subTabName": "热门主播",
+          "subTabId": 101
+        },
+        "… 1 more item(s) truncated"
+      ],
+      "dataType": 1
+    },
+    "ussid": "MzAxXzU1MjU3ODAxODZfMTc4NTIyMDE0NDU0NF9fMjI5NQ",
+    "host-name": "public-bjy-c34-kce-node2128.idchb1az2.hb1.kwaidc.com",
+    "debug_id": "faec75d5",
+    "debug_info": "gAAAAABqaEwwvh2PcuCv_TOtcGs3qbIIRmNBXS9gu9E65nn8lLBHvz6KyYMxR-UtrnbwiWY88X9jnOJkkM7LEhS3KPy4znqwdTIMzjyUb92trcaa_R3hpHgkHiqBAc4R11wLjEn5vDW9nOPJXe1SZncHdGO3QFsawRp6xODTE9bNKIQE5X_35FgrkxxRaegp1DF7ELPH… [292 chars]"
+  }
+}

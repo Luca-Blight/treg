@@ -1,0 +1,43 @@
+{
+  "search_metadata": {
+    "id": "6a6898cb868180a7b882d84a",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/ZawY0go2eBxMDxNqfen1tQ/6a6898cb… [81 chars]",
+    "created_at": "2026-07-28 11:55:55 UTC",
+    "processed_at": "2026-07-28 11:55:55 UTC",
+    "google_lens_url": "https://lens.google.com/uploadbyurl?url=https%3A%2F%2Fi.imgu… [79 chars]",
+    "raw_html_file": "https://serpapi.com/searches/ZawY0go2eBxMDxNqfen1tQ/6a6898cb… [81 chars]",
+    "total_time_taken": 3.37
+  },
+  "search_parameters": {
+    "engine": "google_lens",
+    "url": "https://i.imgur.com/HBrB8p0.png",
+    "type": "visual_matches"
+  },
+  "visual_matches": [
+    {
+      "position": 1,
+      "title": "If we ever get an animated undertale movie out of these two … [106 chars]",
+      "link": "https://www.reddit.com/r/Undertale/comments/1o4wspg/if_we_ev… [102 chars]",
+      "source": "Reddit",
+      "source_icon": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAACAAAAA… [953 chars]",
+      "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcQ-UQ-J… [104 chars]",
+      "thumbnail_width": 245,
+      "thumbnail_height": 206,
+      "image": "https://i.redd.it/if-we-ever-get-an-animated-undertale-movie… [173 chars]",
+      "image_width": 245,
+      "image_height": 206,
+      "exact_matches": true,
+      "serpapi_exact_matches_link": "https://serpapi.com/search.json?engine=google_lens&type=exac… [113 chars]"
+    },
+    "… 58 more item(s) truncated"
+  ],
+  "related_content": [
+    {
+      "query": "Danny DeVito",
+      "link": "https://www.google.com/search?sca_esv=fbf2635dd64e7c8e&lns_s… [158 chars]",
+      "thumbnail": "https://serpapi.com/searches/6a6898cb868180a7b882d84a/images… [109 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google… [119 chars]"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "9718565c-3526-4360-8169-7502f57f6926",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:35",
+  "time_stamp": 1785220115,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_one_video_by_sh… [118 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/9718565c-3526-43… [150 chars]",
+  "router": "/api/v1/douyin/web/fetch_one_video_by_share_url",
+  "params": {
+    "share_url": "https://v.douyin.com/e3x2fjE/"
+  },
+  "data": {
+    "aweme_detail": {
+      "activity_video_type": 0,
+      "anchors": null,
+      "authentication_token": "<omitted: expires>",
+      "author": "… {54 field(s) truncated}",
+      "author_mask_tag": 0,
+      "author_user_id": 62128408339,
+      "aweme_control": "… {4 field(s) truncated}",
+      "aweme_id": "6894784055775071503",
+      "aweme_listen_struct": "… {1 field(s) truncated}",
+      "aweme_type": 0,
+      "aweme_type_tags": "",
+      "boost_status": 0,
+      "can_cache_to_local": true,
+      "caption": "",
+      "cf_assets_type": 0,
+      "…": "126 more field(s) truncated"
+    },
+    "log_pb": {
+      "impr_id": "202607281428348093437D5BDCA710680A"
+    },
+    "status_code": 0
+  }
+}

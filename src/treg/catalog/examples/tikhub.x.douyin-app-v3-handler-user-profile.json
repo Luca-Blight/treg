@@ -1,0 +1,49 @@
+{
+  "code": 200,
+  "request_id": "fbb94b4a-f939-4c8d-817c-4ce63c0303da",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:59",
+  "time_stamp": 1785220079,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/handler_user_profi… [108 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/fbb94b4a-f939-4c… [150 chars]",
+  "router": "/api/v1/douyin/app/v3/handler_user_profile",
+  "params": {
+    "sec_user_id": "MS4wLjABAAAAW9FWcqS7RdQAWPd2AA5fL_ilmqsIFUCQ_Iym6Yh9_cUa6ZRq… [76 chars]"
+  },
+  "data": {
+    "extra": {
+      "fatal_item_ids": null,
+      "logid": "202607281427587A6D661003ED404AF77F",
+      "now": 1785220078000,
+      "search_request_id": null
+    },
+    "log_pb": {
+      "impr_id": "202607281427587A6D661003ED404AF77F"
+    },
+    "status_code": 0,
+    "status_msg": null,
+    "user": {
+      "account_cert_info": "{}",
+      "apple_account": 0,
+      "avatar_168x168": "… {4 field(s) truncated}",
+      "avatar_300x300": "… {4 field(s) truncated}",
+      "avatar_is_digged": false,
+      "avatar_larger": "… {4 field(s) truncated}",
+      "avatar_medium": "… {4 field(s) truncated}",
+      "avatar_thumb": "… {4 field(s) truncated}",
+      "aweme_count": 219,
+      "aweme_count_correction_threshold": -1,
+      "birthday": "",
+      "birthday_hide_level": 0,
+      "can_set_item_cover": false,
+      "can_show_group_card": 1,
+      "card_entries": "… [1 item(s) truncated]",
+      "…": "126 more field(s) truncated"
+    }
+  }
+}

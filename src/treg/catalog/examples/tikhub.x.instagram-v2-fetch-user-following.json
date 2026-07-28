@@ -1,0 +1,29 @@
+{
+  "code": 200,
+  "request_id": "2f276f7f-18ac-41b9-9c9f-6afec0e3cadc",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:27",
+  "time_stamp": 1785220287,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V2-API/fetch_user_following_api_v1_instagram_v2_fetch_user_following_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2f276f7f-18ac-41b9-9c9f-6afec0e3cadc?sign=6acc0567503281bc0c25b28bb6b32d1f54d69a2a5c93f1961ab2b1a3c3173d2e",
+  "router": "/api/v1/instagram/v2/fetch_user_following",
+  "params": {
+    "username": "instagram",
+    "user_id": "18527"
+  },
+  "data": {
+    "data": {
+      "count": 50,
+      "items": [
+        "… {7 field(s) truncated}",
+        "… 49 more item(s) truncated"
+      ]
+    },
+    "pagination_token": "<omitted: expires>"
+  }
+}

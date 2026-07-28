@@ -1,0 +1,48 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "expect_cpe": {
+      "cpe_1_20": "818",
+      "cpe_21_60": "1292",
+      "cpe_60": "1723"
+    },
+    "expect_cpm": {
+      "cpm_1_20": "31621",
+      "cpm_21_60": "49927",
+      "cpm_60": "66570"
+    },
+    "interact_rate": {
+      "label": "运动健身"
+    },
+    "item_rate": {
+      "interact_rate": {},
+      "item_num": {
+        "label": "",
+        "overtake": 6700
+      },
+      "play_mid": {
+        "label": ""
+      }
+    },
+    "play_over_rate": {
+      "label": "运动健身"
+    },
+    "play_stability": {
+      "label": "运动健身",
+      "overtake": 8438,
+      "value": 503347
+    },
+    "sales_expect_cpm": {
+      "cpm_1_20": "40982",
+      "cpm_21_60": "64705",
+      "cpm_60": "86275"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:28.4019797",
+  "requestId": "cfb0b2961efb4e0aac3c811b5e51a8cf"
+}

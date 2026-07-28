@@ -1,0 +1,14 @@
+{
+  "siteEntry": [
+    {
+      "siteUrl": "sc-domain:example.org",
+      "permissionLevel": "siteOwner"
+    },
+    {
+      "siteUrl": "sc-domain:example.net",
+      "permissionLevel": "siteOwner"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "_scrubbed": true
+}

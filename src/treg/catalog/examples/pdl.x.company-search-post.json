@@ -1,0 +1,71 @@
+{
+  "status": 200,
+  "data": [
+    {
+      "id": "tnHcNHbCv8MKeLh92946LAkX6PKg",
+      "name": "people data labs",
+      "display_name": "People Data Labs",
+      "size": "51-200",
+      "employee_count": 87,
+      "founded": 2015,
+      "industry": "computer software",
+      "industry_v2": "software development",
+      "naics": null,
+      "sic": null,
+      "location": {
+        "name": "san francisco, california, united states",
+        "locality": "san francisco",
+        "region": "california",
+        "metro": "san francisco, california",
+        "country": "united states",
+        "continent": "north america",
+        "street_address": "455 market street",
+        "address_line_2": "suite 1670",
+        "postal_code": null,
+        "geo": "37.79,-122.39"
+      },
+      "linkedin_id": "18170482",
+      "linkedin_url": "linkedin.com/company/peopledatalabs",
+      "linkedin_slug": "peopledatalabs",
+      "facebook_url": "facebook.com/peopledatalabs",
+      "twitter_url": "twitter.com/peopledatalabs",
+      "profiles": [
+        "linkedin.com/company/18170482",
+        "crunchbase.com/organization/talentiq",
+        "… 3 more item(s) truncated"
+      ],
+      "website": "peopledatalabs.com",
+      "ticker": null,
+      "mic_exchange": null,
+      "type": "private",
+      "summary": "people data labs (pdl) is the leading provider of high-quality, compliant data on people, companies, and job postings.\n\nthrough its network of proprietary sources and the public web, pdl standardizes its dataset into a single source of truth available via api or data sharing.\n\ncompanies building data-driven products in hr, investment research, sales, and marketing turn to pdl for accurate, reliable, and easy-to-use data at scale.",
+      "tags": [
+        "artificial intelligence",
+        "developer apis",
+        "… 8 more item(s) truncated"
+      ],
+      "headline": "People and Company Intelligence",
+      "alternative_names": [],
+      "alternative_domains": [],
+      "affiliated_profiles": [],
+      "total_funding_raised": 55475000.0,
+      "latest_funding_stage": "series_b",
+      "last_funding_date": "2021-11-16",
+      "number_funding_rounds": 7,
+      "funding_stages": [
+        "series_b",
+        "pre_seed",
+        "… 2 more item(s) truncated"
+      ],
+      "employee_count_by_country": {
+        "canada": 1,
+        "other_uncategorized": 2,
+        "united states": 84
+      },
+      "dataset_version": "35.0"
+    }
+  ],
+  "scroll_token": "<omitted: expires>",
+  "total": 1,
+  "dataset_version": "35.0"
+}

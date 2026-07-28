@@ -1,0 +1,36 @@
+{
+  "code": 0,
+  "data": {
+    "best_sellers": [
+      {
+        "rank": 1,
+        "asin": "B08JHCVHTY",
+        "product_title": "blink plus plan with monthly auto-renewal",
+        "product_price": "$11.99",
+        "product_star_rating": "4.4",
+        "product_num_ratings": 278493,
+        "product_url": "https://www.amazon.com/dp/B08JHCVHTY",
+        "product_photo": "https://images-na.ssl-images-amazon.com/images/I/31YHGbJsldL._AC_UL900_SR900,600_.png",
+        "rank_change_label": null
+      },
+      {
+        "rank": 2,
+        "asin": "B0GJTFXNRX",
+        "product_title": "Apple AirTag (2nd Generation): Tracker for Keychain, Wallet, and More; Locator with Sound; Simple One-Tap Setup with iPhone o",
+        "product_price": "$27.00",
+        "product_star_rating": "4.6",
+        "product_num_ratings": 7188,
+        "product_url": "https://www.amazon.com/dp/B0GJTFXNRX",
+        "product_photo": "https://images-na.ssl-images-amazon.com/images/I/61Qd9Z9caRL._AC_UL900_SR900,600_.jpg",
+        "rank_change_label": null
+      },
+      "… 48 more item(s) truncated"
+    ],
+    "category_name": "Electronics",
+    "country": "US",
+    "domain": "www.amazon.com"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:42.04413154",
+  "requestId": "ba44a6bc3ac74627ae474ad518cbe35d"
+}

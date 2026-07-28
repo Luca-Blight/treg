@@ -1,0 +1,46 @@
+{
+  "code": 200,
+  "request_id": "9fe905e8-6836-4ef0-95fb-493e07703357",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:47",
+  "time_stamp": 1785220187,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Reddit-APP-API/fetch_user_profile_ap… [98 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/9fe905e8-6836-4e… [150 chars]",
+  "router": "/api/v1/reddit/app/fetch_user_profile",
+  "params": {
+    "username": "spez",
+    "need_format": "false"
+  },
+  "data": {
+    "redditorInfoByName": {
+      "__typename": "Redditor",
+      "id": "t2_1w72",
+      "name": "spez",
+      "prefixedName": "u/spez",
+      "isFriend": false,
+      "isEmployee": true,
+      "isAcceptingChats": true,
+      "isAcceptingFollowers": true,
+      "isAcceptingPMs": true,
+      "isVerified": true,
+      "isBlocked": false,
+      "accountType": "USER",
+      "profile": "… {16 field(s) truncated}",
+      "profileInfo": "… {1 field(s) truncated}",
+      "profileExemptedExperiments": "… [0 item(s) truncated]",
+      "isProfileContentFiltered": true,
+      "karma": "… {3 field(s) truncated}",
+      "contributionStats": "… {2 field(s) truncated}",
+      "snoovatarIcon": null,
+      "trophyCase": "… {2 field(s) truncated}",
+      "contributorPublicProfile": "… {1 field(s) truncated}",
+      "isGilded": true,
+      "isPremiumAvatarTreatment": true
+    }
+  }
+}

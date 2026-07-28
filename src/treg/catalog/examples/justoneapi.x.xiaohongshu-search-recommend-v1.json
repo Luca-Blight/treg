@@ -1,0 +1,45 @@
+{
+  "code": 0,
+  "data": {
+    "result": {
+      "success": true,
+      "message": "success"
+    },
+    "items": [
+      {
+        "link": "",
+        "type": "top_note",
+        "icon": "http://picasso-static.xiaohongshu.com/fe-platform/ada4a11451816f9500d7a3bfd561edfd23a48a21.png",
+        "icon_night": "http://picasso-static.xiaohongshu.com/fe-platform/20107487de37f8896d23383e41f43df5058f9f62.png",
+        "highlight_flags": [
+          true,
+          true,
+          "… 2 more item(s) truncated"
+        ],
+        "is_intervened": false,
+        "search_type": "notes",
+        "text": "咖啡自制"
+      },
+      {
+        "icon": "http://picasso-static.xiaohongshu.com/fe-platform/ada4a11451816f9500d7a3bfd561edfd23a48a21.png",
+        "icon_night": "http://picasso-static.xiaohongshu.com/fe-platform/20107487de37f8896d23383e41f43df5058f9f62.png",
+        "highlight_flags": [
+          true,
+          true,
+          "… 1 more item(s) truncated"
+        ],
+        "is_intervened": false,
+        "search_type": "notes",
+        "text": "咖啡店",
+        "link": "",
+        "type": "top_note"
+      },
+      "… 14 more item(s) truncated"
+    ],
+    "word_request_id": "fd60be14d7e3d44aece0d9a6094ef29d",
+    "search_cpl_id": "03521cc7678b3db6ac4775946a684580"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:33.221890968",
+  "requestId": "5b39ea2d7d5a46008ce125756d6b8fdb"
+}

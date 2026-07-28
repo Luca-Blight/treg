@@ -1,0 +1,34 @@
+{
+  "code": 200,
+  "request_id": "e7273ba3-89e2-4c05-82d3-0611fbea91e3",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:08",
+  "time_stamp": 1785220328,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/get_user_recommendations_api_v1_linkedin_web_get_user_recommendations_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/e7273ba3-89e2-4c05-82d3-0611fbea91e3?sign=bd9abce3e04062636c1e2a567302de43443887b8911c7cc429e9633b79c70c70",
+  "router": "/api/v1/linkedin/web/get_user_recommendations",
+  "params": {
+    "urn": "ACoAAC3iNKcB3qbWJrP7K5Z3i89AF5c1snr8bhc",
+    "page": "1",
+    "type": "received"
+  },
+  "data": {
+    "page": 1,
+    "total": 53,
+    "has_more": true,
+    "data": [
+      {
+        "text": "Mathew has an amazing way of writing his e-book that supports you on your linkedin journey. Allowing you to effectively navigate and build your community with bringing out your expertise effectively. … [368 chars]",
+        "date": "August 19, 2024",
+        "type": "Clifford was Mathew’s client",
+        "recommender": "… {9 field(s) truncated}"
+      },
+      "… 19 more item(s) truncated"
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "code": 200,
+  "request_id": "d269db53-a99e-45a0-9f43-d94d59ca12ac",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:00",
+  "time_stamp": 1785220380,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Channels-V2-API/fetch_live_de… [113 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d269db53-a99e-45… [150 chars]",
+  "router": "/api/v1/wechat_channels/v2/fetch_live_detail",
+  "params": {
+    "live_id": "2078950291205875194",
+    "scene": 5,
+    "finder_username": "v2_060000231003b20faec8cae1811ac4d5c702ea32b0771737aa785454f… [86 chars]",
+    "raw": true
+  },
+  "data": {
+    "previewJoinliveControlInfo": {
+      "enable": false,
+      "effectSeconds": 0,
+      "pbRequestMsgInfo": null
+    },
+    "baseResponse": {
+      "ret": 0,
+      "errMsg": null,
+      "pbRequestMsgInfo": null
+    },
+    "closePageControlInfo": null,
+    "liveSuggestionJump": [],
+    "replayPrivilege": 0,
+    "coAuthorInfo": null,
+    "bizLiveNewFansNum": 0,
+    "notificationDynamicDisplayInfo": null,
+    "abnormalClosePage": null,
+    "notifyMoreLive": {
+      "pbRequestMsgInfo": null,
+      "leftContent": "更多直播",
+      "entranceType": 1,
+      "recommendMaxCnt": 0
+    },
+    "sharePageStatus": 7,
+    "liveEntranceGuideInfo": null,
+    "enableShowReplaySubscriptionEntry": false,
+    "shareCardDisplayInfo": null,
+    "objectId": 0,
+    "…": "30 more field(s) truncated"
+  }
+}

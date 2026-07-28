@@ -1,0 +1,247 @@
+{
+  "code": 200,
+  "request_id": "6230456e-ec29-40f8-a0a1-ae2401474370",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 20:55:07",
+  "time_stamp": 1785210907,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/fetch_post_comment_api_v1_tiktok_web_fetch_post_comment_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only…",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/6230456e-ec29-40f8-a0a1-ae2401474370?sign=57584df7455e456d84ba90bfc76b5a746bd4f89…",
+  "router": "/api/v1/tiktok/web/fetch_post_comment",
+  "params": {
+    "aweme_id": "7606449212716305678",
+    "count": "5"
+  },
+  "data": {
+    "alias_comment_deleted": false,
+    "comments": [
+      {
+        "allow_download_photo": true,
+        "author_pin": false,
+        "aweme_id": "7606449212716305678",
+        "cid": "7606529313643954962",
+        "collect_stat": 0,
+        "comment_language": "en",
+        "comment_post_item_ids": null,
+        "create_time": 1771033137,
+        "digg_count": 120167,
+        "fold_status": -1,
+        "image_list": [
+          {
+            "crop_url": {
+              "height": 1600,
+              "uri": "tos-alisg-i-zt8igodiya-sg/4c828bee6fca403db073f67cf316029b",
+              "url_list": [
+                "https://p16-comment-sg-sign.tiktokcdn-us.com/tos-alisg-i-zt8igodiya-sg/4c828bee6fca403db073f67cf316029b~tplv-jj85edgx6n-image…",
+                "https://p19-comment-sg-sign.tiktokcdn-us.com/tos-alisg-i-zt8igodiya-sg/4c828bee6fca403db073f67cf316029b~tplv-jj85edgx6n-image…",
+                "… 1 more item(s) truncated"
+              ],
+              "url_prefix": null,
+              "width": 720
+            },
+            "origin_url": {
+              "height": 1600,
+              "uri": "tos-alisg-i-zt8igodiya-sg/4c828bee6fca403db073f67cf316029b",
+              "url_list": [
+                "https://p16-comment-sg-sign.tiktokcdn-us.com/tos-alisg-i-zt8igodiya-sg/4c828bee6fca403db073f67cf316029b~tplv-jj85edgx6n-image…",
+                "https://p19-comment-sg-sign.tiktokcdn-us.com/tos-alisg-i-zt8igodiya-sg/4c828bee6fca403db073f67cf316029b~tplv-jj85edgx6n-image…",
+                "… 1 more item(s) truncated"
+              ],
+              "url_prefix": null,
+              "width": 720
+            },
+            "source": 0
+          }
+        ],
+        "is_author_digged": false,
+        "is_comment_translatable": true,
+        "is_high_purchase_intent": true,
+        "label_list": null,
+        "no_show": false,
+        "reply_comment": null,
+        "reply_comment_total": 41,
+        "reply_id": "0",
+        "reply_to_reply_id": "0",
+        "seeking_help_model_type": 0,
+        "share_info": {
+          "acl": {
+            "add_to_story_code": 0,
+            "code": 0,
+            "extra": "{}"
+          },
+          "desc": "NICOLE’s comment: is this her",
+          "title": "The best TikTok dance rn 😮‍💨 @Zoe Dang @kimberly kim #zoedang #kimberlykim #lamamadelamama #realcj #dancechallenge ",
+          "url": "https://m.tiktok.com/v/7606449212716305678.html?_d=f0ja0akic34cb9&comment_author_id=7422429654504702992&preview_pb=0&share_co…"
+        },
+        "sort_extra_score": {
+          "reply_score": 9.9e-05,
+          "show_more_score": 0.208259
+        },
+        "sort_tags": "{\"top_list\":1}",
+        "status": 1,
+        "stick_position": 0,
+        "text": "is this her",
+        "text_extra": [],
+        "text_to_image_item_ids": null,
+        "thread_has_more": false,
+        "thread_id": 0,
+        "trans_btn_style": 0,
+        "user": {
+          "account_labels": null,
+          "ad_cover_url": null,
+          "advance_feature_item_order": null,
+          "advanced_feature_info": null,
+          "avatar_thumb": {
+            "uri": "tos-alisg-avt-0068/fab4a81f26421679e69134dea85b38ed",
+            "url_list": [
+              "https://p16-common-sign.tiktokcdn-us.com/tos-alisg-avt-0068/fab4a81f26421679e69134dea85b38ed~tplv-tiktokx-cropcenter:100:100.…",
+              "https://p19-common-sign.tiktokcdn-us.com/tos-alisg-avt-0068/fab4a81f26421679e69134dea85b38ed~tplv-tiktokx-cropcenter:100:100.…",
+              "… 1 more item(s) truncated"
+            ],
+            "url_prefix": null
+          },
+          "bold_fields": null,
+          "can_message_follow_status_list": null,
+          "can_set_geofencing": null,
+          "cha_list": null,
+          "cover_url": null,
+          "custom_verify": "",
+          "enterprise_verify_reason": "",
+          "events": null,
+          "followers_detail": null,
+          "geofencing": null,
+          "homepage_bottom_toast": null,
+          "item_list": null,
+          "mutual_relation_avatars": null,
+          "need_points": null,
+          "nickname": "NICOLE",
+          "platform_sync_info": null,
+          "relative_users": null,
+          "search_highlight": null,
+          "sec_uid": "MS4wLjABAAAAxLohPNJFrlZLSwuyAkAoaBhHVDw0tlBiiFsSa5AYIyqm9wLLT4BTpYhWs4rnDqKU",
+          "shield_edit_field_info": null,
+          "type_label": null,
+          "uid": "7422429654504702992",
+          "unique_id": "sheengie0",
+          "user_profile_guide": null,
+          "user_tags": null,
+          "white_cover_url": null
+        },
+        "user_buried": false,
+        "user_digged": 0
+      },
+      {
+        "allow_download_photo": true,
+        "author_pin": false,
+        "aweme_id": "7606449212716305678",
+        "cid": "7606611415797711646",
+        "collect_stat": 0,
+        "comment_language": "en",
+        "comment_post_item_ids": null,
+        "create_time": 1771052330,
+        "digg_count": 29382,
+        "fold_status": -1,
+        "image_list": null,
+        "is_author_digged": false,
+        "is_comment_translatable": true,
+        "is_high_purchase_intent": false,
+        "label_list": null,
+        "no_show": false,
+        "reply_comment": null,
+        "reply_comment_total": 43,
+        "reply_id": "0",
+        "reply_to_reply_id": "0",
+        "seeking_help_model_type": 0,
+        "share_info": {
+          "acl": {
+            "add_to_story_code": 0,
+            "code": 0,
+            "extra": "{}"
+          },
+          "desc": "ilikelimes67’s comment: Kimberly looks so different",
+          "title": "The best TikTok dance rn 😮‍💨 @Zoe Dang @kimberly kim #zoedang #kimberlykim #lamamadelamama #realcj #dancechallenge ",
+          "url": "https://m.tiktok.com/v/7606449212716305678.html?_d=f0ja0akic34cb9&comment_author_id=7100727391399609387&preview_pb=0&share_co…"
+        },
+        "sort_extra_score": {
+          "reply_score": 8.4e-05,
+          "show_more_score": 0.106786
+        },
+        "sort_tags": "{\"top_list\":1}",
+        "status": 1,
+        "stick_position": 0,
+        "text": "Kimberly looks so different",
+        "text_extra": [],
+        "text_to_image_item_ids": null,
+        "thread_has_more": false,
+        "thread_id": 0,
+        "trans_btn_style": 0,
+        "user": {
+          "account_labels": null,
+          "ad_cover_url": null,
+          "advance_feature_item_order": null,
+          "advanced_feature_info": null,
+          "avatar_thumb": {
+            "uri": "tos-useast8-avt-0068-tx2/8c94bc43ccfdc00e1d244ea29a144b7d",
+            "url_list": [
+              "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/8c94bc43ccfdc00e1d244ea29a144b7d~tplv-tiktokx-cropcenter:10…",
+              "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/8c94bc43ccfdc00e1d244ea29a144b7d~tplv-tiktokx-cropcenter:10…",
+              "… 1 more item(s) truncated"
+            ],
+            "url_prefix": null
+          },
+          "bold_fields": null,
+          "can_message_follow_status_list": null,
+          "can_set_geofencing": null,
+          "cha_list": null,
+          "cover_url": null,
+          "custom_verify": "",
+          "enterprise_verify_reason": "",
+          "events": null,
+          "followers_detail": null,
+          "geofencing": null,
+          "homepage_bottom_toast": null,
+          "item_list": null,
+          "mutual_relation_avatars": null,
+          "need_points": null,
+          "nickname": "ilikelimes67",
+          "platform_sync_info": null,
+          "relative_users": null,
+          "search_highlight": null,
+          "sec_uid": "MS4wLjABAAAAvqAH9NegMXxhfGxY58j3rFhMvYC7sYZtHzX_v1JiSGzAqTFUBYb32YLotOX_PZhH",
+          "shield_edit_field_info": null,
+          "type_label": null,
+          "uid": "7100727391399609387",
+          "unique_id": "ilikelimes67",
+          "user_profile_guide": null,
+          "user_tags": null,
+          "white_cover_url": null
+        },
+        "user_buried": false,
+        "user_digged": 0
+      },
+      "… 3 more item(s) truncated"
+    ],
+    "cursor": 5,
+    "extra": {
+      "api_debug_info": null,
+      "fatal_item_ids": null,
+      "now": 1785210907000
+    },
+    "has_filtered_comments": 0,
+    "has_more": 1,
+    "log_pb": {
+      "impr_id": "20260728035507DC049AA166EF07068003"
+    },
+    "reply_style": 2,
+    "status_code": 0,
+    "status_msg": "",
+    "top_gifts": null,
+    "total": 1061,
+    "tt_chain_token": "<omitted: expires>",
+    "cookie": "<omitted: expires>"
+  }
+}

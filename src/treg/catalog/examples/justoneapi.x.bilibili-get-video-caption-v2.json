@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "data": {
+    "data": [
+      {
+        "subtitle_url": "https://aisubtitle.hdslb.com/bfs/ai_subtitle/prod/11680291069016539357713899bd4611dd91ece39ea98a28487f2d204d?auth_key=<omitted: expires>",
+        "lan_doc": "中文",
+        "lan": "ai-zh"
+      }
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:02:42.848361717",
+  "requestId": "f41e626fe89f4012a14f3fc983b6971b"
+}

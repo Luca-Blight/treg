@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "f2733a70-ad2f-4103-8b8e-5cf39c060581",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:52",
+  "time_stamp": 1785220312,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Threads-Web-API/fetch_user_info_api_v1_threads_web_fetch_user_info_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f2733a70-ad2f-4103-8b8e-5cf39c060581?sign=1b9b6f41f91146d5c339c808243af1bf71… [150 chars]",
+  "router": "/api/v1/threads/web/fetch_user_info",
+  "params": {
+    "username": "lilbieber"
+  },
+  "data": {
+    "user": {
+      "pk": "67027868801",
+      "text_post_app_is_private": false,
+      "biography": "",
+      "text_app_biography": "… {1 field(s) truncated}",
+      "account_badges": "… [0 item(s) truncated]",
+      "username": "lilbieber",
+      "friendship_status": null,
+      "profile_pic_url": "https://instagram.fcyw1-1.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-jpg_e… [565 chars]",
+      "follower_count": 15743620,
+      "profile_context_facepile_users": null,
+      "hd_profile_pic_versions": "… [2 item(s) truncated]",
+      "eligible_for_text_app_activation_badge": false,
+      "hide_text_app_activation_badge_on_text_app": false,
+      "full_name": "Justin Bieber",
+      "is_verified": true,
+      "id": "67027868801"
+    }
+  }
+}

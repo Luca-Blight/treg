@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "request_id": "1eba10c9-5819-40ae-8570-886f7b96f778",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:48",
+  "time_stamp": 1785220368,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Search-API/fetch_image_search… [105 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "…": "5 more field(s) truncated"
+}

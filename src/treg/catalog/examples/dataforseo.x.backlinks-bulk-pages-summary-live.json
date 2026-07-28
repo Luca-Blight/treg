@@ -1,0 +1,41 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0846 sec.",
+  "cost": 0.024072,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0576-0000-55d195b912f4",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0718 sec.",
+      "cost": 0.024072,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "bulk_pages_summary",
+        "targets": [
+          "https://dataforseo.com/solutions",
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "total_count": 2,
+          "items_count": 2,
+          "items": [
+            "… {24 field(s) truncated}",
+            "… 1 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

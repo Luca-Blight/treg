@@ -1,0 +1,68 @@
+{
+  "code": 0,
+  "data": {
+    "all_sort_strategies": [
+      {
+        "optional_name": "默认",
+        "suffix_name": "",
+        "type": "default"
+      },
+      "… 2 more item(s) truncated"
+    ],
+    "comment_count": 37980,
+    "comment_count_l1": 23659,
+    "comments": [
+      {
+        "at_users": [],
+        "biz_label": {
+          "group_invite": "false",
+          "product_review": false,
+          "rich_text": "unknown"
+        },
+        "collected": false,
+        "comment_type": 0,
+        "content": "爱🌲护🌲",
+        "downvoted": false,
+        "friend_liked_msg": "",
+        "hidden": false,
+        "id": "6a68466000000000150154a4",
+        "ip_location": "北京",
+        "like_count": 0,
+        "liked": false,
+        "note_id": "6a62e328000000000f01fc16",
+        "score": 0,
+        "share_strategy": 0,
+        "show_tags": [],
+        "show_tags_v2": [],
+        "show_type": "common",
+        "status": 0,
+        "sub_comment_count": 1,
+        "sub_comments": [],
+        "time": 1785218656,
+        "track_id": "interaction-service.local",
+        "translation_strategy": 9,
+        "user": {
+          "additional_tags": {},
+          "ai_agent": false,
+          "current_user": "false",
+          "images": "https://sns-avatar-qc-ae.rednotecdn.com/avatar/1040g2jo31urrteajii604854bohaqe4mso1md40?imageView2/2/w/120/format/jpg",
+          "level": {
+            "image": ""
+          },
+          "nickname": "松林路218号",
+          "red_id": "625209802",
+          "userid": "af15faa07e28212ee9a666277a232"
+        }
+      },
+      "… 9 more item(s) truncated"
+    ],
+    "current_sort_strategy": "latest_v2",
+    "cursor": "<omitted: expires>",
+    "has_more": true,
+    "page_context": "{\"support_folded\":true}",
+    "user_id": "606149320000000001002cdf"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:52.059108156",
+  "requestId": "1b691199ed7846adb440f3c8fd866a61"
+}

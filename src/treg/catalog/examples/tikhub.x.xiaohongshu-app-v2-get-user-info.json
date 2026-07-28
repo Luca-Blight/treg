@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "f7af1711-f944-4c19-b250-c12aa07a2087",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:20",
+  "time_stamp": 1785220400,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/get_user_info… [104 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f7af1711-f944-4c… [150 chars]",
+  "router": "/api/v1/xiaohongshu/app_v2/get_user_info",
+  "params": {
+    "user_id": "61b46d790000000010008153",
+    "share_text": "https://xhslink.com/m/3ZSCJZAMz0a"
+  },
+  "data": {
+    "code": 0,
+    "success": true,
+    "data": {
+      "tab_visible": "… {4 field(s) truncated}",
+      "ip_location": "Beijing",
+      "collected_poi_num": 0,
+      "blocked": false,
+      "liked": 518424,
+      "result": "… {3 field(s) truncated}",
+      "is_login_user_pro_account": false,
+      "collected": 46344,
+      "follows": 7,
+      "recommend_info": "",
+      "real_name_info": "",
+      "default_collection_tab": "",
+      "block_view_to_user": false,
+      "share_link": "https://www.xiaohongshu.com/user/profile/61b46d7900000000100… [145 chars]",
+      "red_club_info": "… {4 field(s) truncated}",
+      "…": "51 more field(s) truncated"
+    },
+    "msg": "成功",
+    "debug_id": "30052dd8",
+    "debug_info": "gAAAAABqaE0wQyYxr4_qTp0U-bDAKxT38GER2YN95MTJsHG-T9wDDUaT4bxe… [440 chars]"
+  }
+}

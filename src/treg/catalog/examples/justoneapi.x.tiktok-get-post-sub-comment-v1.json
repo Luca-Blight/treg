@@ -1,0 +1,55 @@
+{
+  "code": 0,
+  "data": {
+    "comments": [
+      {
+        "aweme_id": "7666214645006421278",
+        "cid": "7667217769079374614",
+        "collect_stat": 0,
+        "comment_language": "ja",
+        "comment_post_item_ids": null,
+        "create_time": 1785163268,
+        "digg_count": 0,
+        "fold_status": 0,
+        "image_list": null,
+        "is_author_digged": false,
+        "is_comment_translatable": true,
+        "is_high_purchase_intent": false,
+        "label_list": null,
+        "no_show": false,
+        "reply_comment": null,
+        "reply_id": "7667212874628858638",
+        "reply_to_reply_id": "0",
+        "seeking_help_model_type": 0,
+        "share_info": "… 4 field(s) truncated",
+        "status": 1,
+        "stick_position": 0,
+        "text": "no shi",
+        "text_extra": "… 0 item(s) truncated",
+        "text_to_image_item_ids": null,
+        "thread_has_more": false,
+        "thread_id": 1,
+        "trans_btn_style": 1,
+        "user": "… 115 field(s) truncated",
+        "user_buried": false,
+        "user_digged": 0
+      }
+    ],
+    "cursor": 1,
+    "extra": {
+      "fatal_item_ids": [],
+      "logid": "20260728061514AA01C3212B502D0CF597",
+      "now": 1785219314000
+    },
+    "has_more": 0,
+    "log_pb": {
+      "impr_id": "20260728061514AA01C3212B502D0CF597"
+    },
+    "status_code": 0,
+    "status_msg": "",
+    "total": 1
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:15:14.56158075",
+  "requestId": "a7f667814f85445fbd49c7ee8ef5f564"
+}

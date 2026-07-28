@@ -1,0 +1,159 @@
+provider: lusha
+source:
+  docs: https://docs.lusha.com/tutorials/v3-migration-guide
+  openapi: null # Lusha renders an OpenAPI-style reference client-side; no fetchable spec document
+  curated: 2026-07-28
+# UNVERIFIED — no credential available at curation time; every path and price below is transcribed
+# from Lusha's official API documentation 2026-07-28. Nothing here has been called.
+#
+# THIS IS THE V3 API, AND V2 IS ON A CLOCK. Most Lusha material still circulating on the web shows
+# the older flat routes (GET /v2/person, GET /v2/company, POST /prospecting/contact/search). Those
+# still answer, but Lusha began sending V2 sunset headers on 2026-05-18 and V2 SHUTS OFF ON
+# 2026-11-18 — roughly four months after this file was curated. Cataloguing V2 would ship a
+# provider that breaks itself before year end, so every path below is V3. Lusha's migration guide
+# maps the old routes onto these, and several GETs became POSTs in the move. The registry's probe
+# (/v3/account/usage) is already on V3.
+#
+# Auth quirk carried over from the registry: the key rides in a header literally named `api_key`,
+# with no scheme prefix — not Authorization, not Bearer.
+#
+# THE COST MODEL, which is the point of the two-step shape: SEARCH is free and ENRICH is charged.
+# The search/prospecting endpoints return non-PII previews plus record ids for nothing; you spend
+# credits only when you pass those ids to an enrich endpoint to reveal emails and phones, and v3
+# bills PER REVEALED DATAPOINT (an email and a phone on the same contact are two charges). The
+# `reveal` array is therefore the real price dial — ask for emails only when you only need emails.
+# `search-and-enrich` collapses both steps into one call and is billed like the enrich step.
+# Credits are sold per plan (API access is generally Pro/Scale and up) and Lusha does not publish
+# the numeric V3 credit costs in its docs — so cost.value is null. It does something better: the
+# FREE GET /v3/account/usage returns a `pricing` object with the authoritative per-action credit
+# costs for the calling plan. Read that endpoint first and you know exactly what every call below
+# will cost you, which no other provider in this catalog offers.
+#
+# Request-body shapes below come from the migration guide and endpoint summaries; Lusha's reference
+# pages render client-side and could not be read in full at curation time, so field lists are the
+# documented essentials rather than an exhaustive schema. Treat `note` as the contract.
+
+pricing_url: https://www.lusha.com/pricing/  # A credit is spent only when contact data is returned.
+endpoints:
+  - id: lusha.people.enrich
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v3/contacts/search-and-enrich
+    name: "Find and enrich a person's contact info"
+    summary: "Enrich a person — work email, direct dial and mobile — from email, LinkedIn or name"
+    input:
+      bodyType: json
+      body:
+        contacts: {type: "array[object]", required: true, note: "the people to look up, each identified by email, linkedinUrl, or firstName + lastName + companyName|companyDomain", example: [{"firstName": "Jane", "lastName": "Doe", "companyDomain": "lusha.com"}]}
+        reveal: {type: "array[string]", required: false, note: "which datapoints to unlock: emails, phones, or both — EACH REVEALED DATAPOINT IS BILLED, so ask only for what you need", example: ["emails"]}
+        waterfallReveal: {type: "array[string]", required: false, note: "datapoints Lusha may fall through to third-party providers for when its own data misses; costs more"}
+      note: "the v3 replacement for the old GET /v2/person. Lusha's differentiator is verified DIRECT-DIAL and MOBILE numbers, not just emails — which is also why phones cost more than emails"
+    test_request:
+      body: {contacts: [{firstName: "Jane", lastName: "Doe", companyDomain: "lusha.com"}], reveal: ["emails"]}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "billed per revealed datapoint (email and phone are separate charges), not per call; a contact Lusha cannot match is free. Dollar value depends on plan."
+    docs_url: https://docs.lusha.com/apis/openapi/enrichment
+
+  - id: lusha.people.search
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v3/contacts/prospecting
+    name: "Search contacts by role and company"
+    summary: "Search Lusha's contacts by title, seniority, company, location or intent (free preview)"
+    input:
+      bodyType: json
+      body:
+        pages: {type: object, required: true, note: "{page: <0-based>, size: <up to 40>} — keep size small", example: {"page": 0, "size": 1}}
+        filters: {type: object, required: true, note: "nested contact and company filters: job titles, seniority, departments, locations, company size, revenue, industry, technologies, intent topics and signals. GET /v3/contacts/prospecting/filters/{filterType} enumerates the accepted values for each filter", example: {"contacts": {"include": {"jobTitles": ["Head of Marketing"]}}}}
+      note: "returns a requestId plus contact ids and NON-PII previews — this step is free. Feed the ids to lusha.people.contacts.enrich to spend credits only on the ones worth revealing. CORRECTED at verify time: the pagination field is `pagination` (min size 10), not `pages`, and it DOES consume 1 credit (contactSearch, per 25 results) despite the docs prose calling it a 'free preview' — see cost block below."
+    test_request:
+      body: {pagination: {page: 0, size: 10}, filters: {contacts: {include: {jobTitles: ["Head of Marketing"]}}}}
+    cost: {type: per_result, value: null, currency: USD, note: "OBSERVED live 2026-07-28: charged 1 credit per up to 25 results (pricing.contactSearch), NOT free as the prose on this endpoint's docs page claims — verify against GET /v3/account/usage.pricing before trusting the docs text on any Lusha endpoint"}
+    docs_url: https://docs.lusha.com/apis/openapi/prospecting-search-and-enrich
+
+  - id: lusha.people.contacts.enrich
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v3/contacts/enrich
+    name: "Reveal contacts' emails and phone numbers"
+    summary: "Reveal emails and phone numbers for contacts you already found in a prospecting search"
+    input:
+      bodyType: json
+      body:
+        ids: {type: "array[string]", required: true, note: "1-100 ids from a prospecting search — CORRECTED at verify time: the field is `ids`, not `contactIds` as the doc prose paraphrases it. Each revealed datapoint is billed, so send only the ids you want", example: ["4389064654"]}
+        reveal: {type: "array[string]", required: false, note: "emails | phones | both — the price dial", example: ["emails"]}
+        waterfallReveal: {type: "array[string]", required: false, note: "subset of `reveal` Lusha may source from third-party providers when its own data misses"}
+        tableId: {type: string, required: false, note: "persist the results into a Lusha Table"}
+      note: "the paid half of the prospecting flow, and the endpoint that makes Lusha's pricing legible: cost scales with ids x datapoints revealed"
+    test_request:
+      body: {ids: ["v1.-R1YwK7SIvBv1FVAOW1zmel9bZ4XD9mxNQ"], reveal: ["emails"]}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "billed per revealed datapoint across the batch (email and phone charged separately)."
+    docs_url: https://docs.lusha.com/apis/openapi/enrichment
+
+  - id: lusha.companies.enrich
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v3/companies/search-and-enrich
+    name: "Find and enrich a company's details"
+    summary: "Enrich a company from domain or name — industry, headcount, revenue, funding, tech"
+    input:
+      bodyType: json
+      body:
+        companies: {type: "array[object]", required: true, note: "the companies to look up, each identified by domain (preferred), name, or Lusha company id", example: [{"domain": "lusha.com"}]}
+      note: "the v3 replacement for the old GET /v2/company. Pass domains rather than names wherever you have them — a name alone is ambiguous. POST /v3/companies/enrich takes companyIds (max 100) when you already hold ids from a prospecting search"
+    test_request:
+      body: {companies: [{domain: "lusha.com"}]}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      note: "billed per company record returned; a no-match is free."
+    docs_url: https://docs.lusha.com/apis/openapi/company-search-and-enrich
+
+  - id: lusha.companies.search
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v3/companies/prospecting
+    name: "Search companies by industry and size"
+    summary: "Search Lusha's companies by industry, headcount, revenue or tech (free preview)"
+    input:
+      bodyType: json
+      body:
+        pages: {type: object, required: true, note: "{page: <0-based>, size: <up to 40>}", example: {"page": 0, "size": 1}}
+        filters: {type: object, required: true, note: "company filters — industry, size, revenue, location, technologies, signals. GET /v3/companies/prospecting/filters/{filterType} enumerates the accepted values", example: {"companies": {"include": {"industries": ["Software"]}}}}
+      note: "same two-step shape as the contact side: free ids and previews here, credits spent by POST /v3/companies/enrich on the ids you keep. CORRECTED at verify time: pagination field is `pagination` (min size 10) not `pages`; filters.companies.include has no `industries` key (real fields per the OpenAPI schema: domains, names, ids, sizes, revenues, mainIndustriesIds, technologies, locations, sicCodes, naicsCodes, signals). It ALSO consumes 1 credit like the contact side (companySearch) despite being called free preview in the prose."
+    test_request:
+      body: {pagination: {page: 0, size: 10}, filters: {companies: {include: {domains: ["lusha.com"]}}}}
+    cost: {type: per_result, value: null, currency: USD, note: "OBSERVED live 2026-07-28: charged 1 credit per up to 25 results (pricing.companySearch), not free as the docs prose claims"}
+    docs_url: https://docs.lusha.com/apis/openapi/prospecting-search-and-enrich/searchprospectingcompanies
+
+  - id: lusha.account.usage
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v3/account/usage
+    name: "Check account credit balance and usage"
+    summary: "See the Lusha plan's credit balance, usage so far and reset date (free)"
+    input:
+      note: "no parameters — the key rides in the api_key header. Returns credits {total, used, remaining}, rateLimits (daily/hourly/minute), the plan, AND a `pricing` object giving the per-action credit cost for this plan — the authoritative source for what the other five endpoints cost. Call it before budgeting a batch. Rate-limited to 5 req/min; Lusha's migration guide also writes the route unversioned as /account/usage"
+    test_request: {queryParams: {}}
+    cost: {type: free, value: 0, currency: USD, note: "explicitly free — consumes no credits. Rate limit 5 req/min"}
+    docs_url: https://docs.lusha.com/apis/openapi/account-usage-api/get-account-usage

@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "name": "data analyst",
+      "count": 365886,
+      "meta": null
+    },
+    {
+      "name": "data engineer",
+      "count": 149881,
+      "meta": null
+    },
+    "… 3 more item(s) truncated"
+  ],
+  "fields": [
+    "job_title",
+    "experience.title.name"
+  ],
+  "status": 200
+}

@@ -1,0 +1,47 @@
+{
+  "code": 200,
+  "request_id": "f5958e81-5f2c-41d3-a768-c7b97a9b0b23",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:54",
+  "time_stamp": 1785220194,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_creator_search_insights_detail_api_v1_tiktok_app_v3_fetch_creator_search_insights_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f5958e81-5f2c-41d3-a768-c7b97a9b0b23?sign=da9147f98f4797d8bd711365002a36590d7bdce458ab4c20b09e189e5979f943",
+  "router": "/api/v1/tiktok/app/v3/fetch_creator_search_insights_detail",
+  "params": {
+    "query_id_str": "122991006",
+    "time_range": "past_30_days",
+    "dimension_list": "gender,age,country"
+  },
+  "data": {
+    "age": [
+      "… {2 field(s) truncated}",
+      "… 6 more item(s) truncated"
+    ],
+    "demographics": {
+      "age": "18-24",
+      "gender": "female",
+      "location": "United States of America"
+    },
+    "extra": {
+      "latency": 51,
+      "logid": "202607280629540AD14AB6E08773132353",
+      "now": 1785220194350,
+      "vgeo": "VGeo-US"
+    },
+    "gender": [
+      "… {2 field(s) truncated}",
+      "… 3 more item(s) truncated"
+    ],
+    "location": [
+      "… {2 field(s) truncated}",
+      "… 5 more item(s) truncated"
+    ],
+    "status_code": 0,
+    "status_msg": ""
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "code": 0,
+  "data": {
+    "authors": [
+      {
+        "attribute_datas": "… 82 field(s) truncated",
+        "extra_data": "… 7 field(s) truncated",
+        "items": "… 2 item(s) truncated",
+        "star_id": "6930060811712856071",
+        "task_infos": "… 1 item(s) truncated"
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "extra_data": {
+      "intent_score": 0.8819037079811096,
+      "is_cpm_project_search": false,
+      "is_intent_consistent": true,
+      "search_author_count": 0,
+      "search_item_count": 0,
+      "search_session_id": "<omitted: expires>",
+      "speaker_live_base_dis": []
+    },
+    "pagination": {
+      "has_more": true,
+      "limit": 20,
+      "page": 1,
+      "total_count": 111
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:08:24.400902241",
+  "requestId": "88d36c391baa4dab86ebfa1002f2778e"
+}

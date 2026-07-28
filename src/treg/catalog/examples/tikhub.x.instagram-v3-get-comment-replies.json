@@ -1,0 +1,26 @@
+{
+  "code": 200,
+  "request_id": "ccd37c56-b331-4ebf-8f4c-16f14205682f",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:40:46",
+  "time_stamp": 1785220846,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V3-API/get_comment_replies_api_v1_instagram_v3_get_comment_replies_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ccd37c56-b331-4ebf-8f4c-16f14205682f?sign=14f2c426d67c002abed8e4588381d67b66aa633758ec35dbd68cb8e863fc8cb7",
+  "router": "/api/v1/instagram/v3/get_comment_replies",
+  "params": {
+    "media_id": "3829530490739515971",
+    "comment_id": "18065937092249736"
+  },
+  "data": {
+    "comments": [],
+    "items": [],
+    "count": 0,
+    "next_min_id": null,
+    "_backend": "igrapi"
+  }
+}

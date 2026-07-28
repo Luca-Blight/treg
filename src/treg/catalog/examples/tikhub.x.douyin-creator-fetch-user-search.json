@@ -1,0 +1,31 @@
+{
+  "code": 200,
+  "request_id": "9331ab8d-75bc-445d-bb2a-2535e77fc9a0",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:13",
+  "time_stamp": 1785220093,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Creator-API/fetch_user_search_api_v1_douyin_creator_fetch_user_search_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/9331ab8d-75bc-445d-bb2a-2535e77fc9a0?sign=a4bcdd3c2d42d0b437d58489e141012589bba3f0e64a541f01434096d120ed02",
+  "router": "/api/v1/douyin/creator/fetch_user_search",
+  "params": {
+    "user_name": "Y"
+  },
+  "data": {
+    "status_code": 0,
+    "status_msg": "",
+    "user_infos": [
+      {
+        "avatar": "https://p11.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-i-0813c001_fd665005323245dc84beb25c3a21242f.jpeg?from=3782654143",
+        "nick_name": "央广军事",
+        "short_id": "ygjstv",
+        "user_id": "100358272741"
+      },
+      "… 19 more item(s) truncated"
+    ]
+  }
+}

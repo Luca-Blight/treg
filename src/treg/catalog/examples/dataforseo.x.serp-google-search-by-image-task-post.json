@@ -1,0 +1,35 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0156 sec.",
+  "cost": 0.0006,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281335-2171-0066-0000-58ba2678c391",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0037 sec.",
+      "cost": 0.0006,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "task_post",
+        "se": "google",
+        "se_type": "search_by_image",
+        "language_code": "en",
+        "location_code": 2840,
+        "image_url": "https://dataforseo.com/wp-content/uploads/2016/11/data_for_seo_light_429.png",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

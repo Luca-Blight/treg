@@ -1,0 +1,37 @@
+{
+  "code": 200,
+  "request_id": "650a2dec-e40f-4af2-a9d4-d35a90ce65cc",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:16",
+  "time_stamp": 1785220216,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/fetch_live_recommend_tabs_api_v1_tiktok_web_fetch_live_recommend_tabs_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/650a2dec-e40f-4af2-a9d4-d35a90ce65cc?sign=4af818ebdd68bb6c9c1dc3cb957b0b67c66d89f92bf3e4637bab288186ae3611",
+  "router": "/api/v1/tiktok/web/fetch_live_recommend_tabs",
+  "params": {},
+  "data": {
+    "data": [
+      {
+        "is_not_show_tab": false,
+        "sub_tabs": [
+          "… {6 field(s) truncated}",
+          "… 49 more item(s) truncated"
+        ],
+        "tab_name": "Gaming",
+        "tab_type": "gaming"
+      },
+      "… 2 more item(s) truncated"
+    ],
+    "extra": {
+      "has_more": true,
+      "if_expire": true,
+      "now": 1785220216860
+    },
+    "status_code": 0,
+    "logid": "2026072814301680E1D1F417244CD53BF8"
+  }
+}

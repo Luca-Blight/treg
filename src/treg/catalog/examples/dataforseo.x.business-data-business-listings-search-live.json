@@ -1,0 +1,56 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.2779 sec.",
+  "cost": 0.01308,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280923-2171-0544-0000-3cb404997c7d",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.2673 sec.",
+      "cost": 0.01308,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "business_data",
+        "function": "search",
+        "categories": [
+          "pizza_restaurant"
+        ],
+        "description": "pizza",
+        "title": "pizza",
+        "is_claimed": true,
+        "location_coordinate": "53.476225,-2.243572,10",
+        "order_by": [
+          "rating.value,desc"
+        ],
+        "filters": [
+          [
+            "rating.value",
+            "… 2 more item(s) truncated"
+          ]
+        ],
+        "limit": 3
+      },
+      "result": [
+        {
+          "total_count": 65,
+          "count": 3,
+          "offset": 0,
+          "offset_token": "<omitted: expires>",
+          "items": [
+            "… 37 field(s) truncated",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "request_id": "51c72cf8-ef5c-41ca-8c65-e1753ce38a22",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:18",
+  "time_stamp": 1785220338,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V3-API/get_post_info_by_code_api_v1_instagram_v3_get_post_info_by_code_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/51c72cf8-ef5c-41ca-8c65-e1753ce38a22?sign=d9d338ac82958f93ca5830e818e08291d2ff5df00f82c4ca51d23d8c4e5dc965",
+  "router": "/api/v1/instagram/v3/get_post_info_by_code",
+  "params": {
+    "code": "DUajw4YkorV"
+  },
+  "data": {
+    "num_results": 1,
+    "more_available": false,
+    "items": [
+      "… {119 field(s) truncated}"
+    ],
+    "auto_load_more_enabled": false,
+    "status": "ok"
+  }
+}

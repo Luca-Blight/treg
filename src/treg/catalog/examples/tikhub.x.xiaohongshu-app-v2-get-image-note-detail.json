@@ -1,0 +1,35 @@
+{
+  "code": 200,
+  "request_id": "714e871f-e85f-48d8-ac0d-6396e620e789",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:16",
+  "time_stamp": 1785220396,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/get_image_note_detail_api_v1_xiaohongshu_app_v2_get_image_note_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/714e871f-e85f-48d8-ac0d-6396e620e789?sign=abf066cbd77ddeec923e09baed5cde5fd985db6a9fdd278b32b7565e3cce97c7",
+  "router": "/api/v1/xiaohongshu/app_v2/get_image_note_detail",
+  "params": {
+    "note_id": "697c0eee000000000a03c308",
+    "share_text": "http://xhslink.com/o/8GqargIxrko"
+  },
+  "data": {
+    "code": 0,
+    "success": true,
+    "data": [
+      {
+        "note_list": "… [1 item(s) truncated]",
+        "comment_list": "… [0 item(s) truncated]",
+        "model_type": "note",
+        "track_id": "",
+        "user": "… {15 field(s) truncated}"
+      }
+    ],
+    "msg": "成功",
+    "debug_id": "f76acd67",
+    "debug_info": "gAAAAABqaE0sBNnRDbupyiJv8DW-hbqEsSzrYDGZxvhIv9InXaD52vkK2HAVOy7eFLWko-70ma7B-utxVhb9LyH5SyqCpI6sZcTWlLeOPoIrCpW0oKaT8FcCYFzAn9-y0AzzzGdroPJ_yryv628BpQCWiLrXigZZUzSDcf87F0vO5jg_yUcFYRyDPuUUjbrEHfWxZEfX… [460 chars]"
+  }
+}

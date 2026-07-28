@@ -1,0 +1,52 @@
+{
+  "code": 0,
+  "data": {
+    "users": [
+      {
+        "id": "5adf13d2e8ac2b1f6071688a",
+        "desc": "小红书号：kafei0",
+        "followed": false,
+        "show_red_official_verify_icon": false,
+        "red_official_verified": false,
+        "link": "xhsdiscover://1/user/user.5adf13d2e8ac2b1f6071688a",
+        "sub_title": "粉丝 45.7万",
+        "reason": "",
+        "name": "咖啡",
+        "image": "https://sns-avatar-qc.xhscdn.com/avatar/618f470309e98aa627ce5819.jpg?imageView2/2/w/360/format/webp",
+        "red_id": "kafei0",
+        "red_official_verify_type": 0,
+        "self": false
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "filters": [
+      {
+        "id": "fans_count",
+        "group_show_type": 0,
+        "filter_tags": [
+          {
+            "need_location_info": false,
+            "id": "all",
+            "name": "不限",
+            "origin_text": "",
+            "icon_url": "",
+            "icon_tail_url": "",
+            "icon_tail_url_night": "",
+            "icon_url_night": "",
+            "sub_filters_select_type": "",
+            "sub_filters": null
+          },
+          "… 5 more item(s) truncated"
+        ],
+        "word_request_id": "a5f45f01ff6164922f2b7248b9df8a18",
+        "invisible": true,
+        "type": "single",
+        "name": "粉丝数量"
+      },
+      "… 1 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:35.112607586",
+  "requestId": "afcc852ee5bb4f2a93f26c5063705e68"
+}

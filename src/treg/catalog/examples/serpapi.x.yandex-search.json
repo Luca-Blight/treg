@@ -1,0 +1,55 @@
+{
+  "search_metadata": {
+    "id": "6a6898e2a3882d4632bafc83",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/VkBjK5Zg6v9WPndca_Bcvw/6a6898e2… [81 chars]",
+    "created_at": "2026-07-28 11:56:18 UTC",
+    "processed_at": "2026-07-28 11:56:18 UTC",
+    "yandex_url": "https://yandex.com/search/?lang=en&lr=84&text=coffee",
+    "raw_html_file": "https://serpapi.com/searches/VkBjK5Zg6v9WPndca_Bcvw/6a6898e2… [81 chars]",
+    "total_time_taken": 1.76
+  },
+  "search_parameters": {
+    "text": "coffee",
+    "engine": "yandex",
+    "lang": "en",
+    "lr": "84",
+    "yandex_domain": "yandex.com",
+    "device": "desktop"
+  },
+  "search_information": {
+    "organic_results_state": "Results for exact spelling",
+    "query_displayed": "coffee"
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "Coffee - Wikipedia",
+      "link": "https://en.wikipedia.org/wiki/Coffee",
+      "displayed_link": "en.wikipedia.org › Coffee",
+      "snippet": "Coffee is a beverage brewed from roasted ground coffee beans… [161 chars]"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://yandex.com/search?text=coffee&lr=84&test-mode=1&no-t… [120 chars]",
+    "other_pages": {
+      "2": "https://yandex.com/search?text=coffee&lr=84&test-mode=1&no-t… [110 chars]",
+      "3": "https://yandex.com/search?text=coffee&lr=84&test-mode=1&no-t… [110 chars]",
+      "4": "https://yandex.com/search?text=coffee&lr=84&test-mode=1&no-t… [110 chars]",
+      "5": "https://yandex.com/search?text=coffee&lr=84&test-mode=1&no-t… [110 chars]"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?device=desktop&engine=yandex… [115 chars]",
+    "next": "https://serpapi.com/search.json?device=desktop&engine=yandex… [115 chars]",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?device=desktop&engine=yandex… [115 chars]",
+      "3": "https://serpapi.com/search.json?device=desktop&engine=yandex… [115 chars]",
+      "4": "https://serpapi.com/search.json?device=desktop&engine=yandex… [115 chars]",
+      "5": "https://serpapi.com/search.json?device=desktop&engine=yandex… [115 chars]"
+    }
+  }
+}

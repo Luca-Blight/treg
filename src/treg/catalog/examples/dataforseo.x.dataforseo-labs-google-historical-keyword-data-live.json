@@ -1,0 +1,44 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.3437 sec.",
+  "cost": 0.01212,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0608-0000-407648875c1b",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.3385 sec.",
+      "cost": 0.01212,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "historical_keyword_data",
+        "se_type": "google",
+        "language_code": "en",
+        "location_code": 2840,
+        "keywords": [
+          "iphone"
+        ]
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "location_code": 2840,
+          "language_code": "en",
+          "items_count": 1,
+          "items": [
+            "… {5 field(s) truncated}"
+          ]
+        }
+      ]
+    }
+  ]
+}

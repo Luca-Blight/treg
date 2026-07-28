@@ -1,0 +1,76 @@
+{
+  "code": 200,
+  "request_id": "bab9e589-7ad7-4b23-b761-f829eb28e324",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 20:55:24",
+  "time_stamp": 1785210924,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_general_search_v2_api_v1_youtube_web_v2_get_general_search_v2_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through the API again.",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/bab9e589-7ad7-4b23-b761-f829eb28e324?sign=a5899efc19deab4750edb166e4a42785a84bca4e7c4fd36a16e4cf9dc6f38025",
+  "router": "/api/v1/youtube/web_v2/get_general_search_v2",
+  "params": {
+    "keyword": "coffee",
+    "type": "video"
+  },
+  "data": {
+    "keyword": "coffee",
+    "videos": [
+      {
+        "video_id": "Gy7nd_A9AIE",
+        "title": "COFFEE (Official Music Video) - Amrinder Gill | Jasmeen Akhtar | Navi Brar  | Raj Ranjodh",
+        "duration": "2:44",
+        "view_count": "14,943,780 views",
+        "published_time": "3 weeks ago",
+        "author": "Rhythm Boyz and Amrinder Gill",
+        "channel_id": "",
+        "thumbnails": [
+          {
+            "url": "https://i.ytimg.com/vi/Gy7nd_A9AIE/hq720.jpg?sqp=-oaymwEjCOgCEMoBSFryq4qpAxUIARUAAAAAGAElAADIQj0AgKJDeAE=&rs=AOn4CLDyUw1kpFnJFKGjntg6NBiYOk-u9A",
+            "width": 360,
+            "height": 202
+          },
+          {
+            "url": "https://i.ytimg.com/vi/Gy7nd_A9AIE/hq720.jpg?sqp=-oaymwEXCNAFEJQDSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLAP3ViGIcDOPcOLlaaUeRt1eyd1VQ",
+            "width": 720,
+            "height": 404
+          }
+        ],
+        "description_snippet": "Singer: Amrinder Gill & Jasmeen Akhtar Lyrics: Raj Ranjodh Music: Armaan Gill & Arnaaz Gill Presentation: Karaj Gill Directed by: ...",
+        "url": "https://www.youtube.com/watch?v=Gy7nd_A9AIE"
+      },
+      {
+        "video_id": "c3hPS6OdFbs",
+        "title": "Miguel - coffee (Official Audio)",
+        "duration": "4:49",
+        "view_count": "15,573,452 views",
+        "published_time": "6 years ago",
+        "author": "Miguel",
+        "channel_id": "UCxU6nh0LHqH9H4-fxWMGsgw",
+        "thumbnails": [
+          {
+            "url": "https://i.ytimg.com/vi/c3hPS6OdFbs/hq720.jpg?sqp=-oaymwEjCOgCEMoBSFryq4qpAxUIARUAAAAAGAElAADIQj0AgKJDeAE=&rs=AOn4CLDVx0j0b3L7hYcytTF1lpeo4RL7qw",
+            "width": 360,
+            "height": 202
+          },
+          {
+            "url": "https://i.ytimg.com/vi/c3hPS6OdFbs/hq720.jpg?sqp=-oaymwEXCNAFEJQDSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLDKaimkyPpDptga7mibmblDvISwtQ",
+            "width": 720,
+            "height": 404
+          }
+        ],
+        "description_snippet": "\"coffee\" by Miguel Listen to Miguel: https://Miguel.lnk.to/listenYD Subscribe to the official Miguel YouTube channel: ...",
+        "url": "https://www.youtube.com/watch?v=c3hPS6OdFbs"
+      },
+      "… 18 more item(s) truncated"
+    ],
+    "shorts": [],
+    "channels": [],
+    "playlists": [],
+    "continuation_token": "<omitted: expires>",
+    "completion_suggestions": []
+  }
+}

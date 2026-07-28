@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "50e866a9-7d71-47cf-b026-de0d40266cb1",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:35",
+  "time_stamp": 1785220235,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-App-API/fetch_video_featured_feed_api_v1_weibo_app_fetch_video_featured_feed_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/50e866a9-7d71-47cf-b026-de0d40266cb1?sign=ddbb108402d9c3575d7c7a5b4ef290ee60b1944fe7d57cefb0cde6416477b86b",
+  "router": "/api/v1/weibo/app/fetch_video_featured_feed",
+  "params": {},
+  "data": {
+    "pageRefresh": "{}",
+    "refreshInfo": "{}",
+    "pageData": "{}",
+    "moreInfo": {
+      "pagingType": "cursor",
+      "error": "网络加载失败，请稍后尝试",
+      "loading": "正在加载更多",
+      "moreType": "default",
+      "params": {
+        "max_id": 0,
+        "count": 20,
+        "page": 2
+      }
+    },
+    "pageTabBar": "{}",
+    "loadedInfo": "{}",
+    "items": [
+      {
+        "category": "card",
+        "data": "… {20 field(s) truncated}",
+        "style": "… {3 field(s) truncated}",
+        "itemExt": "… {1 field(s) truncated}"
+      },
+      "… 34 more item(s) truncated"
+    ],
+    "config": "{}"
+  }
+}

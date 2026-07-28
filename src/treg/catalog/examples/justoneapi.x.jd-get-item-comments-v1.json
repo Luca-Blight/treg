@@ -1,0 +1,52 @@
+{
+  "code": 0,
+  "data": {
+    "data": [
+      {
+        "userNickName": "1***q",
+        "userImgURL": "https://storage.360buyimg.com/default.image/6a645f6465665f696d675f393836323031373632333134353936313533_sma.jpg",
+        "afterComment": {},
+        "commentId": "105623290197946209",
+        "productId": "10160545687002",
+        "buyCount": 2,
+        "commentDate": "2026-07-18 11:44:28",
+        "commentData": "此用户未填写评价内容",
+        "pictureInfoList": [
+          {
+            "picURL": "https://img30.360buyimg.com/shaidan/s300x300_jfs/t1/464724/15/2629/117509/6a5af68cFfb1bc868/0015300400a8afcf.jpg.dpg",
+            "largePicURL": "https://img30.360buyimg.com/shaidan/s1080x1080_jfs/t1/464724/15/2629/117509/6a5af68cFfb1bc868/0015300400a8afcf.jpg.dpg",
+            "mediaType": "1",
+            "liveShooting": "0",
+            "showOrderMediaId": "-759680958"
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "commentScore": "5",
+        "guid": "T6NbP8V0ipUtdROBUqKewn-I",
+        "isPlus": 0,
+        "praiseCnt": 0,
+        "productColor": "羽砂黑",
+        "productSize": "8GB+128GB",
+        "replyList": [
+          {
+            "content": "尊敬的用户您好，感谢您对我们的支持！我们将竭尽全力给您提供更好的服务，期待您的下次光临，祝您生活愉快！"
+          }
+        ]
+      },
+      "… 9 more item(s) truncated"
+    ],
+    "pageInfo": {
+      "maxPage": "15",
+      "nowPage": "1",
+      "good_rate": 100,
+      "good_count": "200+",
+      "general_count": "0",
+      "poor_count": "0",
+      "comment_count": "1000+",
+      "count": "1000"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:30.182348729",
+  "requestId": "d68d728fd0b04ce0bc0f6ea8573381cb"
+}

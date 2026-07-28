@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "f7151f27-ef47-4929-b8dd-db46f4cdfd37",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:09",
+  "time_stamp": 1785220209,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Shop-Web-API/fetch_product_reviews_api_v1_tiktok_shop_web_fetch_product_reviews_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f7151f27-ef47-4929-b8dd-db46f4cdfd37?sign=383df0b533f58c65a470e557b9f89b8e7d7bcd14dd389e7dc9afa02ecd1b41d1",
+  "router": "/api/v1/tiktok/shop/web/fetch_product_reviews",
+  "params": {
+    "product_id": "1729508370969629931",
+    "page_start": "1",
+    "page_size": "5",
+    "sort_rule": "1",
+    "filter_type": "1",
+    "filter_value": "6",
+    "region": "US"
+  },
+  "data": {
+    "has_more": true,
+    "total_reviews": "48563",
+    "product_reviews": [
+      "… {16 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "review_ratings": {
+      "review_count": "48563",
+      "overall_score": 4.2,
+      "rating_result": "… {5 field(s) truncated}"
+    },
+    "base_resp": {
+      "StatusCode": 0,
+      "StatusMessage": "success"
+    }
+  }
+}

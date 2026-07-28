@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "a21374ec-ddb8-4ed8-be37-d7b592890335",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:39",
+  "time_stamp": 1785220059,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-App-API/fetch_one_video_api… [96 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/a21374ec-ddb8-4e… [150 chars]",
+  "router": "/api/v1/bilibili/app/fetch_one_video",
+  "params": {
+    "av_id": "115568241811221",
+    "bv_id": "BV18SCrBGE9E"
+  },
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "aid": 115568241811221,
+      "videos": 1,
+      "tid": 171,
+      "tname": "电子竞技",
+      "copyright": 1,
+      "pic": "http://i1.hdslb.com/bfs/archive/c95688774677b3c8696f82cafd89… [76 chars]",
+      "title": "狙击盛宴！黑豹战胜猎鹰捧杯BLAST香港！26分钟精彩时刻复盘！",
+      "pubdate": 1763432183,
+      "ctime": 1763431681,
+      "desc": "精力有限 可能是最后一期长视频了~ \n剪的时候累 出片的时候还是很有成就感的~",
+      "state": 0,
+      "duration": 1586,
+      "mission_id": 4051462,
+      "rights": "… {14 field(s) truncated}",
+      "owner": "… {3 field(s) truncated}",
+      "…": "43 more field(s) truncated"
+    }
+  }
+}

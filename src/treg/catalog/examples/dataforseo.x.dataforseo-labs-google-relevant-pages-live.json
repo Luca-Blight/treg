@@ -1,0 +1,53 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "3.6354 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0385-0000-66f9e9d9a48b",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "3.6276 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "relevant_pages",
+        "se_type": "google",
+        "target": "amazon.com",
+        "language_name": "English",
+        "location_code": 2840,
+        "filters": [
+          [
+            "metrics.organic.pos_1",
+            "… 2 more item(s) truncated"
+          ],
+          "… 2 more item(s) truncated"
+        ],
+        "limit": 3
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "target": "amazon.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 3758400,
+          "items_count": 3,
+          "items": [
+            "… {3 field(s) truncated}",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

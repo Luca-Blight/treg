@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "credits_remaining": 19801,
+  "credits_charged": 1,
+  "query": "ai agents",
+  "posts": [
+    {
+      "url": "https://www.linkedin.com/posts/aagupta_what-you-need-to-know-ai-agents-activity-7354600338621906944-RvXR",
+      "datePublished": "2025-07-25T19:56:02.566Z",
+      "description": "There's way too much hype about AI agents.\n\nHere's your simple guide:\n\nForget the super complex taxonomies out there. There are 4 categories of tools you should know.\n\n1. Consumer Agents\n\nThe latest L… [1473 chars]",
+      "media": "https://media.licdn.com/dms/image/v2/D4E1FAQHAzpgC7eaKgw/feedshare-document-images_160/B4EZhDHPPEGoAs-/1/1753472629037?e=1785974400&v=beta&t=q_jDkQJd9sfqoPNjiv4DMN02q4DBTcMe8nUeezJ-B5I",
+      "images": [
+        "https://media.licdn.com/dms/image/v2/D4E1FAQHAzpgC7eaKgw/feedshare-document-images_160/B4EZhDHPPEGoAs-/1/1753472629037?e=1785974400&v=beta&t=q_jDkQJd9sfqoPNjiv4DMN02q4DBTcMe8nUeezJ-B5I",
+        "… 8 more item(s) truncated"
+      ],
+      "image": "https://media.licdn.com/dms/image/v2/D4E1FAQHAzpgC7eaKgw/feedshare-document-images_160/B4EZhDHPPEGoAs-/1/1753472629037?e=1785974400&v=beta&t=q_jDkQJd9sfqoPNjiv4DMN02q4DBTcMe8nUeezJ-B5I",
+      "author": {
+        "name": "Aakash Gupta",
+        "url": "https://www.linkedin.com/in/aagupta",
+        "image": "https://media.licdn.com/dms/image/v2/D5603AQGl7mUqMgCLRQ/profile-displayphoto-scale_200_200/B56Z3V9cKNKgAc-/0/1777411150180?e=2147483647&v=beta&t=oVB3kzDdrFGH-2pOYeziFk3m_B8fTCiH190YbTMrgoY",
+        "followers": 318691
+      },
+      "comments": [
+        "… {3 field(s) truncated}",
+        "… 9 more item(s) truncated"
+      ],
+      "likeCount": 217,
+      "commentCount": 25
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "cursor": "2"
+}

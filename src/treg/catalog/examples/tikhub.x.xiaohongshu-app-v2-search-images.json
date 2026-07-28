@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "ffeff60b-6785-4fa8-921e-aafb7cf4bea6",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:21",
+  "time_stamp": 1785220401,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/search_images_api_v1_xiaohongshu_app_v2_search_images_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ffeff60b-6785-4fa8-921e-aafb7cf4bea6?sign=99308a7bd34673176e21a32eedb5322eb3dfab7f226c8edce31049b6ab15a980",
+  "router": "/api/v1/xiaohongshu/app_v2/search_images",
+  "params": {
+    "keyword": "壁纸",
+    "page": "1",
+    "source": "explore_feed"
+  },
+  "data": {
+    "success": true,
+    "data": {
+      "items": "… [20 item(s) truncated]",
+      "filter_items": "… [1 item(s) truncated]"
+    },
+    "code": 0,
+    "msg": "成功",
+    "search_id": "773aa86d7fac4edc",
+    "search_session_id": "<omitted: expires>",
+    "word_request_id": "2dcf63174f0d438386b3a18c6e587cd4",
+    "page": 1,
+    "next_page": 2,
+    "debug_id": "7af1fd29",
+    "debug_info": "gAAAAABqaE0xIsAn8Y1ibirCo0h71c9racKUBkkPSx7QnnVQgIC3cR3gYiQXGZECcvovSEnqqBgii9OBzG-jVGgwNbU1FLl5i6MnCMPruO6PGrK18WtFYBZlqv4V6-YrgLHSqerEZl70pC3MkWJXWY8v59S0TUVfxLCmGhiNhjhFh1ncARnNLYfQdtBGjfOXyazPOQ5M… [440 chars]"
+  }
+}

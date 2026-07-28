@@ -1,0 +1,50 @@
+{
+  "job_change_detected": false,
+  "status": "NO_CHANGE",
+  "resolution_reason": "NO_EXPERIENCE_HISTORY_FOUND",
+  "summary": "Could not load profile data for this URL — the profile may be missing, private, or invalid. Expected company context: leadmagic.",
+  "employee_name": "",
+  "expected_company": "leadmagic",
+  "expected_company_canonical": "leadmagic",
+  "expected_company_resolution": {
+    "input": "leadmagic.io",
+    "resolved": "leadmagic",
+    "method": "EXACT_INPUT",
+    "confidence": null,
+    "note": null
+  },
+  "current_company": "",
+  "current_positions": [],
+  "match_confidence": null,
+  "matched_companies": [],
+  "data_quality": {
+    "has_experience_history": false,
+    "has_current_position": false,
+    "current_position_count": 0,
+    "work_history_entries": 0,
+    "matched_company_count": 0
+  },
+  "current_position": {
+    "title": "",
+    "role_summary": null,
+    "seniority": null,
+    "company": "",
+    "start_date": null,
+    "days_at_job": null,
+    "tenure_formatted": "",
+    "is_current_position": false
+  },
+  "tenure_stats": {
+    "average_tenure_months": 0,
+    "average_tenure_formatted": "0 months",
+    "total_positions": 0,
+    "longest_tenure_months": 0,
+    "longest_tenure_formatted": "0 months",
+    "shortest_tenure_months": 0,
+    "shortest_tenure_formatted": "0 months"
+  },
+  "work_history": [],
+  "profile_found": false,
+  "profile_url": "https://www.linkedin.com/in/example",
+  "credits_consumed": 3
+}

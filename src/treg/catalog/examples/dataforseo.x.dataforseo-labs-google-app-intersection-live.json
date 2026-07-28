@@ -1,0 +1,52 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "13.1793 sec.",
+  "cost": 0.0132,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0452-0000-66d0678c0797",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "13.1688 sec.",
+      "cost": 0.0132,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "app_intersection",
+        "se_type": "google",
+        "app_ids": {
+          "1": "org.telegram.messenger",
+          "2": "com.zhiliaoapp.musically"
+        },
+        "language_name": "English",
+        "location_code": 2840,
+        "limit": 10
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "app_ids": {
+            "1": "org.telegram.messenger",
+            "2": "com.zhiliaoapp.musically"
+          },
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 49183,
+          "items_count": 10,
+          "items": [
+            "… {3 field(s) truncated}",
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

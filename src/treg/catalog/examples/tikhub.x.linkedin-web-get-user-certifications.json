@@ -1,0 +1,33 @@
+{
+  "code": 200,
+  "request_id": "43edb571-7818-4661-8d90-fbd48c0f7424",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-28 01:20:32",
+  "time_stamp": 1785226832,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/get_user_certifications_api_v1_linkedin_web_get_user_certifications_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/43edb571-7818-4661-8d90-fbd48c0f7424?sign=8cea1c19253ac6a1608a7aabfc8108f2b0ce2b3051238fc9cb481ba91973473d",
+  "router": "/api/v1/linkedin/web/get_user_certifications",
+  "params": {
+    "urn": "ACoAAARpiwIBp_SzoeHPlUfOvmtibe08Ea1iCh4",
+    "page": "1"
+  },
+  "data": {
+    "page": 1,
+    "total": 8,
+    "has_more": false,
+    "data": [
+      {
+        "title": "pandas Essential Training",
+        "authority": "Xinquiry -  🗣️ Hire Pre-tested Interns in a Day(Affordable, Fair, Quality Education)",
+        "credential_url": "https://www.linkedin.com/learning/pandas-essential-training/welcome?u=42751868",
+        "issued_at": "May 2024"
+      },
+      "… 7 more item(s) truncated"
+    ]
+  }
+}

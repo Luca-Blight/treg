@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "request_id": "82c4a6d1-9d3d-40ba-9cdb-4cabf69120f4",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:07",
+  "time_stamp": 1785220147,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-App-API/fetch_tag_feed_api_… [94 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "…": "5 more field(s) truncated"
+}

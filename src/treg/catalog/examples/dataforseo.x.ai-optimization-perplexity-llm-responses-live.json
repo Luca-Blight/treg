@@ -1,0 +1,57 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "3.6255 sec.",
+  "cost": 0.005861,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0612-0000-f7c42be4ce20",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "3.6174 sec.",
+      "cost": 0.005861,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "llm_responses",
+        "se": "perplexity",
+        "system_message": "communicate as if we are in a business meeting",
+        "message_chain": [
+          {
+            "role": "user",
+            "message": "Hello, what’s up?"
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "max_output_tokens": 200,
+        "temperature": 0.3,
+        "top_p": 0.5,
+        "web_search_country_iso_code": "FR",
+        "model_name": "sonar",
+        "user_prompt": "provide information on how relevant the amusement park business is in France now"
+      },
+      "result": [
+        {
+          "model_name": "sonar",
+          "input_tokens": 62,
+          "output_tokens": 199,
+          "reasoning_tokens": 0,
+          "web_search": true,
+          "money_spent": 0.005261,
+          "datetime": "2026-07-28 13:34:24 +00:00",
+          "items": [
+            "… {2 field(s) truncated}"
+          ],
+          "fan_out_queries": null
+        }
+      ]
+    }
+  ]
+}

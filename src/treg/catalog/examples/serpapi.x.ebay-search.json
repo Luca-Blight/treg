@@ -1,0 +1,100 @@
+{
+  "search_metadata": {
+    "id": "6a6898ba95e0b35fb0844588",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/JRZcHugHSo4YJ9vtjlmFSA/6a6898ba… [81 chars]",
+    "created_at": "2026-07-28 11:55:38 UTC",
+    "processed_at": "2026-07-28 11:55:38 UTC",
+    "ebay_url": "https://www.ebay.com/sch/i.html?_nkw=Coffee",
+    "raw_html_file": "https://serpapi.com/searches/JRZcHugHSo4YJ9vtjlmFSA/6a6898ba… [81 chars]",
+    "total_time_taken": 4.19
+  },
+  "search_parameters": {
+    "engine": "ebay",
+    "_nkw": "Coffee"
+  },
+  "search_information": {
+    "organic_results_state": "Results for exact spelling",
+    "total_results": 1100000,
+    "query_displayed": "Coffee"
+  },
+  "categories": [
+    {
+      "name": "All"
+    },
+    "… 56 more item(s) truncated"
+  ],
+  "organic_results": [
+    {
+      "sponsored": true,
+      "title": "Seattle’s Best Coffee, Post Alley, Dark Roast, Ground Coffee… [71 chars]",
+      "link": "https://www.ebay.com/itm/137081075896?_skw=Coffee&itmmeta=01… [436 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?ebay_domain=ebay.com&engine=… [96 chars]",
+      "product_id": "137081075896",
+      "condition": "Brand New",
+      "price": "… {2 field(s) truncated}",
+      "shipping": "Free delivery",
+      "location": "Located in United States",
+      "returns": "Free returns",
+      "…": "7 more field(s) truncated"
+    },
+    "… 59 more item(s) truncated"
+  ],
+  "inline_results": [
+    {
+      "title": "Picked For YouTop selling items from trusted sellers | Spons… [65 chars]",
+      "subtitle": "Top selling items from trusted sellers | Sponso⁧red",
+      "items": "… [8 item(s) truncated]"
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "query": "ground coffee",
+      "link": "https://www.ebay.com/sch/i.html?_nkw=ground+coffee&_sop=12"
+    },
+    "… 11 more item(s) truncated"
+  ],
+  "popular_filters": [
+    {
+      "name": "Dark",
+      "parameter": "Roast=Dark",
+      "link": "https://www.ebay.com/sch/i.html?_nkw=Coffee&Roast=Dark",
+      "serpapi_link": "https://serpapi.com/search.json?_nkw=Coffee&engine=ebay&popu… [84 chars]"
+    },
+    "… 5 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=2",
+    "other_pages": {
+      "1": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=1",
+      "2": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=2",
+      "3": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=3",
+      "4": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=4",
+      "5": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=5&rt=nc",
+      "6": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=6&rt=nc",
+      "7": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=7&rt=nc",
+      "8": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=8&rt=nc",
+      "9": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=9&rt=nc",
+      "10": "https://www.ebay.com/sch/i.html?_nkw=Coffee&_pgn=10&rt=nc"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=2&engine=eb… [62 chars]",
+    "next": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=2&engine=eb… [62 chars]",
+    "other_pages": {
+      "1": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=1&engine=eb… [62 chars]",
+      "2": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=2&engine=eb… [62 chars]",
+      "3": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=3&engine=eb… [62 chars]",
+      "4": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=4&engine=eb… [62 chars]",
+      "5": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=5&engine=eb… [62 chars]",
+      "6": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=6&engine=eb… [62 chars]",
+      "7": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=7&engine=eb… [62 chars]",
+      "8": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=8&engine=eb… [62 chars]",
+      "9": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=9&engine=eb… [62 chars]",
+      "10": "https://serpapi.com/search.json?_nkw=Coffee&_pgn=10&engine=e… [63 chars]"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "90b3ec83-5681-46c8-9da8-f54569d5c3d8",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:36",
+  "time_stamp": 1785220356,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V3-API/user_id_to_username… [104 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/90b3ec83-5681-46… [150 chars]",
+  "router": "/api/v1/instagram/v3/user_id_to_username",
+  "params": {
+    "user_id": "25025320"
+  },
+  "data": {
+    "pk": "25025320",
+    "id": "25025320",
+    "username": "instagram",
+    "full_name": "Instagram",
+    "follower_count": 685855155,
+    "following_count": 264,
+    "media_count": 8535,
+    "is_private": false,
+    "is_verified": true,
+    "biography": "Discover what's new on Instagram 🔎✨",
+    "profile_pic_url": "https://scontent-ord5-2.cdninstagram.com/v/t51.82787-19/5508… [585 chars]",
+    "profile_pic_url_hd": "https://scontent-ord5-2.cdninstagram.com/v/t51.82787-19/5508… [560 chars]",
+    "external_url": "https://www.youtube.com/watch?v=H6G9PcvHjj4",
+    "category": "",
+    "edge_followed_by": {
+      "count": 685855155
+    },
+    "edge_follow": {
+      "count": 264
+    },
+    "edge_owner_to_timeline_media": {
+      "count": 8535
+    },
+    "_backend": "igrapi"
+  }
+}

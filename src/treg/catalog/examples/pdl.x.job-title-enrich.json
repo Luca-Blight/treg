@@ -1,0 +1,17 @@
+{
+  "status": 200,
+  "data": {
+    "id": "software engineer",
+    "relevant_skills": [
+      "core java",
+      "microservices",
+      "… 3 more item(s) truncated"
+    ],
+    "similar_job_titles": [
+      "software  engineer",
+      "computer software engineer",
+      "… 3 more item(s) truncated"
+    ],
+    "cleaned_job_title": "software engineer"
+  }
+}

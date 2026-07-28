@@ -1,0 +1,33 @@
+{
+  "data": {
+    "first_name": "Patrick",
+    "last_name": "Collison",
+    "email": "person@example.com",
+    "score": 80,
+    "domain": "stripe.com",
+    "accept_all": true,
+    "position": null,
+    "twitter": null,
+    "linkedin_url": null,
+    "phone_number": null,
+    "company": "Stripe",
+    "source_type": "generated",
+    "sources": [],
+    "verification": {
+      "date": "2026-07-28",
+      "status": "valid"
+    }
+  },
+  "meta": {
+    "params": {
+      "first_name": null,
+      "last_name": null,
+      "full_name": "Patrick Collison",
+      "domain": "stripe.com",
+      "company": null,
+      "linkedin_handle": null,
+      "max_duration": null
+    }
+  },
+  "_scrubbed": true
+}

@@ -1,0 +1,23 @@
+{
+  "code": 200,
+  "request_id": "8656e1f5-d70c-40f9-8d9f-4037835f4ebd",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:48",
+  "time_stamp": 1785220128,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Xingtu-V2-API/get_playlet_actor_rank_catalog_api_v1_douyin_xingtu_v2_get_playlet_actor_rank_catalog_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/8656e1f5-d70c-40f9-8d9f-4037835f4ebd?sign=61116b6e8f052dccd0d49d3fb76328584edb86c6ca3e8b26065cb07a588bfc8c",
+  "router": "/api/v1/douyin/xingtu_v2/get_playlet_actor_rank_catalog",
+  "params": {},
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "catalog": "{\"type\":1,\"children\":{\"playlet_actor_list\":{\"type\":2,\"children\":{\"playlet_actor_composite_list\":{\"type\":4,\"children\":{\"30\":{\"type\":5,\"children\":{\"20250930\":{\"type\":6},\"20251031\":{\"type\":6},\"20251130\":… [218 chars]"
+  }
+}

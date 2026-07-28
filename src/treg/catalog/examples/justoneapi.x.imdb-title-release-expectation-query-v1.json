@@ -1,0 +1,84 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "__typename": "Title",
+      "id": "tt0111161",
+      "titleText": {
+        "text": "The Shawshank Redemption",
+        "isOriginalTitle": true
+      },
+      "originalTitleText": {
+        "text": "The Shawshank Redemption",
+        "isOriginalTitle": true
+      },
+      "releaseYear": {
+        "__typename": "YearRange",
+        "year": 1994,
+        "endYear": null
+      },
+      "releaseDate": {
+        "__typename": "ReleaseDate",
+        "month": 10,
+        "day": 14,
+        "year": 1994,
+        "country": {
+          "id": "US"
+        },
+        "restriction": null,
+        "attributes": [],
+        "displayableProperty": {
+          "qualifiersInMarkdownList": null
+        }
+      },
+      "titleType": {
+        "__typename": "TitleType",
+        "id": "movie",
+        "text": "Movie",
+        "categories": [
+          "… 3 field(s) truncated"
+        ],
+        "canHaveEpisodes": false,
+        "isEpisode": false,
+        "isSeries": false,
+        "displayableProperty": {
+          "value": "… 1 field(s) truncated"
+        }
+      },
+      "primaryImage": {
+        "__typename": "Image",
+        "id": "rm1690056449",
+        "url": "https://m.media-amazon.com/images/M/MV5BMDAyY2FhYjctNDc5OS00… [109 chars total]",
+        "height": 1800,
+        "width": 1200
+      },
+      "productionStatus": {
+        "__typename": "ProductionStatusDetails",
+        "announcements": null,
+        "currentProductionStage": {
+          "id": "released",
+          "text": "Released"
+        },
+        "productionStatusHistory": [
+          "… 3 field(s) truncated"
+        ]
+      },
+      "episodes": null,
+      "wideReleaseDates": {
+        "edges": [
+          "… 1 field(s) truncated",
+          "… 46 more item(s) truncated"
+        ]
+      },
+      "excludeWideReleaseDates": {
+        "edges": [
+          "… 1 field(s) truncated",
+          "… 23 more item(s) truncated"
+        ]
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:03.211448037",
+  "requestId": "5165210b1ab8476584dc263d72a56c82"
+}

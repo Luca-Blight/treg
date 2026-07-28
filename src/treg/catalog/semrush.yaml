@@ -1,0 +1,361 @@
+provider: semrush
+source:
+  docs: https://developer.semrush.com/api/v3/analytics/basic-docs/
+  openapi: null # Semrush publishes no machine-readable spec for the classic (v3) Analytics API
+  curated: 2026-07-28
+
+# UNVERIFIED — no credential available at curation time; every path, parameter and price below is
+# transcribed from Semrush's official v3 Analytics docs 2026-07-28. Nothing here has been called.
+#
+# House rules for this provider (they apply to EVERY endpoint below, so they are stated once):
+#
+#  1. TWO REPORT FAMILIES, TWO PATHS, ONE HOST. Semrush splits the classic API in two: Domain and
+#     Keyword reports answer at the host ROOT, Backlinks reports answer under `/analytics/v1/`.
+#     Both are on api.semrush.com, which is what treg's base_url
+#     (oauth_providers.SEMRUSH.base_url = "https://api.semrush.com/") points at, so both families
+#     are reachable from this provider — no endpoint here is stranded on a host treg cannot call.
+#     ⚠️ base_url ENDS IN A SLASH and the paths below BEGIN with one. Depending on how the caller
+#     joins them that yields "https://api.semrush.com//" or ".../analytics/v1/" with a doubled
+#     slash. Semrush tolerates the doubled slash today, but a join that collapses it is the safe
+#     behaviour — worth confirming once against treg's URL binding before trusting the first live
+#     call, because a 404 here would look like a wrong path rather than a joining artefact.
+#     The report itself is selected by the `type` query param, not by the path, so many entries
+#     below share a path and differ only in `type`. Getting `type` wrong is the single most common
+#     way to call the wrong report.
+#  2. The API key rides as `?key=…` and is INJECTED by treg — never list it as user input.
+#  3. RESPONSES ARE CSV, NOT JSON. Every report answers `text/plain` with a semicolon-separated
+#     header row followed by data rows (`export_escape=1` wraps each column in double quotes).
+#     Nothing in this file can be checked with an `expect: {json_path: …}` block, and any consumer
+#     has to parse CSV. Errors are ALSO plain text with HTTP 200 in some cases — the body reads
+#     `ERROR 50 :: NOTHING FOUND` — so "did it work?" means "does the body start with ERROR".
+#  4. `export_columns` selects which columns come back, and the two families behave DIFFERENTLY.
+#     On domain and keyword reports it is genuinely optional — omit it and Semrush sends that
+#     report's documented default set (the examples below are those defaults). On the BACKLINKS
+#     reports it is effectively required: they serve no default column set, so omitting it returns
+#     an empty or near-empty row that you were still billed for. It is marked required there.
+#  5. BILLING IS IN API UNITS, NOT DOLLARS. Units are bought as a package on top of a Business
+#     subscription (packages of 2M / 5M / 10M / 20M units), so there is no fixed per-call $ price
+#     and `cost.value` is null throughout — the unit price per report lives in `cost.note` and is
+#     quoted verbatim from each report's docs page. Most reports charge PER LINE RETURNED, so
+#     `display_limit` is the cost dial: a domain_organic call with the default limit (10,000 lines)
+#     costs 100,000 units. ALWAYS send an explicit small `display_limit`.
+#     Historical data (`display_date` in the past) costs 5x the live price on most reports.
+#
+# NO account.usage ENTRY, deliberately: Semrush's free unit-balance check is
+# `GET http://www.semrush.com/users/countapiunits.html?key=…`, which is on www.semrush.com — a
+# DIFFERENT host from base_url — so it cannot be expressed as a path under this provider. treg's
+# registry already handles it out-of-band via OAuthProvider.probe_url. The other free meter,
+# `GET http://api.semrush.com/analytics/ta/limits/key/<API_KEY>`, IS on this host but carries the
+# key in the URL PATH, which treg's query-param token binding cannot produce. Hence neither is
+# catalogued.
+
+
+limits: "10 requests/second"
+pricing_url: https://www.semrush.com/api-documentation/  # API units are bought separately from the UI subscription; cost scales with the number of rows requested.
+endpoints:
+  # --- Domain & keyword reports (host root) -----------------------------------------------------
+  - id: semrush.google.domain.ranked_keywords
+    capability: google.domain.ranked_keywords
+    platform: google
+    scope: any_account
+    method: GET
+    path: /
+    name: "List Google keywords a domain ranks for"
+    summary: "Google keywords a domain ranks for in the top 100, with position, volume and traffic"
+    input:
+      queryParams:
+        type: {type: string, required: true, note: "the report selector — must be the literal string below", example: "domain_organic"}
+        domain: {type: string, required: true, note: "bare domain, no scheme", example: "seobook.com"}
+        database: {type: string, required: true, note: "regional database code, e.g. us, uk, de — see the Databases list in the docs", example: "us"}
+        display_limit: {type: integer, required: false, note: "COST DIAL — omitting it (or sending 0) returns the DEFAULT 10,000 lines and bills for all of them. Max 100,000 per request", example: 10}
+        display_offset: {type: integer, required: false, note: "skip N results; display_limit must be raised by the same amount"}
+        display_sort: {type: string, required: false, note: "po_asc/po_desc, tr_asc/tr_desc, nq_asc/nq_desc, kd_asc/kd_desc, cp_asc/cp_desc …", example: "tr_desc"}
+        display_filter: {type: string, required: false, note: "Semrush filter DSL, e.g. '+|Ph|Co|seo' (phrase contains seo); must be URL-encoded"}
+        display_date: {type: string, required: false, note: "YYYYMM15 for a monthly snapshot, YYYYMMDD for a daily one. A PAST date makes this a historical request at 50 units/line instead of 10"}
+        display_daily: {type: integer, required: false, note: "1 = daily position changes over the last 31 days; only applies when display_positions is set"}
+        display_positions: {type: string, required: false, note: "new | lost | rise | fall — restrict to keywords that entered, left, gained or lost positions"}
+        export_columns: {type: string, required: false, note: "comma-separated; default Ph,Po,Pp,Pd,Nq,Cp,Ur,Tr,Tc,Co,Nr,Td. Ph=phrase Po=position Nq=volume Cp=CPC Ur=ranking URL Tr=traffic share Kd=difficulty", example: "Ph,Po,Nq,Cp,Ur,Tr"}
+        export_escape: {type: integer, required: false, note: "1 wraps every CSV column in double quotes — set it if any field can contain a semicolon"}
+      note: "CSV response, semicolon-separated. The `key` query param is injected by treg."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "10 API units per LINE returned (50 units per line for historical data via display_date). Units are pre-purchased in packages, so there is no fixed $ price. Send display_limit — the default is 10,000 lines = 100,000 units."
+    docs_url: https://developer.semrush.com/api/v3/analytics/domain-reports/#domain-organic-search-keywords
+
+  - id: semrush.google.domain.paid_keywords
+    capability: google.domain.paid_keywords
+    platform: google
+    scope: any_account
+    method: GET
+    path: /
+    name: "List Google Ads keywords a domain bids on"
+    summary: "List the Google Ads keywords a domain bids on, with ad position, CPC and the live ad copy"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "domain_adwords"}
+        domain: {type: string, required: true, example: "ebay.com"}
+        database: {type: string, required: true, example: "us"}
+        display_limit: {type: integer, required: false, note: "COST DIAL — default is 10,000 lines", example: 10}
+        display_offset: {type: integer, required: false}
+        display_sort: {type: string, required: false, note: "po_asc/po_desc, nq_desc, cp_desc …", example: "po_asc"}
+        display_filter: {type: string, required: false}
+        display_date: {type: string, required: false, note: "past dates bill at the historical rate (100 units/line)"}
+        display_positions: {type: string, required: false, note: "new | lost | rise | fall"}
+        export_columns: {type: string, required: false, note: "default Ph,Po,Pp,Pd,Nq,Cp,Vu,Tr,Tc,Co,Nr,Td. Vu=visible ad URL, Tt=ad title, Ds=ad description", example: "Ph,Po,Nq,Cp,Vu,Tt,Ds"}
+        export_escape: {type: integer, required: false}
+      note: "CSV response. Semrush's paid-search view of a domain — the PPC counterpart of domain_organic."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "20 API units per LINE returned (100 units per line for historical data). Send display_limit — the default is 10,000 lines."
+    docs_url: https://developer.semrush.com/api/v3/analytics/domain-reports/#domain-paid-search-keywords
+
+  - id: semrush.google.domain.competitors
+    capability: google.domain.competitors
+    platform: google
+    scope: any_account
+    method: GET
+    path: /
+    name: "List Google organic competitors for a domain"
+    summary: "Domains competing with a target in Google organic, ranked by shared keywords"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "domain_organic_organic"}
+        domain: {type: string, required: true, example: "seobook.com"}
+        database: {type: string, required: true, example: "us"}
+        display_limit: {type: integer, required: false, note: "COST DIAL — default is 10,000 lines", example: 10}
+        display_offset: {type: integer, required: false}
+        export_columns: {type: string, required: false, note: "default Dn,Cr,Np,Or,Ot,Oc,Ad. Dn=competitor domain, Cr=competition level, Np=common keywords, Or=organic keyword count, Ot=organic traffic", example: "Dn,Cr,Np,Or,Ot"}
+        export_escape: {type: integer, required: false}
+      note: "CSV response. `Cr` (competition level) is Semrush's overlap score, not a market-share figure."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "40 API units per LINE returned (200 units per line for historical data). Send display_limit — the default is 10,000 lines."
+    docs_url: https://developer.semrush.com/api/v3/analytics/domain-reports/#competitors-in-organic-search
+
+  - id: semrush.google.keywords.volume
+    capability: google.keywords.volume
+    platform: google
+    scope: any_account
+    method: GET
+    path: /
+    name: "Get search volume for a keyword"
+    summary: "Get Google search volume, CPC, competition and result count for a single keyword"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "phrase_this"}
+        phrase: {type: string, required: true, note: "the keyword to look up", example: "seo"}
+        database: {type: string, required: true, example: "us"}
+        display_date: {type: string, required: false, note: "YYYYMM15 for a past month; historical requests bill at 50 units/line"}
+        export_columns: {type: string, required: false, note: "default Ph,Nq,Cp,Co,Nr,Td. Nq=volume Cp=CPC Co=competition Nr=number of results Td=12-month trend", example: "Ph,Nq,Cp,Co,Nr,Td"}
+        export_escape: {type: integer, required: false}
+      note: |
+        CSV response, one data line per keyword. `phrase_this` takes ONE keyword; for a batch use
+        `type=phrase_these` with keywords joined by semicolons (phrase=ebay;seo), same price per
+        line, which is much cheaper per keyword than looping this endpoint.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "10 API units per LINE returned (50 units per line for historical data via display_date). One keyword = one line."
+    docs_url: https://developer.semrush.com/api/v3/analytics/keyword-reports/#keyword-overview-one-database
+
+  - id: semrush.google.keywords.ideas
+    capability: google.keywords.ideas
+    platform: google
+    scope: any_account
+    method: GET
+    path: /
+    name: "List related keyword ideas"
+    summary: "Get keywords semantically related to a seed keyword, each with volume, CPC and competition"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "phrase_related"}
+        phrase: {type: string, required: true, note: "the seed keyword", example: "seo"}
+        database: {type: string, required: true, example: "us"}
+        display_limit: {type: integer, required: false, note: "COST DIAL — default is 10,000 lines at 40 units each", example: 10}
+        display_offset: {type: integer, required: false}
+        display_sort: {type: string, required: false, example: "nq_desc"}
+        display_filter: {type: string, required: false, note: "e.g. '+|Nq|Lt|1000' = volume less than 1000; URL-encode it"}
+        export_columns: {type: string, required: false, note: "default Ph,Nq,Cp,Co,Nr,Td,Rr,Fk. Rr=relevance to the seed, Fk=SERP features", example: "Ph,Nq,Cp,Co,Rr"}
+        export_escape: {type: integer, required: false}
+      note: |
+        CSV response. `phrase_related` is the semantic-similarity report. Two nearby alternatives with
+        different economics: `phrase_fullsearch` (broad match, 20 units/line) and `phrase_questions`
+        (question keywords only, 40 units/line) — same parameter shape, different `type`.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "40 API units per LINE returned. Send display_limit — the default is 10,000 lines = 400,000 units."
+    docs_url: https://developer.semrush.com/api/v3/analytics/keyword-reports/#related-keywords
+
+  - id: semrush.google.serp.organic
+    capability: google.serp.organic
+    platform: google
+    scope: any_account
+    method: GET
+    path: /
+    name: "List Google organic search results for a keyword"
+    summary: "List the domains and URLs ranking in Google's top 100 organic results for a keyword"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "phrase_organic"}
+        phrase: {type: string, required: true, note: "the keyword whose SERP you want", example: "seo"}
+        database: {type: string, required: true, example: "us"}
+        display_limit: {type: integer, required: false, note: "COST DIAL — one line per ranking URL; 10 gives the first page of results", example: 10}
+        display_offset: {type: integer, required: false}
+        display_sort: {type: string, required: false}
+        display_filter: {type: string, required: false}
+        display_date: {type: string, required: false, note: "YYYYMM15 for a past month; historical requests bill at 50 units/line"}
+        export_columns: {type: string, required: false, note: "default Dn,Ur,Fk,Fp. Dn=ranking domain, Ur=ranking URL, Fk=SERP features present, Fp=SERP features the URL occupies", example: "Dn,Ur,Fk,Fp"}
+        export_escape: {type: integer, required: false}
+      note: |
+        CSV response. This is Semrush's DATABASE view of the SERP, not a live scrape — positions come
+        from Semrush's last crawl of that keyword in that regional database, so it is cheaper and
+        faster than a live SERP API but can lag by days. Use a live SERP provider when freshness matters.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "10 API units per LINE returned (50 units per line for historical data). One ranking URL = one line, so a full top-100 pull costs 1,000 units."
+    docs_url: https://developer.semrush.com/api/v3/analytics/keyword-reports/#organic-results
+
+  # --- Backlinks reports (host path /analytics/v1/) ----------------------------------------------
+  # Everything below lives on a DIFFERENT PATH from the reports above. Same host, same `key`,
+  # same CSV, but `target` + `target_type` replace `domain` + `database`.
+  - id: semrush.web.backlinks.summary
+    capability: web.backlinks.summary
+    platform: web
+    scope: any_account
+    method: GET
+    path: /analytics/v1/
+    name: "Get backlink profile summary"
+    summary: "Aggregate backlink profile — Authority Score, links, referring domains, follow split"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "backlinks_overview"}
+        target: {type: string, required: true, note: "domain, subdomain or full URL — must match target_type", example: "searchenginejournal.com"}
+        target_type: {type: string, required: true, note: "root_domain | domain | url", example: "root_domain"}
+        export_columns: {type: string, required: true, note: "EFFECTIVELY REQUIRED on the backlinks family — unlike the domain/keyword reports these serve no default column set, so omitting it gets you an empty or near-empty row. Columns: ascore (Authority Score), total, domains_num, urls_num, ips_num, ipclassc_num, follows_num, nofollows_num, texts_num, images_num, forms_num, frames_num", example: "ascore,total,domains_num,urls_num,ips_num,follows_num,nofollows_num"}
+        export_escape: {type: integer, required: false}
+      note: "CSV response, a single data line. This is the one backlinks report priced per REQUEST rather than per line, so it is the cheap way to compare many domains' authority one call at a time."
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "40 API units per REQUEST (not per line) — the whole summary is one flat charge."
+    docs_url: https://developer.semrush.com/api/v3/analytics/backlinks/#backlinks-overview
+
+  - id: semrush.web.backlinks.list
+    capability: web.backlinks.list
+    platform: web
+    scope: any_account
+    method: GET
+    path: /analytics/v1/
+    name: "List backlinks to a domain or URL"
+    summary: "Individual backlinks to a domain or URL, with source page, anchor and follow status"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "backlinks"}
+        target: {type: string, required: true, example: "searchenginejournal.com"}
+        target_type: {type: string, required: true, note: "root_domain | domain | url", example: "root_domain"}
+        display_limit: {type: integer, required: false, note: "COST DIAL — one line per backlink at 40 units each", example: 10}
+        display_offset: {type: integer, required: false}
+        display_sort: {type: string, required: false, note: "e.g. last_seen_desc, page_ascore_desc"}
+        display_filter: {type: string, required: false}
+        export_columns: {type: string, required: true, note: "EFFECTIVELY REQUIRED — the backlinks family serves no default column set. Columns: page_ascore, source_title, source_url, target_url, anchor, external_num, internal_num, first_seen, last_seen, nofollow", example: "page_ascore,source_url,target_url,anchor,nofollow,last_seen"}
+        export_escape: {type: integer, required: false, note: "worth setting here — anchor text and page titles routinely contain semicolons"}
+      note: "CSV response, one line per backlink."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "40 API units per LINE returned. Send display_limit — the default is 10,000 lines = 400,000 units."
+    docs_url: https://developer.semrush.com/api/v3/analytics/backlinks/#backlinks
+
+  - id: semrush.web.linking_domains.list
+    capability: web.linking_domains.list
+    platform: web
+    scope: any_account
+    method: GET
+    path: /analytics/v1/
+    name: "List referring domains linking to a target"
+    summary: "Referring domains linking to a target, with Authority Score, country and link count"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "backlinks_refdomains"}
+        target: {type: string, required: true, example: "searchenginejournal.com"}
+        target_type: {type: string, required: true, note: "root_domain | domain | url", example: "root_domain"}
+        display_limit: {type: integer, required: false, note: "COST DIAL — one line per referring domain", example: 10}
+        display_offset: {type: integer, required: false}
+        display_sort: {type: string, required: false, note: "default backlinks_num_desc", example: "backlinks_num_desc"}
+        display_filter: {type: string, required: false}
+        export_columns: {type: string, required: true, note: "EFFECTIVELY REQUIRED — the backlinks family serves no default column set. Columns: domain_ascore, domain, backlinks_num, ip, country, first_seen, last_seen", example: "domain_ascore,domain,backlinks_num,country,first_seen,last_seen"}
+        export_escape: {type: integer, required: false}
+      note: "CSV response, one line per referring domain."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "40 API units per LINE returned. Send display_limit — the default is 10,000 lines."
+    docs_url: https://developer.semrush.com/api/v3/analytics/backlinks/#referring-domains
+
+  - id: semrush.web.anchors.list
+    capability: web.anchors.list
+    platform: web
+    scope: any_account
+    method: GET
+    path: /analytics/v1/
+    name: "List anchor texts in a backlink profile"
+    summary: "Anchor texts across a target's backlink profile, with domain and link counts"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "backlinks_anchors"}
+        target: {type: string, required: true, example: "searchenginejournal.com"}
+        target_type: {type: string, required: true, note: "root_domain | domain | url", example: "root_domain"}
+        display_limit: {type: integer, required: false, note: "COST DIAL — one line per anchor phrase", example: 10}
+        display_offset: {type: integer, required: false}
+        display_sort: {type: string, required: false, note: "default backlinks_num_desc", example: "backlinks_num_desc"}
+        display_filter: {type: string, required: false}
+        export_columns: {type: string, required: true, note: "EFFECTIVELY REQUIRED — the backlinks family serves no default column set. Columns: anchor, domains_num, backlinks_num, first_seen, last_seen", example: "anchor,domains_num,backlinks_num,first_seen,last_seen"}
+        export_escape: {type: integer, required: false, note: "set it — anchor text frequently contains semicolons"}
+      note: "CSV response, one line per anchor phrase."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "40 API units per LINE returned. Send display_limit — the default is 10,000 lines."
+    docs_url: https://developer.semrush.com/api/v3/analytics/backlinks/#anchors
+
+  - id: semrush.web.backlinks.competitors
+    capability: web.backlinks.competitors
+    platform: web
+    scope: any_account
+    method: GET
+    path: /analytics/v1/
+    name: "List backlink competitors for a domain"
+    summary: "Domains whose backlink profile overlaps a target's, by shared referring domains"
+    input:
+      queryParams:
+        type: {type: string, required: true, example: "backlinks_competitors"}
+        target: {type: string, required: true, example: "searchenginejournal.com"}
+        target_type: {type: string, required: true, note: "root_domain | domain | url", example: "root_domain"}
+        display_limit: {type: integer, required: false, note: "COST DIAL — one line per competitor domain", example: 10}
+        display_offset: {type: integer, required: false}
+        display_sort: {type: string, required: false}
+        display_filter: {type: string, required: false}
+        export_columns: {type: string, required: true, note: "EFFECTIVELY REQUIRED — the backlinks family serves no default column set. Columns: ascore, neighbour (the competitor domain), similarity, common_refdomains, domains_num, backlinks_num", example: "ascore,neighbour,similarity,common_refdomains,domains_num"}
+        export_escape: {type: integer, required: false}
+      note: "CSV response, one line per competitor. `neighbour` is the competing domain and `common_refdomains` is the overlap count — this is the link-gap prospecting report."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "40 API units per LINE returned. Send display_limit — the default is 10,000 lines."
+    docs_url: https://developer.semrush.com/api/v3/analytics/backlinks/#backlinks-competitors

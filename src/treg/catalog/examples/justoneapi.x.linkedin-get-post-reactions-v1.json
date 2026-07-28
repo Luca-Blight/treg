@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "data": {
+    "page": 1,
+    "total": null,
+    "has_more": false,
+    "data": []
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:07:14.385077912",
+  "requestId": "27cd9a54639c471bbb2a68b301a931cd"
+}

@@ -1,0 +1,63 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "masterpiece_videos": [
+      {
+        "author_id": "62781260366",
+        "cover_uri": "tos-cn-i-0813c000-ce/ocs91vEFRAm6u8efA9v… [59 chars total]",
+        "create_time": "1774083069",
+        "duration": 10.9,
+        "id": "7619628758806307451",
+        "stats": "… 7 field(s) truncated",
+        "title": "有机会一定要体验一次冲浪 #冲浪",
+        "url": "https://www.iesdouyin.com/share/video/76… [458 chars total]",
+        "video_id": "v1e00fgi0000d6v5nqnog65v77thikh0"
+      }
+    ],
+    "newest_video": {
+      "author_id": "62781260366",
+      "cover_uri": "tos-cn-i-0813c000-ce/ogMAJiCBwqAClF6ifAp… [59 chars total]",
+      "create_time": "1775901600",
+      "duration": 13.767,
+      "id": "7627181871163557497",
+      "stats": {
+        "avg_watch_dura": "0",
+        "comment_cnt": "279",
+        "favorite_cnt": "3044",
+        "interact_rate": 0.0412,
+        "like_cnt": "17266",
+        "share_cnt": "4607",
+        "watch_cnt": "536988"
+      },
+      "title": "🌋世界不在书里  在我脚下",
+      "url": "https://www.iesdouyin.com/share/video/76… [458 chars total]",
+      "video_id": "v2700fgi0000d7cj1h7og65p38a0bv5g"
+    },
+    "personal_hot_video": {
+      "author_id": "62781260366",
+      "cover_uri": "tos-cn-i-0813c000-ce/ogMAJiCBwqAClF6ifAp… [59 chars total]",
+      "create_time": "1775901600",
+      "duration": 13.767,
+      "id": "7627181871163557497",
+      "stats": {
+        "avg_watch_dura": "0",
+        "comment_cnt": "279",
+        "favorite_cnt": "3044",
+        "interact_rate": 0.0412,
+        "like_cnt": "17266",
+        "share_cnt": "4607",
+        "watch_cnt": "536988"
+      },
+      "title": "🌋世界不在书里  在我脚下",
+      "url": "https://www.iesdouyin.com/share/video/76… [458 chars total]",
+      "video_id": "v2700fgi0000d7cj1h7og65p38a0bv5g"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:18.637021495",
+  "requestId": "17ab384ac5604ddda90189e1e4661fe7"
+}
