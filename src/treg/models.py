@@ -333,6 +333,10 @@ class DenyRule(SQLModel, table=True):
     # NULL = applies to everyone in the org. Set = only this member/agent (identified the same way
     # every other member endpoint does, by user id — org_id + user_id IS the membership).
     user_id: int | None = Field(default=None, foreign_key="user.id", index=True)
+    # NULL = applies to any tool. Set = only calls made THROUGH a tool in this project — the third
+    # optional scope axis, composed with user_id as AND (both NULL-means-any, like project_access).
+    # A URL-passthrough call resolves to a tool first, so it carries a project too.
+    project_id: int | None = Field(default=None, foreign_key="project.id", index=True)
     host: str = Field(default="")  # netloc, case-insensitive; "" = any host
     path_prefix: str = Field(default="")  # "" = any path
     method: str = Field(default="")  # "" = any method

@@ -3006,9 +3006,19 @@ def cmd_org_deny(args, cfg) -> None:
         org_id = _active_org_id(cfg, c)
         if org_id is None:
             sys.exit("no active org")
+        project_id = None
+        if getattr(args, "project", None):
+            ref = args.project.strip()
+            if ref.isdigit():
+                project_id = int(ref)
+            else:  # a slug — resolve it, so the flag takes the same handle `--projects` does
+                match = [p for p in c.get(f"/orgs/{org_id}/projects").json() if p["slug"] == ref]
+                if not match:
+                    sys.exit(f"unknown project {ref!r} in this team")
+                project_id = match[0]["id"]
         _show(c.post(f"/orgs/{org_id}/deny", json={
             "host": args.host or "", "path_prefix": args.path or "", "method": args.method or "",
-            "user_id": args.user, "note": args.note or ""}))
+            "user_id": args.user, "project_id": project_id, "note": args.note or ""}))
 
 
 def cmd_org_deny_ls(args, cfg) -> None:
@@ -3356,6 +3366,7 @@ def build_parser() -> argparse.ArgumentParser:
     od2.add_argument("--path", help="path prefix to block, e.g. /admin; omit = any path")
     od2.add_argument("--method", help="HTTP method to block, e.g. DELETE; omit = any method")
     od2.add_argument("--user", type=int, help="apply to ONE member/agent (from `org members`); omit = whole team")
+    od2.add_argument("--project", help="apply only to calls through this project's tools (slug or id); omit = any tool")
     od2.add_argument("--note", help="why — shown in the refusal so it names its source")
     od2.set_defaults(fn=cmd_org_deny)
     mk(og, "deny-ls", "List this team's deny rules (admin+).", "treg org deny-ls").set_defaults(fn=cmd_org_deny_ls)

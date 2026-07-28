@@ -1556,12 +1556,19 @@ async def _org_deny_rules(caller: Caller, db: AsyncSession) -> list[DenyRule]:
     ))).scalars().all())
 
 
-async def _enforce_deny(caller: Caller, url: str, method: str, db: AsyncSession) -> None:
+async def _enforce_deny(
+    caller: Caller, url: str, method: str, db: AsyncSession, tool_project_id: int | None = None
+) -> None:
     """Block a call the org's policy forbids. Deliberately applies to EVERY role including owner: a
     deny rule is a guardrail, not a permission tier — an owner who disagrees deletes the rule rather
     than quietly bypassing it. The refusal names the rule, mirroring `localrun.check_deny`'s
-    "a refusal can name its source"."""
+    "a refusal can name its source".
+
+    `tool_project_id` = the project of the tool this call goes through (every enforcement point has
+    resolved a Tool by then). A project-scoped rule (`project_id` set) fires only on that project's
+    tools; an org-wide-tool call (`tool_project_id` None) is never caught by one."""
     rules = await _org_deny_rules(caller, db)
+    rules = [r for r in rules if r.project_id is None or r.project_id == tool_project_id]
     if not rules:
         return  # the common path costs one indexed query and nothing else
     try:
@@ -1573,8 +1580,9 @@ async def _enforce_deny(caller: Caller, url: str, method: str, db: AsyncSession)
         return
     why = f" ({rule.note})" if rule.note else ""
     scope = "this team" if rule.user_id is None else "you"
+    in_proj = " in this project" if rule.project_id is not None else ""
     raise HTTPException(status_code=403, detail=(
-        f"blocked by a policy rule on {scope}{why} — "
+        f"blocked by a policy rule on {scope}{in_proj}{why} — "
         f"{rule.method or 'any'} {rule.host or 'any host'}{rule.path_prefix or ''}"))
 
 
@@ -3030,6 +3038,12 @@ async def delete_project(
             # every OTHER project's tools — a privilege escalation triggered by an unrelated delete.
             # `[]` is already the right meaning: org-wide tools only, which now include the freed ones.
             m.project_access = [p for p in m.project_access if p != project_id]
+    # A rule scoped to this project can never fire again — and DenyRule.project_id is a foreign key,
+    # so a surviving row would dangle (Postgres rejects that; SQLite only hides it). Same sweep-on-
+    # departure idiom as _drop_member_deny_rules.
+    for rule in (await db.execute(select(DenyRule).where(
+            DenyRule.project_id == project_id))).scalars().all():
+        await db.delete(rule)
     await db.delete(project)
     await db.commit()
     return {"deleted": project_id, "tools_made_org_wide": freed}
@@ -3044,6 +3058,7 @@ class DenyRuleIn(BaseModel):
     path_prefix: str = ""
     method: str = ""
     user_id: int | None = None  # None = the whole org; set = only that member/agent
+    project_id: int | None = None  # None = any tool; set = only calls through that project's tools
     note: str = ""
 
 
@@ -3072,6 +3087,7 @@ async def _drop_member_deny_rules(db: AsyncSession, user_id: int, org_id: int | 
 def _deny_view(r: DenyRule) -> dict:
     return {"id": r.id, "host": r.host, "path_prefix": r.path_prefix, "method": r.method,
             "user_id": r.user_id, "scope": "org" if r.user_id is None else "member",
+            "project_id": r.project_id,
             "verdict": r.verdict, "note": r.note, "created_by": r.created_by,
             "created_at": r.created_at}
 
@@ -3101,7 +3117,12 @@ async def create_deny_rule(
             Membership.org_id == org_id, Membership.user_id == body.user_id))).scalar_one_or_none()
         if target is None:
             raise HTTPException(status_code=404, detail="not a member of this org")
-    rule = DenyRule(org_id=org_id, user_id=body.user_id, host=host, path_prefix=path_prefix,
+    if body.project_id is not None:
+        project = await db.get(Project, body.project_id)
+        if project is None or project.org_id != org_id:  # 404 across orgs, like everywhere else
+            raise HTTPException(status_code=404, detail="unknown project")
+    rule = DenyRule(org_id=org_id, user_id=body.user_id, project_id=body.project_id,
+                    host=host, path_prefix=path_prefix,
                     method=method, note=(body.note or "").strip(), created_by=caller.email)
     db.add(rule)
     await db.commit()
@@ -3116,6 +3137,30 @@ async def list_deny_rules(
     _require_admin_of(org_id, caller)
     rules = (await db.execute(select(DenyRule).where(DenyRule.org_id == org_id))).scalars().all()
     return [_deny_view(r) for r in rules]
+
+
+@app.get("/orgs/{org_id}/policy/cli-deny")
+async def list_cli_deny(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """READ-ONLY: every CLI tool's effective argv deny patterns, so the Policy screen can show the
+    whole "what is blocked" picture in one place. These live on the TOOL (treg.json `cli.deny` +
+    catalog defaults, see `localrun.effective_profile`), not in the DenyRule table — editing them
+    means editing the skill or the catalog, which is why this endpoint only reports (admin+)."""
+    _require_admin_of(org_id, caller)
+    from . import providers as prov
+    out: list[dict] = []
+    tools = (await db.execute(select(Tool).where(Tool.org_id == org_id))).scalars().all()
+    for tool in tools:
+        profile = localrun.effective_profile(tool, (prov.match_skill(tool.name) or {}).get("cli"))
+        if not profile or not profile.get("deny"):
+            continue
+        own = set(profile.get("_own_deny") or [])
+        out.append({"tool": tool.name, "enabled": bool(profile.get("enabled")),
+                    "patterns": [{"pattern": p,
+                                  "source": "skill" if p in own else "catalog"}
+                                 for p in profile["deny"]]})
+    return out
 
 
 @app.delete("/orgs/{org_id}/deny/{rule_id}")
@@ -3523,7 +3568,7 @@ async def grant_local_run(
         raise HTTPException(status_code=404, detail="tool not found")
     _require_tool_use(caller, tool)  # per-member tool + project ACL (call + both run tiers)
     _require_local_run(caller)               # local tier may be disabled for this member (server-only)
-    await _enforce_deny(caller, tool.base_url, "", db)  # host-level policy (see run_tool_server)
+    await _enforce_deny(caller, tool.base_url, "", db, tool.project_id)  # host-level policy (see run_tool_server)
     await _enforce_daily_cap(caller, db)  # a local run counts toward the per-user daily cap
     catalog_cli = (prov.match_skill(tool.name) or {}).get("cli")
     profile = localrun.effective_profile(tool, catalog_cli)
@@ -5144,7 +5189,7 @@ async def call_tool(
     # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
     # shape the caller used (named or URL-passthrough), and the relay never follows redirects, so a
     # blocked host can't be reached via a 3xx bounce.
-    await _enforce_deny(caller, upstream_url, request.method, db)
+    await _enforce_deny(caller, upstream_url, request.method, db, tool.project_id)
     await _enforce_daily_cap(caller, db)  # per-user daily cap (skips sandbox + unmetered members)
     if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
         await _enforce_public_demo_ip_cap(request, db)  # shared token → meter by client IP, not user
@@ -5242,7 +5287,7 @@ async def run_tool_server(
     _require_tool_use(caller, tool)  # per-member tool + project ACL
     # A run executes a CLI, so there is no request path to match — evaluate the tool's own upstream
     # host, which is what a host-level rule ("nobody may reach api.stripe.com") is really saying.
-    await _enforce_deny(caller, tool.base_url, "", db)
+    await _enforce_deny(caller, tool.base_url, "", db, tool.project_id)
     await _enforce_daily_cap(caller, db)  # a server run counts toward the per-user daily cap
     try:
         exec_bin = runner.resolve_exec_bin(tool)  # the SAME resolution run_tool execs — never diverges

@@ -1362,21 +1362,40 @@ th{background:rgba(0,0,0,.25)}
                   <option :value="null">whole team</option>
                   <option v-for="m in orgMembers" :key="m.user_id" :value="m.user_id">{{m.is_agent?'agent: ':''}}{{m.email}}</option>
                 </select>
+                <select v-if="projects.length" v-model="denyForm.project_id" class="msel" title="which project's tools it applies to">
+                  <option :value="null">any project</option>
+                  <option v-for="p in projects" :key="p.id" :value="p.id">{{p.name}}</option>
+                </select>
                 <input v-model="denyForm.note" placeholder="why (shown in the refusal)" style="min-width:170px"/>
                 <button class="btn primary" @click="addDeny" :disabled="denyBusy">{{denyBusy?'…':'Block'}}</button>
               </div>
               <p v-if="!denyRules.length" class="muted" style="font-size:12px;margin-top:8px">No rules — nothing is blocked.</p>
               <table v-else style="margin-top:8px">
-                <tr><th>Method</th><th>Host</th><th>Path</th><th>Applies to</th><th>Note</th><th></th></tr>
+                <tr><th>Method</th><th>Host</th><th>Path</th><th>Applies to</th><th v-if="projects.length">Project</th><th>Note</th><th></th></tr>
                 <tr v-for="r in denyRules" :key="r.id">
                   <td><span class="chip">{{r.method||'any'}}</span></td>
                   <td style="font-family:var(--mono);font-size:12px">{{r.host||'any'}}</td>
                   <td style="font-family:var(--mono);font-size:12px">{{r.path_prefix||'any'}}</td>
                   <td>{{r.scope==='org'?'whole team':(denyWho(r.user_id))}}</td>
+                  <td v-if="projects.length">{{r.project_id?projName(r.project_id):'any'}}</td>
                   <td class="muted" style="font-size:12px">{{r.note}}</td>
                   <td style="text-align:right"><button class="btn sm" :class="{danger:confirmDeny===r.id}" @click="removeDeny(r)">{{confirmDeny===r.id?'Confirm remove':'Remove'}}</button></td>
                 </tr>
               </table>
+
+              <!-- Tool-level argv blocks — the OTHER deny layer, surfaced read-only so the whole
+                   "what is blocked" picture lives on one screen. -->
+              <template v-if="cliDeny.length">
+                <div class="lbl" style="margin-top:22px">Per-tool CLI blocks <span class="chip" style="margin-left:6px">read-only</span></div>
+                <p class="sub" style="margin:-2px 0 8px;font-size:12px">treg blocks at three layers: the rules above (HTTP host/path/method, this team's policy), these per-tool argument patterns (from the skill's <span class="mono">treg.json</span> or the treg catalog — edit them there), and the OS sandbox around isolated local runs.</p>
+                <table>
+                  <tr><th>Tool</th><th>Blocked argument patterns</th></tr>
+                  <tr v-for="t in cliDeny" :key="t.tool">
+                    <td><b>{{t.tool}}</b><span v-if="!t.enabled" class="chip" style="margin-left:6px" title="local runs for this tool are not enabled">off</span></td>
+                    <td><span v-for="pat in t.patterns" :key="pat.pattern" class="chip" style="margin:2px 6px 2px 0;font-family:var(--mono);font-size:11px" :title="pat.source==='skill'?'from this skill\'s treg.json':'from the treg catalog defaults'">{{pat.pattern}}<span class="muted" style="margin-left:4px">· {{pat.source}}</span></span></td>
+                  </tr>
+                </table>
+              </template>
             </template>
 
             <!-- TEAM SETTINGS: the active team's identity + your teams actions; destructive actions
@@ -2285,7 +2304,7 @@ createApp({
       newAgent:null, confirmAgent:null,
       projects:[], projectName:'', projBusy:false, confirmProj:null, projDraft:{},
       editProj:null, projToolDraft:{}, projToolBusy:false,
-      denyRules:[], denyForm:{host:'',path_prefix:'',method:'',user_id:null,note:''}, denyBusy:false, confirmDeny:null,
+      denyRules:[], denyForm:{host:'',path_prefix:'',method:'',user_id:null,project_id:null,note:''}, denyBusy:false, confirmDeny:null, cliDeny:[],
       bootVersion:'', newVersion:false,
       usage:null, usageDays:30, myUsage:null,  // usage-metering: rollups + the member's own used/cap
       confirmDel:'', confirmLeave:false, confirmRemove:null,
@@ -2750,7 +2769,8 @@ createApp({
       this.orgErr=''; this.confirmDel=''; this.confirmLeave=false; this.confirmRemove=null;
       if(!this.canAdmin || !this.activeOrgId) return; const id=this.activeOrgId;
       try{ this.orgMembers=await this.api('/orgs/'+id+'/members'); this.orgInvites=await this.api('/orgs/'+id+'/invites');
-           this.projects=await this.api('/orgs/'+id+'/projects'); this.denyRules=await this.api('/orgs/'+id+'/deny'); }
+           this.projects=await this.api('/orgs/'+id+'/projects'); this.denyRules=await this.api('/orgs/'+id+'/deny');
+           this.cliDeny=await this.api('/orgs/'+id+'/policy/cli-deny').catch(()=>[]); }
       catch(e){ this.orgErr='Load team failed: '+(e.detail||e.status); } },
 
     // ---- agents: a member identity for a machine caller ----
@@ -2834,7 +2854,7 @@ createApp({
       if(!f.host && !f.path_prefix && !f.method){ this.orgErr='Give at least a host, a path, or a method.'; return; }
       this.denyBusy=true; this.orgErr='';
       try{ await this.api('/orgs/'+this.activeOrgId+'/deny',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(f)});
-           this.denyForm={host:'',path_prefix:'',method:'',user_id:null,note:''}; }
+           this.denyForm={host:'',path_prefix:'',method:'',user_id:null,project_id:null,note:''}; }
       catch(e){ this.orgErr='Add rule failed: '+(e.detail||e.status); }
       this.denyBusy=false; await this.loadOrgAdmin(); },
     async removeDeny(r){ if(this.confirmDeny!==r.id){ this.confirmDeny=r.id; return; }

@@ -203,6 +203,12 @@ def _migrate_to_orgs(conn) -> None:
         if tbl in tables and "project_access" not in {c["name"] for c in insp.get_columns(tbl)}:
             conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN project_access JSON"))  # NULL = whole org
 
+    # (A22) additive: project-scoped POLICY — a deny rule may name a project, so "block DELETE in
+    # the ads project" is expressible. Nullable, NULL = any tool, so existing rules keep their exact
+    # meaning; not a BOOLEAN, so the Postgres integer-default trap (PR #22) doesn't apply.
+    if "denyrule" in tables and "project_id" not in {c["name"] for c in insp.get_columns("denyrule")}:
+        conn.execute(text("ALTER TABLE denyrule ADD COLUMN project_id INTEGER"))  # NULL = any tool
+
     # (B) legacy backfill — guarded
     if "org" not in tables:
         return  # defensive: create_all should have made it
