@@ -629,7 +629,8 @@ def test_catalog_get_renders_params_siblings_and_the_command(monkeypatch, capsys
         ["catalog", "get", "justoneapi.tiktok.video.comments"]), {"base_url": "http://x"})
     out = capsys.readouterr().out
     assert "$0.014/success" in out and "(CNY 0.1)" in out          # usd to compare, original to verify
-    assert "60 req/min" in out and "https://justoneapi.com/" in out
+    provider = body["provider"]
+    assert provider["limits"] in out and provider["pricing_url"] in out
     assert "tikhub.tiktok.video.comments" in out                    # the sibling, for comparison
     assert "awemeId" in out and "the post id" in out and "e.g. 76662" in out
     assert "treg call justoneapi /api/tiktok/get-post-comment/v1 --query awemeId=76662" in out
