@@ -3317,7 +3317,8 @@ def cmd_catalog(args, cfg) -> None:
             print(f"\n{len(rows)} platforms — `treg catalog <platform>` for its endpoints")
             return
 
-        r = c.get(f"/catalog/platforms/{quote(args.platform, safe='')}")
+        _hidden = "?include_hidden=1" if getattr(args, "show_all", False) else ""
+        r = c.get(f"/catalog/platforms/{quote(args.platform, safe='')}{_hidden}")
         if r.status_code != 200 or _JSON_OVERRIDE:
             _show(r)
             return
@@ -4108,6 +4109,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="a platform slug (tiktok, web, google, …), or `search <query>` / `get <endpoint-id>`")
     ct.add_argument("rest", nargs="*", metavar="<args>", help="the search query, or the endpoint id for `get`")
     ct.add_argument("--limit", type=int, default=25, help="search: how many results (default: 25, max 100)")
+    ct.add_argument("--all", action="store_true", dest="show_all",
+                    help="include management endpoints (account/utility CRUD) hidden from the browse by default")
     ct.set_defaults(fn=cmd_catalog)
 
     # ---- connections (connecting a provider lives here now; `oauth` is the hidden old spelling) ----

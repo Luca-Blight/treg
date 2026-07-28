@@ -24,6 +24,7 @@ limits: "per-minute rate limit varies by plan"
 pricing_url: https://www.peopledatalabs.com/pricing  # Only a match at or above `min_likelihood` is billed.; free tier: 100 matches/month (developer tier)
 endpoints:
   - id: pdl.people.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -62,6 +63,7 @@ endpoints:
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-enrichment-api
 
   - id: pdl.people.search
+    domain: contacts
     capability: people.search
     platform: people
     scope: any_account
@@ -91,6 +93,7 @@ endpoints:
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-search-api
 
   - id: pdl.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -125,6 +128,7 @@ endpoints:
     docs_url: https://docs.peopledatalabs.com/docs/reference-company-enrichment-api
 
   - id: pdl.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account

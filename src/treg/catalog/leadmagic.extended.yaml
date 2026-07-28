@@ -47,6 +47,7 @@ source:
 
 endpoints:
   - id: leadmagic.x.b2b-profile
+    domain: contacts
     tier: extended
     platform: people
     method: POST
@@ -73,6 +74,7 @@ endpoints:
     capability: people.identity.resolve
 
   - id: leadmagic.x.b2b-profile-email
+    domain: contacts
     tier: extended
     capability: people.email.find
     platform: people
@@ -97,6 +99,7 @@ endpoints:
     docs_url: https://leadmagic.io/docs/api-reference/profile-to-email
 
   - id: leadmagic.x.personal-email-finder
+    domain: contacts
     tier: extended
     platform: people
     method: POST
@@ -121,6 +124,7 @@ endpoints:
     capability: people.email.find
 
   - id: leadmagic.x.role-finder
+    domain: contacts
     tier: extended
     capability: people.search
     platform: people
@@ -148,6 +152,7 @@ endpoints:
     docs_url: https://leadmagic.io/docs/reference/role-finder
 
   - id: leadmagic.x.employee-finder
+    domain: contacts
     tier: extended
     capability: people.search
     platform: people
@@ -175,6 +180,7 @@ endpoints:
     docs_url: https://leadmagic.io/docs/api-reference/employee-finder
 
   - id: leadmagic.x.job-change-detector
+    domain: contacts
     tier: extended
     platform: people
     method: POST
@@ -202,6 +208,7 @@ endpoints:
     capability: people.signals
 
   - id: leadmagic.x.competitors-search
+    domain: companies
     tier: extended
     platform: companies
     method: POST
@@ -227,6 +234,7 @@ endpoints:
     docs_url: https://leadmagic.io/docs/api-reference/competitors-search
 
   - id: leadmagic.x.company-funding
+    domain: other
     tier: extended
     platform: companies
     method: POST
@@ -252,6 +260,7 @@ endpoints:
     docs_url: https://leadmagic.io/docs/api-reference/company-funding
 
   - id: leadmagic.x.technographics
+    domain: other
     tier: extended
     platform: companies
     method: POST
@@ -275,6 +284,7 @@ endpoints:
     docs_url: https://leadmagic.io/docs/api-reference/technographics
 
   - id: leadmagic.x.companies-search-v3
+    domain: companies
     tier: extended
     capability: companies.search
     platform: companies
@@ -310,6 +320,7 @@ endpoints:
     docs_url: https://leadmagic.io/docs/api-reference/company-search-v3
 
   - id: leadmagic.x.jobs-search-v3
+    domain: companies
     tier: extended
     platform: companies
     method: POST
@@ -342,6 +353,7 @@ endpoints:
     docs_url: https://leadmagic.io/docs/api-reference/job-search
 
   - id: leadmagic.x.jobs-finder
+    domain: companies
     tier: extended
     platform: companies
     method: POST
@@ -423,6 +435,7 @@ endpoints:
     docs_url: https://leadmagic.io/docs/api-reference/meta-ads-search
 
   - id: leadmagic.x.b2b-ads-search
+    domain: companies
     tier: extended
     platform: companies
     method: POST

@@ -55,6 +55,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/company-filters
 
   - id: lusha.x.companies-enrich-by-id
+    domain: companies
     tier: extended
     platform: companies
     method: POST
@@ -69,11 +70,12 @@ endpoints:
       note: "the id-based sibling of lusha.companies.enrich (which takes domain/name); use this once you already hold ids from POST /v3/companies/prospecting"
     test_request:
       body: {ids: ["v1.A1gXjPYd63SSPjSvxO4uwqXqE5ilJV9S"]}
-    cost: {type: per_result, value: null, currency: credit, note: "billed on the reveal_company action per company returned; a no-match is free. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
+    cost: {type: per_result, value: 1, currency: credit, note: "billed on the reveal_company action per company returned; a no-match is free. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
     skipped: "field-name bug fixed and a real id (from lusha.companies.search) is in test_request, but not called to conserve budget — lusha.companies.enrich (core) already verifies this exact reveal_company billing path against the same company (domain-based instead of id-based); top up credits and re-run to confirm the id-based variant specifically"
     docs_url: https://docs.lusha.com/apis/openapi/company-search-and-enrich
 
   - id: lusha.x.contacts-lookalike
+    domain: contacts
     tier: extended
     platform: people
     method: POST
@@ -98,6 +100,7 @@ endpoints:
     capability: people.lookalike
 
   - id: lusha.x.companies-lookalike
+    domain: companies
     tier: extended
     platform: companies
     method: POST
@@ -121,6 +124,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/lookalikes
 
   - id: lusha.x.contacts-signals
+    domain: contacts
     tier: extended
     platform: people
     method: POST
@@ -135,12 +139,13 @@ endpoints:
         startDate: {type: string, required: false, note: "ISO date; only signals on/after this date"}
         tableId: {type: string, required: false, note: "persist results into a Lusha Table's Signals column"}
       note: "standalone alternative to the signals filter on the search/prospecting endpoints"
-    cost: {type: per_result, value: null, currency: credit, note: "billed on the showSignalsContact action per matched signal. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
+    cost: {type: per_result, value: 1, currency: credit, note: "billed on the showSignalsContact action per matched signal. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
     untestable: "requires contactIds minted by a prior search on this account; no public/stable id is documented to probe with"
     docs_url: https://docs.lusha.com/apis/openapi/signals
     capability: people.signals
 
   - id: lusha.x.companies-signals
+    domain: other
     tier: extended
     platform: companies
     method: POST
@@ -155,7 +160,7 @@ endpoints:
         startDate: {type: string, required: false, note: "ISO date; only signals on/after this date"}
         tableId: {type: string, required: false, note: "persist results into a Lusha Table's Signals column"}
       note: "standalone alternative to the signals filter on the search/prospecting endpoints"
-    cost: {type: per_result, value: null, currency: credit, note: "billed on the showSignalsCompany action per matched signal. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
+    cost: {type: per_result, value: 1, currency: credit, note: "billed on the showSignalsCompany action per matched signal. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
     untestable: "requires companyIds minted by a prior search on this account; no public/stable id is documented to probe with"
     docs_url: https://docs.lusha.com/apis/openapi/signals
 
@@ -226,6 +231,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/signals
 
   - id: lusha.x.decision-makers
+    domain: contacts
     tier: extended
     platform: people
     method: POST
@@ -246,6 +252,7 @@ endpoints:
     capability: people.decision_makers
 
   - id: lusha.x.companies-website-visits
+    domain: other
     tier: extended
     platform: companies
     method: POST

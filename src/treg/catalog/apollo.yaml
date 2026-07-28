@@ -33,6 +33,7 @@ limits: "credit pool plus per-minute caps that differ per endpoint"
 pricing_url: https://www.apollo.io/pricing  # Per USER per month. API access for custom integrations requires Organization. Exporting a mobile number commonly costs 5 credits. Credits do NOT roll over.; free tier: 10 expor
 endpoints:
   - id: apollo.people.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -65,6 +66,7 @@ endpoints:
     docs_url: https://docs.apollo.io/reference/people-enrichment
 
   - id: apollo.people.search
+    domain: contacts
     capability: people.search
     platform: people
     scope: any_account
@@ -91,6 +93,7 @@ endpoints:
     docs_url: https://docs.apollo.io/reference/people-api-search
 
   - id: apollo.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -113,6 +116,7 @@ endpoints:
     docs_url: https://docs.apollo.io/reference/organization-enrichment
 
   - id: apollo.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account
@@ -142,6 +146,7 @@ endpoints:
     docs_url: https://docs.apollo.io/reference/organization-search
 
   - id: apollo.people.bulk_enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account

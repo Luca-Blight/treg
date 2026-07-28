@@ -35,6 +35,7 @@ source:
 pricing_url: https://coresignal.com/pricing/  # Search returns ids for free; COLLECTING each record costs a credit.
 endpoints:
   - id: coresignal.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -55,6 +56,7 @@ endpoints:
     docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/enrich
 
   - id: coresignal.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account
@@ -71,6 +73,7 @@ endpoints:
     docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/elasticsearch-dsl
 
   - id: coresignal.companies.collect
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -90,6 +93,7 @@ endpoints:
     docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/collect
 
   - id: coresignal.people.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -109,6 +113,7 @@ endpoints:
     docs_url: https://docs.coresignal.com/employee-api/multi-source-employee-api/collect
 
   - id: coresignal.people.search
+    domain: contacts
     capability: people.search
     platform: people
     scope: any_account

@@ -951,6 +951,7 @@ endpoints:
     docs_url: https://docs.brightdata.com/datasets/scrapers/telegram/quickstart
 
   - id: brightdata.x.companies-crunchbase
+    domain: companies
     tier: extended
     capability: companies.enrich
     platform: companies
@@ -972,6 +973,7 @@ endpoints:
     docs_url: https://docs.brightdata.com/datasets/scrapers/companies/quickstart
 
   - id: brightdata.x.companies-glassdoor-info
+    domain: companies
     tier: extended
     platform: companies
     scope: any_account
@@ -992,6 +994,7 @@ endpoints:
     docs_url: https://docs.brightdata.com/datasets/scrapers/companies/quickstart
 
   - id: brightdata.x.companies-glassdoor-reviews
+    domain: other
     tier: extended
     capability: companies.reviews
     platform: companies

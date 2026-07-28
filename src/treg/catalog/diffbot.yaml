@@ -33,6 +33,7 @@ limits: "concurrent-request cap by plan"
 pricing_url: https://www.diffbot.com/pricing/
 endpoints:
   - id: diffbot.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -72,6 +73,7 @@ endpoints:
     docs_url: https://docs.diffbot.com/reference/enhanceget
 
   - id: diffbot.people.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -108,6 +110,7 @@ endpoints:
     docs_url: https://docs.diffbot.com/reference/enhanceget
 
   - id: diffbot.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account
@@ -138,6 +141,7 @@ endpoints:
     docs_url: https://docs.diffbot.com/docs/tutorial-quickstart-with-knowledge-graph-search
 
   - id: diffbot.people.search
+    domain: contacts
     capability: people.search
     platform: people
     scope: any_account
@@ -166,6 +170,7 @@ endpoints:
     docs_url: https://docs.diffbot.com/docs/tutorial-quickstart-with-knowledge-graph-search
 
   - id: diffbot.companies.bulk_enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account

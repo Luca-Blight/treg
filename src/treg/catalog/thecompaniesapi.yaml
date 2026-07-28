@@ -26,6 +26,7 @@ source:
 pricing_url: https://www.thecompaniesapi.com/pricing
 endpoints:
   - id: thecompaniesapi.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -48,6 +49,7 @@ endpoints:
     docs_url: https://www.thecompaniesapi.com/api/enrich-company-from-domain
 
   - id: thecompaniesapi.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account
@@ -78,6 +80,7 @@ endpoints:
     docs_url: https://www.thecompaniesapi.com/api/search-companies
 
   - id: thecompaniesapi.companies.enrich_by_email
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -98,6 +101,7 @@ endpoints:
     docs_url: https://www.thecompaniesapi.com/api/enrich-company-from-email
 
   - id: thecompaniesapi.companies.email_pattern
+    domain: companies
     capability: companies.email_pattern
     platform: companies
     scope: any_account

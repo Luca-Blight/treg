@@ -24,6 +24,7 @@ source:
 
 endpoints:
   - id: pdl.x.person-enrich-preview
+    domain: contacts
     tier: extended
     platform: people
     method: GET
@@ -62,6 +63,7 @@ endpoints:
     capability: people.enrich
 
   - id: pdl.x.person-identify
+    domain: contacts
     tier: extended
     platform: people
     method: GET
@@ -102,6 +104,7 @@ endpoints:
     capability: people.identity.resolve
 
   - id: pdl.x.person-retrieve-by-id
+    domain: contacts
     tier: extended
     platform: people
     method: GET
@@ -121,6 +124,7 @@ endpoints:
     capability: people.enrich
 
   - id: pdl.x.person-retrieve-bulk
+    domain: contacts
     tier: extended
     platform: people
     method: POST
@@ -141,6 +145,7 @@ endpoints:
     capability: people.enrich
 
   - id: pdl.x.person-search-post
+    domain: contacts
     tier: extended
     capability: people.search
     platform: people
@@ -167,6 +172,7 @@ endpoints:
     example_response: examples/pdl.x.person-search-post.json
 
   - id: pdl.x.company-search-post
+    domain: companies
     tier: extended
     capability: companies.search
     platform: companies
@@ -364,7 +370,7 @@ endpoints:
     docs_url: https://docs.peopledatalabs.com/docs/reference-subscriptions-api
 
   - id: pdl.x.person-subjectrequest
-    kind: action
+    kind: utility
     tier: extended
     platform: people
     method: GET

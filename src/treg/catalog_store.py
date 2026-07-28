@@ -386,7 +386,9 @@ def domain_rows(pairs: list[tuple[dict, dict]], capabilities: dict[str, str]) ->
     for row in rows:
         sections.setdefault(row["domain"], []).append(row)
     for section in sections.values():
-        section.sort(key=lambda r: (r["kind"] != "merged", r["description"].lower(), r["endpoints"][0]["id"]))
+        # merged first (a comparable job beats a lone route), then the widely-supported jobs — the
+        # ones the most providers implement, i.e. the popular ones — before the niche, then alpha.
+        section.sort(key=lambda r: (r["kind"] != "merged", -len(r["endpoints"]), r["description"].lower()))
     order = sorted(sections, key=lambda d: (d == DOMAIN_OTHER, -len(sections[d]), d))
     return [{"domain": d, "rows": sections[d]} for d in order]
 

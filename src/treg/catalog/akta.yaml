@@ -36,6 +36,7 @@ source:
 
 endpoints:
   - id: akta.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -60,6 +61,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/company-data
 
   - id: akta.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account
@@ -79,6 +81,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/supporting-apis/company-search
 
   - id: akta.companies.news
+    domain: other
     capability: companies.news
     platform: companies
     scope: any_account
@@ -116,6 +119,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/news-signals
 
   - id: akta.companies.headcount_trend
+    domain: other
     capability: companies.headcount_trend
     platform: companies
     scope: any_account
@@ -134,6 +138,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/alternative-data/headcount-trends
 
   - id: akta.companies.reviews
+    domain: other
     capability: companies.reviews
     platform: companies
     scope: any_account

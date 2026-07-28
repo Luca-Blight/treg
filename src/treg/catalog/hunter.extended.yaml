@@ -759,7 +759,7 @@ endpoints:
     currency: USD
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.campaigns-recipients-add
-  kind: action
+  kind: account
   tier: extended
   platform: people
   method: POST

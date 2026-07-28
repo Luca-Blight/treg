@@ -20,6 +20,7 @@ source:
 
 endpoints:
   - id: akta.x.product-reviews
+    domain: other
     tier: extended
     platform: companies
     method: GET
@@ -44,6 +45,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/alternative-data/product-reviews
 
   - id: akta.x.jobs
+    domain: companies
     tier: extended
     platform: companies
     method: GET
@@ -63,6 +65,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/alternative-data/job-posts
 
   - id: akta.x.social-posts
+    domain: other
     tier: extended
     platform: companies
     method: GET
@@ -82,6 +85,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/alternative-data/social-posts
 
   - id: akta.x.website-traffic
+    domain: other
     tier: extended
     platform: companies
     method: GET
