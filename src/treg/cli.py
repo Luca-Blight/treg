@@ -114,7 +114,7 @@ class _RegistryClient(httpx.Client):
 
 def _detect_runtime() -> str:
     """Which coding agent this CLI is running inside, from environment fingerprints. Sent as
-    X-Treg-Client so the registry can attribute traffic per runtime ("jason / claude-code") —
+    X-Treg-Client so the registry can attribute traffic per runtime ("sam / claude-code") —
     attribution only, never authentication. TREG_CLIENT overrides for anything we can't sniff."""
     override = os.environ.get("TREG_CLIENT", "").strip()
     if override:

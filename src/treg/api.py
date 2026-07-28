@@ -2895,7 +2895,7 @@ async def list_observed_agents(
     org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
     """The agents ALREADY running under members' own tokens, discovered from traffic: one row per
-    (member, runtime) seen in the last 30 days, e.g. "jason@… / claude-code". The zero-setup half
+    (member, runtime) seen in the last 30 days, e.g. "sam@… / claude-code". The zero-setup half
     of the agents story — nobody mints anything, the roster fills itself from `CallRecord.client`
     (and RunRecord). Self-reported attribution, not authentication, which is why this view only
     informs; scoping one for real = mint it a token ("Scope this agent" in the dashboard).
