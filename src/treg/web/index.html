@@ -1470,7 +1470,26 @@ th{background:rgba(0,0,0,.25)}
             <p class="sub" style="margin:6px 0 0;font-size:11.5px">Put this wherever the agent runs — a <span class="mono">.env</span>, a CI secret, or its config.</p>
           </div>
 
+          <!-- DETECTED: the agents already running under members' own tokens, discovered from
+               traffic. Zero setup; self-reported attribution, so it informs, it never gates. -->
+          <template v-if="observedAgents.length">
+            <div class="lbl" style="margin-top:18px">Detected in your team's traffic</div>
+            <p class="sub" style="margin:-2px 0 8px;font-size:12px">These run under a <b>member's own token</b> — the runtime reports itself, so this is attribution, not authentication. They inherit that member's full access. To cap or scope one independently, give it its own token below.</p>
+            <table>
+              <tr><th>Agent</th><th>Runs as</th><th style="text-align:right">Today</th><th style="text-align:right">Last 30 days</th><th>Last seen</th><th></th></tr>
+              <tr v-for="o in observedAgents" :key="o.member+'/'+o.client">
+                <td><b>{{o.client}}</b></td>
+                <td>{{short(o.member)}}</td>
+                <td style="text-align:right" class="muted">{{o.used_today}}</td>
+                <td style="text-align:right" class="muted">{{o.calls_30d}}</td>
+                <td class="muted">{{when(o.last_seen)}}</td>
+                <td style="text-align:right"><button class="btn sm" @click="promoteObserved(o)" title="mint this agent its own token — its own cap, scope and audit trail, independent of the member's">Scope this agent</button></td>
+              </tr>
+            </table>
+          </template>
+
           <div class="lbl" style="margin-top:18px">New agent</div>
+          <p v-if="promoteHint" class="sub" style="margin:-2px 0 6px;font-size:12px;color:var(--accent)">{{promoteHint}}</p>
           <div class="field" style="max-width:620px">
             <input v-model="agentName" placeholder="ci-bot" @keyup.enter="createAgent"/>
             <select v-model="agentRole" class="msel"><option>viewer</option><option>member</option><option v-if="isOwner">admin</option></select>
@@ -1483,12 +1502,13 @@ th{background:rgba(0,0,0,.25)}
           </div>
           <p class="sub" style="margin:-2px 0 0;font-size:12px">Cap <b>-1</b> = unlimited. An agent can never be an owner, and can never sign in — its token is the only way to act as it.</p>
 
-          <div class="lbl" style="margin-top:20px">This team's agents</div>
+          <div class="lbl" style="margin-top:20px">This team's agents <span class="chip" style="margin-left:6px" title="each has its own token — cap, scope and audit are independent of any member">own token</span></div>
           <p v-if="!agents.length" class="muted" style="font-size:13px">No agents yet. Create one above, then put its token in your agent's environment.</p>
           <table v-else>
-            <tr><th>Name</th><th>Role</th><th style="text-align:right">Today</th><th>Daily cap</th><th>Tools</th><th>Projects</th><th></th></tr>
+            <tr><th>Name</th><th>Owner</th><th>Role</th><th style="text-align:right">Today</th><th>Daily cap</th><th>Tools</th><th>Projects</th><th></th></tr>
             <tr v-for="a in agents" :key="a.user_id">
               <td><b>{{a.name}}</b><div class="muted" style="font-size:11px;font-family:var(--mono)">{{a.email}}</div></td>
+              <td class="muted" :title="a.created_by?('minted by '+a.created_by):''">{{a.created_by?short(a.created_by):'—'}}</td>
               <td><span class="role" :class="a.role">{{a.role}}</span></td>
               <td style="text-align:right" class="muted">{{a.used_today}}</td>
               <td><input class="msel" type="number" min="-1" step="1" style="width:78px" :value="a.daily_call_cap" @change="setAgentCap(a,$event.target.value)" title="-1 = unlimited"/></td>
@@ -2301,6 +2321,7 @@ createApp({
       agentSnip:'env',   // which paste-ready snippet the agent card shows
       snipAgent:null,    // an EXISTING agent whose setup snippets are open (no token — placeholder)
       agents:[], agentName:'', agentRole:'member', agentCap:-1, agentBusy:false, agentErr:'', agentProjSel:{},
+      observedAgents:[], promoteHint:'',
       newAgent:null, confirmAgent:null,
       projects:[], projectName:'', projBusy:false, confirmProj:null, projDraft:{},
       editProj:null, projToolDraft:{}, projToolBusy:false,
@@ -2778,8 +2799,17 @@ createApp({
       if(!this.canAdmin || !this.activeOrgId){ this.agents=[]; return; }
       try{ this.agents=await this.api('/orgs/'+this.activeOrgId+'/agents');
            this.projects=await this.api('/orgs/'+this.activeOrgId+'/projects');
-           const sel={}; this.projects.forEach(p=>{ sel[p.id]=true; }); this.agentProjSel=sel; }
+           const sel={}; this.projects.forEach(p=>{ sel[p.id]=true; }); this.agentProjSel=sel;
+           this.observedAgents=await this.api('/orgs/'+this.activeOrgId+'/agents/observed').catch(()=>[]); }
       catch(e){ this.agentErr='Load agents failed: '+(e.detail||e.status); } },
+    promoteObserved(o){
+      // Promotion = mint a real identity for a runtime we've only SEEN so far. Prefill the form;
+      // the admin still picks role/cap/projects and presses Create, then swaps the env key.
+      const who=(o.member.split('@')[0]||'agent').replace(/[^a-zA-Z0-9-]/g,'-');
+      this.agentName=who+'-'+o.client; this.promoteHint='Creating a token for "'+o.client+'" running as '
+        +o.member+'. After Create, put the new token in that runtime\'s TREG_TOKEN — from then on it '
+        +'acts as itself, with its own cap and scope, instead of as '+o.member+'.';
+      window.scrollTo({top:0,behavior:'smooth'}); },
     async createAgent(){ const name=(this.agentName||'').trim();
       if(!name){ this.agentErr='Give the agent a name, e.g. ci-bot.'; return; }
       // An admin agent can manage this team's tools, secrets and members. That is a real step up from
@@ -2795,7 +2825,7 @@ createApp({
       if(this.projects.length && picked.length<this.projects.length) body.project_access=picked;
       try{ const r=await this.api('/orgs/'+this.activeOrgId+'/agents',{method:'POST',headers:{'content-type':'application/json'},
              body:JSON.stringify(body)});
-           this.newAgent=r; this.snipAgent=null; this.agentName=''; await this.loadAgents(); }
+           this.newAgent=r; this.snipAgent=null; this.agentName=''; this.promoteHint=''; await this.loadAgents(); }
       catch(e){ this.agentErr='Create failed: '+(e.detail||e.status); }
       this.agentBusy=false; },
     // Rotate = create with the SAME name: the server replaces the token hash, so the old one dies.

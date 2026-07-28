@@ -2845,7 +2845,7 @@ async def create_agent(
 
     if is_new:
         membership = Membership(user_id=user.id, org_id=org_id, role=body.role,
-                                token_hash=crypto.hash_token(token))
+                                token_hash=crypto.hash_token(token), created_by=caller.email)
         db.add(membership)
     else:
         membership.token_hash = crypto.hash_token(token)  # rotate: the previous token dies here
@@ -2885,7 +2885,53 @@ async def list_agents(
                     "email": user.email, "role": m.role, "daily_call_cap": m.daily_call_cap,
                     "used_today": used.get(user.email, 0), "tool_access": m.tool_access,
                     "project_access": m.project_access,  # the dashboard renders this column
-                    "local_run_enabled": m.local_run_enabled, "created_at": m.created_at})
+                    "local_run_enabled": m.local_run_enabled, "created_at": m.created_at,
+                    "created_by": m.created_by})
+    return out
+
+
+@app.get("/orgs/{org_id}/agents/observed")
+async def list_observed_agents(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """The agents ALREADY running under members' own tokens, discovered from traffic: one row per
+    (member, runtime) seen in the last 30 days, e.g. "jason@… / claude-code". The zero-setup half
+    of the agents story — nobody mints anything, the roster fills itself from `CallRecord.client`
+    (and RunRecord). Self-reported attribution, not authentication, which is why this view only
+    informs; scoping one for real = mint it a token ("Scope this agent" in the dashboard).
+
+    Machine identities are excluded — their calls are already attributed to themselves. So is a
+    plain terminal (`client` in ('', 'cli')): a roster that lists every human twice teaches nothing.
+    """
+    _require_admin_of(org_id, caller)
+    since = datetime.now(timezone.utc) - timedelta(days=30)
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    rows: dict[tuple[str, str], dict] = {}
+    for model, email_col, when_col, client_col in (
+        (CallRecord, CallRecord.user_email, CallRecord.created_at, CallRecord.client),
+        (RunRecord, RunRecord.user_email, RunRecord.created_at, RunRecord.client),
+    ):
+        q = (select(email_col, client_col, func.count(), func.max(when_col))
+             .where(model.org_id == org_id, when_col >= since,
+                    client_col.not_in(("", "cli")))
+             .group_by(email_col, client_col))
+        for email, client, count, last_seen in (await db.execute(q)).all():
+            if _is_machine_email(email):
+                continue
+            key = (email, client)
+            cur = rows.setdefault(key, {"member": email, "client": client,
+                                        "calls_30d": 0, "last_seen": last_seen})
+            cur["calls_30d"] += count
+            cur["last_seen"] = max(cur["last_seen"], last_seen)
+        qt = (select(email_col, client_col, func.count())
+              .where(model.org_id == org_id, when_col >= today,
+                     client_col.not_in(("", "cli")))
+              .group_by(email_col, client_col))
+        for email, client, count in (await db.execute(qt)).all():
+            if (email, client) in rows:
+                rows[(email, client)]["used_today"] = rows[(email, client)].get("used_today", 0) + count
+    out = [{**r, "used_today": r.get("used_today", 0)} for r in rows.values()]
+    out.sort(key=lambda r: (r["member"], r["client"]))
     return out
 
 
@@ -3538,11 +3584,27 @@ def _redact_argv(argv: list[str]) -> str:
     return " ".join(_redact_argv_list(argv))[:500]
 
 
-async def _grant_audit(db: AsyncSession, caller: Caller, tool_name: str, method: str, path: str, status: int) -> int:
+_KNOWN_CLIENTS = ("claude-code", "codex", "cursor", "windsurf", "gemini-cli", "copilot", "cli")
+
+
+def _client_of(request: Request | None) -> str:
+    """The calling RUNTIME from X-Treg-Client — attribution, not authentication (anything holding
+    the token can claim any name, so this informs the roster and never gates anything). Normalized
+    to a short slug; an unknown-but-well-formed name is kept, so a new runtime shows up without a
+    release."""
+    raw = (request.headers.get("X-Treg-Client", "") if request is not None else "").strip().lower()
+    raw = raw.split("/", 1)[0]  # accept "claude-code/1.2" version suffixes
+    slug = re.sub(r"[^a-z0-9-]", "", raw)[:32]
+    return slug
+
+
+async def _grant_audit(db: AsyncSession, caller: Caller, tool_name: str, method: str, path: str,
+                       status: int, client: str = "") -> int:
     """A SYNCHRONOUS audit row (unlike record_call): the grant returns its audit id so the
     run-report can prove it follows a real grant. One insert; this is not the hot proxy path."""
     rec = CallRecord(org_id=caller.org_id, user_email=caller.email, tool_name=tool_name,
-                     method=method, path=path[:500], status_code=status, kind="local_run")
+                     method=method, path=path[:500], status_code=status, kind="local_run",
+                     client=client)
     db.add(rec)
     await db.commit()
     return rec.id
@@ -3586,7 +3648,7 @@ async def grant_local_run(
     denied = localrun.check_deny(profile, body.argv)
     if denied:
         pattern, source = denied
-        await _grant_audit(db, caller, tool.name, "DENY", _redact_argv(body.argv), 403)
+        await _grant_audit(db, caller, tool.name, "DENY", _redact_argv(body.argv), 403, _client_of(request))
         raise HTTPException(status_code=403, detail=(
             f"denied by {source}: pattern {pattern!r}. The skill's creator controls this list "
             "(cli.deny in treg.json)."))
@@ -3607,7 +3669,7 @@ async def grant_local_run(
         proof = get_settings().run_proof
         supplied = request.headers.get("X-Treg-Run-Proof", "")
         if not (proof and hmac.compare_digest(supplied, proof)):
-            await _grant_audit(db, caller, tool.name, "DENY", _redact_argv(body.argv), 403)
+            await _grant_audit(db, caller, tool.name, "DENY", _redact_argv(body.argv), 403, _client_of(request))
             raise HTTPException(status_code=403, detail=(
                 "this tool uses another member's key — running it needs the isolated treg-run runner "
                 "(an admin sets it up once: `sudo treg setup-local-run --run-proof …`). A direct grant "
@@ -3620,7 +3682,7 @@ async def grant_local_run(
         raise HTTPException(status_code=409, detail=str(exc))
     except Exception as exc:  # noqa: BLE001 — a failed oauth refresh must read clearly, like /call
         raise HTTPException(status_code=502, detail=f"oauth refresh failed: {exc}")
-    audit_id = await _grant_audit(db, caller, tool.name, "GRANT", _redact_argv(body.argv), 200)
+    audit_id = await _grant_audit(db, caller, tool.name, "GRANT", _redact_argv(body.argv), 200, _client_of(request))
     warnings = list(profile.get("warnings") or [])
     ttl = rendered["ttl_seconds"]
     if ttl is not None and ttl <= 0:
@@ -5198,6 +5260,7 @@ async def call_tool(
         audit.record_call(
             org_id=caller.org_id, user_email=caller.email, tool_name=tool.name,
             method=request.method, path=upstream_url, status_code=status_code,
+            client=_client_of(request),
         )
 
     # Landing-page sandbox: never touch the network — EXCEPT the one live wire. A call to the
@@ -5265,7 +5328,8 @@ class RunIn(BaseModel):
 
 @app.post("/run")
 async def run_tool_server(
-    body: RunIn, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+    body: RunIn, request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
     """Run a tool's CLI **on the treg server**, with its `cli.inject` secrets injected into the
     child process — the caller never holds the key. Both run tiers read the same `Tool.cli`
@@ -5308,7 +5372,7 @@ async def run_tool_server(
     audit.record_run(
         org_id=caller.org_id, user_email=caller.email, bundle_name=tool.name,
         argv=_redact_argv_list(list(body.args)),  # redact any credential typed inline before it's stored
-        exit_code=result.exit_code, duration_ms=result.duration_ms,
+        exit_code=result.exit_code, duration_ms=result.duration_ms, client=_client_of(request),
     )
     return {
         "tool": tool.name,

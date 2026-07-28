@@ -112,8 +112,27 @@ class _RegistryClient(httpx.Client):
         return super().send(retry, **kwargs)
 
 
+def _detect_runtime() -> str:
+    """Which coding agent this CLI is running inside, from environment fingerprints. Sent as
+    X-Treg-Client so the registry can attribute traffic per runtime ("jason / claude-code") —
+    attribution only, never authentication. TREG_CLIENT overrides for anything we can't sniff."""
+    override = os.environ.get("TREG_CLIENT", "").strip()
+    if override:
+        return override
+    for env_var, name in (
+        ("CLAUDECODE", "claude-code"),
+        ("CODEX_SANDBOX", "codex"), ("CODEX_HOME", "codex"),
+        ("CURSOR_AGENT", "cursor"), ("CURSOR_TRACE_ID", "cursor"),
+        ("GEMINI_CLI", "gemini-cli"),
+        ("GITHUB_COPILOT_AGENT", "copilot"),
+    ):
+        if os.environ.get(env_var):
+            return name
+    return "cli"  # a plain terminal — recorded but kept out of the observed-agents roster
+
+
 def _client(cfg: dict, *, auth: bool = True) -> httpx.Client:
-    headers = {"ngrok-skip-browser-warning": "1"}
+    headers = {"ngrok-skip-browser-warning": "1", "X-Treg-Client": _detect_runtime()}
     if auth and cfg.get("token"):
         headers["X-Treg-Token"] = cfg["token"]
         org = _effective_org(cfg)
