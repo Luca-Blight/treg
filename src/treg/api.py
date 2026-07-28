@@ -2788,6 +2788,7 @@ class AgentIn(BaseModel):
     role: str = "member"  # never "owner" (see below); "admin" is owner-granted only
     daily_call_cap: int = -1  # -1 = unlimited, mirroring set_member_cap
     tool_access: list[str] | None = None  # None = every tool, mirroring set_member_access
+    project_access: list | None = None  # None = every project; slugs or ids, mirroring set_member_access
     local_run_enabled: bool = True
 
 
@@ -2845,6 +2846,8 @@ async def create_agent(
     if is_new or "tool_access" in sent:  # only re-validate what the caller actually sent
         membership.tool_access = _normalize_tool_access(
             body.tool_access, await _known_access_names(org_id, db))
+    if is_new or "project_access" in sent:
+        membership.project_access = await _normalize_project_access(body.project_access, org_id, db)
     membership.local_run_enabled = _keep("local_run_enabled", membership.local_run_enabled)
     await db.commit()
     return {"token": token, "name": name, "email": email, "org": caller.org.slug, "user_id": user.id,

@@ -2940,10 +2940,16 @@ def cmd_org_agent_new(args, cfg) -> None:
         org_id = _active_org_id(cfg, c)
         if org_id is None:
             sys.exit("no active org")
-        _show(c.post(f"/orgs/{org_id}/agents", json={
+        body = {
             "name": args.name, "role": args.role, "daily_call_cap": args.cap,
             "tool_access": _resolve_tool_access(c, org_id, args),
-            "local_run_enabled": getattr(args, "local_run", "on") != "off"}))
+            "local_run_enabled": getattr(args, "local_run", "on") != "off"}
+        # Only send project_access when the caller asked for it — an absent field survives a rotate.
+        if getattr(args, "all_projects", False):
+            body["project_access"] = None
+        elif getattr(args, "projects", None):
+            body["project_access"] = [p.strip() for p in args.projects.split(",") if p.strip()]
+        _show(c.post(f"/orgs/{org_id}/agents", json=body))
 
 
 def cmd_org_agents(args, cfg) -> None:
@@ -3323,6 +3329,9 @@ def build_parser() -> argparse.ArgumentParser:
     oan.add_argument("--tools", help="comma-separated tool names this agent may use (default: prompt / all)")
     oan.add_argument("--all-tools", dest="all_tools", action="store_true", help="allow every tool")
     oan.add_argument("--local-run", dest="local_run", choices=["on", "off"], help="allow local CLI runs")
+    oan.add_argument("--projects", help="comma-separated project slugs/ids this agent is scoped to")
+    oan.add_argument("--all-projects", dest="all_projects", action="store_true",
+                     help="scope to every project (the default for a new agent)")
     oan.set_defaults(fn=cmd_org_agent_new)
     mk(og, "agents", "List this team's agent identities and their limits (admin+). "
                      "(Different from `treg agents`, which lists coding agents for skill install.)",

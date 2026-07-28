@@ -248,3 +248,36 @@ async def test_an_access_patch_without_projects_keeps_the_scope(env):
     me = next(m for m in members if m["user_id"] == env.member_uid)
     assert me["project_access"] == [env.apollo["id"]], "project scope must survive an unrelated PATCH"
     assert (await env.c.get("/call/g-tool/ok", headers=_h(env.member))).status_code == 403
+
+
+# ---- agents can be project-scoped at creation -------------------------------------------------
+async def test_agent_created_with_project_scope(env):
+    """`AgentIn.project_access` — an agent can be scoped to a project at mint time (slugs or ids),
+    instead of a second PATCH from the Team roster."""
+    r = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner),
+                         json={"name": "scoped", "project_access": [env.apollo["slug"]]})
+    assert r.status_code == 200, r.text
+    assert r.json()["project_access"] == [env.apollo["id"]]
+    tok = r.json()["token"]
+    names = {t["name"] for t in (await env.c.get("/tools", headers=_h(tok))).json()}
+    assert names == {"a-tool", "shared"}
+    assert (await env.c.get("/call/g-tool/ok", headers=_h(tok))).status_code == 403
+
+
+async def test_agent_rotate_without_projects_keeps_the_scope(env):
+    """A rotate that does not mention project_access must not widen it — same `model_fields_set`
+    contract as tool_access (round-4 blocker #2)."""
+    made = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner),
+                            json={"name": "scoped", "project_access": [env.apollo["slug"]]})
+    assert made.status_code == 200, made.text
+    rot = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner),
+                           json={"name": "scoped"})  # the dashboard Rotate shape
+    assert rot.status_code == 200, rot.text
+    assert rot.json()["project_access"] == [env.apollo["id"]], "rotate must never widen the scope"
+    assert (await env.c.get("/call/g-tool/ok", headers=_h(rot.json()["token"]))).status_code == 403
+
+
+async def test_agent_created_with_unknown_project_is_rejected(env):
+    r = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner),
+                         json={"name": "typo", "project_access": ["no-such-project"]})
+    assert r.status_code == 422
