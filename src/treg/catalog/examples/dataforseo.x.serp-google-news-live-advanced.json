@@ -1,0 +1,58 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "11.5924 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281335-2171-0139-0000-b4b4863a72ea",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "11.5107 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "google",
+        "se_type": "news",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "android",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "android",
+          "type": "news",
+          "se_domain": "google.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.google.com/search?q=android&num=10&hl=en&gl=US&gws_rd=cr&tbm=nws&uule=w+CAIQIFISCQs2MuSEtepUEUK33kOSuTsc&ie=UTF-8&oe=UTF-8",
+          "datetime": "2026-07-28 10:35:42 +00:00",
+          "spell": null,
+          "refinement_chips": null,
+          "includes_non_news_search_results": false,
+          "item_types": [
+            "news_search",
+            "… 1 more item(s) truncated"
+          ],
+          "se_results_count": 15700000,
+          "items_count": 10,
+          "items": [
+            "… {9 field(s) truncated}",
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

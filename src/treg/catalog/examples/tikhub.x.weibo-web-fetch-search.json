@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "request_id": "13e9dfb9-ce8f-4538-abd8-221c665cf197",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:42",
+  "time_stamp": 1785220242,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-API/fetch_search_api_v1_weibo_web_fetch_search_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/13e9dfb9-ce8f-4538-abd8-221c665cf197?sign=d55c8741455b7efb16e65f049b3a2e4a50c717a23446ff89017ff6255d8b9394",
+  "router": "/api/v1/weibo/web/fetch_search",
+  "params": {
+    "keyword": "游戏",
+    "page": "1",
+    "search_type": "1"
+  },
+  "data": {
+    "ok": 1,
+    "data": {
+      "cardlistInfo": "… {23 field(s) truncated}",
+      "cards": "… [16 item(s) truncated]",
+      "ext_trans": "… {5 field(s) truncated}",
+      "scheme": "sinaweibo://searchall?containerid=100103&q=%E6%B8%B8%E6%88%8F&page=1&_T_WM=46372935661&v_p=42&lfid=100103&launchid=10000360-page_H5",
+      "showAppTips": 0
+    }
+  }
+}

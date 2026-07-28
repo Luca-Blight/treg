@@ -1,0 +1,51 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "8.8683 sec.",
+  "cost": 0.024,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0466-0000-86447302da81",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "8.8615 sec.",
+      "cost": 0.024,
+      "result_count": 10,
+      "path": [
+        "v3",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "content_analysis",
+        "function": "rating_distribution",
+        "keyword": "logitech",
+        "search_mode": "as_is",
+        "internal_list_limit": 10
+      },
+      "result": [
+        {
+          "type": "content_analysis_rating_distribution",
+          "min": 0,
+          "max": 0.1,
+          "metrics": {
+            "type": "content_analysis_summary",
+            "total_count": 216,
+            "rank": 270,
+            "top_domains": "… [6 item(s) truncated]",
+            "sentiment_connotations": "… {6 field(s) truncated}",
+            "connotation_types": "… {3 field(s) truncated}",
+            "text_categories": "… [10 item(s) truncated]",
+            "page_categories": "… [10 item(s) truncated]",
+            "page_types": "… {5 field(s) truncated}",
+            "countries": "… {6 field(s) truncated}",
+            "languages": "… {7 field(s) truncated}"
+          }
+        },
+        "… 9 more item(s) truncated"
+      ]
+    }
+  ]
+}

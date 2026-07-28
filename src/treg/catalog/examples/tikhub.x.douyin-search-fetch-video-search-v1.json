@@ -1,0 +1,55 @@
+{
+  "code": 200,
+  "request_id": "6a43250e-c764-484f-ae64-8a5fe12f08b2",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:53",
+  "time_stamp": 1785220373,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Search-API/fetch_video_search… [111 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/6a43250e-c764-48… [150 chars]",
+  "router": "/api/v1/douyin/search/fetch_video_search_v1",
+  "params": {
+    "keyword": "猫咪",
+    "cursor": 0,
+    "sort_type": "0",
+    "publish_time": "0",
+    "filter_duration": "0",
+    "content_type": "0",
+    "search_id": "",
+    "backtrace": ""
+  },
+  "data": {
+    "status_code": 0,
+    "aweme_list": null,
+    "has_more": 1,
+    "cursor": 8,
+    "guide_search_words": [
+      "… {5 field(s) truncated}",
+      "… 13 more item(s) truncated"
+    ],
+    "ad_info": {},
+    "extra": {
+      "now": 1785220373000,
+      "logid": "20260728143252BEC6118660E0FA27406F",
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "search_request_id": "",
+      "scenes": null
+    },
+    "log_pb": {
+      "impr_id": "20260728143252BEC6118660E0FA27406F",
+      "stab_extra": "… {1 field(s) truncated}"
+    },
+    "backtrace": "J6aGE6HAjYfQrWVjdpCA4mb/4Ou8tKEO9Z/KGZQa5oHKhMZb0IpXIQMJnz0I… [88 chars]",
+    "data": [
+      "… {26 field(s) truncated}",
+      "… 7 more item(s) truncated"
+    ],
+    "global_doodle_config": {
+      "keyword": "猫咪"
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "code": 200,
+  "request_id": "b09f7ca7-8af1-474d-a9e2-740cd96c52fe",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:05",
+  "time_stamp": 1785220325,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/get_company_profile… [104 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/b09f7ca7-8af1-47… [150 chars]",
+  "router": "/api/v1/linkedin/web/get_company_profile",
+  "params": {
+    "company": "rapidapi"
+  },
+  "data": {
+    "id": "10649600",
+    "name": "Rapid (acquired by Nokia)",
+    "universal_name": "rapidapi",
+    "description": "RapidAPI is the world’s largest API Hub where millions of de… [267 chars]",
+    "linkedin_url": "https://www.linkedin.com/company/rapidapi/",
+    "website_url": "https://RapidAPI.com/",
+    "active": true,
+    "archived": false,
+    "follower_count": 24630,
+    "employee_count": 339,
+    "employee_count_range": {
+      "start": 51,
+      "end": 200
+    },
+    "claimable": false,
+    "verification": {
+      "verified": true,
+      "last_modified_at": "2023-09-12T18:18:31.454Z"
+    },
+    "founded_on": {
+      "day": null,
+      "month": null,
+      "year": 2015
+    },
+    "headquarter": {
+      "country": "US",
+      "city": "San Francisco",
+      "geographic_area": "California",
+      "line1": "2 Shaw Alley",
+      "line2": "Floor #4",
+      "postal_code": "94105"
+    },
+    "…": "7 more field(s) truncated"
+  }
+}

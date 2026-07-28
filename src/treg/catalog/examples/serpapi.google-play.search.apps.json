@@ -1,0 +1,52 @@
+{
+  "search_metadata": {
+    "id": "6a68987c7af899c42c6514bf",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/gShMG_DWBPyCI6PHawBxOw/6a68987c7af899c42c6514bf.json",
+    "created_at": "2026-07-28 11:54:36 UTC",
+    "processed_at": "2026-07-28 11:54:36 UTC",
+    "google_play_url": "https://play.google.com/store/search?q=coffee&c=apps&hl=en&gl=us",
+    "raw_html_file": "https://serpapi.com/searches/gShMG_DWBPyCI6PHawBxOw/6a68987c7af899c42c6514bf.html",
+    "total_time_taken": 0.73
+  },
+  "search_parameters": {
+    "engine": "google_play",
+    "q": "coffee",
+    "hl": "en",
+    "gl": "us",
+    "store": "apps"
+  },
+  "organic_results": [
+    {
+      "items": [
+        {
+          "title": "Good Coffee, Great Coffee",
+          "link": "https://play.google.com/store/apps/details?id=com.tapblaze.coffeebusiness",
+          "product_id": "com.tapblaze.coffeebusiness",
+          "serpapi_link": "https://serpapi.com/search.json?engine=google_play_product&gl=us&hl=en&platform=phone&product_id=com.tapblaze.coffeebusiness&sort_by=1&store=apps",
+          "rating": 4.3,
+          "author": "TapBlaze",
+          "category": "Simulation",
+          "downloads": "10,000,000+",
+          "video": "https://www.youtube.com/embed/RFUNyVrGCzE?vq=large&rel=0&autohide=1&showinfo=0",
+          "thumbnail": "https://play-lh.googleusercontent.com/8VmEqrFsGQlykmwtBljq0GTF7qvxA1jsuS9oMYJIZOlYJTCHjtQG3QXiweA4W7oRn9WVM0MhSXOvF9tXgvVMzdA=s64",
+          "description": "☕ Wake up and smell the coffee because TapBlaze's newest simulation cooking game, Good Coffee, Great Coffee, is finally here! Prepare delicious drinks, experiment with new flavors, decorate your shop, and manage cafe costs to become the best barista in town!\n\nFulfill quirky customer orders with coffee drinks that look and taste delicious! Upgrade your shop with new decorations and equipment to increase your cafe profit! Make friends, rivals, and more when locals visit your shop! Listen to their … [1966 chars total]"
+        },
+        {
+          "title": "iBrewCoffee - Coffee Journal",
+          "link": "https://play.google.com/store/apps/details?id=coffee.ibrew.ibrewcoffee",
+          "product_id": "coffee.ibrew.ibrewcoffee",
+          "serpapi_link": "https://serpapi.com/search.json?engine=google_play_product&gl=us&hl=en&platform=phone&product_id=coffee.ibrew.ibrewcoffee&sort_by=1&store=apps",
+          "rating": 4.6,
+          "author": "Stanislav Novacek",
+          "category": "Food & Drink",
+          "downloads": "50,000+",
+          "thumbnail": "https://play-lh.googleusercontent.com/pWF1ceHqSLUMKamVy-h9qdA1XoDWHA7BlTZHX6Wy-bMrCt4EotdrPwpEODU2LwJ1RvGxbjCehu-cHlUhghPcFw=s64",
+          "feature_image": "https://play-lh.googleusercontent.com/2qbBLnHQoaKbaejJDwBREwL_AFTOaFMQ6mfWX5WDec4mKh3Wqhc-Pt2swdYpAOd96z-t9DN06sVcVb4HQaJ00w=w416-h235",
+          "description": "Coffee App for your Brews\nHave you ever made a fantastic cup of your favorite coffee and forgot the exact brewing process? \nNot anymore. Your personal coffee journal app is finally here!\n\niBrewCoffee lets you save specialty coffee beans, record all your brewing recipes, and export print-ready PDF so you can enjoy your coffee journal and share your brewing mastery with your friends.\n\nUsing the app is simple:\n1) save a Product (bag of specialty coffee),\n2) record your Brews, experiment, rate, comp… [3585 chars total]"
+        },
+        "… 10 more item(s) truncated"
+      ]
+    }
+  ]
+}

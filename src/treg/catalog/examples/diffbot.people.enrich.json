@@ -1,0 +1,44 @@
+{
+  "version": 3,
+  "hits": 1,
+  "kgversion": "478",
+  "request_ctx": {
+    "query": {
+      "type": "Person",
+      "name": "Mike Tung",
+      "employer": "Diffbot"
+    },
+    "query_ctx": {
+      "search": "OFF"
+    }
+  },
+  "data": [
+    {
+      "score": 0.997490554914678,
+      "esscore": 126055.546875,
+      "entity": {
+        "twitterUri": "twitter.com/mikektung",
+        "gender": "… {1 field(s) truncated}",
+        "githubUri": "github.com/miketung",
+        "importance": 93.38774108886719,
+        "origin": "wikidata.org/entity/Q24050958",
+        "description": "Mike Tung serves as the Founder and CEO of Diffbot since January 2012, a pioneering company within the Stanford StartX accelerator program. Additionally, Mike acts as an advisor for Enterprise/SaaS st… [807 chars]",
+        "educations": "… [2 item(s) truncated]",
+        "homepageUri": "miketung.com",
+        "type": "Person",
+        "allNames": "… [11 item(s) truncated]",
+        "skills": "… [32 item(s) truncated]",
+        "youtubeUri": "youtube.com/channel/UChWEWf5k8JaN_8fmXxz0xxA",
+        "origins": "… [21 item(s) truncated]",
+        "id": "ESGMaGV9uP0SuTmfPTtNEoA",
+        "crawlTimestamp": 1784271134,
+        "…": "24 more field(s) truncated"
+      },
+      "errors": [],
+      "entity_ctx": {
+        "inner_hits": "… {1 field(s) truncated}"
+      }
+    }
+  ],
+  "errors": []
+}

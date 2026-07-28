@@ -1,0 +1,118 @@
+{
+  "code": 0,
+  "data": {
+    "areaLimit": false,
+    "coupon": {
+      "coupon": "… 9 field(s) truncated"
+    },
+    "creativeText": "超长待机 7天不充电,4G全网通 双卡双待",
+    "dianpuCouponList": [
+      "… 9 field(s) truncated",
+      "… 1 more item(s) truncated"
+    ],
+    "freeShipping": false,
+    "item": {
+      "beehiveContent": "… 6 field(s) truncated",
+      "categoryId": "1512",
+      "images": "… 5 item(s) truncated",
+      "itemId": 522900342691,
+      "location": "广东东莞",
+      "rootCategoryId": "1512",
+      "sellCount": "7000+",
+      "seoItemType": "tmall",
+      "title": "纽曼M560老人手机 4G全网通长待机智能按键手机 电信版学… [41 chars total]",
+      "videos": "… 1 item(s) truncated"
+    },
+    "itemAskDOList": [
+      "… 4 field(s) truncated",
+      "… 9 more item(s) truncated"
+    ],
+    "itemDesc": "<div style=\"width: 750.0px;hei… [2600 chars total]",
+    "itemExist": true,
+    "itemPrice": {
+      "currency": "KRW",
+      "currencySymbol": "₩",
+      "endTime": "2026-05-30 23:59:59",
+      "exchangePrice": "25134.27",
+      "exchangePriceHKD": "126.23",
+      "exchangePriceTWD": "505.54",
+      "hasRangePrice": true,
+      "originalPrice": "528.00",
+      "price": "108.00-158.00",
+      "promotionName": "优惠价",
+      "promotionPrice": "108.00",
+      "remark": "价格可能因优惠活动发生变化",
+      "startTime": "2026-05-21 00:00:00"
+    },
+    "itemSkuDO": {
+      "skuList": "… 30 field(s) truncated",
+      "skuPVPairList": "… 30 item(s) truncated",
+      "skuPropertyList": "… 4 item(s) truncated"
+    },
+    "itemTrade": {
+      "paymentList": "… 3 item(s) truncated",
+      "soldQuantityTotal": "7000+"
+    },
+    "merchantReturnRegion": [
+      "HK",
+      "… 1 more item(s) truncated"
+    ],
+    "props": {
+      "groupProps": "… 1 item(s) truncated"
+    },
+    "rate": {
+      "hasAppendCount": "3000+",
+      "hasMediaCount": "5000+",
+      "hasNextPage": true,
+      "keywords": "… 8 item(s) truncated",
+      "rateList": "… 20 item(s) truncated",
+      "totalCount": "2万+"
+    },
+    "seeMore": {
+      "jumpUrlPrefix": "/item",
+      "recommendUrl": "https://tui.taobao.com/recomme… [191 chars total]"
+    },
+    "sellableLanguageList": [
+      "en_US",
+      "… 1 more item(s) truncated"
+    ],
+    "seller": {
+      "allItemCount": 13,
+      "creditLevel": "17",
+      "evaluates": "… 3 item(s) truncated",
+      "newItemCount": 4,
+      "sellerType": "B",
+      "shopCard": "掌柜近期上新4件宝贝，速览",
+      "shopIcon": "https://img.alicdn.com/imgextr… [86 chars total]",
+      "shopId": 104819338,
+      "shopName": "纽曼宏悦智联专卖店",
+      "shopUrl": "//shop.m.taobao.com/shop/shop_… [79 chars total]",
+      "showShopLinkIcon": false,
+      "starts": "2013-06-17 15:49:36",
+      "taoShopUrl": "//shop.m.taobao.com/shop/shop_… [79 chars total]",
+      "userId": 1707225666
+    },
+    "service": {
+      "remarkUrl": "https://img.alicdn.com/tfs/TB1… [67 chars total]"
+    },
+    "skuId": 5984570164933,
+    "success": true,
+    "mainItemInfo": {
+      "afterCouponAmountPrice": "88",
+      "auctionIconUrl": "https://gw.alicdn.com/imgextra… [90 chars total]",
+      "hasSubsidy": "false",
+      "itemId": "522900342691",
+      "itemName": "[官方直营]4G全网通纽曼M560正品老年手机超长待机老人机… [54 chars total]",
+      "pic": "//img.alicdn.com/bao/uploaded/… [104 chars total]",
+      "pretaobaoAmt": "1.77",
+      "promotionModel": "… 4 field(s) truncated",
+      "scm": "taobao.0.0.taobao_markting-pag… [33 chars total]",
+      "tk": "1",
+      "taobaoPromotionModel": "… 1 field(s) truncated",
+      "url": "https://detail.tmall.com/?e=m%… [893 chars total]"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:22.234917783",
+  "requestId": "a6dee3ad096941cc96e20e0dd32419… [32 chars total]"
+}

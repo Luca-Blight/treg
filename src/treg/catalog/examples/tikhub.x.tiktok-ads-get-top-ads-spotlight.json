@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "fef778aa-62a9-47e5-a2ca-6bf7fdebae00",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:52",
+  "time_stamp": 1785220192,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Ads-API/get_top_ads_spotlight_api_v1_tiktok_ads_get_top_ads_spotlight_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/fef778aa-62a9-47e5-a2ca-6bf7fdebae00?sign=4b14436f4ce31c2b3d1603ab590db29dbda3c609606dddb501d8245482227ce9",
+  "router": "/api/v1/tiktok/ads/get_top_ads_spotlight",
+  "params": {
+    "limit": "5"
+  },
+  "data": {
+    "code": 0,
+    "msg": "OK",
+    "data": {
+      "materials": [
+        {
+          "cost": 2,
+          "ctr": 0.2,
+          "highlight": "Showcase a real-time comparison between products, while communicating your product's value and superiority. Leverage your product's unique features to encourage a purchase.",
+          "id": "7182310470102122497",
+          "like": 33506,
+          "video_info": "… {6 field(s) truncated}"
+        },
+        "… 4 more item(s) truncated"
+      ],
+      "pagination": {
+        "page": 1,
+        "size": 5,
+        "total": 5,
+        "has_more": false
+      }
+    }
+  }
+}

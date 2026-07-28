@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "535d678b-34c8-403e-bc68-67015a38b918",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:51",
+  "time_stamp": 1785220311,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Threads-Web-API/fetch_post_comments_api_v1_threads_web_fetch_post_comments_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/535d678b-34c8-403e-bc68-67015a38b918?sign=40a4f95404f7429bc78c8b1c070970abfab7e4536588924eb2ab94522a54df6d",
+  "router": "/api/v1/threads/web/fetch_post_comments",
+  "params": {
+    "post_id": "3390920896561588969"
+  },
+  "data": {
+    "edges": [
+      {
+        "node": {
+          "header": null,
+          "thread_items": [
+            "… {1 field(s) truncated}"
+          ],
+          "thread_type": "thread",
+          "id": "3390920896561588969",
+          "__typename": "XDTThread"
+        },
+        "cursor": ""
+      },
+      "… 7 more item(s) truncated"
+    ],
+    "page_info": {
+      "has_next_page": true,
+      "has_previous_page": false,
+      "end_cursor": null,
+      "start_cursor": null
+    }
+  }
+}

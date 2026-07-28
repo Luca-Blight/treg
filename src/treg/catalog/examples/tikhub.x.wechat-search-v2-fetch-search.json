@@ -1,0 +1,51 @@
+{
+  "code": 200,
+  "request_id": "fb77e9a5-f290-4a1a-821b-d054935b4b17",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:14",
+  "time_stamp": 1785220394,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Search-V2-API/fetch_search_ap… [99 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/fb77e9a5-f290-4a… [150 chars]",
+  "router": "/api/v1/wechat_search/v2/fetch_search",
+  "params": {
+    "keyword": "人民日报",
+    "business_type": "all",
+    "sort": "default",
+    "publish_time": "all",
+    "offset": 0,
+    "cursor": null,
+    "raw": true
+  },
+  "data": {
+    "keyword": "人民日报",
+    "business_type": 0,
+    "results": {
+      "byStepText": "",
+      "category": "… [18 item(s) truncated]",
+      "continueFlag": 1,
+      "data": "… [15 item(s) truncated]",
+      "direction": 2,
+      "enableQuestionClosely": false,
+      "forbidRefreshLocation": true,
+      "isAutoPlayVideo": 1,
+      "isBoxCardStyle": 1,
+      "isDivide": 1,
+      "isHomePage": 0,
+      "lang": "zh_CN",
+      "loadingText": "搜索中",
+      "offset": 18,
+      "pageNumber": 1,
+      "…": "6 more field(s) truncated"
+    },
+    "continue_flag": 1,
+    "offset": 18,
+    "cursor": "<omitted: expires>",
+    "debug_id": "bc33d95f",
+    "debug_info": "gAAAAABqaE0qEARvLaCmOjtIM_8BegD0bZpqNth1PxOu4dn9DsdxPUtTIVHy… [268 chars]"
+  }
+}

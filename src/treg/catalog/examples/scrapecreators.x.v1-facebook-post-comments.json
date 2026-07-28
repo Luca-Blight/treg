@@ -1,0 +1,38 @@
+{
+  "success": true,
+  "credits_remaining": 19832,
+  "credits_charged": 1,
+  "comments": [
+    {
+      "id": "Y29tbWVudDoxMjA2OTAzNjAxNDgzOTYwXzc3OTIzNDI4MTE0NjkzNQ==",
+      "text": "Do 1/2 mini Oreos and 1/2 peanut butter ritz Bitz, otherwise the same recipe. It’s the BEST",
+      "created_at": "2025-09-01T01:10:40.000Z",
+      "reply_count": 1,
+      "reaction_count": 95,
+      "reactions": {
+        "thankful": 0,
+        "like": 79,
+        "love": 4,
+        "care": 0,
+        "haha": 1,
+        "wow": 11,
+        "sad": 0,
+        "anger": 0,
+        "pride": 0,
+        "confused": 0
+      },
+      "author": {
+        "id": "pfbid0P1iCPskqYGkWTL7PchiXEvsFEFxo5QT91gq69od981SVxVsp2r5k71c8maFbnZsTl",
+        "name": "Robin Bergsagel",
+        "gender": "FEMALE",
+        "profile_picture": "https://scontent-iad3-1.xx.fbcdn.net/v/t39.30808-1/541010933_10106323684125112_9066040164311826134_n.jpg?stp=cp6_dst-jpg_s64x64_tt6&_nc_cat=104&ccb=1-7&_nc_sid=e99d92&_nc_ohc=7pTBwraHVcsQ7kNvwGGFMD6&_… [418 chars]",
+        "short_name": "Robin"
+      },
+      "feedback_id": "ZmVlZGJhY2s6MTIwNjkwMzYwMTQ4Mzk2MF83NzkyMzQyODExNDY5MzU=",
+      "expansion_token": "<omitted: expires>"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>",
+  "has_next_page": true
+}

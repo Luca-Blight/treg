@@ -1,0 +1,82 @@
+{
+  "search_metadata": {
+    "id": "6a6898d5529e4bfeff675147",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/Rffa5_f6dXtsgqClMsPi0g/6a6898d5… [81 chars]",
+    "created_at": "2026-07-28 11:56:05 UTC",
+    "processed_at": "2026-07-28 11:56:05 UTC",
+    "walmart_url": "https://www.walmart.com/search?query=coffee+maker",
+    "raw_html_file": "https://serpapi.com/searches/Rffa5_f6dXtsgqClMsPi0g/6a6898d5… [81 chars]",
+    "prettify_html_file": "https://serpapi.com/searches/Rffa5_f6dXtsgqClMsPi0g/6a6898d5… [85 chars]",
+    "total_time_taken": 46.77
+  },
+  "search_parameters": {
+    "engine": "walmart",
+    "device": "desktop",
+    "walmart_domain": "walmart.com",
+    "query": "coffee maker"
+  },
+  "search_information": {
+    "location": {
+      "postal_code": "95829",
+      "province_code": "CA",
+      "city": "Sacramento",
+      "store_id": "3081"
+    },
+    "time_taken": 0.696,
+    "total_results": 3376,
+    "query_displayed": "coffee maker",
+    "organic_results_state": "Results for exact spelling"
+  },
+  "organic_results": [
+    {
+      "us_item_id": "18439016545",
+      "product_id": "6PP0IWY76E84",
+      "title": "Ninja Pods &amp; Grounds Hot &amp; Iced Single-Serve Coffee … [120 chars]",
+      "thumbnail": "https://i5.walmartimages.com/seo/Ninja-Single-Serve-Pods-Gro… [241 chars]",
+      "rating": 4.5,
+      "reviews": 1446,
+      "seller_id": "F55CDC31AB754BB68FE0B39041159D63",
+      "seller_name": "Walmart.com",
+      "two_day_shipping": false,
+      "free_shipping": false,
+      "…": "10 more field(s) truncated"
+    },
+    "… 18 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1707 chars]",
+    "other_pages": {
+      "2": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1707 chars]",
+      "3": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1707 chars]",
+      "4": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1707 chars]",
+      "5": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1707 chars]",
+      "6": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1707 chars]",
+      "7": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1707 chars]",
+      "8": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1707 chars]",
+      "9": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1707 chars]",
+      "10": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1708 chars]",
+      "11": "https://www.walmart.com/search?adSlot=WSpread&affinityOverri… [1708 chars]",
+      "…": "2 more field(s) truncated"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+    "next": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+      "3": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+      "4": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+      "5": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+      "6": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+      "7": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+      "8": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+      "9": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [169 chars]",
+      "10": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [170 chars]",
+      "11": "https://serpapi.com/search.json?cat_id=0&device=desktop&engi… [170 chars]",
+      "…": "2 more field(s) truncated"
+    }
+  }
+}

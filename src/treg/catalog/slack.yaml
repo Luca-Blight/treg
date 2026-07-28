@@ -1,0 +1,200 @@
+# unverified — no credential available at curation time; transcribed from official docs 2026-07-28.
+#
+# Slack's Web API reached with the workspace's OWN bot token (xoxb-…), which treg's users create
+# themselves from the pre-filled manifest in oauth_providers.py. A bot token only ever answers for
+# the workspace it was installed in, so every endpoint below is scope own_account — this is the
+# team's own Slack, not a scraper.
+#
+# Two conventions dominate this API and shape every entry:
+#   1. Failure is HTTP 200. Slack answers `{"ok": false, "error": "channel_not_found"}` with a 200
+#      status, so a plain 2xx check passes on a dead token. Hence `expect: {json_path: ok,
+#      equals: true}` on every endpoint — verification is ready the day a token exists.
+#   2. GET methods take form-encoded query params; POST (write) methods accept a JSON body with
+#      `Content-Type: application/json` alongside the Bearer token.
+#
+# Bot scopes granted by treg's manifest: chat:write, chat:write.public, channels:read, groups:read,
+# im:read, mpim:read, channels:history, groups:history, users:read, reactions:read, reactions:write,
+# files:read, app_mentions:read. Anything outside that list is absent below — in particular
+# `search.messages` needs a USER token with search:read, which a bot-token install can never hold,
+# and `users:read.email` is not requested so users.list/users.info return no email addresses.
+#
+# ⚠️ Read-history rate limit: Slack apps created after 2025-05-29 that are not Slack Marketplace
+# listed are capped at 1 request/minute and 15 messages per call on conversations.history and
+# conversations.replies. Since treg users create their own unlisted app, assume that tier when
+# planning a backfill; the other methods below stay on the normal Tier 2–4 limits.
+provider: slack
+source:
+  docs: https://docs.slack.dev/reference/methods/
+  openapi: null
+  curated: 2026-07-28
+
+
+limits: "per-METHOD tiers (Tier 1 ~1/min … Tier 4 ~100/min), not one global limit"
+pricing_url: https://api.slack.com/apis/rate-limits  # API free; rate tiers depend on workspace plan and the specific method.
+endpoints:
+  - id: slack.slack.channels.list
+    capability: slack.channels.list
+    platform: slack
+    scope: own_account
+    method: GET
+    path: /conversations.list
+    name: "List workspace channels"
+    summary: "List the channels in your Slack workspace, public and private"
+    input:
+      queryParams:
+        types: {type: string, required: false, note: "comma-separated: public_channel, private_channel, mpim, im. Default public_channel only — private channels need this set explicitly", example: "public_channel,private_channel"}
+        exclude_archived: {type: boolean, required: false, note: "default false — archived channels are included unless you opt out", example: true}
+        limit: {type: integer, required: false, note: "default 100, must be under 1000", example: 100}
+        cursor: {type: string, required: false, note: "response_metadata.next_cursor from the previous page"}
+        team_id: {type: string, required: false, note: "required only when the token belongs to an org-wide app"}
+      note: "the bot only sees private channels it has been /invite-d to, regardless of scopes"
+    expect: {json_path: ok, equals: true}
+    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 2, ~20 requests/minute)"}
+    docs_url: https://docs.slack.dev/reference/methods/conversations.list
+
+  - id: slack.slack.message.send
+    capability: slack.message.send
+    platform: slack
+    scope: own_account
+    method: POST
+    path: /chat.postMessage
+    summary: "Post a message to a Slack channel, or reply in a thread"
+    input:
+      body:
+        channel: {type: string, required: true, note: "channel ID (C…) is safest; a channel name also works", example: "C0123456789"}
+        text: {type: string, required: false, note: "required unless blocks or attachments are supplied; also used as the notification/fallback text when they are", example: "Deploy finished."}
+        blocks: {type: array, required: false, note: "Block Kit layout; supplying it makes `text` the fallback rather than the body"}
+        thread_ts: {type: string, required: false, note: "`ts` of the parent message — makes this a threaded reply", example: "1700000000.000100"}
+        reply_broadcast: {type: boolean, required: false, note: "with thread_ts, also surfaces the reply in the channel"}
+        unfurl_links: {type: boolean, required: false}
+        unfurl_media: {type: boolean, required: false}
+      bodyType: json
+      note: "chat:write posts to channels the bot is in; chat:write.public covers any public channel without joining. Private channels always require an /invite. Response returns the new message's `ts`, which is what thread_ts and reactions.add take"
+    expect: {json_path: ok, equals: true}
+    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (~1 message/second per channel)"}
+    docs_url: https://docs.slack.dev/reference/methods/chat.postMessage
+
+  - id: slack.slack.messages.history
+    capability: slack.messages.history
+    platform: slack
+    scope: own_account
+    method: GET
+    path: /conversations.history
+    summary: "Read recent messages from a Slack channel"
+    input:
+      queryParams:
+        channel: {type: string, required: true, note: "channel ID (C…)", example: "C0123456789"}
+        limit: {type: integer, required: false, note: "default 100, max 999 — but see the unlisted-app cap of 15 in the file header", example: 15}
+        oldest: {type: string, required: false, note: "only messages after this Unix timestamp", example: "1700000000.000000"}
+        latest: {type: string, required: false, note: "only messages before this Unix timestamp"}
+        inclusive: {type: boolean, required: false, note: "include messages sitting exactly on the oldest/latest bounds"}
+        cursor: {type: string, required: false, note: "response_metadata.next_cursor from the previous page"}
+      note: "returns top-level messages only — thread replies come from conversations.replies. Message authors arrive as user IDs (U…); resolve them with users.info or users.list"
+    expect: {json_path: ok, equals: true}
+    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply — 1 request/minute for non-Marketplace apps created after 2025-05-29"}
+    docs_url: https://docs.slack.dev/reference/methods/conversations.history
+
+  - id: slack.slack.thread.replies
+    capability: slack.thread.replies
+    platform: slack
+    scope: own_account
+    method: GET
+    path: /conversations.replies
+    summary: "Read the replies in a Slack message thread"
+    input:
+      queryParams:
+        channel: {type: string, required: true, note: "channel ID the thread lives in", example: "C0123456789"}
+        ts: {type: string, required: true, note: "`ts` of the thread's PARENT message (a reply's thread_ts)", example: "1700000000.000100"}
+        limit: {type: integer, required: false, note: "default 100; same unlisted-app cap of 15 as conversations.history", example: 15}
+        oldest: {type: string, required: false}
+        latest: {type: string, required: false}
+        inclusive: {type: boolean, required: false}
+        cursor: {type: string, required: false}
+      note: "the parent message is returned as the first item, so a thread with N replies comes back as N+1 messages"
+    expect: {json_path: ok, equals: true}
+    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply — 1 request/minute for non-Marketplace apps created after 2025-05-29"}
+    docs_url: https://docs.slack.dev/reference/methods/conversations.replies
+
+  - id: slack.slack.channel.info
+    capability: slack.channel.info
+    platform: slack
+    scope: own_account
+    method: GET
+    path: /conversations.info
+    name: "Get channel details"
+    summary: "Get a Slack channel's details — topic, purpose, member count and archived state"
+    input:
+      queryParams:
+        channel: {type: string, required: true, note: "channel ID (C…)", example: "C0123456789"}
+        include_num_members: {type: boolean, required: false, note: "adds num_members to the channel object"}
+        include_locale: {type: boolean, required: false}
+      note: "answers channel_not_found for a private channel the bot has not been invited to — the same error as a genuinely missing channel"
+    expect: {json_path: ok, equals: true}
+    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 3, ~50 requests/minute)"}
+    docs_url: https://docs.slack.dev/reference/methods/conversations.info
+
+  - id: slack.slack.users.list
+    capability: slack.users.list
+    platform: slack
+    scope: own_account
+    method: GET
+    path: /users.list
+    summary: "List the members of your Slack workspace"
+    input:
+      queryParams:
+        limit: {type: integer, required: false, note: "Slack recommends no more than 200 per page", example: 200}
+        cursor: {type: string, required: false, note: "response_metadata.next_cursor from the previous page"}
+        include_locale: {type: boolean, required: false}
+        team_id: {type: string, required: false, note: "required only when the token belongs to an org-wide app"}
+      note: "includes deactivated members (`deleted: true`) and bots (`is_bot: true`) — filter client-side. Email addresses are omitted: users:read.email is not in treg's manifest"
+    expect: {json_path: ok, equals: true}
+    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 2, ~20 requests/minute)"}
+    docs_url: https://docs.slack.dev/reference/methods/users.list
+
+  - id: slack.slack.user.profile
+    capability: slack.user.profile
+    platform: slack
+    scope: own_account
+    method: GET
+    path: /users.info
+    summary: "Get a Slack workspace member's profile by user ID"
+    input:
+      queryParams:
+        user: {type: string, required: true, note: "user ID (U…) as it appears on a message", example: "U0123456789"}
+        include_locale: {type: boolean, required: false}
+      note: "the one-shot way to turn the user IDs in conversations.history output into names, without paging all of users.list"
+    expect: {json_path: ok, equals: true}
+    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 4, ~100 requests/minute)"}
+    docs_url: https://docs.slack.dev/reference/methods/users.info
+
+  - id: slack.slack.reaction.add
+    capability: slack.reaction.add
+    platform: slack
+    scope: own_account
+    method: POST
+    path: /reactions.add
+    summary: "Add an emoji reaction to a Slack message"
+    input:
+      body:
+        channel: {type: string, required: true, note: "channel ID the message is in", example: "C0123456789"}
+        timestamp: {type: string, required: true, note: "`ts` of the target message — note the field is `timestamp` here, not `ts`", example: "1700000000.000100"}
+        name: {type: string, required: true, note: "emoji name WITHOUT colons", example: "white_check_mark"}
+      bodyType: json
+      note: "reacting twice with the same emoji fails with already_reacted rather than being a no-op"
+    expect: {json_path: ok, equals: true}
+    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 3, ~50 requests/minute)"}
+    docs_url: https://docs.slack.dev/reference/methods/reactions.add
+
+  - id: slack.account.identity
+    capability: account.identity
+    platform: account
+    scope: own_account
+    method: GET
+    path: /auth.test
+    name: "Get connected workspace and bot identity"
+    summary: "Check which Slack workspace and bot identity the token belongs to"
+    input:
+      note: "takes no parameters. Returns team, team_id, user, user_id and url — this is what treg's connection label is built from, and the cheapest way to tell a live token from a revoked one"
+    expect: {json_path: ok, equals: true}
+    cost: {type: free, note: "included with your workspace; requires no scopes and is not rate-tiered like the data methods"}
+    docs_url: https://docs.slack.dev/reference/methods/auth.test

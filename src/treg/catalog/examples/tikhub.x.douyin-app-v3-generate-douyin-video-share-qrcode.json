@@ -1,0 +1,34 @@
+{
+  "code": 200,
+  "request_id": "6ddb0e43-f7ca-4593-8ab8-b23032effec9",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:58",
+  "time_stamp": 1785220078,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/generate_douyin_video_share_qrcode_api_v1_douyin_app_v3_generate_douyin_video_share_qrcode_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/6ddb0e43-f7ca-4593-8ab8-b23032effec9?sign=6a9085c354560c5144603d2a958ba0e33ea859a420eed9212557c0d7781fc4ae",
+  "router": "/api/v1/douyin/app/v3/generate_douyin_video_share_qrcode",
+  "params": {
+    "object_id": "7348044435755846962"
+  },
+  "data": {
+    "event_extra": "{\"schema_type\":1,\"schema_type_name\":\"SCHEMA_VIDEO\",\"object_id\":\"7348044435755846962\",\"ug_share_id\":\"e556684b40e0c_1785220078321\"}",
+    "extra": {
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "logid": "20260728142758D6B9313AE253027F6A94",
+      "now": 1785220078000
+    },
+    "log_pb": {
+      "impr_id": "20260728142758D6B9313AE253027F6A94"
+    },
+    "qrcode_url": {
+      "uri": "aweme-qrcode/BApnXN7667461849503352627",
+      "url_list": "… [2 item(s) truncated]"
+    },
+    "status_code": 0
+  }
+}

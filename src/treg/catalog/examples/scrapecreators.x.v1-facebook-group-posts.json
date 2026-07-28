@@ -1,0 +1,52 @@
+{
+  "success": true,
+  "credits_remaining": 19838,
+  "credits_charged": 1,
+  "posts": [
+    {
+      "id": "3684560455042132",
+      "text": "So the cheeseburger family just had a new kid. They named it Patty. \n\nLOL 😂😂😂😂😂😂😂😂",
+      "url": "https://www.facebook.com/groups/1270525996445602/permalink/3684560455042132/",
+      "author": {
+        "__typename": "User",
+        "name": "PaulandJennykaye Harper",
+        "short_name": "PaulandJennykaye",
+        "id": "100029402416275"
+      },
+      "reactionCount": 8,
+      "reaction_counts": {
+        "thankful": 0,
+        "like": 4,
+        "love": 0,
+        "care": 0,
+        "haha": 4,
+        "wow": 0,
+        "sad": 0,
+        "anger": 0,
+        "pride": 0,
+        "confused": 0
+      },
+      "commentCount": 3,
+      "videoViewCount": null,
+      "publishTime": 1781317010,
+      "creation_time": "2026-06-13T02:16:50.000Z",
+      "videoDetails": {},
+      "image": "https://scontent-det1-1.xx.fbcdn.net/v/t39.10873-6/258595237_335525475049252_1798044099026978784_n.jpg?stp=dst-jpg_p526x296_tt6&_nc_cat=1&ccb=1-7&_nc_sid=4bb800&_nc_ohc=r22oSlCKEN4Q7kNvwGhCyRQ&_nc_oc=… [412 chars]",
+      "topComments": [
+        {
+          "id": "Y29tbWVudDozNjg0NTYwNDU1MDQyMTMyXzM3MzU3ODYwMDMyNTI5MTA=",
+          "text": "I heard the grandparents flipped after they heard that.",
+          "publishTime": 1785174358,
+          "author": {
+            "id": "pfbid02Wchah2Ucs7evm1p7oGg9JhGirX8YqqtWYnNKagR63TxcQbTn2hdtGojSN57j1bkDl",
+            "name": "Michael Sutton",
+            "gender": "MALE",
+            "url": "https://www.facebook.com/HarryGotUp"
+          }
+        }
+      ]
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>"
+}

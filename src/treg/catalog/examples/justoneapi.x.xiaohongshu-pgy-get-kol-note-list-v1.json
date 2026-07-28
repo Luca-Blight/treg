@@ -1,0 +1,38 @@
+{
+  "code": 0,
+  "data": {
+    "list": [
+      {
+        "readNum": 18592,
+        "likeNum": 58,
+        "collectNum": 18,
+        "isAdvertise": false,
+        "isVideo": false,
+        "noteId": "6a659b100000000001033841",
+        "imgUrl": "http://ci.xiaohongshu.com/notes_pre_post/1040g3k03232tafsdg20049v1ne1e0n4719m7je0?imageView2/2/w/540/format/jpg/q/75",
+        "title": "已严肃品鉴瑞幸新品！！",
+        "brandName": null,
+        "date": "2026-07-26",
+        "thirdReadUserNum": 0
+      },
+      {
+        "readNum": 18230,
+        "likeNum": 590,
+        "collectNum": 46,
+        "isAdvertise": false,
+        "isVideo": true,
+        "noteId": "6a658cd8000000000100ea59",
+        "imgUrl": "http://ci.xiaohongshu.com/1040g0083232olo217o1049v1ne1e0n472pbglgo?imageView2/2/w/540/format/jpg/q/75",
+        "title": "朋友说：谁先敲碎谁买单。。。",
+        "brandName": null,
+        "date": "2026-07-26",
+        "thirdReadUserNum": 0
+      },
+      "… 98 more item(s) truncated"
+    ],
+    "total": 163
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:11:46.718001059",
+  "requestId": "8ecc252ea0844725a748e22f2fbb3dda"
+}

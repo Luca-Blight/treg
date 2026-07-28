@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "740b442e-e53e-4fc7-8713-481a534d046f",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:57",
+  "time_stamp": 1785220077,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/fetch_user_post_videos_api_v1_douyin_app_v3_fetch_user_post_videos_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/740b442e-e53e-4fc7-8713-481a534d046f?sign=c9825dbe635375d2af6cc1d2a1f14b75b893173715e96ee08848d2ab5122b565",
+  "router": "/api/v1/douyin/app/v3/fetch_user_post_videos",
+  "params": {
+    "sec_user_id": "MS4wLjABAAAANXSltcLCzDGmdNFI2Q_QixVTr67NiYzjKOIP5s03CAE",
+    "count": "20"
+  },
+  "data": {
+    "extra": {
+      "now": 1785220077000,
+      "logid": "2026072814275693216AC449B1249BE8AF",
+      "fatal_item_ids": "… [0 item(s) truncated]"
+    },
+    "log_pb": {
+      "impr_id": "2026072814275693216AC449B1249BE8AF"
+    },
+    "status_msg": "",
+    "post_serial": 0,
+    "uid": "92163827336",
+    "min_cursor": 1784541897000,
+    "sec_uid": "MS4wLjABAAAANXSltcLCzDGmdNFI2Q_QixVTr67NiYzjKOIP5s03CAE",
+    "status_code": 0,
+    "replace_series_cover": 1,
+    "aweme_list": [
+      "… {171 field(s) truncated}",
+      "… 22 more item(s) truncated"
+    ],
+    "has_more": 1,
+    "request_item_cursor": 0,
+    "max_cursor": 1758706846000,
+    "version": "v1"
+  }
+}

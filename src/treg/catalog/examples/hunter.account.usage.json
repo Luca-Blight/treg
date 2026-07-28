@@ -1,0 +1,31 @@
+{
+  "data": {
+    "first_name": "[redacted]",
+    "last_name": "[redacted]",
+    "email": "[redacted]",
+    "plan_name": "Free",
+    "plan_level": 0,
+    "reset_date": "2026-08-28",
+    "team_id": 0,
+    "requests": {
+      "credits": {
+        "used": 2.7,
+        "available": 50.0,
+        "remaining": 47.3
+      },
+      "searches": {
+        "used": 2,
+        "available": 50
+      },
+      "verifications": {
+        "used": 5,
+        "available": 100
+      }
+    },
+    "calls": {
+      "_deprecation_notice": "Sums the searches and the verifications, giving an unprecise look of the available requests",
+      "used": 27,
+      "available": 75
+    }
+  }
+}

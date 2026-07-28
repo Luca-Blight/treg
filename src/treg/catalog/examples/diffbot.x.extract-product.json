@@ -1,0 +1,63 @@
+{
+  "request": {
+    "pageUrl": "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+    "api": "product",
+    "version": 3
+  },
+  "objects": [
+    {
+      "images": [
+        {
+          "naturalHeight": 395,
+          "width": 318,
+          "title": "A Light in the Attic",
+          "url": "http://books.toscrape.com/media/cache/fe/72/fe72f0532301ec28892ae79a629a293c.jpg",
+          "naturalWidth": 318,
+          "primary": true,
+          "height": 395
+        }
+      ],
+      "offerPrice": "£51.77",
+      "diffbotUri": "product|3|1783416992",
+      "availability": true,
+      "type": "product",
+      "title": "A Light in the Attic",
+      "offerPriceDetails": {
+        "symbol": "£",
+        "amount": 51.77,
+        "text": "£51.77",
+        "currencyCode": "GBP"
+      },
+      "specs": {
+        "price_excl_tax": "£51.77",
+        "product_type": "Books",
+        "price_incl_tax": "£51.77",
+        "upc": "a897fe39b1053632",
+        "tax": "£0.00",
+        "availability": "In stock (22 available)",
+        "number_of_reviews": "0"
+      },
+      "normalizedSpecs": {
+        "sku": [
+          {
+            "cleanLiteral": "a897fe39b1053632"
+          }
+        ]
+      },
+      "humanLanguage": "unknown",
+      "pageUrl": "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+      "text": "It's hard to imagine a world without A Light in the Attic. This now-classic collection of poetry and drawings from Shel Silverstein celebrates its 20th anniversary with this special edition. Silverste… [1017 chars]",
+      "categories": [
+        {
+          "level": 1,
+          "isPrimary": true,
+          "confidence": 0.99,
+          "name": "Office Supplies",
+          "id": 922
+        },
+        "… 3 more item(s) truncated"
+      ],
+      "category": "Office Supplies"
+    }
+  ]
+}

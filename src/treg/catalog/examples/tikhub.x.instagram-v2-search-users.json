@@ -1,0 +1,40 @@
+{
+  "code": 200,
+  "request_id": "32742176-0bd0-4640-ab70-e7ed6db655f1",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:46",
+  "time_stamp": 1785220306,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V2-API/search_users_api_v1_instagram_v2_search_users_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/32742176-0bd0-4640-ab70-e7ed6db655f1?sign=723d900a5a91ef0ca24ce784f3ba22d56a8b89cc1f09f2792a5834aba679572e",
+  "router": "/api/v1/instagram/v2/search_users",
+  "params": {
+    "keyword": "instagram"
+  },
+  "data": {
+    "data": {
+      "count": 49,
+      "items": [
+        {
+          "full_name": "Instagram",
+          "has_anonymous_profile_picture": false,
+          "id": "25025320",
+          "is_private": false,
+          "is_ring_creator": false,
+          "is_verified": true,
+          "latest_reel_media": 0,
+          "profile_pic_id": "3725434617063385984",
+          "profile_pic_url": "https://scontent-bru2-1.cdninstagram.com/v/t51.82787-19/550891366_18667771684001321_1383210656577177067_n.jpg?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn… [563 chars]",
+          "show_ring_award": false,
+          "unseen_count": 0,
+          "username": "instagram"
+        },
+        "… 48 more item(s) truncated"
+      ]
+    }
+  }
+}

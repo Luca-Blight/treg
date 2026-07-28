@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "5651c862-b052-433e-bd61-af5be837962b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:38",
+  "time_stamp": 1785220058,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-App-API/fetch_bangumi_tab_api_v1_bilibili_app_fetch_bangumi_tab_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/5651c862-b052-433e-bd61-af5be837962b?sign=732ea3032750433f287d30c51bd438a85279dd1c1a1167aa8043165617a4e2cb",
+  "router": "/api/v1/bilibili/app/fetch_bangumi_tab",
+  "params": {},
+  "data": {
+    "code": 0,
+    "message": "success",
+    "result": {
+      "hot": {
+        "desc": "查看更多",
+        "items": "… [0 item(s) truncated]",
+        "title": "热点推荐",
+        "wid": 0
+      },
+      "modules": [
+        "… {10 field(s) truncated}",
+        "… 13 more item(s) truncated"
+      ],
+      "regions": [
+        "… {4 field(s) truncated}",
+        "… 4 more item(s) truncated"
+      ]
+    }
+  }
+}

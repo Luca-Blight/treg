@@ -1,0 +1,43 @@
+{
+  "code": 200,
+  "request_id": "3bed50d2-f6cb-42bf-a326-658cf2f6cd0d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:03",
+  "time_stamp": 1785220383,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Channels-V2-API/fetch_search_… [133 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/3bed50d2-f6cb-42… [150 chars]",
+  "router": "/api/v1/wechat_channels/v2/fetch_search_channel_videos",
+  "params": {
+    "username": "v2_060000231003b20faec8c6e4811dc1d4c602ee30b0771bbcf220c6792… [86 chars]",
+    "keyword": "新闻",
+    "raw": true
+  },
+  "data": {
+    "continueFlag": 1,
+    "cookies": "<omitted: expires>",
+    "data": [
+      "… {2 field(s) truncated}"
+    ],
+    "direction": 2,
+    "enableQuestionClosely": false,
+    "experiment": [
+      "… {2 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "forbidRefreshLocation": true,
+    "isAutoPlayVideo": 1,
+    "isBoxCardStyle": 1,
+    "isDivide": 0,
+    "isHomePage": 0,
+    "lang": "zh_CN",
+    "offset": 20,
+    "pageNumber": 1,
+    "query": "新闻",
+    "…": "8 more field(s) truncated"
+  }
+}

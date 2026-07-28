@@ -1,0 +1,46 @@
+{
+  "code": 200,
+  "request_id": "c5053cb5-9e28-4361-8dcc-e1e0b2bce1db",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:10",
+  "time_stamp": 1785220150,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-Web-API/fetch_kuaishou_hot_list_v2_api_v1_kuaishou_web_fetch_kuaishou_hot_list_v2_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c5053cb5-9e28-4361-8dcc-e1e0b2bce1db?sign=4575d008062a22e0294443986946660bc31f1a71ef418ffa57beae1751712956",
+  "router": "/api/v1/kuaishou/web/fetch_kuaishou_hot_list_v2",
+  "params": {
+    "board_type": "1"
+  },
+  "data": {
+    "result": 1,
+    "topHots": [
+      {
+        "keyword": "加强海内外中华儿女大团结",
+        "hotValue": 12791855,
+        "ksOrderId": "",
+        "id": "5753171",
+        "pvSoarSignal": 0,
+        "viewCount": 0,
+        "hotWordType": 2
+      }
+    ],
+    "llsid": "2009965362081241569",
+    "host-name": "public-bjmt-c26-kce-node605.idchb1az4.hb1.kwaidc.com",
+    "hots": [
+      {
+        "keyword": "青海海南州连续两次地震",
+        "hotValue": 12593585,
+        "ksOrderId": "",
+        "id": "5754180",
+        "pvSoarSignal": 0,
+        "viewCount": 0,
+        "hotWordType": 0
+      },
+      "… 49 more item(s) truncated"
+    ]
+  }
+}

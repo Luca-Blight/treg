@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "f0a5636f-de2c-470a-b918-4d11c7a85b0d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:06",
+  "time_stamp": 1785220206,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_video_comments_api_v1_tiktok_app_v3_fetch_video_comments_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f0a5636f-de2c-470a-b918-4d11c7a85b0d?sign=2bddf4342c72bbca4dcaa25d5aa4a8e347e221719cef2e794f61d917f5586cca",
+  "router": "/api/v1/tiktok/app/v3/fetch_video_comments",
+  "params": {
+    "aweme_id": "7326156045968067873",
+    "count": "5"
+  },
+  "data": {
+    "alias_comment_deleted": false,
+    "comments": [
+      "… {35 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "cursor": 5,
+    "extra": {
+      "api_debug_info": null,
+      "fatal_item_ids": null,
+      "now": 1785220206000
+    },
+    "has_filtered_comments": 0,
+    "has_more": 1,
+    "log_pb": {
+      "impr_id": "202607280630064D413F06CC35630F0530"
+    },
+    "reply_style": 2,
+    "status_code": 0,
+    "status_msg": "",
+    "top_gifts": null,
+    "total": 50312
+  }
+}

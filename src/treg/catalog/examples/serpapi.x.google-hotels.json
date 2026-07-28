@@ -1,0 +1,75 @@
+{
+  "search_metadata": {
+    "id": "6a6898c8b4ab722cbe9452e3",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/SBN6L7caj923UnqcckHdNg/6a6898c8… [81 chars]",
+    "created_at": "2026-07-28T11:55:52.605Z",
+    "processed_at": "2026-07-28T11:55:52.606Z",
+    "google_hotels_url": "https://www.google.com/travel/search?q=Bali+Resorts&hl=en&gl… [63 chars]",
+    "raw_html_file": "https://serpapi.com/searches/SBN6L7caj923UnqcckHdNg/6a6898c8… [81 chars]",
+    "prettify_html_file": "https://serpapi.com/searches/SBN6L7caj923UnqcckHdNg/6a6898c8… [85 chars]",
+    "total_time_taken": {
+      "float": 7.2577691078186035
+    }
+  },
+  "search_parameters": {
+    "engine": "google_hotels",
+    "q": "Bali Resorts",
+    "gl": "us",
+    "hl": "en",
+    "currency": "USD",
+    "check_in_date": "2026-09-01",
+    "check_out_date": "2026-09-02",
+    "adults": 2,
+    "children": 0
+  },
+  "search_information": {
+    "total_results": 15000
+  },
+  "brands": [
+    {
+      "id": 33,
+      "name": "Accor Live Limitless",
+      "children": "… [13 item(s) truncated]"
+    },
+    "… 20 more item(s) truncated"
+  ],
+  "ads": [
+    {
+      "name": "OK Divers Resort & Spa, PADI 5 Star Dive Center in Padangbai",
+      "source": "Booking.com",
+      "source_icon": "https://www.gstatic.com/travel-hotels/branding/icon_184.png",
+      "link": "https://www.google.com/aclk?sa=l&ai=DChsSEwjx4cWtqPWVAxVTEKI… [224 chars]",
+      "property_token": "<omitted: expires>",
+      "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-… [198 chars]",
+      "gps_coordinates": "… {2 field(s) truncated}",
+      "hotel_class": 3,
+      "thumbnail": "https://lh6.googleusercontent.com/proxy/Z7f5mqdi17IsLGp41jEQ… [213 chars]",
+      "overall_rating": 4.6,
+      "…": "5 more field(s) truncated"
+    },
+    "… 8 more item(s) truncated"
+  ],
+  "properties": [
+    {
+      "type": "vacation rental",
+      "name": "Prasi Sunset Bungalows - Bungalow with Ocean View",
+      "link": "https://www.bluepillow.com/search/5af10c0e7c00cb1600b37c97?d… [115 chars]",
+      "property_token": "<omitted: expires>",
+      "serpapi_property_details_link": "https://serpapi.com/search.json?adults=2&check_in_date=2026-… [219 chars]",
+      "gps_coordinates": "… {2 field(s) truncated}",
+      "check_in_time": "12:00 PM",
+      "check_out_time": "10:00 AM",
+      "rate_per_night": "… {2 field(s) truncated}",
+      "total_rate": "… {2 field(s) truncated}",
+      "…": "12 more field(s) truncated"
+    },
+    "… 19 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "current_from": 1,
+    "current_to": 20,
+    "next_page_token": "CBI=",
+    "next": "https://serpapi.com/search.json?adults=2&check_in_date=2026-… [186 chars]"
+  }
+}

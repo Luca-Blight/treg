@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "04c03a8b-39ab-4c98-a2f1-413a78400531",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:35",
+  "time_stamp": 1785220235,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-App-API/fetch_video_detail_api… [96 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/04c03a8b-39ab-4c… [150 chars]",
+  "router": "/api/v1/weibo/app/fetch_video_detail",
+  "params": {
+    "mid": "5242977759006596"
+  },
+  "data": {
+    "status": {
+      "visible": "… {2 field(s) truncated}",
+      "created_at": "Fri Dec 12 10:32:50 +0800 2025",
+      "id": 5242977759006596,
+      "idStr": "5242977759006596",
+      "idstr": "5242977759006596",
+      "mid": "5242977759006596",
+      "can_edit": false,
+      "version": 15,
+      "show_additional_indication": 0,
+      "text": "和顶流男星同居的日子-第1集-女主梅望舒开车去接看完演唱会的闺蜜，却被闺蜜放了鸽子，不曾想开演唱会的顶流男星夏秋蝉，遭遇… [131 chars]",
+      "source": "<a href=\"sinaweibo://gotovideo?selected_containerid=231557_2… [411 chars]",
+      "source_type": 3,
+      "source_allowclick": 1,
+      "appid": 692,
+      "favorited": false,
+      "…": "63 more field(s) truncated"
+    }
+  }
+}

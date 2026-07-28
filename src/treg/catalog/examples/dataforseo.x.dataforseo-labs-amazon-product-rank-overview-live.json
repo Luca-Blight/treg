@@ -1,0 +1,68 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0743 sec.",
+  "cost": 0.01224,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281401-2171-0378-0000-0311811748fc",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0627 sec.",
+      "cost": 0.01224,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "product_rank_overview",
+        "se_type": "amazon",
+        "asins": [
+          "B001TJ3HUG",
+          "… 1 more item(s) truncated"
+        ],
+        "language_name": "English",
+        "location_code": 2840
+      },
+      "result": [
+        {
+          "se_type": "amazon",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 2,
+          "items_count": 2,
+          "items": [
+            {
+              "se_type": "amazon",
+              "asin": "B01LW2SL7R",
+              "metrics": {
+                "amazon_serp": {
+                  "pos_1": 3,
+                  "pos_2_3": 4,
+                  "pos_4_10": 22,
+                  "pos_11_100": 112,
+                  "count": 141,
+                  "search_volume": 6326
+                },
+                "amazon_paid": {
+                  "pos_1": 0,
+                  "pos_2_3": 0,
+                  "pos_4_10": 1,
+                  "pos_11_100": 0,
+                  "count": 1,
+                  "search_volume": 0
+                }
+              }
+            },
+            "… 1 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

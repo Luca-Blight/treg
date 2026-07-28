@@ -1,0 +1,62 @@
+{
+  "code": 0,
+  "data": {
+    "item": {
+      "questionCount": "8965",
+      "itemTitle": "[官方直营]4G全网通纽曼M560正品老年手机超长待机老人机大屏幕大字大声音男女士电信版学生专用智能按键手机",
+      "itemPic": "https://gw.alicdn.com/tfscom/tuitui/i1/1707225666/O1CN01zGDash1rj5FaFwDc1_!!4611… [110 chars total]",
+      "buyerCount": null,
+      "itemUrl": "https://a.m.taobao.com/i522900342691.htm",
+      "tags": {
+        "list": [
+          {
+            "count": "18",
+            "keyword": "质量",
+            "propertyId": "100017067"
+          },
+          "… 5 more item(s) truncated"
+        ]
+      }
+    },
+    "questionStatus": {
+      "closeQuestion": "false"
+    },
+    "questionWords": [],
+    "pagination": {
+      "direction": "1",
+      "hasMore": "true",
+      "pageNum": "2",
+      "pageSize": "10"
+    },
+    "total": "5000",
+    "list": [
+      [
+        {
+          "clusterId": "574794368170",
+          "clusterName": null,
+          "feedType": "200",
+          "gmtCreate": "1784627073000",
+          "gmtModified": "1784863598000",
+          "id": "574794368170",
+          "cardType": "2",
+          "similarCount": null,
+          "similarFeeds": null,
+          "subFeedsCount": "5",
+          "targetUrl": "https://web.m.taobao.com/app/mtb/ask-everyone/detail?disableNav=YES&from=answer&… [137 chars total]",
+          "title": "手机音质清晰吗？",
+          "subFeeds": [
+            "… 8 field(s) truncated"
+          ]
+        }
+      ],
+      "… 9 more item(s) truncated"
+    ],
+    "dataSuccess": "true",
+    "success": "true",
+    "experienceFlag": "false",
+    "balaVersion": "3.0"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:45.556465591",
+  "requestId": "03969e9dd08542a9998b61e99d727c87"
+}

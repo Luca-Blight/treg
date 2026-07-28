@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "keyword_item_distribution": {
+      "女人": 1,
+      "敏感": 1,
+      "滑雪": 1
+    },
+    "keyword_map": {
+      "女人": 1,
+      "敏感": 2,
+      "滑雪": 1
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:36.648218673",
+  "requestId": "2802ad5b55e6423387cd432c2e56895a"
+}

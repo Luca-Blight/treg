@@ -1,0 +1,16 @@
+{
+  "results": [
+    {
+      "customer": {
+        "resourceName": "customers/1234567890",
+        "id": "1234567890",
+        "descriptiveName": "Example Account",
+        "currencyCode": "AUD",
+        "timeZone": "Australia/Sydney"
+      }
+    }
+  ],
+  "fieldMask": "customer.id,customer.descriptiveName,customer.currencyCode,customer.timeZone",
+  "queryResourceConsumption": "56",
+  "_scrubbed": true
+}

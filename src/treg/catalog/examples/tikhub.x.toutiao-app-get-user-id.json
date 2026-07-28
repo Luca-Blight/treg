@@ -1,0 +1,22 @@
+{
+  "code": 200,
+  "request_id": "355b6a20-0cf6-45c3-a3ac-81060ee3b022",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:23",
+  "time_stamp": 1785220223,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Toutiao-App-API/get_user_id_api_v1_toutiao_app_get_user_id_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/355b6a20-0cf6-45c3-a3ac-81060ee3b022?sign=55674efb721374899f41d35c7fef2e860a687de5812f03430a597f05fe72bd52",
+  "router": "/api/v1/toutiao/app/get_user_id",
+  "params": {
+    "user_profile_url": "https://www.toutiao.com/c/user/token/MS4wLjABAAAAwK6echNksY69R8l2vcZudupfhTItbGSGt-8ineO5UaB4L-djqkYDgB6TkAdMvrmW/"
+  },
+  "data": {
+    "sec_user_id": "MS4wLjABAAAAwK6echNksY69R8l2vcZudupfhTItbGSGt-8ineO5UaB4L-djqkYDgB6TkAdMvrmW",
+    "user_id": "1352838578180211"
+  }
+}

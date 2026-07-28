@@ -1,0 +1,39 @@
+{
+  "code": 200,
+  "request_id": "1c67be71-e2db-48cc-9f65-18a2b45c8138",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:04",
+  "time_stamp": 1785220204,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_user_music_list_api_v1_tiktok_app_v3_fetch_user_music_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/1c67be71-e2db-48cc-9f65-18a2b45c8138?sign=3492db72afd1319662146128644c172d9f0df438ad7413f4c039224a1a41624f",
+  "router": "/api/v1/tiktok/app/v3/fetch_user_music_list",
+  "params": {
+    "sec_uid": "MS4wLjABAAAAqB08cUbXaDWqbD6MCga2RbGTuhfO2EsHayBYx08NDrN7IE3jQuRDNNN6YwyfH6_6",
+    "count": "5"
+  },
+  "data": {
+    "cursor": 5,
+    "extra": {
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "logid": "202607280630030128117C55D9970FA33D",
+      "now": 1785220204000
+    },
+    "groups": null,
+    "has_more": 1,
+    "honor_label": 3,
+    "log_pb": {
+      "impr_id": "202607280630030128117C55D9970FA33D"
+    },
+    "music": [
+      "… {66 field(s) truncated}",
+      "… 3 more item(s) truncated"
+    ],
+    "status_code": 0,
+    "status_msg": ""
+  }
+}

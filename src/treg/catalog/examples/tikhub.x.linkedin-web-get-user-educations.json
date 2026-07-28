@@ -1,0 +1,37 @@
+{
+  "code": 200,
+  "request_id": "27c16541-a96f-4d20-ac6d-08f7701a81da",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-28 00:21:53",
+  "time_stamp": 1785223313,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/get_user_educations_api_v1_linkedin_web_get_user_educations_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/27c16541-a96f-4d20-ac6d-08f7701a81da?sign=1ceb089f665212368b60c4a2b3f5faa955ca375243e86da71df7399859b9a0fe",
+  "router": "/api/v1/linkedin/web/get_user_educations",
+  "params": {
+    "urn": "ACoAAARpiwIBp_SzoeHPlUfOvmtibe08Ea1iCh4",
+    "page": "1"
+  },
+  "data": {
+    "page": 1,
+    "total": 4,
+    "has_more": false,
+    "data": [
+      {
+        "id": "164340",
+        "school": "Indian Institute of Science (IISc)",
+        "date": {
+          "start": "Mar 2024",
+          "end": "Jan 2026"
+        },
+        "degree": "Artificial Intelligence",
+        "grade": "95%"
+      },
+      "… 3 more item(s) truncated"
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "code": 200,
+  "request_id": "7f935863-0b02-4bd9-9c6b-37a0082a2e4d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:55",
+  "time_stamp": 1785220135,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V1-API/fetch_search_api_v1_instagram_v1_fetch_search_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/7f935863-0b02-4bd9-9c6b-37a0082a2e4d?sign=1ae828be5f280f1bf1e5c9dc89049f12fdbd7b03dceb42dd5b704d297c0d114a",
+  "router": "/api/v1/instagram/v1/fetch_search",
+  "params": {
+    "query": "taylorswift"
+  },
+  "data": {
+    "status": "ok",
+    "hashtags": [
+      {
+        "position": 1,
+        "hashtag": "… {3 field(s) truncated}"
+      },
+      "… 14 more item(s) truncated"
+    ],
+    "places": [
+      {
+        "position": 6,
+        "place": "… {3 field(s) truncated}"
+      },
+      "… 2 more item(s) truncated"
+    ],
+    "users": [
+      {
+        "position": 0,
+        "user": "… {13 field(s) truncated}"
+      },
+      "… 36 more item(s) truncated"
+    ],
+    "attempts": "19"
+  }
+}

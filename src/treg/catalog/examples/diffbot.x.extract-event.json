@@ -1,0 +1,49 @@
+{
+  "request": {
+    "options": [
+      "norender=true"
+    ],
+    "pageUrl": "https://www.eventbrite.com/e/graphql-summit-2018-tickets-46601841362",
+    "api": "event",
+    "version": 3
+  },
+  "objects": [
+    {
+      "venue": "The Regency Center",
+      "images": [
+        "… {6 field(s) truncated}"
+      ],
+      "endDate": "Thu, 08 Nov 2018 00:00:00 GMT",
+      "timezone": "America/Los_Angeles",
+      "diffbotUri": "event|3|1573797901",
+      "description": "More events from Apollo GraphQL\nDiscover more events from Apollo GraphQL, from Science & Tech to other experiences you might love.",
+      "type": "event",
+      "title": "GraphQL Summit 2018",
+      "tags": [
+        "… {6 field(s) truncated}",
+        "… 1 more item(s) truncated"
+      ],
+      "timezoneOffset": "-07:00",
+      "humanLanguage": "en",
+      "pageUrl": "https://www.eventbrite.com/e/graphql-summit-2018-tickets-46601841362",
+      "location": {
+        "venue": "The Regency Center",
+        "country": "… {1 field(s) truncated}",
+        "address": "The Regency Center, San Francisco, California",
+        "city": "… {1 field(s) truncated}",
+        "metroArea": "… {3 field(s) truncated}",
+        "subregion": "… {1 field(s) truncated}",
+        "latitude": 37.77800750732422,
+        "precision": 24.501174926757812,
+        "region": "… {1 field(s) truncated}",
+        "longitude": -122.4312744140625
+      },
+      "categories": [
+        "… {3 field(s) truncated}",
+        "… 1 more item(s) truncated"
+      ],
+      "startDateLocalTimezone": "Wed, 07 Nov 2018 16:30:00",
+      "…": "2 more field(s) truncated"
+    }
+  ]
+}

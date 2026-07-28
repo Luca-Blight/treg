@@ -1,0 +1,79 @@
+{
+  "kind": "youtube#commentThreadListResponse",
+  "etag": "NPLk5vKZl1-VLW3LRoEG-orWccA",
+  "nextPageToken": "<omitted: expires>",
+  "pageInfo": {
+    "totalResults": 2,
+    "resultsPerPage": 2
+  },
+  "items": [
+    {
+      "kind": "youtube#commentThread",
+      "etag": "xdlCAxD1CYnVv1VaJHVXXVVup9w",
+      "id": "Ugzge340dBgB75hWBm54AaABAg",
+      "snippet": {
+        "channelId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+        "videoId": "dQw4w9WgXcQ",
+        "topLevelComment": {
+          "kind": "youtube#comment",
+          "etag": "nv0sWTwXS7xGDIdlZxsc0Ka5ciA",
+          "id": "Ugzge340dBgB75hWBm54AaABAg",
+          "snippet": {
+            "channelId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+            "videoId": "dQw4w9WgXcQ",
+            "textDisplay": "can confirm: he never gave us up",
+            "textOriginal": "can confirm: he never gave us up",
+            "authorDisplayName": "@YouTube",
+            "authorProfileImageUrl": "https://yt3.ggpht.com/3s6evpqAiDU9tQR4sC2siJippbH2RWVPnwHgyl4V0th2iuQz0VDQZbUhQBGmsxLYo-mjG6TqZQ=s48-c-k-c0x00ffffff-no-rj",
+            "authorChannelUrl": "http://www.youtube.com/@YouTube",
+            "authorChannelId": {
+              "value": "UCBR8-60-B28hp2BmDPdntcQ"
+            },
+            "canRate": true,
+            "viewerRating": "none",
+            "likeCount": 273733,
+            "publishedAt": "2025-04-22T19:05:08Z",
+            "updatedAt": "2025-04-22T19:05:08Z"
+          }
+        },
+        "canReply": false,
+        "totalReplyCount": 1000,
+        "isPublic": true
+      }
+    },
+    {
+      "kind": "youtube#commentThread",
+      "etag": "YShuFzPRzks7THp2LtMsF9Kw2JY",
+      "id": "UgwAfXrxmzGDY9U1HTt4AaABAg",
+      "snippet": {
+        "channelId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+        "videoId": "dQw4w9WgXcQ",
+        "topLevelComment": {
+          "kind": "youtube#comment",
+          "etag": "INWXKT_e2BZNrIB48Qyo9htILbI",
+          "id": "UgwAfXrxmzGDY9U1HTt4AaABAg",
+          "snippet": {
+            "channelId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+            "videoId": "dQw4w9WgXcQ",
+            "textDisplay": "<a href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ&amp;t=150\">2:30</a> I’m the member",
+            "textOriginal": "2:30 I’m the member",
+            "authorDisplayName": "@rollercoastercentral0808",
+            "authorProfileImageUrl": "https://yt3.ggpht.com/GKBOicn6puea65mpVAHoOUBiwqq8IJNRx1RsrlnJX2-9g_2-GzJu7y8Eh8kNphTq7cgzHtglUw=s48-c-k-c0x00ffffff-no-rj",
+            "authorChannelUrl": "http://www.youtube.com/@rollercoastercentral0808",
+            "authorChannelId": {
+              "value": "UCO4PeHvfg6EU_VoQTn0_Gjg"
+            },
+            "canRate": true,
+            "viewerRating": "none",
+            "likeCount": 0,
+            "publishedAt": "2026-07-28T05:46:05Z",
+            "updatedAt": "2026-07-28T05:46:05Z"
+          }
+        },
+        "canReply": true,
+        "totalReplyCount": 0,
+        "isPublic": true
+      }
+    }
+  ]
+}

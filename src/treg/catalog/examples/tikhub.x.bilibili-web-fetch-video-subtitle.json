@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "request_id": "640f4a18-07fb-4216-8af8-6ff7a823e4af",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:48",
+  "time_stamp": 1785220068,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_video_subtitle_api_v1_bilibili_web_fetch_video_subtitle_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/640f4a18-07fb-4216-8af8-6ff7a823e4af?sign=2d42b112ef3224235da36bd0cd1acda49c3d076b457c7b68470e515b5ba85d9c",
+  "router": "/api/v1/bilibili/web/fetch_video_subtitle",
+  "params": {
+    "a_id": "114006081739452",
+    "c_id": "28400484458"
+  },
+  "data": {
+    "allow_submit": false,
+    "lan": "",
+    "lan_doc": "",
+    "subtitles": [],
+    "subtitle_position": null,
+    "font_size_type": 0
+  }
+}

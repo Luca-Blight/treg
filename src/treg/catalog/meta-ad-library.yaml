@@ -1,0 +1,124 @@
+# unverified — no credential available at curation time; transcribed from official docs 2026-07-28.
+#
+# The Ad Library API is ONE edge — /ads_archive on graph.facebook.com/v21.0 — and the four entries
+# below are four different jobs done with four different parameter/field sets, not four paths. There
+# is no per-ad detail endpoint: an ArchivedAd is not a node you can GET by id, so "look up this ad"
+# means re-running ads_archive with a narrower filter, or opening the ad_snapshot_url in a browser.
+#
+# ad_reached_countries is REQUIRED on every call (URL-encoded JSON array, e.g. %5B%22US%22%5D) and
+# the access token rides as ?access_token= — treg injects it, a direct caller that omits it gets a
+# 400 with a generic OAuthException rather than a 401.
+#
+# What comes back depends on WHERE the ad ran and WHAT it is about, which is the one thing that
+# repeatedly surprises people:
+#   - spend, impressions, demographic_distribution and delivery_by_region are populated ONLY for
+#     ad_type=POLITICAL_AND_ISSUE_ADS, and even then as RANGES ({lower_bound, upper_bound}).
+#   - eu_total_reach, age_country_gender_reach_breakdown and beneficiary_payers exist only for ads
+#     delivered in the EU (the DSA disclosure set) — asking for them on a US-only query returns the
+#     rows with those fields simply absent, not an error.
+#   - commercial (non-political) ads outside the EU carry creative + timing + platform data only.
+# Requesting a field an ad does not have never fails the call, so an empty column means "not
+# disclosed for this ad", never "wrong parameter".
+#
+# This is the any_account / competitive view of Meta ads. Your OWN spend is meta-ads.yaml.
+# apify.yaml implements the same meta-ads.library.search capability by scraping the Ad Library UI —
+# richer per-ad detail, paid per result, and unofficial; this file is official, free and thinner.
+provider: meta-ad-library
+source:
+  docs: https://www.facebook.com/ads/library/api/
+  openapi: null
+  curated: 2026-07-28
+
+limits: "standard Graph API rate limits per app"
+pricing_url: https://www.facebook.com/ads/library/api  # No charge; access is gated on identity verification, not payment.
+endpoints:
+  - id: meta-ad-library.meta-ads.library.search
+    capability: meta-ads.library.search
+    platform: meta-ads
+    scope: any_account
+    method: GET
+    path: /ads_archive
+    name: "Search Facebook and Instagram ads by keyword"
+    summary: "Search publicly running Facebook and Instagram ads by keyword"
+    input:
+      queryParams:
+        search_terms: {type: string, required: false, note: "max 100 characters; matched against the ad's text. Required in practice unless you filter by search_page_ids instead", example: "project management software"}
+        search_type: {type: string, required: false, note: "KEYWORD_UNORDERED (default, all words in any order) | KEYWORD_EXACT_PHRASE", example: "KEYWORD_UNORDERED"}
+        ad_reached_countries: {type: array, required: true, note: "REQUIRED on every ads_archive call. JSON array of ISO country codes, URL-encoded — [\"US\"] — or ALL", example: ["US"]}
+        fields: {type: string, required: true, note: "comma-separated; nothing but id comes back by default", example: "id,page_id,page_name,ad_creative_bodies,ad_creative_link_titles,ad_creative_link_captions,ad_snapshot_url,ad_delivery_start_time,ad_delivery_stop_time,publisher_platforms,languages,estimated_audience_size"}
+        ad_active_status: {type: string, required: false, note: "ACTIVE (default) | INACTIVE | ALL — ALL is what you want for creative research, since a competitor's best-performing ad may have finished", example: "ALL"}
+        ad_type: {type: string, required: false, note: "ALL (default) | POLITICAL_AND_ISSUE_ADS | HOUSING_ADS | EMPLOYMENT_ADS | FINANCIAL_PRODUCTS_AND_SERVICES_ADS", example: "ALL"}
+        ad_delivery_date_min: {type: string, required: false, note: "YYYY-MM-DD; ads that were delivering on or after this date", example: "2026-06-01"}
+        ad_delivery_date_max: {type: string, required: false, note: "YYYY-MM-DD"}
+        media_type: {type: string, required: false, note: "ALL | IMAGE | MEME | VIDEO | NONE", example: "VIDEO"}
+        publisher_platforms: {type: array, required: false, note: "FACEBOOK | INSTAGRAM | AUDIENCE_NETWORK | MESSENGER | WHATSAPP | OCULUS | THREADS", example: ["INSTAGRAM"]}
+        languages: {type: array, required: false, note: "ISO 639-1 codes (plus CMN, YUE)", example: ["en"]}
+        estimated_audience_size_min: {type: integer, required: false, note: "one of the fixed buckets 100 | 1000 | 5000 | 10000 | 50000 | 100000 | 500000 | 1000000"}
+        limit: {type: integer, required: false, note: "page size; 25 by default, a few hundred is the practical ceiling before Meta starts timing out", example: 25}
+        after: {type: string, required: false, note: "paging.cursors.after from the previous response"}
+      note: "give it either search_terms or search_page_ids — a call with neither returns an error, not the whole library. ad_snapshot_url is the human-viewable render of the creative and needs the access token appended to load. Results are ads Meta has KEPT: commercial ads leave the library some time after they stop running, so this is a live-ish view, not an archive"
+    cost: {type: free, note: "no per-call charge; access is gated on a one-time Meta identity verification, and the app is subject to Graph API rate limits (per-app hourly quota, reported in x-app-usage)"}
+    docs_url: https://developers.facebook.com/docs/graph-api/reference/ads_archive/
+
+  - id: meta-ad-library.meta-ads.library.advertiser
+    capability: meta-ads.library.advertiser
+    platform: meta-ads
+    scope: any_account
+    method: GET
+    path: /ads_archive
+    summary: "List every ad a specific Facebook Page is currently running"
+    input:
+      queryParams:
+        search_page_ids: {type: array, required: true, note: "JSON array of up to 10 numeric Facebook Page ids. You need the id, not the vanity handle — get it from a keyword search's page_id, or from the Page's About section", example: ["20531316728"]}
+        ad_reached_countries: {type: array, required: true, example: ["US"]}
+        fields: {type: string, required: true, example: "id,page_id,page_name,ad_creative_bodies,ad_creative_link_titles,ad_snapshot_url,ad_delivery_start_time,ad_delivery_stop_time,publisher_platforms,media_type"}
+        ad_active_status: {type: string, required: false, note: "ACTIVE (default) | INACTIVE | ALL", example: "ACTIVE"}
+        ad_delivery_date_min: {type: string, required: false, note: "YYYY-MM-DD"}
+        limit: {type: integer, required: false, example: 50}
+        after: {type: string, required: false}
+      note: "the competitor-monitoring shape: pin the advertiser, page through everything they run. One Page can run hundreds of near-identical creative variants, so count DISTINCT ad_creative_bodies rather than rows when sizing a competitor's output"
+    cost: {type: free, note: "no per-call charge; Graph API app-level rate limits apply"}
+    docs_url: https://developers.facebook.com/docs/graph-api/reference/ads_archive/
+
+  - id: meta-ad-library.meta-ads.library.political
+    capability: meta-ads.library.political
+    platform: meta-ads
+    scope: any_account
+    method: GET
+    path: /ads_archive
+    name: "Search political and issue ads by spender"
+    summary: "Search political and issue ads and see who paid for them and roughly how much"
+    input:
+      queryParams:
+        ad_type: {type: string, required: true, note: "POLITICAL_AND_ISSUE_ADS — this is what unlocks the spend/impressions/demographic fields", example: "POLITICAL_AND_ISSUE_ADS"}
+        ad_reached_countries: {type: array, required: true, example: ["US"]}
+        fields: {type: string, required: true, note: "the disclosure fields only exist on this ad_type", example: "id,page_name,bylines,currency,spend,impressions,demographic_distribution,delivery_by_region,ad_creative_bodies,ad_delivery_start_time,ad_delivery_stop_time"}
+        search_terms: {type: string, required: false, example: "climate"}
+        bylines: {type: array, required: false, note: "JSON array of exact paid-for-by disclaimers; POLITICAL_AND_ISSUE_ADS only"}
+        delivery_by_region: {type: array, required: false, note: "state / province names; POLITICAL_AND_ISSUE_ADS only", example: ["California"]}
+        ad_delivery_date_min: {type: string, required: false, note: "YYYY-MM-DD"}
+        limit: {type: integer, required: false, example: 25}
+      note: "spend and impressions are RANGES — {\"lower_bound\":\"100\",\"upper_bound\":\"499\"} — never point values, so totals across ads can only be reported as a range. demographic_distribution and delivery_by_region come back as percentage breakdowns that sum to ~1. Political ads stay in the library for seven years, unlike commercial ones"
+    cost: {type: free, note: "no per-call charge; Graph API app-level rate limits apply"}
+    docs_url: https://www.facebook.com/ads/library/api/
+
+  - id: meta-ad-library.meta-ads.library.eu_reach
+    capability: meta-ads.library.eu_reach
+    platform: meta-ads
+    scope: any_account
+    method: GET
+    path: /ads_archive
+    name: "Get EU ad reach and audience breakdown"
+    summary: "Get the EU reach, audience breakdown and payer of ads delivered in Europe"
+    input:
+      queryParams:
+        ad_reached_countries: {type: array, required: true, note: "EU/EEA member states only — the DSA fields are populated for EU delivery and are absent everywhere else", example: ["DE", "FR"]}
+        fields: {type: string, required: true, note: "the DSA disclosure set", example: "id,page_name,eu_total_reach,age_country_gender_reach_breakdown,beneficiary_payers,target_ages,target_gender,target_locations,ad_creative_bodies,ad_delivery_start_time"}
+        search_terms: {type: string, required: false, example: "electric car"}
+        search_page_ids: {type: array, required: false, note: "up to 10 Page ids, to scope to one advertiser"}
+        ad_active_status: {type: string, required: false, example: "ALL"}
+        limit: {type: integer, required: false, example: 25}
+      note: "Meta publishes these under the EU Digital Services Act: eu_total_reach is an actual number of accounts reached (not a range), age_country_gender_reach_breakdown splits it by country/age/gender, beneficiary_payers names who paid and who benefits, and target_ages / target_gender / target_locations expose the advertiser's declared targeting — the only place any Meta ad targeting is public. All of it is missing for non-EU delivery, which reads as an empty response field rather than an error"
+    cost: {type: free, note: "no per-call charge; Graph API app-level rate limits apply"}
+    docs_url: https://developers.facebook.com/docs/graph-api/reference/archived-ad/
+

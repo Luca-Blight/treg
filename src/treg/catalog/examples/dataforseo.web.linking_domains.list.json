@@ -1,0 +1,115 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "3.6272 sec.",
+  "cost": 0.024072,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280654-2171-0273-0000-3e70a1319f79",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "3.5671 sec.",
+      "cost": 0.024072,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "backlinks",
+        "… 2 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "referring_domains",
+        "target": "moz.com",
+        "limit": 2
+      },
+      "result": [
+        {
+          "target": "moz.com",
+          "total_count": 112358,
+          "items_count": 2,
+          "items": [
+            {
+              "type": "backlinks_referring_domain",
+              "domain": "opensiteexplorer.org",
+              "rank": 492,
+              "backlinks": 2448,
+              "first_seen": "2019-01-16 16:48:56 +00:00",
+              "lost_date": null,
+              "backlinks_spam_score": 0,
+              "broken_backlinks": 0,
+              "broken_pages": 0,
+              "referring_domains": 2,
+              "referring_domains_nofollow": 0,
+              "referring_main_domains": 1,
+              "referring_main_domains_nofollow": 0,
+              "referring_ips": 3,
+              "referring_subnets": 1,
+              "referring_pages": 2448,
+              "referring_pages_nofollow": 0,
+              "referring_links_tld": {
+                "org": 2448
+              },
+              "referring_links_types": {
+                "redirect": 2448
+              },
+              "referring_links_attributes": null,
+              "referring_links_platform_types": null,
+              "referring_links_semantic_locations": {
+                "": 2448
+              },
+              "referring_links_countries": {
+                "": 2448
+              }
+            },
+            {
+              "type": "backlinks_referring_domain",
+              "domain": "dejan.ai",
+              "rank": 487,
+              "backlinks": 18,
+              "first_seen": "2025-12-19 00:21:51 +00:00",
+              "lost_date": null,
+              "backlinks_spam_score": 4,
+              "broken_backlinks": 0,
+              "broken_pages": 0,
+              "referring_domains": 2,
+              "referring_domains_nofollow": 0,
+              "referring_main_domains": 1,
+              "referring_main_domains_nofollow": 0,
+              "referring_ips": 2,
+              "referring_subnets": 2,
+              "referring_pages": 15,
+              "referring_pages_nofollow": 0,
+              "referring_links_tld": {
+                "ai": 15
+              },
+              "referring_links_types": {
+                "image": 8,
+                "anchor": 7
+              },
+              "referring_links_attributes": {
+                "noopener": 12,
+                "noreferrer": 8
+              },
+              "referring_links_platform_types": {
+                "unknown": 11,
+                "organization": 4
+              },
+              "referring_links_semantic_locations": {
+                "": 8,
+                "section": 4,
+                "figure": 2,
+                "figcaption": 1
+              },
+              "referring_links_countries": {
+                "AI": 15
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

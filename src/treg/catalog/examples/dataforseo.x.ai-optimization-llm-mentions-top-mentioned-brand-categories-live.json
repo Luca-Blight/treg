@@ -1,0 +1,66 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "2.4192 sec.",
+  "cost": 0.103,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0656-0000-fc8d5f2991fb",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.4068 sec.",
+      "cost": 0.103,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "top_mentioned_brand_categories",
+        "language_code": "en",
+        "location_code": 2840,
+        "platform": "chat_gpt",
+        "target": [
+          {
+            "keyword": "bmw",
+            "search_scope": "… [1 item(s) truncated]"
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "initial_dataset_filters": [
+          [
+            "ai_search_volume",
+            "… 2 more item(s) truncated"
+          ]
+        ],
+        "limit": 3,
+        "internal_list_limit": 2
+      },
+      "result": [
+        {
+          "total_count": 24,
+          "offset": 0,
+          "items_count": 3,
+          "aggregated_metrics": {
+            "location": "… [1 item(s) truncated]",
+            "language": "… [1 item(s) truncated]",
+            "platform": "… [1 item(s) truncated]",
+            "sources_domain": "… [2 item(s) truncated]",
+            "search_results_domain": "… [2 item(s) truncated]",
+            "brand_entities_title": "… [2 item(s) truncated]",
+            "brand_entities_category": "… [2 item(s) truncated]",
+            "total": "… {2 field(s) truncated}"
+          },
+          "items": [
+            "… {9 field(s) truncated}",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

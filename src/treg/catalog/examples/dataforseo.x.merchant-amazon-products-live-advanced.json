@@ -1,0 +1,57 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "23.2963 sec.",
+  "cost": 0.0033,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281359-2171-0644-0000-9f9c1bf4ec6a",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "23.2705 sec.",
+      "cost": 0.0033,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "merchant",
+        "function": "products",
+        "se": "amazon",
+        "language_code": "en_US",
+        "location_code": 2840,
+        "keyword": "shoes",
+        "se_type": "products",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "shoes",
+          "type": "organic",
+          "se_domain": "amazon.com",
+          "location_code": 2840,
+          "language_code": "en_US",
+          "check_url": "https://www.amazon.com/s?k=shoes&crid=OOS5Z1GE5IG9&sprefix=shoes%2Caps%2C118&language=en_US&ref=nb_sb_noss",
+          "datetime": "2026-07-28 10:59:48 +00:00",
+          "spell": null,
+          "item_types": [
+            "amazon_serp",
+            "… 2 more item(s) truncated"
+          ],
+          "se_results_count": 67821,
+          "categories": null,
+          "items_count": 106,
+          "items": [
+            "… {19 field(s) truncated}",
+            "… 105 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

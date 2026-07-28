@@ -1,0 +1,41 @@
+{
+  "success": true,
+  "credits_remaining": 19827,
+  "credits_charged": 1,
+  "advertiserId": "AR01614014350098432001",
+  "creativeId": "CR10449491775734153217",
+  "firstShown": null,
+  "url": "https://adstransparency.google.com/advertiser/AR01614014350098432001/creative/CR10449491775734153217",
+  "lastShown": "2025-10-31T17:42:04.000Z",
+  "format": "text",
+  "overallImpressions": {
+    "min": null,
+    "max": null
+  },
+  "creativeRegions": [
+    {
+      "regionCode": "US",
+      "regionName": "United States"
+    }
+  ],
+  "regionStats": [
+    {
+      "regionCode": "US",
+      "regionName": "United States",
+      "firstShown": null,
+      "lastShown": "2025-10-31T00:00:00.000Z",
+      "impressions": {},
+      "platformImpressions": []
+    }
+  ],
+  "variations": [
+    {
+      "destinationUrl": "shop.lululemon.com/gifts-for-all",
+      "headline": "Best Birthday Gifts - Sign Up For Early",
+      "description": "Access Find The Perfect Gifts At lululemon . We Have You Covered . Shop Online For Your Gifts . Birthday ...",
+      "allText": "Sponsored N lululemon shop.lululemon.com/gifts-for-all Best Birthday Gifts - Sign Up For Early Access Find The Perfect Gifts At lululemon . We Have You Covered . Shop Online For Your Gifts . Birthday … [203 chars]",
+      "imageUrl": "https://tpc.googlesyndication.com/archive/simgad/10860247262800143880"
+    },
+    "… 4 more item(s) truncated"
+  ]
+}

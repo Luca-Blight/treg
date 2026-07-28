@@ -1,0 +1,95 @@
+{
+  "code": 200,
+  "request_id": "243f0a3c-091f-4e50-b3a0-c36863ef2547",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 20:55:25",
+  "time_stamp": 1785210925,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_channel_videos_api_v1_youtube_web_v2_get_channel_videos_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through the API again.",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/243f0a3c-091f-4e50-b3a0-c36863ef2547?sign=4abe7f1392ac4dc183a5f11cf7a5c2f2f4fbea4f796f59d075377c9f7a28135e",
+  "router": "/api/v1/youtube/web_v2/get_channel_videos",
+  "params": {
+    "channel_id": "UCX6OQ3DkcsbYNE6H8uQQuVA",
+    "language_code": "en-US"
+  },
+  "data": {
+    "channel": {
+      "id": "UCX6OQ3DkcsbYNE6H8uQQuVA",
+      "name": "MrBeast",
+      "description": "SUBSCRIBE FOR A COOKIE!\nNew MrBeast or MrBeast Gaming video every single Saturday at noon eastern time!\nAccomplishments:\n- Raised $20,000,000 To Plant 20,000,000 Trees\n- Removed 30,000,000 pounds of trash from the ocean\n- Helped 2,000 people walk again\n- Helped 1,000 blind people see\n- Helped 1,000 deaf people hear\n- Built wells in Africa\n- Built and gave away 100 houses\n- Adopted every dog in a shelter (twice)\n- Given millions to charity\n- Started my own snack company Feastables\n- Started my ow… [972 chars total]",
+      "handle_url": "http://www.youtube.com/@MrBeast",
+      "avatar": "https://yt3.googleusercontent.com/nxYrc_1_2f77DoBadyxMTmv7ZpRZapHR5jbuYe7PlPd5cIRJxtNNEYyOC0ZsxaDyJJzXrnJiuDE=s900-c-k-c0x00ffffff-no-rj",
+      "url": "https://www.youtube.com/channel/UCX6OQ3DkcsbYNE6H8uQQuVA",
+      "rss_url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCX6OQ3DkcsbYNE6H8uQQuVA",
+      "keywords": "mrbeast6000 beast mrbeast Mr.Beast mr",
+      "is_family_safe": true,
+      "is_verified": true
+    },
+    "videos": [
+      {
+        "video_id": "lVylRtlPOIE",
+        "title": "I Granted 100 Kids Their Biggest Wish!",
+        "thumbnail": "https://i.ytimg.com/vi/lVylRtlPOIE/hqdefault.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLDEw9iu9Jqd9KZ9pBMfbkc-aipTog",
+        "thumbnails": [
+          {
+            "url": "https://i.ytimg.com/vi/lVylRtlPOIE/hqdefault.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLAZWJ_YWrQ7Cy7BBAuSy7ZGiz5_Bg",
+            "width": 168,
+            "height": 94
+          },
+          {
+            "url": "https://i.ytimg.com/vi/lVylRtlPOIE/hqdefault.jpg?sqp=-oaymwEbCMQBEG5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLAN4PBLi3lqOsWyKMjZtc8iK-ERDA",
+            "width": 196,
+            "height": 110
+          },
+          "… 2 more item(s) truncated"
+        ],
+        "moving_thumbnail": "https://i.ytimg.com/an_webp/lVylRtlPOIE/mqdefault_6s.webp?du=3000&sqp=CP-uoNMG&rs=AOn4CLBRDAmRGz7tr7T-Wf1WdkogNKSLSQ",
+        "duration": "14:35",
+        "duration_accessibility": "14 minutes, 35 seconds",
+        "view_count": "24M views",
+        "short_view_count": "24M views",
+        "published_time": "2 days ago",
+        "description": "",
+        "is_live": false,
+        "is_verified": true,
+        "url": "https://www.youtube.com/watch?v=lVylRtlPOIE",
+        "playback_url": "https://rr1---sn-n4v7snee.googlevideo.com/initplayback?source=youtube&oeis=1&c=WEB&oad=3200&ovd=3200&oaad=11000&oavd=11000&ocs=700&oewis=1&oputc=1&olis=1&ofpcc=1&msp=1&odepv=1&id=955ca546d94f3881&ip=134.199.214.39&initcwndbps=360000&mt=1785210052&oweuc="
+      },
+      {
+        "video_id": "iYlODtkyw_I",
+        "title": "Survive 30 Days Chained To A Stranger, Win $250,000",
+        "thumbnail": "https://i.ytimg.com/vi/iYlODtkyw_I/hqdefault.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBr_mSSbkEXsEQf8rxuahzMDeW9Jg",
+        "thumbnails": [
+          {
+            "url": "https://i.ytimg.com/vi/iYlODtkyw_I/hqdefault.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLDd3rmn05lZbf7e1HO5TBTmHm0G-A",
+            "width": 168,
+            "height": 94
+          },
+          {
+            "url": "https://i.ytimg.com/vi/iYlODtkyw_I/hqdefault.jpg?sqp=-oaymwEbCMQBEG5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLC8ybnd49DD0S6kV4AFT4FcO7H8Vw",
+            "width": 196,
+            "height": 110
+          },
+          "… 2 more item(s) truncated"
+        ],
+        "moving_thumbnail": "https://i.ytimg.com/an_webp/iYlODtkyw_I/mqdefault_6s.webp?du=3000&sqp=CIavoNMG&rs=AOn4CLBZuSdeOeoOWtENvOM6x_AKfI9vwA",
+        "duration": "35:05",
+        "duration_accessibility": "35 minutes, 5 seconds",
+        "view_count": "80M views",
+        "short_view_count": "80M views",
+        "published_time": "1 month ago",
+        "description": "",
+        "is_live": false,
+        "is_verified": true,
+        "url": "https://www.youtube.com/watch?v=iYlODtkyw_I",
+        "playback_url": "https://rr2---sn-n4v7snls.googlevideo.com/initplayback?source=youtube&oeis=1&c=WEB&oad=3200&ovd=3200&oaad=11000&oavd=11000&ocs=700&oewis=1&oputc=1&olis=1&ofpcc=1&msp=1&odepv=1&id=89894e0ed932c3f2&ip=134.199.214.39&initcwndbps=345000&mt=1785210052&oweuc="
+      },
+      "… 28 more item(s) truncated"
+    ],
+    "continuation_token": "<omitted: expires>"
+  }
+}

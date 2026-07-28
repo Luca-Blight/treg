@@ -1,0 +1,30 @@
+[
+  {
+    "id": "7e3bef08-37cb-4193-8736-7d2b3b28fdc9",
+    "api_token": "[redacted]",
+    "endpoint": "/v1/reddit/search?query=ai&sort=relevance",
+    "status_code": 200,
+    "duration_ms": 9726,
+    "success": true,
+    "response_time": "2026-07-28T11:54:52.291+00:00",
+    "request_time": "2026-07-28T11:54:42.525+00:00",
+    "request_payload": {
+      "sort": "relevance",
+      "query": "ai"
+    },
+    "http_method": "GET",
+    "ip_address": "[redacted]",
+    "created_at": "2026-07-28T11:54:52.836136+00:00",
+    "duration_secs": 10,
+    "credits": 1,
+    "user_id": "[redacted]",
+    "api_key": "REDACTED",
+    "team_id": "[redacted]",
+    "user_agent": "python-httpx/0.28.1",
+    "log_id": "[redacted]",
+    "status": "success",
+    "response_key": "[redacted]",
+    "cache_hit": false
+  },
+  "… 49 more item(s) truncated"
+]

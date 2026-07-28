@@ -1,0 +1,72 @@
+{
+  "search_metadata": {
+    "id": "6a6898bcab28c6ab2fd7f43a",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/VSm2c-4Whhcx_ptD7g9pbQ/6a6898bc… [81 chars]",
+    "created_at": "2026-07-28 11:55:40 UTC",
+    "processed_at": "2026-07-28 11:55:40 UTC",
+    "ebay_product_url": "https://www.ebay.com/itm/305576857892",
+    "raw_html_file": "https://serpapi.com/searches/VSm2c-4Whhcx_ptD7g9pbQ/6a6898bc… [81 chars]",
+    "total_time_taken": 2.24
+  },
+  "search_parameters": {
+    "engine": "ebay_product",
+    "product_id": "305576857892",
+    "ebay_domain": "ebay.com"
+  },
+  "product_results": {
+    "product_id": "305576857892",
+    "product_link": "http://www.ebay.com/itm/305576857892",
+    "title": "PlayStation 5 Slim Console + Extra PS5 DualSense Controller … [74 chars]",
+    "subtitle": "Brand New - Full Warranty",
+    "short_description": "Product Line PlayStation 5. Product Type Gaming Console. Opt… [231 chars]",
+    "full_description_link": "https://itm.ebaydesc.com/itmdesc/305576857892?t=176719895600… [203 chars]",
+    "watch_count": 716,
+    "buy": {
+      "options": "… [1 item(s) truncated]",
+      "buy_it_now": "… {1 field(s) truncated}"
+    },
+    "shipping": {
+      "from": "Atlanta, Georgia, United States",
+      "to": "… {2 field(s) truncated}",
+      "status": "available",
+      "options": "… [1 item(s) truncated]",
+      "ships_to": "… {1 field(s) truncated}",
+      "includes_countries": "… [141 item(s) truncated]",
+      "excludes_countries": "… [67 item(s) truncated]",
+      "handling_time": "… {1 field(s) truncated}",
+      "taxes": "… {1 field(s) truncated}"
+    },
+    "returns": [
+      "… [4 item(s) truncated]"
+    ],
+    "…": "7 more field(s) truncated"
+  },
+  "seller_results": {
+    "type": "store",
+    "name": "Antonline",
+    "username": "antonline",
+    "bio": "For over 30 years, America’s premier online retailer of cutt… [100 chars]",
+    "joined_at": "Joined Sep 2002",
+    "sold_count": 2400000,
+    "rating": 352079,
+    "positive_feedback": 99.4,
+    "profile_link": "https://www.ebay.com/str/antonline",
+    "logo_link": "https://i.ebayimg.com/images/g/HywAAOSwTM5Y56a2/s-l140.jpg",
+    "…": "3 more field(s) truncated"
+  },
+  "related_products": [
+    {
+      "product_id": "304226311477",
+      "product_link": "https://www.ebay.com/itm/304226311477",
+      "title": "GameBoy Color Pokemon Pikachu Edition Nintendo System GLASS … [77 chars]",
+      "price": "… {2 field(s) truncated}",
+      "image_link": "https://i.ebayimg.com/thumbs/images/g/~vgAAOSwLiJhkm9x/s-l50… [65 chars]",
+      "condition": "Excellent - Refurbished",
+      "extensions": "… [3 item(s) truncated]",
+      "bold_extensions": "… [1 item(s) truncated]",
+      "signals": "… [1 item(s) truncated]"
+    },
+    "… 28 more item(s) truncated"
+  ]
+}

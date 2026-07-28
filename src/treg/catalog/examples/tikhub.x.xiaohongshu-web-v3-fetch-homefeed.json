@@ -1,0 +1,40 @@
+{
+  "code": 200,
+  "request_id": "7374b505-8cbf-422f-87d9-69714f5952c2",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:22",
+  "time_stamp": 1785220402,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-Web-V3-API/fetch_homefeed_api_v1_xiaohongshu_web_v3_fetch_homefeed_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/7374b505-8cbf-422f-87d9-69714f5952c2?sign=7287595922b8a717d32a7ab83a0faf61b1656309bd6acaaef3347ea3140a2201",
+  "router": "/api/v1/xiaohongshu/web_v3/fetch_homefeed",
+  "params": {
+    "num": "5",
+    "category": "homefeed_recommend"
+  },
+  "data": {
+    "ok": true,
+    "status": 200,
+    "code": 0,
+    "success": true,
+    "msg": "成功",
+    "data": {
+      "cursor_score": "<omitted: expires>",
+      "items": [
+        {
+          "id": "6a3dc3480000000015024cee",
+          "model_type": "note",
+          "note_card": "… {5 field(s) truncated}",
+          "track_id": "2gorflc1gh94cu81ny1u1",
+          "ignore": false,
+          "xsec_token": "<omitted: expires>"
+        },
+        "… 4 more item(s) truncated"
+      ]
+    }
+  }
+}

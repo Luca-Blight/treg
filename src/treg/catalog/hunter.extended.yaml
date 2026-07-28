@@ -1,0 +1,789 @@
+provider: hunter
+source:
+  method: official docs (no fetchable OpenAPI document is published for Hunter v2)
+  ingested: 2026-07-28
+  spec_urls:
+  - https://hunter.io/api-documentation/v2
+  - https://hunter.io/api/leads
+  - https://help.hunter.io/en/articles/1970956-hunter-api
+endpoints:
+- id: hunter.x.discover-companies
+  tier: extended
+  platform: companies
+  capability: companies.search
+  method: POST
+  path: /discover
+  name: Discover companies matching criteria
+  summary: Identifies companies matching specified criteria; returns up to 100 companies per request
+  input:
+    body:
+      query:
+        type: string
+        required: false
+        note: natural-language description of the companies to find; either query or at least one filter is required
+      headquarters_location:
+        type: string
+        required: false
+      industry:
+        type: string
+        required: false
+      headcount:
+        type: string
+        required: false
+      company_type:
+        type: string
+        required: false
+      technology:
+        type: string
+        required: false
+      limit:
+        type: integer
+        required: false
+        example: 1
+      offset:
+        type: integer
+        required: false
+    bodyType: json
+    note: 'either query (natural language) or at least one filter parameter is required. Cheap probe: body {query: "B2B SaaS companies in the United States", limit: 1}'
+  test_request:
+    body:
+      query: B2B SaaS companies in the United States
+    bodyType: json
+  cost:
+    type: free
+    value: 0
+    currency: USD
+    note: Discover does not consume search or verification credits
+  docs_url: https://hunter.io/api-documentation/v2#discover
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.discover-companies.json
+  observed_time: 2.11
+- id: hunter.x.discover-people
+  tier: extended
+  platform: companies
+  capability: companies.search
+  method: GET
+  path: /discover/people
+  name: Discover companies with email counts
+  summary: Returns companies matching Discover filters together with their personal/generic email counts
+  input:
+    queryParams:
+      query:
+        type: string
+        required: false
+      industry:
+        type: string
+        required: false
+      limit:
+        type: integer
+        required: false
+        example: 1
+      offset:
+        type: integer
+        required: false
+    note: 'either query or at least one filter parameter is required. Cheap probe: queryParams {query: "B2B SaaS companies in the United States", limit: 1}'
+  test_request:
+    queryParams:
+      query: B2B SaaS companies in the United States
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api-documentation/v2#discover
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.discover-people.json
+  observed_time: 1.25
+- id: hunter.x.discover-views-list
+  tier: extended
+  platform: companies
+  method: GET
+  path: /discover/views
+  name: List saved Discover searches
+  summary: Reusable Discover filter configurations saved to your account
+  input:
+    note: no required params
+  test_request:
+    queryParams: {}
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api-documentation/v2#discover
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.discover-views-list.json
+  observed_time: 1.21
+- id: hunter.x.discover-views-get
+  tier: extended
+  platform: companies
+  method: GET
+  path: /discover/views/{id}
+  name: Get a saved Discover search
+  summary: Fetch a single saved Discover filter configuration by id
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+        note: saved-search id, from hunter.x.discover-views-list
+  untestable: requires a real saved-search id belonging to the account; no bare public target exists
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api-documentation/v2#discover
+- id: hunter.x.discover-views-create
+  tier: extended
+  platform: companies
+  method: POST
+  path: /discover/views
+  name: Save a Discover search
+  summary: Create a reusable Discover filter configuration
+  input:
+    body:
+      name:
+        type: string
+        required: true
+        note: name for the saved search
+      query:
+        type: string
+        required: false
+    bodyType: json
+  untestable: writes real account state (creates a saved search); deliberately not probed blind
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api-documentation/v2#discover
+- id: hunter.x.discover-views-delete
+  tier: extended
+  platform: companies
+  method: DELETE
+  path: /discover/views/{id}
+  name: Delete a saved Discover search
+  summary: Delete a saved Discover filter configuration
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+  untestable: destructive; requires a real saved-search id, none available for a blind probe
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api-documentation/v2#discover
+- id: hunter.x.domain-finder
+  tier: extended
+  platform: companies
+  method: GET
+  path: /domain-finder
+  name: Find a company's domain from its name
+  summary: Returns the most likely domain name(s) for a given company name
+  input:
+    queryParams:
+      company:
+        type: string
+        required: true
+        note: minimum 3 characters
+        example: Stripe
+      limit:
+        type: integer
+        required: false
+        note: 1-10, default 5
+        example: 1
+      perfect_match:
+        type: boolean
+        required: false
+    note: 'Cheap probe: queryParams {company: "Stripe", limit: 1}'
+  test_request:
+    queryParams:
+      company: Stripe
+      limit: 1
+  cost:
+    type: free
+    value: 0
+    currency: USD
+    note: does not consume credits
+  docs_url: https://hunter.io/api-documentation/v2#domain-finder
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.domain-finder.json
+  observed_time: 5.83
+- id: hunter.x.email-count
+  tier: extended
+  platform: people
+  method: GET
+  path: /email-count
+  name: Count known emails for a domain
+  summary: Returns the number of email addresses Hunter has for a domain or company, broken down by department and seniority
+  input:
+    queryParams:
+      domain:
+        type: string
+        required: false
+        note: one of domain | company is required
+        example: stripe.com
+      company:
+        type: string
+        required: false
+      type:
+        type: string
+        required: false
+        note: personal | generic
+    note: 'Cheap probe: queryParams {domain: "stripe.com"}'
+  test_request:
+    queryParams:
+      domain: stripe.com
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api-documentation/v2#email-count
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.email-count.json
+  observed_time: 0.02
+- id: hunter.x.multi-domain-search
+  tier: extended
+  platform: people
+  method: POST
+  path: /multi-domain-search
+  name: Search emails across multiple companies
+  summary: Searches across multiple companies at once; returns masked results with reveal handles
+  input:
+    body:
+      companies:
+        type: array
+        required: true
+        note: list of {domain} or {company} objects to search
+      type:
+        type: string
+        required: false
+        note: 'personal | generic — live-verified required: companies alone gets "Provide at least one filter to search across domains"'
+      limit:
+        type: integer
+        required: false
+      per_domain:
+        type: integer
+        required: false
+    bodyType: json
+    note: results are masked; addresses are unlocked via hunter.x.multi-domain-search-reveal
+  test_request:
+    body:
+      companies:
+      - domain: stripe.com
+      type: personal
+    bodyType: json
+  cost:
+    type: free
+    value: 0
+    currency: USD
+    note: searching is free; credits are charged only on reveal
+  docs_url: https://hunter.io/api-documentation/v2#multi-domain-search
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.multi-domain-search.json
+  observed_time: 1.08
+- id: hunter.x.multi-domain-search-reveal
+  tier: extended
+  platform: people
+  method: POST
+  path: /multi-domain-search/reveal
+  name: Reveal emails from a multi-domain search
+  summary: Unlocks the email addresses behind the handles returned by Multi-Domain Search
+  input:
+    body:
+      handles:
+        type: array
+        required: true
+        note: array of opaque handles from a prior multi-domain-search response, max 100 per request
+    bodyType: json
+  untestable: handles are opaque ids minted by a prior multi-domain-search call; none exist without one
+  cost:
+    type: per_success
+    value: null
+    currency: USD
+    note: 1 SEARCH credit per personal email revealed; 1 credit per domain for generic emails
+  docs_url: https://hunter.io/api-documentation/v2#multi-domain-search
+- id: hunter.x.combined-find
+  tier: extended
+  platform: people
+  method: GET
+  path: /combined/find
+  name: Enrich a person and their company by email
+  summary: Retrieves person and company information from a single email address
+  input:
+    queryParams:
+      email:
+        type: string
+        required: true
+        example: steli@close.io
+      clearbit_format:
+        type: boolean
+        required: false
+    note: 'Cheap probe: queryParams {email: "steli@close.io"}'
+  test_request:
+    queryParams:
+      email: steli@close.io
+  cost:
+    type: per_success
+    value: null
+    currency: USD
+    note: 0.2 credits, billed conditionally (only when the combined record comes back complete); a 404 or partial record is free — same rate as the /people/find and /companies/find enrichment routes
+  docs_url: https://hunter.io/api-documentation/v2#email-enrichment
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.combined-find.json
+  observed_time: 1.46
+- id: hunter.x.leads-list
+  tier: extended
+  platform: people
+  method: GET
+  path: /leads
+  name: List saved leads
+  summary: Your saved leads, with the filters and pagination available on the Leads API
+  input:
+    queryParams:
+      leads_list_id:
+        type: string
+        required: false
+      campaign_id:
+        type: string
+        required: false
+      company:
+        type: string
+        required: false
+      email:
+        type: string
+        required: false
+      limit:
+        type: integer
+        required: false
+        example: 1
+      offset:
+        type: integer
+        required: false
+    note: 'Cheap probe: queryParams {limit: 1}'
+  test_request:
+    queryParams:
+      limit: 1
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.leads-list.json
+  observed_time: 1.03
+- id: hunter.x.leads-get
+  tier: extended
+  platform: people
+  method: GET
+  path: /leads/{id}
+  name: Get a saved lead
+  summary: Fetch a single saved lead by id
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+  untestable: requires a real lead id belonging to the account
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+- id: hunter.x.leads-create
+  tier: extended
+  platform: people
+  method: POST
+  path: /leads
+  name: Save a new lead
+  summary: Add a lead to your Hunter account, optionally attaching it to a leads list
+  input:
+    body:
+      email:
+        type: string
+        required: false
+      first_name:
+        type: string
+        required: false
+      last_name:
+        type: string
+        required: false
+      position:
+        type: string
+        required: false
+      company:
+        type: string
+        required: false
+      company_size:
+        type: string
+        required: false
+      confidence_score:
+        type: integer
+        required: false
+      website:
+        type: string
+        required: false
+      country_code:
+        type: string
+        required: false
+      linkedin_url:
+        type: string
+        required: false
+      phone_number:
+        type: string
+        required: false
+      twitter:
+        type: string
+        required: false
+      source_page:
+        type: string
+        required: false
+      leads_list_id:
+        type: string
+        required: false
+    bodyType: json
+    note: writes real account state, deliberately no test_request
+  untestable: writes real account state (creates a lead); deliberately not probed blind
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+- id: hunter.x.leads-update
+  tier: extended
+  platform: people
+  method: PUT
+  path: /leads/{id}
+  name: Update a saved lead
+  summary: Update the fields of an existing lead
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+    body:
+      email:
+        type: string
+        required: false
+      first_name:
+        type: string
+        required: false
+      last_name:
+        type: string
+        required: false
+      company:
+        type: string
+        required: false
+    bodyType: json
+  untestable: requires a real lead id belonging to the account; mutating
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+- id: hunter.x.leads-delete
+  tier: extended
+  platform: people
+  method: DELETE
+  path: /leads/{id}
+  name: Delete a saved lead
+  summary: Remove a lead from your Hunter account
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+  untestable: destructive; requires a real lead id
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+- id: hunter.x.leads-lists-list
+  tier: extended
+  platform: people
+  method: GET
+  path: /leads_lists
+  name: List lead lists
+  summary: Your saved leads lists, used to organize leads into named collections
+  input:
+    queryParams:
+      limit:
+        type: integer
+        required: false
+        example: 1
+      offset:
+        type: integer
+        required: false
+    note: 'Cheap probe: queryParams {limit: 1}'
+  test_request:
+    queryParams:
+      limit: 1
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.leads-lists-list.json
+  observed_time: 0.51
+- id: hunter.x.leads-lists-get
+  tier: extended
+  platform: people
+  method: GET
+  path: /leads_lists/{id}
+  name: Get a lead list
+  summary: Fetch a single leads list by id
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+  untestable: requires a real leads-list id belonging to the account
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+- id: hunter.x.leads-lists-create
+  tier: extended
+  platform: people
+  method: POST
+  path: /leads_lists
+  name: Create a lead list
+  summary: Create a new leads list to organize saved leads
+  input:
+    body:
+      name:
+        type: string
+        required: true
+      leads_list_folder_id:
+        type: string
+        required: false
+    bodyType: json
+    note: writes real account state, deliberately no test_request
+  untestable: writes real account state (creates a leads list); deliberately not probed blind
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+- id: hunter.x.leads-lists-update
+  tier: extended
+  platform: people
+  method: PUT
+  path: /leads_lists/{id}
+  name: Rename or move a lead list
+  summary: Update a leads list's name or folder
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+    body:
+      name:
+        type: string
+        required: false
+      leads_list_folder_id:
+        type: string
+        required: false
+    bodyType: json
+  untestable: requires a real leads-list id; mutating
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+- id: hunter.x.leads-lists-delete
+  tier: extended
+  platform: people
+  method: DELETE
+  path: /leads_lists/{id}
+  name: Delete a lead list
+  summary: Delete a leads list; leads that were in it have their leads_list_folder_id reset to null
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+  untestable: destructive; requires a real leads-list id
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://hunter.io/api/leads
+- id: hunter.x.custom-attributes-list
+  tier: extended
+  platform: people
+  method: GET
+  path: /custom_attributes
+  name: List custom lead attributes
+  summary: Custom fields your team can set on leads, beyond the standard field set
+  input:
+    note: no required params
+  test_request:
+    queryParams: {}
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
+  unverified: 'http 404: <!DOCTYPE html> <html> <head> <title>404 Not Found • Hunter</title> <meta conten'
+- id: hunter.x.custom-attributes-create
+  tier: extended
+  platform: people
+  method: POST
+  path: /custom_attributes
+  name: Create a custom lead attribute
+  summary: Define a new custom field that can be set on leads
+  input:
+    body:
+      name:
+        type: string
+        required: true
+    bodyType: json
+    note: writes real account state, deliberately no test_request
+  untestable: writes real account state (creates a custom attribute); deliberately not probed blind
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
+- id: hunter.x.custom-attributes-update
+  tier: extended
+  platform: people
+  method: PUT
+  path: /custom_attributes/{id}
+  name: Rename a custom lead attribute
+  summary: Update the name of an existing custom lead attribute
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+    body:
+      name:
+        type: string
+        required: false
+    bodyType: json
+  untestable: requires a real custom-attribute id; mutating
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
+- id: hunter.x.custom-attributes-delete
+  tier: extended
+  platform: people
+  method: DELETE
+  path: /custom_attributes/{id}
+  name: Delete a custom lead attribute
+  summary: Remove a custom lead attribute definition
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+  untestable: destructive; requires a real custom-attribute id
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
+- id: hunter.x.campaigns-list
+  tier: extended
+  platform: people
+  method: GET
+  path: /campaigns
+  name: List email campaigns
+  summary: Your email sequences (campaigns); the legacy /v2/campaigns path mirrors /v2/sequences
+  input:
+    queryParams:
+      limit:
+        type: integer
+        required: false
+        example: 1
+      offset:
+        type: integer
+        required: false
+    note: 'Cheap probe: queryParams {limit: 1}'
+  test_request:
+    queryParams:
+      limit: 1
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
+  verified: '2026-07-28'
+  example_response: examples/hunter.x.campaigns-list.json
+  observed_time: 2.46
+- id: hunter.x.campaigns-recipients-list
+  tier: extended
+  platform: people
+  method: GET
+  path: /campaigns/{id}/recipients
+  name: List a campaign's recipients
+  summary: Recipients enrolled in an email sequence and their sending status
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+  untestable: requires a real campaign id belonging to the account
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
+- id: hunter.x.campaigns-recipients-add
+  tier: extended
+  platform: people
+  method: POST
+  path: /campaigns/{id}/recipients
+  name: Add recipients to a campaign
+  summary: Add one or more leads or emails to an email sequence, enrolling them for sending
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+    body:
+      emails:
+        type: array
+        required: false
+        note: one of emails | leads
+      leads:
+        type: array
+        required: false
+    bodyType: json
+    note: enrolling a recipient can trigger a REAL outreach email — never call this blind; deliberately no test_request
+  untestable: enrolling a recipient can trigger a REAL outreach email; deliberately not probed blind
+  cost:
+    type: free
+    value: 0
+    currency: USD
+    note: no search/verification credit charged; consumes the account's sending quota instead
+  docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
+- id: hunter.x.campaigns-recipients-remove
+  tier: extended
+  platform: people
+  method: DELETE
+  path: /campaigns/{id}/recipients
+  name: Cancel campaign recipients
+  summary: Remove recipients from an email sequence before or during sending
+  input:
+    pathParams:
+      id:
+        type: string
+        required: true
+    body:
+      emails:
+        type: array
+        required: false
+    bodyType: json
+  untestable: requires a real campaign id and enrolled recipients; mutating
+  cost:
+    type: free
+    value: 0
+    currency: USD
+  docs_url: https://help.hunter.io/en/articles/1970956-hunter-api

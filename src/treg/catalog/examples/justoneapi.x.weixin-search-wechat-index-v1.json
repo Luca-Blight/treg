@@ -1,0 +1,74 @@
+{
+  "code": 0,
+  "data": {
+    "data": [
+      {
+        "boxID": "0x40000-15048-",
+        "boxPos": 1,
+        "boxPosMerge": 1,
+        "count": 1,
+        "items": [
+          {
+            "docID": "1-7123206500956315942",
+            "itemInfo": {
+              "data": [
+                "… 2 field(s) truncated",
+                "… 29 more item(s) truncated"
+              ],
+              "title": "人工智能 - 微信指数",
+              "type": 1058
+            },
+            "jumpInfo": {
+              "jumpType": 2,
+              "reportId": "chart:chart:112239",
+              "userName": "gh_935b85261f35@app",
+              "weappUrl": "/page/detail/detail?calculate_word=人工智能"
+            },
+            "source": {
+              "iconUrl": "http://mmbiz.qpic.cn/mmbiz_png/uic3vZ5pI29sdd0tUo5t4pxmJMsMO9iaxM8EOxTX1VUAWjQibib0juc81kMkUgtB9IibIg58TZocULicPJ7lichq8… [150 chars total]",
+              "title": "微信指数"
+            },
+            "title": ""
+          }
+        ],
+        "real_type": 262144,
+        "subType": 15048,
+        "type": 52,
+        "useNativeRender": false
+      }
+    ],
+    "category": [
+      {
+        "type": 0,
+        "word": "全部"
+      },
+      "… 15 more item(s) truncated"
+    ],
+    "continueFlag": 0,
+    "cookies": "<omitted: expires>",
+    "direction": 2,
+    "enableQuestionClosely": false,
+    "experiment": [
+      {
+        "key": "s1s_all_prefetch_next_page",
+        "value": "2"
+      },
+      "… 4 more item(s) truncated"
+    ],
+    "isAutoPlayVideo": 1,
+    "isDivide": 0,
+    "isHomePage": 0,
+    "lang": "zh_CN",
+    "nomoreText": "没有更多的搜索结果",
+    "offset": 20,
+    "pageNumber": 1,
+    "query": "人工智能",
+    "resultType": 0,
+    "ret": 0,
+    "searchID": "1785218910029106927",
+    "timeStamp": 1785218909
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:08:29.544762111",
+  "requestId": "d95c46984306412fa8c22448deab09fb"
+}

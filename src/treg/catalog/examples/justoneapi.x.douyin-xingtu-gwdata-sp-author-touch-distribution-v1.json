@@ -1,0 +1,56 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "video_touch": [
+      {
+        "distribution_data": {
+          "cnt": 162628,
+          "id": "0",
+          "name": "个人"
+        },
+        "second_distribution": [
+          {
+            "distribution_data": {
+              "cnt": 15570,
+              "id": "0",
+              "name": "旅行"
+            },
+            "three_distribution": [
+              {
+                "distribution_data": {
+                  "cnt": 15570,
+                  "id": "0",
+                  "name": "旅行记录与分享"
+                }
+              }
+            ]
+          },
+          {
+            "distribution_data": {
+              "cnt": 116309,
+              "id": "0",
+              "name": "时尚"
+            },
+            "three_distribution": [
+              {
+                "distribution_data": {
+                  "cnt": 116309,
+                  "id": "0",
+                  "name": "美妆"
+                }
+              }
+            ]
+          },
+          "… 3 more item(s) truncated"
+        ]
+      }
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:16.582002337",
+  "requestId": "8722aab492664ba298f1ca58bdb9aa19"
+}

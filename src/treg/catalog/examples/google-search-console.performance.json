@@ -1,0 +1,12 @@
+{
+  "rows": [
+    {
+      "clicks": 1234,
+      "impressions": 1234,
+      "ctr": 1234,
+      "position": 1234
+    }
+  ],
+  "responseAggregationType": "byProperty",
+  "_scrubbed": true
+}

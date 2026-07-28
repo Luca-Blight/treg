@@ -1,0 +1,186 @@
+{
+  "status": 200,
+  "data": [
+    {
+      "id": "K6pMZxksvfFqUQ8a8QBOJg_0000",
+      "full_name": "[redacted — real matched individual, not a PDL demo record]",
+      "first_name": "[redacted]",
+      "middle_initial": null,
+      "middle_name": null,
+      "last_initial": "[redacted]",
+      "last_name": "[redacted]",
+      "sex": "male",
+      "birth_year": true,
+      "birth_date": true,
+      "linkedin_url": "[redacted]",
+      "linkedin_username": "[redacted]",
+      "linkedin_id": "[redacted]",
+      "facebook_url": "[redacted]",
+      "facebook_username": "[redacted]",
+      "facebook_id": "[redacted]",
+      "twitter_url": "[redacted]",
+      "twitter_username": "[redacted]",
+      "github_url": null,
+      "github_username": null,
+      "work_email": true,
+      "personal_emails": true,
+      "recommended_personal_email": true,
+      "mobile_phone": true,
+      "industry": "information technology and services",
+      "job_title": "head of client technical enablement",
+      "job_title_role": null,
+      "job_title_sub_role": null,
+      "job_title_class": null,
+      "job_title_levels": [
+        "director"
+      ],
+      "job_company_id": "aQqQRCBbq7pHg9bTzbcNvw8Tb9ED",
+      "job_company_name": "viacode",
+      "job_company_website": "viacode.com",
+      "job_company_size": "51-200",
+      "job_company_founded": 2001,
+      "job_company_industry": "information technology and services",
+      "job_company_industry_v2": "it services and it consulting",
+      "job_company_linkedin_url": "linkedin.com/company/viacode",
+      "job_company_linkedin_id": "1368510",
+      "job_company_facebook_url": null,
+      "job_company_twitter_url": "twitter.com/viacodedev",
+      "job_company_location_name": "avon, connecticut, united states",
+      "job_company_location_locality": "avon",
+      "job_company_location_metro": "hartford, connecticut",
+      "job_company_location_region": "connecticut",
+      "job_company_location_geo": "41.79,-72.84",
+      "job_company_location_street_address": "[redacted]",
+      "job_company_location_address_line_2": "[redacted]",
+      "job_company_location_postal_code": "06001",
+      "job_company_location_country": "united states",
+      "job_company_location_continent": "north america",
+      "job_last_changed": "2021-09-08",
+      "job_last_verified": "2024-06-17",
+      "job_start_date": "2021-08",
+      "location_name": true,
+      "location_locality": true,
+      "location_metro": true,
+      "location_region": true,
+      "location_country": "united states",
+      "location_continent": "north america",
+      "location_street_address": true,
+      "location_address_line_2": null,
+      "location_postal_code": true,
+      "location_geo": true,
+      "location_last_updated": "2024-05-22",
+      "phone_numbers": true,
+      "emails": true,
+      "interests": [
+        "electronics",
+        "reading",
+        "… 2 more item(s) truncated"
+      ],
+      "skills": [
+        "agile methodologies",
+        "business alliances",
+        "… 41 more item(s) truncated"
+      ],
+      "location_names": true,
+      "regions": true,
+      "countries": [
+        "united states"
+      ],
+      "street_addresses": true,
+      "experience": [
+        {
+          "company": {
+            "name": "viacode",
+            "size": "51-200",
+            "id": "aQqQRCBbq7pHg9bTzbcNvw8Tb9ED",
+            "founded": 2001,
+            "industry": "information technology and services",
+            "industry_v2": "it services and it consulting",
+            "location": {
+              "name": "avon, connecticut, united states",
+              "locality": "avon",
+              "region": "connecticut",
+              "metro": "hartford, connecticut",
+              "country": "united states",
+              "continent": "north america",
+              "street_address": "[redacted]",
+              "address_line_2": "[redacted]",
+              "postal_code": "06001",
+              "geo": "41.79,-72.84"
+            },
+            "linkedin_url": "linkedin.com/company/viacode",
+            "linkedin_id": "1368510",
+            "facebook_url": null,
+            "twitter_url": "twitter.com/viacodedev",
+            "website": "viacode.com"
+          },
+          "location_names": [],
+          "end_date": null,
+          "start_date": "2021-08",
+          "title": {
+            "name": "head of client technical enablement",
+            "class": null,
+            "role": null,
+            "sub_role": null,
+            "levels": [
+              "director"
+            ]
+          },
+          "is_primary": true
+        }
+      ],
+      "education": [
+        {
+          "school": {
+            "name": "[redacted]",
+            "type": "post-secondary institution",
+            "id": "[redacted]",
+            "location": {
+              "name": "[redacted]",
+              "locality": "[redacted]",
+              "region": "[redacted]",
+              "country": "united states",
+              "continent": "north america"
+            },
+            "linkedin_url": "[redacted]",
+            "facebook_url": "[redacted]",
+            "twitter_url": "[redacted]",
+            "linkedin_id": "[redacted]",
+            "website": "[redacted]",
+            "domain": "[redacted]"
+          },
+          "degrees": [
+            "bachelor of science",
+            "bachelors"
+          ],
+          "start_date": "1989",
+          "end_date": "1994",
+          "majors": [
+            "mechanical engineering"
+          ],
+          "minors": [],
+          "gpa": null
+        }
+      ],
+      "profiles": [
+        {
+          "network": "linkedin",
+          "id": "[redacted]",
+          "url": "[redacted]",
+          "username": "[redacted]"
+        },
+        {
+          "network": "facebook",
+          "id": "[redacted]",
+          "url": "[redacted]",
+          "username": "[redacted]"
+        },
+        "… 3 more item(s) truncated"
+      ],
+      "dataset_version": "35.0"
+    }
+  ],
+  "scroll_token": "0$1.2655811",
+  "total": 198531424,
+  "dataset_version": "35.0"
+}

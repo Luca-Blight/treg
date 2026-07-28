@@ -1,0 +1,195 @@
+{
+  "search_metadata": {
+    "id": "6a6898789701211e088df0b5",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/EKiHAMz9vV1S4XdoZtNMTw/6a6898789701211e088df0b5.json",
+    "created_at": "2026-07-28 11:54:32 UTC",
+    "processed_at": "2026-07-28 11:54:32 UTC",
+    "apple_app_store_url": "https://itunes.apple.com/search?media=software&term=coffee&country=us&lang=en-us&explicit=yes",
+    "raw_html_file": "https://serpapi.com/searches/EKiHAMz9vV1S4XdoZtNMTw/6a6898789701211e088df0b5.html",
+    "prettify_html_file": "https://serpapi.com/searches/EKiHAMz9vV1S4XdoZtNMTw/6a6898789701211e088df0b5.prettify",
+    "total_time_taken": 3.75
+  },
+  "search_parameters": {
+    "engine": "apple_app_store",
+    "term": "coffee",
+    "country": "us",
+    "lang": "en-us",
+    "device": "mobile"
+  },
+  "search_information": {
+    "organic_results_state": "Results for exact spelling",
+    "results_count": 46
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "id": 1603584945,
+      "title": "Good Coffee, Great Coffee",
+      "bundle_id": "com.tapblaze.coffeebusiness",
+      "version": "1.19.5",
+      "vpp_license": true,
+      "age_rating": "4+",
+      "release_note": "Fixed minor bugs.",
+      "seller_link": "http://www.tapblaze.com/app/good-coffee-great-coffee/",
+      "minimum_os_version": "15.0",
+      "description": "Wake up and smell the coffee because TapBlaze's newest simulation cooking game, Good Coffee, Great Coffee, is finally here! Prepare delicious drinks, experiment with new flavors, decorate your shop, and manage cafe costs to become the best barista in town! Fulfill quirky customer orders with coffee drinks that look and taste delicious! Upgrade your shop with new decorations and equipment to increase your cafe profit! Make friends, rivals, and more when locals visit your shop! Listen to their sto… [2019 chars total]",
+      "game_center_enabled": true,
+      "link": "https://apps.apple.com/us/app/good-coffee-great-coffee/id1603584945?uo=4",
+      "serpapi_product_link": "https://serpapi.com/search.json?country=us&engine=apple_product&product_id=1603584945&type=app",
+      "serpapi_reviews_link": "https://serpapi.com/search.json?country=us&engine=apple_reviews&page=1&product_id=1603584945&sort=mostrecent",
+      "release_date": "2025-02-27 08:00:00 UTC",
+      "latest_version_release_date": "2026-07-27 07:44:39 UTC",
+      "price": {
+        "type": "Free"
+      },
+      "rating": [
+        {
+          "type": "All Times",
+          "rating": 4.67,
+          "count": 36051
+        }
+      ],
+      "genres": [
+        {
+          "name": "Games",
+          "id": 6014,
+          "primary": true
+        },
+        {
+          "name": "Casual",
+          "id": 7003,
+          "primary": false
+        },
+        "… 2 more item(s) truncated"
+      ],
+      "developer": {
+        "name": "TAPBLAZE",
+        "id": 1055223695,
+        "link": "https://apps.apple.com/us/developer/id1055223695"
+      },
+      "size_in_bytes": 1505309696,
+      "supported_languages": [
+        "AR",
+        "EN",
+        "… 15 more item(s) truncated"
+      ],
+      "screenshots": {},
+      "logos": [
+        {
+          "size": "60x60",
+          "link": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/01/2b/c2/012bc273-e5c9-3b62-81e5-491fa6d1ef30/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/60x60bb.jpg"
+        },
+        {
+          "size": "512x512",
+          "link": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/01/2b/c2/012bc273-e5c9-3b62-81e5-491fa6d1ef30/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg"
+        },
+        "… 1 more item(s) truncated"
+      ],
+      "features": [
+        "gameCenter",
+        "iosUniversal"
+      ],
+      "supported_devices": [
+        "iPhone5s",
+        "iPadAir",
+        "… 125 more item(s) truncated"
+      ]
+    },
+    {
+      "position": 2,
+      "id": 1591921962,
+      "title": "Coffee Stack",
+      "bundle_id": "markergame.coffeestack",
+      "version": "47.0.7",
+      "vpp_license": true,
+      "age_rating": "12+",
+      "release_note": "We gave things a polish so you can play without pause. Update now for smoother gameplay!",
+      "seller_link": "http://rollicgames.com",
+      "minimum_os_version": "15.0",
+      "description": "Start your day with the ultimate coffee game in Coffee Stack! This exciting and satisfying cup stacking game adds fun Coffee Shop elements where you can stack, serve, and customize delicious coffee drinks for customers. From cappuccinos to frappuccinos, every coffee is a work of art in this addictive game! How to Play? Collect coffee cups and stack them as you move through the game. Fill your cups with different flavors, add beautiful sleeves, and top them off with cute lids. The more cups you s… [1688 chars total]",
+      "game_center_enabled": false,
+      "link": "https://apps.apple.com/us/app/coffee-stack/id1591921962?uo=4",
+      "serpapi_product_link": "https://serpapi.com/search.json?country=us&engine=apple_product&product_id=1591921962&type=app",
+      "serpapi_reviews_link": "https://serpapi.com/search.json?country=us&engine=apple_reviews&page=1&product_id=1591921962&sort=mostrecent",
+      "release_date": "2021-10-28 07:00:00 UTC",
+      "latest_version_release_date": "2026-07-24 21:09:10 UTC",
+      "price": {
+        "type": "Free"
+      },
+      "rating": [
+        {
+          "type": "All Times",
+          "rating": 4.71,
+          "count": 544134
+        }
+      ],
+      "genres": [
+        {
+          "name": "Games",
+          "id": 6014,
+          "primary": true
+        },
+        {
+          "name": "Casual",
+          "id": 7003,
+          "primary": false
+        },
+        "… 1 more item(s) truncated"
+      ],
+      "developer": {
+        "name": "Rollic Games",
+        "id": 1452111779,
+        "link": "https://apps.apple.com/us/developer/id1452111779"
+      },
+      "size_in_bytes": 589868032,
+      "supported_languages": [
+        "EN"
+      ],
+      "screenshots": {
+        "general": [
+          {
+            "link": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource126/v4/8f/85/7a/8f857aa1-5fb5-a43d-2cf5-610fd58a2d0c/ca48160c-2f39-40f0-b76e-89577f931e95_UpgradedCups1242x2208.png/392x696bb.png",
+            "size": "1242x2208"
+          },
+          {
+            "link": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource116/v4/b3/89/d8/b389d84c-067b-af24-0d4b-d8e6f5b20559/6b0cc176-5489-4ad1-b29c-c5d432adeeb3_IdleArea1242x2208.png/392x696bb.png",
+            "size": "1242x2208"
+          },
+          "… 8 more item(s) truncated"
+        ],
+        "ipad": [
+          {
+            "link": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource116/v4/81/eb/cd/81ebcd05-1756-51f4-7d30-03f31478e973/3058fceb-2015-4488-a167-e2bed6d9d6b7_UpgradedCups2048x2732.png/576x768bb.png",
+            "size": "2048x2732"
+          },
+          {
+            "link": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource126/v4/95/88/8d/95888d91-583c-6a68-3374-98ea715ab6e5/53a40505-f6ee-4226-9e1b-4fd20626b0c5_IdleArea2048x2732.png/576x768bb.png",
+            "size": "2048x2732"
+          },
+          "… 8 more item(s) truncated"
+        ]
+      },
+      "logos": [
+        {
+          "size": "60x60",
+          "link": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/a6/18/f9/a618f90a-9c42-9b26-0d41-6d720a940044/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/60x60bb.jpg"
+        },
+        {
+          "size": "512x512",
+          "link": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/a6/18/f9/a618f90a-9c42-9b26-0d41-6d720a940044/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg"
+        },
+        "… 1 more item(s) truncated"
+      ],
+      "features": [
+        "iosUniversal"
+      ],
+      "supported_devices": [
+        "iPhone5s",
+        "iPadAir",
+        "… 125 more item(s) truncated"
+      ]
+    },
+    "… 44 more item(s) truncated"
+  ]
+}

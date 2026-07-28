@@ -1,0 +1,46 @@
+{
+  "code": 200,
+  "request_id": "af5b71bb-a437-43bb-8946-5ac4ba6b7f69",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:03",
+  "time_stamp": 1785220383,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Channels-V2-API/fetch_live_hi… [115 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/af5b71bb-a437-43… [150 chars]",
+  "router": "/api/v1/wechat_channels/v2/fetch_live_history",
+  "params": {
+    "username": "v2_060000231003b20faec8cae1811ac4d5c702ea32b0771737aa785454f… [86 chars]",
+    "last_buffer": "",
+    "flag": 12,
+    "raw": true
+  },
+  "data": {
+    "object": [
+      "… {97 field(s) truncated}",
+      "… 44 more item(s) truncated"
+    ],
+    "preloadInfo": {
+      "globalInfo": "… {52 field(s) truncated}",
+      "preloadStrategyId": 2122349885451446308,
+      "objectInfo": "… [45 item(s) truncated]",
+      "megavideoInfo": "… [45 item(s) truncated]",
+      "pbRequestMsgInfo": null
+    },
+    "pbRequestMsgInfo": null,
+    "totalCount": 45,
+    "baseResponse": {
+      "ret": 0,
+      "errMsg": "… {2 field(s) truncated}",
+      "pbRequestMsgInfo": null
+    },
+    "lastBuffer": "CNK99OOI74OiwQEQASDdsvC9r7+L3c8BII6wwNnVsfzMzgEg2bvE+d6rusbO… [680 chars]",
+    "continueFlag": 1,
+    "last_buffer": "CNK99OOI74OiwQEQASDdsvC9r7+L3c8BII6wwNnVsfzMzgEg2bvE+d6rusbO… [680 chars]",
+    "debug_id": "2079b21d",
+    "debug_info": "gAAAAABqaE0fXBEs5CS0ymorFPn8unEHBVKRzSRbD_1fcYxmTCbJzK1c4czX… [268 chars]"
+  }
+}

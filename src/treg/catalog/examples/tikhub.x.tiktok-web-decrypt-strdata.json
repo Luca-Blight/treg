@@ -1,0 +1,22 @@
+{
+  "code": 200,
+  "request_id": "e8524dac-89bf-4f72-a86c-ecd27800f12d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:15",
+  "time_stamp": 1785220215,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/decrypt_strData_api_v1_tiktok_web_decrypt_strData_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/e8524dac-89bf-4f72-a86c-ecd27800f12d?sign=caa031f2332c52a24b5132c5d4e17c4a784f3f73250b9ef84c8e39e81ab58aff",
+  "router": "/api/v1/tiktok/web/decrypt_strData",
+  "params": {
+    "encrypted_length": 872
+  },
+  "data": {
+    "decrypted": "{\"behavior\":{\"beResize\":[],\"beMotion\":[{\"ts\":1701069187299,\"x\":null,\"y\":null,\"z\":null},{\"ts\":1701069202902,\"x\":null,\"y\":null,\"z\":null}],\"bePaste\":[],\"beMouse\":[],\"beKeyboard\":[],\"beScroll\":[],\"beTouch… [905 chars]",
+    "length": 905
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "code": 200,
+  "request_id": "281c5757-e264-4fb0-9f9c-848d488b36ff",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:42",
+  "time_stamp": 1785220062,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_dynamic_detail_api_v1_bilibili_web_fetch_dynamic_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/281c5757-e264-4fb0-9f9c-848d488b36ff?sign=b6872b7a9a115ac95d0ff78e43089f938e89cd1acb7f758c3826b639b8aa989c",
+  "router": "/api/v1/bilibili/web/fetch_dynamic_detail",
+  "params": {
+    "dynamic_id": "1172584638000922630"
+  },
+  "data": {
+    "code": 0,
+    "message": "0",
+    "ttl": 1,
+    "data": {
+      "item": {
+        "id_str": "1172584638000922630",
+        "type": 0,
+        "basic": {
+          "comment_type": 11,
+          "comment_id_str": "385887198",
+          "title": "电影最TOP的动态 - 哔哩哔哩",
+          "uid": "17819768",
+          "tribee": null,
+          "like_icon": "… {4 field(s) truncated}",
+          "editable": false,
+          "aigc": false,
+          "open_app_extra": "",
+          "rid_str": "385887198",
+          "article_type": 0,
+          "is_only_fans": false
+        },
+        "modules": [
+          "… {16 field(s) truncated}",
+          "… 3 more item(s) truncated"
+        ]
+      }
+    }
+  }
+}

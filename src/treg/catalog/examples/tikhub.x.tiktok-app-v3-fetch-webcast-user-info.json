@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "3fd41d0f-2f81-419a-87c7-8f50f5359845",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:06",
+  "time_stamp": 1785220206,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_webcast_user… [114 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/3fd41d0f-2f81-41… [150 chars]",
+  "router": "/api/v1/tiktok/app/v3/fetch_webcast_user_info",
+  "params": {
+    "sec_user_id": "MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM"
+  },
+  "data": {
+    "data": {
+      "allow_find_by_contacts": false,
+      "allow_others_download_video": false,
+      "allow_others_download_when_sharing_video": false,
+      "allow_share_show_profile": false,
+      "allow_show_in_gossip": false,
+      "allow_show_my_action": false,
+      "allow_strange_comment": false,
+      "allow_unfollower_comment": false,
+      "allow_use_linkmic": false,
+      "authentication_info": "… {4 field(s) truncated}",
+      "author_stats": "… {6 field(s) truncated}",
+      "avatar_large": "… {8 field(s) truncated}",
+      "avatar_medium": "… {8 field(s) truncated}",
+      "avatar_thumb": "… {8 field(s) truncated}",
+      "badge_image_list": "… [0 item(s) truncated]",
+      "…": "81 more field(s) truncated"
+    },
+    "extra": {
+      "anonymous_is_silence": false,
+      "now": 1785220206247,
+      "preload_empty_reason": ""
+    },
+    "status_code": 0
+  }
+}

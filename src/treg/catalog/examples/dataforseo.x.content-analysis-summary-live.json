@@ -1,0 +1,49 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "6.0508 sec.",
+  "cost": 0.024036,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0464-0000-d3b5202e18ab",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "6.0406 sec.",
+      "cost": 0.024036,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "content_analysis",
+        "function": "summary",
+        "keyword": "logitech",
+        "page_type": [
+          "ecommerce",
+          "… 4 more item(s) truncated"
+        ],
+        "internal_list_limit": 8,
+        "positive_connotation_threshold": 0.5
+      },
+      "result": [
+        {
+          "type": "content_analysis_summary",
+          "total_count": 3965408,
+          "rank": 595,
+          "top_domains": "… [8 item(s) truncated]",
+          "sentiment_connotations": "… {6 field(s) truncated}",
+          "connotation_types": "… {3 field(s) truncated}",
+          "text_categories": "… [8 item(s) truncated]",
+          "page_categories": "… [8 item(s) truncated]",
+          "page_types": "… {5 field(s) truncated}",
+          "countries": "… {8 field(s) truncated}",
+          "languages": "… {8 field(s) truncated}"
+        }
+      ]
+    }
+  ]
+}

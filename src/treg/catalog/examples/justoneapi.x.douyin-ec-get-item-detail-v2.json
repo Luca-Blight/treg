@@ -1,0 +1,71 @@
+{
+  "code": 0,
+  "data": {
+    "promotion_id": "3833249427875823701",
+    "product_id": "3833249427875823701",
+    "item_type": 6,
+    "model": {
+      "product": {
+        "product_base": {
+          "title": "【柏林之声】2026新款运动蓝牙耳机开放式不入耳高音质骨传超长待机",
+          "cover": "https://p3-aio.ecombdimg.com/obj/ecom-shop-material/png_m_53… [114 chars total]",
+          "images": "… 5 item(s) truncated",
+          "white_background": "https://p3-aio.ecombdimg.com/obj/ecom-shop-material/jpeg_m_1… [112 chars total]",
+          "is_global_shoping": false,
+          "big_imgs": "… 5 item(s) truncated"
+        },
+        "product_sales": {
+          "product_label": "… 2 field(s) truncated",
+          "sell_num": 186,
+          "total_sales": 186
+        },
+        "product_comment": {
+          "comment_label": "… 1 field(s) truncated",
+          "good_ratio": 100
+        },
+        "product_privilege": {
+          "privilege_info_label": "… 2 field(s) truncated"
+        }
+      },
+      "shop": {
+        "shop_id": "251094601",
+        "shop_base": {
+          "shop_name": "联邦电器",
+          "shop_logo": "https://p3-ecom-qualification-sign.ecombdimg.com/tos-cn-i-6v… [207 chars total]",
+          "platform_source": 4
+        }
+      },
+      "promotion_data": {
+        "code": -1
+      },
+      "comment_data": {
+        "code": -1
+      },
+      "author_data": {
+        "code": -1
+      },
+      "content_data": {
+        "code": -1
+      },
+      "hot_content_data": {
+        "code": -1
+      },
+      "shop_product_data": {
+        "code": -1
+      },
+      "material_data": {
+        "code": -1
+      }
+    },
+    "label": {
+      "service_module": {
+        "module_list": [
+          "… 3 field(s) truncated"
+        ]
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:07.861476879",
+  "requestId": "cdbbd20531ce45ffba683598ad6d63b5"
+}

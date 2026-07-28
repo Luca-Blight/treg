@@ -1,0 +1,37 @@
+{
+  "code": 200,
+  "request_id": "f8951f2d-89ac-4ed4-a8b2-52a0c44fd478",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:16",
+  "time_stamp": 1785220096,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-DouPlus-API/search_live_room_api_v1_douyin_douplus_search_live_room_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f8951f2d-89ac-4ed4-a8b2-52a0c44fd478?sign=17659e50fb23774e220d7f568416a9a3f0a235393b441b686db20608e969eae3",
+  "router": "/api/v1/douyin/douplus/search_live_room",
+  "params": {},
+  "data": {
+    "code": 0,
+    "msg": "success",
+    "data": {
+      "cursor": 10,
+      "userList": [
+        {
+          "avatar": "https://p3.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-i-0813c001_oYc6dIPQiIihAKbAPQAyiAaajdl1AIVEQaBA6.jpeg?from=2956013662",
+          "nickname": "小耳朵",
+          "followerCount": 22292,
+          "uniqueId": "XQD0626",
+          "shortId": "77449540612",
+          "secUid": "MS4wLjABAAAArQGMCrJTIkCcKiqfE_GdVz9XnXKwcWx_OVn5taOr8SiNzdtFjyhfDcA4vwv9vuOY",
+          "followerCountStr": "",
+          "liveRoomInfo": "… {3 field(s) truncated}"
+        },
+        "… 9 more item(s) truncated"
+      ],
+      "hasMore": true
+    }
+  }
+}

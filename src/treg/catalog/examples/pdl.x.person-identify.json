@@ -1,0 +1,207 @@
+{
+  "status": 200,
+  "matches": [
+    {
+      "data": {
+        "id": "qEnOZ5O…",
+        "full_name": "sean th…",
+        "first_name": "sean",
+        "middle_initial": "f",
+        "middle_name": "fong",
+        "last_initial": "t",
+        "last_name": "thorne",
+        "sex": "male",
+        "birth_year": true,
+        "birth_date": false,
+        "linkedin_url": "linkedi…",
+        "linkedin_username": "seantho…",
+        "linkedin_id": "1459915…",
+        "facebook_url": "faceboo…",
+        "facebook_username": "deseant…",
+        "facebook_id": "1089351…",
+        "twitter_url": "twitter…",
+        "twitter_username": "seantho…",
+        "github_url": null,
+        "github_username": null,
+        "work_email": false,
+        "personal_emails": true,
+        "recommended_personal_email": true,
+        "mobile_phone": true,
+        "industry": "compute…",
+        "job_title": "preside…",
+        "job_title_role": "operati…",
+        "job_title_sub_role": "executi…",
+        "job_title_class": "general…",
+        "job_title_levels": [
+          "cxo"
+        ],
+        "job_company_id": null,
+        "job_company_name": "the cop…",
+        "job_company_website": null,
+        "job_company_size": null,
+        "job_company_founded": null,
+        "job_company_industry": null,
+        "job_company_industry_v2": null,
+        "job_company_linkedin_url": null,
+        "job_company_linkedin_id": null,
+        "job_company_facebook_url": null,
+        "job_company_twitter_url": null,
+        "job_company_location_name": null,
+        "job_company_location_locality": null,
+        "job_company_location_metro": null,
+        "job_company_location_region": null,
+        "job_company_location_geo": null,
+        "job_company_location_street_address": null,
+        "job_company_location_address_line_2": null,
+        "job_company_location_postal_code": null,
+        "job_company_location_country": null,
+        "job_company_location_continent": null,
+        "job_last_changed": "2026-04…",
+        "job_last_verified": "2026-06…",
+        "job_start_date": "2024-02",
+        "location_name": true,
+        "location_locality": true,
+        "location_metro": true,
+        "location_region": true,
+        "location_country": "united …",
+        "location_continent": "north a…",
+        "location_street_address": false,
+        "location_address_line_2": null,
+        "location_postal_code": false,
+        "location_geo": true,
+        "location_last_updated": "2026-06…",
+        "phone_numbers": true,
+        "emails": true,
+        "interests": [
+          "college…",
+          "college…",
+          "… 5 mor…"
+        ],
+        "skills": [
+          "enterpr…",
+          "entrepr…",
+          "… 8 mor…"
+        ],
+        "location_names": true,
+        "regions": true,
+        "countries": [
+          "united …",
+          "canada"
+        ],
+        "street_addresses": false,
+        "experience": [
+          {
+            "company": {
+              "name": "the cop…",
+              "size": null,
+              "id": null,
+              "founded": null,
+              "industry": null,
+              "industry_v2": null,
+              "location": null,
+              "linkedin_url": null,
+              "linkedin_id": null,
+              "facebook_url": null,
+              "twitter_url": null,
+              "website": null
+            },
+            "location_names": [],
+            "end_date": null,
+            "start_date": "2024-02",
+            "title": {
+              "name": "preside…",
+              "class": "general…",
+              "role": "operati…",
+              "sub_role": "executi…",
+              "levels": [
+                "cxo"
+              ]
+            },
+            "is_primary": true
+          },
+          {
+            "company": {
+              "name": "agentsc…",
+              "size": "1-10",
+              "id": "bomhBpP…",
+              "founded": null,
+              "industry": "compute…",
+              "industry_v2": "softwar…",
+              "location": null,
+              "linkedin_url": "linkedi…",
+              "linkedin_id": "1117880…",
+              "facebook_url": null,
+              "twitter_url": null,
+              "website": "agentsc…"
+            },
+            "location_names": [],
+            "end_date": null,
+            "start_date": "2026-01",
+            "title": {
+              "name": "founder",
+              "class": "general…",
+              "role": "operati…",
+              "sub_role": "executi…",
+              "levels": [
+                "owner"
+              ]
+            },
+            "is_primary": false
+          },
+          "… 2 mor…"
+        ],
+        "education": [
+          {
+            "school": {
+              "name": "univers…",
+              "type": "post-se…",
+              "id": "HCCO6IK…",
+              "location": {
+                "name": "eugene,…",
+                "locality": "eugene",
+                "region": "oregon",
+                "country": "united …",
+                "continent": "north a…"
+              },
+              "linkedin_url": "linkedi…",
+              "facebook_url": "faceboo…",
+              "twitter_url": "twitter…",
+              "linkedin_id": "5827",
+              "website": "uoregon…",
+              "domain": "uoregon…"
+            },
+            "degrees": [],
+            "start_date": "2010-01",
+            "end_date": "2012",
+            "majors": [
+              "entrepr…"
+            ],
+            "minors": [],
+            "gpa": null
+          }
+        ],
+        "profiles": [
+          {
+            "network": "linkedi…",
+            "id": "1459915…",
+            "url": "linkedi…",
+            "username": "seantho…"
+          },
+          {
+            "network": "faceboo…",
+            "id": "1089351…",
+            "url": "faceboo…",
+            "username": "deseant…"
+          },
+          "… 10 mo…"
+        ],
+        "dataset_version": "35.0"
+      },
+      "match_score": 60,
+      "matched_on": [
+        "email"
+      ]
+    },
+    "… 1 more low-confidence match (score 40) truncated for scrub — a different, unrelated real person; not shown"
+  ]
+}

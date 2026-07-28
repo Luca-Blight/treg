@@ -1,0 +1,26 @@
+{
+  "code": 200,
+  "request_id": "a9620465-103d-43d9-ac57-99b88dd98b9a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:37:27",
+  "time_stamp": 1785220647,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-V2-API/get_job_detail_api_v1_linkedin_web_v2_get_job_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/a9620465-103d-43d9-ac57-99b88dd98b9a?sign=f6d5a31e68964b84c5be6b00687c7d7c5fcfa95abfc980992386adbc179717dc",
+  "router": "/api/v1/linkedin/web_v2/get_job_detail",
+  "params": {
+    "url": "https://www.linkedin.com/jobs/view/software-engineer-at-pave-4310512612/"
+  },
+  "data": {
+    "timestamp": "2026-07-28T06:37:26.973Z",
+    "input": {
+      "url": "https://www.linkedin.com/jobs/view/software-engineer-at-pave-4310512612/"
+    },
+    "error": "Job unavailable, redirected to search page.",
+    "error_code": "dead_page"
+  }
+}

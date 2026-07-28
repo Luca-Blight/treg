@@ -1,0 +1,34 @@
+{
+  "code": 200,
+  "request_id": "cfbdf3e7-0b2a-4703-bc4e-7c79146d9680",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:00",
+  "time_stamp": 1785220380,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Channels-V2-API/fetch_channel_info_api_v1_wechat_channels_v2_fetch_channel_info_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/cfbdf3e7-0b2a-4703-bc4e-7c79146d9680?sign=e47e0c64d31c0f0224a87143aa3b00a047f6e8d052d68cd80f6707c7c5f746e7",
+  "router": "/api/v1/wechat_channels/v2/fetch_channel_info",
+  "params": {
+    "username": "v2_060000231003b20faec8c6e4811dc1d4c602ee30b0771bbcf220c67926bb76ab7702ac335a53@finder",
+    "raw": true
+  },
+  "data": {
+    "baseResponse": {
+      "ret": 0,
+      "errMsg": "… {2 field(s) truncated}",
+      "pbRequestMsgInfo": null
+    },
+    "pbRequestMsgInfo": null,
+    "pair": [],
+    "sections": [
+      "… {3 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "debug_id": "713c5f83",
+    "debug_info": "gAAAAABqaE0cfvjCai5nrANR-fd2rJB8mcZSfHYbk7nRvPkcINvJg3MvaTz2uvOBdq9VcWUsgVKNNWQkSRqvC32yzFgSHsdBX08xJ5XIxet5mwaijVhB6tm7giEGOTLCfPEVoFZQmJX1n2LTliRkcEVXiwHg1LnQC2pcl85GWV6xEfE_GiqBqeskLCl1GYTyMcc29b0l… [268 chars]"
+  }
+}

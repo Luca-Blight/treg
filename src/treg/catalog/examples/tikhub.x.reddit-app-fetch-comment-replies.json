@@ -1,0 +1,31 @@
+{
+  "code": 200,
+  "request_id": "f9d6da5b-1272-4fda-8d71-ef7b90259e3a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:43",
+  "time_stamp": 1785220183,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Reddit-APP-API/fetch_comment_replies_api_v1_reddit_app_fetch_comment_replies_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f9d6da5b-1272-4fda-8d71-ef7b90259e3a?sign=adf94951c372a2e95663e8a03a1a6c21fc9215fd1a2c2505c22c4f08fe6532b8",
+  "router": "/api/v1/reddit/app/fetch_comment_replies",
+  "params": {
+    "post_id": "t3_1qmup73",
+    "cursor": "<omitted: expires>",
+    "sort_type": "CONFIDENCE",
+    "need_format": "false"
+  },
+  "data": {
+    "postInfoById": {
+      "__typename": "SubredditPost",
+      "id": "t3_1qmup73",
+      "title": "We found this poor little kitten in the woods, covered in ice, with her fur stuck to the hunk of plastic she was hiding under for shelter. We saved her 😁",
+      "subreddit": "… {7 field(s) truncated}",
+      "commentForest": "… {3 field(s) truncated}",
+      "commentCount": 3052
+    }
+  }
+}

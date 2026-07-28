@@ -1,0 +1,40 @@
+{
+  "version": 3,
+  "hits": 1,
+  "kgversion": "478",
+  "request_ctx": {
+    "query": {
+      "type": "Organization",
+      "url": "diffbot.com"
+    },
+    "query_ctx": {
+      "search": "OFF"
+    }
+  },
+  "data": [
+    {
+      "score": 0.9607137578458318,
+      "esscore": 80.56199645996094,
+      "entity": {
+        "twitterUri": "twitter.com/diffbot",
+        "nbActiveEmployeeEdges": 35,
+        "type": "Organization",
+        "naceClassification": "… [6 item(s) truncated]",
+        "allNames": "… [8 item(s) truncated]",
+        "isAcquired": false,
+        "revenue": "… {2 field(s) truncated}",
+        "competitors": "… [2 item(s) truncated]",
+        "emailAddresses": "… [4 item(s) truncated]",
+        "logo": "https://kg.diffbot.com/image/api/get?fetch=yes&url=g%3Cj7P0Stn8p.%5DjEp9G.Bd%7Bk%3EXMJM5%7E%7B-E%2FXy-Z7%5Dq-CdLD-axttB6p%2FR620zN_%3Cb4E.A%5Dm",
+        "id": "EYX1i02YVPsuT7fPLUYgRhQ",
+        "nbOrigins": 96,
+        "sicClassification": "… [4 item(s) truncated]",
+        "foundingDate": "… {3 field(s) truncated}",
+        "image": "https://kg.diffbot.com/image/api/get?fetch=yes&urls=g%3Cj7P0Stn8p.%5DjEp9G.Bd%7Bk%3EXMJM5%7E%7B-E%2FXy-Z7%5Dq-CdLD-axttB6p%2FR620zN_%3Cb4E.A%5Dm,g%3Cj7guSXzAoBWu.x0KwLZrUn.%5B%3CR0Aa4Hwygr9m6W%3Exl5G%… [366 chars]",
+        "…": "57 more field(s) truncated"
+      },
+      "errors": []
+    }
+  ],
+  "errors": []
+}

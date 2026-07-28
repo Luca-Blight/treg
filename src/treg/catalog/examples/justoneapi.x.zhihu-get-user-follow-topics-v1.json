@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "data": {
+    "paging": {
+      "totals": 0,
+      "is_start": true,
+      "is_end": true,
+      "previous": "https://www.zhihu.com/api/v5.1/topics/zhang-jia-wei/following_topics_contributions?offset=-20&limit=20&include=data[*].topic.introduction&user_url_token=<omitted: expires>",
+      "next": "https://www.zhihu.com/api/v5.1/topics/zhang-jia-wei/following_topics_contributions?offset=20&limit=20&include=data[*].topic.introduction&user_url_token=<omitted: expires>"
+    },
+    "data": []
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:45.955345025",
+  "requestId": "c8bc15ffa93c46359bfa03b48e527178"
+}

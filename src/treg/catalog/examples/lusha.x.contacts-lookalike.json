@@ -1,0 +1,37 @@
+{
+  "dedupeSessionId": "<omitted: expires>",
+  "results": [
+    {
+      "id": "v1.EXAMPLE_CONTACT_ID",
+      "firstName": "Example",
+      "lastName": "Contact",
+      "jobTitle": {
+        "title": "Marketing Lead",
+        "departments": [
+          "Marketing"
+        ],
+        "seniority": "Manager"
+      },
+      "company": {
+        "id": "v1.EXAMPLE_COMPANY_ID",
+        "name": "Example Co",
+        "domain": "example-co.com"
+      },
+      "location": {
+        "country": "United Kingdom",
+        "city": "Edinburgh"
+      },
+      "socialLinks": {
+        "linkedin": "https://www.linkedin.com/in/example-contact"
+      }
+    }
+  ],
+  "meta": {
+    "returned": 1,
+    "hasMore": true
+  },
+  "billing": {
+    "creditsCharged": 1,
+    "resultsReturned": 1
+  }
+}

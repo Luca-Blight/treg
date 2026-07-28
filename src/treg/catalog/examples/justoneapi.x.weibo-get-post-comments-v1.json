@@ -1,0 +1,66 @@
+{
+  "code": 0,
+  "data": {
+    "ok": 1,
+    "filter_group": [
+      {
+        "param": "flow=0",
+        "scheme": "",
+        "title": "按热度",
+        "isDefault": 0
+      },
+      "… 1 more item(s) truncated"
+    ],
+    "data": [
+      {
+        "created_at": "Tue Jul 28 13:55:09 +0800 2026",
+        "id": 5325653104657430,
+        "rootid": 5325653104657430,
+        "rootidstr": "5325653104657430",
+        "floor_number": 1184,
+        "text": "是技术发布，不是产品发布？",
+        "disable_reply": 0,
+        "restrictOperate": 0,
+        "source_allowclick": 0,
+        "source_type": 4,
+        "source": "来自云南",
+        "restrict_state": 0,
+        "user": "… 32 field(s) truncated",
+        "mid": "5325653104657430",
+        "idstr": "5325653104657430",
+        "url_objects": "… 0 item(s) truncated",
+        "liked": false,
+        "pic_num": 0,
+        "readtimetype": "comment",
+        "analysis_extra": "author_uid:1749127163|mid:53252014218952… [65 chars total]",
+        "cmt_ext": "level_type:1",
+        "match_ai_play_picture": false,
+        "rid": "0_0_0_162556961615397572_0_0_0",
+        "allow_follow": false,
+        "item_category": "comment",
+        "degrade_type": "normal",
+        "report_scheme": "sinaweibo://mpdialog?scheme=sinaweibo%3A… [482 chars total]",
+        "biz_mark_type": 0,
+        "comments": "… 0 item(s) truncated",
+        "hasvisible": false,
+        "previous_cursor": 0,
+        "next_cursor": 0,
+        "total_number": 0,
+        "since_id": 0,
+        "max_id": 0,
+        "like_counts": 0,
+        "text_raw": "是技术发布，不是产品发布？",
+        "isExpand": false
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "rootComment": [],
+    "total_number": 1378,
+    "tip_msg": "30天内，博主已拉黑恶意评论用户3人，请谨慎评论",
+    "max_id": 5325605538365636,
+    "trendsText": "已加载全部评论"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:48.001786242",
+  "requestId": "be3cdb27110c46ba902d2bbdfda4ec24"
+}

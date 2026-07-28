@@ -1,0 +1,45 @@
+{
+  "success": true,
+  "credits_remaining": 19830,
+  "credits_charged": 1,
+  "events": [
+    {
+      "id": "996646606461764",
+      "__typename": "Event",
+      "name": "RAVE with Jaywalk, Khanh, DJ Moo at Brickyard ",
+      "is_canceled": false,
+      "event_creator": {
+        "__typename": "User",
+        "__isEntity": "User",
+        "url": "https://www.facebook.com/brickyardoldtown",
+        "name": "Brickyard",
+        "id": "100066639371774"
+      },
+      "event_place": {
+        "__typename": "Page",
+        "contextual_name": "Brickyard",
+        "location": {
+          "reverse_geocode": {
+            "city": "Wichita"
+          }
+        },
+        "__isNode": "Page",
+        "id": "274995392617693"
+      },
+      "day_time_sentence": "Fri, Jul 31 at 9:00 PM CDT",
+      "url": "https://www.facebook.com/events/996646606461764/",
+      "gif_cover_photo": null,
+      "cover_video": null,
+      "__isEntity": "Event",
+      "event_kind": "PUBLIC_TYPE",
+      "is_happening_now": false,
+      "is_online_or_detected_online": false,
+      "is_past": false,
+      "start_timestamp": 1785549600
+    },
+    "… 7 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>",
+  "has_next_page": false,
+  "total_count": 8
+}

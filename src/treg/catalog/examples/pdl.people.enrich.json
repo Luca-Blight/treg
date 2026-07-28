@@ -1,0 +1,199 @@
+{
+  "status": 200,
+  "likelihood": 6,
+  "data": {
+    "id": "qEnOZ5Oh0poWnQ1luFBfVw_0000",
+    "full_name": "sean thorne",
+    "first_name": "sean",
+    "middle_initial": "f",
+    "middle_name": "fong",
+    "last_initial": "t",
+    "last_name": "thorne",
+    "sex": "male",
+    "birth_year": true,
+    "birth_date": false,
+    "linkedin_url": "linkedin.com/in/seanthorne",
+    "linkedin_username": "seanthorne",
+    "linkedin_id": "145991517",
+    "facebook_url": "facebook.com/deseanthorne",
+    "facebook_username": "deseanthorne",
+    "facebook_id": "1089351304",
+    "twitter_url": "twitter.com/seanthorne5",
+    "twitter_username": "seanthorne5",
+    "github_url": null,
+    "github_username": null,
+    "work_email": false,
+    "personal_emails": true,
+    "recommended_personal_email": true,
+    "mobile_phone": true,
+    "industry": "computer software",
+    "job_title": "president",
+    "job_title_role": "operations",
+    "job_title_sub_role": "executive",
+    "job_title_class": "general_and_administrative",
+    "job_title_levels": [
+      "cxo"
+    ],
+    "job_company_id": null,
+    "job_company_name": "the copernican project",
+    "job_company_website": null,
+    "job_company_size": null,
+    "job_company_founded": null,
+    "job_company_industry": null,
+    "job_company_industry_v2": null,
+    "job_company_linkedin_url": null,
+    "job_company_linkedin_id": null,
+    "job_company_facebook_url": null,
+    "job_company_twitter_url": null,
+    "job_company_location_name": null,
+    "job_company_location_locality": null,
+    "job_company_location_metro": null,
+    "job_company_location_region": null,
+    "job_company_location_geo": null,
+    "job_company_location_street_address": null,
+    "job_company_location_address_line_2": null,
+    "job_company_location_postal_code": null,
+    "job_company_location_country": null,
+    "job_company_location_continent": null,
+    "job_last_changed": "2026-04-05",
+    "job_last_verified": "2026-06-14",
+    "job_start_date": "2024-02",
+    "location_name": true,
+    "location_locality": true,
+    "location_metro": true,
+    "location_region": true,
+    "location_country": "united states",
+    "location_continent": "north america",
+    "location_street_address": false,
+    "location_address_line_2": null,
+    "location_postal_code": false,
+    "location_geo": true,
+    "location_last_updated": "2026-06-14",
+    "phone_numbers": true,
+    "emails": true,
+    "interests": [
+      "college campuses",
+      "colleges",
+      "… 5 more item(s) truncated"
+    ],
+    "skills": [
+      "enterprise technology sales",
+      "entrepreneurship",
+      "… 8 more item(s) truncated"
+    ],
+    "location_names": true,
+    "regions": true,
+    "countries": [
+      "united states",
+      "canada"
+    ],
+    "street_addresses": false,
+    "experience": [
+      {
+        "company": {
+          "name": "the copernican project",
+          "size": null,
+          "id": null,
+          "founded": null,
+          "industry": null,
+          "industry_v2": null,
+          "location": null,
+          "linkedin_url": null,
+          "linkedin_id": null,
+          "facebook_url": null,
+          "twitter_url": null,
+          "website": null
+        },
+        "location_names": [],
+        "end_date": null,
+        "start_date": "2024-02",
+        "title": {
+          "name": "president",
+          "class": "general_and_administrative",
+          "role": "operations",
+          "sub_role": "executive",
+          "levels": [
+            "cxo"
+          ]
+        },
+        "is_primary": true
+      },
+      {
+        "company": {
+          "name": "agentscore",
+          "size": "1-10",
+          "id": "bomhBpPIzy7ykWjHkFH2egWfz8j0",
+          "founded": null,
+          "industry": "computer software",
+          "industry_v2": "software development",
+          "location": null,
+          "linkedin_url": "linkedin.com/company/casedistribution",
+          "linkedin_id": "111788085",
+          "facebook_url": null,
+          "twitter_url": null,
+          "website": "agentscore.sh"
+        },
+        "location_names": [],
+        "end_date": null,
+        "start_date": "2026-01",
+        "title": {
+          "name": "founder",
+          "class": "general_and_administrative",
+          "role": "operations",
+          "sub_role": "executive",
+          "levels": [
+            "owner"
+          ]
+        },
+        "is_primary": false
+      },
+      "… 2 more item(s) truncated"
+    ],
+    "education": [
+      {
+        "school": {
+          "name": "university of oregon",
+          "type": "post-secondary institution",
+          "id": "HCCO6IKZ59bW7BhuaHk4Tg_0000",
+          "location": {
+            "name": "eugene, oregon, united states",
+            "locality": "eugene",
+            "region": "oregon",
+            "country": "united states",
+            "continent": "north america"
+          },
+          "linkedin_url": "linkedin.com/school/university-of-oregon",
+          "facebook_url": "facebook.com/universityoforegon",
+          "twitter_url": "twitter.com/uoregon",
+          "linkedin_id": "5827",
+          "website": "uoregon.edu",
+          "domain": "uoregon.edu"
+        },
+        "degrees": [],
+        "start_date": "2010-01",
+        "end_date": "2012",
+        "majors": [
+          "entrepreneurship"
+        ],
+        "minors": [],
+        "gpa": null
+      }
+    ],
+    "profiles": [
+      {
+        "network": "linkedin",
+        "id": "145991517",
+        "url": "linkedin.com/in/seanthorne",
+        "username": "seanthorne"
+      },
+      {
+        "network": "facebook",
+        "id": "1089351304",
+        "url": "facebook.com/deseanthorne",
+        "username": "deseanthorne"
+      },
+      "… 10 more item(s) truncated"
+    ],
+    "dataset_version": "35.0"
+  }
+}

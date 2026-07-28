@@ -1,0 +1,56 @@
+{
+  "data": {
+    "domain": "stripe.com",
+    "disposable": false,
+    "webmail": false,
+    "accept_all": true,
+    "pattern": "{first}{last}",
+    "organization": "Stripe",
+    "linked_domains": [],
+    "emails": [
+      {
+        "value": "person@example.com",
+        "type": "personal",
+        "source_type": "found",
+        "confidence": 85,
+        "sources": [
+          {
+            "domain": "linkedin.com",
+            "uri": "https://www.google.com/search?q=site:linkedin.com%20aylin%20orakcal%20stripe",
+            "extracted_on": "2026-05-18",
+            "last_seen_on": "2026-06-25",
+            "still_on_page": true
+          }
+        ],
+        "first_name": "Aylin",
+        "last_name": "Orakcal",
+        "position": "Head of Engineering",
+        "position_raw": "Head of Engineering | Financial Connections",
+        "seniority": "executive",
+        "department": "management",
+        "decision_maker": true,
+        "linkedin": "https://www.linkedin.com/in/aylinturhan",
+        "twitter": null,
+        "phone_number": null,
+        "verification": {
+          "date": "2026-07-27",
+          "status": "valid"
+        }
+      }
+    ]
+  },
+  "meta": {
+    "results": 2207,
+    "limit": 1,
+    "offset": 0,
+    "params": {
+      "domain": "stripe.com",
+      "company": null,
+      "type": null,
+      "seniority": null,
+      "department": null,
+      "decision_maker": null
+    }
+  },
+  "_scrubbed": true
+}

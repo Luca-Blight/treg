@@ -1,0 +1,285 @@
+{
+  "code": 200,
+  "request_id": "a6a8a054-676c-49c4-a2bb-aacbf7643169",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 20:55:28",
+  "time_stamp": 1785210928,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Twitter-Web-API/fetch_user_post_tweet_api_v1_twitter_web_fetch_user_post_tweet_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only…",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/a6a8a054-676c-49c4-a2bb-aacbf7643169?sign=3f7d111fa07d35d97e6b58b26e023f354b02ff2…",
+  "router": "/api/v1/twitter/web/fetch_user_post_tweet",
+  "params": {
+    "screen_name": "elonmusk"
+  },
+  "data": {
+    "timeline": [
+      {
+        "tweet_id": "2081942019283255449",
+        "bookmarks": 0,
+        "created_at": "Tue Jul 28 03:17:12 +0000 2026",
+        "favorites": 0,
+        "text": "RT @WR4NYGov: 2002-2004: Software guy thinks he can build rockets and cars\n\n2016: Car guy thinks he can do brain surgery\n\n201…",
+        "lang": "en",
+        "source": "<a href=\"http://twitter.com/download/iphone\" rel=\"nofollow\">Twitter for iPhone</a>",
+        "views": "388639",
+        "quotes": 0,
+        "entities": {
+          "user_mentions": [
+            {
+              "id_str": "108365454",
+              "name": "Warren Redlich - Chasing Dreams 🇺🇸",
+              "screen_name": "WR4NYGov"
+            }
+          ]
+        },
+        "replies": 0,
+        "retweets": 174,
+        "conversation_id": "2081942019283255449",
+        "media": [],
+        "author": {
+          "rest_id": "44196397",
+          "name": "Elon Musk",
+          "screen_name": "elonmusk",
+          "avatar": "https://pbs.twimg.com/profile_images/2053244804520427520/m8mdWZCG_normal.jpg",
+          "followers_count": null,
+          "blue_verified": true
+        },
+        "retweeted": {
+          "id": "2081849826267078951"
+        },
+        "retweeted_tweet": {
+          "tweet_id": "2081849826267078951",
+          "bookmarks": 76,
+          "created_at": "Mon Jul 27 21:10:52 +0000 2026",
+          "favorites": 1313,
+          "text": "2002-2004: Software guy thinks he can build rockets and cars\n\n2016: Car guy thinks he can do brain surgery\n\n2018: American gu…",
+          "lang": "en",
+          "views": "114736",
+          "quotes": 19,
+          "entities": {
+            "media": [
+              {
+                "allow_download_status": {
+                  "allow_download": true
+                },
+                "display_url": "pic.x.com/KKO1NHkEm6",
+                "expanded_url": "https://x.com/WR4NYGov/status/2081849826267078951/photo/1",
+                "ext_media_availability": {
+                  "status": "Available"
+                },
+                "features": {
+                  "large": {
+                    "faces": [
+                      {
+                        "h": 132,
+                        "w": 132,
+                        "x": 523,
+                        "y": 884
+                      }
+                    ]
+                  },
+                  "medium": {
+                    "faces": [
+                      {
+                        "h": 132,
+                        "w": 132,
+                        "x": 523,
+                        "y": 884
+                      }
+                    ]
+                  },
+                  "orig": {
+                    "faces": [
+                      {
+                        "h": 132,
+                        "w": 132,
+                        "x": 523,
+                        "y": 884
+                      }
+                    ]
+                  },
+                  "small": {
+                    "faces": [
+                      {
+                        "h": 76,
+                        "w": 76,
+                        "x": 301,
+                        "y": 510
+                      }
+                    ]
+                  }
+                },
+                "id_str": "2081849821619769344",
+                "indices": [
+                  259,
+                  282
+                ],
+                "media_key": "3_2081849821619769344",
+                "media_results": {
+                  "result": {
+                    "media_key": "3_2081849821619769344"
+                  }
+                },
+                "media_url_https": "https://pbs.twimg.com/media/HOQ3YfVbUAAeIuv.jpg",
+                "original_info": {
+                  "focus_rects": [
+                    {
+                      "h": 660,
+                      "w": 1178,
+                      "x": 0,
+                      "y": 52
+                    },
+                    {
+                      "h": 1089,
+                      "w": 1089,
+                      "x": 0,
+                      "y": 0
+                    },
+                    "… 3 more item(s) truncated"
+                  ],
+                  "height": 1089,
+                  "width": 1178
+                },
+                "sizes": {
+                  "large": {
+                    "h": 1089,
+                    "resize": "fit",
+                    "w": 1178
+                  },
+                  "medium": {
+                    "h": 1089,
+                    "resize": "fit",
+                    "w": 1178
+                  },
+                  "small": {
+                    "h": 629,
+                    "resize": "fit",
+                    "w": 680
+                  },
+                  "thumb": {
+                    "h": 150,
+                    "resize": "crop",
+                    "w": 150
+                  }
+                },
+                "type": "photo",
+                "url": "https://t.co/KKO1NHkEm6"
+              }
+            ]
+          },
+          "replies": 23,
+          "retweets": 174,
+          "conversation_id": "2081849826267078951",
+          "author": {
+            "rest_id": "108365454",
+            "name": "Warren Redlich - Chasing Dreams 🇺🇸",
+            "screen_name": "WR4NYGov",
+            "avatar": "https://pbs.twimg.com/profile_images/2021727914824507392/ffkfQ0JK_normal.jpg",
+            "blue_verified": true
+          },
+          "media": {
+            "photo": [
+              {
+                "media_url_https": "https://pbs.twimg.com/media/HOQ3YfVbUAAeIuv.jpg",
+                "id": "2081849821619769344",
+                "sizes": {
+                  "h": 1089,
+                  "w": 1178
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "tweet_id": "2081936891184566514",
+        "bookmarks": 64,
+        "created_at": "Tue Jul 28 02:56:50 +0000 2026",
+        "favorites": 3666,
+        "text": "True",
+        "lang": "en",
+        "source": "<a href=\"http://twitter.com/download/iphone\" rel=\"nofollow\">Twitter for iPhone</a>",
+        "views": "730941",
+        "quotes": 20,
+        "entities": [],
+        "replies": 626,
+        "retweets": 294,
+        "conversation_id": "2081936891184566514",
+        "media": [],
+        "author": {
+          "rest_id": "44196397",
+          "name": "Elon Musk",
+          "screen_name": "elonmusk",
+          "avatar": "https://pbs.twimg.com/profile_images/2053244804520427520/m8mdWZCG_normal.jpg",
+          "followers_count": null,
+          "blue_verified": true
+        },
+        "quoted": {
+          "tweet_id": "2081868536126005427",
+          "bookmarks": 83,
+          "created_at": "Mon Jul 27 22:25:12 +0000 2026",
+          "favorites": 6342,
+          "text": "Some technologies become so normal that we forget life before them \n\nFSD Supervised is like that",
+          "lang": "en",
+          "views": "706070",
+          "quotes": 84,
+          "replies": 404,
+          "retweets": 481,
+          "conversation_id": "2081868536126005427",
+          "author": {
+            "rest_id": "13298072",
+            "name": "Tesla",
+            "screen_name": "Tesla",
+            "avatar": "https://pbs.twimg.com/profile_images/1337607516008501250/6Ggc4S5n_normal.png",
+            "followers_count": null,
+            "blue_verified": true
+          },
+          "media": []
+        }
+      },
+      "… 18 more item(s) truncated"
+    ],
+    "next_cursor": "<omitted: expires>",
+    "prev_cursor": "<omitted: expires>",
+    "status": "ok",
+    "user": {
+      "status": "active",
+      "profile": null,
+      "rest_id": "44196397",
+      "blue_verified": true,
+      "verification_type": null,
+      "affiliates": {
+        "label": {
+          "badge": {
+            "url": "https://pbs.twimg.com/profile_images/1955359038532653056/OSHY3ewP_bigger.jpg"
+          },
+          "description": "X",
+          "url": {
+            "url": "https://twitter.com/X",
+            "urlType": "DeepLink"
+          },
+          "userLabelDisplayType": "Badge",
+          "userLabelType": "BusinessLabel"
+        }
+      },
+      "business_account": [],
+      "avatar": "https://pbs.twimg.com/profile_images/2053244804520427520/m8mdWZCG_normal.jpg",
+      "header_image": "https://pbs.twimg.com/profile_banners/44196397/1774145451",
+      "desc": "",
+      "name": "Elon Musk",
+      "protected": false,
+      "location": "",
+      "friends": 1376,
+      "sub_count": 241033439,
+      "statuses_count": 106247,
+      "media_count": 4655,
+      "created_at": "Tue Jun 02 20:12:29 +0000 2009",
+      "pinned_tweet_ids_str": null,
+      "id": "44196397"
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "credits": {
+    "total": 50,
+    "used": 8,
+    "remaining": 42
+  },
+  "rateLimits": {
+    "daily": {
+      "limit": 100,
+      "used": 24,
+      "remaining": 76,
+      "resetsAt": "2026-07-29T11:33:42.472Z"
+    },
+    "hourly": null,
+    "minute": {
+      "limit": 40,
+      "used": 3,
+      "remaining": 37,
+      "resetsAt": "2026-07-28T11:58:40.162Z"
+    }
+  },
+  "plan": {
+    "category": "free",
+    "renewalType": "month",
+    "startDate": "2026-07-28T04:39:48.755Z",
+    "endDate": "2026-08-28T04:39:48.755Z"
+  },
+  "pricing": {
+    "companySearch": {
+      "credits": 1,
+      "perQuantity": 25
+    },
+    "contactSearch": {
+      "credits": 1,
+      "perQuantity": 25
+    },
+    "revealCompany": {
+      "credits": 1,
+      "perQuantity": 1
+    },
+    "revealEmail": {
+      "credits": 1,
+      "perQuantity": 1
+    },
+    "revealPhone": {
+      "credits": 5,
+      "perQuantity": 1
+    },
+    "lookalikeCompany": {
+      "credits": 1,
+      "perQuantity": 5
+    },
+    "lookalikeContact": {
+      "credits": 1,
+      "perQuantity": 5
+    },
+    "contactRecommendationsReveal": {
+      "credits": 1,
+      "perQuantity": 1
+    },
+    "companyRecommendationsReveal": {
+      "credits": 1,
+      "perQuantity": 1
+    },
+    "showSignalsCompany": {
+      "credits": 1,
+      "perQuantity": 1
+    },
+    "showSignalsContact": {
+      "credits": 1,
+      "perQuantity": 1
+    },
+    "tableRead": {
+      "credits": 1,
+      "perQuantity": 1
+    }
+  }
+}

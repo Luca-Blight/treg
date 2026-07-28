@@ -1,0 +1,53 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.7468 sec.",
+  "cost": 0.18,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0592-0000-d95f46407d9b",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.7338 sec.",
+      "cost": 0.18,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "global_search_volume",
+        "se": "clickstream_data",
+        "tag": "test-tag",
+        "keywords": [
+          "you tube",
+          "… 2 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "items_count": 3,
+          "items": [
+            {
+              "keyword": "youtube",
+              "search_volume": 1542314890,
+              "country_distribution": [
+                {
+                  "country_iso_code": "IN",
+                  "search_volume": 296017301,
+                  "percentage": 19.19305
+                },
+                "… 241 more item(s) truncated"
+              ]
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "30.1000 sec.",
+  "cost": 0.004,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0629-0000-08726f56f538",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "30.0905 sec.",
+      "cost": 0.004,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "llm_scraper",
+        "se": "chat_gpt",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "albert einstein",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "albert einstein",
+          "location_code": 2840,
+          "language_code": "en",
+          "model": "gpt-5-5",
+          "check_url": "https://chatgpt.com/?prompt=albert%20einstein",
+          "datetime": "2026-07-28 10:34:51 +00:00",
+          "markdown": "![Albert Einstein (zdjęcie czarno-białe)](https://images.openai.com/static-rsc-4/e4t939IZY1QCFlRv2bbC-oROFYCK2OXqGTzowOWZwd6ZdruFWrCUA0ztk7RyWBSPTooussDQKxa_fJtsVKzCSA0y86YCE0M3JbvyIGqwU8pxWGCIZrsDMiy… [3802 chars]",
+          "search_results": null,
+          "sources": null,
+          "fan_out_queries": null,
+          "brand_entities": [
+            "… {5 field(s) truncated}"
+          ],
+          "se_results_count": 0,
+          "item_types": [
+            "chat_gpt_images",
+            "… 1 more item(s) truncated"
+          ],
+          "items_count": 2,
+          "items": [
+            "… {5 field(s) truncated}",
+            "… 1 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

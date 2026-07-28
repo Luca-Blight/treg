@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "67226e0c-e571-41cb-90c6-b90c29debda0",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:50",
+  "time_stamp": 1785220250,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-V2-API/fetch_user_info_api… [96 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/67226e0c-e571-41… [150 chars]",
+  "router": "/api/v1/weibo/web_v2/fetch_user_info",
+  "params": {
+    "uid": "1722594714",
+    "custom": "shuqi"
+  },
+  "data": {
+    "user": {
+      "id": 1722594714,
+      "idstr": "1722594714",
+      "pc_new": 0,
+      "screen_name": "舒淇",
+      "profile_image_url": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.50/001SzPzIly8gl… [135 chars]",
+      "profile_url": "/u/1722594714",
+      "verified": true,
+      "verified_type": 0,
+      "domain": "shuqi",
+      "weihao": "",
+      "verified_type_ext": 2,
+      "status_total_counter": "… {5 field(s) truncated}",
+      "avatar_large": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.180/001SzPzIly8g… [136 chars]",
+      "avatar_hd": "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.1024/001SzPzIly8… [139 chars]",
+      "follow_me": false,
+      "…": "24 more field(s) truncated"
+    },
+    "tabList": [
+      "… {2 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "blockText": ""
+  }
+}

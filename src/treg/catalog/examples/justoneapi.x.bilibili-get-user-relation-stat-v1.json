@@ -1,0 +1,20 @@
+{
+  "code": 0,
+  "data": {
+    "code": 0,
+    "message": "0",
+    "ttl": 1,
+    "data": {
+      "mid": 946974,
+      "following": 679,
+      "whisper": 0,
+      "black": 0,
+      "follower": 16823771,
+      "fans_medal_toast": null,
+      "fans_effect": null
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:02:42.942089512",
+  "requestId": "39ff3baab2f843a1931cf1eba3d40f7d"
+}

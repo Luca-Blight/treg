@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "data": {
+    "ok": 0,
+    "msg": "博主设置仅针对粉丝展示全部关注",
+    "relation_display": 1,
+    "error_type": "none"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:25.953457453",
+  "requestId": "c13ce1bc44974766a5d324e466877990"
+}

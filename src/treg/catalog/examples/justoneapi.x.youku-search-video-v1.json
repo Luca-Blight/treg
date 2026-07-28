@@ -1,0 +1,86 @@
+{
+  "code": 0,
+  "data": {
+    "api": "mtop.youku.soku.yksearch",
+    "data": {
+      "nodes": [
+        {
+          "nodes": [
+            "… 7 field(s) truncated",
+            "… 3 more item(s) truncated"
+          ],
+          "data": {
+            "schema": "15",
+            "logCate": "programset",
+            "cateId": 7,
+            "schemeName": "15",
+            "filters": "… 1 item(s) truncated",
+            "docSource": 15
+          },
+          "level": 1,
+          "more": false,
+          "style": [
+            "… 1 field(s) truncated"
+          ],
+          "id": 0,
+          "type": 1004,
+          "hasAfterSplitLine": true
+        },
+        "… 21 more item(s) truncated"
+      ],
+      "data": {
+        "displaySearchTerms": "电影",
+        "pz": 30,
+        "rstate": 0,
+        "isEnd": 0,
+        "isModule": true,
+        "globalControlParam": {
+          "closeRetentionPop": true
+        },
+        "highlightWord": "电影",
+        "filter": {
+          "duration": [
+            "… 2 field(s) truncated",
+            "… 4 more item(s) truncated"
+          ],
+          "cate": [
+            "… 2 field(s) truncated",
+            "… 4 more item(s) truncated"
+          ],
+          "newType": true,
+          "tab": [
+            "… 3 field(s) truncated",
+            "… 2 more item(s) truncated"
+          ],
+          "format": [
+            "… 2 field(s) truncated",
+            "… 3 more item(s) truncated"
+          ]
+        },
+        "total": 675,
+        "typeVersion": "B",
+        "pg": 1,
+        "action": {
+          "report": {
+            "trackInfo": "… 7 field(s) truncated",
+            "pageName": "page_searchresults"
+          }
+        },
+        "hitNFMode": true,
+        "status": "success"
+      },
+      "level": 0,
+      "more": true,
+      "id": 0,
+      "type": 0
+    },
+    "ret": [
+      "SUCCESS::调用成功"
+    ],
+    "traceId": "21547b5317852184351761373ee31a",
+    "v": "2.0"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:35.803247841",
+  "requestId": "36ed028b025649ada380db31062d00f3"
+}

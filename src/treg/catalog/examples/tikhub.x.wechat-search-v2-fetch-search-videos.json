@@ -1,0 +1,59 @@
+{
+  "code": 200,
+  "request_id": "614a2811-956b-46e7-ad0e-7f59049c7b90",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:16",
+  "time_stamp": 1785220396,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Search-V2-API/fetch_search_vi… [113 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/614a2811-956b-46… [150 chars]",
+  "router": "/api/v1/wechat_search/v2/fetch_search_videos",
+  "params": {
+    "keyword": "美食",
+    "duration": "all",
+    "sort": "default",
+    "publish_time": "all",
+    "offset": 0,
+    "cursor": null,
+    "raw": true
+  },
+  "data": {
+    "keyword": "美食",
+    "business_type": 7,
+    "results": {
+      "continueFlag": 1,
+      "data": [
+        {
+          "subBoxes": [
+            "… {7 field(s) truncated}",
+            "… 9 more item(s) truncated"
+          ],
+          "type": 107
+        }
+      ],
+      "direction": 2,
+      "enableQuestionClosely": false,
+      "forbidRefreshLocation": true,
+      "isAutoPlayVideo": 1,
+      "isBoxCardStyle": 1,
+      "isDivide": 0,
+      "isHomePage": 0,
+      "lang": "zh_CN",
+      "offset": 10,
+      "pageNumber": 1,
+      "query": "美食",
+      "resultType": 0,
+      "ret": 0,
+      "timeStamp": 1785220396
+    },
+    "continue_flag": 1,
+    "offset": 10,
+    "cursor": "<omitted: expires>",
+    "debug_id": "7dc87534",
+    "debug_info": "gAAAAABqaE0s_DjIbnPaMCcrQLtI4AUPZV5_YPH9ByhVb44TzraEKhOtqHG2… [292 chars]"
+  }
+}

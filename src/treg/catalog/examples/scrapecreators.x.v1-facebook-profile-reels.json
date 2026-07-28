@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "credits_remaining": 19826,
+  "credits_charged": 1,
+  "reels": [
+    {
+      "id": "UzpfSTEwMDA2MzY2OTQ5MTc0MzpWSzoxNjM0ODcwMzI0MjE5MTc3",
+      "post_id": "1593991512733150",
+      "creation_time": "2026-03-08T15:55:57.000Z",
+      "url": "https://www.facebook.com/reel/1634870324219177",
+      "view_count": 17000,
+      "feedback_id": "ZmVlZGJhY2s6MTU5Mzk5MTUxMjczMzE1MA==",
+      "description": "After meeting 40,000+ people across 100 cities…\n\nI noticed something.\n\nMost people don’t have a lead problem.\n\nThey have a conversation problem.\n\nEveryone is watching:\n\nYouTube\nChatGPT\nPodcasts\nCourse… [622 chars]",
+      "video_id": "1634870324219177",
+      "thumbnail": "https://scontent-bos5-1.xx.fbcdn.net/v/t15.5256-10/648865339_923316347095200_609769480612485623_n.jpg?stp=dst-jpg_tt6&cstp=mx720x1280&ctp=s720x1280&_nc_cat=102&ccb=1-7&_nc_sid=5fad0e&_nc_ohc=fHa5hiC-s… [434 chars]",
+      "play_time_in_ms": 31033,
+      "…": "3 more field(s) truncated"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>",
+  "next_page_id": "<omitted: expires>"
+}

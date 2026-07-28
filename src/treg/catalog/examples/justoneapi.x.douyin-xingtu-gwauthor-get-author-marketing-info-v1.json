@@ -1,0 +1,70 @@
+{
+  "code": 0,
+  "data": {
+    "activity_info": [],
+    "base_resp": {
+      "status_code": 0,
+      "status_message": "Success"
+    },
+    "hot_list_ranks": [],
+    "industry_tags": [
+      "美妆-面部洗护",
+      "传媒资讯-其他传媒资讯",
+      "… 1 more item(s) truncated"
+    ],
+    "price_info": [
+      {
+        "activity_info": [],
+        "author_id": "6930060811712856071",
+        "desc": "1-20s视频",
+        "do_fold": false,
+        "enable": true,
+        "end_time": "2145916800",
+        "field": "price",
+        "has_discount": false,
+        "is_open": true,
+        "need_price": true,
+        "online_status": 1,
+        "origin_price": 19000,
+        "platform_activity_id": "0",
+        "platform_source": 1,
+        "price": 19000,
+        "settlement_desc": "固定价格",
+        "settlement_type": 2,
+        "start_time": "1709222400",
+        "task_category": 1,
+        "task_category_status": 1,
+        "template_list": [],
+        "video_type": 1
+      },
+      {
+        "activity_info": [],
+        "author_id": "6930060811712856071",
+        "desc": "21-60s视频",
+        "do_fold": false,
+        "enable": true,
+        "end_time": "2145916800",
+        "field": "long_video_price",
+        "has_discount": false,
+        "is_open": true,
+        "need_price": true,
+        "online_status": 1,
+        "origin_price": 29999,
+        "platform_activity_id": "0",
+        "platform_source": 1,
+        "price": 29999,
+        "settlement_desc": "固定价格",
+        "settlement_type": 2,
+        "start_time": "1709222400",
+        "task_category": 1,
+        "task_category_status": 1,
+        "template_list": [],
+        "video_type": 2
+      },
+      "… 6 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:02.664438454",
+  "requestId": "e874b240a9724181b30fec4ae060cd1d"
+}

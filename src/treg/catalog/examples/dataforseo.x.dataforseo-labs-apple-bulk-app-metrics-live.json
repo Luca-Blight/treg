@@ -1,0 +1,60 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "1.3470 sec.",
+  "cost": 0.01224,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0453-0000-7a1e722782a7",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "1.3396 sec.",
+      "cost": 0.01224,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "bulk_app_metrics",
+        "se_type": "apple",
+        "app_ids": [
+          "686449807",
+          "… 1 more item(s) truncated"
+        ],
+        "language_name": "English",
+        "location_code": 2840
+      },
+      "result": [
+        {
+          "se_type": "apple",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 2,
+          "items_count": 2,
+          "items": [
+            {
+              "se_type": "apple",
+              "app_id": "686449807",
+              "metrics": {
+                "app_store_search_organic": {
+                  "pos_1": 3011,
+                  "pos_2_3": 3502,
+                  "pos_4_10": 9732,
+                  "pos_11_100": 103858,
+                  "count": 120103,
+                  "search_volume": 181689955
+                }
+              }
+            },
+            "… 1 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

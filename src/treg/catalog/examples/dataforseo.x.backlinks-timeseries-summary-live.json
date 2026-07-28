@@ -1,0 +1,58 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0155 sec.",
+  "cost": 0.024108,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0459-0000-fc3aff5b9404",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0100 sec.",
+      "cost": 0.024108,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "timeseries_summary",
+        "target": "dataforseo.com",
+        "date_from": "2026-04-24",
+        "date_to": "2026-06-24",
+        "group_range": "month"
+      },
+      "result": [
+        {
+          "target": "dataforseo.com",
+          "date_from": "2026-04-24",
+          "date_to": "2026-06-24",
+          "group_range": "month",
+          "items_count": 3,
+          "items": [
+            {
+              "type": "backlinks_timeseries_summary",
+              "date": "2026-04-30 00:00:00 +00:00",
+              "rank": 415,
+              "backlinks": 358886,
+              "backlinks_nofollow": 6216,
+              "referring_pages": 355250,
+              "referring_pages_nofollow": 5542,
+              "referring_domains": 3517,
+              "referring_domains_nofollow": 879,
+              "referring_main_domains": 3100,
+              "referring_main_domains_nofollow": 637,
+              "referring_ips": 2517,
+              "referring_subnets": 1687
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

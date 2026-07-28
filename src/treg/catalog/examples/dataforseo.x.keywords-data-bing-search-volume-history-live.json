@@ -1,0 +1,75 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "12.5605 sec.",
+  "cost": 0.09,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0262-0000-2585fdd3692b",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "12.5300 sec.",
+      "cost": 0.09,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "search_volume_history",
+        "se": "bing",
+        "location_code": 2840,
+        "language_code": "en",
+        "keywords": [
+          "10 minute timer"
+        ]
+      },
+      "result": [
+        {
+          "keyword": "10 minute timer",
+          "location_code": 2840,
+          "language_code": "en",
+          "device": [
+            "desktop",
+            "… 3 more item(s) truncated"
+          ],
+          "period": "monthly",
+          "searches": {
+            "desktop": [
+              {
+                "year": 2026,
+                "month": 6,
+                "day": 1,
+                "search_volume": 21575
+              },
+              "… 23 more item(s) truncated"
+            ],
+            "non_smartphones": null,
+            "mobile": [
+              {
+                "year": 2026,
+                "month": 6,
+                "day": 1,
+                "search_volume": 734
+              },
+              "… 23 more item(s) truncated"
+            ],
+            "tablet": [
+              {
+                "year": 2026,
+                "month": 6,
+                "day": 1,
+                "search_volume": 1280
+              },
+              "… 23 more item(s) truncated"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

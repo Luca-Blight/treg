@@ -1,0 +1,47 @@
+{
+  "dimensionHeaders": [
+    {
+      "name": "sessionDefaultChannelGroup"
+    }
+  ],
+  "metricHeaders": [
+    {
+      "name": "sessions",
+      "type": "TYPE_INTEGER"
+    }
+  ],
+  "rows": [
+    {
+      "dimensionValues": [
+        {
+          "value": "Organic Search"
+        }
+      ],
+      "metricValues": [
+        {
+          "value": "1234"
+        }
+      ]
+    },
+    {
+      "dimensionValues": [
+        {
+          "value": "Direct"
+        }
+      ],
+      "metricValues": [
+        {
+          "value": "1234"
+        }
+      ]
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "rowCount": 11,
+  "metadata": {
+    "currencyCode": "AUD",
+    "timeZone": "Australia/Sydney"
+  },
+  "kind": "analyticsData#runReport",
+  "_scrubbed": true
+}

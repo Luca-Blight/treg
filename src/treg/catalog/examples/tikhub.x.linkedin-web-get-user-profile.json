@@ -1,0 +1,40 @@
+{
+  "code": 200,
+  "request_id": "1ca6333f-dc6f-4177-8597-6d1a63008b2c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-28 00:22:11",
+  "time_stamp": 1785223331,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/get_user_profile_api_v1_linkedin_web_get_user_profile_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/1ca6333f-dc6f-4177-8597-6d1a63008b2c?sign=aaa48efec82e34b3b1db74b6722c5113c67d2ffdd3c48097d505ca13c9ca56ef",
+  "router": "/api/v1/linkedin/web/get_user_profile",
+  "params": {
+    "username": "jack"
+  },
+  "data": {
+    "id": "615825428",
+    "urn": "ACoAACS0wBQB9GfGRgyQfsFTHlx2ZBohtGXPlQ8",
+    "public_identifier": "jack",
+    "first_name": "Jack",
+    "last_name": "Rogers",
+    "full_name": "Jack Rogers",
+    "headline": "Problem Solver, Developer, Human - Managing Director at D3VL",
+    "is_premium": true,
+    "is_open_to_work": false,
+    "is_hiring": false,
+    "is_memorialized": false,
+    "is_influencer": false,
+    "is_top_voice": false,
+    "is_creator": false,
+    "birth": {
+      "day": null,
+      "month": null,
+      "year": null
+    },
+    "…": "8 more field(s) truncated"
+  }
+}

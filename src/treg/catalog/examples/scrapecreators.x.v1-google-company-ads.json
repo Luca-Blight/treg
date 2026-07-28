@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "credits_remaining": 19828,
+  "credits_charged": 1,
+  "ads": [
+    {
+      "advertiserId": "AR01614014350098432001",
+      "creativeId": "CR06235704008783167489",
+      "format": "text",
+      "adUrl": "https://adstransparency.google.com/advertiser/AR01614014350098432001/creative/CR06235704008783167489",
+      "advertiserName": "lululemon athletica canada inc.",
+      "domain": "lululemon.com",
+      "imageUrl": "https://tpc.googlesyndication.com/archive/simgad/15395645462600011731",
+      "firstShown": "2026-03-05T22:35:41.000Z",
+      "lastShown": "2026-07-28T11:36:20.000Z"
+    },
+    "… 39 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>",
+  "number_of_ads_estimate": 20000
+}

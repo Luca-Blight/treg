@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "87c986d0-32c7-4d69-962b-cca980f0625c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:37",
+  "time_stamp": 1785220117,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_user_post_videos_api_v1_douyin_web_fetch_user_post_videos_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/87c986d0-32c7-4d69-962b-cca980f0625c?sign=66004a83813c0eb6f3740d58dedce74019… [150 chars]",
+  "router": "/api/v1/douyin/web/fetch_user_post_videos",
+  "params": {
+    "sec_user_id": "MS4wLjABAAAANXSltcLCzDGmdNFI2Q_QixVTr67NiYzjKOIP5s03CAE",
+    "count": "5"
+  },
+  "data": {
+    "status_code": 0,
+    "min_cursor": 0,
+    "max_cursor": 1778752422000,
+    "has_more": 1,
+    "aweme_list": [
+      "… {153 field(s) truncated}",
+      "… 7 more item(s) truncated"
+    ],
+    "not_login_module": {
+      "guide_login_tip_exist": false,
+      "guide_login_tip_style": 1,
+      "extra": "{\"guide_login_tip_create_time\":0,\"guide_login_tip_desc\":\"\",\"guide_login_tip_text_biserial\":\"看更多最新作品\",\"guide_login_tip_te… [146 chars]"
+    },
+    "log_pb": {
+      "impr_id": "202607281428361D7B3E47902AAD2842E2"
+    },
+    "request_item_cursor": 0,
+    "post_serial": 2,
+    "replace_series_cover": 1,
+    "time_list": null
+  }
+}

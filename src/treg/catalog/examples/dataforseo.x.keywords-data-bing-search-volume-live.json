@@ -1,0 +1,87 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "12.6097 sec.",
+  "cost": 0.09,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280924-2171-0440-0000-39b3f02672ed",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "12.5973 sec.",
+      "cost": 0.09,
+      "result_count": 3,
+      "path": [
+        "v3",
+        "keywords_data",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "search_volume",
+        "se": "bing",
+        "location_name": "United States",
+        "language_code": "en",
+        "keywords": [
+          "tom and jerry",
+          "silicon valley",
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "keyword": "silicon valley",
+          "location_code": 2840,
+          "language_code": "en",
+          "search_partners": false,
+          "device": "all",
+          "competition": 0.9,
+          "cpc": 0.76,
+          "search_volume": 5920,
+          "categories": null,
+          "monthly_searches": [
+            {
+              "year": 2026,
+              "month": 6,
+              "search_volume": 5300
+            },
+            {
+              "year": 2026,
+              "month": 5,
+              "search_volume": 5820
+            },
+            "… 11 more item(s) truncated"
+          ]
+        },
+        {
+          "keyword": "spider man",
+          "location_code": 2840,
+          "language_code": "en",
+          "search_partners": false,
+          "device": "all",
+          "competition": 0.9,
+          "cpc": 0.13,
+          "search_volume": 38740,
+          "categories": null,
+          "monthly_searches": [
+            {
+              "year": 2026,
+              "month": 6,
+              "search_volume": 46210
+            },
+            {
+              "year": 2026,
+              "month": 5,
+              "search_volume": 43300
+            },
+            "… 11 more item(s) truncated"
+          ]
+        },
+        "… 1 more item(s) truncated"
+      ]
+    }
+  ]
+}

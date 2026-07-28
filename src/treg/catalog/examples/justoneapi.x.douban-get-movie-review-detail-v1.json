@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "data": {
+    "title": "",
+    "user": "",
+    "rating": "",
+    "time": "",
+    "content": "",
+    "forward_count": 0,
+    "collectCount": 0
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:02:52.744740838",
+  "requestId": "f1a8fe2155cf4dd0ad507fc5bb356947"
+}

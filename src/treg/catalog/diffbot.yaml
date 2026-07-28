@@ -1,0 +1,198 @@
+provider: diffbot
+source:
+  docs: https://docs.diffbot.com/docs/en/kg-index
+  openapi: null # Diffbot documents the Knowledge Graph API on readme.io; no fetchable spec
+  curated: 2026-07-28
+# VERIFIED 2026-07-28 — all 5 endpoints below were live-tested against a real free-plan (kgfree)
+# key and passed; see each endpoint's `test_request` / `example_response`. Prices and param docs
+# were originally transcribed from Diffbot's official documentation and are now confirmed live.
+# diffbot.companies.bulk_enrich is asynchronous: the test_request captures the HTTP 202 + job_id
+# response (which is what a re-run of catalog_verify.py replays and what counts as a pass, since
+# 202 is 2xx) — the full lifecycle was additionally confirmed by hand: POST -> 202 job_id ->
+# GET .../status polled to "COMPLETE" (~8s) -> GET .../{jobId} returned the same enriched record
+# diffbot.companies.enrich does synchronously.
+#
+# Two hosts, one provider. The ENRICHMENT value is on the Knowledge Graph host
+# (https://kg.diffbot.com/kg/v3), which is what the registry's base_url points at and what every
+# path below is relative to. The free account endpoint lives on a DIFFERENT host
+# (https://api.diffbot.com/v4/account) — the registry verifies against it via probe_url — and is
+# therefore NOT catalogued here: a catalog `path` is relative to base_url and would resolve to the
+# wrong host. Check credits in the Diffbot dashboard or at that URL directly.
+#
+# Auth: the token is a QUERY parameter (?token=…) on every call, not a header. treg's proxy injects
+# it, so the token must never appear in a path or example below.
+#
+# Billing: Diffbot meters CREDITS against the plan and publishes the per-record rate, which is high
+# enough to matter: 25 CREDITS PER RECORD on /enhance and /dql, and 100 CREDITS when `refresh=true`
+# forces a live re-crawl — so a refresh costs four ordinary lookups. DQL facet-query results are
+# also 100 each. Published plans: Free $0 for 10k credits, Startup $299/mo for 250k, Plus $899/mo
+# for 1M — roughly $0.0012/credit on Startup, i.e. ~$0.03 per enriched record. Since the $/credit
+# moves with the plan, `cost.value` stays null and the credit count lives in `cost.note`.
+
+limits: "concurrent-request cap by plan"
+pricing_url: https://www.diffbot.com/pricing/
+endpoints:
+  - id: diffbot.companies.enrich
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /enhance
+    name: "Enrich a company profile"
+    summary: "Enrich a company from website, name or ticker — industry, revenue, headcount, rivals"
+    input:
+      queryParams:
+        type: {type: string, required: true, note: "must be Organization for company enrichment", example: "Organization"}
+        url: {type: string, required: false, note: "the company's homepage — the strongest identifier", example: "https://www.diffbot.com"}
+        name: {type: string, required: false, note: "company name; ambiguous alone, pair with location or url"}
+        location: {type: string, required: false, note: "disambiguates a common company name"}
+        ip: {type: string, required: false, note: "resolve the company from a visitor IP address"}
+        phone: {type: string, required: false}
+        email: {type: string, required: false, note: "resolves the company from an employee's email domain"}
+        description: {type: string, required: false, note: "free-text description, as an extra disambiguator"}
+        id: {type: string, required: false, note: "a DiffbotId, when you already have one"}
+        customId: {type: string, required: false, note: "your own correlation id, echoed back in the response"}
+        size: {type: integer, required: false, note: "candidate entities to return, default 1 — raise it only when the identifier is ambiguous, since you pay 25 credits per record", example: 1}
+        threshold: {type: number, required: false, note: "match-confidence floor below which no candidate is returned"}
+        refresh: {type: boolean, required: false, note: "force a live re-crawl instead of the cached KG record — QUADRUPLES the price to 100 credits per record; default false"}
+        search: {type: boolean, required: false, note: "widen to a search when no exact entity matches; default false"}
+        nonCanonicalFacts: {type: boolean, required: false, note: "include facts Diffbot has not canonicalised"}
+        jsonmode: {type: string, required: false, note: "'extended' adds provenance for every fact"}
+        filter: {type: string, required: false, note: "JsonPath expression selecting which parts of the record to return"}
+      note: "`type` plus at least one identifier; url gives by far the highest match rate. `useCache` appears in older material but is not in the current v3 docs"
+    test_request:
+      queryParams: {type: "Organization", url: "https://www.diffbot.com", size: 1}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "25 credits per enhanced record, or 100 credits with refresh=true. `size` multiplies this. On the $299/mo 250k-credit plan that is roughly $0.03 per record."
+    verified: 2026-07-28
+    example_response: examples/diffbot.companies.enrich.json
+    docs_url: https://docs.diffbot.com/reference/enhanceget
+
+  - id: diffbot.people.enrich
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: GET
+    path: /enhance
+    name: "Enrich a person profile"
+    summary: "Enrich a person from name, email or employer — role, employment history, profiles"
+    input:
+      queryParams:
+        type: {type: string, required: true, note: "must be Person for people enrichment", example: "Person"}
+        name: {type: string, required: false, note: "full name; pair with employer to disambiguate", example: "Mike Tung"}
+        email: {type: string, required: false, note: "work email — the strongest identifier"}
+        employer: {type: string, required: false, note: "employer name, to disambiguate a common name", example: "Diffbot"}
+        title: {type: string, required: false, note: "job title, as a further disambiguator"}
+        url: {type: string, required: false, note: "a profile URL for the person (e.g. LinkedIn)"}
+        phone: {type: string, required: false}
+        location: {type: string, required: false}
+        school: {type: string, required: false, note: "a school the person attended, as a further disambiguator"}
+        size: {type: integer, required: false, note: "candidate entities to return, default 1 — you pay 25 credits per record", example: 1}
+        threshold: {type: number, required: false, note: "match-confidence floor"}
+        refresh: {type: boolean, required: false, note: "force a live re-crawl — QUADRUPLES the price to 100 credits per record; default false"}
+        search: {type: boolean, required: false, note: "widen to a search when no exact entity matches; default false"}
+        jsonmode: {type: string, required: false, note: "'extended' adds provenance for every fact"}
+      note: "same /enhance endpoint as company enrichment — `type` is what switches it between Organization and Person"
+    test_request:
+      queryParams: {type: "Person", name: "Mike Tung", employer: "Diffbot", size: 1}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "25 credits per enhanced record, or 100 with refresh=true — same rate as company enrichment."
+    verified: 2026-07-28
+    example_response: examples/diffbot.people.enrich.json
+    docs_url: https://docs.diffbot.com/reference/enhanceget
+
+  - id: diffbot.companies.search
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /dql
+    name: "Search companies in the knowledge graph"
+    summary: "Search the Diffbot Knowledge Graph for companies by DQL filter (industry, revenue)"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "a DQL query string; the type facet picks the entity, e.g. type:Organization industries:\"Software Companies\" nbEmployees>50", example: "type:Organization industries:\"Software Companies\""}
+        type: {type: string, required: false, note: "'query' (default) returns entities; 'refresh' re-crawls the matches before returning"}
+        size: {type: integer, required: false, note: "entities to return, DEFAULT 50, and -1 means ALL — at 25 credits each, an unset size is a 1,250-credit call. Always set this explicitly", example: 1}
+        from: {type: integer, required: false, note: "offset for paging; from + size must stay under 10,000 on facet queries", example: 0}
+        format: {type: string, required: false, note: "json (default) | jsonl | csv | xls | xlsx"}
+        jsonmode: {type: string, required: false, note: "'extended' adds provenance, 'id' returns bare DiffbotIds"}
+        nonCanonicalFacts: {type: boolean, required: false}
+        filter: {type: string, required: false, note: "JsonPath expression selecting which parts of each record to return"}
+      note: "THE QUOTA TRAP ON THIS PROVIDER: `size` defaults to 50, not 1, and -1 returns everything — always pass an explicit small size before you trust a new query. A POST variant of /dql accepts the same fields"
+    test_request:
+      queryParams: {query: "type:Organization industries:\"Software Companies\"", size: 1}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "25 credits per entity record returned (100 per facet-query result), so `size` is the price. Billed per result, not per query."
+    verified: 2026-07-28
+    example_response: examples/diffbot.companies.search.json
+    docs_url: https://docs.diffbot.com/docs/tutorial-quickstart-with-knowledge-graph-search
+
+  - id: diffbot.people.search
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: GET
+    path: /dql
+    name: "Search people in the knowledge graph"
+    summary: "Search the Diffbot Knowledge Graph for people by DQL filter (role, employer, skills)"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "a DQL query string starting with type:Person, e.g. type:Person employments.employer.name:\"Diffbot\"", example: "type:Person employments.employer.name:\"Diffbot\""}
+        type: {type: string, required: false, note: "'query' (default) | 'refresh'"}
+        size: {type: integer, required: false, note: "entities to return, DEFAULT 50 — at 25 credits each that is a 1,250-credit call if you leave it unset", example: 1}
+        from: {type: integer, required: false, example: 0}
+        format: {type: string, required: false, note: "json (default) | jsonl | csv | xls | xlsx"}
+        jsonmode: {type: string, required: false, note: "'extended' adds provenance, 'id' returns bare DiffbotIds"}
+      note: "same /dql endpoint as company search — the `type:` facet inside the query string is what switches the entity kind"
+    test_request:
+      queryParams: {query: "type:Person employments.employer.name:\"Diffbot\"", size: 1}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "25 credits per entity record returned (100 per facet-query result); `size` is the price."
+    verified: 2026-07-28
+    example_response: examples/diffbot.people.search.json
+    docs_url: https://docs.diffbot.com/docs/tutorial-quickstart-with-knowledge-graph-search
+
+  - id: diffbot.companies.bulk_enrich
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /enhance/bulk
+    name: "Bulk enrich companies or people (async batch)"
+    summary: "Enrich many companies or people in one asynchronous job instead of one call each"
+    input:
+      bodyType: json
+      body:
+        "": {type: "array[object]", required: true, note: "the body IS a bare JSON array of Enhance query objects — each carrying the same fields as the /enhance query params, e.g. [{\"type\":\"Organization\",\"url\":\"diffbot.com\"}]", example: [{"type": "Organization", "url": "diffbot.com"}]}
+      queryParams:
+        name: {type: string, required: false, note: "a label for the bulk job", example: "treg-batch-1"}
+        size: {type: integer, required: false, note: "applies to every query in the job"}
+        refresh: {type: boolean, required: false, note: "job-wide; 100 credits per record instead of 25"}
+        threshold: {type: number, required: false}
+        webhookurl: {type: string, required: false, note: "where to POST the results when the job finishes"}
+      note: "ASYNCHRONOUS: returns HTTP 202 and a job id. Poll GET /enhance/bulk/{bulkjobId}/status, then read GET /enhance/bulk/{bulkjobId}. The maximum batch size is not published"
+    test_request:
+      queryParams: {name: "treg-verify"}
+      bodyType: json
+      body: [{"type": "Organization", "url": "diffbot.com"}]
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "25 credits per record in the batch (100 with refresh) — the same rate as a single /enhance call, so batching saves round trips, not credits."
+    verified: 2026-07-28
+    example_response: examples/diffbot.companies.bulk_enrich.json
+    docs_url: https://docs.diffbot.com/reference/introduction-to-enhance-api

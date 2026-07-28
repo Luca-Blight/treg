@@ -1,0 +1,35 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0098 sec.",
+  "cost": 0.0006,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281335-2171-0447-0000-56ccf23fd0f8",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0035 sec.",
+      "cost": 0.0006,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "task_post",
+        "se": "google",
+        "se_type": "jobs",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": ".net developer",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "results": [
+    {
+      "anchor_text": "moz",
+      "external_root_domains": 31753,
+      "external_pages": 643474
+    }
+  ],
+  "next_token": "<omitted: expires>"
+}

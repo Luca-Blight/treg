@@ -1,0 +1,29 @@
+{
+  "code": 200,
+  "request_id": "2335ba23-e373-4b42-a5ae-c30705da5d97",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:30",
+  "time_stamp": 1785220290,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V2-API/fetch_user_reels_api_v1_instagram_v2_fetch_user_reels_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2335ba23-e373-4b42-a5ae-c30705da5d97?sign=56b6f3e608f98998db923f1a78a9c1018fcd3d2791ea23db877929b32ee8f8eb",
+  "router": "/api/v1/instagram/v2/fetch_user_reels",
+  "params": {
+    "username": "instagram",
+    "user_id": "18527"
+  },
+  "data": {
+    "data": {
+      "count": 12,
+      "items": [
+        "… {131 field(s) truncated}",
+        "… 11 more item(s) truncated"
+      ]
+    },
+    "pagination_token": "<omitted: expires>"
+  }
+}

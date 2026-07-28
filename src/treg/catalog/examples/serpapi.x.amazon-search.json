@@ -1,0 +1,100 @@
+{
+  "search_metadata": {
+    "id": "6a6898a5c4f20f65232dc7c6",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/JujgQdlFxXrLNL95gwAdKg/6a6898a5… [81 chars]",
+    "created_at": "2026-07-28 11:55:17 UTC",
+    "processed_at": "2026-07-28 11:55:17 UTC",
+    "amazon_url": "https://www.amazon.com/s?k=Coffee",
+    "raw_html_file": "https://serpapi.com/searches/JujgQdlFxXrLNL95gwAdKg/6a6898a5… [81 chars]",
+    "total_time_taken": 1.32
+  },
+  "search_parameters": {
+    "engine": "amazon",
+    "k": "Coffee",
+    "amazon_domain": "amazon.com",
+    "device": "desktop"
+  },
+  "search_information": {
+    "total_results": 113387,
+    "query_displayed": "Coffee",
+    "store": "gateway",
+    "page": 1
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "asin": "B07C1YFV6D",
+      "tags": "… [2 item(s) truncated]",
+      "options": "3 sizes, 2 flavors",
+      "options_link": "https://www.amazon.com/Dunkin-Donuts-Original-Ground-Caniste… [128 chars]",
+      "title": "Dunkin’ Original Blend Medium Roast Ground Coffee, 30 Oz. Ca… [189 chars]",
+      "link": "https://www.amazon.com/Dunkin-Donuts-Original-Ground-Caniste… [124 chars]",
+      "link_clean": "https://www.amazon.com/Dunkin-Donuts-Original-Ground-Caniste… [76 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?amazon_domain=amazon.com&asi… [109 chars]",
+      "thumbnail": "https://m.media-amazon.com/images/I/81g3-Cms56L._AC_UL320_.j… [62 chars]",
+      "…": "9 more field(s) truncated"
+    },
+    "… 47 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "position": 1,
+      "query": "coffee makers",
+      "link": "https://www.amazon.com/s?k=coffee+makers&ref=rsl_sug_0_0&pd_… [324 chars]"
+    },
+    "… 5 more item(s) truncated"
+  ],
+  "categories": [
+    {
+      "position": 1,
+      "name": "Books",
+      "link": "https://www.amazon.com/books-used-books-textbooks/b/?ie=UTF8… [90 chars]",
+      "node": "283155",
+      "serpapi_link": "https://serpapi.com/search.json?amazon_domain=amazon.com&dev… [97 chars]"
+    },
+    "… 11 more item(s) truncated"
+  ],
+  "filters": {
+    "popular_shopping_ideas": [
+      "… {4 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "eligible_for_free_shipping": [
+      "… {6 field(s) truncated}"
+    ],
+    "delivery_day": [
+      "… {5 field(s) truncated}",
+      "… 2 more item(s) truncated"
+    ],
+    "pick_up": [
+      "… {5 field(s) truncated}"
+    ],
+    "price": [
+      "… {5 field(s) truncated}",
+      "… 8 more item(s) truncated"
+    ],
+    "customer_reviews": [
+      "… {5 field(s) truncated}"
+    ],
+    "brands": [
+      "… {5 field(s) truncated}",
+      "… 39 more item(s) truncated"
+    ],
+    "local_stores": [
+      "… {5 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "from_our_brands": [
+      "… {5 field(s) truncated}"
+    ],
+    "snap_ebt": [
+      "… {5 field(s) truncated}"
+    ],
+    "…": "29 more field(s) truncated"
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next": "https://serpapi.com/search.json?amazon_domain=amazon.com&dev… [101 chars]"
+  }
+}

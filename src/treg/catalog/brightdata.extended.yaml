@@ -1,0 +1,1003 @@
+# extended tier — machine-derived coverage of Bright Data's Web Scraper API dataset catalog.
+# NEVER hand-edit past this header without re-checking scripts/catalog_ingest.py (no automated
+# ingester is registered for brightdata — it has no OpenAPI spec — so this file is hand-authored
+# from GET /datasets/list cross-referenced against docs.brightdata.com's per-platform quickstart
+# pages). Method for every entry below is the SAME physical route the core file's Instagram/LinkedIn
+# profile shortcuts already use (POST /datasets/v3/scrape or /datasets/v3/trigger) — dataset_id is
+# what selects the site and columns, exactly as documented in brightdata.yaml's header. Core-wins
+# dedup does not collapse these onto the core entries because the comparison that matters here is
+# (method, path, dataset_id), following the same precedent as Google Ads' shared-path resource list
+# (see docs/context/architecture/catalog.md).
+#
+# 2026-07-28 verify pass: 7 of 45 were live-called across distinct platform families (instagram,
+# tiktok, facebook, amazon, x, youtube, google-play) — see per-entry `verified:`. All 7 passed,
+# proving the shared mechanism (generic POST /datasets/v3/scrape runner, dataset_id-only
+# difference) generalises across the catalog; the other 38 share the identical request shape and
+# are `skipped:` citing that sample rather than re-spending budget on each one. Two of the seven
+# needed one retry: the sync scrape route occasionally hits a transient 502 or exceeds our client's
+# 60s read timeout on a slower target (TikTok, Facebook, Instagram — retry passed both times).
+# Three passes (amazon-products, x-profiles, youtube-channels) returned HTTP 200 with a THIN body
+# (input echoed back + timestamp, no scraped fields) — the sync endpoint can return before the
+# dataset finishes collecting for a slower target; still counts as a verified, billed call against
+# the documented contract, but prefer the async trigger/status/results flow (proven full-fidelity
+# in brightdata.yaml) for anything beyond a connectivity check.
+provider: brightdata
+source:
+  method: "GET /datasets/list (this account's live dataset catalog), filtered to the cleanly-named,
+    non-internal/non-test entries and cross-checked against docs.brightdata.com's per-platform
+    quickstart pages where fetched"
+  ingested: 2026-07-28
+  spec_urls:
+    - https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-list
+    - https://docs.brightdata.com/scraping-automation/web-data-apis/web-scraper-api/overview
+    - https://docs.brightdata.com/datasets/scrapers/tiktok/quickstart
+    - https://docs.brightdata.com/datasets/scrapers/instagram/quickstart
+    - https://docs.brightdata.com/datasets/scrapers/linkedin/quickstart
+    - https://brightdata.com/pricing
+pricing_url: https://brightdata.com/pricing
+endpoints:
+
+  - id: brightdata.x.instagram-posts
+    tier: extended
+    capability: instagram.post.detail
+    platform: instagram
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Instagram - Posts"
+    summary: "Instagram - Posts"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Instagram - Posts' dataset", example: "gd_lk5ns7kz21pck8jpis"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Instagram post URL", example: [{"url": "https://www.instagram.com/p/DbTY2uSG3Oj/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    test_request:
+      queryParams: {dataset_id: "gd_lk5ns7kz21pck8jpis", format: "json"}
+      body: [{"url": "https://www.instagram.com/p/DbTY2uSG3Oj/"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.x.instagram-posts.json
+    docs_url: https://docs.brightdata.com/datasets/scrapers/instagram/quickstart
+
+  - id: brightdata.x.instagram-comments
+    tier: extended
+    capability: instagram.post.comments
+    platform: instagram
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Instagram - Comments"
+    summary: "Instagram - Comments"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Instagram - Comments' dataset", example: "gd_ltppn085pokosxh13"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Instagram post URL to fetch its comments", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.instagram-posts; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/instagram/quickstart
+
+  - id: brightdata.x.instagram-reels
+    tier: extended
+    platform: instagram
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Instagram - Reels"
+    summary: "Instagram - Reels"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Instagram - Reels' dataset", example: "gd_lyclm20il4r5helnj"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Instagram reel URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.instagram-posts; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/instagram/quickstart
+
+  - id: brightdata.x.instagram-hashtag-info
+    tier: extended
+    platform: instagram
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Instagram hashtag information"
+    summary: "Instagram hashtag information"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Instagram hashtag information' dataset", example: "gd_lp9xgqvwrt2wc2jjy"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Instagram hashtag page URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.instagram-posts; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/instagram/quickstart
+
+  - id: brightdata.x.tiktok-profiles
+    tier: extended
+    capability: tiktok.user.profile
+    platform: tiktok
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "TikTok - Profiles"
+    summary: "TikTok - Profiles"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'TikTok - Profiles' dataset", example: "gd_l1villgoiiidt09ci"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a TikTok profile URL, documented pattern https://www.tiktok.com/@username", example: [{"url": "https://www.tiktok.com/@tiktok"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Confirmed live via the quickstart doc (fetched 2026-07-28); not yet call-verified — see catalog_verify_extended.py for that pass."
+    test_request:
+      queryParams: {dataset_id: "gd_l1villgoiiidt09ci", format: "json"}
+      body: [{"url": "https://www.tiktok.com/@tiktok"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.x.tiktok-profiles.json
+    docs_url: https://docs.brightdata.com/datasets/scrapers/tiktok/quickstart
+
+  - id: brightdata.x.tiktok-posts
+    tier: extended
+    capability: tiktok.video.detail
+    platform: tiktok
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "TikTok - Posts"
+    summary: "TikTok - Posts"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'TikTok - Posts' dataset", example: "gd_lu702nij2f790tmv9h"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a TikTok video URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.tiktok-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/tiktok/quickstart
+
+  - id: brightdata.x.tiktok-comments
+    tier: extended
+    capability: tiktok.video.comments
+    platform: tiktok
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "TikTok - Comments"
+    summary: "TikTok - Comments"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'TikTok - Comments' dataset", example: "gd_lkf2st302ap89utw5k"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a TikTok video URL to fetch its comments", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.tiktok-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/tiktok/quickstart
+
+  - id: brightdata.x.tiktok-shop-products
+    tier: extended
+    platform: tiktok-shop
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "TikTok Shop"
+    summary: "TikTok Shop"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'TikTok Shop' dataset", example: "gd_m45m1u911dsa4274pi"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a TikTok Shop product URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.tiktok-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/tiktok-shop/quickstart
+
+  - id: brightdata.x.linkedin-company-info
+    tier: extended
+    capability: linkedin.company.profile
+    platform: linkedin
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "LinkedIn company information"
+    summary: "LinkedIn company information"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'LinkedIn company information' dataset", example: "gd_l1vikfnt1wgvvqz95w"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a LinkedIn company page URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.linkedin.user.profile (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/linkedin/quickstart
+
+  - id: brightdata.x.linkedin-posts
+    tier: extended
+    capability: linkedin.post.detail
+    platform: linkedin
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "LinkedIn posts"
+    summary: "LinkedIn posts"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'LinkedIn posts' dataset", example: "gd_lyy3tktm25m4avu764"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a LinkedIn post URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.linkedin.user.profile (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/linkedin/quickstart
+
+  - id: brightdata.x.linkedin-jobs
+    tier: extended
+    capability: linkedin.job.detail
+    platform: linkedin
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Linkedin job listings information"
+    summary: "Linkedin job listings information"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Linkedin job listings information' dataset", example: "gd_lpfll7v5hcqtkxl6l"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a LinkedIn job listing URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.linkedin.user.profile (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/linkedin/quickstart
+
+  - id: brightdata.x.facebook-profiles
+    tier: extended
+    platform: facebook
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Facebook - Profiles"
+    summary: "Facebook - Profiles"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Facebook - Profiles' dataset", example: "gd_mf0urb782734ik94dz"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Facebook profile or Page URL", example: [{"url": "https://www.facebook.com/facebook"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    test_request:
+      queryParams: {dataset_id: "gd_mf0urb782734ik94dz", format: "json"}
+      body: [{"url": "https://www.facebook.com/facebook"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.x.facebook-profiles.json
+    docs_url: https://docs.brightdata.com/datasets/scrapers/facebook/quickstart
+
+  - id: brightdata.x.facebook-posts-by-profile
+    tier: extended
+    capability: facebook.user.posts
+    platform: facebook
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Facebook - Pages Posts by Profile URL"
+    summary: "Facebook - Pages Posts by Profile URL"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Facebook - Pages Posts by Profile URL' dataset", example: "gd_lkaxegm826bjpoo9m5"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Facebook Page URL to fetch its recent posts", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.facebook-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/facebook/quickstart
+
+  - id: brightdata.x.facebook-posts-by-post-url
+    tier: extended
+    platform: facebook
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Facebook - Posts by post URL"
+    summary: "Facebook - Posts by post URL"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Facebook - Posts by post URL' dataset", example: "gd_lyclm1571iy3mv57zw"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a single Facebook post URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.facebook-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/facebook/quickstart
+
+  - id: brightdata.x.facebook-comments
+    tier: extended
+    capability: facebook.post.comments
+    platform: facebook
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Facebook - Comments"
+    summary: "Facebook - Comments"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Facebook - Comments' dataset", example: "gd_lkay758p1eanlolqw8"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Facebook post URL to fetch its comments", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.facebook-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/facebook/quickstart
+
+  - id: brightdata.x.facebook-marketplace
+    tier: extended
+    platform: facebook
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Facebook Marketplace"
+    summary: "Facebook Marketplace"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Facebook Marketplace' dataset", example: "gd_lvt9iwuh6fbcwmx1a"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Facebook Marketplace listing URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.facebook-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/facebook/quickstart
+
+  - id: brightdata.x.amazon-products
+    tier: extended
+    capability: amazon.product.detail
+    platform: amazon
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Amazon products"
+    summary: "Amazon products"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Amazon products' dataset", example: "gd_l7q7dkf244hwjntr0"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Amazon product (dp) URL", example: [{"url": "https://www.amazon.com/dp/B08N5WRWNW"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    test_request:
+      queryParams: {dataset_id: "gd_l7q7dkf244hwjntr0", format: "json"}
+      body: [{"url": "https://www.amazon.com/dp/B08N5WRWNW"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.x.amazon-products.json
+    # NOTE: this call's captured example is thin (input echo + timestamp only) -- the sync
+    # /datasets/v3/scrape route returned HTTP 200 before this dataset finished collecting
+    # for this target. Endpoint mechanism confirmed live; for a full record use the
+    # async brightdata.web.scrape.job.start -> job.status -> job.results flow instead.
+    docs_url: https://docs.brightdata.com/datasets/scrapers/amazon/quickstart
+
+  - id: brightdata.x.amazon-reviews
+    tier: extended
+    platform: amazon
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Amazon Reviews"
+    summary: "Amazon Reviews"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Amazon Reviews' dataset", example: "gd_le8e811kzy4ggddlq"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Amazon product URL to fetch its reviews", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.amazon-products; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/amazon/quickstart
+
+  - id: brightdata.x.amazon-best-sellers
+    tier: extended
+    capability: amazon.bestsellers.list
+    platform: amazon
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Amazon best seller products"
+    summary: "Amazon best seller products"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Amazon best seller products' dataset", example: "gd_l1vijixj9g2vp7563"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Amazon best-sellers category URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.amazon-products; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/amazon/quickstart
+
+  - id: brightdata.x.amazon-sellers-info
+    tier: extended
+    platform: amazon
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Amazon sellers info"
+    summary: "Amazon sellers info"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Amazon sellers info' dataset", example: "gd_lhotzucw1etoe5iw1k"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Amazon seller storefront URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.amazon-products; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/amazon/quickstart
+
+  - id: brightdata.x.x-profiles
+    tier: extended
+    capability: x.user.profile
+    platform: x
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "X (formerly Twitter) - Profiles"
+    summary: "X (formerly Twitter) - Profiles"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'X (formerly Twitter) - Profiles' dataset", example: "gd_lwxmeb2u1cniijd7t4"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an X/Twitter profile URL", example: [{"url": "https://x.com/X"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    test_request:
+      queryParams: {dataset_id: "gd_lwxmeb2u1cniijd7t4", format: "json"}
+      body: [{"url": "https://x.com/X"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.x.x-profiles.json
+    # NOTE: this call's captured example is thin (input echo + timestamp only) -- the sync
+    # /datasets/v3/scrape route returned HTTP 200 before this dataset finished collecting
+    # for this target. Endpoint mechanism confirmed live; for a full record use the
+    # async brightdata.web.scrape.job.start -> job.status -> job.results flow instead.
+    docs_url: https://docs.brightdata.com/datasets/scrapers/x/quickstart
+
+  - id: brightdata.x.x-posts
+    tier: extended
+    capability: x.post.detail
+    platform: x
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "X (formerly Twitter) - Posts"
+    summary: "X (formerly Twitter) - Posts"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'X (formerly Twitter) - Posts' dataset", example: "gd_lwxkxvnf1cynvib9co"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an X/Twitter post URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.x-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/x/quickstart
+
+  - id: brightdata.x.youtube-channels
+    tier: extended
+    capability: youtube.channel.profile
+    platform: youtube
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "YouTube - Channels"
+    summary: "YouTube - Channels"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'YouTube - Channels' dataset", example: "gd_lk538t2k2p1k3oos71"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a YouTube channel URL", example: [{"url": "https://www.youtube.com/@YouTube"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    test_request:
+      queryParams: {dataset_id: "gd_lk538t2k2p1k3oos71", format: "json"}
+      body: [{"url": "https://www.youtube.com/@YouTube"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.x.youtube-channels.json
+    # NOTE: this call's captured example is thin (input echo + timestamp only) -- the sync
+    # /datasets/v3/scrape route returned HTTP 200 before this dataset finished collecting
+    # for this target. Endpoint mechanism confirmed live; for a full record use the
+    # async brightdata.web.scrape.job.start -> job.status -> job.results flow instead.
+    docs_url: https://docs.brightdata.com/datasets/scrapers/youtube/quickstart
+
+  - id: brightdata.x.youtube-videos
+    tier: extended
+    capability: youtube.video.detail
+    platform: youtube
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Youtube - Videos posts"
+    summary: "Youtube - Videos posts"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Youtube - Videos posts' dataset", example: "gd_lk56epmy2i5g7lzu0k"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a YouTube video URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.youtube-channels; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/youtube/quickstart
+
+  - id: brightdata.x.youtube-comments
+    tier: extended
+    capability: youtube.video.comments
+    platform: youtube
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Youtube - Comments"
+    summary: "Youtube - Comments"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Youtube - Comments' dataset", example: "gd_lk9q0ew71spt1mxywf"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a YouTube video URL to fetch its comments", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.youtube-channels; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/youtube/quickstart
+
+  - id: brightdata.x.reddit-posts
+    tier: extended
+    capability: reddit.post.detail
+    platform: reddit
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Reddit - Posts"
+    summary: "Reddit - Posts"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Reddit - Posts' dataset", example: "gd_lvz8ah06191smkebj4"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Reddit post (thread) URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/reddit/quickstart
+
+  - id: brightdata.x.reddit-comments
+    tier: extended
+    capability: reddit.post.comments
+    platform: reddit
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Reddit - Comments"
+    summary: "Reddit - Comments"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Reddit - Comments' dataset", example: "gd_lvzdpsdlw09j6t702"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Reddit post URL to fetch its comments", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/reddit/quickstart
+
+  - id: brightdata.x.walmart-products
+    tier: extended
+    platform: walmart
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Walmart - products"
+    summary: "Walmart - products"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Walmart - products' dataset", example: "gd_l95fol7l1ru6rlo116"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Walmart product URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/walmart/quickstart
+
+  - id: brightdata.x.walmart-reviews
+    tier: extended
+    platform: walmart
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Walmart Reviews"
+    summary: "Walmart Reviews"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Walmart Reviews' dataset", example: "gd_mpql1v8g2o8o6l1wzd"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Walmart product URL to fetch its reviews", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/walmart/quickstart
+
+  - id: brightdata.x.ebay-products
+    tier: extended
+    platform: ebay
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "eBay"
+    summary: "eBay"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'eBay' dataset", example: "gd_ltr9mjt81n0zzdk1fb"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an eBay listing URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/ebay/quickstart
+
+  - id: brightdata.x.yelp-businesses
+    tier: extended
+    platform: yelp
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Yelp businesses overview"
+    summary: "Yelp businesses overview"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Yelp businesses overview' dataset", example: "gd_lgugwl0519h1p14rwk"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Yelp business page URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/yelp/quickstart
+
+  - id: brightdata.x.yelp-reviews
+    tier: extended
+    platform: yelp
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Yelp businesses reviews"
+    summary: "Yelp businesses reviews"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Yelp businesses reviews' dataset", example: "gd_lgzhlu9323u3k24jkv"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Yelp business page URL to fetch its reviews", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/yelp/quickstart
+
+  - id: brightdata.x.tripadvisor-hotels
+    tier: extended
+    platform: tripadvisor
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Tripadvisor Hotel Listings"
+    summary: "Tripadvisor Hotel Listings"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Tripadvisor Hotel Listings' dataset", example: "gd_mapan2y3gii0v83rh"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Tripadvisor hotel listing URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/tripadvisor/quickstart
+
+  - id: brightdata.x.trustpilot-reviews
+    tier: extended
+    platform: trustpilot
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Trustpilot business reviews"
+    summary: "Trustpilot business reviews"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Trustpilot business reviews' dataset", example: "gd_lm5zmhwd2sni130p"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Trustpilot business profile URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/trustpilot/quickstart
+
+  - id: brightdata.x.google-play-apps
+    tier: extended
+    platform: google-play
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Google Play Store"
+    summary: "Google Play Store"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Google Play Store' dataset", example: "gd_lsk382l8xei8vzm4u"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Google Play app listing URL", example: [{"url": "https://play.google.com/store/apps/details?id=com.google.android.youtube"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    test_request:
+      queryParams: {dataset_id: "gd_lsk382l8xei8vzm4u", format: "json"}
+      body: [{"url": "https://play.google.com/store/apps/details?id=com.google.android.youtube"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.x.google-play-apps.json
+    docs_url: https://docs.brightdata.com/datasets/scrapers/google-play/quickstart
+
+  - id: brightdata.x.google-play-reviews
+    tier: extended
+    platform: google-play
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Google Play Store reviews"
+    summary: "Google Play Store reviews"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Google Play Store reviews' dataset", example: "gd_m6zagkt024uwvvwuyu"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Google Play app listing URL to fetch its reviews", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.google-play-apps; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/google-play/quickstart
+
+  - id: brightdata.x.app-store-apps
+    tier: extended
+    platform: app-store
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Apple App Store"
+    summary: "Apple App Store"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Apple App Store' dataset", example: "gd_lsk9ki3u2iishmwrui"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Apple App Store app listing URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.google-play-apps; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/app-store/quickstart
+
+  - id: brightdata.x.app-store-reviews
+    tier: extended
+    platform: app-store
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Apple App Store reviews"
+    summary: "Apple App Store reviews"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Apple App Store reviews' dataset", example: "gd_m734msue16e0adkbit"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an Apple App Store app listing URL to fetch its reviews", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.x.google-play-apps; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/app-store/quickstart
+
+  - id: brightdata.x.imdb-media
+    tier: extended
+    capability: imdb.title.detail
+    platform: imdb
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "IMDB media"
+    summary: "IMDB media"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'IMDB media' dataset", example: "gd_l1vikf2h1a4t6x8qzu"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — an IMDb title URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/imdb/quickstart
+
+  - id: brightdata.x.xiaohongshu-posts
+    tier: extended
+    capability: xiaohongshu.note.detail
+    platform: xiaohongshu
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Xiaohongshu - posts"
+    summary: "Xiaohongshu - posts"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Xiaohongshu - posts' dataset", example: "gd_mj5ejq771oauz0bz85"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Xiaohongshu post URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/xiaohongshu/quickstart
+
+  - id: brightdata.x.threads-profiles
+    tier: extended
+    capability: threads.user.profile
+    platform: threads
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Threads - Profiles"
+    summary: "Threads - Profiles"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Threads - Profiles' dataset", example: "gd_mde7jg3ld2h3hnnf2"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Threads profile URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/threads/quickstart
+
+  - id: brightdata.x.telegram-channels
+    tier: extended
+    capability: telegram.channel.info
+    platform: telegram
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Telegram"
+    summary: "Telegram"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Telegram' dataset", example: "gd_lnlpb47l1ztqrqz7oc"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Telegram channel URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/telegram/quickstart
+
+  - id: brightdata.x.companies-crunchbase
+    tier: extended
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Crunchbase companies information"
+    summary: "Crunchbase companies information"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Crunchbase companies information' dataset", example: "gd_l1vijqt9jfj7olije"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Crunchbase company page URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/companies/quickstart
+
+  - id: brightdata.x.companies-glassdoor-info
+    tier: extended
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Glassdoor companies information (Public web data)"
+    summary: "Glassdoor companies information (Public web data)"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Glassdoor companies information (Public web data)' dataset", example: "gd_l1vik5c8204suup7nc"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Glassdoor company page URL", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/companies/quickstart
+
+  - id: brightdata.x.companies-glassdoor-reviews
+    tier: extended
+    capability: companies.reviews
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Glassdoor companies reviews"
+    summary: "Glassdoor companies reviews"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented 'Glassdoor companies reviews' dataset", example: "gd_l7j1po0921hbu0ri1z"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv"}
+      body:
+        input: {type: array, required: true, note: "one object per target — a Glassdoor company page URL to fetch its reviews", example: [{"url": "https://example.com/"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with dataset_id fixed to this dataset (see that entry and brightdata.instagram.user.profile in the core file for the pattern). >1 minute falls back to HTTP 202 + snapshot_id — use brightdata.web.scrape.job.start for anything beyond a handful of URLs. Exact required body fields were not individually re-confirmed per dataset here; verify against the dataset's own quickstart page before high-volume use."
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
+    skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
+    docs_url: https://docs.brightdata.com/datasets/scrapers/companies/quickstart

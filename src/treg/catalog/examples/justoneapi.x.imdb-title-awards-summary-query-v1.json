@@ -1,0 +1,39 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "prestigiousAwardSummary": {
+        "__typename": "PrestigiousAwardSummary",
+        "awardNomination": {
+          "award": {
+            "eventEdition": {
+              "event": {
+                "id": "ev0000003"
+              }
+            },
+            "text": "Oscar"
+          }
+        },
+        "wins": 0,
+        "nominations": 7
+      },
+      "totalWins": {
+        "total": 21
+      },
+      "totalNominations": {
+        "total": 43
+      },
+      "ratingsSummary": {
+        "topRanking": {
+          "rank": 1,
+          "text": {
+            "value": "Top Rated"
+          }
+        }
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:55.486606718",
+  "requestId": "decf4683597e4f48925dee0560770070"
+}

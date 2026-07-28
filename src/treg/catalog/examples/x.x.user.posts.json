@@ -1,0 +1,45 @@
+{
+  "data": [
+    {
+      "created_at": "2026-07-28T05:26:51.000Z",
+      "edit_history_tweet_ids": [
+        "2081974644114911715"
+      ],
+      "id": "2081974644114911715",
+      "public_metrics": {
+        "bookmark_count": 0,
+        "impression_count": 408445,
+        "like_count": 0,
+        "quote_count": 0,
+        "reply_count": 0,
+        "retweet_count": 216
+      },
+      "text": "RT @XFreeze: A throwback to Elon Musk walking through the engineering behind Falcon 9’s payload fairing\n\nExplaining the massive carbon-comp…"
+    },
+    {
+      "created_at": "2026-07-28T05:21:19.000Z",
+      "edit_history_tweet_ids": [
+        "2081973255296934043"
+      ],
+      "id": "2081973255296934043",
+      "public_metrics": {
+        "bookmark_count": 72,
+        "impression_count": 623420,
+        "like_count": 2910,
+        "quote_count": 36,
+        "reply_count": 714,
+        "retweet_count": 445
+      },
+      "text": "Common sense https://t.co/bcb3q3Yq0z"
+    },
+    "… 3 more item(s) truncated"
+  ],
+  "meta": {
+    "newest_id": "2081974644114911715",
+    "next_token": "<omitted: expires>",
+    "oldest_id": "2081941622242128048",
+    "result_count": 5
+  },
+  "_scrubbed": true,
+  "_scrubbed_note": "public-figure or reference data; account-specific values masked where present"
+}

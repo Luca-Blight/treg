@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "3d790f92-7b33-4fa9-bce5-2909d95d8f23",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:49",
+  "time_stamp": 1785220309,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-Web-API/fetch_one_video_v2_… [102 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/3d790f92-7b33-4f… [150 chars]",
+  "router": "/api/v1/kuaishou/web/fetch_one_video_v2",
+  "params": {
+    "photo_id": "3xtdqvdnqd3psuc"
+  },
+  "data": {
+    "result": 1,
+    "photo": {
+      "singlePicture": false,
+      "type": 1,
+      "manifest": "… {10 field(s) truncated}",
+      "timestamp": 1732700666106,
+      "duration": 29480,
+      "likeCount": 1896482,
+      "width": 720,
+      "height": 1280,
+      "mainMvUrls": "… [2 item(s) truncated]",
+      "commentCount": 27490,
+      "forwardCount": 0,
+      "viewCount": 43311601,
+      "shareCount": 80416,
+      "coverUrls": "… [2 item(s) truncated]",
+      "webpCoverUrls": "… [2 item(s) truncated]",
+      "…": "22 more field(s) truncated"
+    },
+    "counts": {
+      "fanCount": 4940487,
+      "followCount": 121,
+      "collectionCount": 76226,
+      "photoCount": 4594
+    }
+  }
+}

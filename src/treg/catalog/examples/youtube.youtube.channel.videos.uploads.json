@@ -1,0 +1,105 @@
+{
+  "kind": "youtube#playlistItemListResponse",
+  "etag": "4b-AnJxcK7wBs_Gp7P2Jv9kujAc",
+  "nextPageToken": "<omitted: expires>",
+  "items": [
+    {
+      "kind": "youtube#playlistItem",
+      "etag": "yCGAUzPKByaobIgopeBOhWUIpz0",
+      "id": "VVVCUjgtNjAtQjI4aHAyQm1EUGRudGNRLlM3b1N2QXE3LXJN",
+      "snippet": {
+        "publishedAt": "2026-07-28T05:00:27Z",
+        "channelId": "UCBR8-60-B28hp2BmDPdntcQ",
+        "title": "is dubai chewy kimbap the new dubai chewy cookie??",
+        "description": "",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/S7oSvAq7-rM/default.jpg",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i.ytimg.com/vi/S7oSvAq7-rM/mqdefault.jpg",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i.ytimg.com/vi/S7oSvAq7-rM/hqdefault.jpg",
+            "width": 480,
+            "height": 360
+          },
+          "standard": {
+            "url": "https://i.ytimg.com/vi/S7oSvAq7-rM/sddefault.jpg",
+            "width": 640,
+            "height": 480
+          },
+          "maxres": {
+            "url": "https://i.ytimg.com/vi/S7oSvAq7-rM/maxresdefault.jpg",
+            "width": 1280,
+            "height": 720
+          }
+        },
+        "channelTitle": "YouTube",
+        "playlistId": "UUBR8-60-B28hp2BmDPdntcQ",
+        "position": 0,
+        "resourceId": {
+          "kind": "youtube#video",
+          "videoId": "S7oSvAq7-rM"
+        },
+        "videoOwnerChannelTitle": "YouTube",
+        "videoOwnerChannelId": "UCBR8-60-B28hp2BmDPdntcQ"
+      }
+    },
+    {
+      "kind": "youtube#playlistItem",
+      "etag": "MejfG_vMIWrXl6BRfuou35ASJts",
+      "id": "VVVCUjgtNjAtQjI4aHAyQm1EUGRudGNRLjAyOXVXS2VCZEVv",
+      "snippet": {
+        "publishedAt": "2026-07-27T15:00:26Z",
+        "channelId": "UCBR8-60-B28hp2BmDPdntcQ",
+        "title": "dear aliens, this is all you need to know about humans @VanessaDavis",
+        "description": "",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/029uWKeBdEo/default.jpg",
+            "width": 120,
+            "height": 90
+          },
+          "medium": {
+            "url": "https://i.ytimg.com/vi/029uWKeBdEo/mqdefault.jpg",
+            "width": 320,
+            "height": 180
+          },
+          "high": {
+            "url": "https://i.ytimg.com/vi/029uWKeBdEo/hqdefault.jpg",
+            "width": 480,
+            "height": 360
+          },
+          "standard": {
+            "url": "https://i.ytimg.com/vi/029uWKeBdEo/sddefault.jpg",
+            "width": 640,
+            "height": 480
+          },
+          "maxres": {
+            "url": "https://i.ytimg.com/vi/029uWKeBdEo/maxresdefault.jpg",
+            "width": 1280,
+            "height": 720
+          }
+        },
+        "channelTitle": "YouTube",
+        "playlistId": "UUBR8-60-B28hp2BmDPdntcQ",
+        "position": 1,
+        "resourceId": {
+          "kind": "youtube#video",
+          "videoId": "029uWKeBdEo"
+        },
+        "videoOwnerChannelTitle": "YouTube",
+        "videoOwnerChannelId": "UCBR8-60-B28hp2BmDPdntcQ"
+      }
+    }
+  ],
+  "pageInfo": {
+    "totalResults": 1522,
+    "resultsPerPage": 2
+  }
+}

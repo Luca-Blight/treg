@@ -1,0 +1,57 @@
+{
+  "code": 0,
+  "data": {
+    "commonData": {
+      "HcCid": "… 3 field(s) truncated",
+      "PosAdInfo": "… 3 field(s) truncated",
+      "abData": "… 19 field(s) truncated",
+      "abFields": "… 15 field(s) truncated",
+      "abver": "V1.0#2|2#realtime",
+      "adPosId": "28392",
+      "adsAbData": "… 1 item(s) truncated",
+      "ads_req_info": "{\"palantir_expids\":\"S|SHUNT_SA… [6547 chars total]",
+      "appVersion": "0",
+      "bbtf": "1",
+      "coordinateFrom": "0",
+      "csid": "249d3ccf51a04a25820393c1717e6a… [32 chars total]",
+      "debugUrl": "… 4 field(s) truncated",
+      "filterData": "… 178 field(s) truncated",
+      "filterParam": "… 4 field(s) truncated",
+      "isPriceFilter": "0",
+      "kw": "%E6%89%8B%E6%9C%BA",
+      "notResultType": 2,
+      "oneboxurl": "",
+      "origin": "… 3 field(s) truncated",
+      "pageType": "keyword_search",
+      "realPlusMemberType": "0",
+      "rewrite": "… 0 field(s) truncated",
+      "samStatus": "0",
+      "session_id": "<omitted: expires>",
+      "sort_type": "sort_totalsales15_desc",
+      "ssCsid": "249d3ccf51a04a25820393c1717e6a… [32 chars total]",
+      "subscribeSwitch": 1,
+      "tenantShield": "… 0 field(s) truncated",
+      "uet": "… 3 field(s) truncated",
+      "voiceConfig": "… 2 field(s) truncated",
+      "writerBrief": "… 0 field(s) truncated",
+      "yhyx": "1"
+    },
+    "originWareList": {
+      "adWareList": "… 3 item(s) truncated",
+      "searchWareList": "… 10 item(s) truncated"
+    },
+    "pageSummary": {
+      "pageCount": "698",
+      "pageNo": "1",
+      "pageSize": "10",
+      "totalCount": "6972"
+    },
+    "wareList": [
+      "… 40 field(s) truncated",
+      "… 12 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:11.112129367",
+  "requestId": "f299a5ddaa714948814f908759fc57… [32 chars total]"
+}

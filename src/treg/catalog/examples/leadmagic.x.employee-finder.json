@@ -1,0 +1,30 @@
+{
+  "message": "Data found for the given company.",
+  "total_count": 1,
+  "returned_count": 1,
+  "with_email_count": 1,
+  "with_mobile_phone_count": 1,
+  "with_email_and_mobile_phone_count": 1,
+  "credits_consumed": 0.05,
+  "limit_applied": 1,
+  "resolved_company_domain": "leadmagic.io",
+  "resolved_by": "company_domain",
+  "data": [
+    {
+      "first_name": "Jesse",
+      "last_name": "Ouellette",
+      "full_name": "Jesse Ouellette",
+      "title": "Founder",
+      "website": "leadmagic.io",
+      "company_name": "Leadmagic",
+      "profile_url": "https://www.linkedin.com/in/jesseoue",
+      "job_level": "C-Team",
+      "job_function": "General Business & Management",
+      "country_code": "US",
+      "headline": "Growth & AI Expert | Founder LeadMagic",
+      "followers": 500,
+      "has_email": true,
+      "has_mobile_phone": true
+    }
+  ]
+}

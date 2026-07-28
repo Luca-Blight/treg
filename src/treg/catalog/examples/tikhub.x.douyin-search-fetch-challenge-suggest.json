@@ -1,0 +1,47 @@
+{
+  "code": 200,
+  "request_id": "4f21aa5e-0a54-4e80-ab77-6449285a693d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:45",
+  "time_stamp": 1785220365,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Search-API/fetch_challenge_suggest_api_v1_douyin_search_fetch_challenge_suggest_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/4f21aa5e-0a54-4e80-ab77-6449285a693d?sign=b88b85baef9ab2aab1a309687b8ccde67e4049d6cde02eba4ad6de5e9743277c",
+  "router": "/api/v1/douyin/search/fetch_challenge_suggest",
+  "params": {
+    "keyword": "游戏"
+  },
+  "data": {
+    "sug_list": [
+      {
+        "cha_name": "游戏",
+        "view_count": 717072257845,
+        "cid": "1624332181128206",
+        "group_id": "6534954143558145288",
+        "tag": 0
+      },
+      "… 4 more item(s) truncated"
+    ],
+    "status_code": 0,
+    "status_msg": "",
+    "rid": "20260728143244FFCE813D6F270D9B3D24",
+    "words_query_record": {
+      "info": "{}",
+      "words_source": "sug",
+      "query_id": ""
+    },
+    "extra": {
+      "now": 1785220364000,
+      "logid": "20260728143244FFCE813D6F270D9B3D24",
+      "fatal_item_ids": [],
+      "search_request_id": ""
+    },
+    "log_pb": {
+      "impr_id": "20260728143244FFCE813D6F270D9B3D24"
+    }
+  }
+}

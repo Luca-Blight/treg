@@ -1,0 +1,45 @@
+{
+  "success": true,
+  "credits_remaining": 19859,
+  "credits_charged": 1,
+  "user": {
+    "id": "6659752019493208069",
+    "shortId": "",
+    "uniqueId": "stoolpresidente",
+    "nickname": "Dave Portnoy",
+    "avatarLarger": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7310178711609032710~tplv-tiktokx-cropcenter:1080:1080.jpeg?dr=9640&refresh_token=<omitted: expires>&x-expires=1785409200&x-signature=<omitted: expires> [276 chars]",
+    "avatarMedium": "https://p16-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7310178711609032710~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9640&refresh_token=<omitted: expires>&x-expires=1785409200&x-signature=<omitted: expires> [274 chars]",
+    "avatarThumb": "https://p19-common-sign.tiktokcdn-us.com/tos-maliva-avt-0068/7310178711609032710~tplv-tiktokx-cropcenter:100:100.jpeg?dr=9640&refresh_token=<omitted: expires>&x-expires=1785409200&x-signature=<omitted: expires> [278 chars]",
+    "signature": "<omitted: expires>",
+    "createTime": 1550594547,
+    "verified": true,
+    "secUid": "MS4wLjABAAAAINC_ElRR-l1RCcnEjOZhNO-9wOzAMf-YHXqRY8vvG9bEhMRa6iu23TaE3JPZYXBD",
+    "ftc": false,
+    "relation": 0,
+    "openFavorite": false,
+    "bioLink": {
+      "link": "https://www.barstoolsports.com/bios/el-presidente",
+      "risk": 0
+    },
+    "…": "25 more field(s) truncated"
+  },
+  "stats": {
+    "followerCount": 4700000,
+    "followingCount": 97,
+    "heart": 226800000,
+    "heartCount": 226800000,
+    "videoCount": 2478,
+    "diggCount": 0,
+    "friendCount": 64
+  },
+  "statsV2": {
+    "followerCount": "4731892",
+    "followingCount": "97",
+    "heart": "226781144",
+    "heartCount": "226781144",
+    "videoCount": "2478",
+    "diggCount": "0",
+    "friendCount": "64"
+  },
+  "itemList": []
+}

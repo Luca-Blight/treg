@@ -1,0 +1,35 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.1282 sec.",
+  "cost": 0.00225,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0243-0000-51b953b65e3c",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0036 sec.",
+      "cost": 0.00225,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "business_data",
+        "function": "my_business_updates",
+        "se": "google",
+        "language_code": "en",
+        "location_name": "New York,New York,United States",
+        "keyword": "RustyBrick, Inc.",
+        "se_type": "my_business_updates",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

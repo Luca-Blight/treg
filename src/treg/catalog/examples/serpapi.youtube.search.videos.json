@@ -1,0 +1,210 @@
+{
+  "search_metadata": {
+    "id": "6a6898767bf2f9f2f3d75c62",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/9IU-oSG4NdEQzrgltC53HA/6a6898767bf2f9f2f3d75c62.json",
+    "created_at": "2026-07-28 11:54:30 UTC",
+    "processed_at": "2026-07-28 11:54:30 UTC",
+    "youtube_url": "https://www.youtube.com/results?search_query=coffee",
+    "raw_html_file": "https://serpapi.com/searches/9IU-oSG4NdEQzrgltC53HA/6a6898767bf2f9f2f3d75c62.html",
+    "total_time_taken": 1.32
+  },
+  "search_parameters": {
+    "engine": "youtube",
+    "search_query": "coffee"
+  },
+  "search_information": {
+    "total_results": 52487636,
+    "video_results_state": "Results for exact spelling"
+  },
+  "ads_results": [
+    {
+      "position_on_page": 1,
+      "title": "Authentic Italian Coffee Beans",
+      "website": "https://www.googleadservices.com/pagead/aclk?sa=L&ai=CMp8Pd5hoavmgCur-v8IPgoeC4QL91fz4gwHl4YLK7hRkEAEgAGDJlveM5KSsE4IBF2NhLXB…",
+      "channel": {
+        "name": "Torrefare Saka Caffe",
+        "thumbnail": "https://lh3.googleusercontent.com/proxy/Tl2SY3AqzL_etfluLuMqgcqTXfo7pyhJ9XzOhNRt3ziZwM10C-gV_F_MSOhl5yG7vSFLKY2huEcUMY2N44sMa…"
+      },
+      "description": "Freshly roasted coffee beans, delivered to your door. Torrefare.",
+      "thumbnail": {
+        "static": "https://lh3.googleusercontent.com/proxy/Tl2SY3AqzL_etfluLuMqgcqTXfo7pyhJ9XzOhNRt3ziZwM10C-gV_F_MSOhl5yG7vSFLKY2huEcUMY2N44sMa…"
+      }
+    }
+  ],
+  "video_results": [
+    {
+      "position_on_page": 2,
+      "title": "15 WORST Coffee Brands Ever Made (And 5 That Are 100% Coffee)",
+      "link": "https://www.youtube.com/watch?v=ZwtFFyciYG0",
+      "serpapi_link": "https://serpapi.com/search.json?engine=youtube_video&v=ZwtFFyciYG0",
+      "video_id": "ZwtFFyciYG0",
+      "channel": {
+        "name": "The Hidden Pantry",
+        "link": "https://www.youtube.com/@thehiddenpantry0405",
+        "thumbnail": "https://yt3.ggpht.com/BlgCPVKb0wtGsu7nnvxyBWV7kMcmHdxx_MDOyCH5HY0NcZsLPEhX_KlXjeDcCKaKHGWyfXnkVw=s68-c-k-c0x00ffffff-no-rj"
+      },
+      "published_date": "1 month ago",
+      "views": 156721,
+      "length": "46:36",
+      "description": "Coffee brands love to promise bold flavor and premium beans, but some of the most familiar names are built on stale blends, .…",
+      "thumbnail": {
+        "static": "https://i.ytimg.com/vi/ZwtFFyciYG0/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAxWFPRx6xo-7MAd4Gd…",
+        "rich": "https://i.ytimg.com/an_webp/ZwtFFyciYG0/mqdefault_6s.webp?du=3000&sqp=CJ_qodMG&rs=AOn4CLAMjoZB_qJSTUm2tPYUGpfeVm_YFw"
+      }
+    },
+    {
+      "position_on_page": 3,
+      "title": "How humanity got hooked on coffee - Jonathan Morris",
+      "link": "https://www.youtube.com/watch?v=xQ156y4TtJs",
+      "serpapi_link": "https://serpapi.com/search.json?engine=youtube_video&v=xQ156y4TtJs",
+      "video_id": "xQ156y4TtJs",
+      "channel": {
+        "name": "TED-Ed",
+        "link": "https://www.youtube.com/@TEDEd",
+        "verified": true,
+        "thumbnail": "https://yt3.ggpht.com/PKUi-Lc3VFjUfsIhjK3n-FJDNBf-XQLdg4G4bv4fPFF96D3MVnkbub9ePpLoWdmdFgl5I1Zd=s68-c-k-c0x00ffffff-no-rj"
+      },
+      "published_date": "2 years ago",
+      "views": 3191621,
+      "length": "5:35",
+      "description": "Trace the history of coffee, from its first known origins to its rise in popularity due to trade routes and cultivation. -- O…",
+      "extensions": [
+        "CC"
+      ],
+      "thumbnail": {
+        "static": "https://i.ytimg.com/vi/xQ156y4TtJs/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAmxPW-vm7zGlR8vv8a…",
+        "rich": "https://i.ytimg.com/an_webp/xQ156y4TtJs/mqdefault_6s.webp?du=3000&sqp=CLuQotMG&rs=AOn4CLAHqeUuZeToy044TB9qtVLsqn4pOw"
+      }
+    },
+    "… 13 more item(s) truncated"
+  ],
+  "shorts_results": [
+    {
+      "position_on_page": 4,
+      "shorts": [
+        {
+          "title": "How to make really good coffee from a French press",
+          "link": "https://www.youtube.com/shorts/o6PTFEAR2wY",
+          "thumbnail": "https://i.ytimg.com/vi/o6PTFEAR2wY/frame0.jpg",
+          "views_original": "1.3M views",
+          "views": 1300000,
+          "video_id": "o6PTFEAR2wY"
+        },
+        {
+          "title": "how to make coffee with the aeropress",
+          "link": "https://www.youtube.com/shorts/iusG5OMaclE",
+          "thumbnail": "https://i.ytimg.com/vi/iusG5OMaclE/frame0.jpg",
+          "views_original": "1M views",
+          "views": 1000000,
+          "video_id": "iusG5OMaclE"
+        },
+        "… 3 more item(s) truncated"
+      ]
+    },
+    {
+      "position_on_page": 8,
+      "shorts": [
+        {
+          "title": "Have you tried a Café Cubano? #cafecubano #cubancoffee #mokapot #coffee",
+          "link": "https://www.youtube.com/shorts/tcGCK5Ctnso",
+          "thumbnail": "https://i.ytimg.com/vi/tcGCK5Ctnso/frame0.jpg",
+          "views_original": "1.1M views",
+          "views": 1100000,
+          "video_id": "tcGCK5Ctnso"
+        },
+        {
+          "title": "Make my morning coffee with me ☕️ *ASMR edition*",
+          "link": "https://www.youtube.com/shorts/bZ8MOYT76rY",
+          "thumbnail": "https://i.ytimg.com/vi/bZ8MOYT76rY/frame0.jpg",
+          "views_original": "426K views",
+          "views": 426000,
+          "video_id": "bZ8MOYT76rY"
+        },
+        "… 18 more item(s) truncated"
+      ]
+    }
+  ],
+  "popular_in_houston": [
+    {
+      "position_on_page": 13,
+      "title": "Morning Coffee Vol. 18 | 90s R&B Old School Throwbacks Playlist | Jodeci, Aaliyah, Brandy, SWV, 112",
+      "link": "https://www.youtube.com/watch?v=l1nv10YT82Y",
+      "serpapi_link": "https://serpapi.com/search.json?engine=youtube_video&v=l1nv10YT82Y",
+      "video_id": "l1nv10YT82Y",
+      "channel": {
+        "name": "Andrew.",
+        "link": "https://www.youtube.com/@andrewchran",
+        "thumbnail": "https://yt3.ggpht.com/6Ig9n59bhE_rcc94WtOsQsQPvsm3VOYfTwvnX59l7ZDlFjyYmTAv6JpvNoiPY9iQ6RhA22uD5ho=s68-c-k-c0x00ffffff-no-rj"
+      },
+      "published_date": "3 months ago",
+      "views": 373162,
+      "length": "1:27:29",
+      "description": "Hello Morning Coffee crew! I wanted to try something a little different for Volume 18 and take you on a journey by telling a …",
+      "thumbnail": {
+        "static": "https://i.ytimg.com/vi/l1nv10YT82Y/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLCAJzGc1Ql-BecYmSmZ…",
+        "rich": "https://i.ytimg.com/an_webp/l1nv10YT82Y/mqdefault_6s.webp?du=3000&sqp=CJqBotMG&rs=AOn4CLAPoMwi6AhuzLmUzQ0wbPoMnBSksQ"
+      }
+    }
+  ],
+  "channels_new_to_you": [
+    {
+      "position_on_page": 16,
+      "title": "COFFEE (Official Music Video) - Amrinder Gill | Jasmeen Akhtar | Navi Brar  | Raj Ranjodh",
+      "link": "https://www.youtube.com/watch?v=Gy7nd_A9AIE",
+      "serpapi_link": "https://serpapi.com/search.json?engine=youtube_video&v=Gy7nd_A9AIE",
+      "video_id": "Gy7nd_A9AIE",
+      "channel": {
+        "name": "Rhythm Boyz and Amrinder Gill",
+        "thumbnail": "https://yt3.ggpht.com/-pkYIgrwZUpzNZbSvYJLc0ac9QxoAOIOr8JnVaLqSDSHu32cJSrXeNtNmJ21K8vqWtsn72NJxQ=s68-c-k-c0x00ffffff-no-rj"
+      },
+      "published_date": "4 weeks ago",
+      "views": 14997393,
+      "length": "2:44",
+      "description": "Singer: Amrinder Gill & Jasmeen Akhtar Lyrics: Raj Ranjodh Music: Armaan Gill & Arnaaz Gill Presentation: Karaj Gill Directed…",
+      "extensions": [
+        "4K"
+      ],
+      "thumbnail": {
+        "static": "https://i.ytimg.com/vi/Gy7nd_A9AIE/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLCAjUERu7ER9IlBGEH3…",
+        "rich": "https://i.ytimg.com/an_webp/Gy7nd_A9AIE/mqdefault_6s.webp?du=3000&sqp=CIOXotMG&rs=AOn4CLCACzRm1hX3LM6Est-clWJOEnDWew"
+      }
+    },
+    {
+      "position_on_page": 17,
+      "title": "Is Coffee Actually Good For You?",
+      "link": "https://www.youtube.com/watch?v=SfpySgQZsNU",
+      "serpapi_link": "https://serpapi.com/search.json?engine=youtube_video&v=SfpySgQZsNU",
+      "video_id": "SfpySgQZsNU",
+      "channel": {
+        "name": "Talking With Docs",
+        "link": "https://www.youtube.com/@TalkingWithDocs",
+        "thumbnail": "https://yt3.ggpht.com/TFERJ4XMNC4vV6O-ng239K_G5UCc6KqMVqJ9PYJhNezcLFbMLUkXltrQZoloMXc92pz4Kfhztw=s68-c-k-c0x00ffffff-no-rj"
+      },
+      "published_date": "1 day ago",
+      "views": 43051,
+      "length": "8:18",
+      "description": "Contact us: person@example.com Coffee is one of the most popular drinks in the world, but is it actually good for your…",
+      "extensions": [
+        "New",
+        "4K"
+      ],
+      "thumbnail": {
+        "static": "https://i.ytimg.com/vi/SfpySgQZsNU/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBDl51tfoq9EJgL22W2…",
+        "rich": "https://i.ytimg.com/an_webp/SfpySgQZsNU/mqdefault_6s.webp?du=3000&sqp=COyAotMG&rs=AOn4CLAnxlIcBwh1AKFML6gUbgiWrV9zYA"
+      }
+    },
+    "… 7 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": "https://www.youtube.com/results?search_query=coffee",
+    "next": "https://www.youtube.com/results?search_query=coffee&sp=SBSCAQtad3RGRnljaVlHMIIBC3hRMTU2eTRUdEpzggELZnBKTDUzRzkzbFGCAQtobWZsRF…",
+    "next_page_token": "<omitted: expires>"
+  },
+  "serpapi_pagination": {
+    "current": "https://serpapi.com/search.json?engine=youtube&search_query=coffee",
+    "next": "https://serpapi.com/search.json?engine=youtube&search_query=coffee&sp=SBSCAQtad3RGRnljaVlHMIIBC3hRMTU2eTRUdEpzggELZnBKTDUzRzk…",
+    "next_page_token": "<omitted: expires>"
+  },
+  "_scrubbed": true
+}

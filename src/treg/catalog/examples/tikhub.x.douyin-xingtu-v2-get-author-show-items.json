@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "c6003734-7efd-4ced-b4e3-2165fa13cc8c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:48",
+  "time_stamp": 1785220128,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Xingtu-V2-API/get_author_show… [116 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c6003734-7efd-4c… [150 chars]",
+  "router": "/api/v1/douyin/xingtu_v2/get_author_show_items",
+  "params": {
+    "o_author_id": "7589271892177518598",
+    "platform_source": "1",
+    "platform_channel": "1",
+    "only_assign": "false",
+    "flow_type": "0"
+  },
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": "Success"
+    },
+    "data_description": {
+      "interaction": "… {0 field(s) truncated}",
+      "interaction_enrollment": "… {0 field(s) truncated}",
+      "play_medium": "… {0 field(s) truncated}",
+      "play_medium_enrollment": "… {0 field(s) truncated}",
+      "video_view_rate": "… {0 field(s) truncated}",
+      "video_view_rate_enrollment": "… {0 field(s) truncated}"
+    },
+    "latest_item_info": [
+      "… {23 field(s) truncated}",
+      "… 14 more item(s) truncated"
+    ],
+    "latest_item_statics_antispam": {},
+    "latest_star_item_info": [
+      "… {23 field(s) truncated}",
+      "… 14 more item(s) truncated"
+    ]
+  }
+}

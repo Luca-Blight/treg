@@ -1,0 +1,33 @@
+{
+  "code": 200,
+  "request_id": "ec72fb19-a87a-4b72-8248-714344f7d94a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:54",
+  "time_stamp": 1785220134,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V1-API/fetch_post_by_url_v2_api_v1_instagram_v1_fetch_post_by_url_v2_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ec72fb19-a87a-4b72-8248-714344f7d94a?sign=99fe35a5ccc9b92a51fe2e28aa2630e04ea1b88d2cf03ecc7b03090f30550644",
+  "router": "/api/v1/instagram/v1/fetch_post_by_url_v2",
+  "params": {
+    "post_url": "https://www.instagram.com/p/DPwhVB-jo9k/"
+  },
+  "data": {
+    "data": {
+      "full_name": "Taylor Swift",
+      "username": "taylorswift",
+      "medias": [
+        "… {2 field(s) truncated}"
+      ],
+      "comment_count": 0,
+      "like_count": 3843156,
+      "taken_at_timestamp": 1760377223,
+      "caption": "I’ll never forget how excited I was in 2006 when my first album sold 40,000 copies in its first week. I was 16 and couldn’t even fathom that that many people would care enough about my music to invest… [938 chars]"
+    },
+    "status": true,
+    "attempts": "20"
+  }
+}

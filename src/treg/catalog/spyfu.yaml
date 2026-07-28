@@ -1,0 +1,214 @@
+provider: spyfu
+source:
+  docs: https://developer.spyfu.com/
+  openapi: null # SpyFu publishes a readme.io reference; no fetchable machine-readable spec
+  curated: 2026-07-28
+
+# UNVERIFIED — no credential available at curation time; every path, parameter and price below is
+# transcribed from SpyFu's official developer reference 2026-07-28. Nothing here has been called.
+#
+# House rules for this provider (they apply to EVERY endpoint below, so they are stated once):
+#
+#  1. ⚠️ BILLING IS PER ROW RETURNED, AND `pageSize` DEFAULTS TO 5 — BUT `pageSize` IS THE ONLY
+#     BRAKE. SpyFu's own words: "API charges are billed per row of data returned." The bill is
+#     (successful rows / 1000) x the endpoint's CPM, netted against the monthly API credit that
+#     comes with the plan ($40/mo on Pro + AI, $100/mo on Team/Agency). CPM varies a lot by family:
+#     Competitors $0.20, Keyword Research $0.20-$2.50, SEO Research $0.50-$5.00 (the top-pages
+#     endpoints are the $5.00 ones), PPC Research $2.00, Ad History $3.00, Ranking History $3.00,
+#     Domain Stats $0.40-$1.00, Kombat $1.00. A `pageSize: 10000` call against a $3.00 CPM endpoint
+#     is a $30 request. Always set `pageSize` explicitly and small.
+#     (The "10,000 rows/mo then $0.50/1000" figure that circulates on third-party pages is NOT the
+#     current official model — the credit + CPM model above is what developer.spyfu.com documents.)
+#  2. TWO PARAMETER VOCABULARIES. Domain-stats and competitor endpoints take `domain`; every
+#     keyword and SERP endpoint takes `query` (which accepts a domain, subdomain, URL or path).
+#     There is no `r` param. Pagination is `pageSize` + `startingRow` (1-based, default 1).
+#     Range filters use dotted names — `searchVolume.min`, `costPerClick.max`, `rank.min` …
+#     `sortBy` plus `sortOrder` (Ascending | Descending, default Descending). `countryCode`
+#     defaults to US and takes a 28-value enum.
+#  3. AUTH: treg sends the Secret Key as `?api_key=…`, which SpyFu's endpoint reference documents
+#     and which is INJECTED by treg — never list it as user input. Note SpyFu's help centre leads
+#     with a DIFFERENT primary form: HTTP Basic with the API ID as username and the Secret Key as
+#     password (it even pre-generates the Base64 string in Account Settings). A third HMAC-signed
+#     header form is mentioned but not fully specified. If a `?api_key=` call is ever rejected on a
+#     family other than domain stats, the Basic form is the fallback to try.
+#  4. List endpoints answer with a uniform envelope: {"resultCount": N, "totalMatchingResults": M,
+#     "results": [ … ]}. `resultCount` is the number of rows you were billed for.
+#  5. SpyFu is a GOOGLE-ADS intelligence provider: everything here is Google search data, which is
+#     why every endpoint sits on the `google` platform rather than `web`. There is no backlink
+#     index behind this API, so SpyFu implements none of the web.backlinks.* capabilities.
+
+
+pricing_url: https://www.spyfu.com/api
+endpoints:
+  # --- Domain stats -----------------------------------------------------------------------------
+  - id: spyfu.google.domain.overview
+    capability: google.domain.overview
+    platform: google
+    scope: any_account
+    method: GET
+    path: /apis/domain_stats_api/v2/getLatestDomainStats
+    name: "Get domain's Google performance overview"
+    summary: "A domain's recent Google performance — keyword counts, clicks and monthly ad budget"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "bare domain, no scheme", example: "spyfu.com"}
+        countryCode: {type: string, required: false, note: "two-letter code from SpyFu's 28-value enum; default US", example: "US"}
+        pastNMonths: {type: integer, required: false, note: "COST DIAL — how many recent months to return, ONE ROW PER MONTH. Ask for 1 unless you need the trend", example: 1}
+      note: |
+        `/apis/domain_stats_api/v2/getAllDomainStats` is the same report over the domain's ENTIRE
+        history — one row per month since SpyFu started tracking it, which for an old domain is
+        150+ billable rows from a call that looks parameterless. That full-history variant is what
+        treg's registry probes; prefer this endpoint with an explicit `pastNMonths` for real work.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "billed per ROW, and one row = one month. Domain Stats CPM is $0.40-$1.00 per 1,000 rows, so a handful of months is a fraction of a cent — but getAllDomainStats on an old domain returns 150+ rows per call."
+    docs_url: https://developer.spyfu.com/reference/domainstatsapi_getlatestdomainstats_get
+
+  # --- Paid search (PPC) ------------------------------------------------------------------------
+  - id: spyfu.google.domain.paid_keywords
+    capability: google.domain.paid_keywords
+    platform: google
+    scope: any_account
+    method: GET
+    path: /apis/keyword_api/v2/ppc/getMostSuccessful
+    name: "List a domain's top paid keywords"
+    summary: "A domain's best-performing Google Ads keywords, with volume, CPC and monthly cost"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "the advertiser — a domain, subdomain, URL or path. Note this family uses `query`, not `domain`", example: "spyfu.com"}
+        pageSize: {type: integer, required: false, note: "COST DIAL — rows to return, 1 to 10,000, DEFAULT 5. Every row is billed at the $2.00 PPC CPM", example: 10}
+        startingRow: {type: integer, required: false, note: "1-based row offset; default 1"}
+        sortBy: {type: string, required: false, note: "default SearchVolume"}
+        sortOrder: {type: string, required: false, note: "Ascending | Descending; default Descending"}
+        countryCode: {type: string, required: false, note: "default US", example: "US"}
+        adultFilter: {type: boolean, required: false, note: "default true — filters adult keywords out"}
+        "searchVolume.min": {type: integer, required: false, note: "range filters use this dotted form; also searchVolume.max, liveSearchVolume.min/max, costPerClick.min/max, monthlyCost.min/max, adCount.min/max, keywordDifficulty.min/max"}
+        includeTerms: {type: string, required: false, note: "only keywords containing these terms"}
+        excludeTerms: {type: string, required: false, note: "drop keywords containing these terms"}
+        isQuestion: {type: boolean, required: false, note: "restrict to question keywords"}
+        isTransactionalIntent: {type: boolean, required: false, note: "restrict to transactional-intent keywords"}
+      note: "rows carry keyword, searchVolume, liveSearchVolume, rankingDifficulty, totalMonthlyClicks, broad/phrase/exactCostPerClick, broad/phrase/exactMonthlyCost, paidCompetitors, distinctCompetitors and serpFeaturesCsv. Note the path segment is `keyword_api`, unlike the other PPC endpoints which live under `serp_api`."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "$2.00 per 1,000 rows (PPC Research CPM), netted against the plan's monthly API credit. pageSize defaults to 5; a pageSize of 10,000 is a $20 call."
+    docs_url: https://developer.spyfu.com/reference/paidserpapi_getmostsuccessful_get
+
+  - id: spyfu.google.domain.ad_history
+    capability: google.domain.ad_history
+    platform: google
+    scope: any_account
+    method: GET
+    path: /apis/cloud_ad_history_api/v2/domain/getDomainAdHistory
+    name: "Get a domain's Google Ads history"
+    summary: "Google Ads a domain has run over time, with ad copy and the keywords it ran against"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "the advertiser's root domain", example: "spyfu.com"}
+        keywordFilter: {type: string, required: false, note: "restrict to ads that ran on keywords matching this"}
+        countryCode: {type: string, required: false, note: "default US", example: "US"}
+        sortBy: {type: string, required: false, note: "Best (default) | Worst | KeywordAsc | KeywordDesc | SearchDateId"}
+        pageSize: {type: integer, required: false, note: "COST DIAL — 1 to 10,000, DEFAULT 5. This is the most expensive family in the file at $3.00 per 1,000 rows", example: 10}
+        startingRow: {type: integer, required: false, note: "1-based; default 1"}
+      note: |
+        The path segment is `cloud_ad_history_api`, NOT `ad_history_api` — the reference slug and
+        the URL disagree. Siblings in the same family: getDomainAdHistoryByDate, getTermAdHistory,
+        getTermAdHistoryWithStats.
+        For the ads a domain is running RIGHT NOW rather than historically, use
+        `/apis/serp_api/v2/ppc/getPaidSerps` (`query` required), which is on the $2.00 PPC CPM.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "$3.00 per 1,000 rows (Ad History CPM) — tied with Ranking History as the priciest family here. pageSize defaults to 5; a pageSize of 10,000 is a $30 call."
+    docs_url: https://developer.spyfu.com/reference/adhistoryapi_getdomainadhistory_get
+
+  # --- Organic search (SEO) ---------------------------------------------------------------------
+  - id: spyfu.google.domain.ranked_keywords
+    capability: google.domain.ranked_keywords
+    platform: google
+    scope: any_account
+    method: GET
+    path: /apis/serp_api/v2/seo/getMostValuableKeywords
+    name: "List a domain's top organic keywords"
+    summary: "Google organic keywords driving the most clicks to a domain, with rank and volume"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "a domain, subdomain, URL or path", example: "spyfu.com"}
+        pageSize: {type: integer, required: false, note: "COST DIAL — rows to return, 1 to 10,000, DEFAULT 5", example: 10}
+        startingRow: {type: integer, required: false, note: "1-based; default 1"}
+        sortBy: {type: string, required: false, note: "default SearchVolume"}
+        sortOrder: {type: string, required: false, note: "Ascending | Descending; default Descending"}
+        countryCode: {type: string, required: false, note: "default US", example: "US"}
+        adultFilter: {type: boolean, required: false, note: "default true"}
+        compareDomain: {type: string, required: false, note: "a second domain — adds yourRank, yourRankChange and yourUrl to every row, turning this into a gap report"}
+        excludeHomepageKeywords: {type: boolean, required: false, note: "drop keywords whose ranking URL is the homepage"}
+        exactMatch: {type: boolean, required: false}
+        includeTerms: {type: string, required: false}
+        excludeTerms: {type: string, required: false}
+        "rank.max": {type: integer, required: false, note: "range filters use this dotted form; also rank.min, searchVolume.min/max, keywordDifficulty.min/max, seoClicks.min/max, rankChange.min/max, costPerClick.min/max"}
+      note: |
+        SpyFu has NO `/apis/keyword_api/v2/seo/getMostSuccessful` — that path does not exist; this
+        is the organic counterpart of the PPC getMostSuccessful endpoint.
+        Rows carry keyword, topRankedUrl, rank, rankChange, searchVolume, keywordDifficulty,
+        seoClicks, seoClicksChange, the CPC triple and paidCompetitors.
+        `/apis/serp_api/v2/seo/getSeoKeywords` is the generic form of the same report, with a
+        REQUIRED `searchType` (MostValuable, GainedClicks, LostRanks, NewlyRanked …).
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "SEO Research CPM is $0.50-$5.00 per 1,000 rows depending on the endpoint (the top-pages endpoints are the $5.00 end); the exact tier for this one is not called out separately in SpyFu's pricing table. pageSize defaults to 5 — set it explicitly."
+    docs_url: https://developer.spyfu.com/reference/organicserpapi_getmostvaluablekeywords_get
+
+  # --- Competitors (the cheapest family at $0.20 CPM) -------------------------------------------
+  - id: spyfu.google.domain.competitors
+    capability: google.domain.competitors
+    platform: google
+    scope: any_account
+    method: GET
+    path: /apis/competitors_api/v2/seo/getTopCompetitors
+    name: "List a domain's organic search competitors"
+    summary: "Domains competing with a target in Google organic, ranked by shared keywords"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "bare domain — this family uses `domain`, not `query`", example: "spyfu.com"}
+        countryCode: {type: string, required: false, note: "default US", example: "US"}
+        sortBy: {type: string, required: false, note: "Domain | CommonTerms | Rank; default Rank"}
+        sortOrder: {type: string, required: false, note: "Ascending | Descending; default Descending"}
+        pageSize: {type: integer, required: false, note: "COST DIAL — 1 to 550 on this family (not 10,000), DEFAULT 5", example: 10}
+        startingRow: {type: integer, required: false, note: "1 to 550"}
+      note: "note the tighter pageSize ceiling of 550 on the competitors family. `CommonTerms` is the keyword-overlap count that makes the ranking meaningful."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "$0.20 per 1,000 rows — the cheapest family in the file. Even a full 550-row pull costs about $0.11."
+    docs_url: https://developer.spyfu.com/reference/competitorsapi_gettopseocompetitors_get
+
+  - id: spyfu.google.domain.ppc_competitors
+    capability: google.domain.competitors
+    platform: google
+    scope: any_account
+    method: GET
+    path: /apis/competitors_api/v2/ppc/getTopCompetitors
+    name: "List a domain's paid search competitors"
+    summary: "Find the domains bidding against a target on the same Google Ads keywords"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "bare domain", example: "spyfu.com"}
+        countryCode: {type: string, required: false, note: "default US", example: "US"}
+        sortBy: {type: string, required: false, note: "Domain | CommonTerms | Rank; default Rank"}
+        sortOrder: {type: string, required: false, note: "Ascending | Descending; default Descending"}
+        pageSize: {type: integer, required: false, note: "COST DIAL — 1 to 550, DEFAULT 5", example: 10}
+        startingRow: {type: integer, required: false, note: "1 to 550"}
+      note: "identical parameter shape to spyfu.google.domain.competitors — the only difference is `/ppc/` instead of `/seo/` in the path, which switches the overlap from organic keywords to paid ones. SpyFu's core competence is the paid side, so this is usually the more interesting of the two."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "$0.20 per 1,000 rows (Competitors CPM), same as the SEO variant."
+    docs_url: https://developer.spyfu.com/reference/competitorsapi_gettopppccompetitors_get

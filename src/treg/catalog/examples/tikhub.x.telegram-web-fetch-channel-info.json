@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "request_id": "5a08a298-50ca-4548-90f1-18da995aba03",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:49",
+  "time_stamp": 1785220189,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Telegram-Web-API/fetch_channel_info_api_v1_telegram_web_fetch_channel_info_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/5a08a298-50ca-4548-90f1-18da995aba03?sign=0e14b57fb6f85f7ae7b5dca405b4599edb1564d70a9cc699216e1f6031b5bc09",
+  "router": "/api/v1/telegram/web/fetch_channel_info",
+  "params": {
+    "channel": "durov"
+  },
+  "data": {
+    "username": "durov",
+    "title": "Pavel Durov",
+    "verified": true,
+    "description": "Founder of Telegram.",
+    "photo": "https://cdn4.telesco.pe/file/YptjlJowsP4tU2weIcsU8V_kAK4m4lNnlFwOvlqw8w7oVv2VXp0KO04sVOWkKBjGg1yi2WVSIEWOVvfcv0brjT5Fj9Sgm5g14RnGolWHuu7sxOZmXhubBANwFhEI97bbgchSO9lhnBFXKMdNU-g3FulDcA2FFQBeTJRMRMheCQI… [375 chars]",
+    "subscribers": "11.4M",
+    "counters": {
+      "subscribers": "11.4M",
+      "photos": "99",
+      "videos": "45",
+      "links": "193"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "bdbc89b8-efa0-48bc-93bc-24cd7bfb17b9",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:18",
+  "time_stamp": 1785220398,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/get_topic_inf… [106 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/bdbc89b8-efa0-48… [150 chars]",
+  "router": "/api/v1/xiaohongshu/app_v2/get_topic_info",
+  "params": {
+    "page_id": "5c1cc866febed9000184b7c1",
+    "source": "normal"
+  },
+  "data": {
+    "code": 0,
+    "data": {
+      "custom_tabs": "… [0 item(s) truncated]",
+      "page_info": "… {9 field(s) truncated}",
+      "share_info": "… {6 field(s) truncated}",
+      "page_id": "5c1cc866febed9000184b7c1",
+      "page_type": "topic",
+      "business_type": 0,
+      "users": "… [3 item(s) truncated]",
+      "middle_lane_list": "… [0 item(s) truncated]",
+      "topic_id": "5497b494b4c4d654c0d78c99",
+      "topic_long_id": "2233796500294765721",
+      "post_text": "Post now",
+      "moduleId": "0",
+      "tabs": "… [2 item(s) truncated]",
+      "followed": false,
+      "post_deeplink": "xhsdiscover://post_new_note?page=%7B%22page_type%22%3A%22alb… [630 chars]",
+      "…": "4 more field(s) truncated"
+    },
+    "success": true,
+    "msg": "成功",
+    "debug_id": "4ffb45b8",
+    "debug_info": "gAAAAABqaE0uC1zSp6mH60GdkhLiD_dkybLaSDmk6BmosbonKnLNf3nwfPV_… [440 chars]"
+  }
+}

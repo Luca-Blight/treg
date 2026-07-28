@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "items": [],
+    "pagination": {
+      "has_more": false,
+      "limit": 20,
+      "page": 1,
+      "total_count": 0
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:12:50.882461493",
+  "requestId": "591220f4b57b449c907be461756411e9"
+}

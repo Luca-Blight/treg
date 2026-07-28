@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "da1363bc-04ae-485d-b1d9-2367923d38b2",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:50",
+  "time_stamp": 1785220130,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V1-API/fetch_cities_api_v1_instagram_v1_fetch_cities_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/da1363bc-04ae-485d-b1d9-2367923d38b2?sign=b727c7a4b7a6b5bee74ec717c2e8415b2e71e39e11f54147a0dd770e1fbb2616",
+  "router": "/api/v1/instagram/v1/fetch_cities",
+  "params": {
+    "country_code": "US"
+  },
+  "data": {
+    "country_info": {
+      "id": "US",
+      "name": "United States",
+      "slug": "united-states"
+    },
+    "city_list": [
+      {
+        "id": "c2753900",
+        "name": "Downtown-PennQuarter-Chinatown",
+        "slug": "downtown-pennquarter-chinatown-united-states"
+      },
+      "… 95 more item(s) truncated"
+    ],
+    "next_page": 2,
+    "status": "ok",
+    "attempts": "19"
+  }
+}

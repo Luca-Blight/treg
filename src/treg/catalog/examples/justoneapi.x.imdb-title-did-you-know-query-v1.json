@@ -1,0 +1,63 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "__typename": "Title",
+      "titleText": {
+        "text": "The Shawshank Redemption",
+        "isOriginalTitle": true
+      },
+      "originalTitleText": {
+        "text": "The Shawshank Redemption",
+        "isOriginalTitle": true
+      },
+      "trivia": {
+        "edges": [
+          {
+            "node": "… 8 field(s) truncated"
+          }
+        ]
+      },
+      "quotes": {
+        "edges": [
+          {
+            "node": "… 5 field(s) truncated"
+          }
+        ]
+      },
+      "goofs": {
+        "edges": [
+          {
+            "node": "… 6 field(s) truncated"
+          }
+        ]
+      },
+      "crazyCredits": {
+        "edges": [
+          {
+            "node": "… 4 field(s) truncated"
+          }
+        ]
+      },
+      "soundtrack": {
+        "edges": [
+          {
+            "node": "… 4 field(s) truncated"
+          }
+        ]
+      },
+      "triviaCount": {
+        "total": 231
+      },
+      "quotesCount": {
+        "total": 119
+      },
+      "goofsCount": {
+        "total": 112
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:00.356451228",
+  "requestId": "9dfd550c67724f1993c281693589b390"
+}

@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "ee472b9d-8a93-434e-a539-d80350760c5a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:05",
+  "time_stamp": 1785220265,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_shorts_search… [104 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ee472b9d-8a93-43… [150 chars]",
+  "router": "/api/v1/youtube/web_v2/get_shorts_search",
+  "params": {
+    "search_query": "Python编程",
+    "language_code": "en-US",
+    "country_code": "US",
+    "time_zone": "America/Los_Angeles",
+    "filter_mixed_content": "true"
+  },
+  "data": {
+    "responseContext": {
+      "visitorData": "CgtFRHp0VWFPenFnYyipmaHTBjIKCgJVUxIEGgAgIg%3D%3D",
+      "serviceTrackingParams": "… [4 item(s) truncated]",
+      "mainAppWebResponseContext": "… {2 field(s) truncated}",
+      "responseId": "IhMIpqL-3d_0lQMVG5aKBx3igQpS",
+      "webResponseContextExtensionData": "… {2 field(s) truncated}"
+    },
+    "estimatedResults": "11699047",
+    "contents": {
+      "twoColumnSearchResultsRenderer": "… {1 field(s) truncated}"
+    },
+    "trackingParams": "CAAQvGkiEwimov7d3_SVAxUblooHHeKBClLKAQTma7v0",
+    "header": {
+      "searchHeaderRenderer": "… {3 field(s) truncated}"
+    },
+    "topbar": {
+      "desktopTopbarRenderer": "… {9 field(s) truncated}"
+    },
+    "isShortsContext": true,
+    "targetId": "search-page"
+  }
+}

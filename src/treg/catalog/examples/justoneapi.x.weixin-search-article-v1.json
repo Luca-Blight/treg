@@ -1,0 +1,57 @@
+{
+  "code": 0,
+  "data": {
+    "data": [
+      {
+        "boxID": "0x2-0-14833083227645490474",
+        "boxPos": 1,
+        "boxPosMerge": 1,
+        "count": 1,
+        "items": [
+          "… 14 field(s) truncated"
+        ],
+        "real_type": 2,
+        "resultType": 0,
+        "subType": 0,
+        "totalCount": 282,
+        "type": 2,
+        "useNativeRender": false
+      },
+      "… 14 more item(s) truncated"
+    ],
+    "category": [
+      {
+        "selected": 1,
+        "type": 0,
+        "word": "全部"
+      },
+      "… 14 more item(s) truncated"
+    ],
+    "continueFlag": 1,
+    "cookies": "<omitted: expires>",
+    "direction": 2,
+    "enableQuestionClosely": false,
+    "experiment": [
+      {
+        "key": "mmsearch_live_double_auto_play_exp",
+        "value": "1"
+      },
+      "… 7 more item(s) truncated"
+    ],
+    "isAutoPlayVideo": 1,
+    "isDivide": 1,
+    "isHomePage": 1,
+    "lang": "zh_CN",
+    "offset": 18,
+    "pageNumber": 2,
+    "query": "人工智能",
+    "resultType": 0,
+    "ret": 0,
+    "searchID": "1785219099584132038",
+    "sidedata": null,
+    "timeStamp": 1785219100
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:11:40.467903699",
+  "requestId": "94bc267bcbe24d3f818a9e4f3cdaf998"
+}

@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "request_id": "5551d5aa-a96a-456d-8d8e-1638316aa19c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:03",
+  "time_stamp": 1785220143,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-App-API/fetch_music_ranking_api_v1_kuaishou_app_fetch_music_ranking_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/5551d5aa-a96a-456d-8d8e-1638316aa19c?sign=6cc055435f19f0f1dc96cc5b50d4f1a25ab401c837407fafeba1129e73ec05a4",
+  "router": "/api/v1/kuaishou/app/fetch_music_ranking",
+  "params": {
+    "count": "5"
+  },
+  "data": {
+    "result": 1,
+    "musics": [
+      "… {26 field(s) truncated}",
+      "… 24 more item(s) truncated"
+    ],
+    "listTitleMessage": "榜单更新于2026年7月25日",
+    "host-name": "public-bjx-c26-kce-node1220.idchb1az1.hb1.kwaidc.com",
+    "pcursor": "25",
+    "debug_id": "fc553e52",
+    "debug_info": "gAAAAABqaEwvE02KKUm3I8whbOET9u-zezIQ1w71Exwe64wqksoeNiPce2vGNHYgnIsLMrkuzP4vxr_blNOdIUNZ3bEMNml6JhY-qpDEXjP0uP5D5GBASNhGkNhzkQgHLd0Q-Jf6uhOl5ihkVe3Vb7u7KSdgHNHaAb_DxGzq4asEncCkOI5BnYvv64_IV6NvEndyqt3D… [292 chars]"
+  }
+}

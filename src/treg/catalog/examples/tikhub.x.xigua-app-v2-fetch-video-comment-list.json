@@ -1,0 +1,50 @@
+{
+  "code": 200,
+  "request_id": "d3d194ac-6c7d-4083-b983-5a3f0c06a566",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:59",
+  "time_stamp": 1785220259,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xigua-App-V2-API/fetch_video_comment… [114 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d3d194ac-6c7d-40… [150 chars]",
+  "router": "/api/v1/xigua/app/v2/fetch_video_comment_list",
+  "params": {
+    "item_id": "7354954305222377999",
+    "count": "5"
+  },
+  "data": {
+    "message": "success",
+    "err_no": 0,
+    "data": [
+      "… {8 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "media_comment": null,
+    "media_comment_total_num": 0,
+    "media_comment_has_more": false,
+    "media_comment_enable": false,
+    "total_number": 1026,
+    "has_more": true,
+    "offset": 5,
+    "fold_comment_count": 0,
+    "detail_no_comment": 0,
+    "ban_comment": false,
+    "ban_comment_reason": "写评论",
+    "ban_comment_toast": "",
+    "ban_face": false,
+    "ban_audio_comment": false,
+    "ban_pic_comment": 0,
+    "ban_gif_suggest": 0,
+    "at_user_guide_info": null,
+    "comment_share_enabled": true,
+    "go_topic_detail": 1,
+    "show_add_forum": 1,
+    "stick_comments": [],
+    "stick_total_number": 0,
+    "…": "21 more field(s) truncated"
+  }
+}

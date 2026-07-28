@@ -1,0 +1,62 @@
+{
+  "code": 0,
+  "data": {
+    "business_data": [
+      "… 5 field(s) truncated",
+      "… 18 more item(s) truncated"
+    ],
+    "render_info": [
+      "… 4 field(s) truncated"
+    ],
+    "struct": {
+      "id": "00",
+      "layout_type": 1,
+      "children": "… 19 item(s) truncated",
+      "fp": ""
+    },
+    "business_config": {
+      "keyword": "美食",
+      "has_more": 1,
+      "is_filter_search": 0,
+      "search_nil_info": null,
+      "next_page": "<omitted: expires>",
+      "card_count": 19,
+      "extra_fresh_struct": null,
+      "ad_info": null,
+      "filter_bar": null,
+      "extra": "… 3 field(s) truncated",
+      "feedback": "… 3 field(s) truncated",
+      "pre_loadmore_config": null,
+      "poi_search_info": ""
+    },
+    "global_config": {
+      "hidden_filter": false
+    },
+    "status_code": 0,
+    "log_pb": {
+      "impr_id": "20260728135950B16EAC5F61AD135C… [34 chars total]"
+    },
+    "extra": {
+      "now": 1785218390000,
+      "logid": "20260728135950B16EAC5F61AD135C… [34 chars total]",
+      "fatal_item_ids": "… 0 item(s) truncated",
+      "search_request_id": "",
+      "device_score": 0,
+      "scenes": null
+    },
+    "log": {
+      "search_id": "20260728135950B16EAC5F61AD135C… [34 chars total]",
+      "impr_id": "20260728135950B16EAC5F61AD135C… [34 chars total]",
+      "search_keyword": "美食"
+    },
+    "time_cost": {
+      "stream_inner": 540
+    },
+    "path": "/aweme/v2/search/discover/",
+    "mock_recall_path": "/aweme/v2/search/discover/",
+    "success": true
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:51.417332114",
+  "requestId": "7208726a9c0e452fa1e894fbf5bc80… [32 chars total]"
+}

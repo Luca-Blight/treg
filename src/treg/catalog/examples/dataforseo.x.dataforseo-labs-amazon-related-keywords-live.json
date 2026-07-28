@@ -1,0 +1,54 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0366 sec.",
+  "cost": 0.0126,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281347-2171-0387-0000-011ed7ef0882",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0291 sec.",
+      "cost": 0.0126,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "related_keywords",
+        "se_type": "amazon",
+        "keyword": "computer mouse",
+        "language_name": "English",
+        "location_code": 2840,
+        "limit": 5,
+        "include_seed_keyword": true
+      },
+      "result": [
+        {
+          "se_type": "amazon",
+          "seed_keyword": "computer mouse",
+          "seed_keyword_data": {
+            "se_type": "amazon",
+            "keyword": "computer mouse",
+            "location_code": 2840,
+            "language_code": "en",
+            "keyword_info": "… {3 field(s) truncated}"
+          },
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 7,
+          "items_count": 5,
+          "items": [
+            "… {4 field(s) truncated}",
+            "… 4 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "10.2984 sec.",
+  "cost": 0.024144,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0468-0000-9b7c26d4511a",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "10.2876 sec.",
+      "cost": 0.024144,
+      "result_count": 4,
+      "path": [
+        "v3",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "content_analysis",
+        "function": "category_trends",
+        "category_code": 10994,
+        "search_mode": "as_is",
+        "date_from": "2026-04-24",
+        "date_group": "month"
+      },
+      "result": [
+        {
+          "type": "content_analysis_trends",
+          "date": "2026-04-01",
+          "total_count": 297872,
+          "rank": 456,
+          "top_domains": "… [10 item(s) truncated]",
+          "sentiment_connotations": "… {6 field(s) truncated}",
+          "connotation_types": "… {3 field(s) truncated}",
+          "text_categories": "… [10 item(s) truncated]",
+          "page_categories": "… [10 item(s) truncated]",
+          "page_types": "… {5 field(s) truncated}",
+          "countries": "… {10 field(s) truncated}",
+          "languages": "… {10 field(s) truncated}"
+        },
+        "… 3 more item(s) truncated"
+      ]
+    }
+  ]
+}

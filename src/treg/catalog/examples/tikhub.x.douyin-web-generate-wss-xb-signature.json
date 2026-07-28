@@ -1,0 +1,23 @@
+{
+  "code": 200,
+  "request_id": "d4013f8d-325b-4cf4-ac18-6e04123b4792",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:39",
+  "time_stamp": 1785220119,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/generate_wss_xb_signature_api_v1_douyin_web_generate_wss_xb_signature_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d4013f8d-325b-4cf4-ac18-6e04123b4792?sign=9ad7fe674299c205f6e3f23990063da5a48e1a143136a5331e8410dc74fd5e41",
+  "router": "/api/v1/douyin/web/generate_wss_xb_signature",
+  "params": {
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+    "room_id": "7382517534467115826",
+    "user_unique_id": "7382524529011246630"
+  },
+  "data": {
+    "x_bogus": "6MBrlL8cZ4Dn++iy"
+  }
+}

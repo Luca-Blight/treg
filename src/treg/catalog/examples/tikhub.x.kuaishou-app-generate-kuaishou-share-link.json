@@ -1,0 +1,40 @@
+{
+  "code": 200,
+  "request_id": "c93bbf40-a139-4ad2-9844-84c3acf60260",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:07",
+  "time_stamp": 1785220147,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-App-API/generate_kuaishou_s… [122 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c93bbf40-a139-4a… [150 chars]",
+  "router": "/api/v1/kuaishou/app/generate_kuaishou_share_link",
+  "params": {
+    "shareObjectId": "3xg5wjqdtekbb3u"
+  },
+  "data": {
+    "result": 1,
+    "cache-scope": "nocache",
+    "max-age": 0,
+    "share": {
+      "shareMethod": "TOKEN",
+      "subBiz": "BROWSE_SLIDE_PHOTO",
+      "kpn": "KUAISHOU",
+      "appName": "as",
+      "appIconUrl": "https://static.yximgs.com/udata/pkg/ks-share-sdk/cardlogonew… [64 chars]",
+      "shareMode": "APP",
+      "shareObject": "… {10 field(s) truncated}",
+      "shareMethodType": null,
+      "extParams": "… {11 field(s) truncated}",
+      "shareChannel": "COPY_LINK"
+    },
+    "host-name": "public-bjmt-c34-kce-node156.idchb1az4.hb1.kwaidc.com",
+    "error_msg": null,
+    "hostName": "public-bjmt-c34-kce-node156.idchb1az4.hb1.kwaidc.com",
+    "debug_id": "e4226b40",
+    "debug_info": "gAAAAABqaEwz6884eqq2TPHuCN9ESU4HxJAYUxoZWN3vvleUvQ5E7l3_8pxk… [292 chars]"
+  }
+}

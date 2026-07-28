@@ -1,0 +1,80 @@
+{
+  "data": {
+    "id": "706205e2-a15b-5a86-b73c-81ae8b60969d",
+    "name": {
+      "fullName": null,
+      "givenName": null,
+      "familyName": null
+    },
+    "email": "person@example.com",
+    "location": null,
+    "timeZone": null,
+    "utcOffset": null,
+    "geo": {
+      "city": null,
+      "state": null,
+      "stateCode": null,
+      "country": null,
+      "countryCode": null,
+      "lat": null,
+      "lng": null
+    },
+    "bio": null,
+    "site": null,
+    "avatar": null,
+    "employment": {
+      "domain": "close.io",
+      "name": "Close",
+      "title": null,
+      "role": null,
+      "subRole": null,
+      "seniority": null
+    },
+    "facebook": {
+      "handle": null
+    },
+    "github": {
+      "handle": null,
+      "id": null,
+      "avatar": null,
+      "company": null,
+      "blog": null,
+      "followers": null,
+      "following": null
+    },
+    "twitter": {
+      "handle": null,
+      "id": null,
+      "bio": null,
+      "followers": null,
+      "following": null,
+      "statuses": null,
+      "favorites": null,
+      "location": null,
+      "site": null,
+      "avatar": null
+    },
+    "linkedin": {
+      "handle": null
+    },
+    "googleplus": {
+      "handle": null
+    },
+    "gravatar": {
+      "handle": null,
+      "urls": [],
+      "avatar": null,
+      "avatars": []
+    },
+    "fuzzy": false,
+    "emailProvider": "google.com",
+    "indexedAt": "2026-07-24",
+    "phone": null,
+    "activeAt": "2026-07-28",
+    "inactiveAt": null
+  },
+  "meta": {
+    "email": "person@example.com"
+  },
+  "_scrubbed": true
+}

@@ -1,0 +1,37 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "id": "tt0111161",
+      "plot": {
+        "id": "po1124508",
+        "plotText": {
+          "plainText": "After a banker is sentenced to life in Shawshank Prison, he forms an unlikely friendship with a seasoned inmate and clings to hope amid cruelty and corruption."
+        }
+      },
+      "type": {
+        "__typename": "TitleType",
+        "id": "movie",
+        "text": "Movie",
+        "categories": [
+          {
+            "id": "movie",
+            "text": "Movie",
+            "value": "movie"
+          }
+        ],
+        "canHaveEpisodes": false,
+        "isEpisode": false,
+        "isSeries": false,
+        "displayableProperty": {
+          "value": {
+            "plainText": ""
+          }
+        }
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:02.129809172",
+  "requestId": "d1ff4e82482c48049c8ce14d29c4a32f"
+}

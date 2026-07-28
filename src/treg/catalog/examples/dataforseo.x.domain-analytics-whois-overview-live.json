@@ -1,0 +1,47 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "2.4561 sec.",
+  "cost": 0.1224,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280923-2171-0481-0000-74f858507ac8",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.4309 sec.",
+      "cost": 0.1224,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "domain_analytics",
+        "function": "overview",
+        "se": "whois",
+        "limit": 2,
+        "filters": [
+          [
+            "epp_status_codes",
+            "… 2 more item(s) truncated"
+          ]
+        ]
+      },
+      "result": [
+        {
+          "total_count": 133626347,
+          "items_count": 2,
+          "offset": 0,
+          "offset_token": "<omitted: expires>",
+          "items": [
+            "… 12 field(s) truncated",
+            "… 1 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

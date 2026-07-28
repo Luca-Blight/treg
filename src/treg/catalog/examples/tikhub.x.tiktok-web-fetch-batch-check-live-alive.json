@@ -1,0 +1,37 @@
+{
+  "code": 200,
+  "request_id": "19e898c9-3879-4471-9521-fb4fc0ad82bf",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-28 00:30:26",
+  "time_stamp": 1785223826,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/fetch_batch_check_live_alive_api_v1_tiktok_web_fetch_batch_check_live_alive_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/19e898c9-3879-4471-9521-fb4fc0ad82bf?sign=39e5a34cdbed8b3acb06a2e869b1922fb262e17f82abab5f3cd22a9bcf0e0f7e",
+  "router": "/api/v1/tiktok/web/fetch_batch_check_live_alive",
+  "params": {
+    "room_ids": "7530611486784277278,7530633767468288782,7530636465034775310,7530604930088848142"
+  },
+  "data": {
+    "total_queried": 4,
+    "results": {
+      "data": [
+        {
+          "alive": false,
+          "room_id": 7530611486784277278,
+          "room_id_str": "7530611486784277278"
+        },
+        "… 3 more item(s) truncated"
+      ],
+      "extra": {
+        "now": 1785223826455
+      },
+      "status_code": 0,
+      "tt_chain_token": "<omitted: expires>",
+      "cookie": "<omitted: expires>"
+    }
+  }
+}

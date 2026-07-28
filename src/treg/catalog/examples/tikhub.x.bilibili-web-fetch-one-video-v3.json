@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "3875a64e-e58e-45dc-96d3-cc1b083e8d4a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:46",
+  "time_stamp": 1785220066,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_one_video_v3_… [102 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/3875a64e-e58e-45… [150 chars]",
+  "router": "/api/v1/bilibili/web/fetch_one_video_v3",
+  "params": {
+    "url": "https://www.bilibili.com/video/BV1S5uKzzE4r"
+  },
+  "data": {
+    "bvid": "BV1S5uKzzE4r",
+    "aid": 114830681840711,
+    "videos": 1,
+    "tid": 182,
+    "tid_v2": 2001,
+    "tname": "",
+    "tname_v2": "",
+    "copyright": 1,
+    "pic": "http://i1.hdslb.com/bfs/archive/37422d549a60ff1d5d10c970234b… [76 chars]",
+    "title": "【万字拆解】法定杀人日，越杀越伟大！《人类清除计划》神预言？一部电影竟“拍”出了今天的美国乱象！",
+    "pubdate": 1752220800,
+    "ctime": 1752177842,
+    "desc": "如果杀人不犯法，你是拿起武器加入狂欢，还是躲在家裡瑟瑟发抖？\n就有那么一个国家，他有个法定杀人日，越杀越美好，越杀越伟大… [182 chars]",
+    "desc_v2": [
+      "… {3 field(s) truncated}"
+    ],
+    "state": 0,
+    "…": "32 more field(s) truncated"
+  }
+}

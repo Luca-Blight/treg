@@ -1,0 +1,55 @@
+{
+  "code": 0,
+  "data": {
+    "itemId": 522900342691,
+    "title": "[官方直营]4G全网通纽曼M560正品老年手机超长待机老人机大屏幕大字大声音男女士电信版学生专用智能按键手机",
+    "itemPic": "https://gw.alicdn.com/imgextra/O1CN01zGDash1rj5FaFwDc1_!!4611686018427384386-0-item_pic.jpg",
+    "images": [
+      "https://gw.alicdn.com/imgextra/O1CN01zGDash1rj5FaFwDc1_!!4611686018427384386-0-item_pic.jpg",
+      "… 4 more item(s) truncated"
+    ],
+    "itemPrice": 10800,
+    "DiscountPrice": 8600,
+    "sku2info": [
+      {
+        "skuId": "5984570164933",
+        "skuName": "红色,512MB,4G+全网通,官方标配",
+        "skuPicUrl": "https://img.alicdn.com/bao/uploaded/i3/6000000005176/O1CN01DmDRyX1o6embSjand_!!6000000005176-2-remus.png",
+        "finalSkuPrice": 8600,
+        "thirdOriginalDiscountPrice": 8600,
+        "valueList": [
+          "28326",
+          "… 3 more item(s) truncated"
+        ],
+        "itemPrice": 10800,
+        "rate": null,
+        "finalPrice": 8600,
+        "multipleTag": null,
+        "priceDesc": null,
+        "stock": "10"
+      },
+      "… 29 more item(s) truncated"
+    ],
+    "skuBase": [
+      {
+        "propertyId": "1627207",
+        "propertyName": "机身颜色",
+        "itemPropertyValues": [
+          {
+            "valueId": "28326",
+            "value": "红色",
+            "pic": "https://img.alicdn.com/bao/uploaded/i3/6000000005176/O1CN01DmDRyX1o6embSjand_!!6000000005176-2-remus.png",
+            "badge": null
+          },
+          "… 4 more item(s) truncated"
+        ]
+      },
+      "… 3 more item(s) truncated"
+    ],
+    "shopName": "纽曼宏悦智联专卖店",
+    "shopType": "B"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:11:23.677980559",
+  "requestId": "4d13e4df553a49e190e619d41ae4e023"
+}

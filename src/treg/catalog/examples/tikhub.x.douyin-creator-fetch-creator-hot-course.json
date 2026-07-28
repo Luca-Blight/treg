@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "f94b6165-b7a7-4c56-9a3c-69d25dd4914e",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:11",
+  "time_stamp": 1785220091,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Creator-API/fetch_creator_hot_course_api_v1_douyin_creator_fetch_creator_hot_course_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f94b6165-b7a7-4c56-9a3c-69d25dd4914e?sign=206a165423365b03e7a02b2647f4cf9145a85e743833746152647aa77a6f7af1",
+  "router": "/api/v1/douyin/creator/fetch_creator_hot_course",
+  "params": {
+    "order": "1",
+    "limit": "5",
+    "offset": "0"
+  },
+  "data": {
+    "category_name": "",
+    "course_list": [
+      {
+        "collected_count": 11775,
+        "hot_order": 1,
+        "id": "7529857225054063913",
+        "is_collected": false,
+        "item": "… {46 field(s) truncated}",
+        "name": "抖音精选优质内容指南",
+        "offset": 0,
+        "rank": 1
+      },
+      "… 4 more item(s) truncated"
+    ],
+    "has_more": 1,
+    "offset": 5,
+    "selected_topic_categories": null,
+    "status_code": 0,
+    "total": 33
+  }
+}

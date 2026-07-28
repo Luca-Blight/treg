@@ -1,0 +1,29 @@
+{
+  "code": 200,
+  "request_id": "f8883c1f-12ef-4458-a24b-ca32158911b8",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:03",
+  "time_stamp": 1785220263,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_channel_shorts_api_v1_youtube_web_v2_get_channel_shorts_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f8883c1f-12ef-4458-a24b-ca32158911b8?sign=83377aa3571894c1488e2660d091a14e778eb01a0d767002d41b86dc34cf7c27",
+  "router": "/api/v1/youtube/web_v2/get_channel_shorts",
+  "params": {
+    "channel_id": "UCuAXFkgsw1L7xaCfnd5JJOw",
+    "channel_url": "https://www.youtube.com/channel/UCuAXFkgsw1L7xaCfnd5JJOw"
+  },
+  "data": {
+    "channel_id": "UCuAXFkgsw1L7xaCfnd5JJOw",
+    "shorts": [
+      "… {6 field(s) truncated}",
+      "… 47 more item(s) truncated"
+    ],
+    "continuation_token": "<omitted: expires>",
+    "has_more": true,
+    "total_count": 48
+  }
+}

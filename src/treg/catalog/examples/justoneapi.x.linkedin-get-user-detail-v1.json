@@ -1,0 +1,72 @@
+{
+  "code": 0,
+  "data": {
+    "id": "251749025",
+    "urn": "ACoAAA8BYqEBCGLg_vT_ca6mMEqkpp9nVffJ3hc",
+    "public_identifier": "williamhgates",
+    "first_name": "Bill",
+    "last_name": "Gates",
+    "full_name": "Bill Gates",
+    "headline": "Chair, Gates Foundation and Founder, Breakthrough Energy",
+    "is_premium": true,
+    "is_open_to_work": false,
+    "is_hiring": false,
+    "is_memorialized": false,
+    "is_influencer": true,
+    "is_top_voice": true,
+    "is_creator": true,
+    "birth": {
+      "day": null,
+      "month": null,
+      "year": null
+    },
+    "pronoun": null,
+    "created": 1367521780840,
+    "created_date": "2013-05-02T19:09:40.840Z",
+    "location": {
+      "country": "United States",
+      "country_code": "US",
+      "city": "Seattle, Washington, United States",
+      "postal_code": null
+    },
+    "avatar": [
+      {
+        "width": 200,
+        "height": 200,
+        "url": "https://media.licdn.com/dms/image/v2/D5603AQF-RYZP55jmXA/profile-displayphoto-shrink_200_200/B56ZRi8g.aGsAY-/0/1736826818802?e=1786579200&v=beta&t=t6p9X86jVf9hQvNuDggINSpVHL-IOFDwLgg8qrc-fFc",
+        "expires_at": 1786579200000
+      },
+      "… 3 more item(s) truncated"
+    ],
+    "cover": [
+      {
+        "width": 1400,
+        "height": 350,
+        "url": "https://media.licdn.com/dms/image/v2/D5616AQEjhPbTCeblYg/profile-displaybackgroundimage-shrink_350_1400/B56ZcytR5SGsAg-/0/1748902420393?e=1786579200&v=beta&t=K0sw7TKubTdgDmyU5Fw9T_JtbGz-a6qSP0Zk6UmM-D… [201 chars total]",
+        "expires_at": 1786579200000
+      },
+      "… 1 more item(s) truncated"
+    ],
+    "associated_hashtag": [
+      "#books",
+      "… 4 more item(s) truncated"
+    ],
+    "website": {
+      "title": "https://gatesnot.es/tgn",
+      "url": "https://gatesnot.es/tgn"
+    },
+    "supported_locales": [
+      {
+        "country": "US",
+        "language": "en"
+      }
+    ],
+    "primary_locale": {
+      "country": "US",
+      "language": "en"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:17.736935615",
+  "requestId": "f8bf3932c99743329763a72a5161a5f6"
+}

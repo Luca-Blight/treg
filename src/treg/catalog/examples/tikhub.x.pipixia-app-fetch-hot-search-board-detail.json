@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "request_id": "0d2548a0-3312-48df-b575-321257bde289",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:39",
+  "time_stamp": 1785220179,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/PiPiXia-App-API/fetch_hot_search_board_detail_api_v1_pipixia_app_fetch_hot_search_board_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/0d2548a0-3312-48df-b575-321257bde289?sign=29e824a0d4793231bed54c1a5290730ccc71e50d1eaf76358d120d84d80307f6",
+  "router": "/api/v1/pipixia/app/fetch_hot_search_board_detail",
+  "params": {
+    "block_type": "12"
+  },
+  "data": {
+    "status_code": 0,
+    "message": "success",
+    "prompt": "",
+    "time": 1785220178420,
+    "data": {
+      "board": "… {15 field(s) truncated}"
+    }
+  }
+}

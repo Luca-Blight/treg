@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "cd77b746-5786-44bc-96e9-e761cb9e268c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:50",
+  "time_stamp": 1785220070,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/fetch_hot_search_list_api_v1_douyin_app_v3_fetch_hot_search_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/cd77b746-5786-44bc-96e9-e761cb9e268c?sign=77703e58b490e5e3d0f98aa27a7583b460… [150 chars]",
+  "router": "/api/v1/douyin/app/v3/fetch_hot_search_list",
+  "params": {},
+  "data": {
+    "banner_dark": {
+      "uri": "33a57000197f34889bc27",
+      "url_list": "… [3 item(s) truncated]"
+    },
+    "banner_light": {
+      "uri": "33a580000cefdf44e9f76",
+      "url_list": "… [3 item(s) truncated]"
+    },
+    "data": {
+      "active_time": "2026-07-28 14:27:28",
+      "banner_display": "… {0 field(s) truncated}",
+      "display_style": 0,
+      "share_info": "… {3 field(s) truncated}",
+      "trending_desc": "实时上升热点",
+      "trending_list": "… [5 item(s) truncated]",
+      "word_list": "… [51 item(s) truncated]"
+    },
+    "extra": {
+      "logid": "202607281427492BE303F3CD4C5D7ED64B",
+      "now": 1785220069000,
+      "time_cost": "… {1 field(s) truncated}"
+    },
+    "log_pb": {
+      "impr_id": "202607281427492BE303F3CD4C5D7ED64B"
+    },
+    "status_code": 0
+  }
+}

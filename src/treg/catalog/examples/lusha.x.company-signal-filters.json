@@ -1,0 +1,13 @@
+{
+  "availableFilters": [
+    {
+      "filterType": "newsEventTypes",
+      "requiresQuery": false
+    },
+    {
+      "filterType": "hiringByDepartments",
+      "requiresQuery": false
+    },
+    "… 2 more item(s) truncated"
+  ]
+}

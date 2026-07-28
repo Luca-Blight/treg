@@ -1,0 +1,63 @@
+{
+  "code": 0,
+  "data": {
+    "data": [
+      {
+        "subBoxes": [
+          {
+            "boxID": "0x80000000000-1-7630966455650614298",
+            "boxMergeTag": 0,
+            "boxMergeType": 107,
+            "boxMergeValue": 1,
+            "boxPos": 1,
+            "boxPosMerge": 1,
+            "count": 1,
+            "items": "… 1 item(s) truncated",
+            "real_type": 18874368,
+            "resultType": 1,
+            "subType": 1,
+            "totalCount": 162,
+            "type": 84,
+            "useNativeRender": false
+          },
+          "… 11 more item(s) truncated"
+        ],
+        "type": 107
+      }
+    ],
+    "category": [
+      {
+        "selected": 1,
+        "type": 0,
+        "word": "全部"
+      },
+      "… 15 more item(s) truncated"
+    ],
+    "continueFlag": 1,
+    "cookies": "<omitted: expires>",
+    "direction": 2,
+    "enableQuestionClosely": false,
+    "experiment": [
+      {
+        "key": "mmsearch_live_double_auto_play_exp",
+        "value": "1"
+      },
+      "… 6 more item(s) truncated"
+    ],
+    "isAutoPlayVideo": 1,
+    "isDivide": 1,
+    "isHomePage": 1,
+    "lang": "zh_CN",
+    "offset": 12,
+    "pageNumber": 2,
+    "query": "美食",
+    "resultType": 0,
+    "ret": 0,
+    "searchID": "1785219093569100322",
+    "sidedata": null,
+    "timeStamp": 1785219092
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:11:33.361658826",
+  "requestId": "7c78e349aadd4a9eb62dd44399a9f88d"
+}

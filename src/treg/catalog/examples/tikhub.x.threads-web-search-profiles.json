@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "314cdc5d-cdc8-42dd-8957-0e21a6838791",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:56",
+  "time_stamp": 1785220316,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Threads-Web-API/search_profiles_api_v1_threads_web_search_profiles_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/314cdc5d-cdc8-42dd-8957-0e21a6838791?sign=8099eadff56a874cf0c617a20736847f4db06ed4b88d388d78ef4a37211b55c4",
+  "router": "/api/v1/threads/web/search_profiles",
+  "params": {
+    "query": "mark"
+  },
+  "data": {
+    "xdt_api__v1__users__search_connection": {
+      "edges": [
+        {
+          "node": {
+            "username": "zuck",
+            "pk": "63055343223",
+            "is_active_on_text_post_app": true,
+            "full_name": "Mark Zuckerberg",
+            "profile_pic_url": "https://scontent-sea1-1.cdninstagram.com/v/t51.82787-19/550174606_17925811725103224_8363667901743352243_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_… [518 chars]",
+            "is_verified": true,
+            "has_onboarded_to_text_post_app": true,
+            "id": "63055343223"
+          }
+        },
+        "… 9 more item(s) truncated"
+      ],
+      "inform_module": null
+    }
+  }
+}

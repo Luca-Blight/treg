@@ -1,0 +1,58 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "20.7083 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281335-2171-0139-0000-20ffa4927618",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "20.6600 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "google",
+        "se_type": "local_finder",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "local nail services",
+        "min_rating": 4.5,
+        "time_filter": "monday",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "local nail services",
+          "type": "local_finder",
+          "se_domain": "google.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.google.com/search?q=local+nail+services&oq=local+nail+services&hl=en&gl=US&tbm=lcl&fll=37.09024%2C-95.712891&fspn=47.183478138438886%2C106.083984375&fz=4&sll=37.09024%2C-95.712891&sspn=47.… [405 chars]",
+          "datetime": "2026-07-28 10:35:36 +00:00",
+          "spell": null,
+          "refinement_chips": null,
+          "item_types": [
+            "local_pack"
+          ],
+          "se_results_count": 0,
+          "items_count": 20,
+          "items": [
+            "… {16 field(s) truncated}",
+            "… 19 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

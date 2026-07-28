@@ -1,0 +1,43 @@
+{
+  "code": 200,
+  "request_id": "147e636b-9aaf-4d22-b25b-e36dc0e74c73",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:25",
+  "time_stamp": 1785220225,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-App-API/fetch_home_recommend_feed_api_v1_weibo_app_fetch_home_recommend_feed_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/147e636b-9aaf-4d22-b25b-e36dc0e74c73?sign=5ecb41c9e5b0b02324aaa0a144b348b5ac8503ad8c7093616204bf533a7590ad",
+  "router": "/api/v1/weibo/app/fetch_home_recommend_feed",
+  "params": {
+    "count": "5"
+  },
+  "data": {
+    "items": [
+      {
+        "category": "feed",
+        "data": "… {92 field(s) truncated}",
+        "itemExt": "… {1 field(s) truncated}"
+      },
+      "… 5 more item(s) truncated"
+    ],
+    "pageData": "{}",
+    "refreshInfo": "{}",
+    "loadedInfo": "{}",
+    "moreInfo": {
+      "pagingType": "cursor",
+      "params": {
+        "count": 15,
+        "max_id": 1,
+        "lastAdInterval": 3
+      },
+      "error": "网络加载失败，请稍后尝试",
+      "loading": "正在加载更多",
+      "moreType": "default"
+    },
+    "config": "{}"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.3121 sec.",
+  "cost": 0.024,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0484-0000-a336093817a7",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.3062 sec.",
+      "cost": 0.024,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "domain_analytics",
+        "function": "domains_by_technology",
+        "se": "technologies",
+        "technologies": [
+          "Nginx"
+        ],
+        "filters": [
+          [
+            "country_iso_code",
+            "… 2 more item(s) truncated"
+          ],
+          "… 2 more item(s) truncated"
+        ],
+        "order_by": [
+          "last_visited,desc"
+        ],
+        "limit": 10
+      },
+      "result": [
+        {
+          "total_count": 13,
+          "items_count": 10,
+          "offset": 0,
+          "offset_token": "<omitted: expires>",
+          "items": [
+            "… {14 field(s) truncated}",
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

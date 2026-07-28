@@ -1,0 +1,40 @@
+{
+  "code": 200,
+  "request_id": "c5697255-0e9b-4b20-bbc6-9d63dab1fc10",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:05",
+  "time_stamp": 1785220205,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_user_post_videos_api_v1_tiktok_app_v3_fetch_user_post_videos_v2_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c5697255-0e9b-4b20-bbc6-9d63dab1fc10?sign=c4734fdd27f69e90398612643a02a23d2099baf45392cd0b28c94d9a7f238872",
+  "router": "/api/v1/tiktok/app/v3/fetch_user_post_videos_v2",
+  "params": {
+    "sec_user_id": "MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM",
+    "count": "5"
+  },
+  "data": {
+    "status_code": 0,
+    "min_cursor": 1784929700954,
+    "max_cursor": 1784837837000,
+    "has_more": 1,
+    "aweme_list": [
+      "… {153 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "extra": {
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "logid": "202607280630043D583BEE2316C505055F",
+      "now": 1785220204000
+    },
+    "log_pb": {
+      "impr_id": "202607280630043D583BEE2316C505055F"
+    },
+    "has_locate_item": false,
+    "status_msg": "",
+    "version": "v2"
+  }
+}

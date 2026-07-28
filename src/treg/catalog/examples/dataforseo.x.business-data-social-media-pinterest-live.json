@@ -1,0 +1,47 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.3251 sec.",
+  "cost": 0.00012,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280923-2171-0322-0000-66dbe11159cc",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.3147 sec.",
+      "cost": 0.00012,
+      "result_count": 3,
+      "path": [
+        "v3",
+        "business_data",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "business_data",
+        "function": "pinterest",
+        "targets": [
+          "https://www.simplyrecipes.com/recipes/grilled_salmon_with_cucumber_mango_salsa/",
+          "https://tasty.co/recipe/classic-lasagna",
+          "… 1 more item(s) truncated"
+        ],
+        "tag": "some_string_123"
+      },
+      "result": [
+        {
+          "type": "social_media_pinterest_item",
+          "page_url": "https://www.simplyrecipes.com/recipes/grilled_salmon_with_cucumber_mango_salsa/",
+          "pins_count": 270
+        },
+        {
+          "type": "social_media_pinterest_item",
+          "page_url": "https://tasty.co/recipe/classic-lasagna",
+          "pins_count": 1168
+        },
+        "… 1 more item(s) truncated"
+      ]
+    }
+  ]
+}

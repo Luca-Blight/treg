@@ -1,0 +1,45 @@
+{
+  "code": 0,
+  "data": {
+    "item": {
+      "trade": "… 3 field(s) truncated",
+      "num_iid": "522900342691",
+      "title": "[官方直营]4G全网通纽曼M560正品老年手机超长待机老人机… [54 chars total]",
+      "cat_id": null,
+      "cat_name": null,
+      "brandName": null,
+      "sales": null,
+      "detail_url": "//item.taobao.com/item.htm?id=… [42 chars total]",
+      "images": "… 5 item(s) truncated",
+      "video": null,
+      "video_thumbnail": null,
+      "properties_cut": "品牌 / 纽曼型号 / 是否支持NFC / CPU品牌 / … [174 chars total]",
+      "properties": "… 23 item(s) truncated",
+      "desc_url": "//mdetail.tmall.com/templates/… [56 chars total]",
+      "desc_imgs": "… 16 item(s) truncated",
+      "skus": "… 4 field(s) truncated",
+      "sku_base": "… 30 item(s) truncated",
+      "sku_props": "… 4 item(s) truncated",
+      "sku_images": "… 5 field(s) truncated"
+    },
+    "delivery": {
+      "from": null,
+      "to": "东城区",
+      "delivery_fee": "0.00",
+      "area_id": "110101"
+    },
+    "seller": {
+      "seller_id": null,
+      "seller_title": null,
+      "shop_title": "创于佳讯数码专营店",
+      "shop_id": "104819338",
+      "shop_url": "//store.taobao.com/shop/view_s… [53 chars total]",
+      "shop_icon": "//img.alicdn.com/imgextra/i1/O… [86 chars total]",
+      "user_type": "C",
+      "evaluates": null
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:23.626453716",
+  "requestId": "673f6e420a3048a3b8f0761d32691c… [32 chars total]"
+}

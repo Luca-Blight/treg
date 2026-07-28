@@ -1,0 +1,72 @@
+{
+  "profile_url": "https://www.linkedin.com/in/satyanadella/",
+  "credits_consumed": 1,
+  "first_name": "Satya",
+  "last_name": "Nadella",
+  "full_name": "Satya Nadella",
+  "professional_title": "Chairman and CEO at Microsoft",
+  "bio": "As chairman and CEO of Microsoft, I define my mission and that of my company as empowering every person and every organization on the planet to achieve more.",
+  "company_name": "Microsoft",
+  "company_industry": "Software Development",
+  "company_website": "https://www.microsoft.com",
+  "total_tenure_months": "149",
+  "total_tenure_days": "4536",
+  "total_tenure_years": "12.4",
+  "followers_range": null,
+  "total_tenure_formatted": "12 years 5 months",
+  "personal_website": null,
+  "country": "US",
+  "location": "Redmond, WA, United States",
+  "current_position": {
+    "position_title": "Chairman and CEO",
+    "company_name": "Microsoft",
+    "employment_period": "Feb 2014 - Present",
+    "company_website": "https://www.microsoft.com",
+    "company_logo_url": "https://logo.leadmagic.io/microsoft.com",
+    "employment_type": "C-Team"
+  },
+  "profile_summary": {
+    "display_name": "Satya Nadella",
+    "headline": "Chairman and CEO at Microsoft",
+    "current_company": "Microsoft",
+    "current_role": "Chairman and CEO",
+    "location": "Redmond, WA, United States",
+    "country": "US",
+    "followers_range": null,
+    "total_tenure": "12 years 5 months"
+  },
+  "work_experience": [
+    {
+      "position_title": "Chairman and CEO",
+      "company_name": "Microsoft",
+      "employment_period": "Feb 2014 - Present",
+      "company_website": "https://www.microsoft.com",
+      "company_logo_url": "https://logo.leadmagic.io/microsoft.com",
+      "employment_type": "C-Team"
+    },
+    {
+      "position_title": "Member Board of Trustees",
+      "company_name": "University Of Chicago",
+      "employment_period": "Jan 2018 - Present",
+      "company_website": "uchicago.edu",
+      "company_logo_url": "https://logo.leadmagic.io/uchicago.edu",
+      "employment_type": "C-Team"
+    }
+  ],
+  "education": [
+    {
+      "institution_name": "Manipal Institute of Technology, Manipal",
+      "degree": "Bachelor’s Degree",
+      "attendance_period": ""
+    },
+    {
+      "institution_name": "University of Wisconsin-Milwaukee",
+      "degree": "Master’s Degree",
+      "attendance_period": ""
+    }
+  ],
+  "certifications": null,
+  "honors": null,
+  "skills": null,
+  "languages": null
+}

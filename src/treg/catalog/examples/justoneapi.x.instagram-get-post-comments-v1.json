@@ -1,0 +1,61 @@
+{
+  "code": 0,
+  "data": {
+    "can_view_more_preview_comments": false,
+    "caption": {
+      "bit_flags": 0,
+      "content_type": "comment",
+      "created_at": 1777906750,
+      "created_at_for_fb_app": 1777906750,
+      "created_at_utc": 1777906750,
+      "did_report_as_spam": false,
+      "is_covered": false,
+      "is_created_by_media_owner": true,
+      "is_ranked_comment": true,
+      "media_id": "3889679286057499135",
+      "pk": "17907819267225656",
+      "private_reply_status": 0,
+      "share_enabled": true,
+      "status": "Active",
+      "strong_id__": "17907819267225656",
+      "text": "Some reminders hit differently… [323 chars total]",
+      "type": 1,
+      "user": "… 12 field(s) truncated",
+      "user_id": "40054486512"
+    },
+    "caption_is_edited": false,
+    "comment_count": 739,
+    "comment_cover_pos": "bottom",
+    "comment_filter_param": "no_filter",
+    "comment_likes_enabled": true,
+    "comments": [
+      "… 33 field(s) truncated",
+      "… 14 more item(s) truncated"
+    ],
+    "has_more_comments": false,
+    "has_more_headload_comments": true,
+    "initiate_at_top": true,
+    "insert_new_comment_to_top": true,
+    "is_ranked": true,
+    "liked_by_media_owner_badge_enabled": true,
+    "media_header_display": "none",
+    "next_min_id": "<omitted: expires>",
+    "quick_response_emojis": [
+      "… 1 field(s) truncated",
+      "… 7 more item(s) truncated"
+    ],
+    "scroll_behavior": 1,
+    "threading_enabled": true,
+    "filter_options": [],
+    "sort_options": [],
+    "should_render_upsell": false,
+    "foundation_improvements_enabled": true,
+    "has_more_headload_fb_comments": false,
+    "fb_comments": [],
+    "ai_topic_filters": [],
+    "status": "ok"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:21.668621701",
+  "requestId": "c80864e18ade486f8ff6bb08638107… [32 chars total]"
+}

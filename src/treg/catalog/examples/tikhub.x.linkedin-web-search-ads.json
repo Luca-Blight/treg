@@ -1,0 +1,33 @@
+{
+  "code": 200,
+  "request_id": "651005f3-8d54-4cce-8b58-1ab5c424dd5a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-28 00:22:21",
+  "time_stamp": 1785223341,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/search_ads_api_v1_linkedin_web_search_ads_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/651005f3-8d54-4cce-8b58-1ab5c424dd5a?sign=7a994f801f43ff33adce915efee9eacfbe78d834f9af8c916d2a079e9e79a02a",
+  "router": "/api/v1/linkedin/web/search_ads",
+  "params": {
+    "keyword": "data",
+    "country": "US"
+  },
+  "data": {
+    "has_more": false,
+    "pagination_token": "<omitted: expires>",
+    "data": [
+      {
+        "id": "1525010466",
+        "ad_url": "https://www.linkedin.com/ad-library/detail/1525010466",
+        "advertiser": "DavidBurton",
+        "content_preview": "The future of America may depend less on who lives in the White House and more on whether we know who lives in the white…",
+        "image": "https://media.licdn.com/dms/image/v2/D5622AQEj1ePk7SBv1Q/feedshare-shrink_800/B56Z.geyDHKIAc-/0/1785103851972?e=2147483647&v=beta&t=JlTZZW9ap1099uG3v8fp5qQNY2fhkbQsNHDRQajaQlI"
+      },
+      "… 15 more item(s) truncated"
+    ]
+  }
+}

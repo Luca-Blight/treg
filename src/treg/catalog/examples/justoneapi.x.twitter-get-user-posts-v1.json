@@ -1,0 +1,52 @@
+{
+  "code": 0,
+  "data": {
+    "timeline": [
+      {
+        "tweet_id": "2081974644114911715",
+        "bookmarks": 0,
+        "created_at": "Tue Jul 28 05:26:51 +0000 2026",
+        "favorites": 0,
+        "text": "RT @XFreeze: A throwback to Elon Musk wa… [140 chars total]",
+        "lang": "en",
+        "source": "<a href=\"http://twitter.com/download/iph… [82 chars total]",
+        "views": "388573",
+        "quotes": 0,
+        "entities": "… 1 field(s) truncated",
+        "replies": 0,
+        "retweets": 199,
+        "conversation_id": "2081974644114911715",
+        "media": "… 0 item(s) truncated",
+        "author": "… 6 field(s) truncated",
+        "retweeted": "… 1 field(s) truncated",
+        "retweeted_tweet": "… 14 field(s) truncated"
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "next_cursor": "<omitted: expires>",
+    "prev_cursor": "<omitted: expires>",
+    "status": "ok",
+    "user": {
+      "profile": "elonmusk",
+      "id": "44196397",
+      "created_at": "Tue Jun 02 20:12:29 +0000 2009",
+      "avatar": "https://pbs.twimg.com/profile_images/205… [76 chars total]",
+      "blue_verified": true,
+      "affiliates": {
+        "label": "… 5 field(s) truncated"
+      },
+      "header_image": null,
+      "desc": null,
+      "name": "Elon Musk",
+      "protected": false,
+      "location": "",
+      "friends": null,
+      "sub_count": null,
+      "statuses_count": null,
+      "media_count": null
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:30.230795858",
+  "requestId": "b30846ecedcf4418ad13cbf79c960cc9"
+}

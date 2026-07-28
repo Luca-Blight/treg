@@ -1,0 +1,43 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0710 sec.",
+  "cost": 0.024036,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280654-2171-0347-0000-9765b378bf9e",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0163 sec.",
+      "cost": 0.024036,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "backlinks",
+        "… 2 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "bulk_ranks",
+        "targets": [
+          "moz.com"
+        ],
+        "rank_scale": "one_hundred"
+      },
+      "result": [
+        {
+          "items_count": 1,
+          "items": [
+            {
+              "target": "moz.com",
+              "rank": 76
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

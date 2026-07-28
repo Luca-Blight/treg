@@ -1,0 +1,35 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0101 sec.",
+  "cost": 0.001,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0455-0000-0d6e729bb67a",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0034 sec.",
+      "cost": 0.001,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "merchant",
+        "function": "product_info",
+        "se": "google",
+        "language_code": "en",
+        "location_code": 2840,
+        "product_id": "1113158713975221117",
+        "se_type": "product_info",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

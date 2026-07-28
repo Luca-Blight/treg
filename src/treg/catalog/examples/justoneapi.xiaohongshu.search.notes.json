@@ -1,0 +1,116 @@
+{
+  "code": 0,
+  "data": {
+    "api_info": {
+      "code": 10200,
+      "message": "成功"
+    },
+    "search_meta": {
+      "is_broad_query": true,
+      "can_cut": false,
+      "query_type": null,
+      "show_single_col": false,
+      "strategy_info": {
+        "query_average_impression_count": 19,
+        "query_can_guide_to_feed": true
+      }
+    },
+    "notes": [
+      {
+        "id": "6a66f1df000000001101bf73",
+        "title": "马来西亚特产｜拒绝巧克力咖啡内卷",
+        "desc": "这次去亚庇挖到一款绝佳伴手礼——车载香薰！ 一开始只是抱着试试看的心态，直接一口气囤了七八瓶，香调真的惊艳无比。 🍒樱",
+        "type": "normal",
+        "user": {
+          "userid": "60ab2a7c000000000100934a",
+          "nickname": "周一",
+          "red_id": "2602379399",
+          "images": "https://sns-avatar-qc.xhscdn.com/avatar/65578a74e7981ffbfd5ee79d.jpg?imageView2/2/w/80/format/jpg",
+          "red_official_verified": false,
+          "followed": false
+        },
+        "liked_count": 9,
+        "comments_count": 2,
+        "collected_count": 2,
+        "shared_count": 0,
+        "liked": false,
+        "collected": false,
+        "niced": false,
+        "has_music": false,
+        "images_list": [
+          {
+            "height": 1440,
+            "width": 1080,
+            "url": "https://sns-na-i4.xhscdn.com/notes_pre_post/1040g3k8323461i6r7a6g5pa0teqc67c5bmj92n0?imageView2/2/w/608/format/heif/q/56|imageMogr2/strip&redImage/frame/0/enhance/4&ap=5&sc=SRH_PRV&sign=8c54634ec944a54d012c34f6d4e08eb1&t=6a6808df&origin=0",
+            "url_size_large": "https://sns-na-i4.xhscdn.com/notes_pre_post/1040g3k8323461i6r7a6g5pa0teqc67c5bmj92n0?imageView2/2/w/1440/format/heif/q/45&redImage/frame/0&ap=5&sc=SRH_DTL&sign=8c54634ec944a54d012c34f6d4e08eb1&t=6a6808df&origin=0",
+            "original": "",
+            "trace_id": "notes_pre_post/1040g3k8323461i6r7a6g5pa0teqc67c5bmj92n0",
+            "need_load_original_image": false,
+            "fileid": "notes_pre_post/1040g3k8323461i6r7a6g5pa0teqc67c5bmj92n0"
+          }
+        ],
+        "timestamp": 1785131487,
+        "last_update_time": 0,
+        "tags": [],
+        "geo_info": {
+          "distance": ""
+        }
+      },
+      {
+        "id": "6a680805000000000402849f",
+        "title": "贡尼丝滑拿铁三合一浓缩咖啡",
+        "desc": "全新未拆封❗️正品保证❗️ ✅ 原料甄选：产自云南保山2000米高海拔产区小粒咖啡豆，光照充足，咖啡豆品质上乘，自带原生",
+        "type": "normal",
+        "user": {
+          "userid": "5b3ba9474eacab7701bd3751",
+          "nickname": "易烊七喜",
+          "red_id": "940079125",
+          "images": "https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31o7e43s56m004a6qb9kkedqho8sd1m8?imageView2/2/w/80/format/jpg",
+          "red_official_verified": false,
+          "followed": false
+        },
+        "liked_count": 0,
+        "comments_count": 0,
+        "collected_count": 0,
+        "shared_count": 0,
+        "liked": false,
+        "collected": false,
+        "niced": false,
+        "has_music": false,
+        "images_list": [
+          {
+            "need_load_original_image": false,
+            "fileid": "note_pre_post_uhdr/1040g3r8323596pui7k704a6qb9kkedqhfmpt940",
+            "height": 4032,
+            "width": 3024,
+            "url": "https://sns-na-i4.xhscdn.com/note_pre_post_uhdr/1040g3r8323596pui7k704a6qb9kkedqhfmpt940?imageView2/2/w/608/format/heif/q/56|imageMogr2/strip&redImage/frame/0/enhance/4&ap=5&sc=SRH_PRV&sign=e117e8550cb524e6852c7317a9ee3df7&t=6a6808df&origin=0",
+            "url_size_large": "https://sns-na-i4.xhscdn.com/note_pre_post_uhdr/1040g3r8323596pui7k704a6qb9kkedqhfmpt940?imageView2/2/w/1440/format/heif/q/45&redImage/frame/0&ap=5&sc=SRH_DTL&sign=e117e8550cb524e6852c7317a9ee3df7&t=6a6808df&origin=0",
+            "original": "",
+            "trace_id": "note_pre_post_uhdr/1040g3r8323596pui7k704a6qb9kkedqhfmpt940"
+          }
+        ],
+        "timestamp": 1785202693,
+        "last_update_time": 0,
+        "tags": [],
+        "geo_info": {
+          "distance": ""
+        }
+      },
+      "… 1 more item(s) truncated"
+    ],
+    "ads": [],
+    "recommend_queries": [],
+    "statistics": {
+      "total_items": 20,
+      "note_count": 19,
+      "video_count": 1,
+      "ads_count": 0,
+      "recommend_count": 0
+    },
+    "total": 20,
+    "has_more": true
+  },
+  "message": null,
+  "recordTime": "2026-07-28T09:41:53.184774129",
+  "requestId": "533a0c341c1740f69ce44376945809a9"
+}

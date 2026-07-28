@@ -1,0 +1,61 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.4749 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280923-2171-0384-0000-62f347ba198e",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.4475 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "subdomains",
+        "se_type": "google",
+        "target": "dataforseo.com",
+        "language_name": "English",
+        "location_code": 2840,
+        "filters": [
+          [
+            "metrics.organic.pos_1",
+            "… 2 more item(s) truncated"
+          ],
+          "… 2 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "target": "dataforseo.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 3,
+          "items_count": 3,
+          "items": [
+            {
+              "se_type": "google",
+              "subdomain": "dataforseo.com",
+              "metrics": {
+                "organic": "… 22 field(s) truncated",
+                "paid": "… 22 field(s) truncated",
+                "featured_snippet": null,
+                "local_pack": null
+              }
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

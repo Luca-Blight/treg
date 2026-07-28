@@ -1,0 +1,25 @@
+{
+  "code": 200,
+  "request_id": "53f80855-ec8c-4981-a7ea-8699254bf759",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:46",
+  "time_stamp": 1785220246,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-V2-API/fetch_hot_search_index_api_v1_weibo_web_v2_fetch_hot_search_index_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/53f80855-ec8c-4981-a7ea-8699254bf759?sign=4ba4118a337ebb2ef82be354b5669d5c1727ff59a4869d10825d1fa6c18eadca",
+  "router": "/api/v1/weibo/web_v2/fetch_hot_search_index",
+  "params": {},
+  "data": {
+    "hotgovs": [
+      "… {19 field(s) truncated}"
+    ],
+    "list": [
+      "… {29 field(s) truncated}",
+      "… 10 more item(s) truncated"
+    ]
+  }
+}

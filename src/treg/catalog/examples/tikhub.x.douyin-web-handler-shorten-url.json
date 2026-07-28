@@ -1,0 +1,24 @@
+{
+  "code": 200,
+  "request_id": "8ab951f8-a17a-416f-a556-75a4738d733a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:42",
+  "time_stamp": 1785220122,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/handler_shorten_url_api_v1_douyin_web_handler_shorten_url_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/8ab951f8-a17a-416f-a556-75a4738d733a?sign=20da127f03be9f2e2d80f34eb804b23a69dd3dc7c4efcfc72fa0b125c621d9b7",
+  "router": "/api/v1/douyin/web/handler_shorten_url",
+  "params": {
+    "target_url": "https://www.douyin.com/video/7575136499386720761"
+  },
+  "data": {
+    "code": 0,
+    "message": "success",
+    "now": 1785220120,
+    "data": "https://v.douyin.com/xuJSlO_cn5M/"
+  }
+}

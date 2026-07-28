@@ -1,0 +1,43 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "12.8362 sec.",
+  "cost": 0.024144,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0445-0000-d7042b938e68",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "12.8310 sec.",
+      "cost": 0.024144,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "domain_pages_summary",
+        "target": "forbes.com",
+        "limit": 4,
+        "order_by": [
+          "backlinks,desc"
+        ]
+      },
+      "result": [
+        {
+          "target": "forbes.com",
+          "total_count": 3350194,
+          "items_count": 4,
+          "items": [
+            "… {23 field(s) truncated}",
+            "… 3 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

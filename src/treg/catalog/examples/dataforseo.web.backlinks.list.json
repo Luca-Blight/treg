@@ -1,0 +1,156 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "9.7421 sec.",
+  "cost": 0.024072,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280654-2171-0269-0000-99d39390d8b3",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "9.6780 sec.",
+      "cost": 0.024072,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "backlinks",
+        "… 2 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "backlinks",
+        "target": "moz.com",
+        "limit": 2,
+        "mode": "one_per_domain"
+      },
+      "result": [
+        {
+          "target": "moz.com",
+          "mode": "one_per_domain",
+          "custom_mode": null,
+          "total_count": 118369,
+          "items_count": 2,
+          "items": [
+            {
+              "type": "backlink",
+              "domain_from": "dejan.ai",
+              "url_from": "https://dejan.ai/",
+              "url_from_https": true,
+              "domain_to": "hsinfo.moz.com",
+              "url_to": "https://hsinfo.moz.com/technical-geo-peak-aio-moztop10-2025-12",
+              "url_to_https": true,
+              "tld_from": "ai",
+              "is_new": false,
+              "is_lost": false,
+              "backlink_spam_score": 0,
+              "rank": 601,
+              "page_from_rank": 734,
+              "domain_from_rank": 314,
+              "domain_from_platform_type": [
+                "organization"
+              ],
+              "domain_from_is_ip": false,
+              "domain_from_ip": "34.31.25.140",
+              "domain_from_country": "AI",
+              "page_from_external_links": 7,
+              "page_from_internal_links": 14,
+              "page_from_size": 63662,
+              "page_from_encoding": "utf-8",
+              "page_from_language": "en",
+              "page_from_title": "DEJAN, the AI SEO agency",
+              "page_from_status_code": 200,
+              "first_seen": "2025-12-19 00:23:13 +00:00",
+              "prev_seen": "2026-06-07 06:35:03 +00:00",
+              "last_seen": "2026-07-22 06:36:51 +00:00",
+              "item_type": "image",
+              "attributes": [
+                "noopener",
+                "noreferrer"
+              ],
+              "dofollow": true,
+              "original": false,
+              "alt": "MOZ Top 10",
+              "image_url": "https://dejan.ai/media/6zV9eL7FHxKpKpb3.png",
+              "anchor": null,
+              "text_pre": null,
+              "text_post": "Featured in “Moz Top 10“, twice.",
+              "semantic_location": null,
+              "links_count": 2,
+              "group_count": 45,
+              "is_broken": false,
+              "url_to_status_code": null,
+              "url_to_spam_score": null,
+              "url_to_redirect_target": null,
+              "ranked_keywords_info": {
+                "page_from_keywords_count_top_3": 0,
+                "page_from_keywords_count_top_10": 1,
+                "page_from_keywords_count_top_100": 8
+              },
+              "is_indirect_link": false,
+              "indirect_link_path": null
+            },
+            {
+              "type": "backlink",
+              "domain_from": "nodebb.org",
+              "url_from": "https://nodebb.org/",
+              "url_from_https": true,
+              "domain_to": "moz.com",
+              "url_to": "https://moz.com/community/q/",
+              "url_to_https": true,
+              "tld_from": "org",
+              "is_new": false,
+              "is_lost": false,
+              "backlink_spam_score": 0,
+              "rank": 574,
+              "page_from_rank": 779,
+              "domain_from_rank": 583,
+              "domain_from_platform_type": [
+                "unknown"
+              ],
+              "domain_from_is_ip": false,
+              "domain_from_ip": "174.138.114.138",
+              "domain_from_country": null,
+              "page_from_external_links": 29,
+              "page_from_internal_links": 21,
+              "page_from_size": 28173,
+              "page_from_encoding": "utf-8",
+              "page_from_language": "en",
+              "page_from_title": "NodeBB - Modern Forum Software",
+              "page_from_status_code": 200,
+              "first_seen": "2025-05-04 21:25:18 +00:00",
+              "prev_seen": "2026-04-09 11:11:26 +00:00",
+              "last_seen": "2026-06-08 11:28:12 +00:00",
+              "item_type": "image",
+              "attributes": null,
+              "dofollow": true,
+              "original": false,
+              "alt": "Moz Forums",
+              "image_url": "https://nodebb.org/images/brand/moz.png",
+              "anchor": null,
+              "text_pre": "MAXON DEVELOPERS",
+              "text_post": "sketchucation  Cloudron     ironheart.co.uk     Basenji Forums",
+              "semantic_location": null,
+              "links_count": 1,
+              "group_count": 125,
+              "is_broken": false,
+              "url_to_status_code": 200,
+              "url_to_spam_score": 0,
+              "url_to_redirect_target": null,
+              "ranked_keywords_info": {
+                "page_from_keywords_count_top_3": 8,
+                "page_from_keywords_count_top_10": 34,
+                "page_from_keywords_count_top_100": 57
+              },
+              "is_indirect_link": false,
+              "indirect_link_path": null
+            }
+          ],
+          "search_after_token": "<omitted: expires>"
+        }
+      ]
+    }
+  ]
+}

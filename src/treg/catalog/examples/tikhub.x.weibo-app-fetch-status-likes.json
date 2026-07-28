@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "67ce3db4-1617-4c94-9c0e-8350e47bad71",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:28",
+  "time_stamp": 1785220228,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-App-API/fetch_status_likes_api_v1_weibo_app_fetch_status_likes_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/67ce3db4-1617-4c94-9c0e-8350e47bad71?sign=94a583c950edca0ce65d599c5c17490dea94befbddac1dfe9a8ad58e5098f925",
+  "router": "/api/v1/weibo/app/fetch_status_likes",
+  "params": {
+    "status_id": "5016922058656962",
+    "attitude_type": "0"
+  },
+  "data": {
+    "items": [
+      {
+        "category": "detail",
+        "type": "like_attitude",
+        "data": {
+          "attitudes_count": [
+            {
+              "type": 0,
+              "count": 87524
+            },
+            "… 7 more item(s) truncated"
+          ],
+          "cur_sub_tab": 0
+        }
+      },
+      "… 50 more item(s) truncated"
+    ],
+    "pageData": "{}",
+    "loadedInfo": "{}",
+    "config": "{}"
+  }
+}

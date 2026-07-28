@@ -1,0 +1,41 @@
+{
+  "data": {
+    "status": "valid",
+    "score": 100,
+    "email": "person@example.com",
+    "regexp": true,
+    "gibberish": false,
+    "disposable": false,
+    "webmail": false,
+    "mx_records": true,
+    "smtp_server": true,
+    "smtp_check": true,
+    "accept_all": false,
+    "block": false,
+    "sources": [
+      {
+        "domain": "saastock.com",
+        "uri": "https://saastock.com/blog/video-how-to-design-a-killer-saas-sales-email-steli-efti",
+        "extracted_on": "2026-07-24",
+        "last_seen_on": "2026-07-24",
+        "still_on_page": true
+      },
+      {
+        "domain": "startupsfortherestofus.com",
+        "uri": "https://startupsfortherestofus.com/episodes/episode-202-outbound-sales-for-startups-with-guest-steli-efti",
+        "extracted_on": "2025-06-19",
+        "last_seen_on": "2026-07-23",
+        "still_on_page": true
+      },
+      "… 28 more item(s) truncated"
+    ],
+    "result": "deliverable",
+    "_deprecation_notice": "Using result is deprecated, use status instead"
+  },
+  "meta": {
+    "params": {
+      "email": "person@example.com"
+    }
+  },
+  "_scrubbed": true
+}

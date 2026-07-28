@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "countriesOfOrigin": {
+        "countries": [
+          {
+            "__typename": "CountryOfOrigin",
+            "id": "US",
+            "text": "United States"
+          }
+        ]
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:58.886279704",
+  "requestId": "2b5661a545dd45f69de81f5125627e3c"
+}

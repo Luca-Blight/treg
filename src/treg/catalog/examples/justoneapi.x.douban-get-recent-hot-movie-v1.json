@@ -1,0 +1,58 @@
+{
+  "code": 0,
+  "data": {
+    "category": "最新",
+    "type": "全部",
+    "total": 500,
+    "items": [
+      {
+        "id": "37326018",
+        "title": "永远心跳漏一拍",
+        "pic": {
+          "large": "https://img9.doubanio.com/view/photo/m_ratio_poster/public/p2934199164.jpg",
+          "normal": "https://img9.doubanio.com/view/photo/s_ratio_poster/public/p2934199164.jpg"
+        },
+        "rating": {
+          "count": 3374,
+          "max": 10,
+          "star_count": 3.5,
+          "value": 7.4
+        },
+        "uri": "douban://douban.com/movie/37326018",
+        "card_subtitle": "2026 / 英国 / 剧情 喜剧 爱情 同性 / 沃什·韦斯特摩兰 / 基特·康纳 乔·洛克",
+        "is_new": true,
+        "episodes_info": "",
+        "type": "movie"
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "tags": [
+      {
+        "title": "热门电影",
+        "category": "热门",
+        "selected": false,
+        "types": [
+          {
+            "title": "全部",
+            "type": "全部",
+            "selected": false
+          },
+          "… 4 more item(s) truncated"
+        ]
+      },
+      "… 3 more item(s) truncated"
+    ],
+    "recommend_tags": [
+      {
+        "title": "热门",
+        "category": "热门",
+        "type": "全部",
+        "selected": false
+      },
+      "… 7 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:46.939623419",
+  "requestId": "d8477bb27df5418f82866005e3a7b41d"
+}

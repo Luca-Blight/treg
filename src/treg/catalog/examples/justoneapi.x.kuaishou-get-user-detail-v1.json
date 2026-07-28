@@ -1,0 +1,38 @@
+{
+  "code": 0,
+  "data": {
+    "result": 1,
+    "shareInfo": {
+      "webShareVerifyData": "… 4 field(s) truncated",
+      "shareId": "19052508907323",
+      "groupName": "",
+      "shareSubTitle": "承蒙厚爱，感恩遇见 谢谢你的关注❤",
+      "shareTitle": "分享了@悦悦美食推荐♥ 的快手主页，一起来看！",
+      "shareType": "3",
+      "docId": "3"
+    },
+    "host-name": "public-bjzey-c34-kce-node2868.… [54 chars total]",
+    "isLiving": false,
+    "userProfile": {
+      "userSettingOption": "… 34 field(s) truncated",
+      "ownerCount": "… 11 field(s) truncated",
+      "verified": false,
+      "profile": "… 11 field(s) truncated",
+      "showPhotoCollectTab": true,
+      "cityName": "辽宁 大连市",
+      "cityCode": "210200",
+      "enableMoment": true,
+      "canGuestShowMomentNews": true,
+      "isUserBanned": false,
+      "isSubscribe": true,
+      "isFriend": false,
+      "isFollowing": false,
+      "extraLink": "… 10 field(s) truncated",
+      "isFavorited": false,
+      "showCount": true
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:40.340160544",
+  "requestId": "55490086d07d4579bfb8aa87f56075… [32 chars total]"
+}

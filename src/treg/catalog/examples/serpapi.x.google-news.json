@@ -1,0 +1,55 @@
+{
+  "search_metadata": {
+    "id": "6a6898c1d17a8024558d3408",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/ImvBt5AlPLFd60Z9D5HeBQ/6a6898c1… [81 chars]",
+    "created_at": "2026-07-28 11:55:45 UTC",
+    "processed_at": "2026-07-28 11:55:45 UTC",
+    "google_news_url": "https://news.google.com/search?q=pizza&hl=en&gl=US",
+    "raw_html_file": "https://serpapi.com/searches/ImvBt5AlPLFd60Z9D5HeBQ/6a6898c1… [81 chars]",
+    "total_time_taken": 1.8
+  },
+  "search_parameters": {
+    "engine": "google_news",
+    "gl": "us",
+    "hl": "en",
+    "q": "pizza"
+  },
+  "news_results": [
+    {
+      "position": 1,
+      "title": "In Rome, It’s a Pizza Renaissance",
+      "source": "… {3 field(s) truncated}",
+      "link": "https://www.nytimes.com/2026/07/28/travel/pizza-romana-rome-… [80 chars]",
+      "thumbnail": "https://static01.nyt.com/images/2026/07/27/arts/27trav-rome-… [122 chars]",
+      "thumbnail_small": "https://news.google.com/api/attachments/CC8iK0NnNVNPRVpPYldW… [103 chars]",
+      "date": "07/28/2026, 09:01 AM, +0000 UTC",
+      "iso_date": "2026-07-28T09:01:44Z"
+    },
+    "… 99 more item(s) truncated"
+  ],
+  "menu_links": [
+    {
+      "title": "U.S.",
+      "topic_token": "<omitted: expires>",
+      "serpapi_link": "https://serpapi.com/search.json?engine=google_news&gl=us&top… [120 chars]"
+    },
+    "… 8 more item(s) truncated"
+  ],
+  "related_topics": [
+    {
+      "topic_token": "<omitted: expires>",
+      "serpapi_link": "https://serpapi.com/search.json?engine=google_news&gl=us&top… [119 chars]",
+      "title": "Pizza Hut"
+    },
+    "… 10 more item(s) truncated"
+  ],
+  "related_publications": [
+    {
+      "publication_token": "<omitted: expires>",
+      "serpapi_link": "https://serpapi.com/search.json?engine=google_news&gl=us&pub… [131 chars]",
+      "title": "MOD Pizza",
+      "thumbnail": "https://encrypted-tbn0.gstatic.com/faviconV2?url=http://modp… [133 chars]"
+    }
+  ]
+}

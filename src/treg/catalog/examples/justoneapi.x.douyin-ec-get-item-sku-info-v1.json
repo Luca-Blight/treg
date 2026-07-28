@@ -1,0 +1,55 @@
+{
+  "code": 0,
+  "data": {
+    "id": "3833249427875823701",
+    "name": "【柏林之声】2026新款运动蓝牙耳机开放式不入耳高音质骨传超… [33 chars total]",
+    "description": "",
+    "mainImg": "https://p3-aio.ecombdimg.com/o… [114 chars total]",
+    "salePrice": 501,
+    "originalPrice": 2280,
+    "sellNum": 127,
+    "shopId": 251094601,
+    "skus": [
+      "… 6 field(s) truncated",
+      "… 5 more item(s) truncated"
+    ],
+    "category": {
+      "firstCid": 1000007020,
+      "secondCid": 1000007023,
+      "thirdCid": 1000007060,
+      "fourthCid": 0,
+      "firstCName": "3C数码及配件",
+      "secondCName": "电脑外设及配件",
+      "thirdCName": "耳麦",
+      "fourthCName": ""
+    },
+    "promotion_h5": {
+      "basic_info_data": "… 4 field(s) truncated",
+      "shop_info": "… 2 field(s) truncated",
+      "head_figure_data": "… 3 field(s) truncated",
+      "product_support_info_data": "… 4 field(s) truncated",
+      "comment_data": "… 5 field(s) truncated",
+      "shop_coupon_data": "… 0 field(s) truncated",
+      "footer_data": "… 2 field(s) truncated",
+      "init_popup_data": "… 1 field(s) truncated",
+      "pack_detail": "… 1 field(s) truncated",
+      "page_data": "… 0 field(s) truncated",
+      "redirect_location_v2": "",
+      "style_type": 0,
+      "collapse_detail": false
+    },
+    "detail_info": {
+      "detail_imgs": "… 5 item(s) truncated",
+      "product_format": "… 1 item(s) truncated",
+      "detail_config": "… 2 item(s) truncated",
+      "jump_url": "sslocal://webcast_lynxview?typ… [383 chars total]",
+      "detail_imgs_new": "… 5 item(s) truncated",
+      "title_image": "… 4 field(s) truncated",
+      "ai_question": null,
+      "tag_card": null
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:48.497533724",
+  "requestId": "907b7369f9c84d449ca17f19ccfc4d… [32 chars total]"
+}

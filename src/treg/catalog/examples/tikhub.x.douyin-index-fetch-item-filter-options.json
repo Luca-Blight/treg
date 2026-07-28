@@ -1,0 +1,50 @@
+{
+  "code": 200,
+  "request_id": "ff4207f6-bc33-460e-ba09-7d5e002c5333",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:19",
+  "time_stamp": 1785220099,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Index-API/fetch_item_filter_options_api_v1_douyin_index_fetch_item_filter_options_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ff4207f6-bc33-460e-ba09-7d5e002c5333?sign=b94361422b6bfb5f5f408880df429ba929124d408816147b7b4b12158fdb8dd1",
+  "router": "/api/v1/douyin/index/fetch_item_filter_options",
+  "params": {},
+  "data": {
+    "categories": [
+      {
+        "id": "0",
+        "name": "垂类不限",
+        "name_en": "All categories"
+      },
+      "… 35 more item(s) truncated"
+    ],
+    "duration_types": [
+      {
+        "id": 0,
+        "name": "时长不限",
+        "name_en": "Any duration"
+      },
+      "… 5 more item(s) truncated"
+    ],
+    "label_types": [
+      {
+        "id": 0,
+        "name": "类型不限",
+        "name_en": "Any type"
+      },
+      "… 4 more item(s) truncated"
+    ],
+    "date_types": [
+      {
+        "id": 0,
+        "name": "发布时间不限",
+        "name_en": "Any publish time"
+      },
+      "… 3 more item(s) truncated"
+    ]
+  }
+}

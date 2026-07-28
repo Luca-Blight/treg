@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "data": {
+    "paging": {
+      "is_end": true,
+      "totals": 0,
+      "previous": "http://www.zhihu.com/api/v4/members/zhang-jia-wei/following-favlists?include=data%5B%2A%5D.updated_time%2Canswer_count%2Cfollower_count%2Ccreator%2Cdescription%2Cis_following%2Ccomment_count%2Ccreated_time&limit=20&offset=0&user_url_token=zhang-jia-wei",
+      "is_start": true,
+      "next": "http://www.zhihu.com/api/v4/members/zhang-jia-wei/following-favlists?include=data%5B%2A%5D.updated_time%2Canswer_count%2Cfollower_count%2Ccreator%2Cdescription%2Cis_following%2Ccomment_count%2Ccreated_time&limit=20&offset=20&user_url_token=zhang-jia-wei"
+    },
+    "data": []
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:42.347115449",
+  "requestId": "e8e52a4d225d4edfbd3d609ed141e130"
+}

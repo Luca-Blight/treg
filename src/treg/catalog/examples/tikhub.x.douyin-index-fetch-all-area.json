@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "fbea0a30-9349-4014-a823-d4f8280eff22",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:18",
+  "time_stamp": 1785220098,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Index-API/fetch_all_area_api_v1_douyin_index_fetch_all_area_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/fbea0a30-9349-4014-a823-d4f8280eff22?sign=d5217022a2374b1ca619bce72ef58f99b5777a68228f9c8bd73c1ce0604768c9",
+  "router": "/api/v1/douyin/index/fetch_all_area",
+  "params": {},
+  "data": {
+    "all_area_list": [
+      {
+        "value": "86",
+        "label": "全国",
+        "area_level": "1",
+        "children": [
+          {
+            "value": "11",
+            "label": "北京",
+            "area_level": "2",
+            "children": "… [1 item(s) truncated]"
+          },
+          "… 33 more item(s) truncated"
+        ]
+      }
+    ],
+    "all_category_list": [
+      {
+        "category_id": "0",
+        "category_name": "全部"
+      },
+      "… 7 more item(s) truncated"
+    ],
+    "BaseResp": {
+      "StatusMessage": "",
+      "StatusCode": 0
+    }
+  }
+}

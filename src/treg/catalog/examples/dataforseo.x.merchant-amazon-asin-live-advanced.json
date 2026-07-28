@@ -1,0 +1,52 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "22.0960 sec.",
+  "cost": 0.005,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281401-2171-0648-0000-7a153cd76c9c",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "22.0390 sec.",
+      "cost": 0.005,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "merchant",
+        "function": "asin",
+        "se": "amazon",
+        "language_code": "en_US",
+        "location_code": 2840,
+        "asin": "B0756FCPPN",
+        "se_type": "asin",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "asin": "B0756FCPPN",
+          "type": "asin",
+          "se_domain": "amazon.com",
+          "location_code": 2840,
+          "language_code": "en_US",
+          "check_url": "https://www.amazon.com/dp/B0756FCPPN?language=en_US",
+          "datetime": "2026-07-28 11:01:57 +00:00",
+          "item_types": [
+            "amazon_product_info"
+          ],
+          "items_count": 1,
+          "items": [
+            "… {30 field(s) truncated}"
+          ]
+        }
+      ]
+    }
+  ]
+}

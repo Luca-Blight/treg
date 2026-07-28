@@ -1,0 +1,130 @@
+provider: crunchbase
+source:
+  docs: https://data.crunchbase.com/docs/using-the-api
+  openapi: https://api.crunchbase.com/api/v4/openapi.yaml
+  curated: 2026-07-28
+# UNVERIFIED — no credential available at curation time; every path, parameter and price below is
+# transcribed from Crunchbase's official v4 documentation 2026-07-28. Nothing here has been called.
+#
+# ACCESS IS LICENSE-GATED. Crunchbase does not sell self-service API keys: a key comes with an
+# Enterprise or Applications license, and a Team Owner finds it under Integrations settings (this is
+# what the registry's setup_note warns about). The old self-service Basic API is discontinued —
+# Crunchbase states plainly that it no longer offers it. There is consequently NO public per-call
+# price anywhere: the licence is a flat annual fee with a published 200 calls/min rate limit rather
+# than a credit meter, so every entry below carries `cost.value: null` and says so in `cost.note`.
+# The key may ride as the X-cb-user-key header (what treg's registry uses) or a user_key query param.
+#
+# Two v4 shapes to know. ENTITY endpoints (GET /entities/<collection>/<entity_id>) take a permalink
+# such as "apple" and return one record; you MUST pass `field_ids`, because the default response is
+# a thin stub. SEARCH endpoints (POST /searches/<collection>) take a JSON body whose `query` is an
+# array of predicates — {type: "predicate", field_id, operator_id, values} — ANDed together.
+
+pricing_url: https://data.crunchbase.com/docs/using-the-api  # No free API tier — the API is a paid add-on to Crunchbase Pro.
+endpoints:
+  - id: crunchbase.companies.enrich
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /entities/organizations/{entity_id}
+    name: "Get a company's Crunchbase profile"
+    summary: "A company's Crunchbase profile — funding total, categories, headcount, founders"
+    input:
+      pathParams:
+        entity_id: {type: string, required: true, note: "the Crunchbase permalink (the last path segment of the profile URL) or the UUID", example: "apple"}
+      queryParams:
+        field_ids: {type: string, required: false, note: "comma-separated fields to return — WITHOUT this you get a stub. e.g. identifier,short_description,categories,funding_total,num_employees_enum,website", example: "identifier,short_description,funding_total,num_employees_enum,website"}
+        card_ids: {type: string, required: false, note: "comma-separated related-record cards to include: raised_funding_rounds, founders, investors, acquiree_acquisitions, … Each card returns at most 100 items"}
+      note: "to go from a company NAME or domain to a permalink, call crunchbase.companies.search or GET /autocompletes first"
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "no per-call price: access is an annual Enterprise/Applications licence with a published 200 calls/min limit rather than a credit meter."
+    docs_url: https://data.crunchbase.com/docs/examples-organization-api
+
+  - id: crunchbase.companies.search
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /searches/organizations
+    name: "Search companies by industry and funding"
+    summary: "Search Crunchbase companies by industry, funding, headcount, location or founding date"
+    input:
+      bodyType: json
+      body:
+        field_ids: {type: "array[string]", required: true, note: "fields to return on each hit", example: ["identifier", "short_description", "funding_total", "categories"]}
+        query: {type: "array[object]", required: true, note: "predicates, each {type: 'predicate', field_id, operator_id, values: [...]}. THEY ARE AND-ONLY — v4 search has no OR. operator_id is one of eq, not_eq, blank, contains, not_contains, starts, includes, not_includes, includes_all, not_includes_all, gte, lte, between, domain_eq, domain_includes; date fields use `equal` rather than `eq`. There is NO strict gt/lt and NO exists — use gte/lte and blank instead", example: [{"type": "predicate", "field_id": "website_url", "operator_id": "domain_eq", "values": ["stripe.com"]}]}
+        order: {type: "array[object]", required: false, note: "[{field_id, sort: 'asc'|'desc'}]"}
+        limit: {type: integer, required: false, note: "hits per page, max 1000", example: 1}
+        after_id: {type: string, required: false, note: "uuid of the last hit on the previous page — keyset paging forward, not an offset"}
+        before_id: {type: string, required: false, note: "keyset paging backward"}
+      note: "domain lookup is a search, not an entity call: predicate field_id 'website_url' with operator_id 'domain_eq' is how you resolve a domain to a Crunchbase company"
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "no per-call price; covered by the licence, capped by the plan's request-rate limit."
+    docs_url: https://data.crunchbase.com/docs/examples-search-api
+
+  - id: crunchbase.people.enrich
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: GET
+    path: /entities/people/{entity_id}
+    name: "Get a person's Crunchbase profile"
+    summary: "A person's Crunchbase profile — current and past roles, companies founded, investments"
+    input:
+      pathParams:
+        entity_id: {type: string, required: true, note: "the Crunchbase permalink of the person, or their UUID", example: "tim-cook"}
+      queryParams:
+        field_ids: {type: string, required: false, note: "comma-separated fields to return; without it the response is a stub", example: "identifier,primary_job_title,primary_organization,description"}
+        card_ids: {type: string, required: false, note: "related cards: jobs, founded_organizations, participated_investments, …"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "no per-call price; covered by the licence."
+    docs_url: https://data.crunchbase.com/docs/examples-person-api
+
+  - id: crunchbase.people.search
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /searches/people
+    name: "Search people by role or company"
+    summary: "Search Crunchbase people by role, location or the company they are tied to"
+    input:
+      bodyType: json
+      body:
+        field_ids: {type: "array[string]", required: true, note: "fields to return on each hit", example: ["identifier", "primary_job_title", "primary_organization"]}
+        query: {type: "array[object]", required: true, note: "same AND-only predicate shape and operator set as the organization search", example: [{"type": "predicate", "field_id": "primary_job_title", "operator_id": "contains", "values": ["founder"]}]}
+        order: {type: "array[object]", required: false}
+        limit: {type: integer, required: false, note: "max 1000, default 100", example: 1}
+        after_id: {type: string, required: false}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "no per-call price; covered by the licence."
+    docs_url: https://data.crunchbase.com/docs/examples-search-api
+
+  - id: crunchbase.account.usage
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /autocompletes
+    name: "Check key validity and resolve entity name"
+    summary: "Check the key works and resolve a company or person name to its permalink (free)"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "the name being completed", example: "google"}
+        collection_ids: {type: string, required: false, note: "comma-separated collections to search — organizations, people, funding_rounds, and finer-grained ids such as organization.companies, organization.investors, person.investors, location.cities", example: "organizations"}
+        limit: {type: integer, required: false, note: "max 25; the default is not published — pass 1 explicitly for a health check", example: 1}
+      note: "this is the registry's probe. It is also the practical name→permalink resolver that the entity endpoints need"
+    cost: {type: free, value: 0, currency: USD, note: "no credit cost — rate-limited only; used as the free key-health check"}
+    docs_url: https://data.crunchbase.com/docs/using-the-api

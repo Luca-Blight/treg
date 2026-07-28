@@ -1,0 +1,56 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "distributions": [
+      {
+        "description": "分布最多的1个城市广州(17%)",
+        "distribution_list": [
+          {
+            "distribution_key": "广州",
+            "distribution_value": "6710"
+          },
+          {
+            "distribution_key": "杭州",
+            "distribution_value": "2687"
+          },
+          "… 8 more item(s) truncated"
+        ],
+        "image": [
+          "广州居多"
+        ],
+        "origin_type": 8,
+        "type": 256,
+        "type_display": "城市分布"
+      },
+      {
+        "description": "新锐白领居多,占比35%",
+        "distribution_list": [
+          {
+            "distribution_key": "都市银发",
+            "distribution_value": "5479"
+          },
+          {
+            "distribution_key": "小镇青年",
+            "distribution_value": "32177"
+          },
+          "… 6 more item(s) truncated"
+        ],
+        "image": [
+          "新锐白领居多"
+        ],
+        "origin_type": 10,
+        "type": 1024,
+        "type_display": "八大人群分布"
+      },
+      "… 6 more item(s) truncated"
+    ],
+    "last_update_time": "1785219006"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:06.437856185",
+  "requestId": "76dde3698d4f42379c00783fe7cb7fb3"
+}

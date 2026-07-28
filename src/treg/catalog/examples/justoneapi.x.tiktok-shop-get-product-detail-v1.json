@@ -1,0 +1,36 @@
+{
+  "code": 0,
+  "data": {
+    "product_data": {
+      "ab_test": {
+        "user_level": {
+          "shouldJumpH5Pay": 1
+        },
+        "page_level": {
+          "page_id": "841973804696492930",
+          "vids": [],
+          "params": {}
+        }
+      },
+      "page_config": {
+        "global_fe_config": {},
+        "components_map": [
+          {
+            "component_type": "user_info",
+            "component_name": "user_info",
+            "fe_config": {}
+          },
+          {
+            "component_type": "page_header",
+            "component_name": "page_header",
+            "fe_config": {}
+          },
+          "… 17 more item(s) truncated"
+        ]
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:35.056064036",
+  "requestId": "7d83be6e55d14b89903ca843e7d247e7"
+}

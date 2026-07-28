@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "data": {
+    "data": {
+      "name": "人民日报",
+      "biz": "MjM5MjAxNDM4MA==",
+      "wxid": "rmrbwx",
+      "type": "订阅号",
+      "avatar": "http://mmbiz.qpic.cn/mmbiz_png/xrFYciaHL08D1hiaVU0brP9YwQH1wFm9D9AG7oAVaNE8RzGiaKekViaIovvgsjOicfxXcPUPiahpdZ1U1nndyYd4pP0w/0?wx_fmt=png",
+      "desc": "参与、沟通、记录时代。"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:08:26.82644176",
+  "requestId": "844364c9e5664aa8ba571e83eebd0d40"
+}

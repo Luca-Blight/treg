@@ -1,0 +1,28 @@
+{
+  "dedupeSessionId": "<omitted: expires>",
+  "results": [
+    {
+      "id": "v1.NbCZcTz9uUpKjoOfHdGAUlPA1ZOwMEsn",
+      "name": "GoldenSpear LLC",
+      "domain": "www.goldenspear.com",
+      "employeeCount": {
+        "exact": 4
+      },
+      "location": {
+        "country": "United States",
+        "state": "California"
+      },
+      "socialLinks": {
+        "linkedin": "https://www.linkedin.com/company/goldenspear-llc"
+      }
+    }
+  ],
+  "meta": {
+    "returned": 1,
+    "hasMore": true
+  },
+  "billing": {
+    "creditsCharged": 1,
+    "resultsReturned": 1
+  }
+}

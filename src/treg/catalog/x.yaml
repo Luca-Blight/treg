@@ -1,0 +1,142 @@
+# Live-verified 2026-07-28 through the treg /call proxy (connection: x). All 3 read endpoints PASS
+# on the current access tier — no UsageCapExceeded, so the tier warning below did not bite. The
+# write routes are deliberately untested.
+#
+# X API v2 with the member's own OAuth 2.0 user token. Unlike TikTok's Display API, most v2 read
+# routes serve ANY public account once you hold a token — so only /2/users/me is own_account;
+# the rest are any_account and overlap directly with tikhub.x.* (scraped).
+#
+# The real constraint here is not scopes but the ACCESS TIER of treg's X app: the Free tier allows
+# essentially only posting plus /2/users/me, Basic adds modest read caps, and the read endpoints
+# below answer HTTP 429 with a UsageCapExceeded payload on a tier that doesn't include them. That
+# is a plan limit, not a scope error — reconnecting will not fix it.
+#
+# Scopes granted: tweet.read, users.read, offline.access (+ tweet.write on the `write` capability).
+provider: x
+source:
+  docs: https://docs.x.com/x-api
+  openapi: https://api.x.com/2/openapi.json
+  curated: 2026-07-28
+
+limits: "monthly post cap by tier, plus 15-minute request windows"
+pricing_url: https://developer.x.com/en/portal/products  # Monthly post CAP by tier on top of 15-minute windows.; free tier: None write-mostly, very small read allowance
+endpoints:
+  - id: x.x.user.profile
+    capability: x.user.profile
+    platform: x
+    scope: own_account
+    method: GET
+    path: /2/users/me
+    name: "Get your connected X profile"
+    summary: "Get the profile of the connected X account (handle, name, follower counts)"
+    input:
+      queryParams:
+        user.fields: {type: string, required: false, note: "comma-separated extras; public_metrics carries followers_count / following_count / tweet_count", example: "id,name,username,description,public_metrics,verified,created_at"}
+      note: "the only X read route guaranteed on every access tier. Its data.id is the {id} the timeline endpoints need"
+    cost: {type: free, note: "included with the connected account; X applies per-app request caps by access tier, not per-call pricing"}
+    test_request:
+      queryParams: {"user.fields": "id,name,username,description,public_metrics,verified,created_at"}
+    verified: 2026-07-28
+    example_response: examples/x.x.user.profile.json
+    docs_url: https://docs.x.com/x-api/users/user-lookup-me
+
+  - id: x.x.user.profile.by_username
+    # Same capability, public target: a user token reads any public profile, so this competes
+    # directly with the scraped tikhub.x.user.profile — first-party data, zero marginal cost,
+    # but bounded by the app's monthly read cap.
+    capability: x.user.profile
+    platform: x
+    scope: any_account
+    method: GET
+    path: /2/users/by/username/{username}
+    summary: "Get any public X user's profile by handle"
+    input:
+      pathParams:
+        username: {type: string, required: true, note: "handle without the '@'", example: "elonmusk"}
+      queryParams:
+        user.fields: {type: string, required: false, example: "id,name,username,description,public_metrics,verified,created_at"}
+      note: "for several handles at once use GET /2/users/by?usernames=a,b,c (up to 100) — one request against the cap instead of 100"
+    cost: {type: free, note: "included with the connected account; counts against the app's monthly post-read cap"}
+    test_request:
+      pathParams: {username: "elonmusk"}
+      queryParams: {"user.fields": "id,name,username,description,public_metrics,verified,created_at"}
+    verified: 2026-07-28
+    example_response: examples/x.x.user.profile.by_username.json
+    docs_url: https://docs.x.com/x-api/users/user-lookup-by-username
+
+  - id: x.x.user.posts
+    capability: x.user.posts
+    platform: x
+    scope: any_account
+    method: GET
+    path: /2/users/{id}/tweets
+    name: "List a user's recent posts"
+    summary: "List the recent posts of an X user (your own or any public account)"
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "numeric user id — from x.user.profile (data.id), NOT the @handle", example: "44196397"}
+      queryParams:
+        max_results: {type: integer, required: false, note: "5–100, default 10", example: 10}
+        pagination_token: {type: string, required: false, note: "meta.next_token from the previous response"}
+        exclude: {type: string, required: false, note: "comma-separated: retweets, replies", example: "retweets,replies"}
+        tweet.fields: {type: string, required: false, note: "public_metrics carries likes/reposts/replies/impressions", example: "id,text,created_at,public_metrics,referenced_tweets"}
+        start_time: {type: string, required: false, note: "RFC 3339; the timeline reaches back at most 3,200 posts regardless", example: "2026-07-01T00:00:00Z"}
+      note: "posts read here count against the app's monthly cap; on the Free access tier this route answers 429 UsageCapExceeded"
+    cost: {type: free, note: "included with the connected account; consumes the app's monthly post-read allowance (tier-dependent)"}
+    test_request:
+      pathParams: {id: "44196397"}
+      queryParams: {max_results: 5, "tweet.fields": "id,text,created_at,public_metrics"}
+    verified: 2026-07-28
+    example_response: examples/x.x.user.posts.json
+    docs_url: https://docs.x.com/x-api/posts/user-posts-timeline-by-user-id
+
+  # --- write actions (the `write` capability, scope tweet.write) ------------------------------
+  #
+  # ATTACHING MEDIA IS NOT POSSIBLE UNDER TREG'S CURRENT GRANT. A post carries images or video by
+  # passing media.media_ids, and those ids come from POST /2/media/upload (the chunked
+  # INIT / APPEND / FINALIZE flow), which requires the `media.write` scope. treg's X app requests
+  # tweet.read, tweet.write, users.read and offline.access only — cataloguing the upload route here
+  # would promise access the app does not have. Adding it means putting `media.write` into
+  # oauth_providers.X.scopes["write"] and re-consenting every existing connection.
+  # (Postiz sidesteps this by holding OAuth 1.0a user tokens and signing the legacy v1.1 upload
+  # endpoint — a different credential shape treg does not store.)
+  - id: x.x.post.create
+    capability: x.post.create
+    platform: x
+    scope: own_account
+    method: POST
+    path: /2/tweets
+    summary: "Publish a post to your own X account"
+    input:
+      body:
+        text: {type: string, required: true, note: "the post text — 280 characters on a standard account, 25,000 on X Premium. Every link counts as 23 characters whatever its length", example: "Shipping something new today."}
+        reply_settings: {type: string, required: false, note: "who may reply: following | mentionedUsers | subscribers | verified. OMIT the field for the default (everyone) — sending the literal 'everyone' is rejected", example: "following"}
+        poll: {type: object, required: false, note: "{\"options\": [\"a\",\"b\"], \"duration_minutes\": 1440} — 2 to 4 options, 5 to 10080 minutes. A poll cannot be combined with media"}
+        for_super_followers_only: {type: boolean, required: false}
+        geo: {type: object, required: false, note: "{\"place_id\": \"…\"}"}
+      bodyType: json
+      note: "needs the `write` capability (tweet.write); a connection made with `read` answers 403. Success is HTTP 201 with {data: {id, text}} — the public URL is https://x.com/<handle>/status/<data.id>, which the API does not return. Images/video are out of reach, see the block comment above"
+    cost: {type: free, note: "included with the connected account; X caps posts by app access tier (Free = 500 posts/month, 17/day) rather than charging per call"}
+    unverified: "write action — this publishes to a real account; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://docs.x.com/x-api/posts/creation-of-a-post
+
+  - id: x.x.post.reply
+    # Same route and same scope, but a distinct job — and the mechanism behind a thread: publish
+    # the first post, then chain each next one to the id the previous call returned.
+    capability: x.post.reply
+    platform: x
+    scope: own_account
+    method: POST
+    path: /2/tweets
+    summary: "Reply to an X post, or continue your own thread"
+    input:
+      body:
+        text: {type: string, required: true, example: "One more thing —"}
+        reply: {type: object, required: true, note: "{\"in_reply_to_tweet_id\": \"<post id>\"}; add \"exclude_reply_user_ids\": [\"…\"] to drop mentions from the reply", example: {in_reply_to_tweet_id: "1234567890123456789"}}
+        quote_tweet_id: {type: string, required: false, note: "quote-posts the given id instead of replying to it — use INSTEAD of `reply`, not alongside"}
+      bodyType: json
+      note: "to build a thread, feed each response's data.id into the next call's reply.in_reply_to_tweet_id. Replying to a post whose author restricted replies, or that was deleted, answers 403/404 — each call is all-or-nothing, so a half-posted thread stays half-posted"
+    cost: {type: free, note: "included with the connected account; a reply counts against the same per-tier monthly post cap as an original post"}
+    unverified: "write action — this publishes to a real account; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://docs.x.com/x-api/posts/creation-of-a-post
+

@@ -1,0 +1,50 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "3.0171 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0386-0000-4ae62f113b67",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "3.0097 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "competitors_domain",
+        "se_type": "google",
+        "target": "newmouth.com",
+        "intersecting_domains": [
+          "dentaly.org",
+          "… 2 more item(s) truncated"
+        ],
+        "language_name": "English",
+        "location_code": 2840,
+        "limit": 3
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "target": "newmouth.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 890,
+          "items_count": 3,
+          "items": [
+            "… {8 field(s) truncated}",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

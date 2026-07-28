@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "1e0a4fd7-5c80-4f38-b7ad-751272d362e2",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:40:29",
+  "time_stamp": 1785220829,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/get_user_interests_groups_api_v1_linkedin_web_get_user_interests_groups_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [213 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/1e0a4fd7-5c80-4f38-b7ad-751272d362e2?sign=e547c5e0d36c4876ad8d9a773506c79d5b7fd4413cef870b55977a984916a55a",
+  "router": "/api/v1/linkedin/web/get_user_interests_groups",
+  "params": {
+    "urn": "ACoAAAjpjWIBMh1iBR4OgSPK5GXetlQ6dYUT-qo",
+    "page": "1"
+  },
+  "data": {
+    "page": 1,
+    "total": 59,
+    "has_more": true,
+    "data": [
+      {
+        "id": "39683",
+        "title": "Leadership Think Tank",
+        "member_count": 2221643,
+        "url": "https://www.linkedin.com/groups/39683",
+        "logo": [
+          {
+            "width": 92,
+            "height": 92,
+            "url": "https://media.licdn.com/dms/image/v2/D4E07AQGapeZXSm6e2g/group-logo_image-shrink_92x92/group-logo_image-shrink_92x92/0/1707315628991?e=1785826800&v=beta&t=GHdyoN9gr59SrEE6YtAauf94xWdRjWm3YHuLtIiwERk",
+            "expires_at": 1785826800000
+          },
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "… 1 more item(s) truncated"
+    ]
+  }
+}

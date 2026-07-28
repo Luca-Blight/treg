@@ -1,0 +1,36 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0206 sec.",
+  "cost": 0.0006,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0066-0000-7956007c8ff7",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0054 sec.",
+      "cost": 0.0006,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "task_post",
+        "se": "naver",
+        "se_type": "organic",
+        "keyword": "albert einstein",
+        "device": "desktop",
+        "tag": "some_string_123",
+        "postback_url": "https://your-server.com/postbackscript.php",
+        "postback_data": "regular",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

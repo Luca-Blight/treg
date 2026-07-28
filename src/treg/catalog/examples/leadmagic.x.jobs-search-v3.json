@@ -1,0 +1,21 @@
+{
+  "results": [],
+  "signals": [],
+  "pagination": {
+    "limit": 1,
+    "returned": 0,
+    "has_more": false,
+    "next_cursor": null
+  },
+  "credits_consumed": 0,
+  "has_more": false,
+  "next_cursor": null,
+  "snapshot_limit_reached": false,
+  "has_more_beyond_snapshot": false,
+  "metadata": {
+    "pagination": "snapshot",
+    "snapshot_id": "bdb1e6af42debadfdd0e3baaee5d8d0decefdb26",
+    "snapshot_page_start": 0,
+    "snapshot_cache_status": "cold"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "57.0310 sec.",
+  "cost": 0.09,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0369-0000-7a1bc65fc7aa",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "57.0176 sec.",
+      "cost": 0.09,
+      "result_count": 1879,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "keywords_for_site",
+        "se": "google_ads",
+        "location_code": 2840,
+        "target": "dataforseo.com"
+      },
+      "result": [
+        {
+          "keyword": "seo api",
+          "location_code": 2840,
+          "language_code": null,
+          "search_partners": false,
+          "competition": "LOW",
+          "competition_index": 22,
+          "search_volume": 480,
+          "low_top_of_page_bid": 8.36,
+          "high_top_of_page_bid": 39,
+          "cpc": 52.05,
+          "monthly_searches": [
+            {
+              "year": 2026,
+              "month": 6,
+              "search_volume": 260
+            },
+            "… 11 more item(s) truncated"
+          ],
+          "keyword_annotations": {
+            "concepts": [
+              {
+                "name": "google",
+                "concept_group": {
+                  "name": "Site",
+                  "type": "BRAND"
+                }
+              }
+            ]
+          }
+        },
+        "… 1878 more item(s) truncated"
+      ]
+    }
+  ]
+}

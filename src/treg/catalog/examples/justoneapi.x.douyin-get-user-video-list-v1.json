@@ -1,0 +1,25 @@
+{
+  "code": 0,
+  "data": {
+    "has_more": 0,
+    "status_msg": "",
+    "max_cursor": 0,
+    "aweme_list": [],
+    "log_pb": {
+      "impr_id": "202607281359474BBD49F0D26AE055ACBF"
+    },
+    "min_cursor": 0,
+    "uid": "107955",
+    "sec_uid": "MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM",
+    "extra": {
+      "now": 1785218387000,
+      "logid": "202607281359474BBD49F0D26AE055ACBF",
+      "fatal_item_ids": []
+    },
+    "status_code": 0,
+    "version": "v1"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:48.459812496",
+  "requestId": "056fc14e717a455787ffe93b93efe0ab"
+}

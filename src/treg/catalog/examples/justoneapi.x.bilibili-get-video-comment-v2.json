@@ -1,0 +1,27 @@
+{
+  "code": 0,
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "cursor": "<omitted: expires>",
+      "replies": "… 19 item(s) truncated",
+      "top": "… 3 field(s) truncated",
+      "top_replies": "… 1 item(s) truncated",
+      "effects": "… 1 field(s) truncated",
+      "assist": 0,
+      "blacklist": 0,
+      "vote": 0,
+      "config": "… 3 field(s) truncated",
+      "upper": "… 1 field(s) truncated",
+      "control": "… 19 field(s) truncated",
+      "note": 1,
+      "vote_card": "… 4 field(s) truncated",
+      "callbacks": "… 0 field(s) truncated"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:02:44.074664106",
+  "requestId": "e202d554db4a48ce8bd44ba13c59df… [32 chars total]"
+}

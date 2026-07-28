@@ -1,0 +1,39 @@
+{
+  "code": 0,
+  "data": {
+    "counts": {
+      "total_counts": 0
+    },
+    "data": [],
+    "edit_status": {
+      "can_reply": true,
+      "toast": "彼此欣赏让讨论更加充实"
+    },
+    "paging": {
+      "is_end": true,
+      "is_start": false,
+      "next": "https://www.zhihu.com/api/v4/comment_v5/comment/2065109283218502614/child_comment?limit=20&offset=&order_by=score",
+      "previous": "https://www.zhihu.com/api/v4/comment_v5/comment/2065109283218502614/child_comment?limit=20&offset=&order_by=score",
+      "totals": 0
+    },
+    "plugin_info": {
+      "comment_bind_type": "",
+      "comment_ids": null,
+      "plugin_asset": null
+    },
+    "root": null,
+    "sorter": [
+      {
+        "type": "score",
+        "text": "默认"
+      },
+      {
+        "type": "ts",
+        "text": "时间"
+      }
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:05:03.422220353",
+  "requestId": "d083a3fab1d64c9faa50315c646aa4ff"
+}

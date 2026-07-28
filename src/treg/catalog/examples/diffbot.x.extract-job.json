@@ -1,0 +1,19 @@
+{
+  "request": {
+    "pageUrl": "https://www.pathai.com/careers/DirectorClinicalOperations-6715804002",
+    "api": "job",
+    "version": 3,
+    "resolvedPageUrl": "https://www.pathai.com/career/job-post?gh_jid=%7Bghjib%7D&gh_src=%7Bghsrc%7D"
+  },
+  "objects": [
+    {
+      "humanLanguage": "en",
+      "diffbotUri": "job|3|889408989",
+      "pageUrl": "https://www.pathai.com/careers/DirectorClinicalOperations-6715804002",
+      "text": "\nJoin our team. A new path is waiting.\nOur team is passionate about solving big challenges in healthcare and transforming the field of pathology with artificial intelligence.\n",
+      "type": "job",
+      "remote": "NOT_REMOTE",
+      "resolvedPageUrl": "https://www.pathai.com/career/job-post?gh_jid=%7Bghjib%7D&gh_src=%7Bghsrc%7D"
+    }
+  ]
+}

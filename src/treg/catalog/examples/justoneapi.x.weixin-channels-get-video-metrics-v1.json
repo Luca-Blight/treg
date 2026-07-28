@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "data": {
+    "count_info": {
+      "comment_count": 584,
+      "like_count": 1903,
+      "forward_count": 13918,
+      "fav_count": 2866,
+      "version_data": {
+        "data_version": 1785219281,
+        "overwrite": false
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:14:42.907909738",
+  "requestId": "73a4f9b005774adfb6616c7a2c335a6d"
+}

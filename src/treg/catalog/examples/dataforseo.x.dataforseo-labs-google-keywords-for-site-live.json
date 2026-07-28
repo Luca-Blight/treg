@@ -1,0 +1,54 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "2.4842 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0398-0000-dad538f049d3",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.4757 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "keywords_for_site",
+        "se_type": "google",
+        "target": "apple.com",
+        "language_code": "en",
+        "location_code": 2840,
+        "include_serp_info": true,
+        "include_subdomains": true,
+        "filters": [
+          "serp_info.se_results_count",
+          "… 2 more item(s) truncated"
+        ],
+        "limit": 3
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "target": "apple.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 1004792,
+          "items_count": 3,
+          "offset": 0,
+          "offset_token": "<omitted: expires>",
+          "items": [
+            "… {12 field(s) truncated}",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

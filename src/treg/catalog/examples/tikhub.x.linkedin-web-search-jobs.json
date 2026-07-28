@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "dbf3e261-ef2c-4fd9-bc98-398bfab263a4",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:40:39",
+  "time_stamp": 1785220839,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/search_jobs_api_v1_linkedin_web_search_jobs_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/dbf3e261-ef2c-4fd9-bc98-398bfab263a4?sign=0d6f309241912745e040ededa7a18940cf09295359bd503da22261e6475301b9",
+  "router": "/api/v1/linkedin/web/search_jobs",
+  "params": {
+    "keyword": "backend",
+    "page": "1",
+    "geocode": "103644278",
+    "company": "1441"
+  },
+  "data": {
+    "page": 1,
+    "total": 214,
+    "has_more": true,
+    "data": [
+      {
+        "id": "4442669023",
+        "title": "Staff Software Engineer, Full Stack, Google One",
+        "url": "https://www.linkedin.com/jobs/view/4442669023",
+        "listed_at": "2026-07-21T16:33:47.000Z",
+        "is_promote": false,
+        "is_easy_apply": false,
+        "location": "Mountain View, CA (On-site)",
+        "company": {
+          "id": "1441",
+          "name": "Google",
+          "url": "https://www.linkedin.com/company/1441",
+          "verified": true,
+          "logo": "… [3 item(s) truncated]"
+        }
+      },
+      "… 24 more item(s) truncated"
+    ]
+  }
+}

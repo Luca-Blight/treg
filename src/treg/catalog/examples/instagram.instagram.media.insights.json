@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "name": "reach",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 1234
+        }
+      ],
+      "title": "Accounts reached",
+      "description": "The number of unique accounts that have seen this reel at least once. Reach is different from impressions, which may include multiple views of your reel by the same accounts. This metric is estimated.",
+      "id": "17953960824194864/insights/reach/lifetime"
+    },
+    {
+      "name": "saved",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 1234
+        }
+      ],
+      "title": "Saved",
+      "description": "The number of saves of your reel.",
+      "id": "17953960824194864/insights/saved/lifetime"
+    },
+    "… 3 more item(s) truncated"
+  ],
+  "_scrubbed": true
+}

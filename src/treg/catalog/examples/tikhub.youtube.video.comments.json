@@ -1,0 +1,83 @@
+{
+  "code": 200,
+  "request_id": "78a09009-1506-4441-97f7-8d2fbff659eb",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 20:55:23",
+  "time_stamp": 1785210923,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_video_comments_api_v1_youtube_web_v2_get_video_comments_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through the API again.",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/78a09009-1506-4441-97f7-8d2fbff659eb?sign=f9c2dfb3db6f32a5fd87b4ea3456077362f85608b5cb4178bd0923ac06d101cf",
+  "router": "/api/v1/youtube/web_v2/get_video_comments",
+  "params": {
+    "video_id": "dQw4w9WgXcQ",
+    "language_code": "en-US"
+  },
+  "data": {
+    "comments": [
+      {
+        "comment_id": "Ugzge340dBgB75hWBm54AaABAg",
+        "content": "can confirm: he never gave us up",
+        "published_time": "1 year ago",
+        "reply_level": 0,
+        "like_count": "273K",
+        "like_count_a11y": "273K likes",
+        "reply_count": "961",
+        "reply_count_a11y": "961 replies",
+        "author": {
+          "channel_id": "UCBR8-60-B28hp2BmDPdntcQ",
+          "display_name": "@YouTube",
+          "channel_url": "https://www.youtube.com/@YouTube",
+          "avatar_url": "https://yt3.ggpht.com/3s6evpqAiDU9tQR4sC2siJippbH2RWVPnwHgyl4V0th2iuQz0VDQZbUhQBGmsxLYo-mjG6TqZQ=s88-c-k-c0x00ffffff-no-rj",
+          "avatar_thumbnails": [
+            {
+              "url": "https://yt3.ggpht.com/3s6evpqAiDU9tQR4sC2siJippbH2RWVPnwHgyl4V0th2iuQz0VDQZbUhQBGmsxLYo-mjG6TqZQ=s88-c-k-c0x00ffffff-no-rj",
+              "width": 88,
+              "height": 88
+            }
+          ],
+          "is_verified": true,
+          "is_creator": false,
+          "is_artist": false
+        },
+        "creator_thumbnail_url": "https://yt3.ggpht.com/MOWpaiGJdgN4aKMI-NGQLL4jMVP3aDORlQpOBWooi0GSE2TGt4_9ncyepk1pCh-yWQ795AhPbw=s88-c-k-c0x00ffffff-no-rj",
+        "reply_continuation_token": "<omitted: expires>",
+        "reply_count_text": "961 replies"
+      },
+      {
+        "comment_id": "Ugxzbv_ZeZXNRcfwsSF4AaABAg",
+        "content": "Is everyone going to ignore the fact that Rick Astley looks like a twelve year old boy but has a uniquely deep voice?",
+        "published_time": "6 years ago",
+        "reply_level": 0,
+        "like_count": "288K",
+        "like_count_a11y": "288K likes",
+        "reply_count": "632",
+        "reply_count_a11y": "632 replies",
+        "author": {
+          "channel_id": "UCNLgzvqrGzFi5SEAbVkFchg",
+          "display_name": "@candycake9531",
+          "channel_url": "https://www.youtube.com/@candycake9531",
+          "avatar_url": "https://yt3.ggpht.com/ytc/AIdro_mEO82VrM8XtyGrBUkJgbAYgpAmDpUZixd1QvK9kyA=s88-c-k-c0x00ffffff-no-rj",
+          "avatar_thumbnails": [
+            {
+              "url": "https://yt3.ggpht.com/ytc/AIdro_mEO82VrM8XtyGrBUkJgbAYgpAmDpUZixd1QvK9kyA=s88-c-k-c0x00ffffff-no-rj",
+              "width": 88,
+              "height": 88
+            }
+          ],
+          "is_verified": false,
+          "is_creator": false,
+          "is_artist": false
+        },
+        "creator_thumbnail_url": null,
+        "reply_continuation_token": "<omitted: expires>",
+        "reply_count_text": "632 replies"
+      },
+      "… 18 more item(s) truncated"
+    ],
+    "continuation_token": "<omitted: expires>"
+  }
+}

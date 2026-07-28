@@ -1,0 +1,38 @@
+{
+  "search_metadata": {
+    "id": "6a6898bf89ec192114ab29b1",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/IC9Wb9cO6T23fkfmKMFVSg/6a6898bf89ec192114ab29b1.json",
+    "created_at": "2026-07-28 11:55:43 UTC",
+    "processed_at": "2026-07-28 11:55:43 UTC",
+    "google_trends_url": "https://trends.google.com/trends/embed/explore/TIMESERIES?hl=en&tz=420&req=%7B%22comparisonItem%22%3A%5B%7B%22keyword%22%3A%22coffee%22%2C%22geo%22%3A%22US%22%2C%22time%22%3A%22today+12-m%22%7D%5D%2C%… [246 chars]",
+    "raw_html_file": "https://serpapi.com/searches/IC9Wb9cO6T23fkfmKMFVSg/6a6898bf89ec192114ab29b1.html",
+    "prettify_html_file": "https://serpapi.com/searches/IC9Wb9cO6T23fkfmKMFVSg/6a6898bf89ec192114ab29b1.prettify",
+    "total_time_taken": 6.87
+  },
+  "search_parameters": {
+    "engine": "google_trends",
+    "q": "coffee",
+    "hl": "en",
+    "geo": "US",
+    "date": "today 12-m",
+    "tz": "420",
+    "data_type": "TIMESERIES"
+  },
+  "interest_over_time": {
+    "timeline_data": [
+      {
+        "date": "Jul 27 – Aug 2, 2025",
+        "timestamp": "1753574400",
+        "values": [
+          {
+            "query": "coffee",
+            "value": "69",
+            "extracted_value": 69
+          }
+        ]
+      },
+      "… 52 more item(s) truncated"
+    ]
+  }
+}

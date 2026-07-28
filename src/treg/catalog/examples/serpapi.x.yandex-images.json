@@ -1,0 +1,38 @@
+{
+  "search_metadata": {
+    "id": "6a6898e40a9156c307bac533",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/18k3VZvSkB3nipoedrU_Hw/6a6898e40a9156c307bac533.json",
+    "created_at": "2026-07-28 11:56:20 UTC",
+    "processed_at": "2026-07-28 11:56:20 UTC",
+    "yandex_images_url": "https://yandex.com/images/search/?text=coffee",
+    "raw_html_file": "https://serpapi.com/searches/18k3VZvSkB3nipoedrU_Hw/6a6898e40a9156c307bac533.html",
+    "total_time_taken": 1.87
+  },
+  "search_parameters": {
+    "engine": "yandex_images",
+    "text": "coffee"
+  },
+  "images_results": [
+    {
+      "thumbnail": "https://avatars.mds.yandex.net/i?id=f57e61be32ab83217ced43749845bb695bc9a5d1-5236752-images-thumbs&n=13",
+      "position": 1,
+      "title": "Статьи о кофе от экспертов интернет-магазина КофеСпейс - профессиональный взгляд",
+      "snippet": "Как заварить молотый кофе в чашке.",
+      "link": "https://coffeespace.ru/blog/kofe-obzor/",
+      "source": "coffeespace.ru",
+      "original": "https://coffeespace.ru/upload/iblock/207/8z2xho4mky2cvin9zvap42oao1736mku.png",
+      "serpapi_link": "https://serpapi.com/search.json?engine=yandex_images&tab=about&url=https%3A%2F%2Fcoffeespace.ru%2Fupload%2Fiblock%2F207%2F8z2xho4mky2cvin9zvap42oao1736mku.png",
+      "size": {
+        "height": 448,
+        "width": 800,
+        "bytes": 550360
+      }
+    },
+    "… 29 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "next": "https://serpapi.com/search.json?engine=yandex_images&p=1&text=coffee",
+    "current": "https://serpapi.com/search.json?engine=yandex_images&text=coffee"
+  }
+}

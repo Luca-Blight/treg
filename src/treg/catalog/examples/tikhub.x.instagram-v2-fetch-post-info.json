@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "23a1e0ae-bf37-43d7-8ee9-833d316d27e1",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:20",
+  "time_stamp": 1785220280,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V2-API/fetch_post_info_api… [96 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/23a1e0ae-bf37-43… [150 chars]",
+  "router": "/api/v1/instagram/v2/fetch_post_info",
+  "params": {
+    "code_or_url": "DRhvwVLAHAG"
+  },
+  "data": {
+    "data": {
+      "accessibility_caption": null,
+      "are_remixes_crosspostable": true,
+      "boost_unavailable_identifier": null,
+      "boost_unavailable_reason": null,
+      "boost_unavailable_reason_v2": null,
+      "can_reply": false,
+      "can_reshare": true,
+      "can_save": true,
+      "caption": "… {14 field(s) truncated}",
+      "caption_is_edited": false,
+      "clips_metadata": "… {37 field(s) truncated}",
+      "clips_tab_pinned_user_ids": "… [0 item(s) truncated]",
+      "coauthor_producer_can_see_organic_insights": false,
+      "coauthor_producers": "… [0 item(s) truncated]",
+      "code": "DRhvwVLAHAG",
+      "…": "111 more field(s) truncated"
+    }
+  }
+}

@@ -1,0 +1,444 @@
+# leadmagic — EXTENDED tier: the rest of the documented v1/v3 surface not curated in leadmagic.yaml.
+# LeadMagic publishes no fetchable OpenAPI document (per-endpoint reference pages only), so this file
+# is hand-transcribed from https://leadmagic.io/docs/api-reference/* — one WebFetch per page, 2026-07-28.
+# No credential was used; nothing here has been called (INGEST only — verification is a later step).
+#
+# Naming: LeadMagic's own reference-page slugs don't always match their path segments (the page
+# "email-to-profile" documents /v1/people/b2b-profile; "profile-to-email" documents
+# /v1/people/b2b-profile-email) — ids below follow the PATH, `name` follows the page's own title.
+#
+# Billing pattern holds across this tier too: most routes charge only on a definitive hit and are
+# free on a miss/no-match. The three ad-search routes and jobs/company-search v3 charge PER ITEM
+# returned instead (no free floor on the base call), and b2b-ads-search additionally reserves a
+# base charge plus one credit per ad (1-51 credits for a single call) — flag this to a verifier
+# before it runs unbounded.
+#
+# VERIFIED 2026-07-28 — 11 of 15 entries called live with a real credential under a 30-credit
+# budget (observed spend ~9.3 credits total, core+extended combined): 10 passed and 1
+# (competitors-search) 401s with invalid_api_key on this key, the same plan-gate shape as core's
+# /v3/people/search — a different /v3 route (companies/search) on the SAME key succeeds, so it
+# reads as a route-level feature gate rather than a broken key. The 3 ad-search routes
+# (google-ads-search, meta-ads-search, b2b-ads-search) are `skipped`: none of them document a
+# `limit` param, so a single call's cost is unbounded (b2b-ads-search alone can reach 51 credits)
+# and none could be safely bounded within the 30-credit cap — they need a topped-up budget and
+# the response's own X-Credits-Max-Cost header checked before a real run, not investigation.
+
+provider: leadmagic
+source:
+  method: hand-curated from LeadMagic's official per-endpoint HTML reference (no OpenAPI document exists)
+  ingested: '2026-07-28'
+  spec_urls:
+    - https://leadmagic.io/docs/v1/introduction
+    - https://leadmagic.io/docs/api-reference/email-to-profile
+    - https://leadmagic.io/docs/api-reference/profile-to-email
+    - https://leadmagic.io/docs/api-reference/personal-email-finder
+    - https://leadmagic.io/docs/api-reference/role-finder
+    - https://leadmagic.io/docs/api-reference/employee-finder
+    - https://leadmagic.io/docs/api-reference/job-change-detector
+    - https://leadmagic.io/docs/api-reference/competitors-search
+    - https://leadmagic.io/docs/api-reference/company-funding
+    - https://leadmagic.io/docs/api-reference/technographics
+    - https://leadmagic.io/docs/api-reference/company-search-v3
+    - https://leadmagic.io/docs/api-reference/job-search
+    - https://leadmagic.io/docs/api-reference/jobs-finder
+    - https://leadmagic.io/docs/api-reference/google-ads-search
+    - https://leadmagic.io/docs/api-reference/meta-ads-search
+    - https://leadmagic.io/docs/api-reference/b2b-ads-search
+
+endpoints:
+  - id: leadmagic.x.b2b-profile
+    tier: extended
+    platform: people
+    method: POST
+    path: /v1/people/b2b-profile
+    name: "Find a profile URL from an email (reverse lookup)"
+    summary: "Performs reverse email lookup to identify professional profile URLs associated with work or personal email addresses"
+    input:
+      bodyType: json
+      body:
+        work_email: {type: string, required: false, example: "jane@leadmagic.io"}
+        personal_email: {type: string, required: false}
+      note: "at least one of work_email | personal_email is required"
+    test_request:
+      bodyType: json
+      body: {work_email: "press@leadmagic.io"}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      note: "10 credits if a profile is found; free if not found"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.b2b-profile.json
+    docs_url: https://leadmagic.io/docs/api-reference/email-to-profile
+
+  - id: leadmagic.x.b2b-profile-email
+    tier: extended
+    capability: people.email.find
+    platform: people
+    method: POST
+    path: /v1/people/b2b-profile-email
+    name: "Find a work email from a profile URL"
+    summary: "Retrieves work email addresses from professional profiles by accepting a profile URL or username as input; every email found is automatically validated for deliverability"
+    input:
+      bodyType: json
+      body:
+        profile_url: {type: string, required: true, note: "full profile URL or just the username", example: "https://www.linkedin.com/in/example"}
+    test_request:
+      bodyType: json
+      body: {profile_url: "https://www.linkedin.com/in/example"}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      note: "5 credits if an email is found; free if not found"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.b2b-profile-email.json
+    docs_url: https://leadmagic.io/docs/api-reference/profile-to-email
+
+  - id: leadmagic.x.personal-email-finder
+    tier: extended
+    platform: people
+    method: POST
+    path: /v1/people/personal-email-finder
+    name: "Find a personal email from a profile URL"
+    summary: "Locates personal email addresses associated with a professional profile URL, serving as a fallback when work email is unavailable or undeliverable"
+    input:
+      bodyType: json
+      body:
+        profile_url: {type: string, required: true, example: "https://www.linkedin.com/in/example"}
+    test_request:
+      bodyType: json
+      body: {profile_url: "https://www.linkedin.com/in/example"}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      note: "2 credits if found; free if not found"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.personal-email-finder.json
+    docs_url: https://leadmagic.io/docs/api-reference/personal-email-finder
+
+  - id: leadmagic.x.role-finder
+    tier: extended
+    capability: people.search
+    platform: people
+    method: POST
+    path: /v1/people/role-finder
+    name: "Find a person at a company by job title"
+    summary: "Locates a person at a company based on their job title, enabling targeted outreach for account-based marketing campaigns and other role-specific needs"
+    input:
+      bodyType: json
+      body:
+        job_title: {type: string, required: true, example: "VP of Sales"}
+        company_domain: {type: string, required: false, note: "preferred for accuracy", example: "leadmagic.io"}
+        company_name: {type: string, required: false}
+      note: "job_title is required; at least one of company_domain | company_name is also required"
+    test_request:
+      bodyType: json
+      body: {job_title: "Head of Marketing", company_domain: "leadmagic.io"}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      note: "2 credits when found; free on no match"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.role-finder.json
+    docs_url: https://leadmagic.io/docs/reference/role-finder
+
+  - id: leadmagic.x.employee-finder
+    tier: extended
+    capability: people.search
+    platform: people
+    method: POST
+    path: /v1/people/employee-finder
+    name: "List employees at a company"
+    summary: "Retrieves a list of employees from a company using either domain or company name"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: false, example: "leadmagic.io"}
+        company_name: {type: string, required: false}
+        limit: {type: integer, required: false, example: 1}
+      note: "at least one of company_domain | company_name is required"
+    test_request:
+      bodyType: json
+      body: {company_domain: "leadmagic.io", limit: 1}
+    cost:
+      type: per_result
+      value: 0.05
+      currency: USD
+      note: "0.05 credits per employee returned (20 employees = 1 credit); free if no results"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.employee-finder.json
+    docs_url: https://leadmagic.io/docs/api-reference/employee-finder
+
+  - id: leadmagic.x.job-change-detector
+    tier: extended
+    platform: people
+    method: POST
+    path: /v1/people/job-change-detector
+    name: "Detect if a person changed jobs"
+    summary: "Detects whether a professional has changed jobs by comparing their current employment against a previously known company"
+    input:
+      bodyType: json
+      body:
+        profile_url: {type: string, required: true, example: "https://www.linkedin.com/in/example"}
+        company_domain: {type: string, required: false, note: "the previously known employer", example: "leadmagic.io"}
+        company_name: {type: string, required: false}
+      note: "profile_url is required; at least one of company_domain | company_name is also required"
+    test_request:
+      bodyType: json
+      body: {profile_url: "https://www.linkedin.com/in/example", company_domain: "leadmagic.io"}
+    cost:
+      type: per_call
+      value: 3
+      currency: USD
+      note: "3 credits per call, regardless of outcome"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.job-change-detector.json
+    docs_url: https://leadmagic.io/docs/api-reference/job-change-detector
+
+  - id: leadmagic.x.competitors-search
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v1/companies/competitors-search
+    name: "Find a company's competitors"
+    summary: "Retrieves a comprehensive list of competing companies based on a target company identifier — domains, employee counts, industries and descriptions"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: false, example: "leadmagic.io"}
+        company_url: {type: string, required: false}
+        company_name: {type: string, required: false}
+      note: "at least one of company_domain | company_url | company_name is required"
+    test_request:
+      bodyType: json
+      body: {company_domain: "leadmagic.io"}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      note: "5 credits if competitors are found; free if none found"
+    unverified: "http 401 invalid_api_key — plan-gated on this key (same 401 shape as core's /v3/people/search); no credits were consumed"
+    docs_url: https://leadmagic.io/docs/api-reference/competitors-search
+
+  - id: leadmagic.x.company-funding
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v1/companies/company-funding
+    name: "Get a company's funding history"
+    summary: "Retrieves comprehensive funding information for a company, including funding history, investor details, and leadership data"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: false, example: "leadmagic.io"}
+        company_name: {type: string, required: false}
+      note: "at least one of company_domain | company_name is required"
+    test_request:
+      bodyType: json
+      body: {company_domain: "leadmagic.io"}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      note: "4 credits if funding data is found; free if none found"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.company-funding.json
+    docs_url: https://leadmagic.io/docs/api-reference/company-funding
+
+  - id: leadmagic.x.technographics
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v1/companies/technographics
+    name: "Get a company's tech stack"
+    summary: "Analyzes a company's website to identify their technology stack, including marketing tools, analytics platforms, hosting providers, CRM systems, and more"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: true, example: "leadmagic.io"}
+    test_request:
+      bodyType: json
+      body: {company_domain: "leadmagic.io"}
+    cost:
+      type: per_success
+      value: null
+      currency: USD
+      note: "1 credit if technologies are detected; free if none found"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.technographics.json
+    docs_url: https://leadmagic.io/docs/api-reference/technographics
+
+  - id: leadmagic.x.companies-search-v3
+    tier: extended
+    capability: companies.search
+    platform: companies
+    method: POST
+    path: /v3/companies/search
+    name: "Search companies by firmographics, tech, funding"
+    summary: "The canonical company discovery endpoint supporting both single-company lookups and broad criteria-based discovery — domain, website, name, profile URL, and extensive firmographic/technographic/funding filters with cursor pagination"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: false, note: "single-company lookup", example: "leadmagic.io"}
+        company_name: {type: string, required: false}
+        linkedin_url: {type: string, required: false}
+        industries: {type: "array[string]", required: false}
+        min_employees: {type: integer, required: false}
+        max_employees: {type: integer, required: false}
+        country_codes: {type: "array[string]", required: false}
+        tech_stack: {type: "array[string]", required: false}
+        sort_by: {type: string, required: false, note: "linkedin_followers | total_funding | linkedin_employee_count | revenue_min | revenue_max | founded_year | total_contacts"}
+        limit: {type: integer, required: false, note: "max 50", example: 1}
+        cursor: {type: string, required: false, note: "opaque pagination token from a previous response"}
+      note: "one-off lookup via company_domain/website/company_name/linkedin_url, OR broad discovery via the firmographic/technographic/funding filters; also nestable under company_filters (alias: filters)"
+    test_request:
+      bodyType: json
+      body: {company_domain: "leadmagic.io", limit: 1}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 credit per company returned; free if zero matches. Rate limit 100 req/min, ~2 req/s burst"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.companies-search-v3.json
+    docs_url: https://leadmagic.io/docs/api-reference/company-search-v3
+
+  - id: leadmagic.x.jobs-search-v3
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v3/jobs/search
+    name: "Search open job postings and hiring signals"
+    summary: "Discovers open job postings with hiring signal data including titles, companies, locations, tags, and occupation taxonomy — resolves company domains, country codes, tags and occupation values into normalized filter IDs before executing a bounded query. Searches job postings, not people"
+    input:
+      bodyType: json
+      body:
+        titles.include: {type: "array[string]", required: false, example: ["Software Engineer"]}
+        companies.include: {type: "array[string]", required: false, note: "company domains", example: ["leadmagic.io"]}
+        location.countries: {type: "array[string]", required: false, example: ["US"]}
+        seniority: {type: "array[string]", required: false}
+        hasRemote: {type: boolean, required: false}
+        postedWithin: {type: integer, required: false, note: "days", example: 30}
+        limit: {type: integer, required: false, example: 1}
+        cursor: {type: string, required: false, note: "opaque pagination token"}
+        dryRun: {type: boolean, required: false}
+      note: "every field is optional; an empty body queries the whole index — always set limit deliberately"
+    test_request:
+      bodyType: json
+      body: {companies: {include: ["leadmagic.io"]}, limit: 1}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 credit per returned job/signal; free when no jobs are returned. Rate limit 300 req/min, ~5 req/s burst"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.jobs-search-v3.json
+    docs_url: https://leadmagic.io/docs/api-reference/job-search
+
+  - id: leadmagic.x.jobs-finder
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v1/jobs/jobs-finder
+    name: "Search job listings (v1)"
+    summary: "Search for job listings filtered by company, job details, location, and posting date. Returns paginated results with company information and job descriptions"
+    input:
+      bodyType: json
+      body:
+        job_title: {type: string, required: false, example: "Sales Director"}
+        company_name: {type: string, required: false}
+        company_website: {type: string, required: false, example: "leadmagic.io"}
+        min_employees: {type: integer, required: false}
+        max_employees: {type: integer, required: false}
+        has_remote: {type: boolean, required: false}
+        location: {type: string, required: false}
+        posted_within: {type: integer, required: false, note: "days", example: 30}
+        page: {type: integer, required: false, example: 1}
+        per_page: {type: integer, required: false, example: 1}
+      note: "every field is optional — set per_page deliberately to control cost"
+    test_request:
+      bodyType: json
+      body: {company_website: "leadmagic.io", per_page: 1}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 credit per job returned; free if no jobs found"
+    verified: 2026-07-28
+    example_response: examples/leadmagic.x.jobs-finder.json
+    docs_url: https://leadmagic.io/docs/api-reference/jobs-finder
+
+  - id: leadmagic.x.google-ads-search
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v1/ads/google-ads-search
+    name: "Search a company's Google Ads"
+    summary: "Retrieves Google Ads data for a specified company, enabling competitive intelligence and ad strategy analysis"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: false, example: "leadmagic.io"}
+        company_name: {type: string, required: false}
+      note: "at least one of company_domain | company_name is required"
+    test_request:
+      bodyType: json
+      body: {company_domain: "leadmagic.io"}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 credit per ad returned; free if none found. No per-call ceiling documented — check X-Credits-Max-Cost before running on a heavy advertiser"
+    skipped: "unbounded per-result cost with no limit param documented; this verify pass ran under a hard 30-credit budget and the other 11 callable extended entries already used it responsibly — clears with a topped-up budget and X-Credits-Max-Cost checked first, not investigation"
+    docs_url: https://leadmagic.io/docs/api-reference/google-ads-search
+
+  - id: leadmagic.x.meta-ads-search
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v1/ads/meta-ads-search
+    name: "Search a company's Meta (Facebook/Instagram) ads"
+    summary: "Retrieves Meta (Facebook/Instagram) advertisements for a specified company using their domain or name"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: false, example: "leadmagic.io"}
+        company_name: {type: string, required: false}
+      note: "at least one of company_domain | company_name is required"
+    test_request:
+      bodyType: json
+      body: {company_domain: "leadmagic.io"}
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 credit per ad returned; free if none found. Rate limit 300 req/min, ~5 req/s burst"
+    skipped: "unbounded per-result cost with no limit param documented; ran the rest of this verify pass under a hard 30-credit budget — clears with a topped-up budget, not investigation"
+    docs_url: https://leadmagic.io/docs/api-reference/meta-ads-search
+
+  - id: leadmagic.x.b2b-ads-search
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v1/ads/b2b-ads-search
+    name: "Search a company's B2B ads"
+    summary: "Retrieves B2B advertisements for a company, returning ad creatives with metadata including headlines, CTAs, landing pages, and performance metrics"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: false, example: "leadmagic.io"}
+        company_name: {type: string, required: false}
+      note: "at least one of company_domain | company_name is required. UNBOUNDED PER-CALL COST: base 1 credit plus 1 credit per ad, 0-50 ads (1-51 credits total, no limit param documented) — the response header X-Credits-Max-Cost shows the reserved amount before committing"
+    test_request:
+      bodyType: json
+      body: {company_domain: "leadmagic.io"}
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1 credit base + 1 credit per ad returned; range 1-51 credits per call (0-50 ads max) — a 24-ad response costs 25 credits total"
+    skipped: "unbounded per-call cost (1-51 credits, no limit param) — a single call could alone exhaust the entire 30-credit test budget; clears with a topped-up budget and X-Credits-Max-Cost checked first, not investigation"
+    docs_url: https://leadmagic.io/docs/api-reference/b2b-ads-search

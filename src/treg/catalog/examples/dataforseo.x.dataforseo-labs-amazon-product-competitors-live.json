@@ -1,0 +1,45 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "3.1166 sec.",
+  "cost": 0.01968,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281352-2171-0375-0000-c6fa64d86bfb",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "3.1026 sec.",
+      "cost": 0.01968,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "product_competitors",
+        "se_type": "amazon",
+        "asin": "019005476X",
+        "location_code": 2840,
+        "language_code": "en"
+      },
+      "result": [
+        {
+          "se_type": "amazon",
+          "asin": "019005476X",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 64,
+          "items_count": 64,
+          "items": [
+            "… {7 field(s) truncated}",
+            "… 63 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

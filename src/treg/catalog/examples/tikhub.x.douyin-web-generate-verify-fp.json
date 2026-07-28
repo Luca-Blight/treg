@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "request_id": "9241fa8a-b67f-440a-a4d4-933c92448123",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:39",
+  "time_stamp": 1785220119,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/generate_verify_fp_api_v1_douyin_web_generate_verify_fp_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/9241fa8a-b67f-440a-a4d4-933c92448123?sign=1b38fc7672242f603161827375b629c8b97afee0de093d7d3321cb6719117ceb",
+  "router": "/api/v1/douyin/web/generate_verify_fp",
+  "params": {},
+  "data": {
+    "verify_fp": "verify_ms49yrs8_aHbXt9bl_5aEM_4fFi_AyYW_x8AeRmA57PGl"
+  }
+}

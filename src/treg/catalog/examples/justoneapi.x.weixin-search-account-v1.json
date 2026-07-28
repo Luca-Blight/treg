@@ -1,0 +1,25 @@
+{
+  "code": 0,
+  "data": {
+    "data": [
+      {
+        "name": "人工智能",
+        "biz": "MzAwNzIyMTQ2MA==",
+        "owner_name": "郑州夺蓝网络技术有限公司",
+        "customer_type": "企业",
+        "ghid": "gh_143f18f53985",
+        "wxid": "worldofai",
+        "fans": 36143,
+        "avg_top_read": 151,
+        "avg_top_zan": 0,
+        "avatar": "https://wx.qlogo.cn/mmhead/Q3auHgzwzM6B7P7K0g311MAbOHz2d3DqwiaZRPyWlSNK1HU7iaB6FLBQ/0",
+        "qrcode": "https://open.weixin.qq.com/qr/code?username=worldofai",
+        "week_articles": 0,
+        "lastest_publish": 1693393200
+      }
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:08:27.46305805",
+  "requestId": "9ef7acf6d09b47bcab957aaa03672507"
+}

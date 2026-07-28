@@ -1,0 +1,31 @@
+{
+  "code": 200,
+  "request_id": "a31658b7-085a-4061-8599-8b60cd9cee8b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:44",
+  "time_stamp": 1785220244,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-V2-API/fetch_city_list_api_v1_weibo_web_v2_fetch_city_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/a31658b7-085a-4061-8599-8b60cd9cee8b?sign=b616d3efba44090f39a234da58057810b3a8dc9d926b3b068e2e6867e899b61e",
+  "router": "/api/v1/weibo/web_v2/fetch_city_list",
+  "params": {},
+  "data": {
+    "provinces": [
+      {
+        "name": "省/直辖市",
+        "code": 0,
+        "cities": [
+          {
+            "name": "城市/地区",
+            "code": 0
+          }
+        ]
+      },
+      "… 36 more item(s) truncated"
+    ]
+  }
+}

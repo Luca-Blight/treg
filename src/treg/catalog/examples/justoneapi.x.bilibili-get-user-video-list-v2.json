@@ -1,0 +1,33 @@
+{
+  "code": 0,
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "episodic_button": {
+        "text": "播放全部",
+        "uri": "bilibili://music/playlist/spacepage/9469… [241 chars total]"
+      },
+      "order": [
+        "… 2 field(s) truncated",
+        "… 1 more item(s) truncated"
+      ],
+      "count": 916,
+      "item": [
+        "… 40 field(s) truncated",
+        "… 19 more item(s) truncated"
+      ],
+      "last_watched_locator": {
+        "display_threshold": 10,
+        "insert_ranking": 6,
+        "text": "定位至上次观看"
+      },
+      "has_next": true,
+      "has_prev": false
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:44.697147577",
+  "requestId": "f6ea59e14c0b49a6a1de214c7344db0e"
+}

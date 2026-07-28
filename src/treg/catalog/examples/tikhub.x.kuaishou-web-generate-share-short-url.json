@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "ae876719-4eb5-4138-bfee-04e6d190a180",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:10",
+  "time_stamp": 1785220150,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-Web-API/generate_share_short_url_api_v1_kuaishou_web_generate_share_short_url_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ae876719-4eb5-4138-bfee-04e6d190a180?sign=827b11e43876061955dae679fa283265ccf91bbc6607ed849611954eecaac74b",
+  "router": "/api/v1/kuaishou/web/generate_share_short_url",
+  "params": {
+    "photo_id": "3xtdqvdnqd3psuc"
+  },
+  "data": {
+    "result": 1,
+    "hostName": "public-bjy-c95-kce-node221.idchb1az2.hb1.kwaidc.com",
+    "cache-scope": "nocache",
+    "error_msg": null,
+    "max-age": 0,
+    "share": {
+      "shareMethod": "TOKEN",
+      "shareMethodType": null,
+      "shareChannel": "COPY_LINK",
+      "shareMode": "APP",
+      "kpn": "KUAISHOU",
+      "subBiz": "BROWSE_SLIDE_PHOTO",
+      "appName": "as",
+      "appIconUrl": "https://static.yximgs.com/udata/pkg/ks-share-sdk/cardlogonew.png",
+      "shareObject": "… {10 field(s) truncated}",
+      "extParams": "… {11 field(s) truncated}"
+    },
+    "host-name": "public-bjy-c95-kce-node221.idchb1az2.hb1.kwaidc.com"
+  }
+}

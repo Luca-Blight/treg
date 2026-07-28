@@ -1,0 +1,56 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "14.0830 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0139-0000-fc1adf8156c8",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "9.2886 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "google",
+        "se_type": "events",
+        "keyword": "concerts",
+        "location_name": "Los Angeles,California,United States",
+        "date_range": "today",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "concerts",
+          "type": "events",
+          "se_domain": "google.com",
+          "location_code": 1013962,
+          "language_code": "en",
+          "check_url": "https://www.google.com/search?q=concerts&gl=US&uule=w+CAIQIFISCRPaJ9xdx8KAEfQIRiVv3y_i&hl=en&ibp=htl;events&chips=date:today",
+          "datetime": "2026-07-28 10:35:05 +00:00",
+          "spell": null,
+          "refinement_chips": null,
+          "item_types": [
+            "event_item"
+          ],
+          "se_results_count": 0,
+          "items_count": 10,
+          "items": [
+            "… {12 field(s) truncated}",
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

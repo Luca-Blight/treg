@@ -1,0 +1,37 @@
+{
+  "code": 200,
+  "request_id": "3e0f725b-5027-4964-955e-b9db50cbcb5a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:42",
+  "time_stamp": 1785220302,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V2-API/search_locations_api_v1_instagram_v2_search_locations_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/3e0f725b-5027-4964-955e-b9db50cbcb5a?sign=83cea36bcb56f85380949b0ae14530a3ca358d2de18f1a296a8401ea89d13c9e",
+  "router": "/api/v1/instagram/v2/search_locations",
+  "params": {
+    "keyword": "paris"
+  },
+  "data": {
+    "data": {
+      "count": 30,
+      "items": [
+        {
+          "address": "",
+          "city": "",
+          "external_source": "facebook_places",
+          "facebook_places_id": 635040449889372,
+          "id": "266092067",
+          "latitude": 48.85538903,
+          "longitude": 2.34499357,
+          "name": "Sainte-Chapelle de Paris",
+          "short_name": "Sainte-Chapelle de Paris"
+        },
+        "… 29 more item(s) truncated"
+      ]
+    }
+  }
+}

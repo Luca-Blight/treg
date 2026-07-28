@@ -1,0 +1,96 @@
+{
+  "requestId": "7d42ccc3-cadf-496c-aeb9-27ebb01c582f",
+  "pagination": {
+    "page": 0,
+    "size": 10,
+    "total": 205063
+  },
+  "results": [
+    {
+      "id": "v1.EXAMPLE_CONTACT_ID_1",
+      "firstName": "Example",
+      "lastName": "Contact",
+      "jobTitle": {
+        "title": "Head of Marketing and Business Development",
+        "departments": [
+          "Marketing",
+          "Business Development"
+        ],
+        "seniority": "director"
+      },
+      "company": {
+        "id": "v1.EXAMPLE_COMPANY_ID_1",
+        "name": "Example Corp",
+        "domain": "example.com"
+      },
+      "location": {
+        "country": "United Kingdom",
+        "state": "England",
+        "city": "Manchester"
+      },
+      "socialLinks": {
+        "linkedin": "https://www.linkedin.com/in/example-contact"
+      },
+      "has": [
+        "firstName",
+        "lastName",
+        "… 7 more item(s) truncated"
+      ],
+      "canReveal": [
+        {
+          "field": "emails",
+          "credits": 1
+        },
+        {
+          "field": "phones",
+          "credits": 5
+        }
+      ]
+    },
+    {
+      "id": "v1.EXAMPLE_CONTACT_ID_2",
+      "firstName": "Sample",
+      "lastName": "Person",
+      "jobTitle": {
+        "title": "Head of Marketing and Public Relations",
+        "departments": [
+          "Marketing"
+        ],
+        "seniority": "director"
+      },
+      "company": {
+        "id": "v1.EXAMPLE_COMPANY_ID_2",
+        "name": "Sample Ltd",
+        "domain": "sample-example.com"
+      },
+      "location": {
+        "country": "United Kingdom",
+        "state": "England",
+        "city": "London"
+      },
+      "socialLinks": {
+        "linkedin": "https://www.linkedin.com/in/sample-person"
+      },
+      "has": [
+        "firstName",
+        "lastName",
+        "… 6 more item(s) truncated"
+      ],
+      "canReveal": [
+        {
+          "field": "emails",
+          "credits": 1
+        },
+        {
+          "field": "phones",
+          "credits": 5
+        }
+      ]
+    },
+    "… 8 more item(s) truncated"
+  ],
+  "billing": {
+    "creditsCharged": 1,
+    "resultsReturned": 10
+  }
+}

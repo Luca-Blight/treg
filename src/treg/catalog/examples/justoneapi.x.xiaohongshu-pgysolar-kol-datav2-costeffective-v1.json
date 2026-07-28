@@ -1,0 +1,23 @@
+{
+  "code": 0,
+  "data": {
+    "date": null,
+    "pictureReadCost": "0.41",
+    "videoReadCost": "1.67",
+    "pictureSurpassRate": 75.93,
+    "videoSurpassRate": 55.69,
+    "pictureCase": 0,
+    "videoCase": 0,
+    "estimatePictureCpm": 18.264973625378087,
+    "estimatePictureCpmCompare": 0.44378338178622134,
+    "estimateVideoCpm": 56.00672080649678,
+    "estimateVideoCpmCompare": 0.3030897167196268,
+    "estimatePictureEngageCost": 2.2381378692927485,
+    "estimatePictureEngageCostCompare": 0.4277601243999729,
+    "estimateVideoEngageCost": 1.971830985915493,
+    "estimateVideoEngageCostCompare": 0.32355261082189624
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:54.703131996",
+  "requestId": "06261ca5ced04d2582040797b853bc14"
+}

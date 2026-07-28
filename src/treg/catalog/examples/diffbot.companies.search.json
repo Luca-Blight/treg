@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "hits": 8668235,
+  "results": 1,
+  "kgversion": "478",
+  "diffbot_type": "Organization",
+  "facet": false,
+  "textFallback": false,
+  "data": [
+    {
+      "score": 650.7379760742188,
+      "entity": {
+        "twitterUri": "twitter.com/yandex",
+        "nbActiveEmployeeEdges": 5879,
+        "suppliers": "… [40 item(s) truncated]",
+        "type": "Organization",
+        "naceClassification": "… [6 item(s) truncated]",
+        "iSicClassification": "… [1 item(s) truncated]",
+        "allNames": "… [76 item(s) truncated]",
+        "isAcquired": false,
+        "revenue": "… {2 field(s) truncated}",
+        "competitors": "… [45 item(s) truncated]",
+        "emailAddresses": "… [8 item(s) truncated]",
+        "yearlyRevenues": "… [14 item(s) truncated]",
+        "logo": "https://kg.diffbot.com/image/api/get?fetch=yes&url=g%3Cj7P0St0DnBJf.x0KwLZrUn.%5B%3CR0Aa4Hh%3B%5Bv738ZqOr7U%3FGvvo%3E%7EO%3AQhDY7PaGXAX8XLXYx%3EMsQ.5fx",
+        "id": "El0wZJw_cOn-MAyp_hZZ5Tw",
+        "stock": "… {4 field(s) truncated}",
+        "…": "74 more field(s) truncated"
+      },
+      "entity_ctx": {
+        "matched_clauses": "… [0 item(s) truncated]"
+      }
+    }
+  ]
+}

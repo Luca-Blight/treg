@@ -1,0 +1,77 @@
+{
+  "message": "Company found",
+  "credits_consumed": 1,
+  "companyName": "Leadmagic",
+  "companyId": null,
+  "locations": [
+    {
+      "country": "US",
+      "city": "Boston",
+      "geographicArea": "Massachusetts",
+      "postalCode": null,
+      "line1": null,
+      "line2": null,
+      "description": "Boston, Massachusetts, US",
+      "headquarter": true,
+      "localizedName": "Boston, Massachusetts, US",
+      "latitude": null,
+      "longitude": null
+    }
+  ],
+  "employeeCount": 9,
+  "specialities": [
+    "sales",
+    "marketing",
+    "… 2 more item(s) truncated"
+  ],
+  "employeeCountRange": {
+    "start": 1,
+    "end": 10
+  },
+  "tagline": "The data provider other data providers use. Emails, mobiles, and company data that don't bounce.",
+  "followerCount": 8924,
+  "industry": "Internet Publishing",
+  "description": "Most B2B data is a liability dressed up as an asset. Bounced emails. Disconnected mobiles.\"Verified\" contacts that haven't worked at that company in three years. LeadMagic exists because we got tired of it too. We provide email addresses, mobile numbers, and company data through API and CSV upload—built for teams doing real outbound volume. No credits that expire. No contracts that trap you. Just data that connects. That's why Clay, Apollo, Instantly, Smartlead, Lemlist, Freckle, Databar and oth… [654 chars total]",
+  "websiteUrl": "https://leadmagic.io",
+  "headquarter": {
+    "country": "US",
+    "city": "Boston",
+    "geographicArea": "Massachusetts",
+    "postalCode": null,
+    "line1": null,
+    "line2": null,
+    "description": "Boston, Massachusetts, US"
+  },
+  "foundedOn": {
+    "month": null,
+    "year": 2022,
+    "day": null
+  },
+  "universalName": null,
+  "hashtag": null,
+  "url": "https://www.linkedin.com/company/leadmagichq",
+  "logo_url": "https://logo.leadmagic.io/leadmagic.io",
+  "founded_year": "2022",
+  "ownership_status": "Privately Held",
+  "revenue": null,
+  "revenue_formatted": null,
+  "employee_range": "11 to 50",
+  "total_funding": null,
+  "funding_rounds": null,
+  "funding_investor_count": null,
+  "last_funding_round": null,
+  "last_funding_amount": null,
+  "last_funding_date": null,
+  "competitors": null,
+  "acquisitions_count": null,
+  "twitter_url": null,
+  "linkedin_url": "https://www.linkedin.com/company/leadmagichq",
+  "b2b_url": "https://www.linkedin.com/company/leadmagichq",
+  "facebook_url": null,
+  "stock_ticker": null,
+  "b2b_growth_rate": null,
+  "has_tech_stack": true,
+  "email_found": true,
+  "mobile_found": true,
+  "active_web": true
+}

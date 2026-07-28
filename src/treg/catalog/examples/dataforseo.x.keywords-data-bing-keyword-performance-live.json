@@ -1,0 +1,60 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "12.3474 sec.",
+  "cost": 0.09,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0252-0000-7eb49b076a92",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "12.3091 sec.",
+      "cost": 0.09,
+      "result_count": 3,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "keyword_performance",
+        "se": "bing",
+        "location_code": 2840,
+        "language_code": "en",
+        "keywords": [
+          "dataforseo",
+          "… 2 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "keyword": "dataforseo",
+          "location_code": 2840,
+          "language_code": "en",
+          "year": 2026,
+          "month": 6,
+          "keyword_kpi": {
+            "desktop": [
+              {
+                "ad_position": "MainLine1",
+                "clicks": 2,
+                "impressions": 12,
+                "average_cpc": 0.295,
+                "ctr": 16.66666603088379,
+                "total_cost": 0.59,
+                "average_bid": 0.3
+              },
+              "… 3 more item(s) truncated"
+            ],
+            "mobile": null,
+            "tablet": null
+          }
+        },
+        "… 2 more item(s) truncated"
+      ]
+    }
+  ]
+}

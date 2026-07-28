@@ -1,0 +1,44 @@
+{
+  "search_metadata": {
+    "id": "6a6898bd4de49a994d847d12",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/370pTdBZcxT9G2ZXMdSOiw/6a6898bd4de49a994d847d12.json",
+    "created_at": "2026-07-28 11:55:41 UTC",
+    "processed_at": "2026-07-28 11:55:41 UTC",
+    "google_maps_url": "https://www.google.com/maps/search/pizza/@40.7455096,-74.0083012,14z/data=!3m1!4b1!4m2!2m1!6e5?hl=en",
+    "raw_html_file": "https://serpapi.com/searches/370pTdBZcxT9G2ZXMdSOiw/6a6898bd4de49a994d847d12.html",
+    "prettify_html_file": "https://serpapi.com/searches/370pTdBZcxT9G2ZXMdSOiw/6a6898bd4de49a994d847d12.prettify",
+    "total_time_taken": 1.63
+  },
+  "search_parameters": {
+    "engine": "google_maps",
+    "type": "search",
+    "q": "pizza",
+    "ll": "@40.7455096,-74.0083012,14z",
+    "google_domain": "google.com",
+    "hl": "en"
+  },
+  "search_information": {
+    "local_results_state": "Results for exact spelling",
+    "query_displayed": "pizza"
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "title": "Joe's Pizza Broadway",
+      "place_id": "ChIJifIePKtZwokRVZ-UdRGkZzs",
+      "data_id": "0x89c259ab3c1ef289:0x3b67a41175949f55",
+      "data_cid": "4280570365733019477",
+      "reviews_link": "https://serpapi.com/search.json?data_id=0x89c259ab3c1ef289%3A0x3b67a41175949f55&engine=google_maps_reviews&hl=en",
+      "photos_link": "https://serpapi.com/search.json?data_id=0x89c259ab3c1ef289%3A0x3b67a41175949f55&engine=google_maps_photos&hl=en",
+      "gps_coordinates": "… {2 field(s) truncated}",
+      "place_id_search": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&place_id=ChIJifIePKtZwokRVZ-UdRGkZzs",
+      "provider_id": "/g/11bw4ws2mt",
+      "…": "22 more field(s) truncated"
+    },
+    "… 19 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "next": "https://serpapi.com/search.json?engine=google_maps&google_domain=google.com&hl=en&ll=%4040.7455096%2C-74.0083012%2C14z&q… [147 chars]"
+  }
+}

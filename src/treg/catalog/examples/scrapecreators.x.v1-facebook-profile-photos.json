@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "credits_remaining": 19833,
+  "credits_charged": 1,
+  "photos": [
+    {
+      "id": "YXBwX2l0ZW06MTAwMDQ0NjM0NDUwMjA4OjIzMDUyNzI3MzI6NTo6MTU3NzA0NDk1NzEyNjYzOA==",
+      "photo_id": "1577044957126638",
+      "accessibility_caption": "May be a black-and-white image of basketball",
+      "immersive_photo_encodings": [],
+      "viewer_image": {
+        "uri": "https://scontent-bos5-1.xx.fbcdn.net/v/t39.99422-6/758422945_1350805596566243_8949277702175191066_n.png?stp=dst-jpg_tt6&cstp=mx2048x1366&ctp=s2048x1366&_nc_cat=100&ccb=1-7&_nc_sid=127cfc&_nc_ohc=IN9bG… [438 chars]",
+        "height": 1366,
+        "width": 2048
+      },
+      "photo_cix_screen": null,
+      "thumbnail": "https://scontent-bos5-1.xx.fbcdn.net/v/t39.99422-6/758422945_1350805596566243_8949277702175191066_n.png?stp=c341.0.1366.1366a_dst-jpg_tt6&cstp=mx1366x1366&ctp=s552x414&_nc_cat=100&ccb=1-7&_nc_sid=714c… [454 chars]",
+      "url": "https://www.facebook.com/photo.php?fbid=1577044957126638&set=pb.100044634450208.-2207520000&type=3"
+    },
+    "… 7 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>",
+  "next_page_id": "<omitted: expires>"
+}

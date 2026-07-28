@@ -1,0 +1,37 @@
+{
+  "code": 200,
+  "request_id": "ca4c7c35-8d42-4211-8785-3e1738d1830b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:22",
+  "time_stamp": 1785220402,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/search_products_api_v1_xiaohongshu_app_v2_search_products_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ca4c7c35-8d42-4211-8785-3e1738d1830b?sign=3d5177d356617c2bd8f2109503a4bba232e610a5d59b3c093f7c11d1f36ac12b",
+  "router": "/api/v1/xiaohongshu/app_v2/search_products",
+  "params": {
+    "keyword": "手机壳",
+    "page": "1",
+    "source": "explore_feed"
+  },
+  "data": {
+    "code": 0,
+    "success": true,
+    "data": {
+      "biz_info": "… {1 field(s) truncated}",
+      "hierarchy": "… {2 field(s) truncated}",
+      "module": "… {1 field(s) truncated}",
+      "container": "… {1 field(s) truncated}",
+      "ver": "1.0"
+    },
+    "msg": "成功",
+    "search_id": "cbf81d36bd804835",
+    "page": 1,
+    "next_page": 2,
+    "debug_id": "6abb12d2",
+    "debug_info": "gAAAAABqaE0yztKnffpC3jExqN4_myXAFFQXvNUHhnqb7qkaB0WIBwNqnp3EcgLIMvfn9w2XuuwfKzwcai2y5b7Dz1uhoPbR2vNcfpDM2UqPFJpWOYFUpHMg1HfOusKcZTKNeXNGPakA8GCxm6E7fVWKmheRtoE-jVsTaBEWr6zl5Iax2uDmQZDumjnU3IKKdJ3VamaO… [440 chars]"
+  }
+}

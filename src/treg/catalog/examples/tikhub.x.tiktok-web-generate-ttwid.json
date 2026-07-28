@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "request_id": "41cc4bef-4124-4158-832a-eaf5b3543c28",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:21",
+  "time_stamp": 1785220221,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/generate_ttwid_api_v1_tiktok_web_generate_ttwid_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/41cc4bef-4124-4158-832a-eaf5b3543c28?sign=87da121a28f50af86ef15283311c8c482fb3e572590fda099beb71e712c08d1e",
+  "router": "/api/v1/tiktok/web/generate_ttwid",
+  "params": {},
+  "data": {
+    "ttwid": "1%7C0K27Vn6JrAYsKr-MY79J5Ffoapis9QlFXRItXyegVWk%7C1785220221%7C627a42b6d5bbe6a9b33c735386b999bf8787e738ed937930cd57caab2bfa033c"
+  }
+}

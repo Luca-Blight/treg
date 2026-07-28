@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "uuid": "00000l1",
+      "name": "Canva",
+      "website": "canva.com",
+      "product_category": "Visual Design Software",
+      "company_status": "Private"
+    },
+    {
+      "uuid": "005i4j6",
+      "name": "Trio Canva",
+      "website": "triocanva.com",
+      "product_category": "Personal Hobby Blog",
+      "company_status": "Private"
+    },
+    "… 23 more item(s) truncated"
+  ],
+  "count": 25,
+  "credits_consumed": 0.0
+}

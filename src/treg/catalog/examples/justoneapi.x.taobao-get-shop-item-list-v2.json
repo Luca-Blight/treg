@@ -1,0 +1,38 @@
+{
+  "code": 0,
+  "data": {
+    "httpData": {
+      "breadcrumbModuleResponse": "… 2 field(s) truncated",
+      "itemListModuleResponse": "… 4 field(s) truncated",
+      "metaModuleResponse": "… 6 field(s) truncated",
+      "pageSimplifiedModuleResponse": "… 4 field(s) truncated",
+      "seoCommonBannerResponse": "… 4 field(s) truncated",
+      "shopListModuleResponse": "… 2 field(s) truncated",
+      "statusCode": 0,
+      "success": true
+    },
+    "pageData": {
+      "env": "production",
+      "spm": "a21wu.11804641-tw",
+      "locale": "zh-tw",
+      "wh_locale": "zh-TW",
+      "traffic": "people",
+      "client": "pc",
+      "wh_pageType": "list-dianpu",
+      "pageConfig": "… 1 field(s) truncated",
+      "query": "… 14 field(s) truncated",
+      "host": "pagehandler-handler.tmg-wormho… [34 chars total]",
+      "sort": "coefp",
+      "detailUrl": "https://taobao.com/item/",
+      "currentPath": "https://taobao.com",
+      "currentUrl": "https://taobao.com104819338.ht… [31 chars total]",
+      "taglistPath": "https://taobao.com/product/",
+      "keyword": "纽曼宏悦智联专卖店",
+      "pageUrlFollow": false,
+      "isBase64On": true
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:07:39.294325953",
+  "requestId": "c476eb8e582c40feb290d99a498526… [32 chars total]"
+}

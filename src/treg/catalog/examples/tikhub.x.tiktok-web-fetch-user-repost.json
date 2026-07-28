@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "807d5693-beff-4f78-b1ea-63dbd2f570a9",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:20",
+  "time_stamp": 1785220220,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/fetch_user_repost_api_v1_tiktok_web_fetch_user_repost_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/807d5693-beff-4f78-b1ea-63dbd2f570a9?sign=6a10620d9768aa071cddbe9e906fa1bbc7be0a1d930f80356e9d1bc1d9545dae",
+  "router": "/api/v1/tiktok/web/fetch_user_repost",
+  "params": {
+    "secUid": "MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM",
+    "cursor": "0",
+    "count": "5",
+    "coverFormat": "2"
+  },
+  "data": {
+    "cursor": "5",
+    "extra": {
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "logid": "20260728063020D6385C1CD9CE601251EB",
+      "now": 1785220220000
+    },
+    "hasMore": true,
+    "itemList": [
+      "… {37 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "log_pb": {
+      "impr_id": "20260728063020D6385C1CD9CE601251EB"
+    },
+    "statusCode": 0,
+    "status_code": 0,
+    "status_msg": "",
+    "tt_chain_token": "<omitted: expires>",
+    "cookie": "<omitted: expires>"
+  }
+}

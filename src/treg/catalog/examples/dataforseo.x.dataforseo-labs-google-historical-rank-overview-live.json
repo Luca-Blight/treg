@@ -1,0 +1,47 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.1460 sec.",
+  "cost": 0.1236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0406-0000-18bdc028d675",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.1350 sec.",
+      "cost": 0.1236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "historical_rank_overview",
+        "se_type": "google",
+        "target": "dataforseo.com",
+        "location_code": 2840,
+        "language_code": "en",
+        "date_from": "2026-04-24",
+        "date_to": "2026-06-24"
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "target": "dataforseo.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 3,
+          "items_count": 3,
+          "items": [
+            "… {4 field(s) truncated}",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "code": 200,
+  "request_id": "faec4af3-bc0c-4458-a714-75616cab30dd",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:06",
+  "time_stamp": 1785220386,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Channels-V2-API/fetch_video_share_url_api_v1_wechat_channels_v2_fetch_video_share_url_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/faec4af3-bc0c-4458-a714-75616cab30dd?sign=a6dddd64139e92546362101b969c8341413f471a9d32f6fb9418eaf620a4cd0a",
+  "router": "/api/v1/wechat_channels/v2/fetch_video_share_url",
+  "params": {
+    "object_id": "14941130915890399732",
+    "raw": true
+  },
+  "data": {
+    "baseResponse": {
+      "ret": 0,
+      "errMsg": {
+        "string": "",
+        "pbRequestMsgInfo": null
+      },
+      "pbRequestMsgInfo": null
+    },
+    "pbRequestMsgInfo": null,
+    "feedH5Url": "https://weixin.qq.com/sph/AeowOMQSUk",
+    "urlList": [
+      {
+        "feedH5Url": "https://weixin.qq.com/sph/AeowOMQSUk",
+        "pbRequestMsgInfo": null,
+        "objectId": 14941130915890399732
+      }
+    ],
+    "debug_id": "c665238c",
+    "debug_info": "gAAAAABqaE0ibyPEKeAkUJb-xePwD3W0Yfi_-pArwhpN0KPjKosoJztUhp_4-oypf_4n_1eXZLlDsFdrLercXD39WkOBsrgDvGsC_ToY45OCrS1Hxn5jt9lv2KOboPF5u0Sjna3dXCo3iddDajtYlJUNtyOq_x21V116CBYr_f7F9KWI3-jJvrOd53YDEhKetJJMynAe… [292 chars]"
+  }
+}

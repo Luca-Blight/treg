@@ -1,0 +1,107 @@
+{
+  "search_metadata": {
+    "id": "6a6898b299d5f4d6d4d13890",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/-sQiilv-U6YC2yQgaN75AA/6a6898b2… [81 chars]",
+    "created_at": "2026-07-28 11:55:30 UTC",
+    "processed_at": "2026-07-28 11:55:30 UTC",
+    "bing_videos_url": "https://www.bing.com/videos/search?q=coffee&first=1&FORM=VRF… [78 chars]",
+    "raw_html_file": "https://serpapi.com/searches/-sQiilv-U6YC2yQgaN75AA/6a6898b2… [81 chars]",
+    "total_time_taken": 2.08
+  },
+  "search_parameters": {
+    "engine": "bing_videos",
+    "q": "coffee",
+    "device": "desktop"
+  },
+  "top_highlights": {
+    "inline_video": {
+      "title": "How To Make The Best Coffee, According To Science",
+      "link": "https://www.youtube.com/watch?v=xUoFhcQBiZY",
+      "thumbnail": "https://th.bing.com/th/id/OVP.XZdoO4V2GZfevJbJpWCQQgHgFo?w=4… [101 chars]",
+      "date": "Sep 14, 2023",
+      "description": "Visit https://brilliant.org/scishow/ to get started learning… [348 chars]",
+      "source": "YouTube",
+      "channel": "SciShow",
+      "length": "13:47",
+      "views": "1.8M views",
+      "extracted_views": 1800000
+    },
+    "coffee_brewing_techniques_from_french_press_to_espresso": {
+      "title": "Coffee Brewing Techniques: From French Press to Espresso",
+      "results": "… [3 item(s) truncated]"
+    },
+    "shorts": {
+      "title": "Shorts",
+      "link": "https://www.bing.com/videos/search?q=coffee&qft=+filterui:fi… [107 chars]",
+      "results": "… [2 item(s) truncated]"
+    },
+    "top_videos": {
+      "title": "Top videos",
+      "results": "… [3 item(s) truncated]"
+    },
+    "exploring_coffee_shops_in_des_moines": {
+      "title": "Exploring Coffee Shops in Des Moines",
+      "results": "… [3 item(s) truncated]"
+    }
+  },
+  "video_results": [
+    {
+      "title": "How To Make The Best Coffee, According To Science",
+      "link": "https://www.youtube.com/watch?v=xUoFhcQBiZY",
+      "thumbnail": "https://th.bing.com/th/id/OVP.XZdoO4V2GZfevJbJpWCQQgHgFo?w=3… [101 chars]",
+      "date": "Sep 14, 2023",
+      "source": "YouTube",
+      "channel": "SciShow",
+      "length": "13:47",
+      "views": "1.8M views",
+      "extracted_views": 1800000,
+      "position": 1
+    },
+    "… 29 more item(s) truncated"
+  ],
+  "shopping_results": [
+    {
+      "title": "Joe Knows Coffee Single Serve Cups Pods And Capsules, Tall D… [86 chars]",
+      "price": "$29.98",
+      "extracted_price": 29.98,
+      "link": "https://www.bing.com/aclick?ld=e8m1Wn8yBviS0IWPMyFXU1qzVUCUw… [775 chars]",
+      "thumbnail": "https://th.bing.com/th?id=OPHS.yj7j8nBm%2fF8F0Q474C474&w=200… [84 chars]",
+      "seller": "Amazon.com",
+      "position": 1
+    },
+    "… 71 more item(s) truncated"
+  ],
+  "shorts_results": [
+    {
+      "title": "Caramel Coffee with Caramel Sauce😍😋 #shorts",
+      "date": "1 month ago",
+      "link": "https://www.bing.com/videos/search?q=coffee&view=detail&mid=… [282 chars]",
+      "duration": "0:44",
+      "channel": "The Unexplored kitchen",
+      "views": "4.3M views",
+      "extracted_views": 4300000,
+      "source": "YouTube",
+      "position": 1
+    },
+    "… 19 more item(s) truncated"
+  ],
+  "ads_results": [
+    {
+      "title": "Nespresso | Get Vertuo Up for Only $169",
+      "description": "Dive into Iced Coffee Season and Get the Vertuo Up Machine f… [87 chars]",
+      "snippet": "Types: Barista Creations, Single Origins, Coffee, Gran Lungo… [84 chars]",
+      "location": "4400 Sharon Rd, Charlotte",
+      "location_link": "https://www.bing.com/aclick?ld=e86s_nsb-Y9rAMTlNpmrY8ITVUCUy… [690 chars]",
+      "phone": "(800) 562-1465",
+      "link": "https://www.bing.com/aclick?ld=e8TKVYgZjNMdQ4hEwzFCpyiDVUCUx… [1005 chars]",
+      "displayed_link": "https://www.nespresso.com",
+      "position": 1
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "next": "https://serpapi.com/search.json?count=35&device=desktop&engi… [92 chars]",
+    "current": "https://serpapi.com/search.json?device=desktop&engine=bing_v… [74 chars]"
+  }
+}

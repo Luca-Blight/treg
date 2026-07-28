@@ -1,0 +1,55 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "2.1760 sec.",
+  "cost": 0.105,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0664-0000-11f60602eb9a",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.1418 sec.",
+      "cost": 0.105,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "timeseries_new_lost",
+        "language_name": "English",
+        "location_code": 2840,
+        "target": [
+          {
+            "domain": "dataforseo.com",
+            "search_filter": "exclude"
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "platform": "google",
+        "date_from": "2025-08-01",
+        "date_to": "2025-12-01",
+        "group_range": "month"
+      },
+      "result": [
+        {
+          "items_count": 5,
+          "items": [
+            {
+              "date": "2025-08-01",
+              "new_mentions": 1631,
+              "lost_mentions": 0,
+              "new_ai_search_volume": 1186240,
+              "lost_ai_search_volume": 0
+            },
+            "… 4 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+# Live-verified 2026-07-28 through the treg /call proxy (connection: google-analytics). All 3
+# endpoints PASS.
+# EXCEPT the runReport request shape, transcribed from oauth_providers.GOOGLE_ANALYTICS.examples,
+# which was curated against live calls (v1beta path form, and the 'yesterday' rather than 'today'
+# rule — today is a partial day and reads low).
+#
+# GA4 Data API v1beta on analyticsdata.googleapis.com. Everything is own_account: this is the
+# connected user's own property data, and no scraper in the catalog can produce it.
+#
+# HOST SPLIT — the reason there is no "list my properties" endpoint here: property listing lives on
+# analyticsadmin.googleapis.com, a DIFFERENT host from this provider's base_url, so it cannot be
+# expressed as a path under it. treg exposes it separately as the connection's resource picker
+# (`treg connections resources`, discover_base_url in the registry entry).
+#
+# Scope granted: analytics.readonly — read-only, so no property configuration or user management.
+provider: google-analytics
+source:
+  docs: https://developers.google.com/analytics/devguides/reporting/data/v1
+  openapi: https://analyticsdata.googleapis.com/$discovery/rest?version=v1beta
+  curated: 2026-07-28
+
+limits: "concurrent-request and token-based quotas per property"
+pricing_url: https://developers.google.com/analytics/devguides/reporting/data/v1/quotas  # Free; constrained by per-property token quotas.
+endpoints:
+  - id: google-analytics.report
+    capability: google-analytics.report
+    platform: google-analytics
+    scope: own_account
+    method: POST
+    path: /v1beta/properties/{property_id}:runReport
+    name: "Run a custom analytics report"
+    summary: "Run a traffic or behaviour report on your own Google Analytics property"
+    input:
+      pathParams:
+        property_id: {type: string, required: true, note: "numeric GA4 property id (the digits only — the admin API returns it as 'properties/123456789')", example: "123456789"}
+      body:
+        dateRanges: {type: array, required: true, note: "up to 4 ranges. Use 'yesterday' or 'NdaysAgo', not 'today' — today is a partial day and always reads low", example: [{"startDate": "28daysAgo", "endDate": "yesterday"}]}
+        dimensions: {type: array, required: false, note: "[{name: …}] — e.g. pagePath, sessionSource, sessionDefaultChannelGroup, country, deviceCategory, date", example: [{"name": "pagePath"}]}
+        metrics: {type: array, required: false, note: "[{name: …}] — e.g. screenPageViews, sessions, activeUsers, conversions, engagementRate", example: [{"name": "screenPageViews"}]}
+        dimensionFilter: {type: object, required: false, note: "e.g. {\"filter\":{\"fieldName\":\"pagePath\",\"stringFilter\":{\"matchType\":\"CONTAINS\",\"value\":\"/blog/\"}}}"}
+        orderBys: {type: array, required: false, note: "e.g. [{\"metric\":{\"metricName\":\"sessions\"},\"desc\":true}]"}
+        limit: {type: integer, required: false, note: "default 10000, max 250000", example: 100}
+        offset: {type: integer, required: false, example: 0}
+        keepEmptyRows: {type: boolean, required: false}
+      bodyType: json
+      note: "request shape previously live-verified via the registry entry's examples. An incompatible dimension/metric pair fails the whole call — check google.analytics.metadata for what combines. Sampling and thresholding are reported back in the response metadata, not as an error"
+    cost: {type: free, note: "included with the connected account; GA4 enforces per-property token quotas (core tokens per hour/day) rather than a per-call price"}
+    test_request:
+      pathParams: {property_id: "483566226"}
+      body:
+        dateRanges: [{startDate: "28daysAgo", endDate: "yesterday"}]
+        dimensions: [{name: "sessionDefaultChannelGroup"}]
+        metrics: [{name: "sessions"}]
+        limit: 3
+    verified: 2026-07-28
+    example_response: examples/google-analytics.report.json
+    docs_url: https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runReport
+
+  - id: google-analytics.realtime
+    capability: google-analytics.realtime
+    platform: google-analytics
+    scope: own_account
+    method: POST
+    path: /v1beta/properties/{property_id}:runRealtimeReport
+    name: "Get realtime active users on your site"
+    summary: "See who is on your site right now (active users by page, source and country)"
+    input:
+      pathParams:
+        property_id: {type: string, required: true, example: "123456789"}
+      body:
+        dimensions: {type: array, required: false, note: "realtime has its OWN smaller dimension set — unifiedScreenName, country, deviceCategory, audienceName; pagePath is not among them", example: [{"name": "unifiedScreenName"}]}
+        metrics: {type: array, required: true, note: "activeUsers, screenPageViews, conversions", example: [{"name": "activeUsers"}]}
+        minuteRanges: {type: array, required: false, note: "windows within the last 30 minutes, e.g. [{\"startMinutesAgo\":29,\"endMinutesAgo\":0}]"}
+        limit: {type: integer, required: false, example: 20}
+      bodyType: json
+      note: "covers the last 30 minutes only, and takes NO dateRanges — passing one is an error. Reusing a standard-report dimension name here is the usual failure"
+    cost: {type: free, note: "included with the connected account; realtime requests draw on a separate, smaller hourly token quota"}
+    test_request:
+      pathParams: {property_id: "483566226"}
+      body:
+        dimensions: [{name: "country"}]
+        metrics: [{name: "activeUsers"}]
+        limit: 3
+    verified: 2026-07-28
+    example_response: examples/google-analytics.realtime.json
+    docs_url: https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runRealtimeReport
+
+  - id: google-analytics.metadata
+    capability: google-analytics.metadata
+    platform: google-analytics
+    scope: own_account
+    method: GET
+    path: /v1beta/properties/{property_id}/metadata
+    name: "List available dimensions and metrics"
+    summary: "List the dimensions and metrics your GA4 property supports, including custom ones"
+    input:
+      pathParams:
+        property_id: {type: string, required: true, example: "123456789"}
+      note: "the cheap way to stop guessing: returns every apiName with its uiName, description and deprecation status — including the property's CUSTOM dimensions and metrics, which no static documentation can list. Free of the report token quota, so call it before composing a report"
+    cost: {type: free, note: "included with the connected account / platform quotas apply"}
+    test_request:
+      pathParams: {property_id: "483566226"}
+    verified: 2026-07-28
+    example_response: examples/google-analytics.metadata.json
+    docs_url: https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/getMetadata
+

@@ -1,0 +1,67 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "1.0294 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280922-2171-0121-0000-0c5fd1ba6151",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.8895 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "bing",
+        "se_type": "organic",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "albert einstein",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "albert einstein",
+          "type": "organic",
+          "se_domain": "bing.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.bing.com/search?q=albert+einstein&form=QBLH&cc=us",
+          "datetime": "2026-07-28 06:22:46 +00:00",
+          "spell": null,
+          "refinement_chips": null,
+          "item_types": [
+            "organic"
+          ],
+          "se_results_count": 23100,
+          "pages_count": 1,
+          "items_count": 10,
+          "items": [
+            {
+              "type": "organic",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "page": 1,
+              "domain": "en.wikipedia.org",
+              "title": "Albert Einstein - Wikipedia",
+              "description": "1.1Childhood, youth and education. 1.2Marriages, relationships and children. 1.3Assistant at the Swiss Patent Office (1902–1909) …",
+              "url": "https://en.wikipedia.org/wiki/Albert_Einstein",
+              "breadcrumb": "https://en.wikipedia.org › wiki › Albert_Einstein"
+            },
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

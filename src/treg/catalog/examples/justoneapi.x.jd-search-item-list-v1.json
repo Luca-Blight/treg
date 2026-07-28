@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "data": {
+    "products": [
+      "… 93 field(s) truncated",
+      "… 47 more item(s) truncated"
+    ],
+    "totalCount": 7702,
+    "currentPage": 1,
+    "pageSize": 0,
+    "totalPages": 161
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:19.174903717",
+  "requestId": "15499763e60f498b99223bc92ac5aa… [32 chars total]"
+}

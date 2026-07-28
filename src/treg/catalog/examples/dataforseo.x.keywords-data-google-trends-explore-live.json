@@ -1,0 +1,79 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "25.0731 sec.",
+  "cost": 0.011,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280925-2171-0173-0000-7a9a92ab40f7",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "25.0438 sec.",
+      "cost": 0.011,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "explore",
+        "se": "google_trends",
+        "location_name": "United States",
+        "date_from": "2026-04-24",
+        "date_to": "2026-06-24",
+        "type": "youtube",
+        "category_code": 3,
+        "keywords": [
+          "rugby",
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "keywords": [
+            "rugby",
+            "… 1 more item(s) truncated"
+          ],
+          "type": "trends",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://trends.google.com/trends/explore?hl=en&cat=3&gprop=youtube&geo=US&date=2026-04-24%202026-06-24&q=rugby,cricket",
+          "datetime": "2026-07-28 06:25:33 +00:00",
+          "items_count": 1,
+          "items": [
+            {
+              "position": 1,
+              "type": "google_trends_graph",
+              "title": null,
+              "keywords": [
+                "rugby",
+                "… 1 more item(s) truncated"
+              ],
+              "data": [
+                {
+                  "date_from": "2026-04-24",
+                  "date_to": "2026-04-24",
+                  "timestamp": 1776988800,
+                  "missing_data": false,
+                  "values": [
+                    null,
+                    "… 1 more item(s) truncated"
+                  ]
+                },
+                "… 61 more item(s) truncated"
+              ],
+              "averages": [
+                3,
+                "… 1 more item(s) truncated"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
