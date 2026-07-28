@@ -120,26 +120,42 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   balanced quote pair removed). A single-line `NAME=value` splits only in the *name* field — a value
   containing `=` (base64 pad, connection strings) pastes untouched into the value field; multi-line
   splits from either field.
-- **Team** (`view==='orgs'`) — the active team, now split into **tabs** (`orgTab`) because it had grown
-  into one scroll of unrelated things: **Members · My teams · Projects · Policy · Team settings**.
-  Header reads `Team: {activeName} — you are {activeRole}` and points at the sidebar picker for switching.
+- **Team** (`view==='orgs'`) — the active team, now split into **tabs** (`orgTab`):
+  **Members · Projects · Policy · Team settings**. (The former **My teams** tab is gone — it
+  duplicated the sidebar picker; its New team / Join by code / Paste token actions live in Team
+  settings now.) Header reads `Team: {activeName} — you are {activeRole}` and points at the sidebar
+  picker for switching.
   - **Members** — the roster (role, daily cap, today's usage, tool ACL, project scope, local-run toggle).
     Inviting is no longer a separate section: it sits here behind an **"＋ Add member"** toggle
     (`showInvite`), which is where people look for it. The inline access editor now carries **project
     checkboxes** (`projDraft`) beside the tool ones, each collapsing "all checked" back to *all* so future
-    tools/projects are inherited. `list_members` returns `is_agent`, so people and machines are
+    tools/projects are inherited; a zero-project team gets a pointer to the Projects tab instead of a
+    silently-missing section. `list_members` returns `is_agent`, so people and machines are
     distinguishable in one roster.
-  - **My teams** — the sidebar picker rendered as a real table (name, slug, your role, tool count, which
-    is active) with **Switch to** per row plus **New team** / **Join by code** / **Paste token**. The ONE
-    tab not gated on `canAdmin`: a plain member has teams too and the dropdown was their only way to see
-    them, so `loadOrgAdmin` moves a non-admin onto this tab instead of showing a permission notice.
-  - **Projects** — create / list (with tool counts) / delete, with the delete button stating that its
-    tools become team-wide rather than being deleted.
-  - **Policy** — deny rules (host / path / method / who / note), listed and removable. The "who" select
-    labels agents so a per-agent rule is one click.
-  - **Team settings** — leave / delete (the danger zone), acting on the team you are in.
+  - **Projects** — create / list / delete, and the tool count is now a button: it expands an inline
+    **project editor** (`editProj`/`projToolDraft`) listing every tool with a checkbox — check to add,
+    uncheck to free back to team-wide; a tool living in another project is chipped and checking it
+    moves it (saved as per-tool `PATCH /tools/{id}`). The tab copy states the deliberate design:
+    secrets stay team-level. Delete still states that tools become team-wide rather than deleted.
+  - **Policy** — deny rules (host / path / method / who / **project** / note), listed and removable.
+    The "who" select labels agents; the project select scopes a rule to one project's tools. Below,
+    **Per-tool CLI blocks** (read-only, from `GET /orgs/{id}/policy/cli-deny`) lists each CLI tool's
+    argv deny patterns with their source (skill vs catalog), under a line naming all three deny
+    layers — HTTP rules, argv patterns, OS sandbox — so the whole "what is blocked" picture is one
+    screen.
+  - **Team settings** — a real settings page now, visible to EVERY role (leaving is self-service, and
+    `loadOrgAdmin` lands a non-admin here): team identity (name / slug / your role), the your-teams
+    actions, then leave / delete demoted to an explicit **Danger zone** at the bottom.
 - **Agents** (`view==='agents'`, `canAdmin`) — its own sidebar entry rather than a row in Team, because an
-  agent identity is how most people will actually use treg. Create (name / role / daily cap), **Rotate**
+  agent identity is how most people will actually use treg. Two sections now: **Detected in your
+  team's traffic** (`observedAgents`, from `GET /orgs/{id}/agents/observed`) — the agents already
+  running under members' own tokens, one row per (member, runtime) with today/30-day counts and last
+  seen, labeled explicitly as self-reported attribution; its **Scope this agent** button
+  (`promoteObserved`) prefills the mint form and explains the promotion (create the token, swap it
+  into that runtime's `TREG_TOKEN` — from then on it acts as itself). And **This team's agents** (the
+  minted roster, chipped "own token"), which grew an **Owner** column from `created_by` and a
+  **project picker** on the create form (`agentProjSel`, all-checked = omitted = every project).
+  Create (name / role / daily cap), **Rotate**
   (re-POSTs the same name, so the old token dies), **Revoke**, and an inline cap editor. Rotate sends
   only `{name, role, daily_call_cap}` **on purpose**: `create_agent` leaves every field the client does
   not send exactly as it was, so the agent's tool ACL and project scope survive the rotate. They used to

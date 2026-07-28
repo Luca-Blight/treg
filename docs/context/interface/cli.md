@@ -46,14 +46,16 @@ exits non-zero on HTTP >= 400.
 
 ## Commands
 - **Team policy + scoping (all under `org`, all admin+):**
-  - **`org agent-new <name>`** (`--role`, `--cap`, `--tools`, `--all-tools`, `--local-run`) mints or
+  - **`org agent-new <name>`** (`--role`, `--cap`, `--tools`, `--all-tools`, `--local-run`,
+    `--projects a,b` / `--all-projects` — only sent when given, so a rotate never widens scope) mints or
     **rotates** an agent's token — a member identity for a machine caller (`POST /orgs/{id}/agents`).
     Re-running the same name rotates: the previous token dies there. **`org agents`** lists them with
     today's usage; **`org agent-rm <user_id>`** revokes. Nested under `org` on purpose — the top-level
     **`treg agents`** already means "which coding agents can I install skills for", an unrelated concept
     (`agents.py`). See [multi-tenancy](../architecture/multi-tenancy.md).
-  - **`org deny`** (`--host`, `--path`, `--method`, `--user`, `--note`) blocks calls for the whole team or
-    one member/agent; **`org deny-ls`** / **`org deny-rm <id>`**. An empty field means *any*, so
+  - **`org deny`** (`--host`, `--path`, `--method`, `--user`, `--project <slug|id>`, `--note`) blocks
+    calls for the whole team, one member/agent, and/or one project's tools;
+    **`org deny-ls`** / **`org deny-rm <id>`**. An empty field means *any*, so
     `--method DELETE` alone blocks every delete. Enforced on the proxy AND both run tiers — see
     [proxy-model](../architecture/proxy-model.md).
   - **`org project-new <name>`** / **`org projects`** / **`org project-rm <id>`** manage the optional

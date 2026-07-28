@@ -62,7 +62,11 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   new table; `list_agents` (`GET`, never returns a token) and `revoke_agent` (`DELETE …/{user_id}`,
   which also sweeps the deny rules aimed at that agent). An agent token is refused by
   `require_identity` and can never be an owner. **Re-POSTing the same name ROTATES, and a field the
-  caller omits is left as it is** — a rotate changes the token, never the limits. See
+  caller omits is left as it is** — a rotate changes the token, never the limits. `AgentIn` also takes
+  `project_access` (slugs or ids), so an agent can be project-scoped at mint time; `created_by` stamps
+  the minting admin. `GET /orgs/{id}/agents/observed` (admin+) lists the agents **detected in member
+  traffic** — one row per (member, runtime) from `CallRecord.client`/`RunRecord.client` over 30 days,
+  excluding plain-terminal (`''`/`cli`) and machine-identity traffic; attribution, never a gate. See
   [multi-tenancy](../architecture/multi-tenancy.md).
 - **Projects (a sub-scope inside the org):** `create_project` / `list_projects` /
   `delete_project` (`/orgs/{id}/projects`, admin+ to mutate) — deleting frees its tools to org-wide and
@@ -71,10 +75,13 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   take `project` (slug or id; null = org-wide), and `set_member_access` / `create_invite` take
   `project_access`. See [multi-tenancy](../architecture/multi-tenancy.md).
 - **Deny rules (org policy):** `create_deny_rule` (`POST /orgs/{id}/deny`, admin+) blocks a
-  host / path_prefix / method for the whole org or one member (`user_id`); an all-empty rule is
+  host / path_prefix / method for the whole org, one member (`user_id`), and/or one project
+  (`project_id` — fires only on calls through that project's tools); an all-empty rule is
   refused (it would freeze the org) and a full URL is reduced to its host. Plus `list_deny_rules`
   (`GET`) and `delete_deny_rule` (`DELETE …/{rule_id}`, 404 across orgs). Enforced on the proxy and
-  both run tiers — see [proxy-model](../architecture/proxy-model.md).
+  both run tiers — see [proxy-model](../architecture/proxy-model.md). `GET /orgs/{id}/policy/cli-deny`
+  (admin+, read-only) reports each CLI tool's effective argv deny patterns with their source (skill
+  `treg.json` vs catalog) so the Policy screen shows every deny layer in one place.
 - **Usage metering + caps** (usage-metering v1, `docs/USAGE-METERING-PLAN.md`): `org_usage`
   (`GET /orgs/{id}/usage?days=`, admin+) rolls up `CallRecord` + `RunRecord` since the window start into
   **by-user** (with a `call`/`local_run`/`server_run` split), **by-tool**, **by-day**, and totals — pure
