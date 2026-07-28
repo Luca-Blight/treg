@@ -68,6 +68,7 @@ async def relay(
     tool: Tool,
     secrets: dict[int, Secret],
     client: httpx.AsyncClient,
+    drop_params: set[str] | None = None,
 ) -> StreamingResponse:
     # Headers: preserve everything (incl. duplicates / cookies) except hop-by-hop + our token.
     # `.raw` is the original (bytes, bytes) pairs; httpx.Headers is a multidict, so binding
@@ -85,8 +86,13 @@ async def relay(
     # Asking for identity keeps what the caller gets matching what the caller requested.
     if "accept-encoding" not in headers:
         headers["accept-encoding"] = "identity"
-    # Query: a list of pairs preserves duplicate keys verbatim (?tag=a&tag=b).
-    params: list[tuple[str, str]] = list(request.query_params.multi_items())
+    # Query: a list of pairs preserves duplicate keys verbatim (?tag=a&tag=b). A marketplace
+    # endpoint-id call may have CONSUMED some params into the path (`{siteUrl}` placeholders) —
+    # those must not also reach the upstream as query noise.
+    params: list[tuple[str, str]] = [
+        (k, v) for k, v in request.query_params.multi_items()
+        if not drop_params or k not in drop_params
+    ]
 
     # Apply every binding (a request may need several credentials at once).
     for binding in tool.bindings:

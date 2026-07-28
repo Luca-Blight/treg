@@ -1,0 +1,5 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WeChat Channels">
+  <!-- Video sibling of wechat-mp: same green, a play mark instead of the bubbles. -->
+  <circle cx="12" cy="12" r="9.4" fill="none" stroke="#07C160" stroke-width="1.9"/>
+  <path fill="#07C160" d="M10 8.1 16.3 12 10 15.9z"/>
+</svg>
