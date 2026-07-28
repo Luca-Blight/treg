@@ -3,6 +3,7 @@ title: The API — the only brain (FastAPI)
 status: shipped
 sources:
   - src/treg/api.py
+  - src/treg/catalog_store.py
   - src/treg/email.py
   - src/treg/runner.py
   - src/treg/ratestore.py
@@ -149,6 +150,43 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
 - **Provider catalog:** `providers_catalog` (`GET /providers.json`, open) → `{version, providers}` — the
   catalog `treg upload` uses to detect env keys → tools; served so the CLI can refresh centrally. See
   [env-import](env-import.md).
+- **Endpoint catalog** (open, `include_in_schema=False`, read via `catalog_store`): the operations layer
+  — what a connected provider can DO. `catalog_platforms` (`GET /catalog/platforms`) → `{platforms:
+  [{slug, label, capabilities, endpoints, verified, providers[]}], generated_from: "catalog"}`, endpoint
+  count desc, platforms nobody implements omitted. `catalog_platform` (`GET /catalog/platforms/{slug}`,
+  404 unknown) → `{platform:{slug,label}, capabilities:[{id, description, endpoints[]}] (sorted by id),
+  extended:[…], domains:[…], providers:{…}}` where an endpoint is `{id, provider, provider_display,
+  summary, method, path, scope, tier, domain, call_template, cost, verified, docs_url, has_example,
+  input}` — grouping by capability is what makes two providers' take on one job comparable;
+  capability-less endpoints fall to `extended`. **Two axes, both served**: `capabilities`/`extended` is
+  the shape `treg catalog` renders; `domains` is the LEDGER the dashboard renders —
+  `[{domain, rows:[{kind:"merged"|"single", capability?, description, domain, endpoints[]}]}]`, sections
+  ordered `other`-last then busiest-first, merged rows (a job ≥2 providers do) before single rows within
+  a section, a single row described by its ENDPOINT's summary rather than the capability's. Ordering and
+  merging happen server-side (`catalog_store.domain_rows`) so every client shows the same page. Every
+  endpoint carries the `domain` that files it (`catalog_store._domain`: explicit `domain:` → the
+  capability id's middle segment → a path keyword → the path's grouping segment → `other`) and a
+  paste-ready `call_template`. `providers` maps service → `{service, display_name, limits?,
+  pricing_url?, docs?}`, once per provider, for an expanded row. `catalog_example`
+  (`GET /catalog/examples/{endpoint_id}`) streams the captured response JSON — the id is resolved
+  through the loaded catalog **before** any path is built, so caller input never reaches the filesystem
+  (404 otherwise). Consumed by the dashboard and `treg catalog`; see
+  [catalog](../architecture/catalog.md).
+- **Catalog discover → inspect** (open, same section): the two routes that complete the loop whose third
+  step is `treg call`. `catalog_search` (`GET /catalog/search?q=&limit=` , default 25, capped 100) →
+  `{query, count, total, results[], hints[]}`; a result is the endpoint view **plus** `{capability,
+  capability_description, platform, platform_label, score}`. Ranking is plain token containment
+  (`catalog_store.search`, no deps, no embeddings): **every** query token must match somewhere (AND, so a
+  second word narrows), and score sums each token's best field weight — capability id/description +
+  platform label/slug (3) > summary (2) > id/path/provider (1). Ties break core-before-extended, then
+  verified-before-not, then id, so the order is total and reproducible. `catalog_endpoint`
+  (`GET /catalog/endpoints/{endpoint_id}`, 404 unknown) answers everything in ONE round-trip:
+  `{endpoint, provider:{service, display_name, limits?, pricing_url?, docs?}, siblings[], call_template,
+  example_response, hints[]}` — `siblings` are the other providers implementing the same capability (so a
+  price/verification comparison needs no second call), `example_response` is inlined rather than left
+  behind `/catalog/examples`, and `call_template` is a paste-ready `treg call …` line built from the
+  endpoint's `test_request` (the request the verifier actually ran) falling back to documented examples.
+  `hints` on both routes carries the next command, since finding an endpoint is never the goal.
 - **Auth — three identity doors** (all resolve to a user via the shared `_find_or_create_user`, so
   first-proof = registration — the **user only, no auto personal org**; a brand-new user lands with zero
   teams and names their first via the mandatory welcome / `treg org create`): **GitHub** — `auth_github` (`GET /auth/github`,
@@ -313,6 +351,11 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   needing treg's own second credential — Google Ads' developer token — also gets a **platform binding**,
   see [proxy-model](../architecture/proxy-model.md)) and `_record_connected_identity` best-effort asks
   the provider who connected. See [auth-secrets](../architecture/auth-secrets.md).
+  The tool's `examples` come from `_provider_tool_examples`: the registry's hand-written ones first,
+  then the endpoint catalog's **verified core** endpoints for that provider (`catalog_store.tool_examples`
+  → `{method, path, note}` where the note carries the summary, required params and capability),
+  de-duplicated by (method, path) and capped at `CATALOG_STAMP_CAP` (12). Unverified endpoints are never
+  stamped — an example is a promise the call works, and the `verified` date is the only evidence of that.
 - **Connections (the marketplace's dashboard surface):** `list_connections` (`GET /connections`) returns
   every OAuth/registry credential in the org — metadata only, no token material — with health, expiry,
   and (for a known provider) `capabilities`/`missing_capabilities` + extra-credential notes. The filter
