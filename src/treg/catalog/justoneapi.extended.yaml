@@ -456,6 +456,7 @@ endpoints:
       cityId: '110000'
       limitOffset: '0'
   unverified: provider answers code 600 NO PERMISSION — this API is not enabled for the account used on 2026-07-28
+  capability: beike.community.list
 - id: justoneapi.x.beike-ershoufang-detail-v1
   tier: extended
   platform: beike
@@ -475,6 +476,7 @@ endpoints:
         required: true
         note: The unique identifier for the property listing.
   untestable: no test value for required param(s) houseCode — none of the verified responses in this provider carries one
+  capability: beike.listing.detail
 - id: justoneapi.x.beike-get-ershoufang-list-v1
   tier: extended
   platform: beike
@@ -504,6 +506,7 @@ endpoints:
       cityId: '110000'
       offset: '0'
   unverified: provider answers code 600 NO PERMISSION — this API is not enabled for the account used on 2026-07-28
+  capability: beike.listing.list
 - id: justoneapi.x.bilibili-get-user-detail-v2
   tier: extended
   capability: bilibili.user.profile
@@ -819,6 +822,7 @@ endpoints:
       keyword: 球鞋
       page: '1'
   unverified: provider answers code 600 NO PERMISSION — this API is not enabled for the account used on 2026-07-28
+  capability: dewu.search.items
 - id: justoneapi.x.douban-get-movie-comments-v1
   tier: extended
   capability: douban.title.comments
@@ -1036,6 +1040,7 @@ endpoints:
     queryParams:
       keyword: 什么是人工智能
   unverified: provider answers code 600 NO PERMISSION — this API is not enabled for the account used on 2026-07-28
+  capability: ai-search.doubao.answer
 - id: justoneapi.x.douyin-get-user-detail-v3
   tier: extended
   platform: douyin
@@ -3311,6 +3316,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/justoneapi.x.facebook-get-profile-id-v1.json
 # note: the call succeeds (code 0) but returned an EMPTY payload for this test target — route and credential are proven, the example shows no response shape
+  capability: facebook.user.profile.id.resolve
 - id: justoneapi.x.facebook-get-profile-posts-v1
   tier: extended
   capability: facebook.user.posts

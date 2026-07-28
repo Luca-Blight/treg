@@ -26731,7 +26731,7 @@ endpoints:
   capability: xiaohongshu.search.users
 - id: tikhub.x.xiaohongshu-pgy-get-blogger-core-data
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_core_data
   summary: 'Xiaohongshu: get blogger core data (pgy)'
@@ -26765,9 +26765,10 @@ endpoints:
       date_type: 1
       advertise_switch: 1
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.creator.performance
 - id: tikhub.x.xiaohongshu-pgy-get-blogger-data-summary
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_data_summary
   summary: 'Xiaohongshu: get blogger data summary (pgy)'
@@ -26789,9 +26790,10 @@ endpoints:
     body:
       user_id: 5c668b3e0000000012021605
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.creator.performance
 - id: tikhub.x.xiaohongshu-pgy-get-blogger-detail
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_detail
   summary: 'Xiaohongshu: get blogger detail (pgy)'
@@ -26813,9 +26815,10 @@ endpoints:
     body:
       user_id: 5c668b3e0000000012021605
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.creator.profile
 - id: tikhub.x.xiaohongshu-pgy-get-blogger-fans-history
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_fans_history
   summary: 'Xiaohongshu: get blogger fans history (pgy)'
@@ -26841,9 +26844,10 @@ endpoints:
       user_id: 5c668b3e0000000012021605
       date_type: 1
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.creator.fans_history
 - id: tikhub.x.xiaohongshu-pgy-get-blogger-fans-profile
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_fans_profile
   summary: 'Xiaohongshu: get blogger fans profile (pgy)'
@@ -26865,9 +26869,10 @@ endpoints:
     body:
       user_id: 5c668b3e0000000012021605
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.creator.audience
 - id: tikhub.x.xiaohongshu-pgy-get-blogger-fans-summary
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_fans_summary
   summary: 'Xiaohongshu: get blogger fans summary (pgy)'
@@ -26889,9 +26894,10 @@ endpoints:
     body:
       user_id: 5c668b3e0000000012021605
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.creator.fans_summary
 - id: tikhub.x.xiaohongshu-pgy-get-blogger-list
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_list
   summary: 'Xiaohongshu: get blogger list (pgy)'
@@ -26929,9 +26935,10 @@ endpoints:
       fans_number_lower: '10000'
       fans_number_upper: '1000000'
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.search.creators
 - id: tikhub.x.xiaohongshu-pgy-get-blogger-notes
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_notes
   summary: 'Xiaohongshu: get blogger notes (pgy)'
@@ -26973,9 +26980,10 @@ endpoints:
       order_type: 1
       advertise_switch: 1
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.creator.notes
 - id: tikhub.x.xiaohongshu-pgy-get-blogger-notes-rate
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_notes_rate
   summary: 'Xiaohongshu: get blogger notes rate (pgy)'
@@ -27009,9 +27017,10 @@ endpoints:
       date_type: 1
       advertise_switch: 1
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.creator.performance
 - id: tikhub.x.xiaohongshu-pgy-get-note-detail
   tier: extended
-  platform: xiaohongshu
+  platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_note_detail
   summary: 'Xiaohongshu: get note detail (pgy)'
@@ -27033,6 +27042,7 @@ endpoints:
     body:
       note_id: 6a20edfa0000000021020951
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
+  capability: xiaohongshu-pugongying.note.detail
 - id: tikhub.x.xiaohongshu-web-v3-fetch-homefeed
   tier: extended
   platform: xiaohongshu

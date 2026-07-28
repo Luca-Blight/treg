@@ -72,6 +72,7 @@ endpoints:
         type: string
         required: true
         note: Required. The name of the account to fetch.
+  capability: google-business.accounts
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-patch
   tier: extended
   platform: google-business
@@ -357,6 +358,7 @@ endpoints:
         type: boolean
         required: false
         note: Optional. If set to true, metadata for all available attributes are returned, disregarding `parent` and `category_name` fields. `language_code` and `region_code` are required when `show_all` is set to true.
+  capability: google-business.attributes.catalog
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-categories-list
   tier: extended
   platform: google-business
@@ -398,6 +400,7 @@ endpoints:
         - CATEGORY_VIEW_UNSPECIFIED
         - BASIC
         - FULL
+  capability: google-business.categories
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-categories-batchget
   tier: extended
   platform: google-business
@@ -431,6 +434,7 @@ endpoints:
         - CATEGORY_VIEW_UNSPECIFIED
         - BASIC
         - FULL
+  capability: google-business.categories
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-chains-get
   tier: extended
   platform: google-business
@@ -448,6 +452,7 @@ endpoints:
         type: string
         required: true
         note: Required. The chain's resource name, in the format `chains/{chain_place_id}`.
+  capability: google-business.chains
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-chains-search
   tier: extended
   platform: google-business
@@ -468,6 +473,7 @@ endpoints:
         type: integer
         required: false
         note: The maximum number of matched chains to return from this query. The default is 10. The maximum possible value is 500.
+  capability: google-business.chains
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-googlelocations-search
   tier: extended
   platform: google-business
@@ -485,6 +491,7 @@ endpoints:
       type: object
       required: true
       note: JSON body — the SearchGoogleLocationsRequest resource; see the method's API reference for its fields
+  capability: google-business.locations.search
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-locations-delete
   tier: extended
   platform: google-business
@@ -524,6 +531,7 @@ endpoints:
         type: string
         required: false
         note: Required. Read mask to specify what fields will be returned in the response.
+  capability: google-business.locations
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-locations-patch
   tier: extended
   platform: google-business
@@ -571,6 +579,7 @@ endpoints:
         type: string
         required: true
         note: Required. Resource name of the location.
+  capability: google-business.verification.status
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-locations-admins-list
   tier: extended
   platform: google-business
@@ -667,6 +676,7 @@ endpoints:
         type: string
         required: true
         note: Required. Google identifier for this location in the form of `locations/{location_id}/attributes`.
+  capability: google-business.attributes
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-locations-updateattributes
   tier: extended
   platform: google-business
@@ -741,6 +751,7 @@ endpoints:
         type: string
         required: false
         note: Optional. If specified, returns the next page of place action links.
+  capability: google-business.actionlinks
 - id: google-business-profile.x.placeactions-mybusinessplaceactions-locations-placeactionlinks-create
   tier: extended
   platform: google-business
@@ -861,6 +872,7 @@ endpoints:
         type: string
         required: false
         note: Optional. If specified, the next page of questions is retrieved.
+  capability: google-business.qanda
 - id: google-business-profile.x.qanda-mybusinessqanda-locations-questions-create
   tier: extended
   platform: google-business
@@ -996,6 +1008,7 @@ endpoints:
       type: object
       required: true
       note: JSON body — the UpsertAnswerRequest resource; see the method's API reference for its fields
+  capability: google-business.qanda.answer
 - id: google-business-profile.x.businessprofileperformance-businessprofileperformance-locations-searchkeywords-impressions-monthly-list
   tier: extended
   platform: google-business
@@ -1046,6 +1059,7 @@ endpoints:
         type: string
         required: false
         note: Optional. A token indicating the next paginated result to be returned.
+  capability: google-business.insights.keywords
 - id: google-business-profile.x.verifications-mybusinessverifications-locations-verifications-list
   tier: extended
   platform: google-business
@@ -1153,6 +1167,7 @@ endpoints:
         type: integer
         required: false
         note: Year of the date. Must be from 1 to 9999, or 0 to specify a date without a year.
+  capability: google-business.insights
 - id: google-business-profile.x.verifications-mybusinessverifications-locations-fetchverificationoptions
   tier: extended
   platform: google-business
@@ -1263,6 +1278,7 @@ endpoints:
         type: integer
         required: false
         note: Seconds of a minute. Must be greater than or equal to 0 and typically must be less than or equal to 59. An API may allow the value 60 if it allows leap-seconds.
+  capability: google-business.insights
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-locations-getgoogleupdated
   tier: extended
   platform: google-business
@@ -1285,6 +1301,7 @@ endpoints:
         type: string
         required: false
         note: Required. Read mask to specify what fields will be returned in the response.
+  capability: google-business.locations.live
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-locations-transfer
   tier: extended
   platform: google-business
@@ -1385,6 +1402,7 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.posts
 - id: google-business-profile.x.v4-localposts-create
   tier: extended
   platform: google-business
@@ -1396,6 +1414,7 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.posts.create
 - id: google-business-profile.x.v4-media-list
   tier: extended
   platform: google-business
@@ -1407,6 +1426,7 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.media
 - id: google-business-profile.x.v4-media-create
   tier: extended
   platform: google-business
@@ -1417,6 +1437,7 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.media.upload
 - id: google-business-profile.x.v4-reviews-get
   tier: extended
   platform: google-business
@@ -1428,6 +1449,7 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.reviews
 - id: google-business-profile.x.v4-reviews-deletereply
   tier: extended
   platform: google-business
@@ -1450,3 +1472,4 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.reviews

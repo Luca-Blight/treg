@@ -296,6 +296,7 @@ endpoints:
     verified: 2026-07-28
     example_response: examples/brightdata.x.facebook-profiles.json
     docs_url: https://docs.brightdata.com/datasets/scrapers/facebook/quickstart
+    capability: facebook.user.profile
 
   - id: brightdata.x.facebook-posts-by-profile
     tier: extended
@@ -337,6 +338,7 @@ endpoints:
     cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
     skipped: "sibling verified via brightdata.x.facebook-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
     docs_url: https://docs.brightdata.com/datasets/scrapers/facebook/quickstart
+    capability: facebook.post.detail
 
   - id: brightdata.x.facebook-comments
     tier: extended
@@ -378,6 +380,7 @@ endpoints:
     cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
     skipped: "sibling verified via brightdata.x.facebook-profiles; same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
     docs_url: https://docs.brightdata.com/datasets/scrapers/facebook/quickstart
+    capability: facebook.marketplace.item.detail
 
   - id: brightdata.x.amazon-products
     tier: extended
@@ -651,6 +654,7 @@ endpoints:
     cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
     skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
     docs_url: https://docs.brightdata.com/datasets/scrapers/walmart/quickstart
+    capability: walmart.product.detail
 
   - id: brightdata.x.walmart-reviews
     tier: extended
@@ -671,6 +675,7 @@ endpoints:
     cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
     skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
     docs_url: https://docs.brightdata.com/datasets/scrapers/walmart/quickstart
+    capability: walmart.product.reviews
 
   - id: brightdata.x.ebay-products
     tier: extended
@@ -691,6 +696,7 @@ endpoints:
     cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
     skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
     docs_url: https://docs.brightdata.com/datasets/scrapers/ebay/quickstart
+    capability: ebay.product.detail
 
   - id: brightdata.x.yelp-businesses
     tier: extended
@@ -711,6 +717,7 @@ endpoints:
     cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
     skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
     docs_url: https://docs.brightdata.com/datasets/scrapers/yelp/quickstart
+    capability: yelp.business.profile
 
   - id: brightdata.x.yelp-reviews
     tier: extended
@@ -731,6 +738,7 @@ endpoints:
     cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
     skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
     docs_url: https://docs.brightdata.com/datasets/scrapers/yelp/quickstart
+    capability: yelp.business.reviews
 
   - id: brightdata.x.tripadvisor-hotels
     tier: extended
@@ -751,6 +759,7 @@ endpoints:
     cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
     skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
     docs_url: https://docs.brightdata.com/datasets/scrapers/tripadvisor/quickstart
+    capability: tripadvisor.hotel.detail
 
   - id: brightdata.x.trustpilot-reviews
     tier: extended
@@ -771,6 +780,7 @@ endpoints:
     cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — the general Web Scraper API rate documented for this product family; some datasets carry different published rates, confirm on brightdata.com/pricing before volume use"}
     skipped: "sibling verified via brightdata.web.scrape.structured (core); same generic POST /datasets/v3/scrape runner, only dataset_id differs, no per-endpoint logic to diverge on (see file header, 2026-07-28 verify pass). Not re-called to conserve budget."
     docs_url: https://docs.brightdata.com/datasets/scrapers/trustpilot/quickstart
+    capability: trustpilot.business.reviews
 
   - id: brightdata.x.google-play-apps
     tier: extended

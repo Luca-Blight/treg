@@ -281,6 +281,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/hunter.x.multi-domain-search.json
   observed_time: 1.08
+  capability: people.search
 - id: hunter.x.multi-domain-search-reveal
   tier: extended
   platform: people
@@ -302,6 +303,7 @@ endpoints:
     currency: credit
     note: 1 SEARCH credit per personal email revealed; 1 credit per domain for generic emails
   docs_url: https://hunter.io/api-documentation/v2#multi-domain-search
+  capability: people.enrich
 - id: hunter.x.combined-find
   tier: extended
   platform: people
@@ -331,6 +333,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/hunter.x.combined-find.json
   observed_time: 1.46
+  capability: people.enrich
 - id: hunter.x.leads-list
   tier: extended
   platform: people

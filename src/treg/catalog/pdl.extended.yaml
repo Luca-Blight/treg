@@ -59,6 +59,7 @@ endpoints:
     cost: {type: per_success, value: null, currency: credit, note: "PDL bills a preview at a reduced credit rate vs a full enrich; exact rate is plan-negotiated, not published"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-enrich-preview-api
     unverified: "http 402 — payment_required: \"You have hit your account maximum for person_enrich_preview (all matches used)\". This account's Preview allotment is exhausted; the route itself was reached and answered, not a broken endpoint."
+    capability: people.enrich
 
   - id: pdl.x.person-identify
     tier: extended
@@ -98,6 +99,7 @@ endpoints:
     docs_url: https://docs.peopledatalabs.com/docs/reference-identify-api
     verified: 2026-07-28
     example_response: examples/pdl.x.person-identify.json
+    capability: people.identity.resolve
 
   - id: pdl.x.person-retrieve-by-id
     tier: extended
@@ -116,6 +118,7 @@ endpoints:
     untestable: "requires a real PDL person_id from a prior enrich/search result; no public well-known id is documented"
     cost: {type: per_success, value: 1, currency: credit, note: "billed like enrich — 1 credit on a hit"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-retrieve-api
+    capability: people.enrich
 
   - id: pdl.x.person-retrieve-bulk
     tier: extended
@@ -135,6 +138,7 @@ endpoints:
     untestable: "requires real PDL person_ids from a prior enrich/search result; no public well-known ids are documented"
     cost: {type: per_success, value: 1, currency: credit, note: "1 credit per record returned"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-retrieve-api
+    capability: people.enrich
 
   - id: pdl.x.person-search-post
     tier: extended
@@ -204,6 +208,7 @@ endpoints:
     docs_url: https://docs.peopledatalabs.com/docs/reference-job-title-enrichment-api
     verified: 2026-07-28
     example_response: examples/pdl.x.job-title-enrich.json
+    capability: people.title.enrich
 
   - id: pdl.x.ip-enrich
     tier: extended
@@ -288,6 +293,7 @@ endpoints:
     docs_url: https://docs.peopledatalabs.com/docs/cleaner-apis-reference
     verified: 2026-07-28
     example_response: examples/pdl.x.school-clean.json
+    capability: people.school.clean
 
   - id: pdl.x.subscription-list
     tier: extended

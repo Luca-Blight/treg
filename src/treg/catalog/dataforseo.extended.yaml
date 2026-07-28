@@ -73,6 +73,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-ai-keyword-data-keywords-search-volume-live.json
   observed_cost: 0.0102
+  capability: ai-search.keywords.volume
 - id: dataforseo.x.ai-optimization-llm-mentions-historical-live
   tier: extended
   platform: ai-search
@@ -147,6 +148,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-historical-live.json
   observed_cost: 0.101
+  capability: ai-search.mentions.historical
 - id: dataforseo.x.ai-optimization-llm-mentions-multi-target-metrics-live
   tier: extended
   platform: ai-search
@@ -262,6 +264,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-multi-target-metrics-live.json
   observed_cost: 0.104
+  capability: ai-search.mentions.multi_target
 - id: dataforseo.x.ai-optimization-llm-mentions-search-mentions-live
   tier: extended
   platform: ai-search
@@ -364,6 +367,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-search-mentions-live.json
   observed_cost: 0.103
+  capability: ai-search.mentions.search
 - id: dataforseo.x.ai-optimization-llm-mentions-target-metrics-live
   tier: extended
   platform: ai-search
@@ -448,6 +452,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-target-metrics-live.json
   observed_cost: 0.101
+  capability: ai-search.mentions.summary
 - id: dataforseo.x.ai-optimization-llm-mentions-target-metrics-lite-live
   tier: extended
   platform: ai-search
@@ -540,6 +545,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-target-metrics-lite-live.json
   observed_cost: 0.101
+  capability: ai-search.mentions.summary
 - id: dataforseo.x.ai-optimization-llm-mentions-timeseries-delta-live
   tier: extended
   platform: ai-search
@@ -624,6 +630,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-timeseries-delta-live.json
   observed_cost: 0.105
+  capability: ai-search.mentions.timeseries_delta
 - id: dataforseo.x.ai-optimization-llm-mentions-timeseries-new-lost-live
   tier: extended
   platform: ai-search
@@ -708,6 +715,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-timeseries-new-lost-live.json
   observed_cost: 0.105
+  capability: ai-search.mentions.timeseries_new_lost
 - id: dataforseo.x.ai-optimization-llm-mentions-top-mentioned-brand-categories-live
   tier: extended
   platform: ai-search
@@ -822,6 +830,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-top-mentioned-brand-categories-live.json
   observed_cost: 0.103
+  capability: ai-search.mentions.top_brand_categories
 - id: dataforseo.x.ai-optimization-llm-mentions-top-mentioned-brand-categories-lite-live
   tier: extended
   platform: ai-search
@@ -936,6 +945,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-top-mentioned-brand-categories-lite-live.json
   observed_cost: 0.103
+  capability: ai-search.mentions.top_brand_categories
 - id: dataforseo.x.ai-optimization-llm-mentions-top-mentioned-brands-live
   tier: extended
   platform: ai-search
@@ -1050,6 +1060,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-top-mentioned-brands-live.json
   observed_cost: 0.103
+  capability: ai-search.mentions.top_brands
 - id: dataforseo.x.ai-optimization-llm-mentions-top-mentioned-brands-lite-live
   tier: extended
   platform: ai-search
@@ -1164,6 +1175,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-top-mentioned-brands-lite-live.json
   observed_cost: 0.103
+  capability: ai-search.mentions.top_brands
 - id: dataforseo.x.ai-optimization-llm-mentions-top-mentioned-domains-live
   tier: extended
   platform: ai-search
@@ -1284,6 +1296,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-top-mentioned-domains-live.json
   observed_cost: 0.103
+  capability: ai-search.mentions.top_domains
 - id: dataforseo.x.ai-optimization-llm-mentions-top-mentioned-domains-lite-live
   tier: extended
   platform: ai-search
@@ -1404,6 +1417,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-top-mentioned-domains-lite-live.json
   observed_cost: 0.103
+  capability: ai-search.mentions.top_domains
 - id: dataforseo.x.ai-optimization-llm-mentions-top-mentioned-pages-live
   tier: extended
   platform: ai-search
@@ -1524,6 +1538,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-top-mentioned-pages-live.json
   observed_cost: 0.103
+  capability: ai-search.mentions.top_pages
 - id: dataforseo.x.ai-optimization-llm-mentions-top-mentioned-pages-lite-live
   tier: extended
   platform: ai-search
@@ -1644,6 +1659,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-llm-mentions-top-mentioned-pages-lite-live.json
   observed_cost: 0.103
+  capability: ai-search.mentions.top_pages
 - id: dataforseo.x.dataforseo-labs-amazon-bulk-search-volume-live
   tier: extended
   platform: amazon
@@ -3022,6 +3038,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.serp-baidu-organic-task-post.json
   observed_cost: 0.0012
+  capability: baidu.serp.organic
 - id: dataforseo.x.keywords-data-bing-audience-estimation-industries
   tier: extended
   platform: bing
@@ -3125,6 +3142,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.keywords-data-bing-audience-estimation-live.json
   observed_cost: 0.09
+  capability: bing.audience.estimate
 - id: dataforseo.x.keywords-data-bing-keyword-performance-live
   tier: extended
   platform: bing
@@ -3194,6 +3212,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.keywords-data-bing-keyword-performance-live.json
   observed_cost: 0.09
+  capability: bing.keywords.performance
 - id: dataforseo.x.keywords-data-bing-keywords-for-keywords-live
   tier: extended
   platform: bing
@@ -3279,6 +3298,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.keywords-data-bing-keywords-for-keywords-live.json
   observed_cost: 0.09
+  capability: bing.keywords.ideas
 - id: dataforseo.x.keywords-data-bing-keywords-for-site-live
   tier: extended
   platform: bing
@@ -3358,6 +3378,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.keywords-data-bing-keywords-for-site-live.json
   observed_cost: 0.09
+  capability: bing.keywords.for_site
 - id: dataforseo.x.keywords-data-bing-search-volume-live
   tier: extended
   platform: bing
@@ -3439,6 +3460,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.keywords-data-bing-search-volume-live.json
   observed_cost: 0.09
+  capability: bing.keywords.volume
 - id: dataforseo.x.keywords-data-bing-search-volume-history-live
   tier: extended
   platform: bing
@@ -3512,6 +3534,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.keywords-data-bing-search-volume-history-live.json
   observed_cost: 0.09
+  capability: bing.keywords.volume_history
 - id: dataforseo.x.serp-bing-locations-country
   tier: extended
   platform: bing
@@ -3632,6 +3655,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.serp-bing-organic-live-advanced.json
   observed_cost: 0.002
+  capability: bing.serp.organic
 - id: dataforseo.x.serp-bing-organic-live-regular
   tier: extended
   platform: bing
@@ -3727,6 +3751,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.serp-bing-organic-live-regular.json
   observed_cost: 0.002
+  capability: bing.serp.organic
 - id: dataforseo.x.ai-optimization-chat-gpt-llm-responses-live
   tier: extended
   platform: ai-search
@@ -3823,6 +3848,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-chat-gpt-llm-responses-live.json
   observed_cost: 0.0292488
+  capability: ai-search.chatgpt.answer
 - id: dataforseo.x.ai-optimization-chat-gpt-llm-scraper-live-advanced
   tier: extended
   platform: ai-search
@@ -3877,6 +3903,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-chat-gpt-llm-scraper-live-advanced.json
   observed_cost: 0.004
+  capability: ai-search.chatgpt.scrape
 - id: dataforseo.x.ai-optimization-chat-gpt-llm-scraper-locations-country
   tier: extended
   platform: ai-search
@@ -3981,6 +4008,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-claude-llm-responses-live.json
   observed_cost: 0
+  capability: ai-search.claude.answer
 - id: dataforseo.x.ai-optimization-gemini-llm-responses-live
   tier: extended
   platform: ai-search
@@ -4065,6 +4093,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-gemini-llm-responses-live.json
   observed_cost: 0.036256
+  capability: ai-search.gemini.answer
 - id: dataforseo.x.ai-optimization-gemini-llm-scraper-live-advanced
   tier: extended
   platform: ai-search
@@ -4119,6 +4148,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-gemini-llm-scraper-live-advanced.json
   observed_cost: 0.004
+  capability: ai-search.gemini.scrape
 - id: dataforseo.x.business-data-google-extended-reviews-task-post
   tier: extended
   platform: google
@@ -9853,6 +9883,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.serp-naver-organic-task-post.json
   observed_cost: 0.0006
+  capability: naver.serp.organic
 - id: dataforseo.x.ai-optimization-perplexity-llm-responses-live
   tier: extended
   platform: ai-search
@@ -9933,6 +9964,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.ai-optimization-perplexity-llm-responses-live.json
   observed_cost: 0.005861
+  capability: ai-search.perplexity.answer
 - id: dataforseo.x.serp-seznam-locations-country
   tier: extended
   platform: seznam
@@ -10053,6 +10085,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.serp-seznam-organic-task-post.json
   observed_cost: 0.0006
+  capability: seznam.serp.organic
 - id: dataforseo.x.business-data-tripadvisor-locations-country
   tier: extended
   platform: tripadvisor
@@ -10159,6 +10192,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.business-data-tripadvisor-reviews-task-post.json
   observed_cost: 0.00075
+  capability: tripadvisor.business.reviews
 - id: dataforseo.x.business-data-tripadvisor-search-task-post
   tier: extended
   platform: tripadvisor
@@ -10218,6 +10252,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.business-data-tripadvisor-search-task-post.json
   observed_cost: 0.00075
+  capability: tripadvisor.search.businesses
 - id: dataforseo.x.business-data-trustpilot-reviews-task-post
   tier: extended
   platform: trustpilot
@@ -10271,6 +10306,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.business-data-trustpilot-reviews-task-post.json
   observed_cost: 0.0015
+  capability: trustpilot.business.reviews
 - id: dataforseo.x.business-data-trustpilot-search-task-post
   tier: extended
   platform: trustpilot
@@ -10320,6 +10356,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.business-data-trustpilot-search-task-post.json
   observed_cost: 0.0015
+  capability: trustpilot.search.businesses
 - id: dataforseo.x.backlinks-anchors-live
   tier: extended
   platform: web
@@ -14527,6 +14564,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.serp-yahoo-organic-live-advanced.json
   observed_cost: 0.002
+  capability: yahoo.serp.organic
 - id: dataforseo.x.serp-yahoo-organic-live-regular
   tier: extended
   platform: yahoo
@@ -14626,6 +14664,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/dataforseo.x.serp-yahoo-organic-live-regular.json
   observed_cost: 0.002
+  capability: yahoo.serp.organic
 - id: dataforseo.x.serp-youtube-locations-country
   tier: extended
   platform: youtube

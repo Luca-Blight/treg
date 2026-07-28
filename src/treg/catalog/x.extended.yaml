@@ -279,6 +279,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.article.draft.create
 - id: x.x.article-publish
   tier: extended
   platform: x
@@ -297,6 +298,7 @@ endpoints:
       article_id:
         type: string
         required: true
+  capability: x.article.publish
 - id: x.x.list-scheduled-broadcasts
   tier: extended
   platform: x
@@ -325,6 +327,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.broadcast.list
 - id: x.x.create-scheduled-broadcast
   tier: extended
   platform: x
@@ -345,6 +348,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.broadcast.create
 - id: x.x.delete-scheduled-broadcast
   tier: extended
   platform: x
@@ -368,6 +372,7 @@ endpoints:
       roll_forward:
         type: boolean
         required: false
+  capability: x.broadcast.delete
 - id: x.x.get-scheduled-broadcast
   tier: extended
   platform: x
@@ -387,6 +392,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.broadcast.detail
 - id: x.x.update-scheduled-broadcast
   tier: extended
   platform: x
@@ -411,6 +417,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.broadcast.update
 - id: x.x.go-live-scheduled-broadcast
   tier: extended
   platform: x
@@ -430,6 +437,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.broadcast.go_live
 - id: x.x.send-broadcast-chat
   tier: extended
   platform: x
@@ -454,6 +462,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.broadcast.chat.send
 - id: x.x.get-chat-conversations
   tier: extended
   platform: x
@@ -477,6 +486,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.chat.conversations.list
 - id: x.x.create-chat-conversation
   tier: extended
   platform: x
@@ -497,6 +507,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.group.create
 - id: x.x.initialize-chat-group
   tier: extended
   platform: x
@@ -511,6 +522,7 @@ endpoints:
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
+  capability: x.chat.group.initialize
 - id: x.x.get-chat-conversation
   tier: extended
   platform: x
@@ -531,6 +543,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.chat.conversation.detail
 - id: x.x.get-chat-conversation-events
   tier: extended
   platform: x
@@ -558,6 +571,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.chat.conversation.events
 - id: x.x.add-conversation-keys
   tier: extended
   platform: x
@@ -607,6 +621,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.group.members.add
 - id: x.x.send-chat-message
   tier: extended
   platform: x
@@ -631,6 +646,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.message.send
 - id: x.x.delete-chat-messages
   tier: extended
   platform: x
@@ -655,6 +671,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.message.delete
 - id: x.x.mark-chat-conversation-read
   tier: extended
   platform: x
@@ -718,6 +735,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.media.upload
 - id: x.x.chat-media-upload-append
   tier: extended
   platform: x
@@ -742,6 +760,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.media.upload
 - id: x.x.chat-media-upload-finalize
   tier: extended
   platform: x
@@ -766,6 +785,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.media.upload
 - id: x.x.chat-media-download
   tier: extended
   platform: x
@@ -788,6 +808,7 @@ endpoints:
       media_hash_key:
         type: string
         required: true
+  capability: x.chat.media.download
 - id: x.x.search-communities
   tier: extended
   platform: x
@@ -815,6 +836,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.community.search
 - id: x.x.get-communities-by-id
   tier: extended
   platform: x
@@ -835,6 +857,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.community.detail
 - id: x.x.get-compliance-jobs
   tier: extended
   platform: x
@@ -997,6 +1020,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.dm.conversation.create
 - id: x.x.dm-conversations-media-download
   tier: extended
   platform: x
@@ -1022,6 +1046,7 @@ endpoints:
       resource_id:
         type: string
         required: true
+  capability: x.dm.media.download
 - id: x.x.get-direct-messages-events-by-participant-id
   tier: extended
   platform: x
@@ -1053,6 +1078,7 @@ endpoints:
       event_types:
         type: array
         required: false
+  capability: x.dm.events.list
 - id: x.x.create-direct-messages-by-participant-id
   tier: extended
   platform: x
@@ -1078,6 +1104,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.dm.message.send
 - id: x.x.create-direct-messages-by-conversation-id
   tier: extended
   platform: x
@@ -1103,6 +1130,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.dm.message.send
 - id: x.x.get-direct-messages-events-by-conversation-id
   tier: extended
   platform: x
@@ -1134,6 +1162,7 @@ endpoints:
       event_types:
         type: array
         required: false
+  capability: x.dm.events.list
 - id: x.x.get-direct-messages-events
   tier: extended
   platform: x
@@ -1161,6 +1190,7 @@ endpoints:
       event_types:
         type: array
         required: false
+  capability: x.dm.events.list
 - id: x.x.delete-direct-messages-events
   tier: extended
   platform: x
@@ -1180,6 +1210,7 @@ endpoints:
       event_id:
         type: string
         required: true
+  capability: x.dm.event.delete
 - id: x.x.get-direct-messages-events-by-id
   tier: extended
   platform: x
@@ -1200,6 +1231,7 @@ endpoints:
       event_id:
         type: string
         required: true
+  capability: x.dm.event.detail
 - id: x.x.stream-likes-compliance
   tier: extended
   platform: x
@@ -1350,6 +1382,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.create
 - id: x.x.delete-lists
   tier: extended
   platform: x
@@ -1370,6 +1403,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.list.delete
 - id: x.x.get-lists-by-id
   tier: extended
   platform: x
@@ -1390,6 +1424,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.list.detail
 - id: x.x.update-lists
   tier: extended
   platform: x
@@ -1415,6 +1450,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.update
 - id: x.x.get-lists-followers
   tier: extended
   platform: x
@@ -1443,6 +1479,7 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.list.followers
 - id: x.x.get-lists-members
   tier: extended
   platform: x
@@ -1471,6 +1508,7 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.list.members
 - id: x.x.add-lists-member
   tier: extended
   platform: x
@@ -1496,6 +1534,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.member.add
 - id: x.x.remove-lists-member-by-user-id
   tier: extended
   platform: x
@@ -1519,6 +1558,7 @@ endpoints:
       user_id:
         type: string
         required: true
+  capability: x.list.member.remove
 - id: x.x.get-lists-posts
   tier: extended
   platform: x
@@ -1547,6 +1587,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.list.posts
 - id: x.x.get-media-by-media-keys
   tier: extended
   platform: x
@@ -1566,6 +1607,7 @@ endpoints:
       media_keys:
         type: array
         required: true
+  capability: x.media.detail
 - id: x.x.get-media-analytics
   tier: extended
   platform: x
@@ -1594,6 +1636,7 @@ endpoints:
       granularity:
         type: string
         required: false
+  capability: x.media.analytics
 - id: x.x.create-media-metadata
   tier: extended
   platform: x
@@ -1614,6 +1657,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.metadata.set
 - id: x.x.delete-media-subtitles
   tier: extended
   platform: x
@@ -1634,6 +1678,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.subtitles.delete
 - id: x.x.create-media-subtitles
   tier: extended
   platform: x
@@ -1654,6 +1699,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.subtitles.create
 - id: x.x.get-media-upload-status
   tier: extended
   platform: x
@@ -1677,6 +1723,7 @@ endpoints:
       command:
         type: string
         required: false
+  capability: x.media.upload.status
 - id: x.x.media-upload
   tier: extended
   platform: x
@@ -1698,6 +1745,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.upload
 - id: x.x.initialize-media-upload
   tier: extended
   platform: x
@@ -1718,6 +1766,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.upload
 - id: x.x.append-media-upload
   tier: extended
   platform: x
@@ -1742,6 +1791,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.upload
 - id: x.x.finalize-media-upload
   tier: extended
   platform: x
@@ -1761,6 +1811,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.media.upload
 - id: x.x.get-media-by-media-key
   tier: extended
   platform: x
@@ -1780,6 +1831,7 @@ endpoints:
       media_key:
         type: string
         required: true
+  capability: x.media.detail
 - id: x.x.search-news
   tier: extended
   platform: x
@@ -1804,6 +1856,7 @@ endpoints:
       max_age_hours:
         type: integer
         required: false
+  capability: x.search.news
 - id: x.x.get-news
   tier: extended
   platform: x
@@ -1823,6 +1876,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.news.detail
 - id: x.x.create-community-notes
   tier: extended
   platform: x
@@ -1843,6 +1897,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.community_notes.create
 - id: x.x.evaluate-community-notes
   tier: extended
   platform: x
@@ -1863,6 +1918,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.community_notes.evaluate
 - id: x.x.search-community-notes-written
   tier: extended
   platform: x
@@ -1888,6 +1944,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.community_notes.search_written
 - id: x.x.search-eligible-posts
   tier: extended
   platform: x
@@ -1916,6 +1973,7 @@ endpoints:
       post_selection:
         type: string
         required: false
+  capability: x.community_notes.eligible_posts
 - id: x.x.delete-community-notes
   tier: extended
   platform: x
@@ -1935,6 +1993,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.community_notes.delete
 - id: x.x.get-open-api-spec
   tier: extended
   platform: x
@@ -1969,6 +2028,7 @@ endpoints:
       ids:
         type: array
         required: true
+  capability: x.space.detail
 - id: x.x.get-spaces-by-creator-ids
   tier: extended
   platform: x
@@ -1989,6 +2049,7 @@ endpoints:
       user_ids:
         type: array
         required: true
+  capability: x.space.by_creator
 - id: x.x.search-spaces
   tier: extended
   platform: x
@@ -2014,6 +2075,7 @@ endpoints:
       max_results:
         type: integer
         required: false
+  capability: x.search.spaces
 - id: x.x.get-spaces-by-id
   tier: extended
   platform: x
@@ -2034,6 +2096,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.space.detail
 - id: x.x.get-spaces-buyers
   tier: extended
   platform: x
@@ -2062,6 +2125,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.space.ticket_buyers
 - id: x.x.get-spaces-posts
   tier: extended
   platform: x
@@ -2090,6 +2154,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.space.posts
 - id: x.x.get-trends-by-woeid
   tier: extended
   platform: x
@@ -2113,6 +2178,7 @@ endpoints:
       max_trends:
         type: integer
         required: false
+  capability: x.trending.topics
 - id: x.x.get-posts-by-ids
   tier: extended
   platform: x
@@ -2132,6 +2198,7 @@ endpoints:
       ids:
         type: array
         required: true
+  capability: x.post.detail
 - id: x.x.get-posts-analytics
   tier: extended
   platform: x
@@ -2160,6 +2227,7 @@ endpoints:
       granularity:
         type: string
         required: false
+  capability: x.post.analytics
 - id: x.x.stream-posts-compliance
   tier: extended
   platform: x
@@ -2236,6 +2304,7 @@ endpoints:
       search_count.fields:
         type: string
         required: false
+  capability: x.post.counts
 - id: x.x.get-posts-counts-recent
   tier: extended
   platform: x
@@ -2282,6 +2351,7 @@ endpoints:
       search_count.fields:
         type: string
         required: false
+  capability: x.post.counts
 - id: x.x.stream-posts-firehose
   tier: extended
   platform: x
@@ -2728,6 +2798,7 @@ endpoints:
       sort_order:
         type: string
         required: false
+  capability: x.search.posts
 - id: x.x.search-posts-recent
   tier: extended
   platform: x
@@ -2774,6 +2845,7 @@ endpoints:
       sort_order:
         type: string
         required: false
+  capability: x.search.posts
 - id: x.x.stream-posts
   tier: extended
   platform: x
@@ -2825,6 +2897,7 @@ endpoints:
         type: array
         required: false
         note: A comma separated list of Place fields to display.
+  capability: x.post.stream
 - id: x.x.get-rules
   tier: extended
   platform: x
@@ -2851,6 +2924,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.post.stream.rules
 - id: x.x.update-rules
   tier: extended
   platform: x
@@ -2878,6 +2952,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.stream.rules
 - id: x.x.get-rule-counts
   tier: extended
   platform: x
@@ -2966,6 +3041,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.post.delete
 - id: x.x.get-posts-by-id
   tier: extended
   platform: x
@@ -2985,6 +3061,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.post.detail
 - id: x.x.get-posts-liking-users
   tier: extended
   platform: x
@@ -3013,6 +3090,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.post.likers
 - id: x.x.get-posts-quoted-posts
   tier: extended
   platform: x
@@ -3043,6 +3121,7 @@ endpoints:
       exclude:
         type: array
         required: false
+  capability: x.post.quotes
 - id: x.x.get-posts-reposted-by
   tier: extended
   platform: x
@@ -3070,6 +3149,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.post.reposters
 - id: x.x.get-posts-reposts
   tier: extended
   platform: x
@@ -3097,6 +3177,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.post.reposters
 - id: x.x.hide-posts-reply
   tier: extended
   platform: x
@@ -3122,6 +3203,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.reply.hide
 - id: x.x.get-usage
   tier: extended
   platform: x
@@ -3160,6 +3242,7 @@ endpoints:
       ids:
         type: array
         required: true
+  capability: x.user.profile
 - id: x.x.get-users-by-usernames
   tier: extended
   platform: x
@@ -3179,6 +3262,7 @@ endpoints:
       usernames:
         type: array
         required: true
+  capability: x.user.profile
 - id: x.x.stream-users-compliance
   tier: extended
   platform: x
@@ -3224,6 +3308,7 @@ endpoints:
     currency: USD
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
+  capability: x.trending.personalized
 - id: x.x.get-users-public-keys
   tier: extended
   platform: x
@@ -3268,6 +3353,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.reposts_of_me
 - id: x.x.search-users
   tier: extended
   platform: x
@@ -3292,6 +3378,7 @@ endpoints:
       next_token:
         type: string
         required: false
+  capability: x.search.users
 - id: x.x.get-users-by-id
   tier: extended
   platform: x
@@ -3311,6 +3398,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.user.profile
 - id: x.x.get-users-affiliates
   tier: extended
   platform: x
@@ -3338,6 +3426,7 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.user.affiliates
 - id: x.x.get-users-blocking
   tier: extended
   platform: x
@@ -3365,6 +3454,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.user.blocking
 - id: x.x.get-users-bookmarks
   tier: extended
   platform: x
@@ -3393,6 +3483,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.bookmarks
 - id: x.x.create-users-bookmark
   tier: extended
   platform: x
@@ -3418,6 +3509,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.bookmark.add
 - id: x.x.get-users-bookmark-folders
   tier: extended
   platform: x
@@ -3446,6 +3538,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.bookmark_folders
 - id: x.x.create-users-bookmark-folder
   tier: extended
   platform: x
@@ -3471,6 +3564,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.bookmark_folder.create
 - id: x.x.get-users-bookmarks-by-folder-id
   tier: extended
   platform: x
@@ -3502,6 +3596,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.bookmarks
 - id: x.x.delete-users-bookmark
   tier: extended
   platform: x
@@ -3525,6 +3620,7 @@ endpoints:
       tweet_id:
         type: string
         required: true
+  capability: x.post.bookmark.remove
 - id: x.x.block-users-dms
   tier: extended
   platform: x
@@ -3545,6 +3641,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.user.dm.block
 - id: x.x.unblock-users-dms
   tier: extended
   platform: x
@@ -3565,6 +3662,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.user.dm.block
 - id: x.x.get-users-followed-lists
   tier: extended
   platform: x
@@ -3593,6 +3691,7 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.user.followed_lists
 - id: x.x.follow-list
   tier: extended
   platform: x
@@ -3617,6 +3716,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.follow
 - id: x.x.unfollow-list
   tier: extended
   platform: x
@@ -3639,6 +3739,7 @@ endpoints:
       list_id:
         type: string
         required: true
+  capability: x.list.follow
 - id: x.x.get-users-followers
   tier: extended
   platform: x
@@ -3667,6 +3768,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.followers
 - id: x.x.get-users-following
   tier: extended
   platform: x
@@ -3695,6 +3797,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.following
 - id: x.x.follow-user
   tier: extended
   platform: x
@@ -3719,6 +3822,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.user.follow
 - id: x.x.get-users-liked-posts
   tier: extended
   platform: x
@@ -3747,6 +3851,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.liked_posts
 - id: x.x.like-post
   tier: extended
   platform: x
@@ -3771,6 +3876,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.like
 - id: x.x.unlike-post
   tier: extended
   platform: x
@@ -3793,6 +3899,7 @@ endpoints:
       tweet_id:
         type: string
         required: true
+  capability: x.post.like
 - id: x.x.get-users-list-memberships
   tier: extended
   platform: x
@@ -3820,6 +3927,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.user.list_memberships
 - id: x.x.get-users-mentions
   tier: extended
   platform: x
@@ -3861,6 +3969,7 @@ endpoints:
       until_id:
         type: string
         required: false
+  capability: x.user.mentions
 - id: x.x.get-users-muting
   tier: extended
   platform: x
@@ -3888,6 +3997,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.user.muting
 - id: x.x.mute-user
   tier: extended
   platform: x
@@ -3912,6 +4022,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.user.mute
 - id: x.x.get-users-owned-lists
   tier: extended
   platform: x
@@ -3940,6 +4051,7 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.user.owned_lists
 - id: x.x.get-users-pinned-lists
   tier: extended
   platform: x
@@ -3960,6 +4072,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.user.pinned_lists
 - id: x.x.pin-list
   tier: extended
   platform: x
@@ -3984,6 +4097,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.pin
 - id: x.x.unpin-list
   tier: extended
   platform: x
@@ -4006,6 +4120,7 @@ endpoints:
       list_id:
         type: string
         required: true
+  capability: x.list.pin
 - id: x.x.get-users-public-key
   tier: extended
   platform: x
@@ -4074,6 +4189,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.repost
 - id: x.x.unrepost-post
   tier: extended
   platform: x
@@ -4095,6 +4211,7 @@ endpoints:
       source_tweet_id:
         type: string
         required: true
+  capability: x.post.repost
 - id: x.x.get-users-timeline
   tier: extended
   platform: x
@@ -4139,6 +4256,7 @@ endpoints:
       exclude:
         type: array
         required: false
+  capability: x.user.timeline
 - id: x.x.unfollow-user
   tier: extended
   platform: x
@@ -4161,6 +4279,7 @@ endpoints:
       target_user_id:
         type: string
         required: true
+  capability: x.user.follow
 - id: x.x.unmute-user
   tier: extended
   platform: x
@@ -4183,6 +4302,7 @@ endpoints:
       target_user_id:
         type: string
         required: true
+  capability: x.user.mute
 - id: x.x.get-webhooks
   tier: extended
   platform: x

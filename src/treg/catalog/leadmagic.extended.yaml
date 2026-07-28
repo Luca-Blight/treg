@@ -70,6 +70,7 @@ endpoints:
     verified: 2026-07-28
     example_response: examples/leadmagic.x.b2b-profile.json
     docs_url: https://leadmagic.io/docs/api-reference/email-to-profile
+    capability: people.identity.resolve
 
   - id: leadmagic.x.b2b-profile-email
     tier: extended
@@ -117,6 +118,7 @@ endpoints:
     verified: 2026-07-28
     example_response: examples/leadmagic.x.personal-email-finder.json
     docs_url: https://leadmagic.io/docs/api-reference/personal-email-finder
+    capability: people.email.find
 
   - id: leadmagic.x.role-finder
     tier: extended
@@ -197,6 +199,7 @@ endpoints:
     verified: 2026-07-28
     example_response: examples/leadmagic.x.job-change-detector.json
     docs_url: https://leadmagic.io/docs/api-reference/job-change-detector
+    capability: people.signals
 
   - id: leadmagic.x.competitors-search
     tier: extended

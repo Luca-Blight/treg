@@ -52,6 +52,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM campaign WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: campaign. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign
+  capability: google-ads.campaigns.performance
 - id: google-ads.x.gaql-ad-group
   tier: extended
   platform: google-ads
@@ -78,6 +79,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM ad_group WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: ad_group. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group
+  capability: google-ads.adgroups.performance
 - id: google-ads.x.gaql-ad-group-ad
   tier: extended
   platform: google-ads
@@ -104,6 +106,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM ad_group_ad WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: ad_group_ad. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group_ad. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group_ad
+  capability: google-ads.ads.performance
 - id: google-ads.x.gaql-ad-group-criterion
   tier: extended
   platform: google-ads
@@ -130,6 +133,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM ad_group_criterion WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: ad_group_criterion. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group_criterion. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group_criterion
+  capability: google-ads.adgroup.targeting
 - id: google-ads.x.gaql-keyword-view
   tier: extended
   platform: google-ads
@@ -156,6 +160,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM keyword_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: keyword_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/keyword_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/keyword_view
+  capability: google-ads.keywords.performance
 - id: google-ads.x.gaql-search-term-view
   tier: extended
   platform: google-ads
@@ -182,6 +187,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM search_term_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: search_term_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/search_term_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/search_term_view
+  capability: google-ads.search_terms
 - id: google-ads.x.gaql-campaign-budget
   tier: extended
   platform: google-ads
@@ -208,6 +214,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM campaign_budget WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: campaign_budget. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign_budget. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign_budget
+  capability: google-ads.budgets.list
 - id: google-ads.x.gaql-campaign-criterion
   tier: extended
   platform: google-ads
@@ -234,6 +241,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM campaign_criterion WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: campaign_criterion. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign_criterion. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign_criterion
+  capability: google-ads.campaign.targeting
 - id: google-ads.x.gaql-customer
   tier: extended
   platform: google-ads
@@ -260,6 +268,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM customer WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: customer. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/customer. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/customer
+  capability: google-ads.account.details
 - id: google-ads.x.gaql-customer-client
   tier: extended
   platform: google-ads
@@ -286,6 +295,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM customer_client WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: customer_client. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/customer_client. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/customer_client
+  capability: google-ads.mcc.accounts
 - id: google-ads.x.gaql-conversion-action
   tier: extended
   platform: google-ads
@@ -312,6 +322,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM conversion_action WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: conversion_action. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/conversion_action. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/conversion_action
+  capability: google-ads.conversions.actions
 - id: google-ads.x.gaql-change-event
   tier: extended
   platform: google-ads
@@ -338,6 +349,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM change_event WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: change_event. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/change_event. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/change_event
+  capability: google-ads.account.changes
 - id: google-ads.x.gaql-change-status
   tier: extended
   platform: google-ads
@@ -364,6 +376,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM change_status WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: change_status. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/change_status. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/change_status
+  capability: google-ads.account.changes
 - id: google-ads.x.gaql-bidding-strategy
   tier: extended
   platform: google-ads
@@ -390,6 +403,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM bidding_strategy WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: bidding_strategy. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/bidding_strategy. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/bidding_strategy
+  capability: google-ads.bidding_strategies
 - id: google-ads.x.gaql-billing-setup
   tier: extended
   platform: google-ads
@@ -416,6 +430,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM billing_setup WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: billing_setup. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/billing_setup. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/billing_setup
+  capability: google-ads.billing
 - id: google-ads.x.gaql-account-budget
   tier: extended
   platform: google-ads
@@ -442,6 +457,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM account_budget WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: account_budget. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/account_budget. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/account_budget
+  capability: google-ads.account.budget
 - id: google-ads.x.gaql-asset
   tier: extended
   platform: google-ads
@@ -468,6 +484,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM asset WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: asset. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/asset. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/asset
+  capability: google-ads.assets
 - id: google-ads.x.gaql-asset-group
   tier: extended
   platform: google-ads
@@ -494,6 +511,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM asset_group WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: asset_group. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/asset_group. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/asset_group
+  capability: google-ads.performance_max.asset_groups
 - id: google-ads.x.gaql-campaign-asset
   tier: extended
   platform: google-ads
@@ -520,6 +538,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM campaign_asset WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: campaign_asset. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign_asset. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign_asset
+  capability: google-ads.campaign.assets
 - id: google-ads.x.gaql-customer-asset
   tier: extended
   platform: google-ads
@@ -546,6 +565,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM customer_asset WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: customer_asset. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/customer_asset. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/customer_asset
+  capability: google-ads.account.assets
 - id: google-ads.x.gaql-ad-group-ad-asset-view
   tier: extended
   platform: google-ads
@@ -572,6 +592,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM ad_group_ad_asset_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: ad_group_ad_asset_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group_ad_asset_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group_ad_asset_view
+  capability: google-ads.assets.performance
 - id: google-ads.x.gaql-audience
   tier: extended
   platform: google-ads
@@ -598,6 +619,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM audience WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: audience. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/audience. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/audience
+  capability: google-ads.audiences
 - id: google-ads.x.gaql-user-list
   tier: extended
   platform: google-ads
@@ -624,6 +646,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM user_list WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: user_list. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/user_list. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/user_list
+  capability: google-ads.remarketing_lists
 - id: google-ads.x.gaql-user-interest
   tier: extended
   platform: google-ads
@@ -650,6 +673,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM user_interest WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: user_interest. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/user_interest. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/user_interest
+  capability: google-ads.interests.taxonomy
 - id: google-ads.x.gaql-campaign-audience-view
   tier: extended
   platform: google-ads
@@ -676,6 +700,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM campaign_audience_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: campaign_audience_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/campaign_audience_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/campaign_audience_view
+  capability: google-ads.campaign.audience_performance
 - id: google-ads.x.gaql-ad-group-audience-view
   tier: extended
   platform: google-ads
@@ -702,6 +727,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM ad_group_audience_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: ad_group_audience_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_group_audience_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_group_audience_view
+  capability: google-ads.adgroup.audience_performance
 - id: google-ads.x.gaql-age-range-view
   tier: extended
   platform: google-ads
@@ -728,6 +754,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM age_range_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: age_range_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/age_range_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/age_range_view
+  capability: google-ads.performance.age
 - id: google-ads.x.gaql-gender-view
   tier: extended
   platform: google-ads
@@ -754,6 +781,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM gender_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: gender_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/gender_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/gender_view
+  capability: google-ads.performance.gender
 - id: google-ads.x.gaql-parental-status-view
   tier: extended
   platform: google-ads
@@ -780,6 +808,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM parental_status_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: parental_status_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/parental_status_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/parental_status_view
+  capability: google-ads.performance.parental_status
 - id: google-ads.x.gaql-income-range-view
   tier: extended
   platform: google-ads
@@ -806,6 +835,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM income_range_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: income_range_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/income_range_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/income_range_view
+  capability: google-ads.performance.income
 - id: google-ads.x.gaql-geographic-view
   tier: extended
   platform: google-ads
@@ -832,6 +862,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM geographic_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: geographic_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/geographic_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/geographic_view
+  capability: google-ads.performance.geographic
 - id: google-ads.x.gaql-user-location-view
   tier: extended
   platform: google-ads
@@ -858,6 +889,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM user_location_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: user_location_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/user_location_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/user_location_view
+  capability: google-ads.performance.user_location
 - id: google-ads.x.gaql-location-view
   tier: extended
   platform: google-ads
@@ -884,6 +916,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM location_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: location_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/location_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/location_view
+  capability: google-ads.performance.location_targeting
 - id: google-ads.x.gaql-ad-schedule-view
   tier: extended
   platform: google-ads
@@ -910,6 +943,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM ad_schedule_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: ad_schedule_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/ad_schedule_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/ad_schedule_view
+  capability: google-ads.performance.schedule
 - id: google-ads.x.gaql-detail-placement-view
   tier: extended
   platform: google-ads
@@ -936,6 +970,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM detail_placement_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: detail_placement_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/detail_placement_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/detail_placement_view
+  capability: google-ads.placements.detail
 - id: google-ads.x.gaql-managed-placement-view
   tier: extended
   platform: google-ads
@@ -962,6 +997,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM managed_placement_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: managed_placement_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/managed_placement_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/managed_placement_view
+  capability: google-ads.placements.managed
 - id: google-ads.x.gaql-topic-view
   tier: extended
   platform: google-ads
@@ -988,6 +1024,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM topic_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: topic_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/topic_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/topic_view
+  capability: google-ads.performance.topic
 - id: google-ads.x.gaql-landing-page-view
   tier: extended
   platform: google-ads
@@ -1014,6 +1051,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM landing_page_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: landing_page_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/landing_page_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/landing_page_view
+  capability: google-ads.performance.landing_page
 - id: google-ads.x.gaql-shopping-performance-view
   tier: extended
   platform: google-ads
@@ -1040,6 +1078,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM shopping_performance_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: shopping_performance_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/shopping_performance_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/shopping_performance_view
+  capability: google-ads.shopping.performance
 - id: google-ads.x.gaql-recommendation
   tier: extended
   platform: google-ads
@@ -1066,6 +1105,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM recommendation WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: recommendation. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/recommendation. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/recommendation
+  capability: google-ads.recommendations
 - id: google-ads.x.gaql-paid-organic-search-term-view
   tier: extended
   platform: google-ads
@@ -1092,6 +1132,7 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM paid_organic_search_term_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: paid_organic_search_term_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/paid_organic_search_term_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/paid_organic_search_term_view
+  capability: google-ads.search_terms.paid_organic
 - id: google-ads.x.gaql-click-view
   tier: extended
   platform: google-ads
@@ -1118,3 +1159,4 @@ endpoints:
       note: '{"query": "SELECT <fields> FROM click_view WHERE segments.date DURING LAST_30_DAYS"}'
     note: 'Resource: click_view. Its selectable fields, segments and metrics are listed at https://developers.google.com/google-ads/api/fields/v21/click_view. searchStream returns the whole result set in one streamed response and takes no page size; googleAds:search is the paginated twin (curated in the core file).'
   docs_url: https://developers.google.com/google-ads/api/fields/v21/click_view
+  capability: google-ads.clicks

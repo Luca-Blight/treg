@@ -811,6 +811,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.bing-search.json
   observed_time: 11.83
+  capability: bing.serp.organic
 - id: serpapi.x.bing-news
   tier: extended
   platform: bing
@@ -841,6 +842,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.bing-news.json
   observed_time: 1.14
+  capability: bing.serp.news
 - id: serpapi.x.bing-images
   tier: extended
   platform: bing
@@ -871,6 +873,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.bing-images.json
   observed_time: 1.85
+  capability: bing.serp.images
 - id: serpapi.x.bing-videos
   tier: extended
   platform: bing
@@ -901,6 +904,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.bing-videos.json
   observed_time: 2.36
+  capability: bing.serp.videos
 - id: serpapi.x.bing-shopping
   tier: extended
   platform: bing
@@ -931,6 +935,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.bing-shopping.json
   observed_time: 3.02
+  capability: bing.serp.shopping
 - id: serpapi.x.bing-copilot
   tier: extended
   platform: bing
@@ -989,6 +994,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.baidu-search.json
   observed_time: 19.5
+  capability: baidu.serp.organic
 - id: serpapi.x.baidu-news
   tier: extended
   platform: baidu
@@ -1019,6 +1025,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.baidu-news.json
   observed_time: 2.89
+  capability: baidu.serp.news
 - id: serpapi.x.duckduckgo-search
   tier: extended
   platform: duckduckgo
@@ -1056,6 +1063,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.duckduckgo-search.json
   observed_time: 6.88
+  capability: duckduckgo.serp.organic
 - id: serpapi.x.duckduckgo-news
   tier: extended
   platform: duckduckgo
@@ -1086,6 +1094,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.duckduckgo-news.json
   observed_time: 5.19
+  capability: duckduckgo.serp.news
 - id: serpapi.x.duckduckgo-light
   tier: extended
   platform: duckduckgo
@@ -1116,6 +1125,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.duckduckgo-light.json
   observed_time: 1.88
+  capability: duckduckgo.serp.organic
 - id: serpapi.x.duckduckgo-maps
   tier: extended
   platform: duckduckgo
@@ -1177,6 +1187,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.yahoo-search.json
   observed_time: 3.17
+  capability: yahoo.serp.organic
 - id: serpapi.x.yahoo-images
   tier: extended
   platform: yahoo
@@ -1207,6 +1218,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.yahoo-images.json
   observed_time: 1.99
+  capability: yahoo.serp.images
 - id: serpapi.x.yahoo-videos
   tier: extended
   platform: yahoo
@@ -1237,6 +1249,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.yahoo-videos.json
   observed_time: 1.99
+  capability: yahoo.serp.videos
 - id: serpapi.x.yandex-search
   tier: extended
   platform: yandex
@@ -1273,6 +1286,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.yandex-search.json
   observed_time: 2.01
+  capability: yandex.serp.organic
 - id: serpapi.x.yandex-images
   tier: extended
   platform: yandex
@@ -1303,6 +1317,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.yandex-images.json
   observed_time: 2.15
+  capability: yandex.serp.images
 - id: serpapi.x.yandex-videos
   tier: extended
   platform: yandex
@@ -1333,6 +1348,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.yandex-videos.json
   observed_time: 2.3
+  capability: yandex.serp.videos
 - id: serpapi.x.naver-search
   tier: extended
   platform: naver
@@ -1368,6 +1384,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.naver-search.json
   observed_time: 2.97
+  capability: naver.serp.organic
 - id: serpapi.x.naver-ai-overview
   tier: extended
   platform: naver
@@ -1502,6 +1519,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.ebay-search.json
   observed_time: 4.72
+  capability: ebay.search.products
 - id: serpapi.x.ebay-product
   tier: extended
   platform: ebay
@@ -1536,6 +1554,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.ebay-product.json
   observed_time: 2.52
+  capability: ebay.product.detail
 - id: serpapi.x.walmart-search
   tier: extended
   platform: walmart
@@ -1571,6 +1590,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.walmart-search.json
   observed_time: 47.47
+  capability: walmart.search.products
 - id: serpapi.x.walmart-product
   tier: extended
   platform: walmart
@@ -1601,6 +1621,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.walmart-product.json
   observed_time: 5.15
+  capability: walmart.product.detail
 - id: serpapi.x.home-depot-search
   tier: extended
   platform: web
@@ -1672,6 +1693,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.yelp-search.json
   observed_time: 2.49
+  capability: yelp.business.search
 - id: serpapi.x.tripadvisor-search
   tier: extended
   platform: tripadvisor
@@ -1708,6 +1730,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.tripadvisor-search.json
   observed_time: 0.87
+  capability: tripadvisor.search.general
 - id: serpapi.x.facebook-profile
   tier: extended
   platform: facebook
@@ -1739,6 +1762,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/serpapi.x.facebook-profile.json
   observed_time: 0.79
+  capability: facebook.user.profile
 - id: serpapi.x.instagram-profile
   tier: extended
   platform: instagram
@@ -1799,3 +1823,4 @@ endpoints:
     currency: USD
   untestable: param shape not independently confirmed from docs at ingest time
   docs_url: https://serpapi.com/brave-ai-mode-api
+  capability: ai-search.brave.answer

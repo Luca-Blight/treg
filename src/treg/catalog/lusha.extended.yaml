@@ -93,6 +93,7 @@ endpoints:
     verified: 2026-07-28
     example_response: examples/lusha.x.contacts-lookalike.json
     docs_url: https://docs.lusha.com/apis/openapi/lookalikes
+    capability: people.lookalike
 
   - id: lusha.x.companies-lookalike
     tier: extended
@@ -135,6 +136,7 @@ endpoints:
     cost: {type: per_result, value: null, currency: credit, note: "billed on the showSignalsContact action per matched signal. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
     untestable: "requires contactIds minted by a prior search on this account; no public/stable id is documented to probe with"
     docs_url: https://docs.lusha.com/apis/openapi/signals
+    capability: people.signals
 
   - id: lusha.x.companies-signals
     tier: extended
@@ -235,6 +237,7 @@ endpoints:
     verified: 2026-07-28
     example_response: examples/lusha.x.decision-makers.json
     docs_url: https://docs.lusha.com/apis/openapi/decision-makers
+    capability: people.decision_makers
 
   - id: lusha.x.companies-website-visits
     tier: extended
