@@ -145,6 +145,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/prospecting-search-and-enrich/searchprospectingcompanies
 
   - id: lusha.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

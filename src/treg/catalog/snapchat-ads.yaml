@@ -29,6 +29,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /me/organizations
+    name: "Organizations"
     summary: "List the Snapchat business organizations you belong to"
     input:
       queryParams:
@@ -43,6 +44,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /organizations/{organization_id}/adaccounts
+    name: "Accounts"
     summary: "List the Snapchat ad accounts in a business organization"
     input:
       pathParams:
@@ -83,7 +85,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /adaccounts/{ad_account_id}/campaigns
-    name: "List ad account campaigns"
+    name: "List campaigns"
     summary: "List the campaigns in your Snapchat ad account with status, objective and budget"
     input:
       pathParams:
@@ -102,6 +104,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /campaigns/{campaign_id}/stats
+    name: "Campaign stats"
     summary: "Get spend, impressions and swipes for one Snapchat campaign"
     input:
       pathParams:
@@ -123,7 +126,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /adaccounts/{ad_account_id}/ads
-    name: "List ads in an ad account"
+    name: "List ads"
     summary: "List the ads in your Snapchat ad account with their creatives and types"
     input:
       pathParams:

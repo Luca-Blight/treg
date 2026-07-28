@@ -33,6 +33,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /v21/customers:listAccessibleCustomers
+    name: "List accessible accounts"
     summary: "List the Google Ads accounts your login can reach"
     input:
       note: "no parameters. Returns {resourceNames: [\"customers/6186675831\", …]} — ids ONLY, no names, which is why treg runs a second GAQL lookup (SELECT customer.descriptive_name FROM customer) per row to label the picker. Still needs the developer-token header"
@@ -134,11 +135,13 @@ endpoints:
     docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v21/customers/generateKeywordHistoricalMetrics
 
   - id: google-ads.budget.update
+    kind: action
     capability: google-ads.budget.update
     platform: google-ads
     scope: own_account
     method: POST
     path: /v21/customers/{customer_id}/campaignBudgets:mutate
+    name: "Update campaign budget"
     summary: "Change a campaign's daily budget in your Google Ads account"
     input:
       pathParams:

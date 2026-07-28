@@ -59,7 +59,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /webmasters/v3/sites
-    name: "List your Search Console sites"
+    name: "List sites"
     summary: "List the sites and domains you have access to in Search Console"
     input:
       note: "no parameters. Returns {siteEntry: [{siteUrl, permissionLevel}]}; permissionLevel siteUnverifiedUser means the property is listed but not readable. This is also the connection's health probe and resource picker"

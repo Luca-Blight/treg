@@ -2125,6 +2125,7 @@ endpoints:
   observed_cost: 0.005
   observed_time: 22.57
 - id: dataforseo.x.merchant-amazon-locations-country
+  kind: utility
   tier: extended
   platform: amazon
   method: GET
@@ -2925,6 +2926,7 @@ endpoints:
   example_response: examples/dataforseo.x.dataforseo-labs-apple-keywords-for-app-live.json
   observed_cost: 0.0132
 - id: dataforseo.x.serp-baidu-locations-country
+  kind: utility
   tier: extended
   platform: baidu
   method: GET
@@ -3040,6 +3042,7 @@ endpoints:
   observed_cost: 0.0012
   capability: baidu.serp.organic
 - id: dataforseo.x.keywords-data-bing-audience-estimation-industries
+  kind: utility
   tier: extended
   platform: bing
   method: GET
@@ -3049,6 +3052,7 @@ endpoints:
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/audience_estimation/industries/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
 - id: dataforseo.x.keywords-data-bing-audience-estimation-job-functions
+  kind: utility
   tier: extended
   platform: bing
   method: GET
@@ -3536,6 +3540,7 @@ endpoints:
   observed_cost: 0.09
   capability: bing.keywords.volume_history
 - id: dataforseo.x.serp-bing-locations-country
+  kind: utility
   tier: extended
   platform: bing
   method: GET
@@ -3905,6 +3910,7 @@ endpoints:
   observed_cost: 0.004
   capability: ai-search.chatgpt.scrape
 - id: dataforseo.x.ai-optimization-chat-gpt-llm-scraper-locations-country
+  kind: utility
   tier: extended
   platform: ai-search
   method: GET
@@ -4449,6 +4455,7 @@ endpoints:
   example_response: examples/dataforseo.x.business-data-google-hotel-searches-live.json
   observed_cost: 0.004
 - id: dataforseo.x.business-data-google-locations-country
+  kind: utility
   tier: extended
   platform: google
   method: GET
@@ -4872,6 +4879,7 @@ endpoints:
   example_response: examples/dataforseo.x.dataforseo-labs-google-app-intersection-live.json
   observed_cost: 0.0132
 - id: dataforseo.x.dataforseo-labs-google-available-history
+  kind: utility
   tier: extended
   platform: google
   method: GET
@@ -7305,6 +7313,7 @@ endpoints:
   example_response: examples/dataforseo.x.keywords-data-google-ads-keywords-for-site-live.json
   observed_cost: 0.09
 - id: dataforseo.x.keywords-data-google-ads-locations-country
+  kind: utility
   tier: extended
   platform: google
   method: GET
@@ -7482,6 +7491,7 @@ endpoints:
   example_response: examples/dataforseo.x.keywords-data-google-trends-explore-live.json
   observed_cost: 0.011
 - id: dataforseo.x.keywords-data-google-trends-locations-country
+  kind: utility
   tier: extended
   platform: google
   method: GET
@@ -7491,6 +7501,7 @@ endpoints:
   docs_url: https://docs.dataforseo.com/v3/keywords_data/google_trends/locations/
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
 - id: dataforseo.x.merchant-google-locations-country
+  kind: utility
   tier: extended
   platform: google
   method: GET
@@ -7688,6 +7699,7 @@ endpoints:
   example_response: examples/dataforseo.x.merchant-google-products-task-post.json
   observed_cost: 0.001
 - id: dataforseo.x.merchant-google-sellers-ad-url-shop-ad-aclk
+  kind: utility
   tier: extended
   platform: google
   method: GET
@@ -8809,6 +8821,7 @@ endpoints:
   example_response: examples/dataforseo.x.serp-google-local-finder-live-advanced.json
   observed_cost: 0.002
 - id: dataforseo.x.serp-google-locations-country
+  kind: utility
   tier: extended
   platform: google
   method: GET
@@ -9780,6 +9793,7 @@ endpoints:
   example_response: examples/dataforseo.x.app-data-google-app-searches-task-post.json
   observed_cost: 0.0012
 - id: dataforseo.x.app-data-google-locations-country
+  kind: utility
   tier: extended
   platform: google-play
   method: GET
@@ -9966,6 +9980,7 @@ endpoints:
   observed_cost: 0.005861
   capability: ai-search.perplexity.answer
 - id: dataforseo.x.serp-seznam-locations-country
+  kind: utility
   tier: extended
   platform: seznam
   method: GET
@@ -10087,6 +10102,7 @@ endpoints:
   observed_cost: 0.0006
   capability: seznam.serp.organic
 - id: dataforseo.x.business-data-tripadvisor-locations-country
+  kind: utility
   tier: extended
   platform: tripadvisor
   method: GET
@@ -11284,6 +11300,7 @@ endpoints:
   example_response: examples/dataforseo.x.backlinks-history-live.json
   observed_cost: 0.024324
 - id: dataforseo.x.backlinks-index
+  kind: utility
   tier: extended
   platform: web
   method: GET
@@ -11961,7 +11978,7 @@ endpoints:
   observed_cost: 0.01308
 - id: dataforseo.x.business-data-social-media-pinterest-live
   tier: extended
-  platform: web
+  platform: pinterest
   method: POST
   path: /v3/business_data/social_media/pinterest/live
   name: Pin counts for URLs
@@ -12731,6 +12748,7 @@ endpoints:
   example_response: examples/dataforseo.x.domain-analytics-technologies-domains-by-technology-live.json
   observed_cost: 0.024
 - id: dataforseo.x.domain-analytics-technologies-technologies
+  kind: utility
   tier: extended
   platform: web
   method: GET
@@ -13201,6 +13219,7 @@ endpoints:
   example_response: examples/dataforseo.x.keywords-data-dataforseo-trends-explore-live.json
   observed_cost: 0.0012
 - id: dataforseo.x.keywords-data-dataforseo-trends-locations-country
+  kind: utility
   tier: extended
   platform: web
   method: GET
@@ -13689,6 +13708,7 @@ endpoints:
     note: the POST body is an ARRAY of task objects with these fields — one object per task
   untestable: needs the id of a completed on_page crawl (task_post plus polling); the one-shot route of this family is verified via dataforseo.x.on-page-instant-pages
 - id: dataforseo.x.on-page-lighthouse-audits
+  kind: utility
   tier: extended
   platform: web
   method: GET
@@ -14457,6 +14477,7 @@ endpoints:
     note: the POST body is an ARRAY of task objects with these fields — one object per task
   untestable: needs the id of a completed on_page crawl (task_post plus polling); the one-shot route of this family is verified via dataforseo.x.on-page-instant-pages
 - id: dataforseo.x.serp-yahoo-locations-country
+  kind: utility
   tier: extended
   platform: yahoo
   method: GET
@@ -14666,6 +14687,7 @@ endpoints:
   observed_cost: 0.002
   capability: yahoo.serp.organic
 - id: dataforseo.x.serp-youtube-locations-country
+  kind: utility
   tier: extended
   platform: youtube
   method: GET

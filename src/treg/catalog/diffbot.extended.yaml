@@ -362,6 +362,7 @@ endpoints:
     docs_url: https://docs.diffbot.com/reference/event
 
   - id: diffbot.x.crawl-create
+    kind: account
     tier: extended
     capability: web.scrape.job.start
     platform: web
@@ -396,13 +397,14 @@ endpoints:
     docs_url: https://docs.diffbot.com/reference/create-a-crawl
 
   - id: diffbot.x.crawl-manage
+    kind: account
     tier: extended
     capability: web.scrape.job.status
     platform: web
     host: api.diffbot.com
     method: GET
     path: /v3/crawl
-    name: "View, pause, resume, restart or delete a crawl job"
+    name: "Manage a crawl job"
     summary: "One endpoint for status, pause/resume, restart and delete of one or more crawl jobs"
     input:
       queryParams:
@@ -435,6 +437,7 @@ endpoints:
     docs_url: https://docs.diffbot.com/reference/retrieve-crawl-job-data
 
   - id: diffbot.x.bulk-create
+    kind: account
     tier: extended
     capability: web.scrape.job.start
     platform: web
@@ -489,7 +492,7 @@ endpoints:
     host: llm.diffbot.com
     method: GET
     path: /api/v1/web_search/
-    name: "LLM-oriented web search"
+    name: "Web search for LLM context"
     summary: "Search the web and return results shaped for feeding into an LLM context window"
     input:
       queryParams:
@@ -534,6 +537,7 @@ endpoints:
     docs_url: https://docs.diffbot.com/reference/introduction-to-natural-language-api
 
   - id: diffbot.x.account
+    kind: account
     tier: extended
     platform: web
     host: api.diffbot.com

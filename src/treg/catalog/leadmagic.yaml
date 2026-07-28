@@ -187,11 +187,13 @@ endpoints:
     docs_url: https://leadmagic.io/docs/reference/people-search
 
   - id: leadmagic.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account
     method: GET
     path: /v1/credits
+    name: "Check credit balance"
     summary: "Check the LeadMagic credit balance (free and unthrottled)"
     input:
       note: "no parameters — the key rides in the X-API-Key header; it returns {credits}. POST /v1/credits/refresh forces a balance refresh when the number looks stale, and GET /v1/credits/health validates the key alone"

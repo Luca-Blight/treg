@@ -36,6 +36,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /oauth2/advertiser/get/
+    name: "List ad accounts"
     summary: "List the TikTok ad accounts this connection can manage"
     input:
       queryParams:

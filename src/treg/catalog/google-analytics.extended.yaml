@@ -80,6 +80,7 @@ endpoints:
         note: 'Whether to include soft-deleted (ie: "trashed") Accounts in the results. Accounts can be inspected to determine whether they are deleted or not.'
   capability: google-analytics.account.list
 - id: google-analytics.x.analyticsadmin-accounts-delete
+  kind: account
   tier: extended
   platform: google-analytics
   method: DELETE
@@ -103,6 +104,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/accounts/{accountsId}
+  name: "Get an account"
   summary: accounts.get — Lookup for a single Account.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -116,10 +118,12 @@ endpoints:
         note: 'Required. The name of the account to lookup. Format: accounts/{account} Example: "accounts/100"'
   capability: google-analytics.account.get
 - id: google-analytics.x.analyticsadmin-accounts-patch
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
   path: /v1beta/accounts/{accountsId}
+  name: "Update an account"
   summary: accounts.patch — Updates an account.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -209,6 +213,7 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaSearchChangeHistoryEventsRequest resource; see the method's API reference for its fields
   capability: google-analytics.account.change_history
 - id: google-analytics.x.analyticsadmin-accounts-provisionaccountticket
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
@@ -257,6 +262,7 @@ endpoints:
         note: 'Whether to include soft-deleted (ie: "trashed") Properties in the results. Properties can be inspected to determine whether they are deleted or not.'
   capability: google-analytics.property.list
 - id: google-analytics.x.analyticsadmin-properties-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
@@ -276,6 +282,7 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaProperty resource; see the method's API reference for its fields
   capability: google-analytics.property.create
 - id: google-analytics.x.analyticsadmin-properties-delete
+  kind: account
   tier: extended
   platform: google-analytics
   method: DELETE
@@ -299,6 +306,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}
+  name: "Get a property"
   summary: properties.get — Lookup for a single GA Property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -312,10 +320,12 @@ endpoints:
         note: 'Required. The name of the property to lookup. Format: properties/{property_id} Example: "properties/1000"'
   capability: google-analytics.property.get
 - id: google-analytics.x.analyticsadmin-properties-patch
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}
+  name: "Update a property"
   summary: properties.patch — Updates a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -366,6 +376,7 @@ endpoints:
         note: Optional. A page token, received from a previous `ListAudienceExports` call. Provide this to retrieve the subsequent page. When paginating, all other parameters provided to `ListAudienceExports` must match the call that provided the page token.
   capability: google-analytics.audience_export.list
 - id: google-analytics.x.analyticsdata-properties-audienceexports-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
@@ -454,6 +465,7 @@ endpoints:
         note: Optional. A page token, received from a previous `ListConversionEvents` call. Provide this to retrieve the subsequent page. When paginating, all other parameters provided to `ListConversionEvents` must match the call that provided the page token.
   capability: google-analytics.key_event.list
 - id: google-analytics.x.analyticsadmin-properties-conversionevents-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
@@ -478,6 +490,7 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaConversionEvent resource; see the method's API reference for its fields
   capability: google-analytics.key_event.create
 - id: google-analytics.x.analyticsadmin-properties-conversionevents-delete
+  kind: account
   tier: extended
   platform: google-analytics
   method: DELETE
@@ -515,6 +528,7 @@ endpoints:
         note: 'Required. The resource name of the conversion event to retrieve. Format: properties/{property}/conversionEvents/{conversion_event} Example: "properties/123/conversionEvents/456"'
   capability: google-analytics.key_event.get
 - id: google-analytics.x.analyticsadmin-properties-conversionevents-patch
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
@@ -571,10 +585,12 @@ endpoints:
         note: Optional. A page token, received from a previous `ListCustomDimensions` call. Provide this to retrieve the subsequent page. When paginating, all other parameters provided to `ListCustomDimensions` must match the call that provided the page token.
   capability: google-analytics.custom_dimension.list
 - id: google-analytics.x.analyticsadmin-properties-customdimensions-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/customDimensions
+  name: "Create a custom dimension"
   summary: customDimensions.create — Creates a CustomDimension.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -598,6 +614,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/customDimensions/{customDimensionsId}
+  name: "Get a custom dimension"
   summary: customDimensions.get — Lookup for a single CustomDimension.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -611,6 +628,7 @@ endpoints:
         note: 'Required. The name of the CustomDimension to get. Example format: properties/1234/customDimensions/5678'
   capability: google-analytics.custom_dimension.get
 - id: google-analytics.x.analyticsadmin-properties-customdimensions-patch
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
@@ -640,6 +658,7 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaCustomDimension resource; see the method's API reference for its fields
   capability: google-analytics.custom_dimension.update
 - id: google-analytics.x.analyticsadmin-properties-customdimensions-archive
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
@@ -668,6 +687,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/customMetrics
+  name: "List custom metrics"
   summary: customMetrics.list — Lists CustomMetrics on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -690,10 +710,12 @@ endpoints:
         note: A page token, received from a previous `ListCustomMetrics` call. Provide this to retrieve the subsequent page. When paginating, all other parameters provided to `ListCustomMetrics` must match the call that provided the page token.
   capability: google-analytics.custom_metric.list
 - id: google-analytics.x.analyticsadmin-properties-custommetrics-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/customMetrics
+  name: "Create a custom metric"
   summary: customMetrics.create — Creates a CustomMetric.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -717,6 +739,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/customMetrics/{customMetricsId}
+  name: "Get a custom metric"
   summary: customMetrics.get — Lookup for a single CustomMetric.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -730,10 +753,12 @@ endpoints:
         note: 'Required. The name of the CustomMetric to get. Example format: properties/1234/customMetrics/5678'
   capability: google-analytics.custom_metric.get
 - id: google-analytics.x.analyticsadmin-properties-custommetrics-patch
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/customMetrics/{customMetricsId}
+  name: "Update a custom metric"
   summary: customMetrics.patch — Updates a CustomMetric on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -758,6 +783,7 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaCustomMetric resource; see the method's API reference for its fields
   capability: google-analytics.custom_metric.update
 - id: google-analytics.x.analyticsadmin-properties-custommetrics-archive
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
@@ -800,6 +826,7 @@ endpoints:
         note: 'Required. The name of the settings to lookup. Format: properties/{property}/dataRetentionSettings Example: "properties/1000/dataRetentionSettings"'
   capability: google-analytics.data_retention.get
 - id: google-analytics.x.analyticsadmin-properties-updatedataretentionsettings
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
@@ -833,6 +860,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/dataStreams
+  name: "List data streams"
   summary: dataStreams.list — Lists DataStreams on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -855,10 +883,12 @@ endpoints:
         note: A page token, received from a previous `ListDataStreams` call. Provide this to retrieve the subsequent page. When paginating, all other parameters provided to `ListDataStreams` must match the call that provided the page token.
   capability: google-analytics.data_stream.list
 - id: google-analytics.x.analyticsadmin-properties-datastreams-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/dataStreams
+  name: "Create a data stream"
   summary: dataStreams.create — Creates a DataStream.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -878,10 +908,12 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaDataStream resource; see the method's API reference for its fields
   capability: google-analytics.data_stream.create
 - id: google-analytics.x.analyticsadmin-properties-datastreams-delete
+  kind: account
   tier: extended
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}
+  name: "Delete a data stream"
   summary: dataStreams.delete — Deletes a DataStream on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -900,6 +932,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}
+  name: "Get a data stream"
   summary: dataStreams.get — Lookup for a single DataStream.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -913,10 +946,12 @@ endpoints:
         note: 'Required. The name of the DataStream to get. Example format: properties/1234/dataStreams/5678'
   capability: google-analytics.data_stream.get
 - id: google-analytics.x.analyticsadmin-properties-datastreams-patch
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/dataStreams/{dataStreamsId}
+  name: "Update a data stream"
   summary: dataStreams.patch — Updates a DataStream on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -968,6 +1003,7 @@ endpoints:
         note: Optional. A page token, received from a previous `ListMeasurementProtocolSecrets` call. Provide this to retrieve the subsequent page. When paginating, all other parameters provided to `ListMeasurementProtocolSecrets` must match the call that provided the page token.
   capability: google-analytics.measurement_protocol_secret.list
 - id: google-analytics.x.analyticsadmin-properties-datastreams-measurementprotocolsecrets-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
@@ -992,6 +1028,7 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaMeasurementProtocolSecret resource; see the method's API reference for its fields
   capability: google-analytics.measurement_protocol_secret.create
 - id: google-analytics.x.analyticsadmin-properties-datastreams-measurementprotocolsecrets-delete
+  kind: account
   tier: extended
   platform: google-analytics
   method: DELETE
@@ -1029,6 +1066,7 @@ endpoints:
         note: 'Required. The name of the measurement protocol secret to lookup. Format: properties/{property}/dataStreams/{dataStream}/measurementProtocolSecrets/{measurementProtocolSecret}'
   capability: google-analytics.measurement_protocol_secret.get
 - id: google-analytics.x.analyticsadmin-properties-datastreams-measurementprotocolsecrets-patch
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
@@ -1085,6 +1123,7 @@ endpoints:
         note: Optional. A page token, received from a previous `ListFirebaseLinks` call. Provide this to retrieve the subsequent page. When paginating, all other parameters provided to `ListFirebaseLinks` must match the call that provided the page token.
   capability: google-analytics.firebase_link.list
 - id: google-analytics.x.analyticsadmin-properties-firebaselinks-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
@@ -1109,10 +1148,12 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaFirebaseLink resource; see the method's API reference for its fields
   capability: google-analytics.firebase_link.create
 - id: google-analytics.x.analyticsadmin-properties-firebaselinks-delete
+  kind: account
   tier: extended
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}/firebaseLinks/{firebaseLinksId}
+  name: "Delete a Firebase link"
   summary: firebaseLinks.delete — Deletes a FirebaseLink on a property
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1131,6 +1172,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/googleAdsLinks
+  name: "List Google Ads links"
   summary: googleAdsLinks.list — Lists GoogleAdsLinks on a property.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1153,10 +1195,12 @@ endpoints:
         note: Optional. A page token, received from a previous `ListGoogleAdsLinks` call. Provide this to retrieve the subsequent page. When paginating, all other parameters provided to `ListGoogleAdsLinks` must match the call that provided the page token.
   capability: google-analytics.google_ads_link.list
 - id: google-analytics.x.analyticsadmin-properties-googleadslinks-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/googleAdsLinks
+  name: "Create a Google Ads link"
   summary: googleAdsLinks.create — Creates a GoogleAdsLink.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1176,6 +1220,7 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaGoogleAdsLink resource; see the method's API reference for its fields
   capability: google-analytics.google_ads_link.create
 - id: google-analytics.x.analyticsadmin-properties-googleadslinks-delete
+  kind: account
   tier: extended
   platform: google-analytics
   method: DELETE
@@ -1195,10 +1240,12 @@ endpoints:
         note: 'Required. Example format: properties/1234/googleAdsLinks/5678'
   capability: google-analytics.google_ads_link.delete
 - id: google-analytics.x.analyticsadmin-properties-googleadslinks-patch
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/googleAdsLinks/{googleAdsLinksId}
+  name: "Update a Google Ads link"
   summary: googleAdsLinks.patch — Updates a GoogleAdsLink on a property
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1250,10 +1297,12 @@ endpoints:
         note: Optional. A page token, received from a previous `ListKeyEvents` call. Provide this to retrieve the subsequent page. When paginating, all other parameters provided to `ListKeyEvents` must match the call that provided the page token.
   capability: google-analytics.key_event.list
 - id: google-analytics.x.analyticsadmin-properties-keyevents-create
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
   path: /v1beta/properties/{propertiesId}/keyEvents
+  name: "Create a key event"
   summary: keyEvents.create — Creates a Key Event.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1273,10 +1322,12 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaKeyEvent resource; see the method's API reference for its fields
   capability: google-analytics.key_event.create
 - id: google-analytics.x.analyticsadmin-properties-keyevents-delete
+  kind: account
   tier: extended
   platform: google-analytics
   method: DELETE
   path: /v1beta/properties/{propertiesId}/keyEvents/{keyEventsId}
+  name: "Delete a key event"
   summary: keyEvents.delete — Deletes a Key Event.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1295,6 +1346,7 @@ endpoints:
   platform: google-analytics
   method: GET
   path: /v1beta/properties/{propertiesId}/keyEvents/{keyEventsId}
+  name: "Get a key event"
   summary: keyEvents.get — Retrieve a single Key Event.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1308,10 +1360,12 @@ endpoints:
         note: 'Required. The resource name of the Key Event to retrieve. Format: properties/{property}/keyEvents/{key_event} Example: "properties/123/keyEvents/456"'
   capability: google-analytics.key_event.get
 - id: google-analytics.x.analyticsadmin-properties-keyevents-patch
+  kind: account
   tier: extended
   platform: google-analytics
   method: PATCH
   path: /v1beta/properties/{propertiesId}/keyEvents/{keyEventsId}
+  name: "Update a key event"
   summary: keyEvents.patch — Updates a Key Event.
   scope: own_account
   host: analyticsadmin.googleapis.com
@@ -1336,6 +1390,7 @@ endpoints:
       note: JSON body — the GoogleAnalyticsAdminV1betaKeyEvent resource; see the method's API reference for its fields
   capability: google-analytics.key_event.update
 - id: google-analytics.x.analyticsadmin-properties-acknowledgeuserdatacollection
+  kind: account
   tier: extended
   platform: google-analytics
   method: POST
@@ -1404,6 +1459,7 @@ endpoints:
       note: JSON body — the BatchRunReportsRequest resource; see the method's API reference for its fields
   capability: google-analytics.report.batch
 - id: google-analytics.x.analyticsdata-properties-checkcompatibility
+  kind: utility
   tier: extended
   platform: google-analytics
   method: POST

@@ -34,6 +34,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_bangumi_tab
+  name: "Fetch bangumi tab"
   summary: 'Bilibili: fetch bangumi tab (app)'
   cost:
     type: per_success
@@ -48,6 +49,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_cinema_tab
+  name: "Fetch cinema tab"
   summary: 'Bilibili: fetch cinema tab (app)'
   cost:
     type: per_success
@@ -62,6 +64,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_home_feed
+  name: "Fetch home feed"
   summary: 'Bilibili: fetch home feed (app)'
   cost:
     type: per_success
@@ -93,6 +96,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_one_video
+  name: "Fetch one video"
   summary: 'Bilibili: fetch one video (app)'
   cost:
     type: per_success
@@ -122,6 +126,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_popular_feed
+  name: "Fetch popular feed"
   summary: 'Bilibili: fetch popular feed (app)'
   cost:
     type: per_success
@@ -148,6 +153,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_reply_detail
+  name: "Fetch reply detail"
   summary: 'Bilibili: fetch reply detail (app)'
   cost:
     type: per_success
@@ -193,6 +199,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_search_all
+  name: "Fetch search all"
   summary: 'Bilibili: fetch search all (app)'
   cost:
     type: per_success
@@ -231,6 +238,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_search_by_type
+  name: "Fetch search by type"
   summary: 'Bilibili: fetch search by type (app)'
   cost:
     type: per_success
@@ -274,6 +282,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_user_info
+  name: "Fetch user info"
   summary: 'Bilibili: fetch user info (app)'
   cost:
     type: per_success
@@ -297,6 +306,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_user_videos
+  name: "Fetch user videos"
   summary: 'Bilibili: fetch user videos (app)'
   cost:
     type: per_success
@@ -335,6 +345,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/app/fetch_video_comments
+  name: "Fetch video comments"
   summary: 'Bilibili: fetch video comments (app)'
   cost:
     type: per_success
@@ -374,6 +385,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/bv_to_aid
+  name: "Bv to aid"
   summary: 'Bilibili: bv to aid (web)'
   cost:
     type: per_success
@@ -396,6 +408,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_all_live_areas
+  name: "Fetch all live areas"
   summary: 'Bilibili: fetch all live areas (web)'
   cost:
     type: per_success
@@ -411,6 +424,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_collect_folders
+  name: "Fetch collect folders"
   summary: 'Bilibili: fetch collect folders (web)'
   cost:
     type: per_success
@@ -434,6 +448,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_com_popular
+  name: "Fetch com popular"
   summary: 'Bilibili: fetch com popular (web)'
   cost:
     type: per_success
@@ -456,6 +471,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_comment_reply
+  name: "Fetch comment reply"
   summary: 'Bilibili: fetch comment reply (web)'
   cost:
     type: per_success
@@ -490,6 +506,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_dynamic_detail
+  name: "Fetch dynamic detail"
   summary: 'Bilibili: fetch dynamic detail (web)'
   cost:
     type: per_success
@@ -513,6 +530,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_dynamic_detail_v2
+  name: "Fetch dynamic detail v2"
   summary: 'Bilibili: fetch dynamic detail v2 (web)'
   cost:
     type: per_success
@@ -536,6 +554,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_general_search
+  name: "Fetch general search"
   summary: 'Bilibili: fetch general search (web)'
   cost:
     type: per_success
@@ -592,6 +611,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_get_user_id
+  name: "Fetch get user id"
   summary: 'Bilibili: fetch get user id (web)'
   cost:
     type: per_success
@@ -614,6 +634,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_hot_search
+  name: "Fetch hot search"
   summary: 'Bilibili: fetch hot search (web)'
   cost:
     type: per_success
@@ -637,6 +658,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_live_room_detail
+  name: "Fetch live room detail"
   summary: 'Bilibili: fetch live room detail (web)'
   cost:
     type: per_success
@@ -660,6 +682,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_live_streamers
+  name: "Fetch live streamers"
   summary: 'Bilibili: fetch live streamers (web)'
   cost:
     type: per_success
@@ -686,6 +709,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_live_videos
+  name: "Fetch live videos"
   summary: 'Bilibili: fetch live videos (web)'
   cost:
     type: per_success
@@ -709,6 +733,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_one_video
+  name: "Fetch one video"
   summary: 'Bilibili: fetch one video (web)'
   cost:
     type: per_success
@@ -732,6 +757,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_one_video_v2
+  name: "Fetch one video v2"
   summary: 'Bilibili: fetch one video v2 (web)'
   cost:
     type: per_success
@@ -761,6 +787,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_one_video_v3
+  name: "Fetch one video v3"
   summary: 'Bilibili: fetch one video v3 (web)'
   cost:
     type: per_success
@@ -784,6 +811,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_user_collection_videos
+  name: "Fetch user collection videos"
   summary: 'Bilibili: fetch user collection videos (web)'
   cost:
     type: per_success
@@ -812,6 +840,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_user_dynamic
+  name: "Fetch user dynamic"
   summary: 'Bilibili: fetch user dynamic (web)'
   cost:
     type: per_success
@@ -841,6 +870,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_user_post_videos
+  name: "Fetch user post videos"
   summary: 'Bilibili: fetch user post videos (web)'
   cost:
     type: per_success
@@ -874,6 +904,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_user_profile
+  name: "Fetch user profile"
   summary: 'Bilibili: fetch user profile (web)'
   cost:
     type: per_success
@@ -897,6 +928,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_user_relation_stat
+  name: "Fetch user relation stat"
   summary: 'Bilibili: fetch user relation stat (web)'
   cost:
     type: per_success
@@ -920,6 +952,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_user_up_stat
+  name: "Fetch user up stat"
   summary: 'Bilibili: fetch user up stat (web)'
   cost:
     type: per_success
@@ -943,6 +976,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_video_comments
+  name: "Fetch video comments"
   summary: 'Bilibili: fetch video comments (web)'
   cost:
     type: per_success
@@ -971,6 +1005,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_video_danmaku
+  name: "Fetch video danmaku"
   summary: 'Bilibili: fetch video danmaku (web)'
   cost:
     type: per_success
@@ -994,6 +1029,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_video_detail
+  name: "Fetch video detail"
   summary: 'Bilibili: fetch video detail (web)'
   cost:
     type: per_success
@@ -1017,6 +1053,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_video_parts
+  name: "Fetch video parts"
   summary: 'Bilibili: fetch video parts (web)'
   cost:
     type: per_success
@@ -1038,6 +1075,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_video_play_info
+  name: "Fetch video play info"
   summary: 'Bilibili: fetch video play info (web)'
   cost:
     type: per_success
@@ -1061,6 +1099,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_video_playurl
+  name: "Fetch video playurl"
   summary: 'Bilibili: fetch video playurl (web)'
   cost:
     type: per_success
@@ -1090,6 +1129,7 @@ endpoints:
   platform: bilibili
   method: GET
   path: /api/v1/bilibili/web/fetch_video_subtitle
+  name: "Fetch video subtitle"
   summary: 'Bilibili: fetch video subtitle (web)'
   cost:
     type: per_success
@@ -1119,6 +1159,7 @@ endpoints:
   platform: bilibili
   method: POST
   path: /api/v1/bilibili/web/fetch_vip_video_playurl
+  name: "Fetch vip video playurl"
   summary: 'Bilibili: fetch vip video playurl (web)'
   cost:
     type: per_success
@@ -1144,6 +1185,7 @@ endpoints:
           required: true
   untestable: needs the caller's own cookie
 - id: tikhub.x.douyin-app-v3-add-video-play-count
+  kind: action
   tier: extended
   platform: douyin
   method: GET
@@ -1988,6 +2030,7 @@ endpoints:
   example_response: examples/tikhub.x.douyin-app-v3-fetch-video-statistics.json
   capability: douyin.video.stats
 - id: tikhub.x.douyin-app-v3-generate-douyin-short-url
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
@@ -2010,6 +2053,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.douyin-app-v3-generate-douyin-short-url.json
 - id: tikhub.x.douyin-app-v3-generate-douyin-video-share-qrcode
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
@@ -2078,6 +2122,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.douyin-app-v3-open-douyin-app-to-keyword-search.json
 - id: tikhub.x.douyin-app-v3-open-douyin-app-to-send-private-message
+  kind: action
   tier: extended
   platform: douyin
   method: GET
@@ -2183,6 +2228,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_city_list
+  name: "Fetch city list (billboard)"
   summary: 'Douyin: fetch city list (billboard)'
   cost:
     type: per_success
@@ -2196,6 +2242,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_content_tag
+  name: "Fetch content tag (billboard)"
   summary: 'Douyin: fetch content tag (billboard)'
   cost:
     type: per_success
@@ -2275,6 +2322,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_account_fans_portrait_list
+  name: "Fetch hot account fans portrait list (billboard)"
   summary: 'Douyin: fetch hot account fans portrait list (billboard)'
   cost:
     type: per_success
@@ -2302,6 +2350,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_account_item_analysis_list
+  name: "Fetch hot account item analysis list (billboard)"
   summary: 'Douyin: fetch hot account item analysis list (billboard)'
   cost:
     type: per_success
@@ -2323,6 +2372,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_account_list
+  name: "Fetch hot account list (billboard)"
   summary: 'Douyin: fetch hot account list (billboard)'
   cost:
     type: per_success
@@ -2358,6 +2408,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_account_search_list
+  name: "Fetch hot account search list (billboard)"
   summary: 'Douyin: fetch hot account search list (billboard)'
   cost:
     type: per_success
@@ -2385,6 +2436,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_account_trends_list
+  name: "Fetch hot account trends list (billboard)"
   summary: 'Douyin: fetch hot account trends list (billboard)'
   cost:
     type: per_success
@@ -2417,6 +2469,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_calendar_detail
+  name: "Fetch hot calendar detail (billboard)"
   summary: 'Douyin: fetch hot calendar detail (billboard)'
   cost:
     type: per_success
@@ -2438,6 +2491,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_calendar_list
+  name: "Fetch hot calendar list (billboard)"
   summary: 'Douyin: fetch hot calendar list (billboard)'
   cost:
     type: per_success
@@ -2471,6 +2525,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_category_list
+  name: "Fetch hot category list (billboard)"
   summary: 'Douyin: fetch hot category list (billboard)'
   cost:
     type: per_success
@@ -2509,6 +2564,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_challenge_list
+  name: "Fetch hot challenge list (billboard)"
   summary: 'Douyin: fetch hot challenge list (billboard)'
   cost:
     type: per_success
@@ -2540,6 +2596,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_city_list
+  name: "Fetch hot city list (billboard)"
   summary: 'Douyin: fetch hot city list (billboard)'
   cost:
     type: per_success
@@ -2579,6 +2636,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_comment_word_list
+  name: "Fetch hot comment word list (billboard)"
   summary: 'Douyin: fetch hot comment word list (billboard)'
   cost:
     type: per_success
@@ -2600,6 +2658,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_item_trends_list
+  name: "Fetch hot item trends list (billboard)"
   summary: 'Douyin: fetch hot item trends list (billboard)'
   cost:
     type: per_success
@@ -2629,6 +2688,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_rise_list
+  name: "Fetch hot rise list (billboard)"
   summary: 'Douyin: fetch hot rise list (billboard)'
   cost:
     type: per_success
@@ -2670,6 +2730,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_high_fan_list
+  name: "Fetch hot total high fan list (billboard)"
   summary: 'Douyin: fetch hot total high fan list (billboard)'
   cost:
     type: per_success
@@ -2709,6 +2770,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_high_like_list
+  name: "Fetch hot total high like list (billboard)"
   summary: 'Douyin: fetch hot total high like list (billboard)'
   cost:
     type: per_success
@@ -2748,6 +2810,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_high_play_list
+  name: "Fetch hot total high play list (billboard)"
   summary: 'Douyin: fetch hot total high play list (billboard)'
   cost:
     type: per_success
@@ -2787,6 +2850,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_high_search_list
+  name: "Fetch hot total high search list (billboard)"
   summary: 'Douyin: fetch hot total high search list (billboard)'
   cost:
     type: per_success
@@ -2822,6 +2886,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_high_topic_list
+  name: "Fetch hot total high topic list (billboard)"
   summary: 'Douyin: fetch hot total high topic list (billboard)'
   cost:
     type: per_success
@@ -2861,6 +2926,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_total_hot_word_detail_list
+  name: "Fetch hot total hot word detail list (billboard)"
   summary: 'Douyin: fetch hot total hot word detail list (billboard)'
   cost:
     type: per_success
@@ -2887,6 +2953,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_hot_word_list
+  name: "Fetch hot total hot word list (billboard)"
   summary: 'Douyin: fetch hot total hot word list (billboard)'
   cost:
     type: per_success
@@ -2922,6 +2989,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_total_list
+  name: "Fetch hot total list (billboard)"
   summary: 'Douyin: fetch hot total list (billboard)'
   cost:
     type: per_success
@@ -2970,6 +3038,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_low_fan_list
+  name: "Fetch hot total low fan list (billboard)"
   summary: 'Douyin: fetch hot total low fan list (billboard)'
   cost:
     type: per_success
@@ -3009,6 +3078,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_search_list
+  name: "Fetch hot total search list (billboard)"
   summary: 'Douyin: fetch hot total search list (billboard)'
   cost:
     type: per_success
@@ -3044,6 +3114,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_topic_list
+  name: "Fetch hot total topic list (billboard)"
   summary: 'Douyin: fetch hot total topic list (billboard)'
   cost:
     type: per_success
@@ -3083,6 +3154,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/billboard/fetch_hot_total_video_list
+  name: "Fetch hot total video list (billboard)"
   summary: 'Douyin: fetch hot total video list (billboard)'
   cost:
     type: per_success
@@ -3126,6 +3198,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/billboard/fetch_hot_user_portrait_list
+  name: "Fetch hot user portrait list (billboard)"
   summary: 'Douyin: fetch hot user portrait list (billboard)'
   cost:
     type: per_success
@@ -3629,6 +3702,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/creator/fetch_user_search
+  name: "Search users"
   summary: 'Douyin: Search users'
   cost:
     type: per_success
@@ -3699,6 +3773,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/creator_v2/fetch_author_diagnosis
+  name: "Fetch author diagnosis"
   summary: 'Douyin: fetch author diagnosis (creator_v2)'
   cost:
     type: per_success
@@ -3906,6 +3981,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/creator_v2/fetch_item_list
+  name: "Fetch item list"
   summary: 'Douyin: fetch item list (creator_v2)'
   cost:
     type: per_success
@@ -3954,6 +4030,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/creator_v2/fetch_item_list_download
+  name: "Fetch item list download"
   summary: 'Douyin: fetch item list download (creator_v2)'
   cost:
     type: per_success
@@ -4100,6 +4177,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/creator_v2/fetch_live_room_history_list
+  name: "Fetch live room history list"
   summary: 'Douyin: fetch live room history list (creator_v2)'
   cost:
     type: per_success
@@ -4135,10 +4213,12 @@ endpoints:
           note: '是否下载/Download: 0=不下载, 1=下载'
   untestable: needs the caller's own cookie
 - id: tikhub.x.douyin-douplus-calculate-cost
+  kind: utility
   tier: extended
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/calculate_cost
+  name: "Calculate cost (douplus)"
   summary: 'Douyin: calculate cost (douplus)'
   cost:
     type: per_success
@@ -4172,6 +4252,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_analyse_detail
+  name: "Fetch analyse detail (douplus)"
   summary: 'Douyin: fetch analyse detail (douplus)'
   cost:
     type: per_success
@@ -4198,6 +4279,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_analyse_graph
+  name: "Fetch analyse graph (douplus)"
   summary: 'Douyin: fetch analyse graph (douplus)'
   cost:
     type: per_success
@@ -4224,6 +4306,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_analyse_overview
+  name: "Fetch analyse overview (douplus)"
   summary: 'Douyin: fetch analyse overview (douplus)'
   cost:
     type: per_success
@@ -4250,6 +4333,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_promotable_item_list
+  name: "Fetch promotable item list (douplus)"
   summary: 'Douyin: fetch promotable item list (douplus)'
   cost:
     type: per_success
@@ -4288,6 +4372,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_promoted_accounts
+  name: "Fetch promoted accounts (douplus)"
   summary: 'Douyin: fetch promoted accounts (douplus)'
   cost:
     type: per_success
@@ -4316,6 +4401,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_sec_token
+  name: "Fetch sec token (douplus)"
   summary: 'Douyin: fetch sec token (douplus)'
   cost:
     type: per_success
@@ -4338,6 +4424,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_talent_categories
+  name: "Fetch talent categories (douplus)"
   summary: 'Douyin: fetch talent categories (douplus)'
   cost:
     type: per_success
@@ -4363,6 +4450,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_talents_by_category
+  name: "Fetch talents by category (douplus)"
   summary: 'Douyin: fetch talents by category (douplus)'
   cost:
     type: per_success
@@ -4400,6 +4488,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_user_posts
+  name: "Fetch user posts (douplus)"
   summary: 'Douyin: fetch user posts (douplus)'
   cost:
     type: per_success
@@ -4438,6 +4527,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_video_detail
+  name: "Fetch video detail (douplus)"
   summary: 'Douyin: fetch video detail (douplus)'
   cost:
     type: per_success
@@ -4468,6 +4558,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/fetch_video_ranking
+  name: "Fetch video ranking (douplus)"
   summary: 'Douyin: fetch video ranking (douplus)'
   cost:
     type: per_success
@@ -4506,6 +4597,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/search_live_room
+  name: "Search live room (douplus)"
   summary: 'Douyin: search live room (douplus)'
   cost:
     type: per_success
@@ -4544,6 +4636,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/search_user
+  name: "Search user (douplus)"
   summary: 'Douyin: search user (douplus)'
   cost:
     type: per_success
@@ -4579,6 +4672,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/search_user_v2
+  name: "Search user v2 (douplus)"
   summary: 'Douyin: search user v2 (douplus)'
   cost:
     type: per_success
@@ -4621,6 +4715,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/douplus/search_video
+  name: "Search video (douplus)"
   summary: 'Douyin: search video (douplus)'
   cost:
     type: per_success
@@ -4659,6 +4754,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_all_area
+  name: "Fetch all area (index)"
   summary: 'Douyin: fetch all area (index)'
   cost:
     type: per_success
@@ -4673,6 +4769,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_all_valid_date
+  name: "Fetch all valid date (index)"
   summary: 'Douyin: fetch all valid date (index)'
   cost:
     type: per_success
@@ -4687,6 +4784,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_brand_cycles
+  name: "Fetch brand cycles (index)"
   summary: 'Douyin: fetch brand cycles (index)'
   cost:
     type: per_success
@@ -4720,6 +4818,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_brand_hot_videos_time_scope
+  name: "Fetch brand hot videos time scope (index)"
   summary: 'Douyin: fetch brand hot videos time scope (index)'
   cost:
     type: per_success
@@ -4735,6 +4834,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_brand_initiative_rank_weekly
+  name: "Fetch brand initiative rank weekly (index)"
   summary: 'Douyin: fetch brand initiative rank weekly (index)'
   cost:
     type: per_success
@@ -4768,6 +4868,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_brand_lines
+  name: "Fetch brand lines (index)"
   summary: 'Douyin: fetch brand lines (index)'
   cost:
     type: per_success
@@ -4801,6 +4902,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_brand_radar_chart
+  name: "Fetch brand radar chart (index)"
   summary: 'Douyin: fetch brand radar chart (index)'
   cost:
     type: per_success
@@ -4834,6 +4936,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_brand_suggest
+  name: "Fetch brand suggest (index)"
   summary: 'Douyin: fetch brand suggest (index)'
   cost:
     type: per_success
@@ -4851,6 +4954,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_brand_valid_info
+  name: "Fetch brand valid info (index)"
   summary: 'Douyin: fetch brand valid info (index)'
   cost:
     type: per_success
@@ -4868,6 +4972,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_content_author_portrait
+  name: "Fetch content author portrait (index)"
   summary: 'Douyin: fetch content author portrait (index)'
   cost:
     type: per_success
@@ -4897,6 +5002,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_content_consume_trend
+  name: "Fetch content consume trend (index)"
   summary: 'Douyin: fetch content consume trend (index)'
   cost:
     type: per_success
@@ -4922,6 +5028,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_content_consumer_portrait
+  name: "Fetch content consumer portrait (index)"
   summary: 'Douyin: fetch content consumer portrait (index)'
   cost:
     type: per_success
@@ -4951,6 +5058,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_content_creative_duration
+  name: "Fetch content creative duration (index)"
   summary: 'Douyin: fetch content creative duration (index)'
   cost:
     type: per_success
@@ -4980,6 +5088,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_content_creative_keyword_items
+  name: "Fetch content creative keyword items (index)"
   summary: 'Douyin: fetch content creative keyword items (index)'
   cost:
     type: per_success
@@ -5014,6 +5123,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_content_creative_keywords
+  name: "Fetch content creative keywords (index)"
   summary: 'Douyin: fetch content creative keywords (index)'
   cost:
     type: per_success
@@ -5044,6 +5154,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_content_creative_topic
+  name: "Fetch content creative topic (index)"
   summary: 'Douyin: fetch content creative topic (index)'
   cost:
     type: per_success
@@ -5082,6 +5193,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_content_interact_trend
+  name: "Fetch content interact trend (index)"
   summary: 'Douyin: fetch content interact trend (index)'
   cost:
     type: per_success
@@ -5107,6 +5219,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_content_publish_trend
+  name: "Fetch content publish trend (index)"
   summary: 'Douyin: fetch content publish trend (index)'
   cost:
     type: per_success
@@ -5132,6 +5245,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_content_valid_date
+  name: "Fetch content valid date (index)"
   summary: 'Douyin: fetch content valid date (index)'
   cost:
     type: per_success
@@ -5146,6 +5260,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_current_hot_topic
+  name: "Fetch current hot topic (index)"
   summary: 'Douyin: fetch current hot topic (index)'
   cost:
     type: per_success
@@ -5161,6 +5276,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_daren_compare_users_stable
+  name: "Fetch daren compare users stable (index)"
   summary: 'Douyin: fetch daren compare users stable (index)'
   cost:
     type: per_success
@@ -5186,6 +5302,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_daren_great_item_mile_info
+  name: "Fetch daren great item mile info (index)"
   summary: 'Douyin: fetch daren great item mile info (index)'
   cost:
     type: per_success
@@ -5203,6 +5320,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_daren_great_user_fans_info
+  name: "Fetch daren great user fans info (index)"
   summary: 'Douyin: fetch daren great user fans info (index)'
   cost:
     type: per_success
@@ -5220,6 +5338,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_daren_great_user_top_video
+  name: "Fetch daren great user top video (index)"
   summary: 'Douyin: fetch daren great user top video (index)'
   cost:
     type: per_success
@@ -5245,6 +5364,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_daren_similar_users
+  name: "Fetch daren similar users (index)"
   summary: 'Douyin: fetch daren similar users (index)'
   cost:
     type: per_success
@@ -5262,6 +5382,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_daren_sug_great_user_list
+  name: "Fetch daren sug great user list (index)"
   summary: 'Douyin: fetch daren sug great user list (index)'
   cost:
     type: per_success
@@ -5280,10 +5401,12 @@ endpoints:
         example: '20'
   untestable: no documented value for required keyword
 - id: tikhub.x.douyin-index-fetch-encrypt-user-id
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_encrypt_user_id
+  name: "Fetch encrypt user id (index)"
   summary: 'Douyin: fetch encrypt user id (index)'
   cost:
     type: per_success
@@ -5301,6 +5424,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_get_user_sub_word
+  name: "Fetch get user sub word (index)"
   summary: 'Douyin: fetch get user sub word (index)'
   cost:
     type: per_success
@@ -5315,6 +5439,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_hot_detail
+  name: "Fetch hot detail (index)"
   summary: 'Douyin: fetch hot detail (index)'
   cost:
     type: per_success
@@ -5332,6 +5457,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_hot_trend_word
+  name: "Fetch hot trend word (index)"
   summary: 'Douyin: fetch hot trend word (index)'
   cost:
     type: per_success
@@ -5362,6 +5488,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_hot_words
+  name: "Fetch hot words (index)"
   summary: 'Douyin: fetch hot words (index)'
   cost:
     type: per_success
@@ -5387,6 +5514,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_insight_get_rec
+  name: "Fetch insight get rec (index)"
   summary: 'Douyin: fetch insight get rec (index)'
   cost:
     type: per_success
@@ -5404,6 +5532,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_insight_recommend
+  name: "Fetch insight recommend (index)"
   summary: 'Douyin: fetch insight recommend (index)'
   cost:
     type: per_success
@@ -5418,6 +5547,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_item_analysis
+  name: "Fetch item analysis (index)"
   summary: 'Douyin: fetch item analysis (index)'
   cost:
     type: per_success
@@ -5443,6 +5573,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_item_base
+  name: "Fetch item base (index)"
   summary: 'Douyin: fetch item base (index)'
   cost:
     type: per_success
@@ -5460,6 +5591,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_item_filter_options
+  name: "Fetch item filter options (index)"
   summary: 'Douyin: fetch item filter options (index)'
   cost:
     type: per_success
@@ -5474,6 +5606,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_item_index
+  name: "Fetch item index (index)"
   summary: 'Douyin: fetch item index (index)'
   cost:
     type: per_success
@@ -5499,6 +5632,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_item_index_interpret
+  name: "Fetch item index interpret (index)"
   summary: 'Douyin: fetch item index interpret (index)'
   cost:
     type: per_success
@@ -5524,6 +5658,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_item_query
+  name: "Fetch item query (index)"
   summary: 'Douyin: fetch item query (index)'
   cost:
     type: per_success
@@ -5561,6 +5696,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_item_sug
+  name: "Fetch item sug (index)"
   summary: 'Douyin: fetch item sug (index)'
   cost:
     type: per_success
@@ -5578,6 +5714,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_item_user_profile
+  name: "Fetch item user profile (index)"
   summary: 'Douyin: fetch item user profile (index)'
   cost:
     type: per_success
@@ -5603,6 +5740,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_keyword_valid_date
+  name: "Fetch keyword valid date (index)"
   summary: 'Douyin: fetch keyword valid date (index)'
   cost:
     type: per_success
@@ -5620,6 +5758,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_multi_keyword_hot_trend
+  name: "Fetch multi keyword hot trend (index)"
   summary: 'Douyin: fetch multi keyword hot trend (index)'
   cost:
     type: per_success
@@ -5657,6 +5796,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_multi_keyword_interpretation
+  name: "Fetch multi keyword interpretation (index)"
   summary: 'Douyin: fetch multi keyword interpretation (index)'
   cost:
     type: per_success
@@ -5694,6 +5834,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_portrait
+  name: "Fetch portrait (index)"
   summary: 'Douyin: fetch portrait (index)'
   cost:
     type: per_success
@@ -5727,6 +5868,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_relation_word
+  name: "Fetch relation word (index)"
   summary: 'Douyin: fetch relation word (index)'
   cost:
     type: per_success
@@ -5760,6 +5902,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_report_detail
+  name: "Fetch report detail (index)"
   summary: 'Douyin: fetch report detail (index)'
   cost:
     type: per_success
@@ -5777,6 +5920,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_report_search
+  name: "Fetch report search (index)"
   summary: 'Douyin: fetch report search (index)'
   cost:
     type: per_success
@@ -5831,6 +5975,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_topic_query
+  name: "Fetch topic query (index)"
   summary: 'Douyin: fetch topic query (index)'
   cost:
     type: per_success
@@ -5864,6 +6009,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/index/fetch_topic_suggest
+  name: "Fetch topic suggest (index)"
   summary: 'Douyin: fetch topic suggest (index)'
   cost:
     type: per_success
@@ -5889,6 +6035,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/index/fetch_valid_date_for_relation
+  name: "Fetch valid date for relation (index)"
   summary: 'Douyin: fetch valid date for relation (index)'
   cost:
     type: per_success
@@ -5903,6 +6050,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_challenge_search_v1
+  name: "Fetch challenge search v1 (search)"
   summary: 'Douyin: fetch challenge search v1 (search)'
   cost:
     type: per_success
@@ -5954,6 +6102,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_challenge_search_v2
+  name: "Fetch challenge search v2 (search)"
   summary: 'Douyin: fetch challenge search v2 (search)'
   cost:
     type: per_success
@@ -6005,6 +6154,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_challenge_suggest
+  name: "Fetch challenge suggest (search)"
   summary: 'Douyin: fetch challenge suggest (search)'
   cost:
     type: per_success
@@ -6030,6 +6180,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_discuss_search
+  name: "Fetch discuss search (search)"
   summary: 'Douyin: fetch discuss search (search)'
   cost:
     type: per_success
@@ -6081,6 +6232,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_experience_search
+  name: "Fetch experience search (search)"
   summary: 'Douyin: fetch experience search (search)'
   cost:
     type: per_success
@@ -6132,6 +6284,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_general_search_v1
+  name: "Fetch general search v1 (search)"
   summary: 'Douyin: fetch general search v1 (search)'
   cost:
     type: per_success
@@ -6183,6 +6336,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_general_search_v2
+  name: "Fetch general search v2 (search)"
   summary: 'Douyin: fetch general search v2 (search)'
   cost:
     type: per_success
@@ -6234,6 +6388,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_image_search
+  name: "Fetch image search (search)"
   summary: 'Douyin: fetch image search (search)'
   cost:
     type: per_success
@@ -6285,6 +6440,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_image_search_v3
+  name: "Fetch image search v3 (search)"
   summary: 'Douyin: fetch image search v3 (search)'
   cost:
     type: per_success
@@ -6312,6 +6468,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_live_search_v1
+  name: "Fetch live search v1 (search)"
   summary: 'Douyin: fetch live search v1 (search)'
   cost:
     type: per_success
@@ -6363,6 +6520,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_multi_search
+  name: "Fetch multi search (search)"
   summary: 'Douyin: fetch multi search (search)'
   cost:
     type: per_success
@@ -6414,6 +6572,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_music_search
+  name: "Fetch music search (search)"
   summary: 'Douyin: fetch music search (search)'
   cost:
     type: per_success
@@ -6465,6 +6624,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_school_search
+  name: "Fetch school search (search)"
   summary: 'Douyin: fetch school search (search)'
   cost:
     type: per_success
@@ -6489,6 +6649,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_search_suggest
+  name: "Fetch search suggest (search)"
   summary: 'Douyin: fetch search suggest (search)'
   cost:
     type: per_success
@@ -6514,6 +6675,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_user_search
+  name: "Fetch user search (search)"
   summary: 'Douyin: fetch user search (search)'
   cost:
     type: per_success
@@ -6552,6 +6714,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_user_search_v2
+  name: "Fetch user search v2 (search)"
   summary: 'Douyin: fetch user search v2 (search)'
   cost:
     type: per_success
@@ -6579,6 +6742,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_video_search_v1
+  name: "Fetch video search v1 (search)"
   summary: 'Douyin: fetch video search v1 (search)'
   cost:
     type: per_success
@@ -6630,6 +6794,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_video_search_v2
+  name: "Fetch video search v2 (search)"
   summary: 'Douyin: fetch video search v2 (search)'
   cost:
     type: per_success
@@ -6681,6 +6846,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/search/fetch_vision_search
+  name: "Fetch vision search (search)"
   summary: 'Douyin: fetch vision search (search)'
   cost:
     type: per_success
@@ -6748,6 +6914,7 @@ endpoints:
   example_response: examples/tikhub.x.douyin-web-douyin-live-room.json
   capability: douyin.live.danmaku
 - id: tikhub.x.douyin-web-encrypt-uid-to-sec-user-id
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
@@ -6820,6 +6987,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/web/fetch_cartoon_aweme
+  name: "Anime Video"
   summary: 'Douyin: Anime Video'
   cost:
     type: per_success
@@ -6852,6 +7020,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/web/fetch_challenge_posts
+  name: "Challenge Posts"
   summary: 'Douyin: Challenge Posts'
   cost:
     type: per_success
@@ -6912,6 +7081,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/web/fetch_food_aweme
+  name: "Food Video"
   summary: 'Douyin: Food Video'
   cost:
     type: per_success
@@ -6944,6 +7114,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/web/fetch_game_aweme
+  name: "Game Video"
   summary: 'Douyin: Game Video'
   cost:
     type: per_success
@@ -7023,6 +7194,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/web/fetch_knowledge_aweme
+  name: "Knowledge Video"
   summary: 'Douyin: Knowledge Video'
   cost:
     type: per_success
@@ -7201,6 +7373,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/web/fetch_music_aweme
+  name: "Music Video"
   summary: 'Douyin: Music Video'
   cost:
     type: per_success
@@ -7404,6 +7577,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/web/fetch_series_aweme
+  name: "Series Video"
   summary: 'Douyin: Series Video'
   cost:
     type: per_success
@@ -7984,6 +8158,7 @@ endpoints:
   example_response: examples/tikhub.x.douyin-web-fetch-video-high-quality-play-url.json
   capability: douyin.video.play_url
 - id: tikhub.x.douyin-web-generate-a-bogus
+  kind: utility
   tier: extended
   platform: douyin
   method: POST
@@ -8022,6 +8197,7 @@ endpoints:
           note: 加密明文列表的第一个值，无特殊要求，默认为14
   untestable: no documented value for required <request body>
 - id: tikhub.x.douyin-web-generate-real-mstoken
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
@@ -8036,6 +8212,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.douyin-web-generate-real-mstoken.json
 - id: tikhub.x.douyin-web-generate-s-v-web-id
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
@@ -8050,10 +8227,12 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.douyin-web-generate-s-v-web-id.json
 - id: tikhub.x.douyin-web-generate-ttwid
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
   path: /api/v1/douyin/web/generate_ttwid
+  name: "Generate ttwid"
   summary: 'Douyin: Generate ttwid'
   cost:
     type: per_success
@@ -8070,6 +8249,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.douyin-web-generate-ttwid.json
 - id: tikhub.x.douyin-web-generate-verify-fp
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
@@ -8084,6 +8264,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.douyin-web-generate-verify-fp.json
 - id: tikhub.x.douyin-web-generate-wss-xb-signature
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
@@ -8118,6 +8299,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.douyin-web-generate-wss-xb-signature.json
 - id: tikhub.x.douyin-web-generate-x-bogus
+  kind: utility
   tier: extended
   platform: douyin
   method: POST
@@ -8278,6 +8460,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/web/handler_shorten_url
+  name: "Handler shorten url"
   summary: 'Douyin: handler shorten url (web)'
   cost:
     type: per_success
@@ -8369,6 +8552,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/web/handler_user_profile_v4
+  name: "Handler user profile v4"
   summary: 'Douyin: handler user profile v4 (web)'
   cost:
     type: per_success
@@ -8414,6 +8598,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/author_content_hot_comment_keywords_v1
+  name: "Author content hot comment keywords v1 (xingtu)"
   summary: 'Douyin: author content hot comment keywords v1 (xingtu)'
   cost:
     type: per_success
@@ -8435,6 +8620,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/author_hot_comment_tokens_v1
+  name: "Author hot comment tokens v1 (xingtu)"
   summary: 'Douyin: author hot comment tokens v1 (xingtu)'
   cost:
     type: per_success
@@ -8456,6 +8642,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/get_sign_image
+  name: "Get sign image (xingtu)"
   summary: 'Douyin: get sign image (xingtu)'
   cost:
     type: per_success
@@ -8490,6 +8677,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/get_xingtu_kolid_by_sec_user_id
+  name: "Get xingtu kolid by sec user id (xingtu)"
   summary: 'Douyin: get xingtu kolid by sec user id (xingtu)'
   cost:
     type: per_success
@@ -8512,6 +8700,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/get_xingtu_kolid_by_uid
+  name: "Get xingtu kolid by uid (xingtu)"
   summary: 'Douyin: get xingtu kolid by uid (xingtu)'
   cost:
     type: per_success
@@ -8534,6 +8723,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/get_xingtu_kolid_by_unique_id
+  name: "Get xingtu kolid by unique id (xingtu)"
   summary: 'Douyin: get xingtu kolid by unique id (xingtu)'
   cost:
     type: per_success
@@ -8556,6 +8746,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_audience_portrait_v1
+  name: "Kol audience portrait v1 (xingtu)"
   summary: 'Douyin: kol audience portrait v1 (xingtu)'
   cost:
     type: per_success
@@ -8577,6 +8768,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_base_info_v1
+  name: "Kol base info v1 (xingtu)"
   summary: 'Douyin: kol base info v1 (xingtu)'
   cost:
     type: per_success
@@ -8604,6 +8796,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_conversion_ability_analysis_v1
+  name: "Kol conversion ability analysis v1 (xingtu)"
   summary: 'Douyin: kol conversion ability analysis v1 (xingtu)'
   cost:
     type: per_success
@@ -8631,6 +8824,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_convert_video_display_v1
+  name: "Kol convert video display v1 (xingtu)"
   summary: 'Douyin: kol convert video display v1 (xingtu)'
   cost:
     type: per_success
@@ -8664,6 +8858,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_cp_info_v1
+  name: "Kol cp info v1 (xingtu)"
   summary: 'Douyin: kol cp info v1 (xingtu)'
   cost:
     type: per_success
@@ -8685,6 +8880,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_daily_fans_v1
+  name: "Kol daily fans v1 (xingtu)"
   summary: 'Douyin: kol daily fans v1 (xingtu)'
   cost:
     type: per_success
@@ -8718,6 +8914,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_data_overview_v1
+  name: "Kol data overview v1 (xingtu)"
   summary: 'Douyin: kol data overview v1 (xingtu)'
   cost:
     type: per_success
@@ -8761,6 +8958,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_fans_portrait_v1
+  name: "Kol fans portrait v1 (xingtu)"
   summary: 'Douyin: kol fans portrait v1 (xingtu)'
   cost:
     type: per_success
@@ -8788,6 +8986,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_link_struct_v1
+  name: "Kol link struct v1 (xingtu)"
   summary: 'Douyin: kol link struct v1 (xingtu)'
   cost:
     type: per_success
@@ -8809,6 +9008,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_rec_videos_v1
+  name: "Kol rec videos v1 (xingtu)"
   summary: 'Douyin: kol rec videos v1 (xingtu)'
   cost:
     type: per_success
@@ -8830,6 +9030,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_service_price_v1
+  name: "Kol service price v1 (xingtu)"
   summary: 'Douyin: kol service price v1 (xingtu)'
   cost:
     type: per_success
@@ -8857,6 +9058,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_touch_distribution_v1
+  name: "Kol touch distribution v1 (xingtu)"
   summary: 'Douyin: kol touch distribution v1 (xingtu)'
   cost:
     type: per_success
@@ -8878,6 +9080,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_video_performance_v1
+  name: "Kol video performance v1 (xingtu)"
   summary: 'Douyin: kol video performance v1 (xingtu)'
   cost:
     type: per_success
@@ -8905,6 +9108,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/kol_xingtu_index_v1
+  name: "Kol xingtu index v1 (xingtu)"
   summary: 'Douyin: kol xingtu index v1 (xingtu)'
   cost:
     type: per_success
@@ -8926,6 +9130,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/search_kol_v1
+  name: "Search kol v1 (xingtu)"
   summary: 'Douyin: search kol v1 (xingtu)'
   cost:
     type: per_success
@@ -8959,6 +9164,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu/search_kol_v2
+  name: "Search kol v2 (xingtu)"
   summary: 'Douyin: search kol v2 (xingtu)'
   cost:
     type: per_success
@@ -8992,6 +9198,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_audience_distribution
+  name: "Get author audience distribution"
   summary: 'Douyin: get author audience distribution (xingtu_v2)'
   cost:
     type: per_success
@@ -9029,6 +9236,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_base_info
+  name: "Get author base info"
   summary: 'Douyin: get author base info (xingtu_v2)'
   cost:
     type: per_success
@@ -9080,6 +9288,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_business_card_info
+  name: "Get author business card info"
   summary: 'Douyin: get author business card info (xingtu_v2)'
   cost:
     type: per_success
@@ -9101,6 +9310,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_convert_ability
+  name: "Get author convert ability"
   summary: 'Douyin: get author convert ability (xingtu_v2)'
   cost:
     type: per_success
@@ -9146,6 +9356,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_convert_videos_or_products
+  name: "Get author convert videos or products"
   summary: 'Douyin: get author convert videos or products (xingtu_v2)'
   cost:
     type: per_success
@@ -9203,6 +9414,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_daily_fans
+  name: "Get author daily fans"
   summary: 'Douyin: get author daily fans (xingtu_v2)'
   cost:
     type: per_success
@@ -9242,6 +9454,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_fans_distribution
+  name: "Get author fans distribution"
   summary: 'Douyin: get author fans distribution (xingtu_v2)'
   cost:
     type: per_success
@@ -9275,6 +9488,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_homepage_videos
+  name: "Get author homepage videos"
   summary: 'Douyin: get author homepage videos (xingtu_v2)'
   cost:
     type: per_success
@@ -9314,6 +9528,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_spread_info
+  name: "Get author spread info"
   summary: 'Douyin: get author spread info (xingtu_v2)'
   cost:
     type: per_success
@@ -9371,6 +9586,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_touch_distribution
+  name: "Get author touch distribution"
   summary: 'Douyin: get author touch distribution (xingtu_v2)'
   cost:
     type: per_success
@@ -9404,6 +9620,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_demander_mcn_list
+  name: "Get demander mcn list"
   summary: 'Douyin: get demander mcn list (xingtu_v2)'
   cost:
     type: per_success
@@ -9435,6 +9652,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_excellent_case_category_list
+  name: "Get excellent case category list"
   summary: 'Douyin: get excellent case category list (xingtu_v2)'
   cost:
     type: per_success
@@ -9456,6 +9674,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/xingtu_v2/get_ip_activity_list
+  name: "Get ip activity list"
   summary: 'Douyin: get ip activity list (xingtu_v2)'
   cost:
     type: per_success
@@ -9490,6 +9709,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/xingtu_v2/get_recommend_for_star_authors
+  name: "Get recommend for star authors"
   summary: 'Douyin: get recommend for star authors (xingtu_v2)'
   cost:
     type: per_success
@@ -9517,6 +9737,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_resource_list
+  name: "Get resource list"
   summary: 'Douyin: get resource list (xingtu_v2)'
   cost:
     type: per_success
@@ -9539,6 +9760,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_user_profile_qrcode
+  name: "Get user profile qrcode"
   summary: 'Douyin: get user profile qrcode (xingtu_v2)'
   cost:
     type: per_success
@@ -9565,6 +9787,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_xingtu_kolid_by_sec_user_id
+  name: "Get xingtu kolid by sec user id"
   summary: 'Douyin: get xingtu kolid by sec user id (xingtu_v2)'
   cost:
     type: per_success
@@ -9587,6 +9810,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_xingtu_kolid_by_uid
+  name: "Get xingtu kolid by uid"
   summary: 'Douyin: get xingtu kolid by uid (xingtu_v2)'
   cost:
     type: per_success
@@ -9609,6 +9833,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_xingtu_kolid_by_unique_id
+  name: "Get xingtu kolid by unique id"
   summary: 'Douyin: get xingtu kolid by unique id (xingtu_v2)'
   cost:
     type: per_success
@@ -9631,6 +9856,7 @@ endpoints:
   platform: douyin
   method: POST
   path: /api/v1/douyin/xingtu_v2/multi_get_author_info
+  name: "Multi get author info"
   summary: 'Douyin: multi get author info (xingtu_v2)'
   cost:
     type: per_success
@@ -9658,6 +9884,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/search_anchor
+  name: "Search anchor"
   summary: 'Douyin: search anchor (xingtu_v2)'
   cost:
     type: per_success
@@ -9843,6 +10070,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/search_creator
+  name: "Search creator"
   summary: 'Douyin: search creator (xingtu_v2)'
   cost:
     type: per_success
@@ -10030,6 +10258,7 @@ endpoints:
   platform: douyin
   method: GET
   path: /api/v1/douyin/xingtu_v2/search_toutiao_creator
+  name: "Search toutiao creator"
   summary: 'Douyin: search toutiao creator (xingtu_v2)'
   cost:
     type: per_success
@@ -10215,6 +10444,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_content_hot_keywords
+  name: "Get author content hot keywords"
   summary: 'Douyin: get author content hot keywords (xingtu_v2)'
   cost:
     type: per_success
@@ -10244,6 +10474,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_cp_info
+  name: "Get author cp info"
   summary: 'Douyin: get author cp info (xingtu_v2)'
   cost:
     type: per_success
@@ -10279,6 +10510,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_hot_comment_tokens
+  name: "Get author hot comment tokens"
   summary: 'Douyin: get author hot comment tokens (xingtu_v2)'
   cost:
     type: per_success
@@ -10314,6 +10546,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_link_info
+  name: "Get author link info"
   summary: 'Douyin: get author link info (xingtu_v2)'
   cost:
     type: per_success
@@ -10355,6 +10588,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_local_info
+  name: "Get author local info"
   summary: 'Douyin: get author local info (xingtu_v2)'
   cost:
     type: per_success
@@ -10396,6 +10630,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_market_fields
+  name: "Get author market fields"
   summary: 'Douyin: get author market fields (xingtu_v2)'
   cost:
     type: per_success
@@ -10419,6 +10654,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_author_show_items
+  name: "Get author show items"
   summary: 'Douyin: get author show items (xingtu_v2)'
   cost:
     type: per_success
@@ -10466,6 +10702,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_content_trend_guide
+  name: "Get content trend guide"
   summary: 'Douyin: get content trend guide (xingtu_v2)'
   cost:
     type: per_success
@@ -10481,6 +10718,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_ip_activity_detail
+  name: "Get ip activity detail"
   summary: 'Douyin: get ip activity detail (xingtu_v2)'
   cost:
     type: per_success
@@ -10504,6 +10742,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_ip_activity_industry_list
+  name: "Get ip activity industry list"
   summary: 'Douyin: get ip activity industry list (xingtu_v2)'
   cost:
     type: per_success
@@ -10519,6 +10758,7 @@ endpoints:
   platform: douyin-xingtu
   method: POST
   path: /api/v1/douyin/xingtu_v2/get_playlet_actor_rank_catalog
+  name: "Get playlet actor rank catalog"
   summary: 'Douyin: get playlet actor rank catalog (xingtu_v2)'
   cost:
     type: per_success
@@ -10534,6 +10774,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_playlet_actor_rank_list
+  name: "Get playlet actor rank list"
   summary: 'Douyin: get playlet actor rank list (xingtu_v2)'
   cost:
     type: per_success
@@ -10579,6 +10820,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_ranking_list_catalog
+  name: "Get ranking list catalog"
   summary: 'Douyin: get ranking list catalog (xingtu_v2)'
   cost:
     type: per_success
@@ -10606,6 +10848,7 @@ endpoints:
   platform: douyin-xingtu
   method: GET
   path: /api/v1/douyin/xingtu_v2/get_ranking_list_data
+  name: "Get ranking list data"
   summary: 'Douyin: get ranking list data (xingtu_v2)'
   cost:
     type: per_success
@@ -10653,6 +10896,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_cities
+  name: "Fetch cities"
   summary: 'Instagram: fetch cities (v1)'
   cost:
     type: per_success
@@ -10680,6 +10924,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_comment_replies
+  name: "Fetch comment replies"
   summary: 'Instagram: fetch comment replies (v1)'
   cost:
     type: per_success
@@ -10711,6 +10956,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_explore_sections
+  name: "Fetch explore sections"
   summary: 'Instagram: fetch explore sections (v1)'
   cost:
     type: per_success
@@ -10726,6 +10972,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_hashtag_posts
+  name: "Fetch hashtag posts"
   summary: 'Instagram: fetch hashtag posts (v1)'
   cost:
     type: per_success
@@ -10753,6 +11000,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_location_info
+  name: "Fetch location info"
   summary: 'Instagram: fetch location info (v1)'
   cost:
     type: per_success
@@ -10776,6 +11024,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_location_posts
+  name: "Fetch location posts"
   summary: 'Instagram: fetch location posts (v1)'
   cost:
     type: per_success
@@ -10808,6 +11057,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_locations
+  name: "Fetch locations"
   summary: 'Instagram: fetch locations (v1)'
   cost:
     type: per_success
@@ -10836,6 +11086,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_music_posts
+  name: "Fetch music posts"
   summary: 'Instagram: fetch music posts (v1)'
   cost:
     type: per_success
@@ -10869,6 +11120,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_post_by_id
+  name: "Fetch post by id"
   summary: 'Instagram: fetch post by id (v1)'
   cost:
     type: per_success
@@ -10892,6 +11144,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_post_by_url
+  name: "Fetch post by url"
   summary: 'Instagram: fetch post by url (v1)'
   cost:
     type: per_success
@@ -10915,6 +11168,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_post_by_url_v2
+  name: "Fetch post by url v2"
   summary: 'Instagram: fetch post by url v2 (v1)'
   cost:
     type: per_success
@@ -10938,6 +11192,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_post_comments_v2
+  name: "Fetch post comments v2"
   summary: 'Instagram: fetch post comments v2 (v1)'
   cost:
     type: per_success
@@ -10969,6 +11224,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_related_profiles
+  name: "Fetch related profiles"
   summary: 'Instagram: fetch related profiles (v1)'
   cost:
     type: per_success
@@ -10992,6 +11248,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_search
+  name: "Fetch search"
   summary: 'Instagram: fetch search (v1)'
   cost:
     type: per_success
@@ -11019,6 +11276,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_section_posts
+  name: "Fetch section posts"
   summary: 'Instagram: fetch section posts (v1)'
   cost:
     type: per_success
@@ -11052,6 +11310,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_user_about_info
+  name: "Fetch user about info"
   summary: 'Instagram: fetch user about info (v1)'
   cost:
     type: per_success
@@ -11073,6 +11332,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_user_info_by_id
+  name: "Fetch user info by id"
   summary: 'Instagram: fetch user info by id (v1)'
   cost:
     type: per_success
@@ -11096,6 +11356,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_user_info_by_id_v2
+  name: "Fetch user info by id v2"
   summary: 'Instagram: fetch user info by id v2 (v1)'
   cost:
     type: per_success
@@ -11119,6 +11380,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_user_info_by_username_v2
+  name: "Fetch user info by username v2"
   summary: 'Instagram: fetch user info by username v2 (v1)'
   cost:
     type: per_success
@@ -11142,6 +11404,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_user_info_by_username_v3
+  name: "Fetch user info by username v3"
   summary: 'Instagram: fetch user info by username v3 (v1)'
   cost:
     type: per_success
@@ -11165,6 +11428,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_user_posts_v2
+  name: "Fetch user posts v2"
   summary: 'Instagram: fetch user posts v2 (v1)'
   cost:
     type: per_success
@@ -11198,6 +11462,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_user_reels
+  name: "Fetch user reels"
   summary: 'Instagram: fetch user reels (v1)'
   cost:
     type: per_success
@@ -11231,6 +11496,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_user_reposts
+  name: "Fetch user reposts"
   summary: 'Instagram: fetch user reposts (v1)'
   cost:
     type: per_success
@@ -11258,6 +11524,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/fetch_user_tagged_posts
+  name: "Fetch user tagged posts"
   summary: 'Instagram: fetch user tagged posts (v1)'
   cost:
     type: per_success
@@ -11291,6 +11558,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/media_id_to_shortcode
+  name: "Media id to shortcode"
   summary: 'Instagram: media id to shortcode (v1)'
   cost:
     type: per_success
@@ -11313,6 +11581,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/shortcode_to_media_id
+  name: "Shortcode to media id"
   summary: 'Instagram: shortcode to media id (v1)'
   cost:
     type: per_success
@@ -11335,6 +11604,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v1/user_id_to_username
+  name: "User id to username"
   summary: 'Instagram: user id to username (v1)'
   cost:
     type: per_success
@@ -11357,6 +11627,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_comment_replies
+  name: "Fetch comment replies"
   summary: 'Instagram: fetch comment replies (v2)'
   cost:
     type: per_success
@@ -11390,6 +11661,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_hashtag_posts
+  name: "Fetch hashtag posts"
   summary: 'Instagram: fetch hashtag posts (v2)'
   cost:
     type: per_success
@@ -11422,6 +11694,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_highlight_stories
+  name: "Fetch highlight stories"
   summary: 'Instagram: fetch highlight stories (v2)'
   cost:
     type: per_success
@@ -11445,6 +11718,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_location_posts
+  name: "Fetch location posts"
   summary: 'Instagram: fetch location posts (v2)'
   cost:
     type: per_success
@@ -11470,6 +11744,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_music_posts
+  name: "Fetch music posts"
   summary: 'Instagram: fetch music posts (v2)'
   cost:
     type: per_success
@@ -11497,6 +11772,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_post_comments
+  name: "Fetch post comments"
   summary: 'Instagram: fetch post comments (v2)'
   cost:
     type: per_success
@@ -11530,6 +11806,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_post_info
+  name: "Fetch post info"
   summary: 'Instagram: fetch post info (v2)'
   cost:
     type: per_success
@@ -11553,6 +11830,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_post_likes
+  name: "Fetch post likes"
   summary: 'Instagram: fetch post likes (v2)'
   cost:
     type: per_success
@@ -11580,6 +11858,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_similar_users
+  name: "Fetch similar users"
   summary: 'Instagram: fetch similar users (v2)'
   cost:
     type: per_success
@@ -11609,6 +11888,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_user_followers
+  name: "Fetch user followers"
   summary: 'Instagram: fetch user followers (v2)'
   cost:
     type: per_success
@@ -11642,6 +11922,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_user_following
+  name: "Fetch user following"
   summary: 'Instagram: fetch user following (v2)'
   cost:
     type: per_success
@@ -11675,6 +11956,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_user_highlights
+  name: "Fetch user highlights"
   summary: 'Instagram: fetch user highlights (v2)'
   cost:
     type: per_success
@@ -11704,6 +11986,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_user_info
+  name: "Fetch user info"
   summary: 'Instagram: fetch user info (v2)'
   cost:
     type: per_success
@@ -11733,6 +12016,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_user_posts
+  name: "Fetch user posts"
   summary: 'Instagram: fetch user posts (v2)'
   cost:
     type: per_success
@@ -11766,6 +12050,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_user_reels
+  name: "Fetch user reels"
   summary: 'Instagram: fetch user reels (v2)'
   cost:
     type: per_success
@@ -11799,6 +12084,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_user_stories
+  name: "Fetch user stories"
   summary: 'Instagram: fetch user stories (v2)'
   cost:
     type: per_success
@@ -11828,6 +12114,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/fetch_user_tagged_posts
+  name: "Fetch user tagged posts"
   summary: 'Instagram: fetch user tagged posts (v2)'
   cost:
     type: per_success
@@ -11861,6 +12148,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/general_search
+  name: "General search"
   summary: 'Instagram: general search (v2)'
   cost:
     type: per_success
@@ -11888,6 +12176,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/media_id_to_shortcode
+  name: "Media id to shortcode"
   summary: 'Instagram: media id to shortcode (v2)'
   cost:
     type: per_success
@@ -11910,6 +12199,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/search_by_coordinates
+  name: "Search by coordinates"
   summary: 'Instagram: search by coordinates (v2)'
   cost:
     type: per_success
@@ -11939,6 +12229,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/search_hashtags
+  name: "Search hashtags"
   summary: 'Instagram: search hashtags (v2)'
   cost:
     type: per_success
@@ -11962,6 +12253,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/search_locations
+  name: "Search locations"
   summary: 'Instagram: search locations (v2)'
   cost:
     type: per_success
@@ -11985,6 +12277,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/search_music
+  name: "Search music"
   summary: 'Instagram: search music (v2)'
   cost:
     type: per_success
@@ -12008,6 +12301,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/search_reels
+  name: "Search reels"
   summary: 'Instagram: search reels (v2)'
   cost:
     type: per_success
@@ -12035,6 +12329,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/search_users
+  name: "Search users"
   summary: 'Instagram: search users (v2)'
   cost:
     type: per_success
@@ -12058,6 +12353,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/shortcode_to_media_id
+  name: "Shortcode to media id"
   summary: 'Instagram: shortcode to media id (v2)'
   cost:
     type: per_success
@@ -12080,6 +12376,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v2/user_id_to_username
+  name: "User id to username"
   summary: 'Instagram: user id to username (v2)'
   cost:
     type: per_success
@@ -12102,6 +12399,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/bulk_translate_comments
+  name: "Bulk translate comments"
   summary: 'Instagram: bulk translate comments (v3)'
   cost:
     type: per_success
@@ -12125,6 +12423,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/extract_shortcode
+  name: "Extract shortcode"
   summary: 'Instagram: extract shortcode (v3)'
   cost:
     type: per_success
@@ -12147,6 +12446,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/general_search
+  name: "General search"
   summary: 'Instagram: general search (v3)'
   cost:
     type: per_success
@@ -12183,6 +12483,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_comment_replies
+  name: "Get comment replies"
   summary: 'Instagram: get comment replies (v3)'
   cost:
     type: per_success
@@ -12216,6 +12517,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_explore
+  name: "Get explore"
   summary: 'Instagram: get explore (v3)'
   cost:
     type: per_success
@@ -12237,6 +12539,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_hashtag_posts
+  name: "Get hashtag posts"
   summary: 'Instagram: get hashtag posts (v3)'
   cost:
     type: per_success
@@ -12262,6 +12565,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_highlight_stories
+  name: "Get highlight stories"
   summary: 'Instagram: get highlight stories (v3)'
   cost:
     type: per_success
@@ -12297,6 +12601,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_location_info
+  name: "Get location info"
   summary: 'Instagram: get location info (v3)'
   cost:
     type: per_success
@@ -12325,6 +12630,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_location_nearby
+  name: "Get location nearby"
   summary: 'Instagram: get location nearby (v3)'
   cost:
     type: per_success
@@ -12346,6 +12652,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_location_posts
+  name: "Get location posts"
   summary: 'Instagram: get location posts (v3)'
   cost:
     type: per_success
@@ -12391,6 +12698,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_music_posts
+  name: "Get music posts"
   summary: 'Instagram: get music posts (v3)'
   cost:
     type: per_success
@@ -12416,6 +12724,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_post_comments
+  name: "Get post comments"
   summary: 'Instagram: get post comments (v3)'
   cost:
     type: per_success
@@ -12451,6 +12760,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_post_info
+  name: "Get post info"
   summary: 'Instagram: get post info (v3)'
   cost:
     type: per_success
@@ -12480,6 +12790,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_post_info_by_code
+  name: "Get post info by code"
   summary: 'Instagram: get post info by code (v3)'
   cost:
     type: per_success
@@ -12503,6 +12814,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_post_likes
+  name: "Get post likes"
   summary: 'Instagram: get post likes (v3)'
   cost:
     type: per_success
@@ -12526,6 +12838,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_post_oembed
+  name: "Get post oembed"
   summary: 'Instagram: get post oembed (v3)'
   cost:
     type: per_success
@@ -12557,6 +12870,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_recommended_reels
+  name: "Get recommended reels"
   summary: 'Instagram: get recommended reels (v3)'
   cost:
     type: per_success
@@ -12583,6 +12897,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_similar_users
+  name: "Get similar users"
   summary: 'Instagram: get similar users (v3)'
   cost:
     type: per_success
@@ -12606,6 +12921,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_about
+  name: "Get user about"
   summary: 'Instagram: get user about (v3)'
   cost:
     type: per_success
@@ -12629,6 +12945,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_brief
+  name: "Get user brief"
   summary: 'Instagram: get user brief (v3)'
   cost:
     type: per_success
@@ -12658,6 +12975,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_followers
+  name: "Get user followers"
   summary: 'Instagram: get user followers (v3)'
   cost:
     type: per_success
@@ -12691,6 +13009,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_following
+  name: "Get user following"
   summary: 'Instagram: get user following (v3)'
   cost:
     type: per_success
@@ -12724,6 +13043,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_former_usernames
+  name: "Get user former usernames"
   summary: 'Instagram: get user former usernames (v3)'
   cost:
     type: per_success
@@ -12747,6 +13067,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_highlights
+  name: "Get user highlights"
   summary: 'Instagram: get user highlights (v3)'
   cost:
     type: per_success
@@ -12787,6 +13108,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_id_by_username
+  name: "Get user id by username"
   summary: 'Instagram: get user id by username (v3)'
   cost:
     type: per_success
@@ -12809,6 +13131,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_posts
+  name: "Get user posts"
   summary: 'Instagram: get user posts (v3)'
   cost:
     type: per_success
@@ -12855,6 +13178,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_profile
+  name: "Get user profile"
   summary: 'Instagram: get user profile (v3)'
   cost:
     type: per_success
@@ -12878,6 +13202,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_reels
+  name: "Get user reels"
   summary: 'Instagram: get user reels (v3)'
   cost:
     type: per_success
@@ -12924,6 +13249,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_stories
+  name: "Get user stories"
   summary: 'Instagram: get user stories (v3)'
   cost:
     type: per_success
@@ -12947,6 +13273,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/get_user_tagged_posts
+  name: "Get user tagged posts"
   summary: 'Instagram: get user tagged posts (v3)'
   cost:
     type: per_success
@@ -12993,6 +13320,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/media_id_to_shortcode
+  name: "Media id to shortcode"
   summary: 'Instagram: media id to shortcode (v3)'
   cost:
     type: per_success
@@ -13015,6 +13343,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/search_by_coordinates
+  name: "Search by coordinates"
   summary: 'Instagram: search by coordinates (v3)'
   cost:
     type: per_success
@@ -13044,6 +13373,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/search_hashtags
+  name: "Search hashtags"
   summary: 'Instagram: search hashtags (v3)'
   cost:
     type: per_success
@@ -13071,6 +13401,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/search_users
+  name: "Search users"
   summary: 'Instagram: search users (v3)'
   cost:
     type: per_success
@@ -13098,6 +13429,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/shortcode_to_media_id
+  name: "Shortcode to media id"
   summary: 'Instagram: shortcode to media id (v3)'
   cost:
     type: per_success
@@ -13120,6 +13452,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/translate_comment
+  name: "Translate comment"
   summary: 'Instagram: translate comment (v3)'
   cost:
     type: per_success
@@ -13141,6 +13474,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/v1/instagram/v3/user_id_to_username
+  name: "User id to username"
   summary: 'Instagram: user id to username (v3)'
   cost:
     type: per_success
@@ -13163,6 +13497,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_brand_top_list
+  name: "Fetch brand top list"
   summary: 'Kuaishou: fetch brand top list (app)'
   cost:
     type: per_success
@@ -13187,6 +13522,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_hot_board_categories
+  name: "Fetch hot board categories"
   summary: 'Kuaishou: fetch hot board categories (app)'
   cost:
     type: per_success
@@ -13202,6 +13538,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_hot_board_detail
+  name: "Fetch hot board detail"
   summary: 'Kuaishou: fetch hot board detail (app)'
   cost:
     type: per_success
@@ -13227,6 +13564,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_hot_search_person
+  name: "Fetch hot search person"
   summary: 'Kuaishou: fetch hot search person (app)'
   cost:
     type: per_success
@@ -13242,6 +13580,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_live_top_list
+  name: "Fetch live top list"
   summary: 'Kuaishou: fetch live top list (app)'
   cost:
     type: per_success
@@ -13266,6 +13605,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_music_ranking
+  name: "Fetch music ranking"
   summary: 'Kuaishou: fetch music ranking (app)'
   cost:
     type: per_success
@@ -13298,6 +13638,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_one_user_v2
+  name: "Fetch one user v2"
   summary: 'Kuaishou: fetch one user v2 (app)'
   cost:
     type: per_success
@@ -13320,6 +13661,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_one_video
+  name: "Fetch one video"
   summary: 'Kuaishou: fetch one video (app)'
   cost:
     type: per_success
@@ -13342,6 +13684,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_one_video_by_url
+  name: "Fetch one video by url"
   summary: 'Kuaishou: fetch one video by url (app)'
   cost:
     type: per_success
@@ -13364,6 +13707,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_selection_feed
+  name: "Fetch selection feed"
   summary: 'Kuaishou: fetch selection feed (app)'
   cost:
     type: per_success
@@ -13379,6 +13723,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_shopping_top_list
+  name: "Fetch shopping top list"
   summary: 'Kuaishou: fetch shopping top list (app)'
   cost:
     type: per_success
@@ -13403,6 +13748,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_tag_feed
+  name: "Fetch tag feed"
   summary: 'Kuaishou: fetch tag feed (app)'
   cost:
     type: per_success
@@ -13458,6 +13804,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_user_hot_post
+  name: "Fetch user hot post"
   summary: 'Kuaishou: fetch user hot post (app)'
   cost:
     type: per_success
@@ -13483,6 +13830,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_user_live_info
+  name: "Fetch user live info"
   summary: 'Kuaishou: fetch user live info (app)'
   cost:
     type: per_success
@@ -13505,6 +13853,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_user_post_v2
+  name: "Fetch user post v2"
   summary: 'Kuaishou: fetch user post v2 (app)'
   cost:
     type: per_success
@@ -13537,6 +13886,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_video_comment
+  name: "Fetch video comment"
   summary: 'Kuaishou: fetch video comment (app)'
   cost:
     type: per_success
@@ -13562,6 +13912,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_video_sub_comments
+  name: "Fetch video sub comments"
   summary: 'Kuaishou: fetch video sub comments (app)'
   cost:
     type: per_success
@@ -13599,6 +13950,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/fetch_videos_batch
+  name: "Fetch videos batch"
   summary: 'Kuaishou: fetch videos batch (app)'
   cost:
     type: per_success
@@ -13618,10 +13970,12 @@ endpoints:
   example_response: examples/tikhub.x.kuaishou-app-fetch-videos-batch.json
   capability: kuaishou.video.detail
 - id: tikhub.x.kuaishou-app-generate-kuaishou-share-link
+  kind: utility
   tier: extended
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/generate_kuaishou_share_link
+  name: "Generate kuaishou share link"
   summary: 'Kuaishou: generate kuaishou share link (app)'
   cost:
     type: per_success
@@ -13643,6 +13997,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/search_comprehensive
+  name: "Search comprehensive"
   summary: 'Kuaishou: search comprehensive (app)'
   cost:
     type: per_success
@@ -13697,6 +14052,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/search_image
+  name: "Search image"
   summary: 'Kuaishou: search image (app)'
   cost:
     type: per_success
@@ -13723,6 +14079,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/search_live
+  name: "Search live"
   summary: 'Kuaishou: search live (app)'
   cost:
     type: per_success
@@ -13749,6 +14106,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/search_music
+  name: "Search music"
   summary: 'Kuaishou: search music (app)'
   cost:
     type: per_success
@@ -13775,6 +14133,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/search_tag
+  name: "Search tag"
   summary: 'Kuaishou: search tag (app)'
   cost:
     type: per_success
@@ -13801,6 +14160,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/search_user_v2
+  name: "Search user v2"
   summary: 'Kuaishou: search user v2 (app)'
   cost:
     type: per_success
@@ -13856,6 +14216,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/app/search_video_v2
+  name: "Search video v2"
   summary: 'Kuaishou: search video v2 (app)'
   cost:
     type: per_success
@@ -13882,6 +14243,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_get_user_id
+  name: "Fetch get user id"
   summary: 'Kuaishou: fetch get user id (web)'
   cost:
     type: per_success
@@ -13903,6 +14265,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_kuaishou_hot_list_v1
+  name: "Fetch kuaishou hot list v1"
   summary: 'Kuaishou: fetch kuaishou hot list v1 (web)'
   cost:
     type: per_success
@@ -13918,6 +14281,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_kuaishou_hot_list_v2
+  name: "Fetch kuaishou hot list v2"
   summary: 'Kuaishou: fetch kuaishou hot list v2 (web)'
   cost:
     type: per_success
@@ -13940,6 +14304,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_one_video
+  name: "Fetch one video"
   summary: 'Kuaishou: fetch one video (web)'
   cost:
     type: per_success
@@ -13962,6 +14327,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_one_video_by_url
+  name: "Fetch one video by url"
   summary: 'Kuaishou: fetch one video by url (web)'
   cost:
     type: per_success
@@ -13984,6 +14350,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_one_video_comment
+  name: "Fetch one video comment"
   summary: 'Kuaishou: fetch one video comment (web)'
   cost:
     type: per_success
@@ -14009,6 +14376,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_one_video_sub_comment
+  name: "Fetch one video sub comment"
   summary: 'Kuaishou: fetch one video sub comment (web)'
   cost:
     type: per_success
@@ -14041,6 +14409,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_one_video_v2
+  name: "Fetch one video v2"
   summary: 'Kuaishou: fetch one video v2 (web)'
   cost:
     type: per_success
@@ -14063,6 +14432,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_user_collect
+  name: "Fetch user collect"
   summary: 'Kuaishou: fetch user collect (web)'
   cost:
     type: per_success
@@ -14088,6 +14458,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_user_info
+  name: "Fetch user info"
   summary: 'Kuaishou: fetch user info (web)'
   cost:
     type: per_success
@@ -14110,6 +14481,7 @@ endpoints:
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/fetch_user_live_replay
+  name: "Fetch user live replay"
   summary: 'Kuaishou: fetch user live replay (web)'
   cost:
     type: per_success
@@ -14131,10 +14503,12 @@ endpoints:
   example_response: examples/tikhub.x.kuaishou-web-fetch-user-live-replay.json
   capability: kuaishou.user.live_replays
 - id: tikhub.x.kuaishou-web-generate-share-short-url
+  kind: utility
   tier: extended
   platform: kuaishou
   method: GET
   path: /api/v1/kuaishou/web/generate_share_short_url
+  name: "Generate share short url"
   summary: 'Kuaishou: generate share short url (web)'
   cost:
     type: per_success
@@ -14156,6 +14530,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_discover_banners
+  name: "Fetch discover banners"
   summary: 'Lemon8: fetch discover banners (app)'
   cost:
     type: per_success
@@ -14170,6 +14545,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_discover_tab
+  name: "Fetch discover tab"
   summary: 'Lemon8: fetch discover tab (app)'
   cost:
     type: per_success
@@ -14185,6 +14561,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_discover_tab_information_tabs
+  name: "Fetch discover tab information tabs"
   summary: 'Lemon8: fetch discover tab information tabs (app)'
   cost:
     type: per_success
@@ -14199,6 +14576,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_hot_search_keywords
+  name: "Fetch hot search keywords"
   summary: 'Lemon8: fetch hot search keywords (app)'
   cost:
     type: per_success
@@ -14214,6 +14592,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_post_comment_list
+  name: "Fetch post comment list"
   summary: 'Lemon8: fetch post comment list (app)'
   cost:
     type: per_success
@@ -14255,6 +14634,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_post_detail
+  name: "Fetch post detail"
   summary: 'Lemon8: fetch post detail (app)'
   cost:
     type: per_success
@@ -14278,6 +14658,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_search
+  name: "Fetch search"
   summary: 'Lemon8: fetch search (app)'
   cost:
     type: per_success
@@ -14319,6 +14700,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_topic_info
+  name: "Fetch topic info"
   summary: 'Lemon8: fetch topic info (app)'
   cost:
     type: per_success
@@ -14342,6 +14724,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_topic_post_list
+  name: "Fetch topic post list"
   summary: 'Lemon8: fetch topic post list (app)'
   cost:
     type: per_success
@@ -14386,6 +14769,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_user_follower_list
+  name: "Fetch user follower list"
   summary: 'Lemon8: fetch user follower list (app)'
   cost:
     type: per_success
@@ -14413,6 +14797,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_user_following_list
+  name: "Fetch user following list"
   summary: 'Lemon8: fetch user following list (app)'
   cost:
     type: per_success
@@ -14440,6 +14825,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/fetch_user_profile
+  name: "Fetch user profile"
   summary: 'Lemon8: fetch user profile (app)'
   cost:
     type: per_success
@@ -14463,6 +14849,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/get_item_id
+  name: "Get item id"
   summary: 'Lemon8: get item id (app)'
   cost:
     type: per_success
@@ -14485,6 +14872,7 @@ endpoints:
   platform: lemon8
   method: POST
   path: /api/v1/lemon8/app/get_item_ids
+  name: "Get item ids"
   summary: 'Lemon8: get item ids (app)'
   cost:
     type: per_success
@@ -14506,6 +14894,7 @@ endpoints:
   platform: lemon8
   method: GET
   path: /api/v1/lemon8/app/get_user_id
+  name: "Get user id"
   summary: 'Lemon8: get user id (app)'
   cost:
     type: per_success
@@ -14528,6 +14917,7 @@ endpoints:
   platform: lemon8
   method: POST
   path: /api/v1/lemon8/app/get_user_ids
+  name: "Get user ids"
   summary: 'Lemon8: get user ids (app)'
   cost:
     type: per_success
@@ -14549,6 +14939,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_ad_detail
+  name: "Get ad detail"
   summary: 'Linkedin: get ad detail (web)'
   cost:
     type: per_success
@@ -14572,6 +14963,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_comments_replies
+  name: "Get comments replies"
   summary: 'Linkedin: get comments replies (web)'
   cost:
     type: per_success
@@ -14598,6 +14990,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_company_affiliated_pages
+  name: "Get company affiliated pages"
   summary: 'Linkedin: get company affiliated pages (web)'
   cost:
     type: per_success
@@ -14621,6 +15014,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_company_associated_member_insights
+  name: "Get company associated member insights"
   summary: 'Linkedin: get company associated member insights (web)'
   cost:
     type: per_success
@@ -14644,6 +15038,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_company_job_count
+  name: "Get company job count"
   summary: 'Linkedin: get company job count (web)'
   cost:
     type: per_success
@@ -14667,6 +15062,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_company_jobs
+  name: "Get company jobs"
   summary: 'Linkedin: get company jobs (web)'
   cost:
     type: per_success
@@ -14728,6 +15124,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_company_people
+  name: "Get company people"
   summary: 'Linkedin: get company people (web)'
   cost:
     type: per_success
@@ -14757,6 +15154,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_company_posts
+  name: "Get company posts"
   summary: 'Linkedin: get company posts (web)'
   cost:
     type: per_success
@@ -14792,6 +15190,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_company_profile
+  name: "Get company profile"
   summary: 'Linkedin: get company profile (web)'
   cost:
     type: per_success
@@ -14819,6 +15218,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_group_info
+  name: "Get group info"
   summary: 'Linkedin: get group info (web)'
   cost:
     type: per_success
@@ -14836,6 +15236,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_group_posts
+  name: "Get group posts"
   summary: 'Linkedin: get group posts (web)'
   cost:
     type: per_success
@@ -14858,6 +15259,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_job_detail
+  name: "Get job detail"
   summary: 'Linkedin: get job detail (web)'
   cost:
     type: per_success
@@ -14885,6 +15287,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_post_comments
+  name: "Get post comments"
   summary: 'Linkedin: get post comments (web)'
   cost:
     type: per_success
@@ -14922,6 +15325,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_post_detail
+  name: "Get post detail"
   summary: 'Linkedin: get post detail (web)'
   cost:
     type: per_success
@@ -14945,6 +15349,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_post_reactions
+  name: "Get post reactions"
   summary: 'Linkedin: get post reactions (web)'
   cost:
     type: per_success
@@ -14979,6 +15384,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_post_reposts
+  name: "Get post reposts"
   summary: 'Linkedin: get post reposts (web)'
   cost:
     type: per_success
@@ -15012,6 +15418,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_about
+  name: "Get user about"
   summary: 'Linkedin: get user about (web)'
   cost:
     type: per_success
@@ -15034,6 +15441,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_certifications
+  name: "Get user certifications"
   summary: 'Linkedin: get user certifications (web)'
   cost:
     type: per_success
@@ -15063,6 +15471,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_comments
+  name: "Get user comments"
   summary: 'Linkedin: get user comments (web)'
   cost:
     type: per_success
@@ -15096,6 +15505,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_contact
+  name: "Get user contact"
   summary: 'Linkedin: get user contact (web)'
   cost:
     type: per_success
@@ -15116,6 +15526,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_educations
+  name: "Get user educations"
   summary: 'Linkedin: get user educations (web)'
   cost:
     type: per_success
@@ -15145,6 +15556,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_experience
+  name: "Get user experience"
   summary: 'Linkedin: get user experience (web)'
   cost:
     type: per_success
@@ -15174,6 +15586,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_follower_and_connection
+  name: "Get user follower and connection"
   summary: 'Linkedin: get user follower and connection (web)'
   cost:
     type: per_success
@@ -15197,6 +15610,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_honors
+  name: "Get user honors"
   summary: 'Linkedin: get user honors (web)'
   cost:
     type: per_success
@@ -15226,6 +15640,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_images
+  name: "Get user images"
   summary: 'Linkedin: get user images (web)'
   cost:
     type: per_success
@@ -15259,6 +15674,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_interests_companies
+  name: "Get user interests companies"
   summary: 'Linkedin: get user interests companies (web)'
   cost:
     type: per_success
@@ -15288,6 +15704,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_interests_groups
+  name: "Get user interests groups"
   summary: 'Linkedin: get user interests groups (web)'
   cost:
     type: per_success
@@ -15317,6 +15734,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_posts
+  name: "Get user posts"
   summary: 'Linkedin: get user posts (web)'
   cost:
     type: per_success
@@ -15350,6 +15768,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_profile
+  name: "Get user profile"
   summary: 'Linkedin: get user profile (web)'
   cost:
     type: per_success
@@ -15413,6 +15832,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_publications
+  name: "Get user publications"
   summary: 'Linkedin: get user publications (web)'
   cost:
     type: per_success
@@ -15442,6 +15862,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_reactions
+  name: "Get user reactions"
   summary: 'Linkedin: get user reactions (web)'
   cost:
     type: per_success
@@ -15475,6 +15896,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_recommendations
+  name: "Get user recommendations"
   summary: 'Linkedin: get user recommendations (web)'
   cost:
     type: per_success
@@ -15514,6 +15936,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_skills
+  name: "Get user skills"
   summary: 'Linkedin: get user skills (web)'
   cost:
     type: per_success
@@ -15543,6 +15966,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_videos
+  name: "Get user videos"
   summary: 'Linkedin: get user videos (web)'
   cost:
     type: per_success
@@ -15576,6 +16000,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/get_user_volunteers
+  name: "Get user volunteers"
   summary: 'Linkedin: get user volunteers (web)'
   cost:
     type: per_success
@@ -15605,6 +16030,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/search_ads
+  name: "Search ads"
   summary: 'Linkedin: search ads (web)'
   cost:
     type: per_success
@@ -15646,6 +16072,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/search_jobs
+  name: "Search jobs"
   summary: 'Linkedin: search jobs (web)'
   cost:
     type: per_success
@@ -15723,6 +16150,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/search_location
+  name: "Search location"
   summary: 'Linkedin: search location (web)'
   cost:
     type: per_success
@@ -15745,6 +16173,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/search_people
+  name: "Search people"
   summary: 'Linkedin: search people (web)'
   cost:
     type: per_success
@@ -15822,6 +16251,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/search_posts
+  name: "Search posts"
   summary: 'Linkedin: search posts (web)'
   cost:
     type: per_success
@@ -15871,6 +16301,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/search_schools
+  name: "Search schools"
   summary: 'Linkedin: search schools (web)'
   cost:
     type: per_success
@@ -15900,6 +16331,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web/search_suggestion_industry
+  name: "Search suggestion industry"
   summary: 'Linkedin: search suggestion industry (web)'
   cost:
     type: per_success
@@ -15922,6 +16354,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/get_author_articles
+  name: "Get author articles"
   summary: 'Linkedin: get author articles (web_v2)'
   cost:
     type: per_success
@@ -15943,6 +16376,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/get_company_posts
+  name: "Get company posts"
   summary: 'Linkedin: get company posts (web_v2)'
   cost:
     type: per_success
@@ -15972,6 +16406,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/get_company_profile
+  name: "Get company profile"
   summary: 'Linkedin: get company profile (web_v2)'
   cost:
     type: per_success
@@ -15995,6 +16430,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/get_job_detail
+  name: "Get job detail"
   summary: 'Linkedin: get job detail (web_v2)'
   cost:
     type: per_success
@@ -16018,6 +16454,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/get_post_detail
+  name: "Get post detail"
   summary: 'Linkedin: get post detail (web_v2)'
   cost:
     type: per_success
@@ -16041,6 +16478,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/get_user_posts
+  name: "Get user posts"
   summary: 'Linkedin: get user posts (web_v2)'
   cost:
     type: per_success
@@ -16070,6 +16508,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/get_user_profile
+  name: "Get user profile"
   summary: 'Linkedin: get user profile (web_v2)'
   cost:
     type: per_success
@@ -16093,6 +16532,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/search_jobs
+  name: "Search jobs"
   summary: 'Linkedin: search jobs (web_v2)'
   cost:
     type: per_success
@@ -16149,6 +16589,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/search_jobs_by_url
+  name: "Search jobs by url"
   summary: 'Linkedin: search jobs by url (web_v2)'
   cost:
     type: per_success
@@ -16170,6 +16611,7 @@ endpoints:
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/search_users
+  name: "Search users"
   summary: 'Linkedin: search users (web_v2)'
   cost:
     type: per_success
@@ -16197,6 +16639,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_hashtag_detail
+  name: "Fetch hashtag detail"
   summary: 'Pipixia: fetch hashtag detail (app)'
   cost:
     type: per_success
@@ -16220,6 +16663,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_hashtag_post_list
+  name: "Fetch hashtag post list"
   summary: 'Pipixia: fetch hashtag post list (app)'
   cost:
     type: per_success
@@ -16267,6 +16711,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_home_feed
+  name: "Fetch home feed"
   summary: 'Pipixia: fetch home feed (app)'
   cost:
     type: per_success
@@ -16290,6 +16735,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_home_short_drama_feed
+  name: "Fetch home short drama feed"
   summary: 'Pipixia: fetch home short drama feed (app)'
   cost:
     type: per_success
@@ -16313,6 +16759,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_hot_search_board_detail
+  name: "Fetch hot search board detail"
   summary: 'Pipixia: fetch hot search board detail (app)'
   cost:
     type: per_success
@@ -16336,6 +16783,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_hot_search_board_list
+  name: "Fetch hot search board list"
   summary: 'Pipixia: fetch hot search board list (app)'
   cost:
     type: per_success
@@ -16351,6 +16799,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_hot_search_words
+  name: "Fetch hot search words"
   summary: 'Pipixia: fetch hot search words (app)'
   cost:
     type: per_success
@@ -16366,6 +16815,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_increase_post_view_count
+  name: "Fetch increase post view count"
   summary: 'Pipixia: fetch increase post view count (app)'
   cost:
     type: per_success
@@ -16394,6 +16844,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_post_comment_list
+  name: "Fetch post comment list"
   summary: 'Pipixia: fetch post comment list (app)'
   cost:
     type: per_success
@@ -16429,6 +16880,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_post_detail
+  name: "Fetch post detail"
   summary: 'Pipixia: fetch post detail (app)'
   cost:
     type: per_success
@@ -16458,6 +16910,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_post_statistics
+  name: "Fetch post statistics"
   summary: 'Pipixia: fetch post statistics (app)'
   cost:
     type: per_success
@@ -16481,6 +16934,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_search
+  name: "Fetch search"
   summary: 'Pipixia: fetch search (app)'
   cost:
     type: per_success
@@ -16516,6 +16970,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_short_url
+  name: "Fetch short url"
   summary: 'Pipixia: fetch short url (app)'
   cost:
     type: per_success
@@ -16538,6 +16993,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_user_follower_list
+  name: "Fetch user follower list"
   summary: 'Pipixia: fetch user follower list (app)'
   cost:
     type: per_success
@@ -16567,6 +17023,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_user_following_list
+  name: "Fetch user following list"
   summary: 'Pipixia: fetch user following list (app)'
   cost:
     type: per_success
@@ -16596,6 +17053,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_user_info
+  name: "Fetch user info"
   summary: 'Pipixia: fetch user info (app)'
   cost:
     type: per_success
@@ -16619,6 +17077,7 @@ endpoints:
   platform: pipixia
   method: GET
   path: /api/v1/pipixia/app/fetch_user_post_list
+  name: "Fetch user post list"
   summary: 'Pipixia: fetch user post list (app)'
   cost:
     type: per_success
@@ -16654,6 +17113,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/check_subreddit_muted
+  name: "Check subreddit muted"
   summary: 'Reddit: check subreddit muted (app)'
   cost:
     type: per_success
@@ -16682,6 +17142,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_comment_replies
+  name: "Fetch comment replies"
   summary: 'Reddit: fetch comment replies (app)'
   cost:
     type: per_success
@@ -16723,6 +17184,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_community_highlights
+  name: "Fetch community highlights"
   summary: 'Reddit: fetch community highlights (app)'
   cost:
     type: per_success
@@ -16751,6 +17213,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_dynamic_search
+  name: "Fetch dynamic search"
   summary: 'Reddit: fetch dynamic search (app)'
   cost:
     type: per_success
@@ -16814,6 +17277,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_games_feed
+  name: "Fetch games feed"
   summary: 'Reddit: fetch games feed (app)'
   cost:
     type: per_success
@@ -16853,6 +17317,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_home_feed
+  name: "Fetch home feed"
   summary: 'Reddit: fetch home feed (app)'
   cost:
     type: per_success
@@ -16899,6 +17364,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_news_feed
+  name: "Fetch news feed"
   summary: 'Reddit: fetch news feed (app)'
   cost:
     type: per_success
@@ -16934,6 +17400,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_popular_feed
+  name: "Fetch popular feed"
   summary: 'Reddit: fetch popular feed (app)'
   cost:
     type: per_success
@@ -16977,6 +17444,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_post_comments
+  name: "Fetch post comments"
   summary: 'Reddit: fetch post comments (app)'
   cost:
     type: per_success
@@ -17016,6 +17484,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_post_details
+  name: "Fetch post details"
   summary: 'Reddit: fetch post details (app)'
   cost:
     type: per_success
@@ -17055,6 +17524,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_post_details_batch
+  name: "Fetch post details batch"
   summary: 'Reddit: fetch post details batch (app)'
   cost:
     type: per_success
@@ -17094,6 +17564,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_post_details_batch_large
+  name: "Fetch post details batch large"
   summary: 'Reddit: fetch post details batch large (app)'
   cost:
     type: per_success
@@ -17133,6 +17604,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_search_typeahead
+  name: "Fetch search typeahead"
   summary: 'Reddit: fetch search typeahead (app)'
   cost:
     type: per_success
@@ -17174,6 +17646,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_subreddit_feed
+  name: "Fetch subreddit feed"
   summary: 'Reddit: fetch subreddit feed (app)'
   cost:
     type: per_success
@@ -17217,6 +17690,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_subreddit_info
+  name: "Fetch subreddit info"
   summary: 'Reddit: fetch subreddit info (app)'
   cost:
     type: per_success
@@ -17246,6 +17720,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_subreddit_post_channels
+  name: "Fetch subreddit post channels"
   summary: 'Reddit: fetch subreddit post channels (app)'
   cost:
     type: per_success
@@ -17286,6 +17761,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_subreddit_settings
+  name: "Fetch subreddit settings"
   summary: 'Reddit: fetch subreddit settings (app)'
   cost:
     type: per_success
@@ -17314,6 +17790,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_subreddit_style
+  name: "Fetch subreddit style"
   summary: 'Reddit: fetch subreddit style (app)'
   cost:
     type: per_success
@@ -17342,6 +17819,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_trending_searches
+  name: "Fetch trending searches"
   summary: 'Reddit: fetch trending searches (app)'
   cost:
     type: per_success
@@ -17365,6 +17843,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_user_active_subreddits
+  name: "Fetch user active subreddits"
   summary: 'Reddit: fetch user active subreddits (app)'
   cost:
     type: per_success
@@ -17393,6 +17872,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_user_comments
+  name: "Fetch user comments"
   summary: 'Reddit: fetch user comments (app)'
   cost:
     type: per_success
@@ -17438,6 +17918,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_user_posts
+  name: "Fetch user posts"
   summary: 'Reddit: fetch user posts (app)'
   cost:
     type: per_success
@@ -17477,6 +17958,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_user_profile
+  name: "Fetch user profile"
   summary: 'Reddit: fetch user profile (app)'
   cost:
     type: per_success
@@ -17506,6 +17988,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /api/v1/reddit/app/fetch_user_trophies
+  name: "Fetch user trophies"
   summary: 'Reddit: fetch user trophies (app)'
   cost:
     type: per_success
@@ -17534,6 +18017,7 @@ endpoints:
   platform: telegram
   method: GET
   path: /api/v1/telegram/web/batch_channel_info
+  name: "Batch channel info"
   summary: 'Telegram: batch channel info (web)'
   cost:
     type: per_success
@@ -17557,6 +18041,7 @@ endpoints:
   platform: telegram
   method: GET
   path: /api/v1/telegram/web/fetch_channel_info
+  name: "Fetch channel info"
   summary: 'Telegram: fetch channel info (web)'
   cost:
     type: per_success
@@ -17580,6 +18065,7 @@ endpoints:
   platform: telegram
   method: GET
   path: /api/v1/telegram/web/fetch_channel_posts
+  name: "Fetch channel posts"
   summary: 'Telegram: fetch channel posts (web)'
   cost:
     type: per_success
@@ -17621,6 +18107,7 @@ endpoints:
   platform: telegram
   method: GET
   path: /api/v1/telegram/web/fetch_channel_search
+  name: "Fetch channel search"
   summary: 'Telegram: fetch channel search (web)'
   cost:
     type: per_success
@@ -17656,6 +18143,7 @@ endpoints:
   platform: telegram
   method: GET
   path: /api/v1/telegram/web/fetch_post_comments
+  name: "Fetch post comments"
   summary: 'Telegram: fetch post comments (web)'
   cost:
     type: per_success
@@ -17691,6 +18179,7 @@ endpoints:
   platform: telegram
   method: GET
   path: /api/v1/telegram/web/fetch_post_detail
+  name: "Fetch post detail"
   summary: 'Telegram: fetch post detail (web)'
   cost:
     type: per_success
@@ -17720,6 +18209,7 @@ endpoints:
   platform: telegram
   method: GET
   path: /api/v1/telegram/web/fetch_similar_channels
+  name: "Fetch similar channels"
   summary: 'Telegram: fetch similar channels (web)'
   cost:
     type: per_success
@@ -17743,6 +18233,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/fetch_post_comments
+  name: "Fetch post comments"
   summary: 'Threads: fetch post comments (web)'
   cost:
     type: per_success
@@ -17770,6 +18261,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/fetch_post_detail
+  name: "Fetch post detail"
   summary: 'Threads: fetch post detail (web)'
   cost:
     type: per_success
@@ -17793,6 +18285,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/fetch_post_detail_v2
+  name: "Fetch post detail v2"
   summary: 'Threads: fetch post detail v2 (web)'
   cost:
     type: per_success
@@ -17822,6 +18315,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/fetch_user_info
+  name: "Fetch user info"
   summary: 'Threads: fetch user info (web)'
   cost:
     type: per_success
@@ -17845,6 +18339,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/fetch_user_info_by_id
+  name: "Fetch user info by id"
   summary: 'Threads: fetch user info by id (web)'
   cost:
     type: per_success
@@ -17868,6 +18363,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/fetch_user_posts
+  name: "Fetch user posts"
   summary: 'Threads: fetch user posts (web)'
   cost:
     type: per_success
@@ -17895,6 +18391,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/fetch_user_replies
+  name: "Fetch user replies"
   summary: 'Threads: fetch user replies (web)'
   cost:
     type: per_success
@@ -17922,6 +18419,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/fetch_user_reposts
+  name: "Fetch user reposts"
   summary: 'Threads: fetch user reposts (web)'
   cost:
     type: per_success
@@ -17949,6 +18447,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/search_profiles
+  name: "Search profiles"
   summary: 'Threads: search profiles (web)'
   cost:
     type: per_success
@@ -17972,6 +18471,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/search_recent
+  name: "Search recent"
   summary: 'Threads: search recent (web)'
   cost:
     type: per_success
@@ -17999,6 +18499,7 @@ endpoints:
   platform: threads
   method: GET
   path: /api/v1/threads/web/search_top
+  name: "Search top"
   summary: 'Threads: search top (web)'
   cost:
     type: per_success
@@ -18022,8 +18523,9 @@ endpoints:
   example_response: examples/tikhub.x.threads-web-search-top.json
   capability: threads.search.posts
 - id: tikhub.x.tiktok-ads-get-configure-safety
+  kind: utility
   tier: extended
-  platform: tiktok
+  platform: tiktok-ads
   method: GET
   path: /api/v1/tiktok/ads/get_configure_safety
   summary: Get search modules config
@@ -18037,7 +18539,7 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-ads-get-configure-safety.json
 - id: tikhub.x.tiktok-ads-get-location-list
   tier: extended
-  platform: tiktok
+  platform: tiktok-ads
   method: GET
   path: /api/v1/tiktok/ads/get_location_list
   summary: Get supported location list
@@ -18051,7 +18553,7 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-ads-get-location-list.json
 - id: tikhub.x.tiktok-ads-get-query-suggestions
   tier: extended
-  platform: tiktok
+  platform: tiktok-ads
   method: GET
   path: /api/v1/tiktok/ads/get_query_suggestions
   summary: Get query suggestions
@@ -18087,7 +18589,7 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-ads-get-query-suggestions.json
 - id: tikhub.x.tiktok-ads-get-trends-hashtag-detail
   tier: extended
-  platform: tiktok
+  platform: tiktok-ads
   method: GET
   path: /api/v1/tiktok/ads/get_trends_hashtag_detail
   summary: Get trending hashtag detail
@@ -18117,10 +18619,9 @@ endpoints:
       hashtag_id: '7383227119714238469'
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-ads-get-trends-hashtag-detail.json
-  capability: tiktok.hashtag.detail
 - id: tikhub.x.tiktok-ads-get-trends-hashtag-list
   tier: extended
-  platform: tiktok
+  platform: tiktok-ads
   method: GET
   path: /api/v1/tiktok/ads/get_trends_hashtag_list
   summary: Get trending hashtag list
@@ -18159,7 +18660,6 @@ endpoints:
       limit: 5
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-ads-get-trends-hashtag-list.json
-  capability: tiktok.trends.hashtags
 - id: tikhub.x.tiktok-analytics-detect-fake-views
   tier: extended
   platform: tiktok
@@ -18258,6 +18758,7 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-analytics-fetch-video-metrics.json
   capability: tiktok.video.detail
 - id: tikhub.x.tiktok-app-v3-ttencrypt-algorithm
+  kind: utility
   tier: extended
   platform: tiktok
   method: POST
@@ -18317,6 +18818,7 @@ endpoints:
         version_name: 36.4.4
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
 - id: tikhub.x.tiktok-app-v3-add-video-play-count
+  kind: action
   tier: extended
   platform: tiktok
   method: GET
@@ -18396,6 +18898,7 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-app-v3-check-live-room-online-batch.json
   capability: tiktok.live.status
 - id: tikhub.x.tiktok-app-v3-encrypt-decrypt-login-request
+  kind: utility
   tier: extended
   platform: tiktok
   method: POST
@@ -20086,6 +20589,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-app-v3-open-tiktok-app-to-keyword-search.json
 - id: tikhub.x.tiktok-app-v3-open-tiktok-app-to-send-private-message
+  kind: action
   tier: extended
   platform: tiktok
   method: GET
@@ -20775,10 +21279,12 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-shop-web-fetch-shop-id-by-share-link.json
 - id: tikhub.x.tiktok-web-decrypt-strdata
+  kind: utility
   tier: extended
   platform: tiktok
   method: GET
   path: /api/v1/tiktok/web/decrypt_strData
+  name: "Decrypt strData"
   summary: 'Tiktok: Decrypt strData'
   cost:
     type: per_success
@@ -20797,6 +21303,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-decrypt-strdata.json
 - id: tikhub.x.tiktok-web-device-register
+  kind: utility
   tier: extended
   platform: tiktok
   method: GET
@@ -20811,10 +21318,12 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-device-register.json
 - id: tikhub.x.tiktok-web-encrypt-strdata
+  kind: utility
   tier: extended
   platform: tiktok
   method: GET
   path: /api/v1/tiktok/web/encrypt_strData
+  name: "Encrypt strData"
   summary: 'Tiktok: Encrypt strData'
   cost:
     type: per_success
@@ -21002,6 +21511,7 @@ endpoints:
   platform: tiktok
   method: POST
   path: /api/v1/tiktok/web/fetch_home_feed
+  name: "Home Feed"
   summary: 'Tiktok: Home Feed'
   cost:
     type: per_success
@@ -21227,6 +21737,7 @@ endpoints:
   platform: tiktok
   method: GET
   path: /api/v1/tiktok/web/fetch_search_live
+  name: "Search live"
   summary: 'Tiktok: Search live'
   cost:
     type: per_success
@@ -21269,6 +21780,7 @@ endpoints:
   platform: tiktok
   method: GET
   path: /api/v1/tiktok/web/fetch_search_photo
+  name: "Search photo"
   summary: 'Tiktok: Search photo'
   cost:
     type: per_success
@@ -21311,6 +21823,7 @@ endpoints:
   platform: tiktok
   method: GET
   path: /api/v1/tiktok/web/fetch_search_user
+  name: "Search user"
   summary: 'Tiktok: Search user'
   cost:
     type: per_success
@@ -21347,6 +21860,7 @@ endpoints:
   platform: tiktok
   method: GET
   path: /api/v1/tiktok/web/fetch_search_video
+  name: "Search video"
   summary: 'Tiktok: Search video'
   cost:
     type: per_success
@@ -21563,6 +22077,7 @@ endpoints:
   platform: tiktok
   method: GET
   path: /api/v1/tiktok/web/fetch_user_like
+  name: "Get user likes"
   summary: 'Tiktok: Get user likes'
   cost:
     type: per_success
@@ -21735,6 +22250,7 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-web-fetch-user-repost.json
   capability: tiktok.user.reposts
 - id: tikhub.x.tiktok-web-generate-fingerprint
+  kind: utility
   tier: extended
   platform: tiktok
   method: GET
@@ -21754,6 +22270,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-generate-fingerprint.json
 - id: tikhub.x.tiktok-web-generate-hashed-id
+  kind: utility
   tier: extended
   platform: tiktok
   method: GET
@@ -21776,6 +22293,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-generate-hashed-id.json
 - id: tikhub.x.tiktok-web-generate-real-mstoken
+  kind: utility
   tier: extended
   platform: tiktok
   method: GET
@@ -21799,10 +22317,12 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-generate-real-mstoken.json
 - id: tikhub.x.tiktok-web-generate-ttwid
+  kind: utility
   tier: extended
   platform: tiktok
   method: GET
   path: /api/v1/tiktok/web/generate_ttwid
+  name: "Generate ttwid"
   summary: 'Tiktok: Generate ttwid'
   cost:
     type: per_success
@@ -21819,10 +22339,12 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-generate-ttwid.json
 - id: tikhub.x.tiktok-web-generate-webid
+  kind: utility
   tier: extended
   platform: tiktok
   method: GET
   path: /api/v1/tiktok/web/generate_webid
+  name: "Generate web_id"
   summary: 'Tiktok: Generate web_id'
   cost:
     type: per_success
@@ -21856,6 +22378,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-generate-webid.json
 - id: tikhub.x.tiktok-web-generate-wss-xb-signature
+  kind: utility
   tier: extended
   platform: tiktok
   method: GET
@@ -21878,6 +22401,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-generate-wss-xb-signature.json
 - id: tikhub.x.tiktok-web-generate-x-mssdk-info
+  kind: utility
   tier: extended
   platform: tiktok
   method: POST
@@ -21901,10 +22425,12 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-generate-x-mssdk-info.json
 - id: tikhub.x.tiktok-web-generate-xbogus
+  kind: utility
   tier: extended
   platform: tiktok
   method: POST
   path: /api/v1/tiktok/web/generate_xbogus
+  name: "Generate XBogus"
   summary: 'Tiktok: Generate XBogus'
   cost:
     type: per_success
@@ -21931,6 +22457,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-generate-xbogus.json
 - id: tikhub.x.tiktok-web-generate-xgnarly
+  kind: utility
   tier: extended
   platform: tiktok
   method: POST
@@ -21959,6 +22486,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-web-generate-xgnarly.json
 - id: tikhub.x.tiktok-web-generate-xgnarly-and-xbogus
+  kind: utility
   tier: extended
   platform: tiktok
   method: POST
@@ -22375,6 +22903,7 @@ endpoints:
   platform: tiktok-ads
   method: GET
   path: /api/v1/tiktok/ads/search_ads
+  name: "Search ads"
   summary: 'Tiktok: Search ads'
   cost:
     type: per_success
@@ -22853,6 +23382,7 @@ endpoints:
   platform: toutiao
   method: GET
   path: /api/v1/toutiao/app/get_article_info
+  name: "Get article info"
   summary: 'Toutiao: get article info (app)'
   cost:
     type: per_success
@@ -22876,6 +23406,7 @@ endpoints:
   platform: toutiao
   method: GET
   path: /api/v1/toutiao/app/get_comments
+  name: "Get comments"
   summary: 'Toutiao: get comments (app)'
   cost:
     type: per_success
@@ -22905,6 +23436,7 @@ endpoints:
   platform: toutiao
   method: GET
   path: /api/v1/toutiao/app/get_user_id
+  name: "Get user id"
   summary: 'Toutiao: get user id (app)'
   cost:
     type: per_success
@@ -22927,6 +23459,7 @@ endpoints:
   platform: toutiao
   method: GET
   path: /api/v1/toutiao/app/get_user_info
+  name: "Get user info"
   summary: 'Toutiao: get user info (app)'
   cost:
     type: per_success
@@ -22950,6 +23483,7 @@ endpoints:
   platform: toutiao
   method: GET
   path: /api/v1/toutiao/app/get_video_info
+  name: "Get video info"
   summary: 'Toutiao: get video info (app)'
   cost:
     type: per_success
@@ -22973,6 +23507,7 @@ endpoints:
   platform: toutiao
   method: GET
   path: /api/v1/toutiao/web/get_article_info
+  name: "Get article info"
   summary: 'Toutiao: get article info (web)'
   cost:
     type: per_success
@@ -22996,6 +23531,7 @@ endpoints:
   platform: toutiao
   method: GET
   path: /api/v1/toutiao/web/get_video_info
+  name: "Get video info"
   summary: 'Toutiao: get video info (web)'
   cost:
     type: per_success
@@ -23019,6 +23555,7 @@ endpoints:
   platform: web
   method: GET
   path: /api/v1/hybrid/video_data
+  name: "Video data"
   summary: 'Hybrid: video data'
   cost:
     type: per_success
@@ -23050,6 +23587,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_channel_id_to_username
+  name: "Fetch channel id to username"
   summary: 'Wechat channels: fetch channel id to username (v2)'
   cost:
     type: per_success
@@ -23079,6 +23617,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_channel_info
+  name: "Fetch channel info"
   summary: 'Wechat channels: fetch channel info (v2)'
   cost:
     type: per_success
@@ -23109,6 +23648,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_collection_videos
+  name: "Fetch collection videos"
   summary: 'Wechat channels: fetch collection videos (v2)'
   cost:
     type: per_success
@@ -23154,6 +23694,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_live_detail
+  name: "Fetch live detail"
   summary: 'Wechat channels: fetch live detail (v2)'
   cost:
     type: per_success
@@ -23192,6 +23733,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_live_history
+  name: "Fetch live history"
   summary: 'Wechat channels: fetch live history (v2)'
   cost:
     type: per_success
@@ -23229,6 +23771,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_search_channel_videos
+  name: "Fetch search channel videos"
   summary: 'Wechat channels: fetch search channel videos (v2)'
   cost:
     type: per_success
@@ -23264,6 +23807,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_user_collections
+  name: "Fetch user collections"
   summary: 'Wechat channels: fetch user collections (v2)'
   cost:
     type: per_success
@@ -23294,6 +23838,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_user_profile
+  name: "Fetch user profile"
   summary: 'Wechat channels: fetch user profile (v2)'
   cost:
     type: per_success
@@ -23324,6 +23869,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_user_videos
+  name: "Fetch user videos"
   summary: 'Wechat channels: fetch user videos (v2)'
   cost:
     type: per_success
@@ -23357,6 +23903,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_video_comments
+  name: "Fetch video comments"
   summary: 'Wechat channels: fetch video comments (v2)'
   cost:
     type: per_success
@@ -23393,6 +23940,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_video_detail
+  name: "Fetch video detail"
   summary: 'Wechat channels: fetch video detail (v2)'
   cost:
     type: per_success
@@ -23431,6 +23979,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_channels/v2/fetch_video_share_url
+  name: "Fetch video share url"
   summary: 'Wechat channels: fetch video share url (v2)'
   cost:
     type: per_success
@@ -23460,6 +24009,7 @@ endpoints:
   platform: wechat-channels
   method: POST
   path: /api/v1/wechat_search/v2/fetch_search_videos
+  name: "Fetch search videos"
   summary: 'Wechat search: fetch search videos (v2)'
   cost:
     type: per_success
@@ -23509,6 +24059,7 @@ endpoints:
   platform: wechat-mp
   method: POST
   path: /api/v1/wechat_mp/v2/fetch_account_articles
+  name: "Fetch account articles"
   summary: 'Wechat mp: fetch account articles (v2)'
   cost:
     type: per_success
@@ -23549,6 +24100,7 @@ endpoints:
   platform: wechat-mp
   method: POST
   path: /api/v1/wechat_mp/v2/fetch_account_profile
+  name: "Fetch account profile"
   summary: 'Wechat mp: fetch account profile (v2)'
   cost:
     type: per_success
@@ -23579,6 +24131,7 @@ endpoints:
   platform: wechat-mp
   method: POST
   path: /api/v1/wechat_mp/v2/fetch_account_services
+  name: "Fetch account services"
   summary: 'Wechat mp: fetch account services (v2)'
   cost:
     type: per_success
@@ -23607,6 +24160,7 @@ endpoints:
   platform: wechat-mp
   method: POST
   path: /api/v1/wechat_mp/v2/fetch_article_ad
+  name: "Fetch article ad"
   summary: 'Wechat mp: fetch article ad (v2)'
   cost:
     type: per_success
@@ -23637,6 +24191,7 @@ endpoints:
   platform: wechat-mp
   method: POST
   path: /api/v1/wechat_mp/v2/fetch_article_comments
+  name: "Fetch article comments"
   summary: 'Wechat mp: fetch article comments (v2)'
   cost:
     type: per_success
@@ -23670,6 +24225,7 @@ endpoints:
   platform: wechat-mp
   method: POST
   path: /api/v1/wechat_mp/v2/fetch_article_detail
+  name: "Fetch article detail"
   summary: 'Wechat mp: fetch article detail (v2)'
   cost:
     type: per_success
@@ -23700,6 +24256,7 @@ endpoints:
   platform: wechat-mp
   method: POST
   path: /api/v1/wechat_mp/v2/fetch_article_stats
+  name: "Fetch article stats"
   summary: 'Wechat mp: fetch article stats (v2)'
   cost:
     type: per_success
@@ -23730,6 +24287,7 @@ endpoints:
   platform: wechat-mp
   method: POST
   path: /api/v1/wechat_mp/v2/fetch_comment_replies
+  name: "Fetch comment replies"
   summary: 'Wechat mp: fetch comment replies (v2)'
   cost:
     type: per_success
@@ -23772,6 +24330,7 @@ endpoints:
   platform: wechat-mp
   method: POST
   path: /api/v1/wechat_mp/v2/fetch_related_articles
+  name: "Fetch related articles"
   summary: 'Wechat mp: fetch related articles (v2)'
   cost:
     type: per_success
@@ -23802,6 +24361,7 @@ endpoints:
   platform: wechat-search
   method: POST
   path: /api/v1/wechat_search/v2/fetch_search
+  name: "Fetch search"
   summary: 'Wechat search: fetch search (v2)'
   cost:
     type: per_success
@@ -23851,6 +24411,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_ai_smart_search
+  name: "Fetch ai smart search"
   summary: 'Weibo: fetch ai smart search (app)'
   cost:
     type: per_success
@@ -23880,6 +24441,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_home_recommend_feed
+  name: "Fetch home recommend feed"
   summary: 'Weibo: fetch home recommend feed (app)'
   cost:
     type: per_success
@@ -23907,6 +24469,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_hot_search
+  name: "Fetch hot search"
   summary: 'Weibo: fetch hot search (app)'
   cost:
     type: per_success
@@ -23948,6 +24511,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_hot_search_categories
+  name: "Fetch hot search categories"
   summary: 'Weibo: fetch hot search categories (app)'
   cost:
     type: per_success
@@ -23962,6 +24526,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_search_all
+  name: "Fetch search all"
   summary: 'Weibo: fetch search all (app)'
   cost:
     type: per_success
@@ -23997,6 +24562,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_status_comments
+  name: "Fetch status comments"
   summary: 'Weibo: fetch status comments (app)'
   cost:
     type: per_success
@@ -24030,6 +24596,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_status_detail
+  name: "Fetch status detail"
   summary: 'Weibo: fetch status detail (app)'
   cost:
     type: per_success
@@ -24053,6 +24620,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_status_likes
+  name: "Fetch status likes"
   summary: 'Weibo: fetch status likes (app)'
   cost:
     type: per_success
@@ -24082,6 +24650,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_status_reposts
+  name: "Fetch status reposts"
   summary: 'Weibo: fetch status reposts (app)'
   cost:
     type: per_success
@@ -24109,6 +24678,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_user_album
+  name: "Fetch user album"
   summary: 'Weibo: fetch user album (app)'
   cost:
     type: per_success
@@ -24136,6 +24706,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_user_articles
+  name: "Fetch user articles"
   summary: 'Weibo: fetch user articles (app)'
   cost:
     type: per_success
@@ -24163,6 +24734,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_user_audios
+  name: "Fetch user audios"
   summary: 'Weibo: fetch user audios (app)'
   cost:
     type: per_success
@@ -24188,6 +24760,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_user_info
+  name: "Fetch user info"
   summary: 'Weibo: fetch user info (app)'
   cost:
     type: per_success
@@ -24211,6 +24784,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_user_info_detail
+  name: "Fetch user info detail"
   summary: 'Weibo: fetch user info detail (app)'
   cost:
     type: per_success
@@ -24234,6 +24808,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_user_profile_feed
+  name: "Fetch user profile feed"
   summary: 'Weibo: fetch user profile feed (app)'
   cost:
     type: per_success
@@ -24261,6 +24836,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_user_super_topics
+  name: "Fetch user super topics"
   summary: 'Weibo: fetch user super topics (app)'
   cost:
     type: per_success
@@ -24290,6 +24866,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_user_timeline
+  name: "Fetch user timeline"
   summary: 'Weibo: fetch user timeline (app)'
   cost:
     type: per_success
@@ -24331,6 +24908,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_user_videos
+  name: "Fetch user videos"
   summary: 'Weibo: fetch user videos (app)'
   cost:
     type: per_success
@@ -24358,6 +24936,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_video_detail
+  name: "Fetch video detail"
   summary: 'Weibo: fetch video detail (app)'
   cost:
     type: per_success
@@ -24381,6 +24960,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/app/fetch_video_featured_feed
+  name: "Fetch video featured feed"
   summary: 'Weibo: fetch video featured feed (app)'
   cost:
     type: per_success
@@ -24402,6 +24982,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_channel_feed
+  name: "Fetch channel feed"
   summary: 'Weibo: fetch channel feed (web)'
   cost:
     type: per_success
@@ -24431,6 +25012,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_comment_replies
+  name: "Fetch comment replies"
   summary: 'Weibo: fetch comment replies (web)'
   cost:
     type: per_success
@@ -24460,6 +25042,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_config_list
+  name: "Fetch config list"
   summary: 'Weibo: fetch config list (web)'
   cost:
     type: per_success
@@ -24474,6 +25057,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_hot_search
+  name: "Fetch hot search"
   summary: 'Weibo: fetch hot search (web)'
   cost:
     type: per_success
@@ -24489,6 +25073,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_post_comments
+  name: "Fetch post comments"
   summary: 'Weibo: fetch post comments (web)'
   cost:
     type: per_success
@@ -24528,6 +25113,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_post_detail
+  name: "Fetch post detail"
   summary: 'Weibo: fetch post detail (web)'
   cost:
     type: per_success
@@ -24551,6 +25137,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_search
+  name: "Fetch search"
   summary: 'Weibo: fetch search (web)'
   cost:
     type: per_success
@@ -24590,6 +25177,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_search_topics
+  name: "Fetch search topics"
   summary: 'Weibo: fetch search topics (web)'
   cost:
     type: per_success
@@ -24605,6 +25193,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_trend_top
+  name: "Fetch trend top"
   summary: 'Weibo: fetch trend top (web)'
   cost:
     type: per_success
@@ -24634,6 +25223,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_user_info
+  name: "Fetch user info"
   summary: 'Weibo: fetch user info (web)'
   cost:
     type: per_success
@@ -24657,6 +25247,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web/fetch_user_posts
+  name: "Fetch user posts"
   summary: 'Weibo: fetch user posts (web)'
   cost:
     type: per_success
@@ -24690,6 +25281,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/check_allow_comment_with_pic
+  name: "Check allow comment with pic"
   summary: 'Weibo: check allow comment with pic (web_v2)'
   cost:
     type: per_success
@@ -24712,6 +25304,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_advanced_search
+  name: "Fetch advanced search"
   summary: 'Weibo: fetch advanced search (web_v2)'
   cost:
     type: per_success
@@ -24759,6 +25352,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_ai_related_search
+  name: "Fetch ai related search"
   summary: 'Weibo: fetch ai related search (web_v2)'
   cost:
     type: per_success
@@ -24782,6 +25376,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_ai_search
+  name: "Fetch ai search"
   summary: 'Weibo: fetch ai search (web_v2)'
   cost:
     type: per_success
@@ -24805,6 +25400,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_all_groups
+  name: "Fetch all groups"
   summary: 'Weibo: fetch all groups (web_v2)'
   cost:
     type: per_success
@@ -24819,6 +25415,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_city_list
+  name: "Fetch city list"
   summary: 'Weibo: fetch city list (web_v2)'
   cost:
     type: per_success
@@ -24840,6 +25437,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_entertainment_ranking
+  name: "Fetch entertainment ranking"
   summary: 'Weibo: fetch entertainment ranking (web_v2)'
   cost:
     type: per_success
@@ -24855,6 +25453,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_hot_ranking_timeline
+  name: "Fetch hot ranking timeline"
   summary: 'Weibo: fetch hot ranking timeline (web_v2)'
   cost:
     type: per_success
@@ -24896,6 +25495,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_hot_search
+  name: "Fetch hot search"
   summary: 'Weibo: fetch hot search (web_v2)'
   cost:
     type: per_success
@@ -24911,6 +25511,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_hot_search_index
+  name: "Fetch hot search index"
   summary: 'Weibo: fetch hot search index (web_v2)'
   cost:
     type: per_success
@@ -24926,6 +25527,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_hot_search_summary
+  name: "Fetch hot search summary"
   summary: 'Weibo: fetch hot search summary (web_v2)'
   cost:
     type: per_success
@@ -24941,6 +25543,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_life_ranking
+  name: "Fetch life ranking"
   summary: 'Weibo: fetch life ranking (web_v2)'
   cost:
     type: per_success
@@ -24956,6 +25559,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_pic_search
+  name: "Fetch pic search"
   summary: 'Weibo: fetch pic search (web_v2)'
   cost:
     type: per_success
@@ -24985,6 +25589,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_post_comments
+  name: "Fetch post comments"
   summary: 'Weibo: fetch post comments (web_v2)'
   cost:
     type: per_success
@@ -25018,6 +25623,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_post_detail
+  name: "Fetch post detail"
   summary: 'Weibo: fetch post detail (web_v2)'
   cost:
     type: per_success
@@ -25047,6 +25653,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_post_sub_comments
+  name: "Fetch post sub comments"
   summary: 'Weibo: fetch post sub comments (web_v2)'
   cost:
     type: per_success
@@ -25080,6 +25687,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_realtime_search
+  name: "Fetch realtime search"
   summary: 'Weibo: fetch realtime search (web_v2)'
   cost:
     type: per_success
@@ -25109,6 +25717,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_similar_search
+  name: "Fetch similar search"
   summary: 'Weibo: fetch similar search (web_v2)'
   cost:
     type: per_success
@@ -25132,6 +25741,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_social_ranking
+  name: "Fetch social ranking"
   summary: 'Weibo: fetch social ranking (web_v2)'
   cost:
     type: per_success
@@ -25147,6 +25757,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_topic_search
+  name: "Fetch topic search"
   summary: 'Weibo: fetch topic search (web_v2)'
   cost:
     type: per_success
@@ -25176,6 +25787,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_basic_info
+  name: "Fetch user basic info"
   summary: 'Weibo: fetch user basic info (web_v2)'
   cost:
     type: per_success
@@ -25199,6 +25811,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_fans
+  name: "Fetch user fans"
   summary: 'Weibo: fetch user fans (web_v2)'
   cost:
     type: per_success
@@ -25228,6 +25841,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_following
+  name: "Fetch user following"
   summary: 'Weibo: fetch user following (web_v2)'
   cost:
     type: per_success
@@ -25257,6 +25871,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_info
+  name: "Fetch user info"
   summary: 'Weibo: fetch user info (web_v2)'
   cost:
     type: per_success
@@ -25286,6 +25901,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_original_posts
+  name: "Fetch user original posts"
   summary: 'Weibo: fetch user original posts (web_v2)'
   cost:
     type: per_success
@@ -25319,6 +25935,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_posts
+  name: "Fetch user posts"
   summary: 'Weibo: fetch user posts (web_v2)'
   cost:
     type: per_success
@@ -25358,6 +25975,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_recommend_timeline
+  name: "Fetch user recommend timeline"
   summary: 'Weibo: fetch user recommend timeline (web_v2)'
   cost:
     type: per_success
@@ -25411,6 +26029,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_search
+  name: "Fetch user search"
   summary: 'Weibo: fetch user search (web_v2)'
   cost:
     type: per_success
@@ -25487,6 +26106,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_video_collection_detail
+  name: "Fetch user video collection detail"
   summary: 'Weibo: fetch user video collection detail (web_v2)'
   cost:
     type: per_success
@@ -25520,6 +26140,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_video_collection_list
+  name: "Fetch user video collection list"
   summary: 'Weibo: fetch user video collection list (web_v2)'
   cost:
     type: per_success
@@ -25543,6 +26164,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_user_video_list
+  name: "Fetch user video list"
   summary: 'Weibo: fetch user video list (web_v2)'
   cost:
     type: per_success
@@ -25572,6 +26194,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/fetch_video_search
+  name: "Fetch video search"
   summary: 'Weibo: fetch video search (web_v2)'
   cost:
     type: per_success
@@ -25607,6 +26230,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/v1/weibo/web_v2/search_user_posts
+  name: "Search user posts"
   summary: 'Weibo: search user posts (web_v2)'
   cost:
     type: per_success
@@ -25688,6 +26312,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_latest_post_comments
+  name: "Fetch latest post comments"
   summary: 'Twitter: fetch latest post comments (web)'
   cost:
     type: per_success
@@ -25715,6 +26340,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_post_comments
+  name: "Fetch post comments"
   summary: 'Twitter: fetch post comments (web)'
   cost:
     type: per_success
@@ -25742,6 +26368,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_retweet_user_list
+  name: "Fetch retweet user list"
   summary: 'Twitter: fetch retweet user list (web)'
   cost:
     type: per_success
@@ -25769,6 +26396,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_search_timeline
+  name: "Fetch search timeline"
   summary: 'Twitter: fetch search timeline (web)'
   cost:
     type: per_success
@@ -25802,6 +26430,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_trending
+  name: "Fetch trending"
   summary: 'Twitter: fetch trending (web)'
   cost:
     type: per_success
@@ -25825,6 +26454,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_tweet_detail
+  name: "Fetch tweet detail"
   summary: 'Twitter: fetch tweet detail (web)'
   cost:
     type: per_success
@@ -25848,6 +26478,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_user_followers
+  name: "Fetch user followers"
   summary: 'Twitter: fetch user followers (web)'
   cost:
     type: per_success
@@ -25875,6 +26506,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_user_followings
+  name: "Fetch user followings"
   summary: 'Twitter: fetch user followings (web)'
   cost:
     type: per_success
@@ -25902,6 +26534,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_user_media
+  name: "Fetch user media"
   summary: 'Twitter: fetch user media (web)'
   cost:
     type: per_success
@@ -25935,6 +26568,7 @@ endpoints:
   platform: x
   method: GET
   path: /api/v1/twitter/web/fetch_user_tweet_replies
+  name: "Fetch user tweet replies"
   summary: 'Twitter: fetch user tweet replies (web)'
   cost:
     type: per_success
@@ -25962,6 +26596,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_creator_hot_inspiration_feed
+  name: "Get creator hot inspiration feed (app_v2)"
   summary: 'Xiaohongshu: get creator hot inspiration feed (app_v2)'
   cost:
     type: per_success
@@ -25983,6 +26618,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_creator_inspiration_feed
+  name: "Get creator inspiration feed (app_v2)"
   summary: 'Xiaohongshu: get creator inspiration feed (app_v2)'
   cost:
     type: per_success
@@ -26016,6 +26652,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_image_note_detail
+  name: "Get image note detail (app_v2)"
   summary: 'Xiaohongshu: get image note detail (app_v2)'
   cost:
     type: per_success
@@ -26045,6 +26682,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_note_comments
+  name: "Get note comments (app_v2)"
   summary: 'Xiaohongshu: get note comments (app_v2)'
   cost:
     type: per_success
@@ -26096,6 +26734,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_note_sub_comments
+  name: "Get note sub comments (app_v2)"
   summary: 'Xiaohongshu: get note sub comments (app_v2)'
   cost:
     type: per_success
@@ -26141,6 +26780,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_product_detail
+  name: "Get product detail (app_v2)"
   summary: 'Xiaohongshu: get product detail (app_v2)'
   cost:
     type: per_success
@@ -26176,6 +26816,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_product_recommendations
+  name: "Get product recommendations (app_v2)"
   summary: 'Xiaohongshu: get product recommendations (app_v2)'
   cost:
     type: per_success
@@ -26209,6 +26850,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_product_review_overview
+  name: "Get product review overview (app_v2)"
   summary: 'Xiaohongshu: get product review overview (app_v2)'
   cost:
     type: per_success
@@ -26238,6 +26880,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_product_reviews
+  name: "Get product reviews (app_v2)"
   summary: 'Xiaohongshu: get product reviews (app_v2)'
   cost:
     type: per_success
@@ -26285,6 +26928,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_topic_feed
+  name: "Get topic feed (app_v2)"
   summary: 'Xiaohongshu: get topic feed (app_v2)'
   cost:
     type: per_success
@@ -26340,6 +26984,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_topic_info
+  name: "Get topic info (app_v2)"
   summary: 'Xiaohongshu: get topic info (app_v2)'
   cost:
     type: per_success
@@ -26373,6 +27018,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_user_faved_notes
+  name: "Get user faved notes (app_v2)"
   summary: 'Xiaohongshu: get user faved notes (app_v2)'
   cost:
     type: per_success
@@ -26406,6 +27052,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_user_info
+  name: "Get user info (app_v2)"
   summary: 'Xiaohongshu: get user info (app_v2)'
   cost:
     type: per_success
@@ -26435,6 +27082,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_user_posted_notes
+  name: "Get user posted notes (app_v2)"
   summary: 'Xiaohongshu: get user posted notes (app_v2)'
   cost:
     type: per_success
@@ -26468,6 +27116,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/get_video_note_detail
+  name: "Get video note detail (app_v2)"
   summary: 'Xiaohongshu: get video note detail (app_v2)'
   cost:
     type: per_success
@@ -26497,6 +27146,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/search_groups
+  name: "Search groups (app_v2)"
   summary: 'Xiaohongshu: search groups (app_v2)'
   cost:
     type: per_success
@@ -26542,6 +27192,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/search_images
+  name: "Search images (app_v2)"
   summary: 'Xiaohongshu: search images (app_v2)'
   cost:
     type: per_success
@@ -26589,6 +27240,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/search_notes
+  name: "Search notes (app_v2)"
   summary: 'Xiaohongshu: search notes (app_v2)'
   cost:
     type: per_success
@@ -26656,6 +27308,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/search_products
+  name: "Search products (app_v2)"
   summary: 'Xiaohongshu: search products (app_v2)'
   cost:
     type: per_success
@@ -26695,6 +27348,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/app_v2/search_users
+  name: "Search users (app_v2)"
   summary: 'Xiaohongshu: search users (app_v2)'
   cost:
     type: per_success
@@ -26734,6 +27388,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_core_data
+  name: "Get blogger core data (pgy)"
   summary: 'Xiaohongshu: get blogger core data (pgy)'
   cost:
     type: per_success
@@ -26771,6 +27426,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_data_summary
+  name: "Get blogger data summary (pgy)"
   summary: 'Xiaohongshu: get blogger data summary (pgy)'
   cost:
     type: per_success
@@ -26796,6 +27452,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_detail
+  name: "Get blogger detail (pgy)"
   summary: 'Xiaohongshu: get blogger detail (pgy)'
   cost:
     type: per_success
@@ -26821,6 +27478,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_fans_history
+  name: "Get blogger fans history (pgy)"
   summary: 'Xiaohongshu: get blogger fans history (pgy)'
   cost:
     type: per_success
@@ -26850,6 +27508,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_fans_profile
+  name: "Get blogger fans profile (pgy)"
   summary: 'Xiaohongshu: get blogger fans profile (pgy)'
   cost:
     type: per_success
@@ -26875,6 +27534,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_fans_summary
+  name: "Get blogger fans summary (pgy)"
   summary: 'Xiaohongshu: get blogger fans summary (pgy)'
   cost:
     type: per_success
@@ -26900,6 +27560,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_list
+  name: "Get blogger list (pgy)"
   summary: 'Xiaohongshu: get blogger list (pgy)'
   cost:
     type: per_success
@@ -26941,6 +27602,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_notes
+  name: "Get blogger notes (pgy)"
   summary: 'Xiaohongshu: get blogger notes (pgy)'
   cost:
     type: per_success
@@ -26986,6 +27648,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_blogger_notes_rate
+  name: "Get blogger notes rate (pgy)"
   summary: 'Xiaohongshu: get blogger notes rate (pgy)'
   cost:
     type: per_success
@@ -27023,6 +27686,7 @@ endpoints:
   platform: xiaohongshu-pugongying
   method: POST
   path: /api/v1/xiaohongshu/pgy/get_note_detail
+  name: "Get note detail (pgy)"
   summary: 'Xiaohongshu: get note detail (pgy)'
   cost:
     type: per_success
@@ -27048,6 +27712,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/web_v3/fetch_homefeed
+  name: "Fetch homefeed (web_v3)"
   summary: 'Xiaohongshu: fetch homefeed (web_v3)'
   cost:
     type: per_success
@@ -27086,6 +27751,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/web_v3/fetch_homefeed_categories
+  name: "Fetch homefeed categories (web_v3)"
   summary: 'Xiaohongshu: fetch homefeed categories (web_v3)'
   cost:
     type: per_success
@@ -27100,6 +27766,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/web_v3/fetch_hot_list
+  name: "Fetch hot list (web_v3)"
   summary: 'Xiaohongshu: fetch hot list (web_v3)'
   cost:
     type: per_success
@@ -27115,6 +27782,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/web_v3/fetch_note_detail
+  name: "Fetch note detail (web_v3)"
   summary: 'Xiaohongshu: fetch note detail (web_v3)'
   cost:
     type: per_success
@@ -27144,6 +27812,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/web_v3/fetch_search_suggest
+  name: "Fetch search suggest (web_v3)"
   summary: 'Xiaohongshu: fetch search suggest (web_v3)'
   cost:
     type: per_success
@@ -27167,6 +27836,7 @@ endpoints:
   platform: xiaohongshu
   method: GET
   path: /api/v1/xiaohongshu/web_v3/fetch_user_info
+  name: "Fetch user info (web_v3)"
   summary: 'Xiaohongshu: fetch user info (web_v3)'
   cost:
     type: per_success
@@ -27190,6 +27860,7 @@ endpoints:
   platform: xigua
   method: GET
   path: /api/v1/xigua/app/v2/fetch_one_video
+  name: "Fetch one video (app/v2)"
   summary: 'Xigua: fetch one video (app/v2)'
   cost:
     type: per_success
@@ -27213,6 +27884,7 @@ endpoints:
   platform: xigua
   method: GET
   path: /api/v1/xigua/app/v2/fetch_one_video_play_url
+  name: "Fetch one video play url (app/v2)"
   summary: 'Xigua: fetch one video play url (app/v2)'
   cost:
     type: per_success
@@ -27236,6 +27908,7 @@ endpoints:
   platform: xigua
   method: GET
   path: /api/v1/xigua/app/v2/fetch_one_video_v2
+  name: "Fetch one video v2 (app/v2)"
   summary: 'Xigua: fetch one video v2 (app/v2)'
   cost:
     type: per_success
@@ -27257,6 +27930,7 @@ endpoints:
   platform: xigua
   method: GET
   path: /api/v1/xigua/app/v2/fetch_user_info
+  name: "Fetch user info (app/v2)"
   summary: 'Xigua: fetch user info (app/v2)'
   cost:
     type: per_success
@@ -27280,6 +27954,7 @@ endpoints:
   platform: xigua
   method: GET
   path: /api/v1/xigua/app/v2/fetch_user_post_list
+  name: "Fetch user post list (app/v2)"
   summary: 'Xigua: fetch user post list (app/v2)'
   cost:
     type: per_success
@@ -27307,6 +27982,7 @@ endpoints:
   platform: xigua
   method: GET
   path: /api/v1/xigua/app/v2/fetch_video_comment_list
+  name: "Fetch video comment list (app/v2)"
   summary: 'Xigua: fetch video comment list (app/v2)'
   cost:
     type: per_success
@@ -27341,6 +28017,7 @@ endpoints:
   platform: xigua
   method: GET
   path: /api/v1/xigua/app/v2/search_video
+  name: "Search video (app/v2)"
   summary: 'Xigua: search video (app/v2)'
   cost:
     type: per_success
@@ -27381,6 +28058,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_channel_id
+  name: "Get channel id"
   summary: 'Youtube: get channel id (web)'
   cost:
     type: per_success
@@ -27403,6 +28081,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_channel_id_v2
+  name: "Get channel id v2"
   summary: 'Youtube: get channel id v2 (web)'
   cost:
     type: per_success
@@ -27425,6 +28104,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_channel_info
+  name: "Get channel info"
   summary: 'Youtube: get channel info (web)'
   cost:
     type: per_success
@@ -27448,6 +28128,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_channel_short_videos
+  name: "Get channel short videos"
   summary: 'Youtube: get channel short videos (web)'
   cost:
     type: per_success
@@ -27475,6 +28156,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_channel_url
+  name: "Get channel url"
   summary: 'Youtube: get channel url (web)'
   cost:
     type: per_success
@@ -27497,6 +28179,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_channel_videos_v2
+  name: "Get channel videos v2"
   summary: 'Youtube: get channel videos v2 (web)'
   cost:
     type: per_success
@@ -27540,6 +28223,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_relate_video
+  name: "Get relate video"
   summary: 'Youtube: get relate video (web)'
   cost:
     type: per_success
@@ -27567,6 +28251,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_trending_videos
+  name: "Get trending videos"
   summary: 'Youtube: get trending videos (web)'
   cost:
     type: per_success
@@ -27599,6 +28284,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_video_info
+  name: "Get video info"
   summary: 'Youtube: get video info (web)'
   cost:
     type: per_success
@@ -27651,6 +28337,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/get_video_subtitles
+  name: "Get video subtitles"
   summary: 'Youtube: get video subtitles (web)'
   cost:
     type: per_success
@@ -27688,6 +28375,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/search_channel
+  name: "Search channel"
   summary: 'Youtube: search channel (web)'
   cost:
     type: per_success
@@ -27731,6 +28419,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web/search_video
+  name: "Search video"
   summary: 'Youtube: search video (web)'
   cost:
     type: per_success
@@ -27773,6 +28462,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_channel_community_posts
+  name: "Get channel community posts"
   summary: 'Youtube: get channel community posts (web_v2)'
   cost:
     type: per_success
@@ -27817,6 +28507,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_channel_description
+  name: "Get channel description"
   summary: 'Youtube: get channel description (web_v2)'
   cost:
     type: per_success
@@ -27861,6 +28552,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_channel_id
+  name: "Get channel id"
   summary: 'Youtube: get channel id (web_v2)'
   cost:
     type: per_success
@@ -27883,6 +28575,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_channel_shorts
+  name: "Get channel shorts"
   summary: 'Youtube: get channel shorts (web_v2)'
   cost:
     type: per_success
@@ -27921,6 +28614,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_channel_url
+  name: "Get channel url"
   summary: 'Youtube: get channel url (web_v2)'
   cost:
     type: per_success
@@ -27943,6 +28637,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_general_search
+  name: "Get general search"
   summary: 'Youtube: get general search (web_v2)'
   cost:
     type: per_success
@@ -28005,6 +28700,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_post_comment_replies
+  name: "Get post comment replies"
   summary: 'Youtube: get post comment replies (web_v2)'
   cost:
     type: per_success
@@ -28037,6 +28733,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_post_comments
+  name: "Get post comments"
   summary: 'Youtube: get post comments (web_v2)'
   cost:
     type: per_success
@@ -28081,6 +28778,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_post_detail
+  name: "Get post detail"
   summary: 'Youtube: get post detail (web_v2)'
   cost:
     type: per_success
@@ -28121,6 +28819,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_related_videos
+  name: "Get related videos"
   summary: 'Youtube: get related videos (web_v2)'
   cost:
     type: per_success
@@ -28155,6 +28854,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_search_suggestions
+  name: "Get search suggestions"
   summary: 'Youtube: get search suggestions (web_v2)'
   cost:
     type: per_success
@@ -28190,6 +28890,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_shorts_search
+  name: "Get shorts search"
   summary: 'Youtube: get shorts search (web_v2)'
   cost:
     type: per_success
@@ -28249,6 +28950,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_shorts_search_v2
+  name: "Get shorts search v2"
   summary: 'Youtube: get shorts search v2 (web_v2)'
   cost:
     type: per_success
@@ -28284,6 +28986,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_signed_stream_url
+  name: "Get signed stream url"
   summary: 'Youtube: get signed stream url (web_v2)'
   cost:
     type: per_success
@@ -28319,6 +29022,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_video_captions
+  name: "Get video captions"
   summary: 'Youtube: get video captions (web_v2)'
   cost:
     type: per_success
@@ -28365,6 +29069,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_video_captions_result
+  name: "Get video captions result"
   summary: 'Youtube: get video captions result (web_v2)'
   cost:
     type: free
@@ -28397,6 +29102,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_video_comment_replies
+  name: "Get video comment replies"
   summary: 'Youtube: get video comment replies (web_v2)'
   cost:
     type: per_success
@@ -28429,6 +29135,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_video_info
+  name: "Get video info"
   summary: 'Youtube: get video info (web_v2)'
   cost:
     type: per_success
@@ -28463,6 +29170,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_video_info_v2
+  name: "Get video info v2"
   summary: 'Youtube: get video info v2 (web_v2)'
   cost:
     type: per_success
@@ -28497,6 +29205,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_video_streams
+  name: "Get video streams"
   summary: 'Youtube: get video streams (web_v2)'
   cost:
     type: per_success
@@ -28526,6 +29235,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/get_video_streams_v2
+  name: "Get video streams v2"
   summary: 'Youtube: get video streams v2 (web_v2)'
   cost:
     type: per_success
@@ -28555,6 +29265,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /api/v1/youtube/web_v2/search_channels
+  name: "Search channels"
   summary: 'Youtube: search channels (web_v2)'
   cost:
     type: per_success
@@ -28587,6 +29298,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_ai_search_stream
+  name: "Fetch ai search stream"
   summary: 'Zhihu: fetch ai search stream (web)'
   cost:
     type: per_success
@@ -28613,6 +29325,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_answer_detail
+  name: "Fetch answer detail"
   summary: 'Zhihu: fetch answer detail (web)'
   cost:
     type: per_success
@@ -28630,6 +29343,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_article_search_v3
+  name: "Fetch article search v3"
   summary: 'Zhihu: fetch article search v3 (web)'
   cost:
     type: per_success
@@ -28687,6 +29401,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_column_article_detail
+  name: "Fetch column article detail"
   summary: 'Zhihu: fetch column article detail (web)'
   cost:
     type: per_success
@@ -28704,6 +29419,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_column_articles
+  name: "Fetch column articles"
   summary: 'Zhihu: fetch column articles (web)'
   cost:
     type: per_success
@@ -28731,6 +29447,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_column_comment_config
+  name: "Fetch column comment config"
   summary: 'Zhihu: fetch column comment config (web)'
   cost:
     type: per_success
@@ -28748,6 +29465,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_column_recommend
+  name: "Fetch column recommend"
   summary: 'Zhihu: fetch column recommend (web)'
   cost:
     type: per_success
@@ -28775,6 +29493,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_column_relationship
+  name: "Fetch column relationship"
   summary: 'Zhihu: fetch column relationship (web)'
   cost:
     type: per_success
@@ -28792,6 +29511,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_column_search_v3
+  name: "Fetch column search v3"
   summary: 'Zhihu: fetch column search v3 (web)'
   cost:
     type: per_success
@@ -28823,6 +29543,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_comment_v5
+  name: "Fetch comment v5"
   summary: 'Zhihu: fetch comment v5 (web)'
   cost:
     type: per_success
@@ -28854,6 +29575,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_ebook_search_v3
+  name: "Fetch ebook search v3"
   summary: 'Zhihu: fetch ebook search v3 (web)'
   cost:
     type: per_success
@@ -28885,6 +29607,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_hot_list
+  name: "Fetch hot list"
   summary: 'Zhihu: fetch hot list (web)'
   cost:
     type: per_success
@@ -28912,6 +29635,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_hot_recommend
+  name: "Fetch hot recommend"
   summary: 'Zhihu: fetch hot recommend (web)'
   cost:
     type: per_success
@@ -28943,6 +29667,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_pin_comments
+  name: "Fetch pin comments"
   summary: 'Zhihu: fetch pin comments (web)'
   cost:
     type: per_success
@@ -28977,6 +29702,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_pin_detail
+  name: "Fetch pin detail"
   summary: 'Zhihu: fetch pin detail (web)'
   cost:
     type: per_success
@@ -28994,6 +29720,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_preset_search
+  name: "Fetch preset search"
   summary: 'Zhihu: fetch preset search (web)'
   cost:
     type: per_success
@@ -29009,6 +29736,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_question_answers
+  name: "Fetch question answers"
   summary: 'Zhihu: fetch question answers (web)'
   cost:
     type: per_success
@@ -29049,6 +29777,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_question_detail
+  name: "Fetch question detail"
   summary: 'Zhihu: fetch question detail (web)'
   cost:
     type: per_success
@@ -29066,6 +29795,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_recommend_followees
+  name: "Fetch recommend followees"
   summary: 'Zhihu: fetch recommend followees (web)'
   cost:
     type: per_success
@@ -29080,6 +29810,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_salt_search_v3
+  name: "Fetch salt search v3"
   summary: 'Zhihu: fetch salt search v3 (web)'
   cost:
     type: per_success
@@ -29111,6 +29842,7 @@ endpoints:
   platform: zhihu
   method: POST
   path: /api/v1/zhihu/web/fetch_scholar_search_v3
+  name: "Fetch scholar search v3"
   summary: 'Zhihu: fetch scholar search v3 (web)'
   cost:
     type: per_success
@@ -29143,6 +29875,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_search_recommend
+  name: "Fetch search recommend"
   summary: 'Zhihu: fetch search recommend (web)'
   cost:
     type: per_success
@@ -29158,6 +29891,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_search_suggest
+  name: "Fetch search suggest"
   summary: 'Zhihu: fetch search suggest (web)'
   cost:
     type: per_success
@@ -29175,6 +29909,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_sub_comment_v5
+  name: "Fetch sub comment v5"
   summary: 'Zhihu: fetch sub comment v5 (web)'
   cost:
     type: per_success
@@ -29206,6 +29941,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_topic_search_v3
+  name: "Fetch topic search v3"
   summary: 'Zhihu: fetch topic search v3 (web)'
   cost:
     type: per_success
@@ -29233,6 +29969,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_answers
+  name: "Fetch user answers"
   summary: 'Zhihu: fetch user answers (web)'
   cost:
     type: per_success
@@ -29268,6 +30005,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_articles
+  name: "Fetch user articles"
   summary: 'Zhihu: fetch user articles (web)'
   cost:
     type: per_success
@@ -29303,6 +30041,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_collections
+  name: "Fetch user collections"
   summary: 'Zhihu: fetch user collections (web)'
   cost:
     type: per_success
@@ -29330,6 +30069,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_follow_collections
+  name: "Fetch user follow collections"
   summary: 'Zhihu: fetch user follow collections (web)'
   cost:
     type: per_success
@@ -29357,6 +30097,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_follow_columns
+  name: "Fetch user follow columns"
   summary: 'Zhihu: fetch user follow columns (web)'
   cost:
     type: per_success
@@ -29384,6 +30125,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_follow_questions
+  name: "Fetch user follow questions"
   summary: 'Zhihu: fetch user follow questions (web)'
   cost:
     type: per_success
@@ -29411,6 +30153,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_follow_topics
+  name: "Fetch user follow topics"
   summary: 'Zhihu: fetch user follow topics (web)'
   cost:
     type: per_success
@@ -29438,6 +30181,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_followees
+  name: "Fetch user followees"
   summary: 'Zhihu: fetch user followees (web)'
   cost:
     type: per_success
@@ -29465,6 +30209,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_followers
+  name: "Fetch user followers"
   summary: 'Zhihu: fetch user followers (web)'
   cost:
     type: per_success
@@ -29492,6 +30237,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_included_articles
+  name: "Fetch user included articles"
   summary: 'Zhihu: fetch user included articles (web)'
   cost:
     type: per_success
@@ -29519,6 +30265,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_info
+  name: "Fetch user info"
   summary: 'Zhihu: fetch user info (web)'
   cost:
     type: per_success
@@ -29536,6 +30283,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_pins
+  name: "Fetch user pins"
   summary: 'Zhihu: fetch user pins (web)'
   cost:
     type: per_success
@@ -29563,6 +30311,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_search_v3
+  name: "Fetch user search v3"
   summary: 'Zhihu: fetch user search v3 (web)'
   cost:
     type: per_success
@@ -29590,6 +30339,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_user_segments
+  name: "Fetch user segments"
   summary: 'Zhihu: fetch user segments (web)'
   cost:
     type: per_success
@@ -29622,6 +30372,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_video_list
+  name: "Fetch video list"
   summary: 'Zhihu: fetch video list (web)'
   cost:
     type: per_success
@@ -29649,6 +30400,7 @@ endpoints:
   platform: zhihu
   method: GET
   path: /api/v1/zhihu/web/fetch_video_search_v3
+  name: "Fetch video search v3"
   summary: 'Zhihu: fetch video search v3 (web)'
   cost:
     type: per_success

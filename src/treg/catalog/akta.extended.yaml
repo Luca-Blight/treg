@@ -99,6 +99,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/alternative-data/website-traffic
 
   - id: akta.x.company-addition
+    kind: account
     tier: extended
     platform: companies
     method: POST
@@ -116,6 +117,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/supporting-apis/company-addition-api
 
   - id: akta.x.request-status
+    kind: utility
     tier: extended
     platform: companies
     method: GET

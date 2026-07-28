@@ -51,7 +51,7 @@ endpoints:
     platform: people
     method: POST
     path: /v1/people/b2b-profile
-    name: "Find a profile URL from an email (reverse lookup)"
+    name: "Find profile URL from email"
     summary: "Performs reverse email lookup to identify professional profile URLs associated with work or personal email addresses"
     input:
       bodyType: json
@@ -126,7 +126,7 @@ endpoints:
     platform: people
     method: POST
     path: /v1/people/role-finder
-    name: "Find a person at a company by job title"
+    name: "Find one person by job title"
     summary: "Locates a person at a company based on their job title, enabling targeted outreach for account-based marketing campaigns and other role-specific needs"
     input:
       bodyType: json
@@ -346,7 +346,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v1/jobs/jobs-finder
-    name: "Search job listings (v1)"
+    name: "Search job listings (basic)"
     summary: "Search for job listings filtered by company, job details, location, and posting date. Returns paginated results with company information and job descriptions"
     input:
       bodyType: json
@@ -376,7 +376,7 @@ endpoints:
 
   - id: leadmagic.x.google-ads-search
     tier: extended
-    platform: companies
+    platform: google-ads
     method: POST
     path: /v1/ads/google-ads-search
     name: "Search a company's Google Ads"
@@ -400,7 +400,7 @@ endpoints:
 
   - id: leadmagic.x.meta-ads-search
     tier: extended
-    platform: companies
+    platform: meta-ads
     method: POST
     path: /v1/ads/meta-ads-search
     name: "Search a company's Meta (Facebook/Instagram) ads"
@@ -427,7 +427,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v1/ads/b2b-ads-search
-    name: "Search a company's B2B ads"
+    name: "Search a company's LinkedIn ads"
     summary: "Retrieves B2B advertisements for a company, returning ad creatives with metadata including headlines, CTAs, landing pages, and performance metrics"
     input:
       bodyType: json

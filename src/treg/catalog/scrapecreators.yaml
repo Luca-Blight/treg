@@ -9,6 +9,7 @@ pricing_url: https://scrapecreators.com/pricing
 endpoints:
   # --- Account ------------------------------------------------------------------------------
   - id: scrapecreators.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: any_account

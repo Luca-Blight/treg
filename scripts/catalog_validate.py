@@ -45,6 +45,9 @@ SCOPES = {"any_account", "own_account"}
 METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 COST_TYPES = {"per_call", "per_result", "per_success", "free", "quota_rows"}
 TIERS = {"core", "extended"}
+# what an endpoint IS (marketplace browse surface vs. plumbing). Optional — absent reads as "data" —
+# but a stated one must be from this set. See docs/context/architecture/catalog.md.
+KINDS = {"data", "action", "account", "utility"}
 # the section heading an endpoint files under on its platform page — one lowercase word
 DOMAIN = re.compile(r"[a-z][a-z0-9_]*")
 REQUIRED = {
@@ -165,6 +168,9 @@ def main(argv: list[str]) -> int:
             dom = ep.get("domain")
             if dom is not None and not DOMAIN.fullmatch(str(dom)):
                 fail(errors, where, f"domain '{dom}' must be a single lowercase word (a-z0-9_)")
+            # `kind` is optional (absent ⇒ data); a stated one must be a known kind
+            if ep.get("kind") is not None and ep.get("kind") not in KINDS:
+                fail(errors, where, f"kind '{ep.get('kind')}' not one of {sorted(KINDS)}")
             if ep.get("scope", "any_account") not in SCOPES:
                 fail(errors, where, f"bad scope '{ep.get('scope')}'")
             if ep.get("method") not in METHODS:

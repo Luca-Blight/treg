@@ -412,6 +412,7 @@ endpoints:
   # cannot pay for. It is also the correct credential health-check — it answers 20000 for a valid
   # key even while the account is still pending verification and every billable call 403s.
   - id: dataforseo.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

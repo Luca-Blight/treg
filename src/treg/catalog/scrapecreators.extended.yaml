@@ -25,6 +25,7 @@ source:
   - https://docs.scrapecreators.com/openapi.json
 endpoints:
 - id: scrapecreators.x.v1-account-credit-balance
+  kind: account
   tier: extended
   platform: account
   capability: account.usage
@@ -41,6 +42,7 @@ endpoints:
   example_response: examples/scrapecreators.x.v1-account-credit-balance.json
   observed_time: 1.09
 - id: scrapecreators.x.v1-account-get-api-usage
+  kind: account
   tier: extended
   platform: account
   method: GET
@@ -72,6 +74,7 @@ endpoints:
   example_response: examples/scrapecreators.x.v1-account-get-api-usage.json
   observed_time: 1.15
 - id: scrapecreators.x.v1-account-get-daily-usage-count
+  kind: account
   tier: extended
   platform: account
   method: GET
@@ -85,6 +88,7 @@ endpoints:
   example_response: examples/scrapecreators.x.v1-account-get-daily-usage-count.json
   observed_time: 1.09
 - id: scrapecreators.x.v1-account-get-most-used-routes
+  kind: account
   tier: extended
   platform: account
   method: GET
@@ -196,7 +200,7 @@ endpoints:
   platform: apple-music
   method: GET
   path: /v1/apple-music/search
-  name: Search Apple Music Search
+  name: "Search Apple Music"
   summary: Searches Apple Music and returns public result sections for artists, albums, songs, playlists, stations, and music videos.
   cost:
     type: per_call
@@ -325,6 +329,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
   capability: bluesky.user.posts
 - id: scrapecreators.x.v1-detect-age-gender
+  kind: utility
   tier: extended
   platform: web
   method: GET
@@ -352,7 +357,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /v1/facebook/adLibrary/ad
-  name: Get Facebook ad library Ad Details
+  name: "Get Facebook Ad Details"
   summary: Retrieves detailed information about a specific Facebook ad by its ID or URL.
   cost:
     type: per_call
@@ -390,7 +395,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /v1/facebook/adLibrary/ad/transcript
-  name: Get Facebook ad library Ad Transcript
+  name: "Get Facebook Ad Transcript"
   summary: Retrieves a transcript for a single Facebook Ad Library video ad by ID or URL.
   cost:
     type: per_call
@@ -424,7 +429,7 @@ endpoints:
   capability: meta-ads.library.advertiser
   method: GET
   path: /v1/facebook/adLibrary/company/ads
-  name: List Facebook ad library Company Ads
+  name: "List Facebook Company Ads"
   summary: Fetches all ads currently running for a specific company from the Meta Ad Library.
   cost:
     type: per_call
@@ -498,7 +503,7 @@ endpoints:
   capability: meta-ads.library.search
   method: GET
   path: /v1/facebook/adLibrary/search/ads
-  name: Search Facebook ad library Search
+  name: "Search Facebook Ads"
   summary: Searches the Meta Ad Library by keyword and returns matching ads.
   cost:
     type: per_call
@@ -571,7 +576,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /v1/facebook/adLibrary/search/companies
-  name: Search Facebook ad library for Companies
+  name: "Search Facebook Ad Library Companies"
   summary: Searches for companies by name in the Meta Ad Library and returns their page IDs for use with other ad library endpoints.
   cost:
     type: per_call
@@ -625,7 +630,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /v1/facebook/events
-  name: List Facebook events in a city
+  name: "List Facebook Events by City"
   summary: Get the events of a city.
   cost:
     type: per_call
@@ -1560,10 +1565,10 @@ endpoints:
   capability: github.user.repos
 - id: scrapecreators.x.v1-google-ad
   tier: extended
-  platform: google
+  platform: google-ads
   method: GET
   path: /v1/google/ad
-  name: Get Google ad library Ad Details
+  name: "Get Google Ad Details"
   summary: Retrieves detailed information about a specific Google ad including advertiserId, creativeId, format, firstShown, lastShown, and overallImpressions.
   cost:
     type: per_call
@@ -1590,10 +1595,10 @@ endpoints:
   observed_time: 3.01
 - id: scrapecreators.x.v1-google-adlibrary-advertisers-search
   tier: extended
-  platform: google
+  platform: google-ads
   method: GET
   path: /v1/google/adLibrary/advertisers/search
-  name: Search Google ad library Advertiser Search
+  name: "Search Google Advertisers"
   summary: Searches the Google Ad Transparency Library for advertisers by name.
   cost:
     type: per_call
@@ -1620,11 +1625,10 @@ endpoints:
   observed_time: 1.11
 - id: scrapecreators.x.v1-google-company-ads
   tier: extended
-  platform: google
-  capability: google.ads.transparency
+  platform: google-ads
   method: GET
   path: /v1/google/company/ads
-  name: List Google ad library Company Ads
+  name: "List Google Company Ads"
   summary: Fetches public ads for a company from the Google Ad Transparency Library by domain or advertiser_id.
   cost:
     type: per_call
@@ -1695,7 +1699,7 @@ endpoints:
   capability: google.serp.organic
   method: GET
   path: /v1/google/search
-  name: Search Google Search
+  name: "Search Google"
   summary: Performs a Google search and returns organic results with url, title, and description for each result.
   cost:
     type: per_call
@@ -2263,7 +2267,7 @@ endpoints:
   capability: linkedin.ad.detail
   method: GET
   path: /v1/linkedin/ad
-  name: Get LinkedIn ad library Ad Details
+  name: "Get LinkedIn Ad Details"
   summary: Retrieves detailed information about a specific LinkedIn ad by URL.
   cost:
     type: per_call
@@ -2289,7 +2293,7 @@ endpoints:
   capability: linkedin.search.ads
   method: GET
   path: /v1/linkedin/ads/search
-  name: Search LinkedIn ad library Ads
+  name: "Search LinkedIn Ads"
   summary: Searches the LinkedIn Ad Library by company name, keyword, or companyId with optional country and date filters.
   cost:
     type: per_call
@@ -2666,7 +2670,7 @@ endpoints:
   platform: pinterest
   method: GET
   path: /v1/pinterest/search
-  name: Search Pinterest Search
+  name: "Search Pinterest"
   summary: Searches Pinterest for pins matching a query, returning results with id, url, title, description, images, link, domain, board info, and pinner details.
   cost:
     type: per_call
@@ -2797,7 +2801,7 @@ endpoints:
   capability: reddit.search.posts
   method: GET
   path: /v1/reddit/search
-  name: Search Reddit Search
+  name: "Search Reddit"
   summary: Searches across all of Reddit for posts matching a query.
   cost:
     type: per_call
@@ -2919,7 +2923,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /v1/reddit/subreddit/search
-  name: Search Reddit Subreddit Search
+  name: "Search Within Subreddit"
   summary: Searches within a specific subreddit for posts, comments, and media matching a query.
   cost:
     type: per_call
@@ -2993,7 +2997,7 @@ endpoints:
   platform: rumble
   method: GET
   path: /v1/rumble/search
-  name: Search Rumble Search
+  name: "Search Rumble"
   summary: Searches Rumble videos by keyword.
   cost:
     type: per_call
@@ -3373,7 +3377,7 @@ endpoints:
   platform: spotify
   method: GET
   path: /v1/spotify/search
-  name: Search Spotify Search
+  name: "Search Spotify"
   summary: Search Spotify for tracks, artists, albums, episodes, podcasts, and audiobooks.
   cost:
     type: per_call
@@ -3582,7 +3586,7 @@ endpoints:
   capability: tiktok-ads.library.ad.detail
   method: GET
   path: /v1/tiktok/ad-library/ad
-  name: Get TikTok ad library Ad Library Ad
+  name: "Get TikTok Ad Library Ad"
   summary: Fetches one TikTok ad by ID or URL.
   cost:
     type: per_call
@@ -3606,7 +3610,7 @@ endpoints:
   capability: tiktok-ads.library.search
   method: GET
   path: /v1/tiktok/ad-library/search
-  name: Search TikTok ad library Ad Library Search
+  name: "Search TikTok Ad Library"
   summary: Searches TikTok's public Ads Library by advertiser name or keyword.
   cost:
     type: per_call
@@ -3936,7 +3940,7 @@ endpoints:
   capability: tiktok.search.general
   method: GET
   path: /v1/tiktok/search/top
-  name: Search TikTok Top Search
+  name: "Search TikTok Top Results"
   summary: Searches TikTok's 'Top' results by query — returns both videos and photo carousels, unlike keyword search which only returns videos.
   cost:
     type: per_call
@@ -4049,7 +4053,7 @@ endpoints:
   capability: tiktok-shop.shop.products
   method: GET
   path: /v1/tiktok/shop/products
-  name: List a TikTok Shop store's products
+  name: "List TikTok Shop Products"
   summary: Lists all products from a specific TikTok Shop store by its URL.
   cost:
     type: per_call
@@ -4145,7 +4149,7 @@ endpoints:
   capability: tiktok.music.videos
   method: GET
   path: /v1/tiktok/song/videos
-  name: List TikTok videos using a song
+  name: "List TikTok Song Videos"
   summary: Fetches TikTok videos that use a specific sound or song, identified by its clipId.
   cost:
     type: per_call
@@ -5063,7 +5067,7 @@ endpoints:
   capability: youtube.search.videos
   method: GET
   path: /v1/youtube/search
-  name: Search YouTube Search
+  name: "Search YouTube"
   summary: Searches YouTube by keyword query and returns matching videos, channels, playlists, shorts, shelves, and live streams.
   cost:
     type: per_call

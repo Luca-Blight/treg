@@ -113,12 +113,13 @@ endpoints:
     docs_url: https://data.crunchbase.com/docs/examples-search-api
 
   - id: crunchbase.account.usage
+    kind: utility
     capability: account.usage
     platform: account
     scope: own_account
     method: GET
     path: /autocompletes
-    name: "Check key validity and resolve entity name"
+    name: "Resolve name to permalink (key check)"
     summary: "Check the key works and resolve a company or person name to its permalink (free)"
     input:
       queryParams:

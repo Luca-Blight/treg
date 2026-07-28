@@ -83,6 +83,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/by-email
+    name: "Enrich company by email"
     summary: "Identify and enrich the company behind an email address"
     input:
       queryParams:
@@ -119,6 +120,7 @@ endpoints:
     docs_url: https://www.thecompaniesapi.com/api/fetch-company-email-patterns
 
   - id: thecompaniesapi.account.usage
+    kind: utility
     capability: account.usage
     platform: account
     scope: own_account

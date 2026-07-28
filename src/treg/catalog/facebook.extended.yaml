@@ -31,10 +31,12 @@ source:
   - https://developers.facebook.com/docs/graph-api/reference
 endpoints:
 - id: facebook.x.comment-delete
+  kind: action
   tier: extended
   platform: facebook
   method: DELETE
   path: /{comment_id}
+  name: "Delete a comment"
   summary: Delete a comment on the Page's content
   scope: own_account
   cost:
@@ -46,10 +48,12 @@ endpoints:
   scope_gap: treg's OAuth app does not request this; needs pages_manage_engagement
   capability: facebook.comment.delete
 - id: facebook.x.comment-reply
+  kind: action
   tier: extended
   platform: facebook
   method: POST
   path: /{comment_id}/comments
+  name: "Reply to a comment"
   summary: Reply to a comment as the Page
   scope: own_account
   cost:
@@ -61,10 +65,12 @@ endpoints:
   scope_gap: treg's OAuth app does not request this; needs pages_manage_engagement
   capability: facebook.comment.reply.create
 - id: facebook.x.comment-hide
+  kind: action
   tier: extended
   platform: facebook
   method: POST
   path: /{comment_id}?is_hidden=true
+  name: "Hide a comment"
   summary: Hide a comment on the Page's content
   scope: own_account
   cost:
@@ -156,6 +162,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/leadgen_forms
+  name: "List Page lead-ad forms"
   summary: Lead-ad forms attached to the Page, and their fields
   scope: own_account
   cost:
@@ -201,7 +208,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/published_posts
-  name: "List posts published by the Page"
+  name: "List published Page posts"
   summary: Only the posts the Page itself published, including ones published via the API
   scope: own_account
   cost:
@@ -231,6 +238,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/roles
+  name: "List Page admins"
   summary: Who administers the Page and at what role level
   scope: own_account
   cost:
@@ -261,6 +269,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{page_id}/tagged
+  name: "List posts tagging the Page"
   summary: Posts by other people that tagged this Page
   scope: own_account
   cost:
@@ -301,10 +310,12 @@ endpoints:
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.instagram.account
 - id: facebook.x.post-delete
+  kind: action
   tier: extended
   platform: facebook
   method: DELETE
   path: /{post_id}
+  name: "Delete a post"
   summary: Delete one of the Page's posts
   scope: own_account
   cost:
@@ -330,10 +341,12 @@ endpoints:
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.post.detail
 - id: facebook.x.post-update
+  kind: action
   tier: extended
   platform: facebook
   method: POST
   path: /{post_id}
+  name: "Update a post"
   summary: Edit a published post's message
   scope: own_account
   cost:
@@ -378,6 +391,7 @@ endpoints:
   platform: facebook
   method: GET
   path: /{post_id}/likes
+  name: "List post likes"
   summary: Who liked a post (summary=true gives just the total)
   scope: own_account
   cost:

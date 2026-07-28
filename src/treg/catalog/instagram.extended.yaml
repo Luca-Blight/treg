@@ -31,6 +31,7 @@ source:
   - https://developers.facebook.com/docs/graph-api/reference
 endpoints:
 - id: instagram.x.hashtag-search
+  kind: utility
   tier: extended
   platform: instagram
   method: GET
@@ -45,10 +46,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.comment-delete
+  kind: action
   tier: extended
   platform: instagram
   method: DELETE
   path: /{ig_comment_id}
+  name: "Delete a comment"
   summary: Delete a comment on the account's own media
   scope: own_account
   cost:
@@ -87,10 +90,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.comment-reply-create
+  kind: action
   tier: extended
   platform: instagram
   method: POST
   path: /{ig_comment_id}/replies
+  name: "Reply to a comment"
   summary: Reply to a comment as the account
   scope: own_account
   cost:
@@ -101,10 +106,12 @@ endpoints:
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
   scope_gap: treg's OAuth app does not request this; needs instagram_manage_comments
 - id: instagram.x.comment-hide
+  kind: action
   tier: extended
   platform: instagram
   method: POST
   path: /{ig_comment_id}?hide=true
+  name: "Hide a comment"
   summary: Hide a comment on the account's own media
   scope: own_account
   cost:
@@ -185,10 +192,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.media-comment-create
+  kind: action
   tier: extended
   platform: instagram
   method: POST
   path: /{ig_media_id}/comments
+  name: "Comment on a post"
   summary: Comment on the account's own media
   scope: own_account
   cost:
@@ -214,6 +223,7 @@ endpoints:
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
   scope_gap: treg's OAuth app does not request this; needs instagram_shopping_tag_products
 - id: instagram.x.user-content-publishing-limit
+  kind: utility
   tier: extended
   platform: instagram
   method: GET
@@ -232,6 +242,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/conversations
+  name: "List Direct message threads"
   summary: Instagram Direct threads with the account
   scope: own_account
   cost:
@@ -274,6 +285,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/mentioned_media
+  name: "List posts mentioning this account"
   summary: Media whose caption @-mentions this account
   scope: own_account
   cost:
@@ -330,6 +342,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /{ig_user_id}/tags
+  name: "List posts this account is tagged in"
   summary: Media where another account tagged this one in the photo
   scope: own_account
   cost:

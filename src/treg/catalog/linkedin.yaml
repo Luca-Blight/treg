@@ -40,11 +40,13 @@ endpoints:
     docs_url: https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2
 
   - id: linkedin.linkedin.user.post.create
+    kind: action
     capability: linkedin.user.post.create
     platform: linkedin
     scope: own_account
     method: POST
     path: /rest/posts
+    name: "Create a post"
     summary: "Publish a text or link post to your own LinkedIn feed"
     input:
       body:
@@ -74,6 +76,7 @@ endpoints:
   # Video adds a finalizeUpload step and then an async processing wait — attaching a video URN
   # before it reports AVAILABLE makes /rest/posts reject the whole post.
   - id: linkedin.linkedin.image.upload.init
+    kind: utility
     capability: linkedin.image.upload
     platform: linkedin
     scope: own_account
@@ -91,6 +94,7 @@ endpoints:
     docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api
 
   - id: linkedin.linkedin.video.upload.init
+    kind: utility
     capability: linkedin.video.upload
     platform: linkedin
     scope: own_account
@@ -108,6 +112,7 @@ endpoints:
     docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api
 
   - id: linkedin.linkedin.video.upload.finalize
+    kind: utility
     capability: linkedin.video.upload
     platform: linkedin
     scope: own_account

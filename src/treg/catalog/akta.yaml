@@ -139,6 +139,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/company/employee-reviews/
+    name: "Get company employee reviews"
     summary: "Read employee reviews and ratings for a company"
     input:
       queryParams:
@@ -153,6 +154,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/alternative-data/employee-reviews
 
   - id: akta.companies.industry.resolve
+    kind: utility
     capability: companies.industry.resolve
     platform: companies
     scope: any_account

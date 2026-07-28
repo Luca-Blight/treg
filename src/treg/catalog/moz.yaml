@@ -285,6 +285,7 @@ endpoints:
     docs_url: https://moz.com/help/links-api/making-calls/index-metadata
 
   - id: moz.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

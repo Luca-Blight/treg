@@ -103,6 +103,8 @@ endpoints:
                                      #   segment, else a path keyword, else the path's grouping
                                      #   segment, else "other". Set it only to override a bad guess.
     scope: any_account               # any_account (scrapers) | own_account (first-party OAuth)
+    kind: data                       # optional; data (DEFAULT) | action | account | utility.
+                                     #   what the endpoint IS — see "Kind" below. Absent ⇒ data.
     method: GET
     path: /api/v1/tiktok/web/fetch_user_profile   # relative to the provider's base_url
     name: "Get user profile"        # optional short DISPLAY title (≤60 chars). Set it when the
@@ -154,6 +156,7 @@ endpoints:
                                     #   per-op summary / info.title, DataForSEO's operationId).
                                     #   Carried across re-ingests by id, like `capability`.
     summary: "Get comments of a Zhihu answer"
+    kind: data                      # optional; data (DEFAULT) | action | account | utility (see "Kind")
     cost: {type: per_success, value: 0.001, currency: USD}   # optional
     docs_url: https://docs.…                                 # optional
     input:                          # generated from the provider's parameter docs
@@ -208,6 +211,37 @@ Rules:
     the scope that is missing. These are listed rather than dropped on purpose: the set of gaps is
     the answer to "which scopes should we add to the registered app", and it is only visible if the
     endpoints stay in the file. `scope_gap` present ⇒ expect 403 until the app is widened.
+
+### Kind — the browse surface vs. the plumbing
+
+`kind` says what an endpoint IS, so the marketplace can lead with the useful surface and tuck the
+provider's own machinery out of the way. It is optional in BOTH tiers; absent reads as `data`.
+
+| `kind` | what it is | examples | browse |
+|---|---|---|---|
+| `data` (default) | fetch / scrape / enrich a resource | get user profile, backlink summary, SERP | shown |
+| `action` | a meaningful WRITE on the connected user's OWN account | post a video, reply, update an ad budget, upload | shown |
+| `account` | the provider's own list/webhook/saved-search/credit CRUD | create/delete a lead-list, manage webhooks | hidden |
+| `utility` | helpers with no data of their own | token/x-bogus generators, enum & location listings, decrypt/encrypt, device register | hidden |
+
+`data` + `action` are the **browse surface**; `account` + `utility` are **management endpoints**.
+Three things follow, and they are the whole point of the field:
+
+- **The platform census counts data + action only.** `GET /catalog/platforms` reports each shelf's
+  `endpoints` / `capabilities` / `verified` and its "from …" price over the browse surface — a
+  management endpoint is real inventory but it is not what a tile advertises, so it never inflates
+  those numbers (nor the marketplace tile counts the dashboard renders from them).
+- **The default platform view drops them.** `GET /catalog/platforms/<slug>` returns only the
+  browse surface in `capabilities` / `extended` / `domains`, plus a `hidden_count`. Pass
+  `?include_hidden=1` to get the WHOLE surface back — every endpoint carries `kind`, so a client
+  can fold the plumbing behind its own control. The dashboard does exactly this: it requests
+  `include_hidden`, renders data/action in the ledger, and files account/utility behind a small
+  per-section "N management endpoints" expander (the same show-more gesture as the platform tiles).
+- **`kind` is a reviewed judgement, carried across re-ingests.** Like `capability` and `name`, an
+  extended entry's `kind` is set by review, not derived from the spec, so `catalog_ingest.py`'s
+  `carry_verification` re-attaches it by id — regenerating the file must not reset it to `data`.
+
+`catalog_validate.py` only checks the value when present: a stated `kind` must be one of the four.
 
 ### Cost — the file keeps the billing unit, the server computes USD
 

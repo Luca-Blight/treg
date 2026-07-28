@@ -168,6 +168,7 @@ endpoints:
     docs_url: https://docs.apollo.io/reference/bulk-people-enrichment
 
   - id: apollo.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

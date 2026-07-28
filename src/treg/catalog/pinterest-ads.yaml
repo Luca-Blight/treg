@@ -44,7 +44,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /ad_accounts/{ad_account_id}/analytics
-    name: "Get ad account performance metrics"
+    name: "Ad account analytics"
     summary: "Get spend, impressions, clicks and conversions for your Pinterest ad account"
     input:
       pathParams:
@@ -89,7 +89,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /ad_accounts/{ad_account_id}/campaigns/analytics
-    name: "Get campaign performance metrics"
+    name: "Campaign analytics"
     summary: "Get spend and performance per campaign in your Pinterest ad account"
     input:
       pathParams:

@@ -151,6 +151,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /youtube/v3/search
+    name: "Search videos by keyword"
     summary: "Search YouTube videos by keyword"
     input:
       queryParams:
@@ -181,11 +182,13 @@ endpoints:
   # privacyStatus is set. That is not an error the response reports; the video simply stays
   # private. See the note on oauth_providers._YOUTUBE_READ.
   - id: youtube.youtube.video.upload
+    kind: action
     capability: youtube.video.upload
     platform: youtube
     scope: own_account
     method: POST
     path: /upload/youtube/v3/videos
+    name: "Upload a video"
     summary: "Upload a video to your own YouTube channel"
     input:
       queryParams:
@@ -202,11 +205,13 @@ endpoints:
     docs_url: https://developers.google.com/youtube/v3/docs/videos/insert
 
   - id: youtube.youtube.video.thumbnail.set
+    kind: action
     capability: youtube.video.thumbnail.set
     platform: youtube
     scope: own_account
     method: POST
     path: /upload/youtube/v3/thumbnails/set
+    name: "Set video thumbnail"
     summary: "Set the custom thumbnail on one of your YouTube videos"
     input:
       queryParams:

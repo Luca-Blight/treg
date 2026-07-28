@@ -383,6 +383,7 @@ endpoints:
 
   # --- Account (free) ---------------------------------------------------------------------------
   - id: serpstat.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

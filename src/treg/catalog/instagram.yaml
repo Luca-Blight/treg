@@ -79,6 +79,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /{ig_media_id}/comments
+    name: "List post comments"
     summary: "List the comments on one of your Instagram posts"
     input:
       pathParams:
@@ -160,6 +161,7 @@ endpoints:
   # Meta caps an account at 50 published posts per rolling 24 hours; the remaining allowance is
   # readable at GET /{ig_user_id}/content_publishing_limit. Containers expire 24h after creation.
   - id: instagram.instagram.media.container.create
+    kind: action
     capability: instagram.media.container.create
     platform: instagram
     scope: own_account
@@ -186,6 +188,7 @@ endpoints:
     docs_url: https://developers.facebook.com/docs/instagram-platform/content-publishing
 
   - id: instagram.instagram.media.container.status
+    kind: utility
     capability: instagram.media.container.status
     platform: instagram
     scope: own_account
@@ -204,11 +207,13 @@ endpoints:
     docs_url: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media
 
   - id: instagram.instagram.post.publish
+    kind: action
     capability: instagram.post.create
     platform: instagram
     scope: own_account
     method: POST
     path: /{ig_user_id}/media_publish
+    name: "Publish a post"
     summary: "Publish a post to your own Instagram business account"
     input:
       pathParams:

@@ -153,6 +153,7 @@ endpoints:
     docs_url: https://hunter.io/api-documentation/v2#company-enrichment
 
   - id: hunter.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

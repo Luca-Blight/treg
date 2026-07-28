@@ -27,6 +27,17 @@ EXAMPLES_DIRNAME = "examples"
 CAPABILITIES_FILE = "capabilities.yaml"
 FX_FILE = "fx.yaml"
 
+# What an endpoint IS, so the marketplace can browse the useful surface and tuck the plumbing away:
+#   data    — fetch/scrape/enrich a resource (the DEFAULT when `kind:` is absent).
+#   action  — a meaningful WRITE on the connected user's own account (post, reply, update a budget).
+#   account — the provider's own bookkeeping CRUD (create/delete a lead-list, manage webhooks).
+#   utility — helpers with no data of their own (token generators, enum/location lookups, decrypt).
+# `data`+`action` are the browse surface; `account`+`utility` are "management endpoints" — served in
+# the endpoint list with `kind` set, but kept OUT of the census counts and the default platform view.
+KINDS = ("data", "action", "account", "utility")
+DEFAULT_KIND = "data"
+HIDDEN_KINDS = frozenset({"account", "utility"})  # served, but never inflate the browse counts
+
 
 @dataclass(frozen=True)
 class Catalog:
@@ -171,9 +182,15 @@ DOMAIN_NOISE = {"live", "task_post", "task_get", "task_ready", "tasks_ready", "t
                 # provider BRAND/family segments: how the vendor organises its API, not what the
                 # route is about — reading them as a subject put a "dataforseo_labs" heading on the
                 # Google page. Filtered here so such routes classify by their function keywords.
-                "dataforseo_labs", "appendix", "ai_optimization"}
+                # `web_vN` is the "web" delivery marker with a version glued on (TikHub's
+                # `/xiaohongshu/web_v3/…`); left in, it grew a "web_v3"/"web_v2" section per platform.
+                "dataforseo_labs", "appendix", "ai_optimization", "web_v2", "web_v3", "web_v4"}
 _VERSION_SEG = re.compile(r"v\d+(?:\.\d+)*")
 _WORD_SEG = re.compile(r"[a-z][a-z0-9_]*")
+# The WHOLE words of a path segment — split on non-letters AND at camelCase humps, so a keyword
+# matches a word boundary, never a fragment: `ads` must not fire inside `leads`/`threads`, `user`
+# not inside `abuser`, while `searchAnalytics` still yields `search` + `analytics`.
+_WORDS = re.compile(r"[A-Z]?[a-z]+")
 
 
 def _domain(raw: dict, capability: str, platform: str) -> str:
@@ -190,18 +207,24 @@ def _domain(raw: dict, capability: str, platform: str) -> str:
     parts = capability.split(".")
     if len(parts) >= 3 and parts[1]:
         return parts[1]
-    segments = [s for s in str(raw.get("path") or "").lower().split("/")
-                if s and s not in DOMAIN_NOISE and not _VERSION_SEG.fullmatch(s)]
+    segments = [s for s in str(raw.get("path") or "").split("/")
+                if s and s.lower() not in DOMAIN_NOISE and not _VERSION_SEG.fullmatch(s.lower())]
     # The PATH only, never the summary. Prose says "the Live SERP API…" and "your own post…" about
     # endpoints that are neither, and one false heading is worse than a row in `other`: a section a
-    # visitor doesn't trust is a section they stop reading.
-    haystack = " ".join(segments)
+    # visitor doesn't trust is a section they stop reading. Match keywords at WORD boundaries, not by
+    # raw substring: substring put an "ads" section on the People page (it lives inside `leads`) and a
+    # "user" one on abuse reports (inside `abuser`). A stem key (`keyword` → `keywords`) still matches
+    # by prefix; a short key (`ads`, `llm`) must hit a whole word, so `ads` ≠ `leads`/`adset`.
+    words = [w.lower() for seg in segments for w in _WORDS.findall(seg)]
     for key, domain in DOMAIN_KEYWORDS:
-        if key in haystack:
-            return domain
+        stem = key.rstrip("_")  # `ad_` → `ad`: the singular still matches the `ad`/`adGroup` word
+        for w in words:
+            if w.startswith(stem) and (len(stem) > 3 or w == stem):
+                return domain
     # Only a GROUPING segment counts — one with an operation name after it. The last segment IS the
     # operation ("generate_xbogus"), and a section per operation is not a section at all.
-    candidates = [s for s in segments if s != platform and _WORD_SEG.fullmatch(s)]
+    seg_lc = [s.lower() for s in segments]
+    candidates = [s for s in seg_lc if s != platform and _WORD_SEG.fullmatch(s)]
     return candidates[0] if len(candidates) > 1 else DOMAIN_OTHER
 
 
@@ -235,6 +258,9 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         "platform": platform,
         "domain": _domain(raw, capability, platform),
         "scope": raw.get("scope") or "",
+        # what the endpoint IS (see KINDS): default `data`, so every un-annotated route stays on the
+        # browse surface and only the deliberately-marked plumbing (account/utility) is tucked away.
+        "kind": str(raw.get("kind") or DEFAULT_KIND).strip().lower() or DEFAULT_KIND,
         "method": (raw.get("method") or "GET").upper(),
         "path": raw.get("path") or "",
         # optional short display title; `summary` stays the provider's own description, verbatim
@@ -294,6 +320,8 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         "path": ep["path"],
         "scope": ep["scope"],
         "tier": ep["tier"],
+        # data | action | account | utility — the front-end hides account/utility behind an expander
+        "kind": ep.get("kind") or DEFAULT_KIND,
         # the section of its platform page this row files under (see `_domain`)
         "domain": ep.get("domain") or DOMAIN_OTHER,
         # the whole point of a row is the call it stands for, so the line that makes it is part of

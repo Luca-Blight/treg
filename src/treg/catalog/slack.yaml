@@ -53,11 +53,13 @@ endpoints:
     docs_url: https://docs.slack.dev/reference/methods/conversations.list
 
   - id: slack.slack.message.send
+    kind: action
     capability: slack.message.send
     platform: slack
     scope: own_account
     method: POST
     path: /chat.postMessage
+    name: "Post message"
     summary: "Post a message to a Slack channel, or reply in a thread"
     input:
       body:
@@ -80,6 +82,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /conversations.history
+    name: "Read channel history"
     summary: "Read recent messages from a Slack channel"
     input:
       queryParams:
@@ -100,6 +103,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /conversations.replies
+    name: "Read thread replies"
     summary: "Read the replies in a Slack message thread"
     input:
       queryParams:
@@ -139,6 +143,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /users.list
+    name: "List workspace members"
     summary: "List the members of your Slack workspace"
     input:
       queryParams:
@@ -157,6 +162,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /users.info
+    name: "Get user profile"
     summary: "Get a Slack workspace member's profile by user ID"
     input:
       queryParams:
@@ -168,11 +174,13 @@ endpoints:
     docs_url: https://docs.slack.dev/reference/methods/users.info
 
   - id: slack.slack.reaction.add
+    kind: action
     capability: slack.reaction.add
     platform: slack
     scope: own_account
     method: POST
     path: /reactions.add
+    name: "Add emoji reaction"
     summary: "Add an emoji reaction to a Slack message"
     input:
       body:
@@ -186,6 +194,7 @@ endpoints:
     docs_url: https://docs.slack.dev/reference/methods/reactions.add
 
   - id: slack.account.identity
+    kind: utility
     capability: account.identity
     platform: account
     scope: own_account

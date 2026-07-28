@@ -101,6 +101,7 @@ endpoints:
   # (Postiz sidesteps this by holding OAuth 1.0a user tokens and signing the legacy v1.1 upload
   # endpoint — a different credential shape treg does not store.)
   - id: x.x.post.create
+    kind: action
     capability: x.post.create
     platform: x
     scope: own_account
@@ -121,6 +122,7 @@ endpoints:
     docs_url: https://docs.x.com/x-api/posts/creation-of-a-post
 
   - id: x.x.post.reply
+    kind: action
     # Same route and same scope, but a distinct job — and the mechanism behind a thread: publish
     # the first post, then chain each next one to the id the previous call returned.
     capability: x.post.reply

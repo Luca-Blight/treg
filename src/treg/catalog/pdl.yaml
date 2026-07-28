@@ -153,6 +153,7 @@ endpoints:
     docs_url: https://docs.peopledatalabs.com/docs/reference-company-search-api
 
   - id: pdl.account.usage
+    kind: utility
     capability: account.usage
     platform: account
     scope: own_account

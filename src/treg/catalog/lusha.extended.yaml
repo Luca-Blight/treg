@@ -19,11 +19,12 @@ source:
 # `api_key` header, no scheme prefix. No calls were made while writing this file.
 endpoints:
   - id: lusha.x.contacts-prospecting-filters
+    kind: utility
     tier: extended
     platform: people
     method: GET
     path: /v3/contacts/prospecting/filters/{filterType}
-    name: "List accepted values for a contact search filter"
+    name: "List contact filter values"
     summary: "Enumerate the accepted values for one contact-prospecting filter type (job titles, seniority, departments, locations, etc.)"
     input:
       pathParams:
@@ -36,11 +37,12 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/prospecting-search-and-enrich
 
   - id: lusha.x.companies-prospecting-filters
+    kind: utility
     tier: extended
     platform: companies
     method: GET
     path: /v3/companies/prospecting/filters/{filterType}
-    name: "List accepted values for a company search filter"
+    name: "List company filter values"
     summary: "Enumerate the accepted values for one company-prospecting filter type (industry, size, revenue, technologies, intent topics, etc.)"
     input:
       pathParams:
@@ -57,7 +59,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v3/companies/enrich
-    name: "Reveal companies' full details by Lusha company id"
+    name: "Reveal companies' full details by company id"
     summary: "Enrich companies you already found in a prospecting search, by ids (max 100), into full firmographic records"
     input:
       bodyType: json
@@ -158,6 +160,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/signals
 
   - id: lusha.x.contact-signal-types
+    kind: utility
     tier: extended
     platform: people
     method: GET
@@ -173,6 +176,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/signals
 
   - id: lusha.x.company-signal-types
+    kind: utility
     tier: extended
     platform: companies
     method: GET
@@ -188,6 +192,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/signals
 
   - id: lusha.x.company-signal-filters
+    kind: utility
     tier: extended
     platform: companies
     method: GET
@@ -203,6 +208,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/signals
 
   - id: lusha.x.company-signal-filter-values
+    kind: utility
     tier: extended
     platform: companies
     method: GET
@@ -257,6 +263,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/website-visits
 
   - id: lusha.x.webhook-subscriptions-list
+    kind: account
     tier: extended
     platform: account
     method: GET
@@ -271,6 +278,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks/listsubscriptions
 
   - id: lusha.x.webhook-subscriptions-create
+    kind: account
     tier: extended
     platform: account
     method: POST
@@ -291,6 +299,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks
 
   - id: lusha.x.webhook-subscription-get
+    kind: account
     tier: extended
     platform: account
     method: GET
@@ -304,6 +313,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks
 
   - id: lusha.x.webhook-subscription-update
+    kind: account
     tier: extended
     platform: account
     method: PATCH
@@ -320,6 +330,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks
 
   - id: lusha.x.webhook-subscriptions-delete
+    kind: account
     tier: extended
     platform: account
     method: POST
@@ -339,6 +350,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks
 
   - id: lusha.x.webhook-subscription-test
+    kind: account
     tier: extended
     platform: account
     method: POST
@@ -352,6 +364,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks
 
   - id: lusha.x.webhook-audit-logs
+    kind: account
     tier: extended
     platform: account
     method: GET
@@ -366,6 +379,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks
 
   - id: lusha.x.webhook-audit-log-stats
+    kind: account
     tier: extended
     platform: account
     method: GET
@@ -380,6 +394,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks
 
   - id: lusha.x.webhook-secret-get
+    kind: account
     tier: extended
     platform: account
     method: GET
@@ -394,6 +409,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks
 
   - id: lusha.x.webhook-secret-regenerate
+    kind: account
     tier: extended
     platform: account
     method: POST
@@ -406,6 +422,7 @@ endpoints:
     docs_url: https://docs.lusha.com/apis/openapi/webhooks
 
   - id: lusha.x.webhook-opt-out-subscribe
+    kind: account
     tier: extended
     platform: account
     method: POST

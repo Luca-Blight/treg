@@ -865,6 +865,14 @@ a:hover{text-decoration-color:var(--muted)}
 .lsec td span{margin-left:7px;font-weight:450;letter-spacing:0;color:var(--muted2)}
 .lrow{cursor:pointer}
 .lrow:hover td{background:var(--hover)}
+/* The management-endpoints expander at the foot of a section — the same muted "show more" gesture
+   as the platform-tile .pt-more, keeping account/utility plumbing one click out of the browse view. */
+.lmore td{padding:0}
+.lmore-btn{display:flex;align-items:center;gap:7px;width:100%;padding:7px 12px;border:0;background:none;
+  cursor:pointer;font:inherit;font-size:11.5px;color:var(--muted);text-align:left}
+.lmore-btn:hover{color:var(--ink);background:var(--hover)}
+.lmore-btn .lcar{transition:transform .12s}
+.lmore-btn[aria-expanded="true"] .lcar{transform:rotate(90deg)}
 /* Same rule down the leading edge the capability list used: the row you can call today is the
    reason to read the table, so it is findable without reading. */
 .lrow.go td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--green) 75%,transparent)}
@@ -1752,6 +1760,17 @@ a:hover{text-decoration-color:var(--muted)}
                     </td>
                   </tr>
                 </template>
+                <!-- Foot of the section: the account/utility "management" endpoints, folded away by
+                     default because they are the provider's own plumbing (webhooks, saved lists,
+                     token helpers) rather than the data a visitor came to browse. Same show-more
+                     gesture as the platform tiles; the rows themselves are appended into sec.rows
+                     above only once the expander is open (see platLedger). -->
+                <tr v-if="sec.mgmtCount" class="lmore" :key="sec.domain+'::mgmt'">
+                  <td colspan="4">
+                    <button class="lmore-btn" @click="toggleMgmt(sec.domain)" :aria-expanded="!!platMgmtOpen[sec.domain]">
+                      <span class="lcar">▸</span>{{platMgmtOpen[sec.domain]?'Hide':'Show'}} {{sec.mgmtCount}} management endpoint{{sec.mgmtCount===1?'':'s'}}</button>
+                  </td>
+                </tr>
               </template>
             </table></div>
             <div v-else class="mk-empty" style="margin-top:14px">Nothing on this platform matches that filter — clear it, or
@@ -3118,6 +3137,7 @@ createApp({
       // surviving rows disappears rather than showing an empty heading.
       platDomain:'', platQ:'', platVerifiedOnly:false,
       platOpen:{},         // ledger row key → row expanded
+      platMgmtOpen:{},     // domain → its account/utility "management endpoints" expander is open
       epOpen:{},           // endpoint id → its provider sub-row (level two, merged rows only) is open
       epTab:{},            // endpoint id → which pane of its detail is showing ('req' | 'res')
       platEx:{},           // endpoint id → {open, loading, err, text} for the lazily-fetched example
@@ -3291,6 +3311,9 @@ createApp({
                     ' endpoint'+(eps.length===1?'':'s')+' — '+provs.join(', '),
           // the capability is the join key when there is one; an unmapped row is its endpoint
           key:(r.capability||'')+'|'+eps[0].id,
+          // a "management" row is one whose every endpoint is plumbing (account/utility) — those
+          // fold behind a per-section expander instead of sitting in the main ledger.
+          mgmt: eps.every(e=>e.kind==='account'||e.kind==='utility'),
           // "from $0.001" on a merged row, the flat label on a single one — and never "from free",
           // which reads as a hedge on the one price that needs none.
           price: cheapest ? ((r.kind==='merged'&&eps.length>1&&cheapest.n>0?'from ':'')+cheapest.label)
@@ -3314,19 +3337,28 @@ createApp({
       const q=this.platQ.trim().toLowerCase();
       return this.platRowsAll.filter(r=>(!this.platVerifiedOnly||r.verified) && (!q||r.hay.includes(q))); },
     platDomainTabs(){
-      const n={}; for(const r of this.platRowsPreDomain) n[r.domain]=(n[r.domain]||0)+1;
+      // Only the browse surface counts on the chips: management rows (account/utility) live behind
+      // a per-section expander, not in the domain tally.
+      const n={}; for(const r of this.platRowsPreDomain) if(!r.mgmt) n[r.domain]=(n[r.domain]||0)+1;
       // The server's order (busiest first, "other" last) is the one the chips keep — a chip bar
       // that reshuffles as you type is unusable.
       return (this.platData&&this.platData.domains||[]).filter(s=>n[s.domain]).map(s=>({domain:s.domain, n:n[s.domain]})); },
     platLedger(){
-      const rows=this.platRowsPreDomain.filter(r=>!this.platDomain||r.domain===this.platDomain);
-      const by={}; for(const r of rows) (by[r.domain]=by[r.domain]||[]).push(r);
-      return (this.platData&&this.platData.domains||[]).filter(s=>by[s.domain])
-        .map(s=>({domain:s.domain, rows:by[s.domain]})); },
-    // Two numbers, because a merged row stands for several endpoints.
+      // Browse rows (data/action) make the ledger; management rows (account/utility) stay folded
+      // behind a per-section expander until platMgmtOpen[domain] is set.
+      const vis={}, mgmt={};
+      for(const r of this.platRowsPreDomain){ if(this.platDomain && r.domain!==this.platDomain) continue;
+        (r.mgmt ? (mgmt[r.domain]=mgmt[r.domain]||[]) : (vis[r.domain]=vis[r.domain]||[])).push(r); }
+      return (this.platData&&this.platData.domains||[]).filter(s=>vis[s.domain]||mgmt[s.domain])
+        .map(s=>{ const m=mgmt[s.domain]||[];
+          return {domain:s.domain, rows:(vis[s.domain]||[]).concat(this.platMgmtOpen[s.domain]?m:[]),
+                  mgmtCount:m.length}; }); },
+    // Two numbers, because a merged row stands for several endpoints — the browse surface only, so
+    // the header count never jumps when the management expander is opened.
     platStats(){
       let rows=0, eps=0;
-      for(const s of this.platLedger){ rows+=s.rows.length; for(const r of s.rows) eps+=r.endpoints.length; }
+      for(const r of this.platRowsPreDomain){ if(r.mgmt || (this.platDomain && r.domain!==this.platDomain)) continue;
+        rows++; eps+=r.endpoints.length; }
       return {rows, eps}; },
     catalogDeny(){ const c=this.tForm.cli; return (c && this.catalogClis && this.catalogClis[c.bin]) || []; },
     catalogExtra(){  // catalog patterns not already in the own list — the union dedupes at run time, so showing both would double up
@@ -4400,7 +4432,7 @@ createApp({
     // is no server route to serve the SPA on a hard reload of a /app/platforms/<slug> path.
     platformFromHash(){ const m=/^#platform\/(.+)$/.exec(location.hash||''); return m?decodeURIComponent(m[1]):null; },
     openPlatform(slug, fromPop){ this.resetConfirms();
-      this.detail=null; this.platSlug=slug; this.view='platform'; this.platOpen={}; this.epOpen={}; this.epTab={}; this.platEx={};
+      this.detail=null; this.platSlug=slug; this.view='platform'; this.platOpen={}; this.platMgmtOpen={}; this.epOpen={}; this.epTab={}; this.platEx={};
       this.platClearFilters(); this.platCopied='';
       if(!fromPop) history.pushState({platform:slug}, '', '/app#platform/'+encodeURIComponent(slug));
       this.loadPlatforms();                                   // the header's provider links need the list
@@ -4409,7 +4441,10 @@ createApp({
       window.scrollTo(0,0); },
     async loadPlatform(){ if(!this.platSlug) return;
       this.platErr=''; this.platLoading=true; this.platData=null;
-      try{ this.platData=await this.api('/catalog/platforms/'+encodeURIComponent(this.platSlug)); }
+      // include_hidden=1: pull the account/utility endpoints too. They render behind a per-section
+      // "N management endpoints" expander rather than in the main ledger — the page decides that,
+      // client-side, off each endpoint's `kind` (see platRowsAll / platLedger).
+      try{ this.platData=await this.api('/catalog/platforms/'+encodeURIComponent(this.platSlug)+'?include_hidden=1'); }
       catch(e){ this.platErr = e.status===404
         ? 'No catalog for this platform on this server yet.'
         : 'Could not load the endpoint catalog'+(e.detail?': '+e.detail:'.'); }
@@ -4525,6 +4560,9 @@ createApp({
     // Every ledger row expands, merged or not: the row says what it does, the expansion says how to
     // call it, and which of the two a visitor needs is not something the row shape can decide.
     toggleRow(r){ this.platOpen[r.key] = !this.platOpen[r.key]; },
+    // The per-section "N management endpoints" expander: reveals the account/utility rows folded
+    // out of the browse ledger (see platLedger).
+    toggleMgmt(domain){ this.platMgmtOpen[domain] = !this.platMgmtOpen[domain]; },
     // Level two: a provider sub-row under a merged row opens its own instruction. Single rows have
     // nothing to compare and skip this level entirely.
     toggleEp(e){ this.epOpen[e.id] = !this.epOpen[e.id]; },
