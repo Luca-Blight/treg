@@ -30,7 +30,7 @@ source:
 # (The `/search/es_dsl/preview` variants return records inline rather than ids and also cost 20.)
 #
 # Credits are sold per plan and Coresignal does not publish a public per-credit dollar price, so
-# `cost.value` is null throughout.
+# priced endpoints below carry `cost.currency: credit` (the credit count) rather than a USD value.
 
 pricing_url: https://coresignal.com/pricing/  # Search returns ids for free; COLLECTING each record costs a credit.
 endpoints:
@@ -49,8 +49,8 @@ endpoints:
       note: "the cheap path when you already know the domain — it skips the search step entirely. For a LinkedIn URL instead, use coresignal.companies.collect, whose id segment also accepts a company shorthand name"
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 20
+      currency: credit
       note: "20 Coresignal credits per successful (HTTP 200) company record; a no-match is free. Credits are sold per plan; no public per-credit price."
     docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/enrich
 
@@ -84,8 +84,8 @@ endpoints:
       note: "the paid half of search+collect. Budget one credit per id and narrow the id list before looping"
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 20
+      currency: credit
       note: "20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10."
     docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/collect
 
@@ -103,8 +103,8 @@ endpoints:
       note: "the employee side has NO /enrich route (unlike companies): collect IS the enrichment call when you hand it a profile URL rather than an id. Coresignal's depth here is the full employment history, not just the current role"
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 20
+      currency: credit
       note: "20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10."
     docs_url: https://docs.coresignal.com/employee-api/multi-source-employee-api/collect
 

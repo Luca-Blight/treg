@@ -48,8 +48,8 @@ endpoints:
       queryParams: {domain: "stripe.com", full_name: "Patrick Collison"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 SEARCH credit, charged only when an email is found; a miss is free."
     docs_url: https://hunter.io/api-documentation/v2#email-finder
 
@@ -69,8 +69,8 @@ endpoints:
       queryParams: {email: "steli@close.io"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 0.5
+      currency: credit
       note: "0.5 VERIFICATION credits per call — half a credit, a separate pool from search credits. Re-verifying the same address within the plan period is not re-charged."
     docs_url: https://hunter.io/api-documentation/v2#email-verifier
 
@@ -102,8 +102,8 @@ endpoints:
       queryParams: {domain: "stripe.com", limit: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 SEARCH credit per 10 emails returned (rounded up); a domain with no results is free."
     docs_url: https://hunter.io/api-documentation/v2#domain-search
 
@@ -125,8 +125,8 @@ endpoints:
       queryParams: {email: "steli@close.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 0.2
+      currency: credit
       note: "0.2 credits, billed CONDITIONALLY — charged only when email, full name AND position all come back. A 404 or a partial record is free."
     docs_url: https://hunter.io/api-documentation/v2#people-enrichment
 
@@ -147,8 +147,8 @@ endpoints:
       queryParams: {domain: "stripe.com"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 0.2
+      currency: credit
       note: "0.2 credits, billed CONDITIONALLY — charged only when company name, category/description/tags, location or country code AND company size all come back. A 404 or a partial record is free. Still the cheapest companies.enrich in this catalog."
     docs_url: https://hunter.io/api-documentation/v2#company-enrichment
 

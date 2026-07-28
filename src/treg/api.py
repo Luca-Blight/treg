@@ -286,13 +286,14 @@ async def catalog_platforms() -> dict:
             "category": plat["category"],
             "featured": plat.get("featured"),  # rank within its category's Featured shelf; null = not featured
             "summary": plat.get("summary", ""),
-            # cheapest priced endpoint, for the card's "from …" corner. Cross-currency ordering uses
-            # a rough CNY→USD factor; the ORIGINAL value+currency is returned for display.
+            # cheapest priced endpoint, for the card's "from …" corner. Ordering compares the
+            # server-computed USD figure, so CNY rows and provider-credit rows sort against dollar
+            # rows honestly; the ORIGINAL value+currency rides along for display.
             # cheapest PAID option — zero-cost utility routes (rate-card freebies) would otherwise
             # advertise a misleading "from $0"; genuinely free own-account access is signaled by the
             # UI separately when a platform has only free endpoints (price_from stays null).
             "price_from": min(
-                (c for e in eps if (c := cat.cost_view(e.get("cost"))) and c["usd"]),
+                (c for e in eps if (c := cat.cost_view(e.get("cost"), e.get("provider"))) and c["usd"]),
                 key=lambda c: c["usd"],
                 default=None,
             ),

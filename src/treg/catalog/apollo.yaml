@@ -59,9 +59,9 @@ endpoints:
       note: "POST, but every parameter rides in the QUERY STRING — there is no JSON body. Supply the strongest identifier you have: email > linkedin_url > name + domain. A request with none of them cannot match"
     cost:
       type: per_success
-      value: null
-      currency: USD
-      note: "1-9 credits per person, charged only when credit-consuming data is returned: 1 credit for demographics or an email, plus 8 credits if a mobile phone comes back. No match, no charge. Waterfall vendors may bill even on a miss. No public $/credit."
+      value: 1
+      currency: credit
+      note: "1-9 credits per person, charged only when credit-consuming data is returned: 1 credit for demographics or an email, plus 8 credits if a mobile phone comes back (reveal_phone_number defaults off). No match, no charge. Waterfall vendors may bill even on a miss. No public $/credit."
     docs_url: https://docs.apollo.io/reference/people-enrichment
 
   - id: apollo.people.search
@@ -107,8 +107,8 @@ endpoints:
       note: "at least one of domain | website | name | linkedin_url. Requires the organizations_enrich scope on the key"
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per organization returned; unmatched requests are free."
     docs_url: https://docs.apollo.io/reference/organization-enrichment
 
@@ -136,8 +136,8 @@ endpoints:
       note: "query-string params on a POST, arrays in field[]=value form. Result set capped at 50,000 records. UNLIKE people search, this one is not free"
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per PAGE returned (0 when there are no results) — not per company. Fewer, fuller pages therefore cost less than many small ones, the opposite of most providers in this catalog."
     docs_url: https://docs.apollo.io/reference/organization-search
 
@@ -162,9 +162,9 @@ endpoints:
       note: "the ONE endpoint in this file with a real JSON body — and even here the flags stay in the query string while only `details` rides in the body"
     cost:
       type: per_success
-      value: null
-      currency: USD
-      note: "priced per person MATCHED in the batch on the same 1-9 credit scale as single enrichment, not per call; unmatched rows are free."
+      value: 1
+      currency: credit
+      note: "priced per person MATCHED in the batch on the same 1-9 credit scale as single enrichment (1 baseline, +8 if a mobile is revealed), not per call; unmatched rows are free."
     docs_url: https://docs.apollo.io/reference/bulk-people-enrichment
 
   - id: apollo.account.usage

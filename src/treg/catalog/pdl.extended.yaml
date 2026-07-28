@@ -56,7 +56,7 @@ endpoints:
         include_if_matched: {type: boolean, required: false, note: "adds a top-level 'matched' field listing which query fields matched"}
     test_request:
       queryParams: {email: "sean@peopledatalabs.com"}
-    cost: {type: per_success, value: null, currency: USD, note: "PDL bills a preview at a reduced credit rate vs a full enrich; exact rate is plan-negotiated, not published"}
+    cost: {type: per_success, value: null, currency: credit, note: "PDL bills a preview at a reduced credit rate vs a full enrich; exact rate is plan-negotiated, not published"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-enrich-preview-api
     unverified: "http 402 — payment_required: \"You have hit your account maximum for person_enrich_preview (all matches used)\". This account's Preview allotment is exhausted; the route itself was reached and answered, not a broken endpoint."
 
@@ -94,7 +94,7 @@ endpoints:
         include_if_matched: {type: boolean, required: false}
     test_request:
       queryParams: {email: "sean@peopledatalabs.com"}
-    cost: {type: per_success, value: null, currency: USD, note: "1+ credits per identity resolved; PDL does not publish a flat $/credit"}
+    cost: {type: per_success, value: 1, currency: credit, note: "flat 1 credit per call regardless of profiles returned; PDL does not publish a flat $/credit"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-identify-api
     verified: 2026-07-28
     example_response: examples/pdl.x.person-identify.json
@@ -114,7 +114,7 @@ endpoints:
         filter_updated: {type: string, required: false, note: "comma-delimited key(s); skip returning if not updated since the most recent request"}
         request_version: {type: string, required: false, note: "bypass last_requested_version for filter_updated"}
     untestable: "requires a real PDL person_id from a prior enrich/search result; no public well-known id is documented"
-    cost: {type: per_success, value: null, currency: USD, note: "billed like enrich — 1 credit on a hit"}
+    cost: {type: per_success, value: 1, currency: credit, note: "billed like enrich — 1 credit on a hit"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-retrieve-api
 
   - id: pdl.x.person-retrieve-bulk
@@ -133,7 +133,7 @@ endpoints:
         requests: {type: array, required: true, note: "list of {person_id, metadata?} objects, up to 100"}
       bodyType: json
     untestable: "requires real PDL person_ids from a prior enrich/search result; no public well-known ids are documented"
-    cost: {type: per_success, value: null, currency: USD, note: "1 credit per record returned"}
+    cost: {type: per_success, value: 1, currency: credit, note: "1 credit per record returned"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-retrieve-api
 
   - id: pdl.x.person-search-post
@@ -157,7 +157,7 @@ endpoints:
       note: "core file (pdl.yaml) already curates the GET variant; this is the same route, POST method, for the size>100 case"
     test_request:
       body: {sql: "SELECT * FROM person WHERE location_country='united states'", size: 1}
-    cost: {type: per_result, value: null, currency: USD, note: "1 credit PER RECORD in the data array; a size=1000 call costs 1000 credits"}
+    cost: {type: per_result, value: 1, currency: credit, note: "1 credit PER RECORD in the data array; a size=1000 call costs 1000 credits"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-search-api
     verified: 2026-07-28
     example_response: examples/pdl.x.person-search-post.json
@@ -182,7 +182,7 @@ endpoints:
       note: "core file (pdl.yaml) already curates the GET variant; this is the same route, POST method"
     test_request:
       body: {sql: "SELECT * FROM company WHERE name='people data labs'", size: 1}
-    cost: {type: per_result, value: null, currency: USD, note: "1 credit PER RECORD returned"}
+    cost: {type: per_result, value: 1, currency: credit, note: "1 credit PER RECORD returned"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-company-search-api
     verified: 2026-07-28
     example_response: examples/pdl.x.company-search-post.json
@@ -200,7 +200,7 @@ endpoints:
         pretty: {type: boolean, required: false}
     test_request:
       queryParams: {job_title: "software engineer"}
-    cost: {type: per_success, value: null, currency: USD, note: "billed like other enrich routes — 1 credit per matched title; NOT free despite looking like a lookup utility"}
+    cost: {type: per_success, value: 1, currency: credit, note: "billed like other enrich routes — 1 credit per matched title; NOT free despite looking like a lookup utility"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-job-title-enrichment-api
     verified: 2026-07-28
     example_response: examples/pdl.x.job-title-enrich.json
@@ -224,7 +224,7 @@ endpoints:
         titlecase: {type: boolean, required: false}
     test_request:
       queryParams: {ip: "72.212.42.169", return_ip_location: true}
-    cost: {type: per_success, value: null, currency: USD, note: "charged per match on HTTP 200; a 404 is free"}
+    cost: {type: per_success, value: 1, currency: credit, note: "charged per match on HTTP 200; a 404 is free — 1 credit per successful lookup"}
     docs_url: https://docs.peopledatalabs.com/docs/reference-ip-enrichment-api
     verified: 2026-07-28
     example_response: examples/pdl.x.ip-enrich.json

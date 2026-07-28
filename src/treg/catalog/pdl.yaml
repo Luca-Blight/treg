@@ -54,8 +54,8 @@ endpoints:
       queryParams: {email: "sean@peopledatalabs.com"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 PDL credit per person returned (HTTP 200); a 404 is free. Enriching the same person twice costs 2 credits — PDL does not de-duplicate. No public $/credit; it is plan-negotiated."
     verified: 2026-07-28
     example_response: examples/pdl.people.enrich.json
@@ -83,8 +83,8 @@ endpoints:
       queryParams: {sql: "SELECT * FROM person WHERE location_country='united states'", size: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 PDL credit PER RECORD in the data array — a size=100 call costs 100 credits, a size=1000 POST costs 1000. A query matching nothing is free."
     verified: 2026-07-28
     example_response: examples/pdl.people.search.json
@@ -117,8 +117,8 @@ endpoints:
       queryParams: {website: "peopledatalabs.com"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 PDL credit per company returned; a 404 is free."
     verified: 2026-07-28
     example_response: examples/pdl.companies.enrich.json
@@ -145,8 +145,8 @@ endpoints:
       queryParams: {sql: "SELECT * FROM company WHERE name='people data labs'", size: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 PDL credit PER RECORD returned; `size` is the cost dial."
     verified: 2026-07-28
     example_response: examples/pdl.companies.search.json

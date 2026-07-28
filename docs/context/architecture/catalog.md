@@ -21,6 +21,7 @@ The catalog adds that operations layer:
 ```
 src/treg/catalog/
   capabilities.yaml        # the shared capability taxonomy (the cross-provider join key)
+  fx.yaml                  # currency -> USD rates + per-PROVIDER credit rates (see "Cost" below)
   <service>.yaml           # CORE tier — hand-curated; <service> = OAuthProvider.service
   <service>.extended.yaml  # EXTENDED tier — machine-generated full endpoint surface
   examples/<endpoint-id>.json  # truncated, scrubbed real responses captured at verify time
@@ -207,6 +208,32 @@ Rules:
     the scope that is missing. These are listed rather than dropped on purpose: the set of gaps is
     the answer to "which scopes should we add to the registered app", and it is only visible if the
     endpoints stay in the file. `scope_gap` present ⇒ expect 403 until the app is widened.
+
+### Cost — the file keeps the billing unit, the server computes USD
+
+A `cost` block stays in whatever unit the PROVIDER bills in; that is the number that stays correct
+when a rate moves. `cost.usd` is added at SERVE time by `Catalog.cost_view` from `fx.yaml`, so a
+rate refresh re-prices the whole catalog without touching a provider file. Clients (dashboard cards,
+`treg catalog search`, `treg catalog get`) lead with `usd` because a column is only comparable in
+one unit, and fall back to the native amount when `usd` is null.
+
+Two kinds of unit convert, and they convert differently:
+
+- **A real currency** (`currency: USD`, `CNY`) uses `fx.yaml`'s `rates_to_usd`, keyed by currency.
+- **`currency: credit`** is NOT a currency. A credit is a PROVIDER-SCOPED unit — one scrapecreators
+  credit and one lusha credit have nothing to do with each other — so it converts with the rate for
+  the endpoint's provider from `fx.yaml`'s `credit_rates_usd` block, keyed by service. That is why
+  `cost_view(cost, provider)` takes the provider: the same `value: 1, currency: credit` is worth
+  $0.00188 on scrapecreators and $0.1248 on lusha.
+
+Each `credit_rates_usd` entry carries `usd` plus the `basis`/`source`/`checked` that justify it —
+the cheapest PUBLICLY listed tier (plan price ÷ credits included), so the served figure is an upper
+bound on real spend, never an under-estimate. `usd: null` is a deliberate state, not a gap: the
+provider publishes no per-credit price (seat-priced like Apollo, sales-negotiated like PDL, or not
+credit-priced at all like BrightData). Those endpoints keep `cost.usd = null` and display natively
+("3 credits/success"), because a guessed dollar figure is worse than an honest credit count. The
+block is hand-maintained and must stay ABOVE `rates_to_usd:` — `catalog_fx_update.py` rewrites the
+file from the text before that key and discards anything below it.
 
 ### Core-wins dedup compares NORMALISED paths — except on Graph
 

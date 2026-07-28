@@ -298,8 +298,8 @@ endpoints:
   untestable: handles are opaque ids minted by a prior multi-domain-search call; none exist without one
   cost:
     type: per_success
-    value: null
-    currency: USD
+    value: 1
+    currency: credit
     note: 1 SEARCH credit per personal email revealed; 1 credit per domain for generic emails
   docs_url: https://hunter.io/api-documentation/v2#multi-domain-search
 - id: hunter.x.combined-find
@@ -324,8 +324,8 @@ endpoints:
       email: steli@close.io
   cost:
     type: per_success
-    value: null
-    currency: USD
+    value: 0.2
+    currency: credit
     note: 0.2 credits, billed conditionally (only when the combined record comes back complete); a 404 or partial record is free — same rate as the /people/find and /companies/find enrichment routes
   docs_url: https://hunter.io/api-documentation/v2#email-enrichment
   verified: '2026-07-28'

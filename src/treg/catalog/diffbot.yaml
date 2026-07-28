@@ -64,8 +64,8 @@ endpoints:
       queryParams: {type: "Organization", url: "https://www.diffbot.com", size: 1}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 25
+      currency: credit
       note: "25 credits per enhanced record, or 100 credits with refresh=true. `size` multiplies this. On the $299/mo 250k-credit plan that is roughly $0.03 per record."
     verified: 2026-07-28
     example_response: examples/diffbot.companies.enrich.json
@@ -100,8 +100,8 @@ endpoints:
       queryParams: {type: "Person", name: "Mike Tung", employer: "Diffbot", size: 1}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 25
+      currency: credit
       note: "25 credits per enhanced record, or 100 with refresh=true — same rate as company enrichment."
     verified: 2026-07-28
     example_response: examples/diffbot.people.enrich.json
@@ -130,8 +130,8 @@ endpoints:
       queryParams: {query: "type:Organization industries:\"Software Companies\"", size: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 25
+      currency: credit
       note: "25 credits per entity record returned (100 per facet-query result), so `size` is the price. Billed per result, not per query."
     verified: 2026-07-28
     example_response: examples/diffbot.companies.search.json
@@ -158,8 +158,8 @@ endpoints:
       queryParams: {query: "type:Person employments.employer.name:\"Diffbot\"", size: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 25
+      currency: credit
       note: "25 credits per entity record returned (100 per facet-query result); `size` is the price."
     verified: 2026-07-28
     example_response: examples/diffbot.people.search.json
@@ -190,8 +190,8 @@ endpoints:
       body: [{"type": "Organization", "url": "diffbot.com"}]
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 25
+      currency: credit
       note: "25 credits per record in the batch (100 with refresh) — the same rate as a single /enhance call, so batching saves round trips, not credits."
     verified: 2026-07-28
     example_response: examples/diffbot.companies.bulk_enrich.json

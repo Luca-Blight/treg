@@ -42,8 +42,8 @@ endpoints:
       note: "a domain with no company behind it returns an empty object and is not charged"
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per company found; nothing when not found. `simplified=true` is free; `refresh=true` adds 10 credits. Dollar value depends on plan (500 free credits on signup)."
     docs_url: https://www.thecompaniesapi.com/api/enrich-company-from-domain
 
@@ -72,8 +72,8 @@ endpoints:
       note: "POST /companies takes the identical fields as a JSON body, which is easier when the condition array is long. `searchFields` accepts about.name and domain.domain. Always set an explicit small `size` — the default of 10 bills for 10 companies. GET /companies/count returns just the match count and is widely treated as free, though that is not published"
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit PER COMPANY RETURNED, so `size` is the price. `simplified=true` makes the whole call free."
     docs_url: https://www.thecompaniesapi.com/api/search-companies
 
@@ -91,8 +91,8 @@ endpoints:
       note: "the signup-qualification route — turn a new user's work email into their employer's firmographics. Free-mail domains (gmail.com and friends) return nothing"
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "presumed 1 credit per company found, matching domain enrichment — this route's price is NOT explicitly published, so treat the figure as an inference and confirm against a real response's credit accounting before relying on it."
     docs_url: https://www.thecompaniesapi.com/api/enrich-company-from-email
 
@@ -113,8 +113,8 @@ endpoints:
       note: "returns the patterns (first.last@, flast@, first@) with a usage percentage each. It gives you the SHAPE, not a specific person's address — pair it with a verifier such as hunter.people.email.verify or leadmagic.people.email.verify to confirm a constructed address. This provider has NO email-verification endpoint of its own"
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per request."
     docs_url: https://www.thecompaniesapi.com/api/fetch-company-email-patterns
 

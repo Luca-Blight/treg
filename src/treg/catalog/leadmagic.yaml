@@ -49,8 +49,8 @@ endpoints:
       body: {full_name: "Jane Doe", domain: "leadmagic.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per email found; a null result costs nothing. Dollar value depends on plan."
     verified: 2026-07-28
     example_response: examples/leadmagic.people.email.find.json
@@ -73,8 +73,8 @@ endpoints:
       body: {email: "test@leadmagic-nonexistent-domain-test.com"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 0.25
+      currency: credit
       note: "0.25 credits per DEFINITIVE result (valid or invalid) — four validations to a credit. 'unknown' results and RFC syntax failures are free. Rate limit 300 req/min."
     verified: 2026-07-28
     example_response: examples/leadmagic.people.email.verify.json
@@ -97,8 +97,8 @@ endpoints:
       body: {profile_url: "https://www.linkedin.com/in/satyanadella"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per profile matched; free when the profile cannot be resolved."
     verified: 2026-07-28
     example_response: examples/leadmagic.people.enrich.json
@@ -123,8 +123,8 @@ endpoints:
       body: {profile_url: "https://www.linkedin.com/in/nonexistent-test-profile-xyz123"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 5
+      currency: credit
       note: "5 credits when a mobile number is found; free when nothing is returned."
     verified: 2026-07-28
     example_response: examples/leadmagic.people.phone.find.json
@@ -149,8 +149,8 @@ endpoints:
       body: {company_domain: "leadmagic.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per company matched; free when no company is found."
     verified: 2026-07-28
     example_response: examples/leadmagic.companies.enrich.json
@@ -180,8 +180,8 @@ endpoints:
       body: {company_domain: "leadmagic.io", titles: ["Head of Marketing"], limit: 1, include_contact_details: false}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per person returned, PLUS 1 credit per email and 5 per mobile when include_contact_details is true. No results, no charge. A limit=25 search revealing mobiles can therefore cost 150+ credits — set limit deliberately."
     unverified: "http 401 invalid_api_key — this key's plan does not include v3 people search; the sibling /v3/companies/search route on the SAME key succeeded (200, 1 credit), so this is a plan/feature gate on this one route, not a broken key or a broken endpoint"
     docs_url: https://leadmagic.io/docs/reference/people-search

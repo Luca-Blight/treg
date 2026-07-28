@@ -67,7 +67,7 @@ endpoints:
       note: "the id-based sibling of lusha.companies.enrich (which takes domain/name); use this once you already hold ids from POST /v3/companies/prospecting"
     test_request:
       body: {ids: ["v1.A1gXjPYd63SSPjSvxO4uwqXqE5ilJV9S"]}
-    cost: {type: per_result, value: null, currency: USD, note: "billed on the reveal_company action per company returned; a no-match is free"}
+    cost: {type: per_result, value: null, currency: credit, note: "billed on the reveal_company action per company returned; a no-match is free. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
     skipped: "field-name bug fixed and a real id (from lusha.companies.search) is in test_request, but not called to conserve budget — lusha.companies.enrich (core) already verifies this exact reveal_company billing path against the same company (domain-based instead of id-based); top up credits and re-run to confirm the id-based variant specifically"
     docs_url: https://docs.lusha.com/apis/openapi/company-search-and-enrich
 
@@ -89,7 +89,7 @@ endpoints:
       note: "returns lightweight previews; call lusha.people.contacts.enrich on the returned ids for full details"
     test_request:
       body: {seeds: {ids: ["v1.-R1YwK7SIvBv1FVAOW1zmel9bZ4XD9mxNQ", "v1.ujDPLE3res-lYBnt6iiLr3jwCe9wXPdmrg", "v1.n0ghmmrFpkVf6z0q-rKCjt4kTMVGydVe", "v1.Ex7lVhKX97ZmbbTTg4AumQqE0SPKKsw", "v1.AUMmbUKy3d9zrSEMaIog-hADfblVwPQCZQ"]}, limit: 1}
-    cost: {type: per_result, value: null, currency: USD, note: "OBSERVED live 2026-07-28: 1 credit for 1 returned result (lookalikeContact, perQuantity 5 per account/usage pricing)"}
+    cost: {type: per_result, value: 1, currency: credit, note: "OBSERVED live 2026-07-28: 1 credit for 1 returned result (lookalikeContact, perQuantity 5 per account/usage pricing)"}
     verified: 2026-07-28
     example_response: examples/lusha.x.contacts-lookalike.json
     docs_url: https://docs.lusha.com/apis/openapi/lookalikes
@@ -112,7 +112,7 @@ endpoints:
       note: "returns lightweight previews; call lusha.companies.enrich / lusha.x.companies-enrich-by-id on the returned ids for full details"
     test_request:
       body: {seeds: {domains: ["salesforce.com", "hubspot.com", "zoominfo.com", "apollo.io", "clearbit.com"]}, limit: 1}
-    cost: {type: per_result, value: null, currency: USD, note: "OBSERVED live 2026-07-28: 1 credit for 1 returned result (lookalikeCompany, perQuantity 5 per account/usage pricing)"}
+    cost: {type: per_result, value: 1, currency: credit, note: "OBSERVED live 2026-07-28: 1 credit for 1 returned result (lookalikeCompany, perQuantity 5 per account/usage pricing)"}
     verified: 2026-07-28
     example_response: examples/lusha.x.companies-lookalike.json
     docs_url: https://docs.lusha.com/apis/openapi/lookalikes
@@ -132,7 +132,7 @@ endpoints:
         startDate: {type: string, required: false, note: "ISO date; only signals on/after this date"}
         tableId: {type: string, required: false, note: "persist results into a Lusha Table's Signals column"}
       note: "standalone alternative to the signals filter on the search/prospecting endpoints"
-    cost: {type: per_result, value: null, currency: USD, note: "billed on the showSignalsContact action per matched signal"}
+    cost: {type: per_result, value: null, currency: credit, note: "billed on the showSignalsContact action per matched signal. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
     untestable: "requires contactIds minted by a prior search on this account; no public/stable id is documented to probe with"
     docs_url: https://docs.lusha.com/apis/openapi/signals
 
@@ -151,7 +151,7 @@ endpoints:
         startDate: {type: string, required: false, note: "ISO date; only signals on/after this date"}
         tableId: {type: string, required: false, note: "persist results into a Lusha Table's Signals column"}
       note: "standalone alternative to the signals filter on the search/prospecting endpoints"
-    cost: {type: per_result, value: null, currency: USD, note: "billed on the showSignalsCompany action per matched signal"}
+    cost: {type: per_result, value: null, currency: credit, note: "billed on the showSignalsCompany action per matched signal. Lusha does not publish the numeric credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."}
     untestable: "requires companyIds minted by a prior search on this account; no public/stable id is documented to probe with"
     docs_url: https://docs.lusha.com/apis/openapi/signals
 

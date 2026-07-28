@@ -64,8 +64,8 @@ endpoints:
       body: {work_email: "press@leadmagic.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 10
+      currency: credit
       note: "10 credits if a profile is found; free if not found"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.b2b-profile.json
@@ -88,8 +88,8 @@ endpoints:
       body: {profile_url: "https://www.linkedin.com/in/example"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 5
+      currency: credit
       note: "5 credits if an email is found; free if not found"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.b2b-profile-email.json
@@ -111,8 +111,8 @@ endpoints:
       body: {profile_url: "https://www.linkedin.com/in/example"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 2
+      currency: credit
       note: "2 credits if found; free if not found"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.personal-email-finder.json
@@ -138,8 +138,8 @@ endpoints:
       body: {job_title: "Head of Marketing", company_domain: "leadmagic.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 2
+      currency: credit
       note: "2 credits when found; free on no match"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.role-finder.json
@@ -166,7 +166,7 @@ endpoints:
     cost:
       type: per_result
       value: 0.05
-      currency: USD
+      currency: credit
       note: "0.05 credits per employee returned (20 employees = 1 credit); free if no results"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.employee-finder.json
@@ -192,7 +192,7 @@ endpoints:
     cost:
       type: per_call
       value: 3
-      currency: USD
+      currency: credit
       note: "3 credits per call, regardless of outcome"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.job-change-detector.json
@@ -217,8 +217,8 @@ endpoints:
       body: {company_domain: "leadmagic.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 5
+      currency: credit
       note: "5 credits if competitors are found; free if none found"
     unverified: "http 401 invalid_api_key — plan-gated on this key (same 401 shape as core's /v3/people/search); no credits were consumed"
     docs_url: https://leadmagic.io/docs/api-reference/competitors-search
@@ -241,8 +241,8 @@ endpoints:
       body: {company_domain: "leadmagic.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 4
+      currency: credit
       note: "4 credits if funding data is found; free if none found"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.company-funding.json
@@ -264,8 +264,8 @@ endpoints:
       body: {company_domain: "leadmagic.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit if technologies are detected; free if none found"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.technographics.json
@@ -299,8 +299,8 @@ endpoints:
       body: {company_domain: "leadmagic.io", limit: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per company returned; free if zero matches. Rate limit 100 req/min, ~2 req/s burst"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.companies-search-v3.json
@@ -331,8 +331,8 @@ endpoints:
       body: {companies: {include: ["leadmagic.io"]}, limit: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per returned job/signal; free when no jobs are returned. Rate limit 300 req/min, ~5 req/s burst"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.jobs-search-v3.json
@@ -364,8 +364,8 @@ endpoints:
       body: {company_website: "leadmagic.io", per_page: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per job returned; free if no jobs found"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.jobs-finder.json
@@ -389,8 +389,8 @@ endpoints:
       body: {company_domain: "leadmagic.io"}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per ad returned; free if none found. No per-call ceiling documented — check X-Credits-Max-Cost before running on a heavy advertiser"
     skipped: "unbounded per-result cost with no limit param documented; this verify pass ran under a hard 30-credit budget and the other 11 callable extended entries already used it responsibly — clears with a topped-up budget and X-Credits-Max-Cost checked first, not investigation"
     docs_url: https://leadmagic.io/docs/api-reference/google-ads-search
@@ -413,8 +413,8 @@ endpoints:
       body: {company_domain: "leadmagic.io"}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per ad returned; free if none found. Rate limit 300 req/min, ~5 req/s burst"
     skipped: "unbounded per-result cost with no limit param documented; ran the rest of this verify pass under a hard 30-credit budget — clears with a topped-up budget, not investigation"
     docs_url: https://leadmagic.io/docs/api-reference/meta-ads-search
@@ -437,8 +437,8 @@ endpoints:
       body: {company_domain: "leadmagic.io"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit base + 1 credit per ad returned; range 1-51 credits per call (0-50 ads max) — a 24-ad response costs 25 credits total"
     skipped: "unbounded per-call cost (1-51 credits, no limit param) — a single call could alone exhaust the entire 30-credit test budget; clears with a topped-up budget and X-Credits-Max-Cost checked first, not investigation"
     docs_url: https://leadmagic.io/docs/api-reference/b2b-ads-search

@@ -31,6 +31,10 @@ FX_FILE = "fx.yaml"
 @dataclass(frozen=True)
 class Catalog:
     fx: dict[str, float] = field(default_factory=dict)           # currency -> USD rate (fx.yaml)
+    # provider service -> USD per credit, or None when the provider publishes no per-credit price.
+    # Credits are PROVIDER-scoped, never a currency: one scrapecreators credit and one lusha credit
+    # are unrelated, so this cannot live in `fx` alongside CNY.
+    credit_rates: dict[str, float | None] = field(default_factory=dict)
     platforms: dict[str, dict] = field(default_factory=dict)     # slug -> {label, category}
     capabilities: dict[str, str] = field(default_factory=dict)   # id -> description
     endpoints: list[dict] = field(default_factory=list)          # normalized endpoint dicts
@@ -46,14 +50,18 @@ class Catalog:
     def for_provider(self, service: str) -> list[dict]:
         return [e for e in self.endpoints if e["provider"] == service]
 
-    def cost_view(self, cost) -> dict | None:
+    def cost_view(self, cost, provider: str | None = None) -> dict | None:
         """A cost dict with a computed `usd` field. Source of truth stays in the provider's
         BILLING currency; USD is derived at serve time from fx.yaml so a rate refresh re-prices
-        the whole catalog at once. `usd` is None when the value or rate is unknown."""
+        the whole catalog at once. `usd` is None when the value or rate is unknown.
+
+        Currency "credit" is not a currency but a provider-scoped unit, so it converts with the
+        PROVIDER's credit rate (fx.yaml `credit_rates_usd`) — hence `provider`. A provider with a
+        null rate keeps `usd` None and the client displays the native credit count."""
         if not isinstance(cost, dict):
             return None
         value, cur = cost.get("value"), cost.get("currency", "USD")
-        rate = self.fx.get(cur)
+        rate = self.credit_rates.get(provider) if cur == "credit" else self.fx.get(cur)
         usd = round(value * rate, 6) if isinstance(value, (int, float)) and rate else None
         return {**cost, "usd": usd}
 
@@ -126,9 +134,16 @@ def _parse(directory: Path) -> Catalog:
 
     for ep in endpoints:  # a platform seen only in provider files still deserves a label
         platforms.setdefault(ep["platform"], {"label": ep["platform"], "category": "Other"})
-    fx = dict((_read_yaml(directory / FX_FILE) or {}).get("rates_to_usd") or {"USD": 1.0})
-    return Catalog(fx=fx, platforms=platforms, capabilities=capabilities, endpoints=endpoints,
-                   by_id=by_id, provider_meta=provider_meta)
+    fx_doc = _read_yaml(directory / FX_FILE) or {}
+    fx = dict(fx_doc.get("rates_to_usd") or {"USD": 1.0})
+    # Each entry is a {usd, basis, source, checked} block; only the rate is served, and `usd: null`
+    # (no published per-credit price) is kept as an explicit None so display stays native.
+    credit_rates = {
+        str(service): (v.get("usd") if isinstance(v, dict) else v)
+        for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
+    }
+    return Catalog(fx=fx, credit_rates=credit_rates, platforms=platforms, capabilities=capabilities,
+                   endpoints=endpoints, by_id=by_id, provider_meta=provider_meta)
 
 
 # The subject an endpoint is ABOUT, within its platform — the section a platform page files it
@@ -284,7 +299,7 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # the whole point of a row is the call it stands for, so the line that makes it is part of
         # the row — not a second request away
         "call_template": call_template(ep),
-        "cost": cat.cost_view(ep["cost"]) if cat else ep["cost"],
+        "cost": cat.cost_view(ep["cost"], ep["provider"]) if cat else ep["cost"],
         "verified": ep["verified"],
         "docs_url": ep["docs_url"],
         "has_example": bool(ep["example_file"]),
