@@ -143,9 +143,10 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
     argv deny patterns with their source (skill vs catalog), under a line naming all three deny
     layers — HTTP rules, argv patterns, OS sandbox — so the whole "what is blocked" picture is one
     screen.
-  - **Team settings** — a real settings page now, visible to EVERY role (leaving is self-service, and
-    `loadOrgAdmin` lands a non-admin here): team identity (name / slug / your role), the your-teams
-    actions, then leave / delete demoted to an explicit **Danger zone** at the bottom.
+  - **Team settings** — deliberately JUST the **Danger zone** (leave / delete), visible to EVERY role
+    (leaving is self-service, and `loadOrgAdmin` lands a non-admin here). New team / Join by code /
+    Paste token live only in the sidebar picker — Jason cut them from this tab on review; a personal
+    team shows a one-line explainer instead of an empty page.
 - **Agents** (`view==='agents'`, `canAdmin`) — its own sidebar entry rather than a row in Team, because an
   agent identity is how most people will actually use treg. Two sections now: **Detected in your
   team's traffic** (`observedAgents`, from `GET /orgs/{id}/agents/observed`) — the agents already

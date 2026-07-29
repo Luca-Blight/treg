@@ -4107,6 +4107,7 @@ async def list_calls(
             "path": c.path,
             "status_code": c.status_code,
             "kind": c.kind,
+            "client": c.client,
             "created_at": c.created_at.isoformat(),
         }
         for c in rows
@@ -4136,12 +4137,12 @@ async def list_runs(
     rows = [
         {"id": f"s{r.id}", "user_email": r.user_email, "tool": r.bundle_name,  # bundle_name = tool (historical)
          "argv": r.argv, "exit_code": r.exit_code, "duration_ms": r.duration_ms,
-         "where": "server", "created_at": r.created_at.isoformat()}
+         "where": "server", "client": r.client, "created_at": r.created_at.isoformat()}
         for r in server
     ] + [
         {"id": f"l{c.id}", "user_email": c.user_email, "tool": c.tool_name,
          "argv": (c.path or "").split(), "exit_code": None, "duration_ms": None,
-         "where": "local", "created_at": c.created_at.isoformat()}
+         "where": "local", "client": c.client, "created_at": c.created_at.isoformat()}
         for c in local
     ]
     rows.sort(key=lambda x: x["created_at"], reverse=True)

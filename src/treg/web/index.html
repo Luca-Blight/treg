@@ -1398,26 +1398,11 @@ th{background:rgba(0,0,0,.25)}
               </template>
             </template>
 
-            <!-- TEAM SETTINGS: the active team's identity + your teams actions; destructive actions
-                 live at the bottom under an explicit Danger zone. Visible to every role — leaving
-                 a team is self-service, not an admin action. -->
+            <!-- TEAM SETTINGS: just the danger zone (new/join/switch team live in the sidebar
+                 picker). Visible to every role — leaving a team is self-service, not admin. -->
             <template v-if="orgTab==='danger'">
-            <div class="lbl" style="margin-top:14px">This team</div>
-            <table style="max-width:560px">
-              <tr><td class="muted" style="width:120px">Name</td><td><b>{{activeName}}</b><span v-if="isPersonal(activeOrg)" class="chip" style="margin-left:8px">personal</span></td></tr>
-              <tr><td class="muted">Slug</td><td style="font-family:var(--mono);font-size:12px">{{activeSlugNow}}</td></tr>
-              <tr><td class="muted">Your role</td><td><span class="role" :class="activeRole">{{activeRole}}</span></td></tr>
-            </table>
-
-            <div class="lbl" style="margin-top:18px;display:flex;align-items:center;gap:10px">Your teams
-              <button v-if="sessionMode" class="btn sm" @click="newOrg=true; newOrgName=''">＋ New team</button>
-              <button v-if="sessionMode" class="btn sm" @click="showJoin=true; joinCode=''; joinErr=''">⤷ Join by code</button>
-              <button v-if="!sessionMode" class="btn sm" @click="addOrg=true">＋ Add team (paste token)</button>
-            </div>
-            <p class="sub" style="margin:-2px 0 8px;font-size:12px">Switch teams from the picker at the top of the sidebar — each team owns its own tools, secrets and members.</p>
-
             <template v-if="!isPersonal(activeOrg)">
-            <div class="lbl" style="margin-top:18px;color:var(--red)">Danger zone</div>
+            <div class="lbl" style="margin-top:14px;color:var(--red)">Danger zone</div>
             <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
               <div>
                 <button class="btn sm" :class="{danger:confirmLeave}" @click="leaveOrg">{{confirmLeave?'Confirm leave':'Leave org'}}</button>
@@ -1429,6 +1414,7 @@ th{background:rgba(0,0,0,.25)}
               </div>
             </div>
             </template>
+            <p v-else class="sub" style="margin-top:14px;font-size:12px">A personal team cannot be left or deleted. Create or join other teams from the picker at the top of the sidebar.</p>
             </template>
           </div>
         </template>
@@ -1528,7 +1514,7 @@ th{background:rgba(0,0,0,.25)}
           <h1>Activity - {{activeName}}</h1>
           <p class="sub">Every proxy call and server CLI run in this org.</p>
           <table><tr><th>When</th><th>Who</th><th>Tool</th><th>Action</th><th>Status</th></tr>
-            <tr v-for="a in activityRows" :key="a.kind+'-'+a.id"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}</td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span></td></tr></table>
+            <tr v-for="a in activityRows" :key="a.kind+'-'+a.id"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span></td></tr></table>
           <p v-if="!loading && !activityRows.length" class="sub">No activity yet.</p>
         </template>
 
