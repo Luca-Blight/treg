@@ -3298,7 +3298,7 @@ def cmd_catalog(args, cfg) -> None:
                 print("no catalog on this registry")
                 return
             # grouped under the marketplace categories, in the same order the dashboard tabs use
-            order = ["SEO", "Social", "Advertising", "Enrichment", "E-commerce",
+            order = ["SEO/AEO", "Social", "Advertising", "Enrichment", "E-commerce",
                      "Reviews & Apps", "Community", "Other"]
             by_cat: dict[str, list] = {}
             for p in rows:

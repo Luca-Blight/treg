@@ -11,19 +11,19 @@
 
 platforms:
   # --- SEO: search engines & the open web ------------------------------------------------------
-  google: {label: "Google Keyword Data", category: "SEO", featured: 1, summary: "Organic rankings, keyword volume and full SERP data from Google."}
-  web: {label: "Backlinks, authority & domain metrics", category: "SEO", featured: 2, summary: "Backlinks, referring domains, anchors and authority metrics for any site."}
-  search-console: {label: "Google Search Console", category: "SEO", featured: 3, summary: "Your site's Google Search clicks, impressions, top queries and indexing."}
-  google-analytics: {label: "Google Analytics (GA4)", category: "SEO", featured: 4, summary: "Traffic and behavior reports from your own GA4 properties, including realtime visitors."}
-  bing: {label: "Bing Keyword Data", category: "SEO", summary: "Organic results and rankings from Bing."}
-  google-business: {label: "Google Business Profile", category: "SEO", featured: 5, summary: "Your Google Business Profile locations and reviews — read them and reply to them."}
-  yahoo: {label: "Yahoo Search Results (SERP)", category: "SEO", summary: "Organic results and rankings from Yahoo."}
-  baidu: {label: "Baidu Search Results (SERP)", category: "SEO", summary: "Organic results and rankings from Baidu, China's main search engine."}
-  naver: {label: "Naver Search Results (SERP)", category: "SEO", summary: "Organic results and rankings from Naver, Korea's main search engine."}
-  seznam: {label: "Seznam Search Results (SERP)", category: "SEO", summary: "Organic results and rankings from Seznam, the Czech search engine."}
+  google: {label: "Google Keyword Data", category: "SEO/AEO", featured: 1, summary: "Organic rankings, keyword volume and full SERP data from Google."}
+  web: {label: "Backlinks, authority & domain metrics", category: "SEO/AEO", featured: 2, summary: "Backlinks, referring domains, anchors and authority metrics for any site."}
+  search-console: {label: "Google Search Console", category: "SEO/AEO", featured: 3, summary: "Your site's Google Search clicks, impressions, top queries and indexing."}
+  google-analytics: {label: "Google Analytics (GA4)", category: "SEO/AEO", featured: 4, summary: "Traffic and behavior reports from your own GA4 properties, including realtime visitors."}
+  bing: {label: "Bing Keyword Data", category: "SEO/AEO", summary: "Organic results and rankings from Bing."}
+  google-business: {label: "Google Business Profile", category: "SEO/AEO", featured: 5, summary: "Your Google Business Profile locations and reviews — read them and reply to them."}
+  yahoo: {label: "Yahoo Search Results (SERP)", category: "SEO/AEO", summary: "Organic results and rankings from Yahoo."}
+  baidu: {label: "Baidu Search Results (SERP)", category: "SEO/AEO", summary: "Organic results and rankings from Baidu, China's main search engine."}
+  naver: {label: "Naver Search Results (SERP)", category: "SEO/AEO", summary: "Organic results and rankings from Naver, Korea's main search engine."}
+  seznam: {label: "Seznam Search Results (SERP)", category: "SEO/AEO", summary: "Organic results and rankings from Seznam, the Czech search engine."}
 
   # --- AI Search: answer engines (GEO / AEO visibility) ----------------------------------------
-  ai-search: {label: "AI Visibility / AEO", category: "SEO", featured: 6, summary: "Aggregated brand-mention and keyword data across AI answer engines."}
+  ai-search: {label: "AI Visibility / AEO", category: "SEO/AEO", featured: 6, summary: "Aggregated brand-mention and keyword data across AI answer engines."}
 
   # --- Social: global social & video -----------------------------------------------------------
   tiktok: {label: "TikTok", category: "Social", featured: 1, summary: "Profiles, videos, comments, hashtags and search — plus your own account via OAuth."}
@@ -108,8 +108,8 @@ platforms:
 
   ebay: {label: "eBay", category: "E-commerce", summary: "Product listings and search results from eBay."}
   walmart: {label: "Walmart", category: "E-commerce", summary: "Product listings and search results from Walmart."}
-  yandex: {label: "Yandex Search Results (SERP)", category: "SEO", summary: "Organic results and rankings from Yandex."}
-  duckduckgo: {label: "DuckDuckGo Search Results (SERP)", category: "SEO", summary: "Organic results from DuckDuckGo."}
+  yandex: {label: "Yandex Search Results (SERP)", category: "SEO/AEO", summary: "Organic results and rankings from Yandex."}
+  duckduckgo: {label: "DuckDuckGo Search Results (SERP)", category: "SEO/AEO", summary: "Organic results from DuckDuckGo."}
   yelp: {label: "Yelp", category: "Reviews & Apps", summary: "Business listings and reviews from Yelp."}
   account: {label: "The provider account itself — usage, quota, balance (not a content platform)", category: "Other"}
 
