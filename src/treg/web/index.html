@@ -1424,7 +1424,7 @@ th{background:rgba(0,0,0,.25)}
                 <select v-model="denyForm.method" class="msel"><option value="">any method</option><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select>
                 <select v-model="denyForm.user_id" class="msel" title="who it applies to">
                   <option :value="null">whole team</option>
-                  <option v-for="m in rosterMembers" :key="m.user_id" :value="m.user_id">{{m.is_agent?('agent: '+(m.name||m.email)):m.email}}</option>
+                  <option v-for="m in rosterMembers.filter(x=>!x.is_observed)" :key="m.user_id" :value="m.user_id">{{m.is_agent?('agent: '+(m.name||m.email)):m.email}}</option>
                 </select>
                 <select v-if="projects.length" v-model="denyForm.project_id" class="msel" title="which project's tools it applies to">
                   <option :value="null">any project</option>

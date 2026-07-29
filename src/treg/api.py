@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlsplit
 
-from sqlalchemy import func, or_
+from sqlalchemy import case, func, or_
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -1567,8 +1567,8 @@ async def _enforce_deny(
     `tool_project_id` = the project of the tool this call goes through (every enforcement point has
     resolved a Tool by then). A project-scoped rule (`project_id` set) fires only on that project's
     tools; an org-wide-tool call (`tool_project_id` None) is never caught by one."""
-    rules = await _org_deny_rules(caller, db)
-    rules = [r for r in rules if r.project_id is None or r.project_id == tool_project_id]
+    rules = [r for r in await _org_deny_rules(caller, db)
+             if r.project_id is None or r.project_id == tool_project_id]
     if not rules:
         return  # the common path costs one indexed query and nothing else
     try:
@@ -2867,7 +2867,7 @@ async def create_agent(
         membership.project_access = await _normalize_project_access(body.project_access, org_id, db)
     if is_new or "promoted_member" in sent or "promoted_client" in sent:
         member = _norm_email(body.promoted_member or "")
-        client = re.sub(r"[^a-z0-9-]", "", (body.promoted_client or "").lower())[:32]
+        client = _norm_client(body.promoted_client or "")
         membership.promoted_from = f"{member}|{client}" if member and client else ""
     membership.local_run_enabled = _keep("local_run_enabled", membership.local_run_enabled)
     await db.commit()
@@ -2954,28 +2954,23 @@ async def list_observed_agents(
         (CallRecord, CallRecord.user_email, CallRecord.created_at, CallRecord.client),
         (RunRecord, RunRecord.user_email, RunRecord.created_at, RunRecord.client),
     ):
-        q = (select(email_col, client_col, func.count(), func.max(when_col))
+        # One grouped pass per table: the 30-day totals plus today's slice as a conditional sum,
+        # so a second identical GROUP BY isn't needed just to get `used_today`.
+        q = (select(email_col, client_col, func.count(), func.max(when_col),
+                    func.sum(case((when_col >= today, 1), else_=0)))
              .where(model.org_id == org_id, when_col >= since,
                     client_col.not_in(("", "cli")))
              .group_by(email_col, client_col))
-        for email, client, count, last_seen in (await db.execute(q)).all():
+        for email, client, count, last_seen, today_count in (await db.execute(q)).all():
             if _is_machine_email(email) or (email, client) in promoted:
                 continue
-            key = (email, client)
-            cur = rows.setdefault(key, {"member": email, "client": client,
-                                        "calls_30d": 0, "last_seen": last_seen})
+            cur = rows.setdefault((email, client), {"member": email, "client": client,
+                                                    "calls_30d": 0, "used_today": 0,
+                                                    "last_seen": last_seen})
             cur["calls_30d"] += count
+            cur["used_today"] += today_count
             cur["last_seen"] = max(cur["last_seen"], last_seen)
-        qt = (select(email_col, client_col, func.count())
-              .where(model.org_id == org_id, when_col >= today,
-                     client_col.not_in(("", "cli")))
-              .group_by(email_col, client_col))
-        for email, client, count in (await db.execute(qt)).all():
-            if (email, client) in rows:
-                rows[(email, client)]["used_today"] = rows[(email, client)].get("used_today", 0) + count
-    out = [{**r, "used_today": r.get("used_today", 0)} for r in rows.values()]
-    out.sort(key=lambda r: (r["member"], r["client"]))
-    return out
+    return sorted(rows.values(), key=lambda r: (r["member"], r["client"]))
 
 
 @app.delete("/orgs/{org_id}/agents/{user_id}")
@@ -3627,18 +3622,18 @@ def _redact_argv(argv: list[str]) -> str:
     return " ".join(_redact_argv_list(argv))[:500]
 
 
-_KNOWN_CLIENTS = ("claude-code", "codex", "cursor", "windsurf", "gemini-cli", "copilot", "cli")
+def _norm_client(raw: str) -> str:
+    """A runtime name as a short slug. One spelling for both ends of the roster: what an incoming
+    header is stored as, and what `promoted_from` must match to hide a detected pair."""
+    return re.sub(r"[^a-z0-9-]", "",
+                  raw.strip().lower().split("/", 1)[0])[:32]  # "claude-code/1.2" → "claude-code"
 
 
 def _client_of(request: Request | None) -> str:
     """The calling RUNTIME from X-Treg-Client — attribution, not authentication (anything holding
-    the token can claim any name, so this informs the roster and never gates anything). Normalized
-    to a short slug; an unknown-but-well-formed name is kept, so a new runtime shows up without a
-    release."""
-    raw = (request.headers.get("X-Treg-Client", "") if request is not None else "").strip().lower()
-    raw = raw.split("/", 1)[0]  # accept "claude-code/1.2" version suffixes
-    slug = re.sub(r"[^a-z0-9-]", "", raw)[:32]
-    return slug
+    the token can claim any name, so this informs the roster and never gates anything). An
+    unknown-but-well-formed name is kept, so a new runtime shows up without a release."""
+    return _norm_client(request.headers.get("X-Treg-Client", "") if request is not None else "")
 
 
 async def _grant_audit(db: AsyncSession, caller: Caller, tool_name: str, method: str, path: str,
