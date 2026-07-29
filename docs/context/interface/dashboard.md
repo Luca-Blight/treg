@@ -147,16 +147,16 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
     (leaving is self-service, and `loadOrgAdmin` lands a non-admin here). New team / Join by code /
     Paste token live only in the sidebar picker — Jason cut them from this tab on review; a personal
     team shows a one-line explainer instead of an empty page.
-- **Agents** (`view==='agents'`, `canAdmin`) — its own sidebar entry rather than a row in Team, because an
-  agent identity is how most people will actually use treg. Two sections now: **Detected in your
-  team's traffic** (`observedAgents`, from `GET /orgs/{id}/agents/observed`) — the agents already
-  running under members' own tokens, one row per (member, runtime) with today/30-day counts and last
-  seen, labeled explicitly as self-reported attribution; its **Scope this agent** button
-  (`promoteObserved`) prefills the mint form and explains the promotion (create the token, swap it
-  into that runtime's `TREG_TOKEN` — from then on it acts as itself). And **This team's agents** (the
-  minted roster, chipped "own token"), which grew an **Owner** column from `created_by` and a
-  **project picker** on the create form (`agentProjSel`, all-checked = omitted = every project).
-  Create (name / role / daily cap), **Rotate**
+- **Agents live INSIDE Team → Members now** — the separate Agents page and its sidebar entry are
+  GONE (Jason's call: an agent IS a membership, so two rosters was one too many). One roster
+  (`rosterMembers`): each person, then `↳` the agents they minted (short name + "owned by", never
+  the machine address; Setup / Rotate / Revoke actions inline), then the runtimes **detected** in
+  their traffic (`observedAgents`, from `GET /orgs/{id}/agents/observed`) as `↳ codex · detected`
+  rows with a **Scope this agent** button (`promoteObserved`) that opens the Add-agent form
+  prefilled and linked (`promotePending` → `promoted_from`, so the detected row disappears on
+  Create and returns on revoke). "Add to this team" toggles **＋ Add member** (invite) |
+  **＋ Add agent** (mint form: name / role / cap + project picker `agentProjSel`, all-checked =
+  omitted = every project). The once-only token card renders at the top of the tab. Rotate
   (re-POSTs the same name, so the old token dies), **Revoke**, and an inline cap editor. Rotate sends
   only `{name, role, daily_call_cap}` **on purpose**: `create_agent` leaves every field the client does
   not send exactly as it was, so the agent's tool ACL and project scope survive the rotate. They used to

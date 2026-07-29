@@ -745,7 +745,6 @@ th{background:rgba(0,0,0,.25)}
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
           <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
-          <button v-if="canAdmin" class="nav" :class="{active:view==='agents'}" @click="go('agents')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="2"/><path d="M12 7V4"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></svg>Agents</button>
           <div v-if="isAdmin"><div class="grp">Platform</div><button class="nav" :class="{active:view==='admin'}" @click="go('admin')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin</button></div>
           <div class="grp">For your agents</div>
           <div v-if="canAdmin" class="agent-copy"><span class="ac-label ac-link" @click="agentGuide='admin'" title="Preview / customize">Setup instruction</span><button class="ac-btn" :class="{done:agentRowCopied==='admin'}" @click="copyAgentGuide('admin')" title="Copy the agent instruction (installs the CLI + registers your skills & keys)">{{agentRowCopied==='admin'?'✓':'⧉'}}</button></div>
@@ -1203,13 +1202,52 @@ th{background:rgba(0,0,0,.25)}
             <div v-if="orgErr" class="banner">{{orgErr}}</div>
 
             <template v-if="canAdmin && orgTab==='members'">
+              <div v-if="agentErr" class="banner" style="margin-top:8px">{{agentErr}}</div>
+          <!-- the token is shown ONCE: make that unmissable -->
+          <div v-if="newAgent || snipAgent" class="card" style="margin-top:16px" :style="newAgent?'border-color:var(--accent)':''">
+            <div class="lbl" style="margin-top:0;display:flex;align-items:center;gap:10px">
+              <template v-if="newAgent">Token for {{newAgent.name}} — copy it now</template>
+              <template v-else>How to use {{snipAgent.name}}</template>
+              <button v-if="!newAgent" class="btn sm" style="margin-left:auto" @click="snipAgent=null">Close</button>
+            </div>
+            <p v-if="newAgent" class="sub" style="margin:2px 0 10px">This is the only time it is shown. Put it in the agent's <code>TREG_TOKEN</code>.
+              <span v-if="agentConnected" class="chip ok" style="margin-left:8px">✓ connected — {{newAgent.name}} called in as itself</span>
+              <span v-else class="muted" style="margin-left:8px">waiting for its first check-in…</span></p>
+            <p v-else-if="agentTokens[snipAgent.user_id]" class="sub" style="margin:2px 0 10px">Snippets carry the real token (minted this page-load — the server only keeps a hash).</p>
+            <p v-else class="sub" style="margin:2px 0 10px">The server stores only a hash of the token, so it can't be shown again — these snippets use <span class="mono">$TREG_TOKEN</span>. <button class="btn sm" @click="rotateAgent(snipAgent)">⟳ Rotate &amp; fill real token</button> <span class="muted">(the old token stops working)</span></p>
+            <div v-if="newAgent" class="field">
+              <input :value="newAgent.token" readonly style="font-family:var(--mono)" @focus="$event.target.select()"/>
+              <button class="btn primary" @click="copy(newAgent.token,'agenttok')">{{copied==='agenttok'?'Copied':'Copy'}}</button>
+              <button class="btn" @click="newAgent=null">Done</button>
+            </div>
+            <!-- a bare token is a dead end: hand over the paste-ready thing, like the Tools snippets do -->
+            <div class="tabs" style="margin:14px 0 8px">
+              <button :class="{active:agentSnip==='prompt'}" @click="agentSnip='prompt'">Give it to your agent</button>
+              <button :class="{active:agentSnip==='env'}" @click="agentSnip='env'">Environment</button>
+            </div>
+            <div class="lc-codewrap">
+              <button class="lc-cp" @click="copy(agentSnippet,'agentsnip')">{{copied==='agentsnip'?'✓ copied':'copy'}}</button>
+              <pre style="max-height:220px;overflow:auto">{{agentSnippet}}</pre>
+            </div>
+            <p class="sub" style="margin:6px 0 0;font-size:11.5px">Put this wherever the agent runs — a <span class="mono">.env</span>, a CI secret, or its config.</p>
+          </div>
+
+
               <div class="lbl" style="margin-top:14px">Members</div>
               <p class="sub" style="margin:-2px 0 8px;font-size:12px">Daily cap = how many calls + runs a member may make per day. <b>-1</b> = unlimited.</p>
               <p class="sub" style="margin:-2px 0 8px;font-size:12px"><b>Tools</b> = which endpoints/CLIs a member may call or run. <b>Local run</b> = may run CLIs on their own machine (off = server only). The owner always has full access.</p>
               <table>
                 <tr><th>Email</th><th>Role</th><th style="text-align:right">Today</th><th>Daily cap</th><th>Tools</th><th>Local run</th><th></th></tr>
-                <template v-for="m in rosterMembers" :key="m.user_id">
-                <tr>
+                <template v-for="m in rosterMembers" :key="m.key">
+                <tr v-if="m.is_observed">
+                  <td><span style="opacity:.45">↳</span> <b>{{m.client}}</b> <span class="chip" title="seen in this member\'s traffic — the runtime reports itself; attribution, not authentication">detected</span>
+                    <div class="muted" style="font-size:11px">runs as {{short(m.member)}} — inherits their full access</div></td>
+                  <td><span class="muted" style="font-size:12px">—</span></td>
+                  <td style="text-align:right" class="muted">{{m.used_today}}</td>
+                  <td colspan="3"><span class="muted" style="font-size:12px">{{m.calls_30d}} calls in 30 days · last seen {{when(m.last_seen)}}</span></td>
+                  <td style="text-align:right"><button class="btn sm" @click="promoteObserved(m)" title="mint this runtime its own token — its own cap, scope and audit trail">Scope this agent</button></td>
+                </tr>
+                <tr v-else>
                   <td>
                     <template v-if="m.is_agent"><span style="opacity:.45">↳</span> <b>{{m.name}}</b> <span class="chip" :title="m.email">agent</span>
                       <div class="muted" style="font-size:11px">{{m.created_by?('owned by '+short(m.created_by)):'machine identity'}}</div></template>
@@ -1233,11 +1271,16 @@ th{background:rgba(0,0,0,.25)}
                       <span>{{m.local_run_enabled?'on':'off'}}</span>
                     </label>
                   </td>
-                  <td style="text-align:right">
-                    <button v-if="m.role!=='owner'" class="btn sm" :class="{danger:confirmRemove===m.user_id}" @click="removeMember(m)">{{confirmRemove===m.user_id?'Confirm remove':'Remove'}}</button>
+                  <td style="text-align:right;white-space:nowrap">
+                    <template v-if="m.is_agent">
+                      <button class="btn sm" @click="showAgentSetup(m)" title="how to give this agent its identity">Setup</button>
+                      <button class="btn sm" @click="rotateAgent(m)" title="issue a new token — the old one stops working immediately">Rotate</button>
+                      <button class="btn sm" :class="{danger:confirmAgent===m.user_id}" @click="revokeAgent(m)">{{confirmAgent===m.user_id?'Confirm revoke':'Revoke'}}</button>
+                    </template>
+                    <button v-else-if="m.role!=='owner'" class="btn sm" :class="{danger:confirmRemove===m.user_id}" @click="removeMember(m)">{{confirmRemove===m.user_id?'Confirm remove':'Remove'}}</button>
                   </td>
                 </tr>
-                <tr v-if="editAccess===m.user_id">
+                <tr v-if="!m.is_observed && editAccess===m.user_id">
                   <td colspan="7" style="background:color-mix(in srgb,var(--accent) 5%,transparent)">
                     <div style="padding:6px 2px">
                       <div class="sub" style="margin-bottom:6px">Tools &amp; skills <b>{{m.email}}</b> may use/see — uncheck to withhold. All checked = full access (and new ones apply automatically).</div>
@@ -1268,10 +1311,27 @@ th{background:rgba(0,0,0,.25)}
                 </template>
               </table>
 
+              <div class="lbl" style="margin-top:22px;display:flex;align-items:center;gap:10px">Add to this team
+                <button v-if="!isPersonal(activeOrg)" class="btn sm" :class="{active:showInvite}" @click="showInvite=!showInvite; if(showInvite)showAddAgent=false">＋ Add member</button>
+                <button class="btn sm" :class="{active:showAddAgent}" @click="showAddAgent=!showAddAgent; if(showAddAgent)showInvite=false">＋ Add agent</button></div>
+              <p class="sub" style="margin:-2px 0 8px;font-size:12px">A member is a person who signs in. An agent is a machine identity with its own token — capped, scoped and logged as itself. Scope either with <b>Tools</b> and <b>Projects</b> above.</p>
+              <div v-show="showAddAgent">
+          <div class="lbl" style="margin-top:18px">New agent</div>
+          <p v-if="promoteHint" class="sub" style="margin:-2px 0 6px;font-size:12px;color:var(--accent)">{{promoteHint}}</p>
+          <div class="field" style="max-width:620px">
+            <input v-model="agentName" placeholder="ci-bot" @keyup.enter="createAgent"/>
+            <select v-model="agentRole" class="msel"><option>viewer</option><option>member</option><option v-if="isOwner">admin</option></select>
+            <input v-model.number="agentCap" type="number" min="-1" step="1" class="msel" style="width:96px" title="daily call cap (-1 = unlimited)"/>
+            <button class="btn primary" @click="createAgent" :disabled="agentBusy">{{agentBusy?'…':'Create'}}</button>
+          </div>
+          <div v-if="projects.length" style="max-width:620px;margin:4px 0 0;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center">
+            <span class="sub" style="font-size:12px">Projects (all checked = every project):</span>
+            <label v-for="p in projects" :key="p.id" class="tgl"><input type="checkbox" v-model="agentProjSel[p.id]"/><span>{{p.name}}</span></label>
+          </div>
+          <p class="sub" style="margin:-2px 0 0;font-size:12px">Cap <b>-1</b> = unlimited. An agent can never be an owner, and can never sign in — its token is the only way to act as it.</p>
+
+              </div>
               <template v-if="!isPersonal(activeOrg)">
-              <div class="lbl" style="margin-top:22px;display:flex;align-items:center;gap:10px">Add a member
-                <button class="btn sm" @click="showInvite=!showInvite">{{showInvite?'Close':'＋ Add member'}}</button></div>
-              <p class="sub" style="margin:-2px 0 8px;font-size:12px">Members join the whole team. Scope what they can reach with <b>Tools</b> and <b>Projects</b> above.</p>
               <div v-show="showInvite">
               <div class="field" style="max-width:560px">
                 <input v-model="inviteEmail" type="email" placeholder="teammate@email.com" @keyup.enter="sendInvite"/>
@@ -1424,98 +1484,6 @@ th{background:rgba(0,0,0,.25)}
         </template>
 
         <!-- ACTIVITY -->
-        <!-- AGENTS: machine identities. Same machinery as a member, its own screen because an
-             agent is how most people will actually use treg. -->
-        <template v-if="view==='agents'">
-          <div class="tut-head">
-            <div><h1>Agents</h1>
-              <p class="sub" style="margin:0">Give an agent its own token, so every call it makes is capped, scoped and logged as <b>itself</b> — not as you.</p></div>
-          </div>
-          <div v-if="agentErr" class="banner" style="margin-top:14px">{{agentErr}}</div>
-
-          <!-- the token is shown ONCE: make that unmissable -->
-          <div v-if="newAgent || snipAgent" class="card" style="margin-top:16px" :style="newAgent?'border-color:var(--accent)':''">
-            <div class="lbl" style="margin-top:0;display:flex;align-items:center;gap:10px">
-              <template v-if="newAgent">Token for {{newAgent.name}} — copy it now</template>
-              <template v-else>How to use {{snipAgent.name}}</template>
-              <button v-if="!newAgent" class="btn sm" style="margin-left:auto" @click="snipAgent=null">Close</button>
-            </div>
-            <p v-if="newAgent" class="sub" style="margin:2px 0 10px">This is the only time it is shown. Put it in the agent's <code>TREG_TOKEN</code>.
-              <span v-if="agentConnected" class="chip ok" style="margin-left:8px">✓ connected — {{newAgent.name}} called in as itself</span>
-              <span v-else class="muted" style="margin-left:8px">waiting for its first check-in…</span></p>
-            <p v-else-if="agentTokens[snipAgent.user_id]" class="sub" style="margin:2px 0 10px">Snippets carry the real token (minted this page-load — the server only keeps a hash).</p>
-            <p v-else class="sub" style="margin:2px 0 10px">The server stores only a hash of the token, so it can't be shown again — these snippets use <span class="mono">$TREG_TOKEN</span>. <button class="btn sm" @click="rotateAgent(snipAgent)">⟳ Rotate &amp; fill real token</button> <span class="muted">(the old token stops working)</span></p>
-            <div v-if="newAgent" class="field">
-              <input :value="newAgent.token" readonly style="font-family:var(--mono)" @focus="$event.target.select()"/>
-              <button class="btn primary" @click="copy(newAgent.token,'agenttok')">{{copied==='agenttok'?'Copied':'Copy'}}</button>
-              <button class="btn" @click="newAgent=null">Done</button>
-            </div>
-            <!-- a bare token is a dead end: hand over the paste-ready thing, like the Tools snippets do -->
-            <div class="tabs" style="margin:14px 0 8px">
-              <button :class="{active:agentSnip==='prompt'}" @click="agentSnip='prompt'">Give it to your agent</button>
-              <button :class="{active:agentSnip==='env'}" @click="agentSnip='env'">Environment</button>
-            </div>
-            <div class="lc-codewrap">
-              <button class="lc-cp" @click="copy(agentSnippet,'agentsnip')">{{copied==='agentsnip'?'✓ copied':'copy'}}</button>
-              <pre style="max-height:220px;overflow:auto">{{agentSnippet}}</pre>
-            </div>
-            <p class="sub" style="margin:6px 0 0;font-size:11.5px">Put this wherever the agent runs — a <span class="mono">.env</span>, a CI secret, or its config.</p>
-          </div>
-
-          <!-- DETECTED: the agents already running under members' own tokens, discovered from
-               traffic. Zero setup; self-reported attribution, so it informs, it never gates. -->
-          <template v-if="observedAgents.length">
-            <div class="lbl" style="margin-top:18px">Detected in your team's traffic</div>
-            <p class="sub" style="margin:-2px 0 8px;font-size:12px">These run under a <b>member's own token</b> — the runtime reports itself, so this is attribution, not authentication. They inherit that member's full access. To cap or scope one independently, give it its own token below.</p>
-            <table>
-              <tr><th>Agent</th><th>Runs as</th><th style="text-align:right">Today</th><th style="text-align:right">Last 30 days</th><th>Last seen</th><th></th></tr>
-              <tr v-for="o in observedAgents" :key="o.member+'/'+o.client">
-                <td><b>{{o.client}}</b></td>
-                <td>{{short(o.member)}}</td>
-                <td style="text-align:right" class="muted">{{o.used_today}}</td>
-                <td style="text-align:right" class="muted">{{o.calls_30d}}</td>
-                <td class="muted">{{when(o.last_seen)}}</td>
-                <td style="text-align:right"><button class="btn sm" @click="promoteObserved(o)" title="mint this agent its own token — its own cap, scope and audit trail, independent of the member's">Scope this agent</button></td>
-              </tr>
-            </table>
-          </template>
-
-          <div class="lbl" style="margin-top:18px">New agent</div>
-          <p v-if="promoteHint" class="sub" style="margin:-2px 0 6px;font-size:12px;color:var(--accent)">{{promoteHint}}</p>
-          <div class="field" style="max-width:620px">
-            <input v-model="agentName" placeholder="ci-bot" @keyup.enter="createAgent"/>
-            <select v-model="agentRole" class="msel"><option>viewer</option><option>member</option><option v-if="isOwner">admin</option></select>
-            <input v-model.number="agentCap" type="number" min="-1" step="1" class="msel" style="width:96px" title="daily call cap (-1 = unlimited)"/>
-            <button class="btn primary" @click="createAgent" :disabled="agentBusy">{{agentBusy?'…':'Create'}}</button>
-          </div>
-          <div v-if="projects.length" style="max-width:620px;margin:4px 0 0;display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center">
-            <span class="sub" style="font-size:12px">Projects (all checked = every project):</span>
-            <label v-for="p in projects" :key="p.id" class="tgl"><input type="checkbox" v-model="agentProjSel[p.id]"/><span>{{p.name}}</span></label>
-          </div>
-          <p class="sub" style="margin:-2px 0 0;font-size:12px">Cap <b>-1</b> = unlimited. An agent can never be an owner, and can never sign in — its token is the only way to act as it.</p>
-
-          <div class="lbl" style="margin-top:20px">This team's agents <span class="chip" style="margin-left:6px" title="each has its own token — cap, scope and audit are independent of any member">own token</span></div>
-          <p v-if="!agents.length" class="muted" style="font-size:13px">No agents yet. Create one above, then put its token in your agent's environment.</p>
-          <table v-else>
-            <tr><th>Name</th><th>Owner</th><th>Role</th><th style="text-align:right">Today</th><th>Daily cap</th><th>Tools</th><th>Projects</th><th></th></tr>
-            <tr v-for="a in agents" :key="a.user_id">
-              <td><b>{{a.name}}</b><span v-if="a.promoted_from" class="chip" style="margin-left:6px" :title="'promoted from detected traffic: '+a.promoted_from.replace('|',' / ')">{{a.promoted_from.split('|')[1]}}</span><div class="muted" style="font-size:11px;font-family:var(--mono)">{{a.email}}</div></td>
-              <td class="muted" :title="a.created_by?('minted by '+a.created_by):''">{{a.created_by?short(a.created_by):'—'}}</td>
-              <td><span class="role" :class="a.role">{{a.role}}</span></td>
-              <td style="text-align:right" class="muted">{{a.used_today}}</td>
-              <td><input class="msel" type="number" min="-1" step="1" style="width:78px" :value="a.daily_call_cap" @change="setAgentCap(a,$event.target.value)" title="-1 = unlimited"/></td>
-              <td><span class="chip">{{a.tool_access===null?'All':a.tool_access.length+' tools'}}</span></td>
-              <td><span class="chip">{{a.project_access===null?'All':a.project_access.length+' projects'}}</span></td>
-              <td style="text-align:right;white-space:nowrap">
-                <button class="btn sm" @click="showAgentSetup(a)" title="how to give this agent its identity">Setup</button>
-                <button class="btn sm" @click="rotateAgent(a)" title="issue a new token — the old one stops working immediately">Rotate</button>
-                <button class="btn sm" :class="{danger:confirmAgent===a.user_id}" @click="revokeAgent(a)">{{confirmAgent===a.user_id?'Confirm revoke':'Revoke'}}</button>
-              </td>
-            </tr>
-          </table>
-          <p class="sub" style="margin-top:10px;font-size:12px">Scope an agent's tools and projects from <a href="#" @click.prevent="go('orgs')">Team</a> — it appears in the roster like any member.</p>
-        </template>
-
         <template v-if="view==='activity'">
           <h1>Activity - {{activeName}}</h1>
           <p class="sub">Every proxy call and server CLI run in this org.</p>
@@ -2309,7 +2277,7 @@ createApp({
       orgMembers:[], orgInvites:[], inviteEmail:'', inviteRole:'member', lastInvite:null,
       editAccess:null, accessDraft:{}, inviteCustomize:false, inviteLocalRun:true, inviteToolSel:{}, accessNote:'',
       // agents (machine identities), projects (sub-scope) and deny rules (policy)
-      orgTab:'members', showInvite:false,   // Team page tabs; invites live inside Members (a non-admin is moved to Team settings on open)
+      orgTab:'members', showInvite:false, showAddAgent:false,   // Team page tabs; invites live inside Members (a non-admin is moved to Team settings on open)
       agentSnip:'prompt',   // which paste-ready snippet the agent card shows (prompt = hand-to-agent, first)
       snipAgent:null,    // an EXISTING agent whose setup snippets are open (no token — placeholder)
       agents:[], agentName:'', agentRole:'member', agentCap:-1, agentBusy:false, agentErr:'', agentProjSel:{},
@@ -2567,13 +2535,17 @@ createApp({
         'A {"connected": true, "you": "agent-…"} reply means treg registered the connection —',
         'the dashboard shows this agent as connected from that moment.',
       ].join('\n'); },
-    rosterMembers(){  // people in listing order, each followed by the agents they minted;
-      // orphaned agents (creator left, or pre-created_by rows) trail at the end
+    rosterMembers(){  // one roster: each person, then the agents they minted, then the runtimes
+      // DETECTED in their traffic (observed — not yet their own identity, hence "Scope this agent").
+      // Orphaned agents (creator left, or pre-created_by rows) trail at the end.
       const humans=(this.orgMembers||[]).filter(m=>!m.is_agent);
       const agents=(this.orgMembers||[]).filter(m=>m.is_agent);
+      const obs=(this.observedAgents||[]);
       const out=[];
-      humans.forEach(h=>{ out.push(h); agents.filter(a=>a.created_by===h.email).forEach(a=>out.push(a)); });
-      agents.filter(a=>!humans.some(h=>h.email===a.created_by)).forEach(a=>out.push(a));
+      humans.forEach(h=>{ out.push({...h, key:'u'+h.user_id});
+        agents.filter(a=>a.created_by===h.email).forEach(a=>out.push({...a, key:'u'+a.user_id}));
+        obs.filter(o=>o.member===h.email).forEach(o=>out.push({...o, is_observed:true, key:'o'+o.member+'/'+o.client})); });
+      agents.filter(a=>!humans.some(h=>h.email===a.created_by)).forEach(a=>out.push({...a, key:'u'+a.user_id}));
       return out; },
     agentConnected(){ const n=this.newAgent; if(!n) return false;
       const row=(this.agents||[]).find(a=>a.user_id===n.user_id); return !!(row&&row.connected); },
@@ -2838,26 +2810,24 @@ createApp({
       if(!this.canAdmin) this.orgTab='danger';  // Team settings — the only tab a plain member can act on
       this.orgErr=''; this.confirmDel=''; this.confirmLeave=false; this.confirmRemove=null;
       if(!this.canAdmin || !this.activeOrgId) return; const id=this.activeOrgId;
+      this.agentErr=''; this.confirmAgent=null;
       try{ this.orgMembers=await this.api('/orgs/'+id+'/members'); this.orgInvites=await this.api('/orgs/'+id+'/invites');
            this.projects=await this.api('/orgs/'+id+'/projects'); this.denyRules=await this.api('/orgs/'+id+'/deny');
-           this.cliDeny=await this.api('/orgs/'+id+'/policy/cli-deny').catch(()=>[]); }
+           this.cliDeny=await this.api('/orgs/'+id+'/policy/cli-deny').catch(()=>[]);
+           // agents live in the same roster now (an agent IS a membership)
+           this.agents=await this.api('/orgs/'+id+'/agents').catch(()=>[]);
+           const sel={}; this.projects.forEach(p=>{ sel[p.id]=true; }); this.agentProjSel=sel;
+           this.observedAgents=await this.api('/orgs/'+id+'/agents/observed').catch(()=>[]); }
       catch(e){ this.orgErr='Load team failed: '+(e.detail||e.status); } },
 
     // ---- agents: a member identity for a machine caller ----
-    async loadAgents(){ this.agentErr=''; this.confirmAgent=null;
-      if(!this.canAdmin || !this.activeOrgId){ this.agents=[]; return; }
-      try{ this.agents=await this.api('/orgs/'+this.activeOrgId+'/agents');
-           this.projects=await this.api('/orgs/'+this.activeOrgId+'/projects');
-           const sel={}; this.projects.forEach(p=>{ sel[p.id]=true; }); this.agentProjSel=sel;
-           this.observedAgents=await this.api('/orgs/'+this.activeOrgId+'/agents/observed').catch(()=>[]); }
-      catch(e){ this.agentErr='Load agents failed: '+(e.detail||e.status); } },
     pollAgentConnected(){
       // Flip the token card to ✓ the moment the setup instruction's final check-in lands.
       if(this._agentPoll) clearInterval(this._agentPoll);
       let tries=0;
       this._agentPoll=setInterval(async()=>{
         if(!this.newAgent || this.agentConnected || ++tries>40){ clearInterval(this._agentPoll); this._agentPoll=null; return; }
-        await this.loadAgents(); }, 3000); },
+        await this.loadOrgAdmin(); }, 3000); },
     promoteObserved(o){
       // Promotion = mint a real identity for a runtime we've only SEEN so far. Prefill the form;
       // the admin still picks role/cap/projects and presses Create, then swaps the env key.
@@ -2865,10 +2835,10 @@ createApp({
       // disappears the moment the agent exists (and returns if the agent is revoked).
       const who=(o.member.split('@')[0]||'agent').replace(/[^a-zA-Z0-9-]/g,'-');
       this.promotePending={member:o.member, client:o.client};
+      this.showAddAgent=true; this.showInvite=false;
       this.agentName=who+'-'+o.client; this.promoteHint='Creating a token for "'+o.client+'" running as '
         +o.member+'. After Create, put the new token in that runtime\'s TREG_TOKEN — from then on it '
-        +'acts as itself, with its own cap and scope, instead of as '+o.member+'.';
-      window.scrollTo({top:0,behavior:'smooth'}); },
+        +'acts as itself, with its own cap and scope, instead of as '+o.member+'.'; },
     async createAgent(){ const name=(this.agentName||'').trim();
       if(!name){ this.agentErr='Give the agent a name, e.g. ci-bot.'; return; }
       // An admin agent can manage this team's tools, secrets and members. That is a real step up from
@@ -2885,7 +2855,7 @@ createApp({
       if(this.promotePending){ body.promoted_member=this.promotePending.member; body.promoted_client=this.promotePending.client; }
       try{ const r=await this.api('/orgs/'+this.activeOrgId+'/agents',{method:'POST',headers:{'content-type':'application/json'},
              body:JSON.stringify(body)});
-           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; this.agentName=''; this.promoteHint=''; this.promotePending=null; await this.loadAgents(); this.pollAgentConnected(); }
+           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; this.agentName=''; this.promoteHint=''; this.promotePending=null; await this.loadOrgAdmin(); this.pollAgentConnected(); }
       catch(e){ this.agentErr='Create failed: '+(e.detail||e.status); }
       this.agentBusy=false; },
     // Rotate = create with the SAME name: the server replaces the token hash, so the old one dies.
@@ -2894,7 +2864,7 @@ createApp({
     async rotateAgent(a){ this.agentBusy=true; this.agentErr='';
       try{ const r=await this.api('/orgs/'+this.activeOrgId+'/agents',{method:'POST',headers:{'content-type':'application/json'},
              body:JSON.stringify({name:a.name, role:a.role, daily_call_cap:a.daily_call_cap})});
-           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; await this.loadAgents(); this.pollAgentConnected(); }
+           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; await this.loadOrgAdmin(); this.pollAgentConnected(); }
       catch(e){ this.agentErr='Rotate failed: '+(e.detail||e.status); }
       this.agentBusy=false; },
     showAgentSetup(a){ this.newAgent=null; this.agentSnip='prompt';
@@ -2902,15 +2872,7 @@ createApp({
     async revokeAgent(a){ if(this.confirmAgent!==a.user_id){ this.confirmAgent=a.user_id; return; }
       try{ await this.api('/orgs/'+this.activeOrgId+'/agents/'+a.user_id,{method:'DELETE'}); }
       catch(e){ this.agentErr='Revoke failed: '+(e.detail||e.status); }
-      this.confirmAgent=null; await this.loadAgents(); },
-    async setAgentCap(a, val){ const cap=parseInt(val,10);
-      if(isNaN(cap)||cap<-1){ this.agentErr='Daily cap must be -1 (unlimited) or 0 and above.'; await this.loadAgents(); return; }
-      if(cap===a.daily_call_cap) return;
-      try{ await this.api('/orgs/'+this.activeOrgId+'/members/'+a.user_id+'/cap',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({daily_call_cap:cap})}); }
-      catch(e){ this.agentErr='Set cap failed: '+(e.detail||e.status); }
-      await this.loadAgents(); },
-
-    // ---- projects ----
+      this.confirmAgent=null; await this.loadOrgAdmin(); },
     async createProject(){ const name=(this.projectName||'').trim();
       if(!name){ this.orgErr='Give the project a name.'; return; }
       this.projBusy=true; this.orgErr='';
@@ -3535,7 +3497,7 @@ createApp({
       this.go('orgs'); },
     resetConfirms(){ this.confirmDelTool=null; this.confirmDelSecret=null; this.confirmDelBundle=null; this.confirmRemove=null; this.confirmLeave=false; this.confirmDel=''; this.confirmAdmUser=null; this.confirmAdmOrg=null; },
     go(v, fromPop){ this.resetConfirms();  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
-      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='agents')this.loadAgents(); if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets(); if(v==='connections')this.loadConnections();
+      this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage();} if(v==='usage')this.loadUsage(); if(v==='secrets')this.loadSecrets(); if(v==='connections')this.loadConnections();
       // push history so browser Back navigates BETWEEN views instead of leaving the app; the '/app'
       // pathname also walks back from a /app/skills/<x> detail URL so reload doesn't reopen the detail
       if(!fromPop) history.pushState({view:v}, '', '/app#'+v); },
