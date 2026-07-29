@@ -86,7 +86,7 @@ def _pick_active_org(cfg: dict) -> None:
 
 
 def _effective_org(cfg: dict) -> str | None:
-    return _ORG_OVERRIDE or cfg.get("active_org")
+    return _ORG_OVERRIDE or os.environ.get("TREG_ORG") or cfg.get("active_org")
 
 
 class _RegistryClient(httpx.Client):
@@ -136,8 +136,13 @@ def _detect_runtime() -> str:
 
 def _client(cfg: dict, *, auth: bool = True) -> httpx.Client:
     headers = {"ngrok-skip-browser-warning": "1", "X-Treg-Client": _detect_runtime()}
-    if auth and cfg.get("token"):
-        headers["X-Treg-Token"] = cfg["token"]
+    # TREG_TOKEN (+ optional TREG_ORG) beats the config file: per-PROCESS identity, so each coding
+    # agent on one machine can act as its own scoped agent while ~/.treg/config.json stays the
+    # human's. Env is how a runtime carries identity (OneCLI does the same with PROXY_AUTH) — and
+    # because it never touches the config file, `treg login` cannot accidentally persist it.
+    token = os.environ.get("TREG_TOKEN") or (cfg.get("token") if auth else None)
+    if auth and token:
+        headers["X-Treg-Token"] = token
         org = _effective_org(cfg)
         if org:
             headers["X-Treg-Org"] = org  # ignored for per-org tokens; picks the org for identity tokens

@@ -44,6 +44,13 @@ for a per-org token, and picks the org for an identity token). `_effective_org` 
 `/orgs/{id}/...` endpoints). `_admin_client` uses `admin_token` else the bearer. `_show` pretty-prints +
 exits non-zero on HTTP >= 400.
 
+**Per-process identity:** `TREG_TOKEN` (+ optional `TREG_ORG`) in the environment beat
+`~/.treg/config.json`, so each coding agent on one machine can run as its own scoped agent —
+set them in the runtime's env (Claude Code settings env, Codex config, a project `.env`) and the
+config file stays the human's. This is what makes the dashboard's "Scope this agent" promotion
+real on a shared machine (OneCLI solves the same problem with a per-process `PROXY_AUTH`).
+The override never touches the config file, so `treg login` can't accidentally persist it.
+
 ## Commands
 - **Team policy + scoping (all under `org`, all admin+):**
   - **`org agent-new <name>`** (`--role`, `--cap`, `--tools`, `--all-tools`, `--local-run`,

@@ -151,3 +151,19 @@ def test_detect_runtime_ignores_config_location_vars(monkeypatch):
     assert _detect_runtime() == "claude-code"
     monkeypatch.setenv("TREG_CLIENT", "my-agent")
     assert _detect_runtime() == "my-agent"
+
+
+def test_treg_token_env_overrides_the_config_file(monkeypatch):
+    """Per-PROCESS identity: TREG_TOKEN/TREG_ORG in a runtime's env make the CLI act as that
+    agent while ~/.treg/config.json stays the human's — several agents on one machine, each with
+    its own scope. Without this, every runtime shared the machine-global config identity."""
+    from treg.cli import _client
+    monkeypatch.setenv("TREG_TOKEN", "agent-token")
+    monkeypatch.setenv("TREG_ORG", "test-team")
+    c = _client({"base_url": "http://x", "token": "human-token", "active_org": "other"})
+    assert c.headers["X-Treg-Token"] == "agent-token"
+    assert c.headers["X-Treg-Org"] == "test-team"
+    monkeypatch.delenv("TREG_TOKEN"); monkeypatch.delenv("TREG_ORG")
+    c = _client({"base_url": "http://x", "token": "human-token", "active_org": "other"})
+    assert c.headers["X-Treg-Token"] == "human-token"
+    assert c.headers["X-Treg-Org"] == "other"
