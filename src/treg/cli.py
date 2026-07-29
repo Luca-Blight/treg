@@ -124,9 +124,10 @@ def _detect_runtime() -> str:
         # Only markers a runtime sets WHILE EXECUTING a command. Config-location vars are traps:
         # CODEX_HOME sits in the shell profile of anyone who installed Codex, so it would tag every
         # plain terminal on that machine as codex (found the hard way).
-        ("CODEX_SANDBOX", "codex"),
+        ("CODEX_SANDBOX", "codex"), ("CODEX_SANDBOX_NETWORK_DISABLED", "codex"),
         ("CURSOR_AGENT", "cursor"), ("CURSOR_TRACE_ID", "cursor"),
         ("GEMINI_CLI", "gemini-cli"),
+        ("PI_CODING_AGENT", "pi"),
         ("GITHUB_COPILOT_AGENT", "copilot"),
     ):
         if os.environ.get(env_var):

@@ -2508,21 +2508,45 @@ createApp({
         return 'export TREG_TOKEN='+tok+'\nexport TREG_ORG='+org+'\nexport TREG_URL='+base; }
       if(this.agentSnip==='verify'){
         return 'curl -s '+base+'/tools \\\n  -H "X-Treg-Token: '+tok+'" \\\n  -H "X-Treg-Org: '+org+'"'; }
-      return 'You have your own tools-registry identity in the team "'+org+'" (you are "'+a.name+'").\n\n'
-        +'FIRST, save this identity into YOUR OWN global settings — the goal is that every future\n'
-        +'session of yours, in any repo, runs as "'+a.name+'" (while other agents and the human keep\n'
-        +'their own identities). Set these three env vars wherever your runtime persists env\n'
-        +'globally — e.g. Claude Code: the "env" map in ~/.claude/settings.json; otherwise add a\n'
-        +'guarded line to the shell profile that only fires inside you (key it on an env var only\n'
-        +'your runtime sets):\n'
-        +'  TREG_TOKEN='+tok+'\n  TREG_ORG='+org+'\n  TREG_URL='+base+'\n'
-        +'Do NOT put the token in a repo file (.env, settings committed to git) — it is a secret,\n'
-        +'and a repo-level file would also hand YOUR identity to every other agent in that repo.\n\n'
-        +'From then on the treg CLI automatically acts as you (TREG_TOKEN beats the machine\n'
-        +'owner\'s ~/.treg config), and raw HTTP works anywhere:\n'
-        +'  curl '+base+'/call/<tool>/<path> -H "X-Treg-Token: $TREG_TOKEN" -H "X-Treg-Org: '+org+'"\n\n'
-        +'List what you may use:  GET '+base+'/tools\n'
-        +'Your calls are capped and logged as "'+a.name+'", so keep them purposeful.'; },
+      return [
+        'You have your own tools-registry identity in the team "'+org+'" (you are "'+a.name+'").',
+        '',
+        'FIRST, persist this identity into YOUR OWN global config, so every future session of',
+        'yours, in any repo, runs as "'+a.name+'" — while other agents and the human keep theirs:',
+        '  TREG_TOKEN='+tok,
+        '  TREG_ORG='+org,
+        '  TREG_URL='+base,
+        '',
+        'How, per runtime — do the one that matches you:',
+        '- Claude Code: add them to the "env" map in ~/.claude/settings.json:',
+        '    "env": { "TREG_TOKEN": "'+tok+'", "TREG_ORG": "'+org+'", "TREG_URL": "'+base+'" }',
+        '- Codex CLI: in ~/.codex/config.toml (a `set` entry bypasses Codex\'s default filtering',
+        '  of *TOKEN* names, so this works where plain shell exports get stripped):',
+        '    [shell_environment_policy]',
+        '    set = { TREG_TOKEN = "'+tok+'", TREG_ORG = "'+org+'", TREG_URL = "'+base+'" }',
+        '- Gemini CLI: append the three KEY=value lines to ~/.gemini/.env. Caveat: a project',
+        '  .env shadows that file entirely, so repos with their own .env must carry them too.',
+        '- Cursor: a guarded line in the shell profile (~/.zshrc or ~/.bashrc):',
+        '    [ -n "$CURSOR_AGENT" ] && export TREG_TOKEN='+tok+' TREG_ORG='+org+' TREG_URL='+base,
+        '- pi: same guarded profile line keyed on $PI_CODING_AGENT — or set',
+        '  "shellCommandPrefix": "source ~/.pi-env.sh" in ~/.pi/agent/settings.json and put the',
+        '  exports in that file.',
+        '- opencode: no global env config and no fingerprint var — use a shell.env plugin, or an',
+        '  unguarded profile export ONLY on a machine that runs no other agents; ALSO export',
+        '  TREG_CLIENT=opencode so your calls are attributed to your runtime.',
+        '- anything else: a profile line guarded by an env var only your runtime sets, plus',
+        '  TREG_CLIENT=<your-runtime-name> if treg does not already detect you.',
+        '',
+        'Do NOT put the token in a repo file (.env, settings committed to git) — it is a secret,',
+        'and a repo-level file would also hand YOUR identity to every other agent in that repo.',
+        '',
+        'From then on the treg CLI automatically acts as you (TREG_TOKEN beats the machine',
+        'owner\'s ~/.treg config), and raw HTTP works anywhere:',
+        '  curl '+base+'/call/<tool>/<path> -H "X-Treg-Token: $TREG_TOKEN" -H "X-Treg-Org: '+org+'"',
+        '',
+        'List what you may use:  GET '+base+'/tools',
+        'Your calls are capped and logged as "'+a.name+'", so keep them purposeful.',
+      ].join('\n'); },
     isOwner(){ return this.activeRole==='owner'; },
     canRegister(){ return this.activeRole!=='viewer'; },  // members+ may create secrets/tools
     secretRowsReady(){ return this.secretRows.filter(r=>(r.name||'').trim()&&r.value).length; },
