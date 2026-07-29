@@ -147,7 +147,10 @@ def _client(cfg: dict, *, auth: bool = True) -> httpx.Client:
         org = _effective_org(cfg)
         if org:
             headers["X-Treg-Org"] = org  # ignored for per-org tokens; picks the org for identity tokens
-    return _RegistryClient(base_url=cfg["base_url"], headers=headers, timeout=30.0)
+    # TREG_URL rides with TREG_TOKEN: an agent identity names its registry too, or a per-process
+    # token would be sent to whatever base_url the machine owner's config points at.
+    base = os.environ.get("TREG_URL") or cfg["base_url"]
+    return _RegistryClient(base_url=base, headers=headers, timeout=30.0)
 
 
 def _admin_client(cfg: dict) -> httpx.Client:

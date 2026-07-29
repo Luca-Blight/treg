@@ -163,7 +163,10 @@ def test_treg_token_env_overrides_the_config_file(monkeypatch):
     c = _client({"base_url": "http://x", "token": "human-token", "active_org": "other"})
     assert c.headers["X-Treg-Token"] == "agent-token"
     assert c.headers["X-Treg-Org"] == "test-team"
-    monkeypatch.delenv("TREG_TOKEN"); monkeypatch.delenv("TREG_ORG")
+    monkeypatch.setenv("TREG_URL", "http://dev-registry:1")
+    c = _client({"base_url": "http://x", "token": "human-token", "active_org": "other"})
+    assert str(c.base_url).startswith("http://dev-registry:1"), "TREG_URL must ride with the token"
+    monkeypatch.delenv("TREG_TOKEN"); monkeypatch.delenv("TREG_ORG"); monkeypatch.delenv("TREG_URL")
     c = _client({"base_url": "http://x", "token": "human-token", "active_org": "other"})
     assert c.headers["X-Treg-Token"] == "human-token"
     assert c.headers["X-Treg-Org"] == "other"
