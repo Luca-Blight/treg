@@ -92,7 +92,7 @@ def _pick_active_org(cfg: dict) -> None:
 
 
 def _effective_org(cfg: dict) -> str | None:
-    return _ORG_OVERRIDE or cfg.get("active_org")
+    return _ORG_OVERRIDE or os.environ.get("TREG_ORG") or cfg.get("active_org")
 
 
 class _RegistryClient(httpx.Client):
@@ -118,14 +118,45 @@ class _RegistryClient(httpx.Client):
         return super().send(retry, **kwargs)
 
 
+def _detect_runtime() -> str:
+    """Which coding agent this CLI is running inside, from environment fingerprints. Sent as
+    X-Treg-Client so the registry can attribute traffic per runtime ("sam / claude-code") —
+    attribution only, never authentication. TREG_CLIENT overrides for anything we can't sniff."""
+    override = os.environ.get("TREG_CLIENT", "").strip()
+    if override:
+        return override
+    for env_var, name in (
+        ("CLAUDECODE", "claude-code"),
+        # Only markers a runtime sets WHILE EXECUTING a command. Config-location vars are traps:
+        # CODEX_HOME sits in the shell profile of anyone who installed Codex, so it would tag every
+        # plain terminal on that machine as codex (found the hard way).
+        ("CODEX_SANDBOX", "codex"), ("CODEX_SANDBOX_NETWORK_DISABLED", "codex"),
+        ("CURSOR_AGENT", "cursor"), ("CURSOR_TRACE_ID", "cursor"),
+        ("GEMINI_CLI", "gemini-cli"),
+        ("PI_CODING_AGENT", "pi"),
+        ("GITHUB_COPILOT_AGENT", "copilot"),
+    ):
+        if os.environ.get(env_var):
+            return name
+    return "cli"  # a plain terminal — recorded but kept out of the observed-agents roster
+
+
 def _client(cfg: dict, *, auth: bool = True) -> httpx.Client:
-    headers = {"ngrok-skip-browser-warning": "1"}
-    if auth and cfg.get("token"):
-        headers["X-Treg-Token"] = cfg["token"]
+    headers = {"ngrok-skip-browser-warning": "1", "X-Treg-Client": _detect_runtime()}
+    # TREG_TOKEN (+ optional TREG_ORG) beats the config file: per-PROCESS identity, so each coding
+    # agent on one machine can act as its own scoped agent while ~/.treg/config.json stays the
+    # human's. Per-process env is the standard way a runtime carries its own identity — and
+    # because it never touches the config file, `treg login` cannot accidentally persist it.
+    token = (os.environ.get("TREG_TOKEN") or cfg.get("token")) if auth else None
+    if token:
+        headers["X-Treg-Token"] = token
         org = _effective_org(cfg)
         if org:
             headers["X-Treg-Org"] = org  # ignored for per-org tokens; picks the org for identity tokens
-    return _RegistryClient(base_url=cfg["base_url"], headers=headers, timeout=30.0)
+    # TREG_URL rides with TREG_TOKEN: an agent identity names its registry too, or a per-process
+    # token would be sent to whatever base_url the machine owner's config points at.
+    base = os.environ.get("TREG_URL") or cfg["base_url"]
+    return _RegistryClient(base_url=base, headers=headers, timeout=30.0)
 
 
 def _admin_client(cfg: dict) -> httpx.Client:
@@ -3046,10 +3077,16 @@ def cmd_org_agent_new(args, cfg) -> None:
         org_id = _active_org_id(cfg, c)
         if org_id is None:
             sys.exit("no active org")
-        _show(c.post(f"/orgs/{org_id}/agents", json={
+        body = {
             "name": args.name, "role": args.role, "daily_call_cap": args.cap,
             "tool_access": _resolve_tool_access(c, org_id, args),
-            "local_run_enabled": getattr(args, "local_run", "on") != "off"}))
+            "local_run_enabled": getattr(args, "local_run", "on") != "off"}
+        # Only send project_access when the caller asked for it — an absent field survives a rotate.
+        if getattr(args, "all_projects", False):
+            body["project_access"] = None
+        elif getattr(args, "projects", None):
+            body["project_access"] = [p.strip() for p in args.projects.split(",") if p.strip()]
+        _show(c.post(f"/orgs/{org_id}/agents", json=body))
 
 
 def cmd_org_agents(args, cfg) -> None:
@@ -3106,9 +3143,19 @@ def cmd_org_deny(args, cfg) -> None:
         org_id = _active_org_id(cfg, c)
         if org_id is None:
             sys.exit("no active org")
+        project_id = None
+        if getattr(args, "project", None):
+            ref = args.project.strip()
+            if ref.isdigit():
+                project_id = int(ref)
+            else:  # a slug — resolve it, so the flag takes the same handle `--projects` does
+                match = [p for p in c.get(f"/orgs/{org_id}/projects").json() if p["slug"] == ref]
+                if not match:
+                    sys.exit(f"unknown project {ref!r} in this team")
+                project_id = match[0]["id"]
         _show(c.post(f"/orgs/{org_id}/deny", json={
             "host": args.host or "", "path_prefix": args.path or "", "method": args.method or "",
-            "user_id": args.user, "note": args.note or ""}))
+            "user_id": args.user, "project_id": project_id, "note": args.note or ""}))
 
 
 def cmd_org_deny_ls(args, cfg) -> None:
@@ -3798,6 +3845,9 @@ def build_parser() -> argparse.ArgumentParser:
     oan.add_argument("--tools", help="comma-separated tool names this agent may use (default: prompt / all)")
     oan.add_argument("--all-tools", dest="all_tools", action="store_true", help="allow every tool")
     oan.add_argument("--local-run", dest="local_run", choices=["on", "off"], help="allow local CLI runs")
+    oan.add_argument("--projects", help="comma-separated project slugs/ids this agent is scoped to")
+    oan.add_argument("--all-projects", dest="all_projects", action="store_true",
+                     help="scope to every project (the default for a new agent)")
     oan.set_defaults(fn=cmd_org_agent_new)
     mk(og, "agents", "List this team's agent identities and their limits (admin+). "
                      "(Different from `treg agents`, which lists coding agents for skill install.)",
@@ -3822,6 +3872,7 @@ def build_parser() -> argparse.ArgumentParser:
     od2.add_argument("--path", help="path prefix to block, e.g. /admin; omit = any path")
     od2.add_argument("--method", help="HTTP method to block, e.g. DELETE; omit = any method")
     od2.add_argument("--user", type=int, help="apply to ONE member/agent (from `org members`); omit = whole team")
+    od2.add_argument("--project", help="apply only to calls through this project's tools (slug or id); omit = any tool")
     od2.add_argument("--note", help="why — shown in the refusal so it names its source")
     od2.set_defaults(fn=cmd_org_deny)
     mk(og, "deny-ls", "List this team's deny rules (admin+).", "treg org deny-ls").set_defaults(fn=cmd_org_deny_ls)

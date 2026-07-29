@@ -98,7 +98,11 @@ segment boundary (`/v1/charges` must not match `/v1/chargesX`), the same trap `_
 It applies to **every role including owner** (a guardrail, not a permission tier) and to both run
 tiers, where the tool's own `base_url` host stands in for the request path. `_deny_match` is pure, so
 it unit-tests without a DB — mirroring `localrun.check_deny`, which is the same idea one layer down
-(argv instead of URL). Zero rules = one indexed query and no behavior change.
+(argv instead of URL). Zero rules = one indexed query and no behavior change. A rule may also carry a
+`project_id`: it then fires only on calls through that project's tools (every enforcement point has a
+resolved Tool by then, so `_enforce_deny` takes `tool.project_id`); an org-wide-tool call is never
+caught by a project rule. The three scope axes — host/path/method, member, project — are ANDed and
+each is NULL-means-any.
 
 `call_tool()` loads every bound secret (running `oauth.ensure_fresh` on oauth secrets first — see
 [auth-secrets](auth-secrets.md)), calls `relay()`, then fires `audit.record_call(...)` off the response

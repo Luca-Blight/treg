@@ -38,20 +38,22 @@ def _get_sem() -> asyncio.Semaphore:
 
 
 def record_call(
-    *, org_id: int | None = None, user_email: str, tool_name: str, method: str, path: str, status_code: int
+    *, org_id: int | None = None, user_email: str, tool_name: str, method: str, path: str,
+    status_code: int, client: str = ""
 ) -> None:
     _schedule(_write(CallRecord,
         org_id=org_id, user_email=user_email, tool_name=tool_name,
-        method=method, path=path, status_code=status_code,
+        method=method, path=path, status_code=status_code, client=client,
     ))
 
 
 def record_run(
-    *, org_id: int | None = None, user_email: str, bundle_name: str, argv: list, exit_code: int, duration_ms: int
+    *, org_id: int | None = None, user_email: str, bundle_name: str, argv: list, exit_code: int,
+    duration_ms: int, client: str = ""
 ) -> None:
     _schedule(_write(RunRecord,
         org_id=org_id, user_email=user_email, bundle_name=bundle_name,
-        argv=argv, exit_code=exit_code, duration_ms=duration_ms,
+        argv=argv, exit_code=exit_code, duration_ms=duration_ms, client=client,
     ))
 
 

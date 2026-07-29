@@ -92,11 +92,18 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   handshake — that is deliberately still in-process (`api._cli_pending`, short-lived, self-heals on retry).
 
 - **`DenyRule`** — org policy over what may be CALLED: `org_id`, nullable `user_id` (NULL = the whole
-  org, set = one member/agent), `host` / `path_prefix` / `method` (an empty field means **any**, so a
-  rule carrying only `method="DELETE"` blocks every delete), `verdict`, `note`, `created_by`. A new
-  table, so `create_all` makes it — **no migration step**. `verdict` is `deny` today and exists so
-  approval-required actions can land here later without one, mirroring the `verdict` vocabulary
-  `localrun.py` already uses. Enforcement: [proxy-model](proxy-model.md).
+  org, set = one member/agent), nullable `project_id` (NULL = any tool, set = only calls **through**
+  that project's tools — migration A22; `delete_project` sweeps the rules that named it, the same
+  dangling-FK reasoning as `_drop_member_deny_rules`), `host` / `path_prefix` / `method` (an empty
+  field means **any**, so a rule carrying only `method="DELETE"` blocks every delete), `verdict`,
+  `note`, `created_by`. The table itself is new, so `create_all` makes it. `verdict` is `deny` today
+  and exists so approval-required actions can land here later without a migration, mirroring the
+  `verdict` vocabulary `localrun.py` already uses. Enforcement: [proxy-model](proxy-model.md).
+- **Runtime attribution** — `CallRecord.client` + `RunRecord.client` (migration A23, `''` default):
+  which coding agent made the call (`X-Treg-Client`, self-reported by the CLI via env fingerprints;
+  attribution, never authentication). Feeds `GET /orgs/{id}/agents/observed` — one row per
+  (member, runtime), the auto-captured half of the agents story. `Membership.created_by` (same
+  step) names the admin who minted an agent; `''` for door/invite joins.
 
 ## Bindings (the multi-credential shape)
 `Tool.bindings` is a JSON list; each entry is

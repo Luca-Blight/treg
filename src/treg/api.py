@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlsplit
 
-from sqlalchemy import func, or_
+from sqlalchemy import case, func, or_
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -1742,12 +1742,19 @@ async def _org_deny_rules(caller: Caller, db: AsyncSession) -> list[DenyRule]:
     ))).scalars().all())
 
 
-async def _enforce_deny(caller: Caller, url: str, method: str, db: AsyncSession) -> None:
+async def _enforce_deny(
+    caller: Caller, url: str, method: str, db: AsyncSession, tool_project_id: int | None = None
+) -> None:
     """Block a call the org's policy forbids. Deliberately applies to EVERY role including owner: a
     deny rule is a guardrail, not a permission tier — an owner who disagrees deletes the rule rather
     than quietly bypassing it. The refusal names the rule, mirroring `localrun.check_deny`'s
-    "a refusal can name its source"."""
-    rules = await _org_deny_rules(caller, db)
+    "a refusal can name its source".
+
+    `tool_project_id` = the project of the tool this call goes through (every enforcement point has
+    resolved a Tool by then). A project-scoped rule (`project_id` set) fires only on that project's
+    tools; an org-wide-tool call (`tool_project_id` None) is never caught by one."""
+    rules = [r for r in await _org_deny_rules(caller, db)
+             if r.project_id is None or r.project_id == tool_project_id]
     if not rules:
         return  # the common path costs one indexed query and nothing else
     try:
@@ -1759,8 +1766,9 @@ async def _enforce_deny(caller: Caller, url: str, method: str, db: AsyncSession)
         return
     why = f" ({rule.note})" if rule.note else ""
     scope = "this team" if rule.user_id is None else "you"
+    in_proj = " in this project" if rule.project_id is not None else ""
     raise HTTPException(status_code=403, detail=(
-        f"blocked by a policy rule on {scope}{why} — "
+        f"blocked by a policy rule on {scope}{in_proj}{why} — "
         f"{rule.method or 'any'} {rule.host or 'any host'}{rule.path_prefix or ''}"))
 
 
@@ -2700,8 +2708,13 @@ async def list_members(
                         "daily_call_cap": m.daily_call_cap, "used_today": used.get(user.email, 0),
                         "tool_access": m.tool_access, "project_access": m.project_access,
                         "local_run_enabled": m.local_run_enabled,
-                        # so the dashboard can separate people from machines in one roster
-                        "is_agent": _is_agent_email(user.email)})
+                        # so the dashboard can separate people from machines in one roster —
+                        # agents carry their short name + owner, so the UI never shows the raw
+                        # machine address and can group each agent under its creator
+                        "is_agent": _is_agent_email(user.email),
+                        "name": (_agent_name(caller.org, user.email)
+                                 if _is_agent_email(user.email) else None),
+                        "created_by": m.created_by})
     return out
 
 
@@ -2974,7 +2987,12 @@ class AgentIn(BaseModel):
     role: str = "member"  # never "owner" (see below); "admin" is owner-granted only
     daily_call_cap: int = -1  # -1 = unlimited, mirroring set_member_cap
     tool_access: list[str] | None = None  # None = every tool, mirroring set_member_access
+    project_access: list | None = None  # None = every project; slugs or ids, mirroring set_member_access
     local_run_enabled: bool = True
+    # Set by the dashboard's "Scope this agent" promotion: the observed (member, runtime) pair this
+    # agent replaces, so the detected roster can drop it while the agent lives.
+    promoted_member: str | None = None
+    promoted_client: str | None = None
 
 
 @app.post("/orgs/{org_id}/agents")
@@ -3022,7 +3040,7 @@ async def create_agent(
 
     if is_new:
         membership = Membership(user_id=user.id, org_id=org_id, role=body.role,
-                                token_hash=crypto.hash_token(token))
+                                token_hash=crypto.hash_token(token), created_by=caller.email)
         db.add(membership)
     else:
         membership.token_hash = crypto.hash_token(token)  # rotate: the previous token dies here
@@ -3031,6 +3049,12 @@ async def create_agent(
     if is_new or "tool_access" in sent:  # only re-validate what the caller actually sent
         membership.tool_access = _normalize_tool_access(
             body.tool_access, await _known_access_names(org_id, db))
+    if is_new or "project_access" in sent:
+        membership.project_access = await _normalize_project_access(body.project_access, org_id, db)
+    if is_new or "promoted_member" in sent or "promoted_client" in sent:
+        member = _norm_email(body.promoted_member or "")
+        client = _norm_client(body.promoted_client or "")
+        membership.promoted_from = f"{member}|{client}" if member and client else ""
     membership.local_run_enabled = _keep("local_run_enabled", membership.local_run_enabled)
     await db.commit()
     return {"token": token, "name": name, "email": email, "org": caller.org.slug, "user_id": user.id,
@@ -3051,6 +3075,13 @@ async def list_agents(
         select(User).where(User.id.in_([m.user_id for m in memberships]))
     )).scalars().all()}
     used = await _used_today_by_user(db, org_id)
+    agent_emails = [u.email for u in users.values() if _is_agent_email(u.email)]
+    # "connected" = the agent has EVER called in as itself (checkin or any real call) — what the
+    # token card polls to flip to ✓ the moment the setup instruction's final step runs.
+    seen = set((await db.execute(
+        select(CallRecord.user_email).where(
+            CallRecord.org_id == org_id, CallRecord.user_email.in_(agent_emails)).distinct()
+    )).scalars().all()) if agent_emails else set()
     out: list[dict] = []
     for m in memberships:
         user = users.get(m.user_id)
@@ -3060,8 +3091,72 @@ async def list_agents(
                     "email": user.email, "role": m.role, "daily_call_cap": m.daily_call_cap,
                     "used_today": used.get(user.email, 0), "tool_access": m.tool_access,
                     "project_access": m.project_access,  # the dashboard renders this column
-                    "local_run_enabled": m.local_run_enabled, "created_at": m.created_at})
+                    "local_run_enabled": m.local_run_enabled, "created_at": m.created_at,
+                    "created_by": m.created_by, "promoted_from": m.promoted_from,
+                    "connected": user.email in seen})
     return out
+
+
+@app.post("/agents/checkin")
+async def agent_checkin(
+    request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """The handshake at the end of the setup instruction: the agent calls in AS ITSELF, proving the
+    token landed in the right environment. Audited synchronously (not fire-and-forget) so the
+    dashboard's poll sees `connected` flip the moment this returns. Works for any member token —
+    for a human it is just a no-op ping."""
+    rec = CallRecord(org_id=caller.org_id, user_email=caller.email, tool_name="—",
+                     method="CHECKIN", path="agent connected", status_code=200, kind="checkin",
+                     client=_client_of(request))
+    db.add(rec)
+    await db.commit()
+    return {"connected": True, "you": caller.email, "org": caller.org.slug}
+
+
+@app.get("/orgs/{org_id}/agents/observed")
+async def list_observed_agents(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """The agents ALREADY running under members' own tokens, discovered from traffic: one row per
+    (member, runtime) seen in the last 30 days, e.g. "sam@… / claude-code". The zero-setup half
+    of the agents story — nobody mints anything, the roster fills itself from `CallRecord.client`
+    (and RunRecord). Self-reported attribution, not authentication, which is why this view only
+    informs; scoping one for real = mint it a token ("Scope this agent" in the dashboard).
+
+    Machine identities are excluded — their calls are already attributed to themselves. So is a
+    plain terminal (`client` in ('', 'cli')): a roster that lists every human twice teaches nothing.
+    """
+    _require_admin_of(org_id, caller)
+    since = datetime.now(timezone.utc) - timedelta(days=30)
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    # A pair that was PROMOTED — it has its own agent identity now — leaves the detected roster;
+    # revoking that agent deletes its membership, which resurfaces the pair automatically.
+    promoted = {tuple(m.promoted_from.split("|", 1)) for m in (await db.execute(
+        select(Membership).where(Membership.org_id == org_id,
+                                 Membership.promoted_from != ""))).scalars().all()}
+    rows: dict[tuple[str, str], dict] = {}
+    for model, email_col, when_col, client_col in (
+        (CallRecord, CallRecord.user_email, CallRecord.created_at, CallRecord.client),
+        (RunRecord, RunRecord.user_email, RunRecord.created_at, RunRecord.client),
+    ):
+        # One grouped pass per table: the 30-day totals plus today's slice as a conditional sum,
+        # so a second identical GROUP BY isn't needed just to get `used_today`.
+        q = (select(email_col, client_col, func.count(), func.max(when_col),
+                    func.sum(case((when_col >= today, 1), else_=0)))
+             .where(model.org_id == org_id, when_col >= since,
+                    client_col.not_in(("", "cli")))
+             .group_by(email_col, client_col))
+        for email, client, count, last_seen, today_count in (await db.execute(q)).all():
+            if _is_machine_email(email) or (email, client) in promoted:
+                continue
+            cur = rows.setdefault((email, client), {"member": email, "client": client,
+                                                    "calls_30d": 0, "used_today": 0,
+                                                    "last_seen": last_seen})
+            cur["calls_30d"] += count
+            cur["used_today"] += today_count
+            cur["last_seen"] = max(cur["last_seen"], last_seen)
+    return sorted(rows.values(), key=lambda r: (r["member"], r["client"]))
 
 
 @app.delete("/orgs/{org_id}/agents/{user_id}")
@@ -3213,6 +3308,12 @@ async def delete_project(
             # every OTHER project's tools — a privilege escalation triggered by an unrelated delete.
             # `[]` is already the right meaning: org-wide tools only, which now include the freed ones.
             m.project_access = [p for p in m.project_access if p != project_id]
+    # A rule scoped to this project can never fire again — and DenyRule.project_id is a foreign key,
+    # so a surviving row would dangle (Postgres rejects that; SQLite only hides it). Same sweep-on-
+    # departure idiom as _drop_member_deny_rules.
+    for rule in (await db.execute(select(DenyRule).where(
+            DenyRule.project_id == project_id))).scalars().all():
+        await db.delete(rule)
     await db.delete(project)
     await db.commit()
     return {"deleted": project_id, "tools_made_org_wide": freed}
@@ -3227,6 +3328,7 @@ class DenyRuleIn(BaseModel):
     path_prefix: str = ""
     method: str = ""
     user_id: int | None = None  # None = the whole org; set = only that member/agent
+    project_id: int | None = None  # None = any tool; set = only calls through that project's tools
     note: str = ""
 
 
@@ -3255,6 +3357,7 @@ async def _drop_member_deny_rules(db: AsyncSession, user_id: int, org_id: int | 
 def _deny_view(r: DenyRule) -> dict:
     return {"id": r.id, "host": r.host, "path_prefix": r.path_prefix, "method": r.method,
             "user_id": r.user_id, "scope": "org" if r.user_id is None else "member",
+            "project_id": r.project_id,
             "verdict": r.verdict, "note": r.note, "created_by": r.created_by,
             "created_at": r.created_at}
 
@@ -3284,7 +3387,12 @@ async def create_deny_rule(
             Membership.org_id == org_id, Membership.user_id == body.user_id))).scalar_one_or_none()
         if target is None:
             raise HTTPException(status_code=404, detail="not a member of this org")
-    rule = DenyRule(org_id=org_id, user_id=body.user_id, host=host, path_prefix=path_prefix,
+    if body.project_id is not None:
+        project = await db.get(Project, body.project_id)
+        if project is None or project.org_id != org_id:  # 404 across orgs, like everywhere else
+            raise HTTPException(status_code=404, detail="unknown project")
+    rule = DenyRule(org_id=org_id, user_id=body.user_id, project_id=body.project_id,
+                    host=host, path_prefix=path_prefix,
                     method=method, note=(body.note or "").strip(), created_by=caller.email)
     db.add(rule)
     await db.commit()
@@ -3299,6 +3407,30 @@ async def list_deny_rules(
     _require_admin_of(org_id, caller)
     rules = (await db.execute(select(DenyRule).where(DenyRule.org_id == org_id))).scalars().all()
     return [_deny_view(r) for r in rules]
+
+
+@app.get("/orgs/{org_id}/policy/cli-deny")
+async def list_cli_deny(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> list[dict]:
+    """READ-ONLY: every CLI tool's effective argv deny patterns, so the Policy screen can show the
+    whole "what is blocked" picture in one place. These live on the TOOL (treg.json `cli.deny` +
+    catalog defaults, see `localrun.effective_profile`), not in the DenyRule table — editing them
+    means editing the skill or the catalog, which is why this endpoint only reports (admin+)."""
+    _require_admin_of(org_id, caller)
+    from . import providers as prov
+    out: list[dict] = []
+    tools = (await db.execute(select(Tool).where(Tool.org_id == org_id))).scalars().all()
+    for tool in tools:
+        profile = localrun.effective_profile(tool, (prov.match_skill(tool.name) or {}).get("cli"))
+        if not profile or not profile.get("deny"):
+            continue
+        own = set(profile.get("_own_deny") or [])
+        out.append({"tool": tool.name, "enabled": bool(profile.get("enabled")),
+                    "patterns": [{"pattern": p,
+                                  "source": "skill" if p in own else "catalog"}
+                                 for p in profile["deny"]]})
+    return out
 
 
 @app.delete("/orgs/{org_id}/deny/{rule_id}")
@@ -3676,11 +3808,27 @@ def _redact_argv(argv: list[str]) -> str:
     return " ".join(_redact_argv_list(argv))[:500]
 
 
-async def _grant_audit(db: AsyncSession, caller: Caller, tool_name: str, method: str, path: str, status: int) -> int:
+def _norm_client(raw: str) -> str:
+    """A runtime name as a short slug. One spelling for both ends of the roster: what an incoming
+    header is stored as, and what `promoted_from` must match to hide a detected pair."""
+    return re.sub(r"[^a-z0-9-]", "",
+                  raw.strip().lower().split("/", 1)[0])[:32]  # "claude-code/1.2" → "claude-code"
+
+
+def _client_of(request: Request | None) -> str:
+    """The calling RUNTIME from X-Treg-Client — attribution, not authentication (anything holding
+    the token can claim any name, so this informs the roster and never gates anything). An
+    unknown-but-well-formed name is kept, so a new runtime shows up without a release."""
+    return _norm_client(request.headers.get("X-Treg-Client", "") if request is not None else "")
+
+
+async def _grant_audit(db: AsyncSession, caller: Caller, tool_name: str, method: str, path: str,
+                       status: int, client: str = "") -> int:
     """A SYNCHRONOUS audit row (unlike record_call): the grant returns its audit id so the
     run-report can prove it follows a real grant. One insert; this is not the hot proxy path."""
     rec = CallRecord(org_id=caller.org_id, user_email=caller.email, tool_name=tool_name,
-                     method=method, path=path[:500], status_code=status, kind="local_run")
+                     method=method, path=path[:500], status_code=status, kind="local_run",
+                     client=client)
     db.add(rec)
     await db.commit()
     return rec.id
@@ -3706,7 +3854,7 @@ async def grant_local_run(
         raise HTTPException(status_code=404, detail="tool not found")
     _require_tool_use(caller, tool)  # per-member tool + project ACL (call + both run tiers)
     _require_local_run(caller)               # local tier may be disabled for this member (server-only)
-    await _enforce_deny(caller, tool.base_url, "", db)  # host-level policy (see run_tool_server)
+    await _enforce_deny(caller, tool.base_url, "", db, tool.project_id)  # host-level policy (see run_tool_server)
     await _enforce_daily_cap(caller, db)  # a local run counts toward the per-user daily cap
     catalog_cli = (prov.match_skill(tool.name) or {}).get("cli")
     profile = localrun.effective_profile(tool, catalog_cli)
@@ -3724,7 +3872,7 @@ async def grant_local_run(
     denied = localrun.check_deny(profile, body.argv)
     if denied:
         pattern, source = denied
-        await _grant_audit(db, caller, tool.name, "DENY", _redact_argv(body.argv), 403)
+        await _grant_audit(db, caller, tool.name, "DENY", _redact_argv(body.argv), 403, _client_of(request))
         raise HTTPException(status_code=403, detail=(
             f"denied by {source}: pattern {pattern!r}. The skill's creator controls this list "
             "(cli.deny in treg.json)."))
@@ -3745,7 +3893,7 @@ async def grant_local_run(
         proof = get_settings().run_proof
         supplied = request.headers.get("X-Treg-Run-Proof", "")
         if not (proof and hmac.compare_digest(supplied, proof)):
-            await _grant_audit(db, caller, tool.name, "DENY", _redact_argv(body.argv), 403)
+            await _grant_audit(db, caller, tool.name, "DENY", _redact_argv(body.argv), 403, _client_of(request))
             raise HTTPException(status_code=403, detail=(
                 "this tool uses another member's key — running it needs the isolated treg-run runner "
                 "(an admin sets it up once: `sudo treg setup-local-run --run-proof …`). A direct grant "
@@ -3758,7 +3906,7 @@ async def grant_local_run(
         raise HTTPException(status_code=409, detail=str(exc))
     except Exception as exc:  # noqa: BLE001 — a failed oauth refresh must read clearly, like /call
         raise HTTPException(status_code=502, detail=f"oauth refresh failed: {exc}")
-    audit_id = await _grant_audit(db, caller, tool.name, "GRANT", _redact_argv(body.argv), 200)
+    audit_id = await _grant_audit(db, caller, tool.name, "GRANT", _redact_argv(body.argv), 200, _client_of(request))
     warnings = list(profile.get("warnings") or [])
     ttl = rendered["ttl_seconds"]
     if ttl is not None and ttl <= 0:
@@ -4183,6 +4331,7 @@ async def list_calls(
             "path": c.path,
             "status_code": c.status_code,
             "kind": c.kind,
+            "client": c.client,
             "created_at": c.created_at.isoformat(),
         }
         for c in rows
@@ -4212,12 +4361,12 @@ async def list_runs(
     rows = [
         {"id": f"s{r.id}", "user_email": r.user_email, "tool": r.bundle_name,  # bundle_name = tool (historical)
          "argv": r.argv, "exit_code": r.exit_code, "duration_ms": r.duration_ms,
-         "where": "server", "created_at": r.created_at.isoformat()}
+         "where": "server", "client": r.client, "created_at": r.created_at.isoformat()}
         for r in server
     ] + [
         {"id": f"l{c.id}", "user_email": c.user_email, "tool": c.tool_name,
          "argv": (c.path or "").split(), "exit_code": None, "duration_ms": None,
-         "where": "local", "created_at": c.created_at.isoformat()}
+         "where": "local", "client": c.client, "created_at": c.created_at.isoformat()}
         for c in local
     ]
     rows.sort(key=lambda x: x["created_at"], reverse=True)
@@ -5502,7 +5651,7 @@ async def call_tool(
     # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
     # shape the caller used (named or URL-passthrough), and the relay never follows redirects, so a
     # blocked host can't be reached via a 3xx bounce.
-    await _enforce_deny(caller, upstream_url, request.method, db)
+    await _enforce_deny(caller, upstream_url, request.method, db, tool.project_id)
     await _enforce_daily_cap(caller, db)  # per-user daily cap (skips sandbox + unmetered members)
     if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
         await _enforce_public_demo_ip_cap(request, db)  # shared token → meter by client IP, not user
@@ -5511,6 +5660,7 @@ async def call_tool(
         audit.record_call(
             org_id=caller.org_id, user_email=caller.email, tool_name=tool.name,
             method=request.method, path=upstream_url, status_code=status_code,
+            client=_client_of(request),
         )
 
     # Landing-page sandbox: never touch the network — EXCEPT the one live wire. A call to the
@@ -5579,7 +5729,8 @@ class RunIn(BaseModel):
 
 @app.post("/run")
 async def run_tool_server(
-    body: RunIn, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+    body: RunIn, request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
     """Run a tool's CLI **on the treg server**, with its `cli.inject` secrets injected into the
     child process — the caller never holds the key. Both run tiers read the same `Tool.cli`
@@ -5601,7 +5752,7 @@ async def run_tool_server(
     _require_tool_use(caller, tool)  # per-member tool + project ACL
     # A run executes a CLI, so there is no request path to match — evaluate the tool's own upstream
     # host, which is what a host-level rule ("nobody may reach api.stripe.com") is really saying.
-    await _enforce_deny(caller, tool.base_url, "", db)
+    await _enforce_deny(caller, tool.base_url, "", db, tool.project_id)
     await _enforce_daily_cap(caller, db)  # a server run counts toward the per-user daily cap
     try:
         exec_bin = runner.resolve_exec_bin(tool)  # the SAME resolution run_tool execs — never diverges
@@ -5622,7 +5773,7 @@ async def run_tool_server(
     audit.record_run(
         org_id=caller.org_id, user_email=caller.email, bundle_name=tool.name,
         argv=_redact_argv_list(list(body.args)),  # redact any credential typed inline before it's stored
-        exit_code=result.exit_code, duration_ms=result.duration_ms,
+        exit_code=result.exit_code, duration_ms=result.duration_ms, client=_client_of(request),
     )
     return {
         "tool": tool.name,

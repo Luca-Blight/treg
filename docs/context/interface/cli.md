@@ -50,6 +50,13 @@ for a per-org token, and picks the org for an identity token). `_effective_org` 
 `/orgs/{id}/...` endpoints). `_admin_client` uses `admin_token` else the bearer. `_show` pretty-prints +
 exits non-zero on HTTP >= 400.
 
+**Per-process identity:** `TREG_TOKEN` (+ optional `TREG_ORG`) in the environment beat
+`~/.treg/config.json`, so each coding agent on one machine can run as its own scoped agent —
+set them in the runtime's env (Claude Code settings env, Codex config, a project `.env`) and the
+config file stays the human's. This is what makes the dashboard's "Scope this agent" promotion
+real on a shared machine (the same per-process pattern other agent credential gateways use).
+The override never touches the config file, so `treg login` can't accidentally persist it.
+
 ## The top-level IA (`treg --help`)
 `build_parser()` returns a `_GroupedHelpParser` whose `format_help` renders the front page from the
 `HELP_GROUPS` table (five groups, fixed order) instead of argparse's flat alphabetical wall — so the
@@ -88,14 +95,16 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
 
 ## Commands
 - **Team policy + scoping (all under `org`, all admin+):**
-  - **`org agent-new <name>`** (`--role`, `--cap`, `--tools`, `--all-tools`, `--local-run`) mints or
+  - **`org agent-new <name>`** (`--role`, `--cap`, `--tools`, `--all-tools`, `--local-run`,
+    `--projects a,b` / `--all-projects` — only sent when given, so a rotate never widens scope) mints or
     **rotates** an agent's token — a member identity for a machine caller (`POST /orgs/{id}/agents`).
     Re-running the same name rotates: the previous token dies there. **`org agents`** lists them with
     today's usage; **`org agent-rm <user_id>`** revokes. Nested under `org` on purpose — the top-level
     **`treg agents`** already means "which coding agents can I install skills for", an unrelated concept
     (`agents.py`). See [multi-tenancy](../architecture/multi-tenancy.md).
-  - **`org deny`** (`--host`, `--path`, `--method`, `--user`, `--note`) blocks calls for the whole team or
-    one member/agent; **`org deny-ls`** / **`org deny-rm <id>`**. An empty field means *any*, so
+  - **`org deny`** (`--host`, `--path`, `--method`, `--user`, `--project <slug|id>`, `--note`) blocks
+    calls for the whole team, one member/agent, and/or one project's tools;
+    **`org deny-ls`** / **`org deny-rm <id>`**. An empty field means *any*, so
     `--method DELETE` alone blocks every delete. Enforced on the proxy AND both run tiers — see
     [proxy-model](../architecture/proxy-model.md).
   - **`org project-new <name>`** / **`org projects`** / **`org project-rm <id>`** manage the optional

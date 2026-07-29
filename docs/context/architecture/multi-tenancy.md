@@ -97,8 +97,20 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   (`tool_access=None` = every tool) just by getting a new token: round-4 blocker #2. `create_agent` now
   writes a field **only when the caller actually sent it** (`body.model_fields_set`, the shape
   `set_member_access` already used for `project_access`); a brand-new agent, having nothing to keep,
-  still takes the documented defaults. `project_access` is preserved for free — `AgentIn` cannot even
-  express it, so it could previously only ever be lost.
+  still takes the documented defaults. `AgentIn` now DOES take `project_access` (slugs or ids, via
+  `_normalize_project_access`) so an agent can be project-scoped at mint time — under the same
+  sent-guard, so a rotate that omits it still preserves it. `Membership.created_by` (migration A23)
+  stamps the minting admin, giving every agent an owner in the roster.
+- **Observed agents (`GET /orgs/{id}/agents/observed`, admin+).** The OTHER half of the agents story:
+  the runtimes already calling under members' own tokens. The CLI fingerprints its host runtime
+  (`CLAUDECODE` → `claude-code`, `CODEX_*`, `CURSOR_*`, …; `TREG_CLIENT` overrides) and sends
+  `X-Treg-Client`; `_client_of` normalizes it (slug ≤32, versions stripped, unknown-but-well-formed
+  kept so a new runtime needs no release) onto `CallRecord.client` / `RunRecord.client` at all three
+  audit points. The endpoint aggregates 30 days into one row per (member, runtime), excluding
+  `''`/`cli` (a roster listing every human twice teaches nothing) and machine identities (already
+  attributed to themselves). **Attribution, never authentication** — anything holding the token can
+  claim any name, so nothing gates on it; scoping a detected agent for real = minting it a token
+  (the dashboard's "Scope this agent" promotion).
 - **Two ACL axes, composed as AND** (`_tool_usable` = `_tool_allowed` AND `_project_allowed`). The
   project scope is the coarse dial, `tool_access` the fine one; both are NULL-means-everything and the
   owner is exempt from both. `project_access` holds project **IDs**, not slugs, so the hot-path check is

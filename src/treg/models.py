@@ -72,6 +72,13 @@ class Membership(SQLModel, table=True):
     org_id: int = Field(foreign_key="org.id", index=True)
     role: str = Field(default="member")  # owner | admin | member
     token_hash: str = Field(index=True)
+    # Who minted this membership (agents name their creating admin; "" for people who came through
+    # a login door or invite — the invite itself records invited_by).
+    created_by: str = Field(default="")
+    # For an agent promoted from the observed roster: "member-email|runtime" (e.g.
+    # "sam@x.dev|claude-code"). The observed-agents view excludes this pair while the agent lives —
+    # the detected row "became" this agent — and revoking the agent naturally resurfaces it.
+    promoted_from: str = Field(default="")
     webhook_url: str | None = Field(default=None)  # health alerts for this member's org POST here
     # Per-user, per-day usage cap for this org (counts proxy calls + local + server runs). -1 = unlimited
     # (the default — nobody is capped until an admin sets a limit). See api._enforce_daily_cap.
@@ -136,6 +143,10 @@ class CallRecord(SQLModel, table=True):
     # Which execution path produced this row: "call" (proxy /call) or "local_run" (/tools/{name}/grant).
     # Server-side CLI runs live in RunRecord ("server_run"). Lets the usage view break down by kind.
     kind: str = Field(default="call")
+    # The RUNTIME that made the call — "claude-code", "codex", "cursor", … — self-reported by the
+    # treg CLI via X-Treg-Client (attribution, NOT authentication: anything holding the token can
+    # claim any name). "" = unreported. What makes the observed-agents roster possible.
+    client: str = Field(default="", index=True)
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -152,6 +163,7 @@ class RunRecord(SQLModel, table=True):
     argv: list = Field(default_factory=list, sa_column=Column("argv", JSON))
     exit_code: int
     duration_ms: int
+    client: str = Field(default="")  # runtime attribution, same contract as CallRecord.client
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -333,6 +345,10 @@ class DenyRule(SQLModel, table=True):
     # NULL = applies to everyone in the org. Set = only this member/agent (identified the same way
     # every other member endpoint does, by user id — org_id + user_id IS the membership).
     user_id: int | None = Field(default=None, foreign_key="user.id", index=True)
+    # NULL = applies to any tool. Set = only calls made THROUGH a tool in this project — the third
+    # optional scope axis, composed with user_id as AND (both NULL-means-any, like project_access).
+    # A URL-passthrough call resolves to a tool first, so it carries a project too.
+    project_id: int | None = Field(default=None, foreign_key="project.id", index=True)
     host: str = Field(default="")  # netloc, case-insensitive; "" = any host
     path_prefix: str = Field(default="")  # "" = any path
     method: str = Field(default="")  # "" = any method
