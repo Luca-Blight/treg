@@ -2401,8 +2401,8 @@ createApp({
     inviteFirstRun(){ return !this.myOrgs.some(o=>!this.isPersonal(o)); },  // no real team yet → decline offers create-team
     activityRows(){  // proxy calls + server CLI runs, one time-sorted feed (ISO strings compare fine)
       // Local runs now arrive via /runs (where:'local'); drop them from the calls feed so they aren't double-counted.
-      const calls=(this.calls||[]).filter(c=>c.kind!=='local_run').map(c=>({kind:'call', id:c.id, created_at:c.created_at, user_email:c.user_email, tool:c.tool_name, action:c.method, status:c.status_code, ok:c.status_code<400}));
-      const runs=(this.runs||[]).map(r=>({kind:'run', where:r.where, id:r.id, created_at:r.created_at, user_email:r.user_email, tool:r.tool, action:(r.argv||[]).join(' ').slice(0,48)||'-', status:(r.where==='local'?'local run':'exit '+r.exit_code), ok:(r.where==='local'?true:r.exit_code===0)}));
+      const calls=(this.calls||[]).filter(c=>c.kind!=='local_run').map(c=>({kind:'call', id:c.id, created_at:c.created_at, user_email:c.user_email, client:c.client, tool:c.tool_name, action:c.method, status:c.status_code, ok:c.status_code<400}));
+      const runs=(this.runs||[]).map(r=>({kind:'run', where:r.where, id:r.id, created_at:r.created_at, user_email:r.user_email, client:r.client, tool:r.tool, action:(r.argv||[]).join(' ').slice(0,48)||'-', status:(r.where==='local'?'local run':'exit '+r.exit_code), ok:(r.where==='local'?true:r.exit_code===0)}));
       return calls.concat(runs).sort((a,b)=>a.created_at<b.created_at?1:-1);
     },
     sbxTourSteps(){ return [
