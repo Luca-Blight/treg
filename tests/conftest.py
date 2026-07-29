@@ -129,3 +129,12 @@ async def clients():
         c.headers["X-Treg-Token"] = r.json()["token"]  # authed by default from here on
         yield c
     await app.state.http.aclose()
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_treg_identity(monkeypatch):
+    """A dev machine may carry a per-agent identity in its environment (TREG_TOKEN et al — the
+    'Scope this agent' setup persists them into the coding agent's global env, and the CLI lets
+    them beat any config). The suite must not change behavior because of who is running it."""
+    for var in ("TREG_TOKEN", "TREG_ORG", "TREG_URL", "TREG_CLIENT"):
+        monkeypatch.delenv(var, raising=False)
