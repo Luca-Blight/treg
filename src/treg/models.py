@@ -75,6 +75,10 @@ class Membership(SQLModel, table=True):
     # Who minted this membership (agents name their creating admin; "" for people who came through
     # a login door or invite — the invite itself records invited_by).
     created_by: str = Field(default="")
+    # For an agent promoted from the observed roster: "member-email|runtime" (e.g.
+    # "sam@x.dev|claude-code"). The observed-agents view excludes this pair while the agent lives —
+    # the detected row "became" this agent — and revoking the agent naturally resurfaces it.
+    promoted_from: str = Field(default="")
     webhook_url: str | None = Field(default=None)  # health alerts for this member's org POST here
     # Per-user, per-day usage cap for this org (counts proxy calls + local + server runs). -1 = unlimited
     # (the default — nobody is capped until an admin sets a limit). See api._enforce_daily_cap.

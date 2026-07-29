@@ -1437,7 +1437,8 @@ th{background:rgba(0,0,0,.25)}
               <button v-if="!newAgent" class="btn sm" style="margin-left:auto" @click="snipAgent=null">Close</button>
             </div>
             <p v-if="newAgent" class="sub" style="margin:2px 0 10px">This is the only time it is shown. Put it in the agent's <code>TREG_TOKEN</code>.</p>
-            <p v-else class="sub" style="margin:2px 0 10px">A stored token can never be shown again — these use <span class="mono">$TREG_TOKEN</span>. Lost it? Press <b>Rotate</b> for a fresh one.</p>
+            <p v-else-if="agentTokens[snipAgent.user_id]" class="sub" style="margin:2px 0 10px">Snippets carry the real token (minted this page-load — the server only keeps a hash).</p>
+            <p v-else class="sub" style="margin:2px 0 10px">The server stores only a hash of the token, so it can't be shown again — these snippets use <span class="mono">$TREG_TOKEN</span>. <button class="btn sm" @click="rotateAgent(snipAgent)">⟳ Rotate &amp; fill real token</button> <span class="muted">(the old token stops working)</span></p>
             <div v-if="newAgent" class="field">
               <input :value="newAgent.token" readonly style="font-family:var(--mono)" @focus="$event.target.select()"/>
               <button class="btn primary" @click="copy(newAgent.token,'agenttok')">{{copied==='agenttok'?'Copied':'Copy'}}</button>
@@ -1493,7 +1494,7 @@ th{background:rgba(0,0,0,.25)}
           <table v-else>
             <tr><th>Name</th><th>Owner</th><th>Role</th><th style="text-align:right">Today</th><th>Daily cap</th><th>Tools</th><th>Projects</th><th></th></tr>
             <tr v-for="a in agents" :key="a.user_id">
-              <td><b>{{a.name}}</b><div class="muted" style="font-size:11px;font-family:var(--mono)">{{a.email}}</div></td>
+              <td><b>{{a.name}}</b><span v-if="a.promoted_from" class="chip" style="margin-left:6px" :title="'promoted from detected traffic: '+a.promoted_from.replace('|',' / ')">{{a.promoted_from.split('|')[1]}}</span><div class="muted" style="font-size:11px;font-family:var(--mono)">{{a.email}}</div></td>
               <td class="muted" :title="a.created_by?('minted by '+a.created_by):''">{{a.created_by?short(a.created_by):'—'}}</td>
               <td><span class="role" :class="a.role">{{a.role}}</span></td>
               <td style="text-align:right" class="muted">{{a.used_today}}</td>
@@ -2307,7 +2308,7 @@ createApp({
       agentSnip:'env',   // which paste-ready snippet the agent card shows
       snipAgent:null,    // an EXISTING agent whose setup snippets are open (no token — placeholder)
       agents:[], agentName:'', agentRole:'member', agentCap:-1, agentBusy:false, agentErr:'', agentProjSel:{},
-      observedAgents:[], promoteHint:'',
+      observedAgents:[], promoteHint:'', promotePending:null, agentTokens:{},  // minted tokens, THIS page-load only — the server stores hashes
       newAgent:null, confirmAgent:null,
       projects:[], projectName:'', projBusy:false, confirmProj:null, projDraft:{},
       editProj:null, projToolDraft:{}, projToolBusy:false,
@@ -2502,7 +2503,7 @@ createApp({
     // What to actually DO with a freshly minted agent token, in the three shapes people need.
     agentSnippet(){ const a=this.newAgent||this.snipAgent; if(!a) return '';
       const base=this.proxy||location.origin, org=a.org||this.activeSlugNow;
-      const tok=a.token||'$TREG_TOKEN';  // a stored token is hashed — never recoverable
+      const tok=a.token||this.agentTokens[a.user_id]||'$TREG_TOKEN';  // hash-stored server-side; real value only if minted this page-load
       if(this.agentSnip==='env'){
         return 'export TREG_TOKEN='+tok+'\nexport TREG_ORG='+org+'\nexport TREG_URL='+base; }
       if(this.agentSnip==='verify'){
@@ -2799,7 +2800,10 @@ createApp({
     promoteObserved(o){
       // Promotion = mint a real identity for a runtime we've only SEEN so far. Prefill the form;
       // the admin still picks role/cap/projects and presses Create, then swaps the env key.
+      // promotePending links the mint to this (member, runtime) pair, so the detected row
+      // disappears the moment the agent exists (and returns if the agent is revoked).
       const who=(o.member.split('@')[0]||'agent').replace(/[^a-zA-Z0-9-]/g,'-');
+      this.promotePending={member:o.member, client:o.client};
       this.agentName=who+'-'+o.client; this.promoteHint='Creating a token for "'+o.client+'" running as '
         +o.member+'. After Create, put the new token in that runtime\'s TREG_TOKEN — from then on it '
         +'acts as itself, with its own cap and scope, instead of as '+o.member+'.';
@@ -2817,9 +2821,10 @@ createApp({
       // Only send project_access when the admin actually narrowed it — all checked = every project.
       const picked=this.projects.filter(p=>this.agentProjSel[p.id]).map(p=>p.id);
       if(this.projects.length && picked.length<this.projects.length) body.project_access=picked;
+      if(this.promotePending){ body.promoted_member=this.promotePending.member; body.promoted_client=this.promotePending.client; }
       try{ const r=await this.api('/orgs/'+this.activeOrgId+'/agents',{method:'POST',headers:{'content-type':'application/json'},
              body:JSON.stringify(body)});
-           this.newAgent=r; this.snipAgent=null; this.agentName=''; this.promoteHint=''; await this.loadAgents(); }
+           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; this.agentName=''; this.promoteHint=''; this.promotePending=null; await this.loadAgents(); }
       catch(e){ this.agentErr='Create failed: '+(e.detail||e.status); }
       this.agentBusy=false; },
     // Rotate = create with the SAME name: the server replaces the token hash, so the old one dies.
@@ -2828,7 +2833,7 @@ createApp({
     async rotateAgent(a){ this.agentBusy=true; this.agentErr='';
       try{ const r=await this.api('/orgs/'+this.activeOrgId+'/agents',{method:'POST',headers:{'content-type':'application/json'},
              body:JSON.stringify({name:a.name, role:a.role, daily_call_cap:a.daily_call_cap})});
-           this.newAgent=r; this.snipAgent=null; await this.loadAgents(); }
+           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; await this.loadAgents(); }
       catch(e){ this.agentErr='Rotate failed: '+(e.detail||e.status); }
       this.agentBusy=false; },
     showAgentSetup(a){ this.newAgent=null; this.agentSnip='env';

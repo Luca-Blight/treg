@@ -219,6 +219,11 @@ def _migrate_to_orgs(conn) -> None:
     if "membership" in tables and "created_by" not in {c["name"] for c in insp.get_columns("membership")}:
         conn.execute(text("ALTER TABLE membership ADD COLUMN created_by VARCHAR NOT NULL DEFAULT ''"))
 
+    # (A24) additive: which observed (member|runtime) pair an agent was promoted from — lets the
+    # detected roster drop a pair once it has its own identity, and resurface it on revoke.
+    if "membership" in tables and "promoted_from" not in {c["name"] for c in insp.get_columns("membership")}:
+        conn.execute(text("ALTER TABLE membership ADD COLUMN promoted_from VARCHAR NOT NULL DEFAULT ''"))
+
     # (B) legacy backfill — guarded
     if "org" not in tables:
         return  # defensive: create_all should have made it
@@ -246,8 +251,8 @@ def _migrate_to_orgs(conn) -> None:
                 text(  # daily_call_cap + local_run_enabled are explicit: create_all builds them NOT NULL
                        # with no server default, so this raw INSERT must supply their defaults (unlimited /
                        # local runs allowed). tool_access is nullable (NULL = all tools) so it's omitted.
-                    "INSERT INTO membership (user_id, org_id, role, token_hash, webhook_url, daily_call_cap, local_run_enabled, created_by, created_at) "
-                    "VALUES (:uid, :oid, 'owner', :th, :wh, -1, 1, '', :ct)"
+                    "INSERT INTO membership (user_id, org_id, role, token_hash, webhook_url, daily_call_cap, local_run_enabled, created_by, promoted_from, created_at) "
+                    "VALUES (:uid, :oid, 'owner', :th, :wh, -1, 1, '', '', :ct)"
                 ),
                 {"uid": row.id, "oid": org_id, "th": row.token_hash, "wh": row.webhook_url, "ct": row.created_at or now},
             )

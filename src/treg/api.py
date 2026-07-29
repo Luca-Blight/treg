@@ -2798,6 +2798,10 @@ class AgentIn(BaseModel):
     tool_access: list[str] | None = None  # None = every tool, mirroring set_member_access
     project_access: list | None = None  # None = every project; slugs or ids, mirroring set_member_access
     local_run_enabled: bool = True
+    # Set by the dashboard's "Scope this agent" promotion: the observed (member, runtime) pair this
+    # agent replaces, so the detected roster can drop it while the agent lives.
+    promoted_member: str | None = None
+    promoted_client: str | None = None
 
 
 @app.post("/orgs/{org_id}/agents")
@@ -2856,6 +2860,10 @@ async def create_agent(
             body.tool_access, await _known_access_names(org_id, db))
     if is_new or "project_access" in sent:
         membership.project_access = await _normalize_project_access(body.project_access, org_id, db)
+    if is_new or "promoted_member" in sent or "promoted_client" in sent:
+        member = _norm_email(body.promoted_member or "")
+        client = re.sub(r"[^a-z0-9-]", "", (body.promoted_client or "").lower())[:32]
+        membership.promoted_from = f"{member}|{client}" if member and client else ""
     membership.local_run_enabled = _keep("local_run_enabled", membership.local_run_enabled)
     await db.commit()
     return {"token": token, "name": name, "email": email, "org": caller.org.slug, "user_id": user.id,
@@ -2886,7 +2894,7 @@ async def list_agents(
                     "used_today": used.get(user.email, 0), "tool_access": m.tool_access,
                     "project_access": m.project_access,  # the dashboard renders this column
                     "local_run_enabled": m.local_run_enabled, "created_at": m.created_at,
-                    "created_by": m.created_by})
+                    "created_by": m.created_by, "promoted_from": m.promoted_from})
     return out
 
 
@@ -2906,6 +2914,11 @@ async def list_observed_agents(
     _require_admin_of(org_id, caller)
     since = datetime.now(timezone.utc) - timedelta(days=30)
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    # A pair that was PROMOTED — it has its own agent identity now — leaves the detected roster;
+    # revoking that agent deletes its membership, which resurfaces the pair automatically.
+    promoted = {tuple(m.promoted_from.split("|", 1)) for m in (await db.execute(
+        select(Membership).where(Membership.org_id == org_id,
+                                 Membership.promoted_from != ""))).scalars().all()}
     rows: dict[tuple[str, str], dict] = {}
     for model, email_col, when_col, client_col in (
         (CallRecord, CallRecord.user_email, CallRecord.created_at, CallRecord.client),
@@ -2916,7 +2929,7 @@ async def list_observed_agents(
                     client_col.not_in(("", "cli")))
              .group_by(email_col, client_col))
         for email, client, count, last_seen in (await db.execute(q)).all():
-            if _is_machine_email(email):
+            if _is_machine_email(email) or (email, client) in promoted:
                 continue
             key = (email, client)
             cur = rows.setdefault(key, {"member": email, "client": client,

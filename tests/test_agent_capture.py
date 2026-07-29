@@ -167,3 +167,35 @@ def test_treg_token_env_overrides_the_config_file(monkeypatch):
     c = _client({"base_url": "http://x", "token": "human-token", "active_org": "other"})
     assert c.headers["X-Treg-Token"] == "human-token"
     assert c.headers["X-Treg-Org"] == "other"
+
+
+# ---- promotion: a detected pair becomes a real agent --------------------------------------------
+async def test_promoted_pair_leaves_the_observed_roster_and_returns_on_revoke(env):
+    await env.c.get("/call/alpha/ok", headers=_h(env.member, "claude-code"))
+    await _drain_audit()
+    rows = (await env.c.get(f"/orgs/{env.org_id}/agents/observed", headers=_h(env.owner))).json()
+    assert [(r["member"], r["client"]) for r in rows] == [("m@x.dev", "claude-code")]
+
+    made = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner), json={
+        "name": "m-claude-code", "promoted_member": "m@x.dev", "promoted_client": "claude-code"})
+    assert made.status_code == 200, made.text
+    listed = (await env.c.get(f"/orgs/{env.org_id}/agents", headers=_h(env.owner))).json()
+    assert listed[0]["promoted_from"] == "m@x.dev|claude-code"
+    assert (await env.c.get(f"/orgs/{env.org_id}/agents/observed", headers=_h(env.owner))).json() == [], \
+        "the detected row became this agent — showing both would suggest promoting it twice"
+
+    # revoking the agent resurfaces the pair: the traffic history is still there
+    await env.c.delete(f"/orgs/{env.org_id}/agents/{made.json()['user_id']}", headers=_h(env.owner))
+    rows = (await env.c.get(f"/orgs/{env.org_id}/agents/observed", headers=_h(env.owner))).json()
+    assert [(r["member"], r["client"]) for r in rows] == [("m@x.dev", "claude-code")]
+
+
+async def test_promotion_link_survives_a_rotate(env):
+    made = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner), json={
+        "name": "m-codex", "promoted_member": "m@x.dev", "promoted_client": "codex"})
+    assert made.status_code == 200, made.text
+    rot = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner),
+                           json={"name": "m-codex"})  # the dashboard Rotate shape
+    listed = (await env.c.get(f"/orgs/{env.org_id}/agents", headers=_h(env.owner))).json()
+    me = next(a for a in listed if a["name"] == "m-codex")
+    assert me["promoted_from"] == "m@x.dev|codex", "a rotate must not unlink the promotion"
