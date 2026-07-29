@@ -132,3 +132,22 @@ async def test_minted_agent_records_its_creator(env):
     await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner), json={"name": "ci-bot"})
     listed = (await env.c.get(f"/orgs/{env.org_id}/agents", headers=_h(env.owner))).json()
     assert listed[0]["created_by"] == "owner@x.dev"
+
+
+# ---- the CLI detector --------------------------------------------------------------------------
+def test_detect_runtime_ignores_config_location_vars(monkeypatch):
+    """CODEX_HOME sits in the shell profile of anyone who installed Codex — a config path, not an
+    'executing inside Codex' marker. Treating it as one tagged every plain terminal on that machine
+    as codex (found on a real machine)."""
+    from treg.cli import _detect_runtime
+    for var in ("TREG_CLIENT", "CLAUDECODE", "CODEX_SANDBOX", "CURSOR_AGENT", "CURSOR_TRACE_ID",
+                "GEMINI_CLI", "GITHUB_COPILOT_AGENT"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("CODEX_HOME", "/Users/someone/.codex")
+    assert _detect_runtime() == "cli"
+    monkeypatch.setenv("CODEX_SANDBOX", "seatbelt")  # the real execution-time marker still counts
+    assert _detect_runtime() == "codex"
+    monkeypatch.setenv("CLAUDECODE", "1")
+    assert _detect_runtime() == "claude-code"
+    monkeypatch.setenv("TREG_CLIENT", "my-agent")
+    assert _detect_runtime() == "my-agent"
