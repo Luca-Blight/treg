@@ -145,10 +145,10 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
     screen.
   - **Team settings** — deliberately JUST the **Danger zone** (leave / delete), visible to EVERY role
     (leaving is self-service, and `loadOrgAdmin` lands a non-admin here). New team / Join by code /
-    Paste token live only in the sidebar picker — Jason cut them from this tab on review; a personal
+    Paste token live only in the sidebar picker — cut from this tab on founder review; a personal
     team shows a one-line explainer instead of an empty page.
 - **Agents live INSIDE Team → Members now** — the separate Agents page and its sidebar entry are
-  GONE (Jason's call: an agent IS a membership, so two rosters was one too many). One roster
+  GONE (founder call on review: an agent IS a membership, so two rosters was one too many). One roster
   (`rosterMembers`): each person, then `↳` the agents they minted (short name + "owned by", never
   the machine address; Setup / Rotate / Revoke actions inline), then the runtimes **detected** in
   their traffic (`observedAgents`, from `GET /orgs/{id}/agents/observed`) as `↳ codex · detected`

@@ -139,7 +139,7 @@ def _client(cfg: dict, *, auth: bool = True) -> httpx.Client:
     headers = {"ngrok-skip-browser-warning": "1", "X-Treg-Client": _detect_runtime()}
     # TREG_TOKEN (+ optional TREG_ORG) beats the config file: per-PROCESS identity, so each coding
     # agent on one machine can act as its own scoped agent while ~/.treg/config.json stays the
-    # human's. Env is how a runtime carries identity (OneCLI does the same with PROXY_AUTH) — and
+    # human's. Per-process env is the standard way a runtime carries its own identity — and
     # because it never touches the config file, `treg login` cannot accidentally persist it.
     token = os.environ.get("TREG_TOKEN") or (cfg.get("token") if auth else None)
     if auth and token:
