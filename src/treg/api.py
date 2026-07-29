@@ -2884,6 +2884,13 @@ async def list_agents(
         select(User).where(User.id.in_([m.user_id for m in memberships]))
     )).scalars().all()}
     used = await _used_today_by_user(db, org_id)
+    agent_emails = [u.email for u in users.values() if _is_agent_email(u.email)]
+    # "connected" = the agent has EVER called in as itself (checkin or any real call) — what the
+    # token card polls to flip to ✓ the moment the setup instruction's final step runs.
+    seen = set((await db.execute(
+        select(CallRecord.user_email).where(
+            CallRecord.org_id == org_id, CallRecord.user_email.in_(agent_emails)).distinct()
+    )).scalars().all()) if agent_emails else set()
     out: list[dict] = []
     for m in memberships:
         user = users.get(m.user_id)
@@ -2894,8 +2901,26 @@ async def list_agents(
                     "used_today": used.get(user.email, 0), "tool_access": m.tool_access,
                     "project_access": m.project_access,  # the dashboard renders this column
                     "local_run_enabled": m.local_run_enabled, "created_at": m.created_at,
-                    "created_by": m.created_by, "promoted_from": m.promoted_from})
+                    "created_by": m.created_by, "promoted_from": m.promoted_from,
+                    "connected": user.email in seen})
     return out
+
+
+@app.post("/agents/checkin")
+async def agent_checkin(
+    request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """The handshake at the end of the setup instruction: the agent calls in AS ITSELF, proving the
+    token landed in the right environment. Audited synchronously (not fire-and-forget) so the
+    dashboard's poll sees `connected` flip the moment this returns. Works for any member token —
+    for a human it is just a no-op ping."""
+    rec = CallRecord(org_id=caller.org_id, user_email=caller.email, tool_name="—",
+                     method="CHECKIN", path="agent connected", status_code=200, kind="checkin",
+                     client=_client_of(request))
+    db.add(rec)
+    await db.commit()
+    return {"connected": True, "you": caller.email, "org": caller.org.slug}
 
 
 @app.get("/orgs/{org_id}/agents/observed")

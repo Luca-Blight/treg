@@ -202,3 +202,17 @@ async def test_promotion_link_survives_a_rotate(env):
     listed = (await env.c.get(f"/orgs/{env.org_id}/agents", headers=_h(env.owner))).json()
     me = next(a for a in listed if a["name"] == "m-codex")
     assert me["promoted_from"] == "m@x.dev|codex", "a rotate must not unlink the promotion"
+
+
+# ---- the check-in handshake ---------------------------------------------------------------------
+async def test_checkin_flips_connected(env):
+    made = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner), json={"name": "ci-bot"})
+    listed = (await env.c.get(f"/orgs/{env.org_id}/agents", headers=_h(env.owner))).json()
+    assert listed[0]["connected"] is False, "a fresh agent has never called in"
+
+    r = await env.c.post("/agents/checkin", headers=_h(made.json()["token"], "claude-code"))
+    assert r.status_code == 200 and r.json()["connected"] is True
+    assert r.json()["you"] == made.json()["email"]
+
+    listed = (await env.c.get(f"/orgs/{env.org_id}/agents", headers=_h(env.owner))).json()
+    assert listed[0]["connected"] is True, "the poll must see the check-in synchronously"

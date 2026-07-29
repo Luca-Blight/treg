@@ -1436,7 +1436,9 @@ th{background:rgba(0,0,0,.25)}
               <template v-else>How to use {{snipAgent.name}}</template>
               <button v-if="!newAgent" class="btn sm" style="margin-left:auto" @click="snipAgent=null">Close</button>
             </div>
-            <p v-if="newAgent" class="sub" style="margin:2px 0 10px">This is the only time it is shown. Put it in the agent's <code>TREG_TOKEN</code>.</p>
+            <p v-if="newAgent" class="sub" style="margin:2px 0 10px">This is the only time it is shown. Put it in the agent's <code>TREG_TOKEN</code>.
+              <span v-if="agentConnected" class="chip ok" style="margin-left:8px">✓ connected — {{newAgent.name}} called in as itself</span>
+              <span v-else class="muted" style="margin-left:8px">waiting for its first check-in…</span></p>
             <p v-else-if="agentTokens[snipAgent.user_id]" class="sub" style="margin:2px 0 10px">Snippets carry the real token (minted this page-load — the server only keeps a hash).</p>
             <p v-else class="sub" style="margin:2px 0 10px">The server stores only a hash of the token, so it can't be shown again — these snippets use <span class="mono">$TREG_TOKEN</span>. <button class="btn sm" @click="rotateAgent(snipAgent)">⟳ Rotate &amp; fill real token</button> <span class="muted">(the old token stops working)</span></p>
             <div v-if="newAgent" class="field">
@@ -1446,9 +1448,8 @@ th{background:rgba(0,0,0,.25)}
             </div>
             <!-- a bare token is a dead end: hand over the paste-ready thing, like the Tools snippets do -->
             <div class="tabs" style="margin:14px 0 8px">
-              <button :class="{active:agentSnip==='env'}" @click="agentSnip='env'">Environment</button>
               <button :class="{active:agentSnip==='prompt'}" @click="agentSnip='prompt'">Give it to your agent</button>
-              <button :class="{active:agentSnip==='verify'}" @click="agentSnip='verify'">Verify</button>
+              <button :class="{active:agentSnip==='env'}" @click="agentSnip='env'">Environment</button>
             </div>
             <div class="lc-codewrap">
               <button class="lc-cp" @click="copy(agentSnippet,'agentsnip')">{{copied==='agentsnip'?'✓ copied':'copy'}}</button>
@@ -2305,7 +2306,7 @@ createApp({
       editAccess:null, accessDraft:{}, inviteCustomize:false, inviteLocalRun:true, inviteToolSel:{}, accessNote:'',
       // agents (machine identities), projects (sub-scope) and deny rules (policy)
       orgTab:'members', showInvite:false,   // Team page tabs; invites live inside Members (a non-admin is moved to Team settings on open)
-      agentSnip:'env',   // which paste-ready snippet the agent card shows
+      agentSnip:'prompt',   // which paste-ready snippet the agent card shows (prompt = hand-to-agent, first)
       snipAgent:null,    // an EXISTING agent whose setup snippets are open (no token — placeholder)
       agents:[], agentName:'', agentRole:'member', agentCap:-1, agentBusy:false, agentErr:'', agentProjSel:{},
       observedAgents:[], promoteHint:'', promotePending:null, agentTokens:{},  // minted tokens, THIS page-load only — the server stores hashes
@@ -2505,9 +2506,19 @@ createApp({
       const base=this.proxy||location.origin, org=a.org||this.activeSlugNow;
       const tok=a.token||this.agentTokens[a.user_id]||'$TREG_TOKEN';  // hash-stored server-side; real value only if minted this page-load
       if(this.agentSnip==='env'){
-        return 'export TREG_TOKEN='+tok+'\nexport TREG_ORG='+org+'\nexport TREG_URL='+base; }
-      if(this.agentSnip==='verify'){
-        return 'curl -s '+base+'/tools \\\n  -H "X-Treg-Token: '+tok+'" \\\n  -H "X-Treg-Org: '+org+'"'; }
+        return [
+          '# Where to persist these, per agent harness:',
+          '#  Claude Code   -> the "env" map in ~/.claude/settings.json',
+          '#  Codex CLI     -> [shell_environment_policy] set = {...} in ~/.codex/config.toml',
+          '#  Gemini CLI    -> append KEY=value lines to ~/.gemini/.env (a project .env shadows it)',
+          '#  Cursor        -> ~/.zshrc: [ -n "$CURSOR_AGENT" ] && export ...',
+          '#  pi            -> ~/.zshrc guard on $PI_CODING_AGENT, or shellCommandPrefix in ~/.pi/agent/settings.json',
+          '#  opencode      -> shell.env plugin; also export TREG_CLIENT=opencode',
+          '#  plain shell / CI -> the exports below, as-is',
+          'export TREG_TOKEN='+tok,
+          'export TREG_ORG='+org,
+          'export TREG_URL='+base,
+        ].join('\n'); }
       return [
         'You have your own tools-registry identity in the team "'+org+'" (you are "'+a.name+'").',
         '',
@@ -2546,7 +2557,14 @@ createApp({
         '',
         'List what you may use:  GET '+base+'/tools',
         'Your calls are capped and logged as "'+a.name+'", so keep them purposeful.',
+        '',
+        'FINALLY, after persisting the env, confirm the identity landed by checking in AS yourself:',
+        '  curl -s -X POST '+base+'/agents/checkin -H "X-Treg-Token: '+tok+'" -H "X-Treg-Org: '+org+'"',
+        'A {"connected": true, "you": "agent-…"} reply means treg registered the connection —',
+        'the dashboard shows this agent as connected from that moment.',
       ].join('\n'); },
+    agentConnected(){ const n=this.newAgent; if(!n) return false;
+      const row=(this.agents||[]).find(a=>a.user_id===n.user_id); return !!(row&&row.connected); },
     isOwner(){ return this.activeRole==='owner'; },
     canRegister(){ return this.activeRole!=='viewer'; },  // members+ may create secrets/tools
     secretRowsReady(){ return this.secretRows.filter(r=>(r.name||'').trim()&&r.value).length; },
@@ -2821,6 +2839,13 @@ createApp({
            const sel={}; this.projects.forEach(p=>{ sel[p.id]=true; }); this.agentProjSel=sel;
            this.observedAgents=await this.api('/orgs/'+this.activeOrgId+'/agents/observed').catch(()=>[]); }
       catch(e){ this.agentErr='Load agents failed: '+(e.detail||e.status); } },
+    pollAgentConnected(){
+      // Flip the token card to ✓ the moment the setup instruction's final check-in lands.
+      if(this._agentPoll) clearInterval(this._agentPoll);
+      let tries=0;
+      this._agentPoll=setInterval(async()=>{
+        if(!this.newAgent || this.agentConnected || ++tries>40){ clearInterval(this._agentPoll); this._agentPoll=null; return; }
+        await this.loadAgents(); }, 3000); },
     promoteObserved(o){
       // Promotion = mint a real identity for a runtime we've only SEEN so far. Prefill the form;
       // the admin still picks role/cap/projects and presses Create, then swaps the env key.
@@ -2848,7 +2873,7 @@ createApp({
       if(this.promotePending){ body.promoted_member=this.promotePending.member; body.promoted_client=this.promotePending.client; }
       try{ const r=await this.api('/orgs/'+this.activeOrgId+'/agents',{method:'POST',headers:{'content-type':'application/json'},
              body:JSON.stringify(body)});
-           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; this.agentName=''; this.promoteHint=''; this.promotePending=null; await this.loadAgents(); }
+           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; this.agentName=''; this.promoteHint=''; this.promotePending=null; await this.loadAgents(); this.pollAgentConnected(); }
       catch(e){ this.agentErr='Create failed: '+(e.detail||e.status); }
       this.agentBusy=false; },
     // Rotate = create with the SAME name: the server replaces the token hash, so the old one dies.
@@ -2857,10 +2882,10 @@ createApp({
     async rotateAgent(a){ this.agentBusy=true; this.agentErr='';
       try{ const r=await this.api('/orgs/'+this.activeOrgId+'/agents',{method:'POST',headers:{'content-type':'application/json'},
              body:JSON.stringify({name:a.name, role:a.role, daily_call_cap:a.daily_call_cap})});
-           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; await this.loadAgents(); }
+           this.agentTokens[r.user_id]=r.token; this.newAgent=r; this.snipAgent=null; await this.loadAgents(); this.pollAgentConnected(); }
       catch(e){ this.agentErr='Rotate failed: '+(e.detail||e.status); }
       this.agentBusy=false; },
-    showAgentSetup(a){ this.newAgent=null; this.agentSnip='env';
+    showAgentSetup(a){ this.newAgent=null; this.agentSnip='prompt';
       this.snipAgent=(this.snipAgent && this.snipAgent.user_id===a.user_id) ? null : a; },
     async revokeAgent(a){ if(this.confirmAgent!==a.user_id){ this.confirmAgent=a.user_id; return; }
       try{ await this.api('/orgs/'+this.activeOrgId+'/agents/'+a.user_id,{method:'DELETE'}); }
