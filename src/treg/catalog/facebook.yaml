@@ -98,11 +98,13 @@ endpoints:
     docs_url: https://developers.facebook.com/docs/graph-api/reference/page/insights/
 
   - id: facebook.facebook.page.post.create
+    kind: action
     capability: facebook.page.post.create
     platform: facebook
     scope: own_account
     method: POST
     path: /{page_id}/feed
+    name: "Publish a Page post"
     summary: "Publish a post to your Facebook Page"
     input:
       pathParams:
@@ -119,6 +121,7 @@ endpoints:
     docs_url: https://developers.facebook.com/docs/pages-api/posts
 
   - id: facebook.facebook.page.photo.create
+    kind: action
     # Two jobs in one route, and the difference is `published`. published=true posts the photo on
     # its own. published=false uploads it UNPUBLISHED and returns an id — that id, wrapped as
     # {"media_fbid": id}, goes into the /feed call's `attached_media` array. That second form is
@@ -146,11 +149,13 @@ endpoints:
     docs_url: https://developers.facebook.com/docs/graph-api/reference/page/photos/
 
   - id: facebook.facebook.page.video.create
+    kind: action
     capability: facebook.page.video.create
     platform: facebook
     scope: own_account
     method: POST
     path: /{page_id}/videos
+    name: "Publish a Page video"
     summary: "Publish a video or Reel to your Facebook Page"
     input:
       pathParams:

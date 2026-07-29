@@ -21,6 +21,7 @@ The catalog adds that operations layer:
 ```
 src/treg/catalog/
   capabilities.yaml        # the shared capability taxonomy (the cross-provider join key)
+  fx.yaml                  # currency -> USD rates + per-PROVIDER credit rates (see "Cost" below)
   <service>.yaml           # CORE tier — hand-curated; <service> = OAuthProvider.service
   <service>.extended.yaml  # EXTENDED tier — machine-generated full endpoint surface
   examples/<endpoint-id>.json  # truncated, scrubbed real responses captured at verify time
@@ -102,6 +103,8 @@ endpoints:
                                      #   segment, else a path keyword, else the path's grouping
                                      #   segment, else "other". Set it only to override a bad guess.
     scope: any_account               # any_account (scrapers) | own_account (first-party OAuth)
+    kind: data                       # optional; data (DEFAULT) | action | account | utility.
+                                     #   what the endpoint IS — see "Kind" below. Absent ⇒ data.
     method: GET
     path: /api/v1/tiktok/web/fetch_user_profile   # relative to the provider's base_url
     name: "Get user profile"        # optional short DISPLAY title (≤60 chars). Set it when the
@@ -153,6 +156,7 @@ endpoints:
                                     #   per-op summary / info.title, DataForSEO's operationId).
                                     #   Carried across re-ingests by id, like `capability`.
     summary: "Get comments of a Zhihu answer"
+    kind: data                      # optional; data (DEFAULT) | action | account | utility (see "Kind")
     cost: {type: per_success, value: 0.001, currency: USD}   # optional
     docs_url: https://docs.…                                 # optional
     input:                          # generated from the provider's parameter docs
@@ -207,6 +211,63 @@ Rules:
     the scope that is missing. These are listed rather than dropped on purpose: the set of gaps is
     the answer to "which scopes should we add to the registered app", and it is only visible if the
     endpoints stay in the file. `scope_gap` present ⇒ expect 403 until the app is widened.
+
+### Kind — the browse surface vs. the plumbing
+
+`kind` says what an endpoint IS, so the marketplace can lead with the useful surface and tuck the
+provider's own machinery out of the way. It is optional in BOTH tiers; absent reads as `data`.
+
+| `kind` | what it is | examples | browse |
+|---|---|---|---|
+| `data` (default) | fetch / scrape / enrich a resource | get user profile, backlink summary, SERP | shown |
+| `action` | a meaningful WRITE on the connected user's OWN account | post a video, reply, update an ad budget, upload | shown |
+| `account` | the provider's own list/webhook/saved-search/credit CRUD | create/delete a lead-list, manage webhooks | hidden |
+| `utility` | helpers with no data of their own | token/x-bogus generators, enum & location listings, decrypt/encrypt, device register | hidden |
+
+`data` + `action` are the **browse surface**; `account` + `utility` are **management endpoints**.
+Three things follow, and they are the whole point of the field:
+
+- **The platform census counts data + action only.** `GET /catalog/platforms` reports each shelf's
+  `endpoints` / `capabilities` / `verified` and its "from …" price over the browse surface — a
+  management endpoint is real inventory but it is not what a tile advertises, so it never inflates
+  those numbers (nor the marketplace tile counts the dashboard renders from them).
+- **The default platform view drops them.** `GET /catalog/platforms/<slug>` returns only the
+  browse surface in `capabilities` / `extended` / `domains`, plus a `hidden_count`. Pass
+  `?include_hidden=1` to get the WHOLE surface back — every endpoint carries `kind`, so a client
+  can fold the plumbing behind its own control. The dashboard does exactly this: it requests
+  `include_hidden`, renders data/action in the ledger, and files account/utility behind a small
+  per-section "N management endpoints" expander (the same show-more gesture as the platform tiles).
+- **`kind` is a reviewed judgement, carried across re-ingests.** Like `capability` and `name`, an
+  extended entry's `kind` is set by review, not derived from the spec, so `catalog_ingest.py`'s
+  `carry_verification` re-attaches it by id — regenerating the file must not reset it to `data`.
+
+`catalog_validate.py` only checks the value when present: a stated `kind` must be one of the four.
+
+### Cost — the file keeps the billing unit, the server computes USD
+
+A `cost` block stays in whatever unit the PROVIDER bills in; that is the number that stays correct
+when a rate moves. `cost.usd` is added at SERVE time by `Catalog.cost_view` from `fx.yaml`, so a
+rate refresh re-prices the whole catalog without touching a provider file. Clients (dashboard cards,
+`treg catalog search`, `treg catalog get`) lead with `usd` because a column is only comparable in
+one unit, and fall back to the native amount when `usd` is null.
+
+Two kinds of unit convert, and they convert differently:
+
+- **A real currency** (`currency: USD`, `CNY`) uses `fx.yaml`'s `rates_to_usd`, keyed by currency.
+- **`currency: credit`** is NOT a currency. A credit is a PROVIDER-SCOPED unit — one scrapecreators
+  credit and one lusha credit have nothing to do with each other — so it converts with the rate for
+  the endpoint's provider from `fx.yaml`'s `credit_rates_usd` block, keyed by service. That is why
+  `cost_view(cost, provider)` takes the provider: the same `value: 1, currency: credit` is worth
+  $0.00188 on scrapecreators and $0.1248 on lusha.
+
+Each `credit_rates_usd` entry carries `usd` plus the `basis`/`source`/`checked` that justify it —
+the cheapest PUBLICLY listed tier (plan price ÷ credits included), so the served figure is an upper
+bound on real spend, never an under-estimate. `usd: null` is a deliberate state, not a gap: the
+provider publishes no per-credit price (seat-priced like Apollo, sales-negotiated like PDL, or not
+credit-priced at all like BrightData). Those endpoints keep `cost.usd = null` and display natively
+("3 credits/success"), because a guessed dollar figure is worse than an honest credit count. The
+block is hand-maintained and must stay ABOVE `rates_to_usd:` — `catalog_fx_update.py` rewrites the
+file from the text before that key and discards anything below it.
 
 ### Core-wins dedup compares NORMALISED paths — except on Graph
 

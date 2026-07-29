@@ -96,8 +96,8 @@ endpoints:
       queryParams: {url: "https://www.diffbot.com/products/extract/"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per page (2 with useProxy=default)"
     verified: 2026-07-28
     example_response: examples/diffbot.x.extract-analyze.json
@@ -134,8 +134,8 @@ endpoints:
       queryParams: {url: "https://www.technologyreview.com/2020/09/04/1008156/knowledge-graph-ai-reads-web-machine-learning-natural-language-processing/"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per page (2 with useProxy=default)"
     verified: 2026-07-28
     example_response: examples/diffbot.x.extract-article.json
@@ -166,8 +166,8 @@ endpoints:
       queryParams: {url: "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per page (2 with useProxy=default)"
     verified: 2026-07-28
     example_response: examples/diffbot.x.extract-product.json
@@ -197,8 +197,8 @@ endpoints:
       queryParams: {url: "https://www.diffbot.com/products/extract/"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per page (2 with useProxy=default)"
     verified: 2026-07-28
     example_response: examples/diffbot.x.extract-image.json
@@ -228,8 +228,8 @@ endpoints:
       queryParams: {url: "https://www.youtube.com/watch?v=hFZFjoX2cGg"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per page (2 with useProxy=default)"
     verified: 2026-07-28
     example_response: examples/diffbot.x.extract-video.json
@@ -261,8 +261,8 @@ endpoints:
       queryParams: {url: "https://forum.gl-inet.com/t/ssh-connection-protocol-does-not-work-well-between-vpn-clients/22779"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per page (2 with useProxy=default)"
     verified: 2026-07-28
     example_response: examples/diffbot.x.extract-discussion.json
@@ -292,8 +292,8 @@ endpoints:
       queryParams: {url: "https://www.pathai.com/careers/DirectorClinicalOperations-6715804002"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per page (2 with useProxy=default)"
     verified: 2026-07-28
     example_response: examples/diffbot.x.extract-job.json
@@ -323,8 +323,8 @@ endpoints:
       queryParams: {url: "https://slashdot.org/"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per page (2 with useProxy=default)"
     verified: 2026-07-28
     example_response: examples/diffbot.x.extract-list.json
@@ -354,14 +354,15 @@ endpoints:
       queryParams: {url: "https://www.eventbrite.com/e/graphql-summit-2018-tickets-46601841362"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per page (2 with useProxy=default)"
     verified: 2026-07-28
     example_response: examples/diffbot.x.extract-event.json
     docs_url: https://docs.diffbot.com/reference/event
 
   - id: diffbot.x.crawl-create
+    kind: account
     tier: extended
     capability: web.scrape.job.start
     platform: web
@@ -390,19 +391,20 @@ endpoints:
     cost:
       type: per_result
       value: null
-      currency: USD
-      note: "no flat job charge — each page the crawl sends through apiUrl bills at that Extract API's per-page rate (1-2 credits)"
+      currency: credit
+      note: "no flat job charge — each page the crawl sends through apiUrl bills at that Extract API's per-page rate (1-2 credits); no single per-call figure to record"
     untestable: "requires a Plus-plan token (docs: 'Access to Crawl API is Limited to Plus Plans and Up') and starts an open-ended background job — not safe to blind-call on a free key"
     docs_url: https://docs.diffbot.com/reference/create-a-crawl
 
   - id: diffbot.x.crawl-manage
+    kind: account
     tier: extended
     capability: web.scrape.job.status
     platform: web
     host: api.diffbot.com
     method: GET
     path: /v3/crawl
-    name: "View, pause, resume, restart or delete a crawl job"
+    name: "Manage a crawl job"
     summary: "One endpoint for status, pause/resume, restart and delete of one or more crawl jobs"
     input:
       queryParams:
@@ -435,6 +437,7 @@ endpoints:
     docs_url: https://docs.diffbot.com/reference/retrieve-crawl-job-data
 
   - id: diffbot.x.bulk-create
+    kind: account
     tier: extended
     capability: web.scrape.job.start
     platform: web
@@ -459,8 +462,8 @@ endpoints:
     cost:
       type: per_result
       value: null
-      currency: USD
-      note: "no flat job charge — each URL processed bills at its apiUrl's per-page rate (1-2 credits)"
+      currency: credit
+      note: "no flat job charge — each URL processed bills at its apiUrl's per-page rate (1-2 credits); no single per-call figure to record"
     untestable: "requires a Plus-plan token (docs: 'Access to Bulk API is Limited to Plus Plans and Up') and starts a real background job — not safe to blind-call on a free key"
     docs_url: https://docs.diffbot.com/reference/create-a-bulk-job
 
@@ -489,7 +492,7 @@ endpoints:
     host: llm.diffbot.com
     method: GET
     path: /api/v1/web_search/
-    name: "LLM-oriented web search"
+    name: "Web search for LLM context"
     summary: "Search the web and return results shaped for feeding into an LLM context window"
     input:
       queryParams:
@@ -527,13 +530,14 @@ endpoints:
     cost:
       type: per_result
       value: null
-      currency: USD
-      note: "1 credit per 10,000 characters of input (document cap 100,000 chars; request cap 1,000,000 chars)"
+      currency: credit
+      note: "1 credit per 10,000 characters of input (document cap 100,000 chars; request cap 1,000,000 chars) — scales with input length, no single fixed per-call figure to record"
     verified: 2026-07-28
     example_response: examples/diffbot.x.nl-process.json
     docs_url: https://docs.diffbot.com/reference/introduction-to-natural-language-api
 
   - id: diffbot.x.account
+    kind: account
     tier: extended
     platform: web
     host: api.diffbot.com

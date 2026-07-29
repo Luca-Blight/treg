@@ -16,6 +16,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/tiktok/get-user-detail/v1
+    name: "Get TikTok User Profile"
     summary: "Public TikTok profile by username (uniqueId) or secUid"
     input:
       queryParams:
@@ -76,6 +77,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/tiktok/get-post-comment/v1
+    name: "List TikTok Post Comments"
     summary: "Comments on a TikTok post, cursor-paginated"
     input:
       queryParams:
@@ -184,6 +186,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/instagram/get-user-detail/v2
+    name: "Get Instagram User Profile"
     summary: "Public Instagram profile by username"
     input:
       queryParams:
@@ -202,6 +205,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/instagram/get-user-posts/v1
+    name: "List Instagram User Posts"
     summary: "Recent posts of an Instagram user, token-paginated"
     input:
       queryParams:
@@ -221,6 +225,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/youtube/get-video-detail/v1
+    name: "Get YouTube Video Detail"
     summary: "Public metadata and stats for a YouTube video by video id"
     input:
       queryParams:
@@ -239,6 +244,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /api/weibo/get-user-detail/v3
+    name: "Get Weibo User Profile"
     summary: "Public Weibo profile by numeric UID"
     input:
       queryParams:

@@ -24,6 +24,7 @@ limits: "per-minute rate limit varies by plan"
 pricing_url: https://www.peopledatalabs.com/pricing  # Only a match at or above `min_likelihood` is billed.; free tier: 100 matches/month (developer tier)
 endpoints:
   - id: pdl.people.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -54,14 +55,15 @@ endpoints:
       queryParams: {email: "sean@peopledatalabs.com"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 PDL credit per person returned (HTTP 200); a 404 is free. Enriching the same person twice costs 2 credits — PDL does not de-duplicate. No public $/credit; it is plan-negotiated."
     verified: 2026-07-28
     example_response: examples/pdl.people.enrich.json
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-enrichment-api
 
   - id: pdl.people.search
+    domain: contacts
     capability: people.search
     platform: people
     scope: any_account
@@ -83,14 +85,15 @@ endpoints:
       queryParams: {sql: "SELECT * FROM person WHERE location_country='united states'", size: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 PDL credit PER RECORD in the data array — a size=100 call costs 100 credits, a size=1000 POST costs 1000. A query matching nothing is free."
     verified: 2026-07-28
     example_response: examples/pdl.people.search.json
     docs_url: https://docs.peopledatalabs.com/docs/reference-person-search-api
 
   - id: pdl.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -117,14 +120,15 @@ endpoints:
       queryParams: {website: "peopledatalabs.com"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 PDL credit per company returned; a 404 is free."
     verified: 2026-07-28
     example_response: examples/pdl.companies.enrich.json
     docs_url: https://docs.peopledatalabs.com/docs/reference-company-enrichment-api
 
   - id: pdl.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account
@@ -145,14 +149,15 @@ endpoints:
       queryParams: {sql: "SELECT * FROM company WHERE name='people data labs'", size: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 PDL credit PER RECORD returned; `size` is the cost dial."
     verified: 2026-07-28
     example_response: examples/pdl.companies.search.json
     docs_url: https://docs.peopledatalabs.com/docs/reference-company-search-api
 
   - id: pdl.account.usage
+    kind: utility
     capability: account.usage
     platform: account
     scope: own_account

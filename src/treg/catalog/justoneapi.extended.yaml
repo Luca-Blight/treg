@@ -54,6 +54,7 @@ endpoints:
   platform: '1688'
   method: GET
   path: /api/1688/search-item-list/v1
+  name: "Search 1688 Products"
   summary: Searches 1688 wholesale product listings by keyword.
   docs_url: https://docs.justoneapi.com/en/api/1688/product-search-v1
   cost:
@@ -456,6 +457,7 @@ endpoints:
       cityId: '110000'
       limitOffset: '0'
   unverified: provider answers code 600 NO PERMISSION — this API is not enabled for the account used on 2026-07-28
+  capability: beike.community.list
 - id: justoneapi.x.beike-ershoufang-detail-v1
   tier: extended
   platform: beike
@@ -475,6 +477,7 @@ endpoints:
         required: true
         note: The unique identifier for the property listing.
   untestable: no test value for required param(s) houseCode — none of the verified responses in this provider carries one
+  capability: beike.listing.detail
 - id: justoneapi.x.beike-get-ershoufang-list-v1
   tier: extended
   platform: beike
@@ -504,12 +507,14 @@ endpoints:
       cityId: '110000'
       offset: '0'
   unverified: provider answers code 600 NO PERMISSION — this API is not enabled for the account used on 2026-07-28
+  capability: beike.listing.list
 - id: justoneapi.x.bilibili-get-user-detail-v2
   tier: extended
   capability: bilibili.user.profile
   platform: bilibili
   method: GET
   path: /api/bilibili/get-user-detail/v2
+  name: "Get Bilibili User Profile"
   summary: Retrieves a Bilibili user profile identified by UID.
   docs_url: https://docs.justoneapi.com/en/api/bilibili/user-profile-v2
   cost:
@@ -774,6 +779,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/justoneapi.x.bilibili-search-video-v2.json
 - id: justoneapi.x.bilibili-share-url-transfer-v1
+  kind: utility
   tier: extended
   platform: bilibili
   method: GET
@@ -819,6 +825,7 @@ endpoints:
       keyword: 球鞋
       page: '1'
   unverified: provider answers code 600 NO PERMISSION — this API is not enabled for the account used on 2026-07-28
+  capability: dewu.search.items
 - id: justoneapi.x.douban-get-movie-comments-v1
   tier: extended
   capability: douban.title.comments
@@ -868,6 +875,7 @@ endpoints:
   platform: douban
   method: GET
   path: /api/douban/get-movie-review-detail/v1
+  name: "Get Douban Review Detail"
   summary: Retrieves a single Douban long-form review by its review ID.
   docs_url: https://docs.justoneapi.com/en/api/douban-movie/review-details-v1
   cost:
@@ -1036,11 +1044,13 @@ endpoints:
     queryParams:
       keyword: 什么是人工智能
   unverified: provider answers code 600 NO PERMISSION — this API is not enabled for the account used on 2026-07-28
+  capability: ai-search.doubao.answer
 - id: justoneapi.x.douyin-get-user-detail-v3
   tier: extended
   platform: douyin
   method: GET
   path: /api/douyin/get-user-detail/v3
+  name: "Get Douyin User Profile"
   summary: Retrieves a Douyin (TikTok China) user profile by secUid.
   docs_url: https://docs.justoneapi.com/en/api/douyin-tiktok-china/user-profile-v3
   cost:
@@ -1481,6 +1491,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/justoneapi.x.douyin-search-video-v4.json
 - id: justoneapi.x.douyin-share-url-transfer-v1
+  kind: utility
   tier: extended
   platform: douyin
   method: GET
@@ -1542,6 +1553,7 @@ endpoints:
   platform: douyin-shop
   method: GET
   path: /api/douyin-ec/get-item-detail/v2
+  name: "Get Douyin Shop Product Detail"
   summary: Retrieves Douyin E-commerce product details by item ID.
   docs_url: https://docs.justoneapi.com/en/api/douyin-e-commerce/item-details-v2
   cost:
@@ -3284,6 +3296,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/justoneapi.x.facebook-get-post-comments-v1.json
 - id: justoneapi.x.facebook-get-profile-id-v1
+  kind: utility
   tier: extended
   platform: facebook
   method: GET
@@ -3311,6 +3324,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/justoneapi.x.facebook-get-profile-id-v1.json
 # note: the call succeeds (code 0) but returned an EMPTY payload for this test target — route and credential are proven, the example shows no response shape
+  capability: facebook.user.profile.id.resolve
 - id: justoneapi.x.facebook-get-profile-posts-v1
   tier: extended
   capability: facebook.user.posts
@@ -4284,6 +4298,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/instagram/get-post-detail/v1
+  name: "Get Instagram Post Detail"
   summary: Retrieves an Instagram post by its shortcode.
   docs_url: https://docs.justoneapi.com/en/api/instagram/post-details-v1
   cost:
@@ -4311,6 +4326,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/instagram/get-user-detail/v1
+  name: "Get Instagram User Detail (v1)"
   summary: Retrieves an Instagram user profile by username.
   docs_url: https://docs.justoneapi.com/en/api/instagram/user-profile-v1
   cost:
@@ -4338,6 +4354,7 @@ endpoints:
   platform: instagram
   method: GET
   path: /api/instagram/search-hashtag-posts/v1
+  name: "Search Instagram Hashtag Posts"
   summary: Searches Instagram posts by hashtag with cursor pagination.
   docs_url: https://docs.justoneapi.com/en/api/instagram/hashtag-posts-search-v1
   cost:
@@ -4470,6 +4487,7 @@ endpoints:
   platform: jd
   method: GET
   path: /api/jd/get-item-detail/v1
+  name: "Get JD Product Detail (v1)"
   summary: Retrieve JD.com product details for a known item ID.
   docs_url: https://docs.justoneapi.com/en/api/jdcom/product-details-v1
   cost:
@@ -4519,6 +4537,7 @@ endpoints:
   platform: jd
   method: GET
   path: /api/jd/get-item-detail/v3
+  name: "Get JD Product Detail (v3)"
   summary: Retrieves JD.com product details for a known item ID.
   docs_url: https://docs.justoneapi.com/en/api/jdcom/product-details-v3
   cost:
@@ -4865,6 +4884,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/justoneapi.x.kuaishou-search-video-v2.json
 - id: justoneapi.x.kuaishou-share-url-transfer-v1
+  kind: utility
   tier: extended
   platform: kuaishou
   method: GET
@@ -6134,6 +6154,7 @@ endpoints:
   platform: toutiao
   method: GET
   path: /api/toutiao/get-user-detail/v1
+  name: "Get Toutiao User Profile"
   summary: Retrieves a Toutiao user profile identified by user ID.
   docs_url: https://docs.justoneapi.com/en/api/toutiao/user-profile-v1
   cost:
@@ -6149,10 +6170,12 @@ endpoints:
         note: The unique identifier of the Toutiao user.
   untestable: no test value for required param(s) userId — none of the verified responses in this provider carries one
 - id: justoneapi.x.toutiao-get-user-id-v1
+  kind: utility
   tier: extended
   platform: toutiao
   method: GET
   path: /api/toutiao/get-user-id/v1
+  name: "Resolve Toutiao User ID"
   summary: Resolves the user ID associated with a Toutiao profile URL.
   docs_url: https://docs.justoneapi.com/en/api/toutiao/user-id-v1
   cost:
@@ -6173,6 +6196,7 @@ endpoints:
   platform: toutiao
   method: GET
   path: /api/toutiao/search/v2
+  name: "Search Toutiao Articles"
   summary: Searches Toutiao web articles by keyword.
   docs_url: https://docs.justoneapi.com/en/api/toutiao/web-keyword-search-v2
   cost:
@@ -6246,6 +6270,7 @@ endpoints:
       source: ALL
   unverified: provider returns code 500 Internal server error on 2026-07-28
 - id: justoneapi.x.weixin-channels-convert-export-id-v1
+  kind: utility
   tier: extended
   platform: wechat-channels
   method: GET
@@ -6738,6 +6763,7 @@ endpoints:
     bodyType: form
   skipped: skipped to conserve balance (¥1.5/call); family verified via justoneapi.x.weixin-channels-search-video-v1
 - id: justoneapi.x.weixin-convert-article-link-v1
+  kind: utility
   tier: extended
   capability: wechat-mp.article.resolve_link
   platform: wechat-mp
@@ -7654,6 +7680,7 @@ endpoints:
   platform: wechat-search
   method: GET
   path: /api/weixin/search-wechat-index/v1
+  name: "Get WeChat Index for Keyword"
   summary: Queries WeChat Index for a keyword.
   docs_url: https://docs.justoneapi.com/en/api/wechat-official-accounts/wechat-index-search-v1
   cost:
@@ -7889,6 +7916,7 @@ endpoints:
   platform: weibo
   method: GET
   path: /api/weibo/hot-search/v1
+  name: "Get Weibo Hot Search Ranking"
   summary: Retrieves the current Weibo hot-search ranking.
   docs_url: https://docs.justoneapi.com/en/api/weibo/hot-search-v1
   cost:
@@ -8651,6 +8679,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/justoneapi.x.xiaohongshu-search-user-v2.json
 - id: justoneapi.x.xiaohongshu-share-url-transfer-v1
+  kind: utility
   tier: extended
   platform: xiaohongshu
   method: GET
@@ -9661,6 +9690,7 @@ endpoints:
   platform: youku
   method: GET
   path: /api/youku/get-user-detail/v1
+  name: "Get Youku User Profile"
   summary: Retrieves a Youku user profile identified by UID.
   docs_url: https://docs.justoneapi.com/en/api/youku/user-profile-v1
   cost:
@@ -9688,6 +9718,7 @@ endpoints:
   platform: youku
   method: GET
   path: /api/youku/get-video-detail/v1
+  name: "Get Youku Video Detail"
   summary: Retrieves details for a Youku video identified by video ID.
   docs_url: https://docs.justoneapi.com/en/api/youku/video-details-v1
   cost:
@@ -9715,6 +9746,7 @@ endpoints:
   platform: youku
   method: GET
   path: /api/youku/search-video/v1
+  name: "Search Youku Videos"
   summary: Searches Youku videos by keyword with page-based pagination.
   docs_url: https://docs.justoneapi.com/en/api/youku/video-search-v1
   cost:

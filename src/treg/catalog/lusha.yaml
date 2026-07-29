@@ -36,6 +36,7 @@ source:
 pricing_url: https://www.lusha.com/pricing/  # A credit is spent only when contact data is returned.
 endpoints:
   - id: lusha.people.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -54,12 +55,13 @@ endpoints:
       body: {contacts: [{firstName: "Jane", lastName: "Doe", companyDomain: "lusha.com"}], reveal: ["emails"]}
     cost:
       type: per_result
-      value: null
-      currency: USD
-      note: "billed per revealed datapoint (email and phone are separate charges), not per call; a contact Lusha cannot match is free. Dollar value depends on plan."
+      value: 1
+      currency: credit
+      note: "billed per revealed datapoint (email and phone are separate charges), not per call; a contact Lusha cannot match is free. Lusha does not publish the numeric V3 credit cost for this action in its docs — read GET /v3/account/usage.pricing for the calling plan's actual number."
     docs_url: https://docs.lusha.com/apis/openapi/enrichment
 
   - id: lusha.people.search
+    domain: contacts
     capability: people.search
     platform: people
     scope: any_account
@@ -75,10 +77,11 @@ endpoints:
       note: "returns a requestId plus contact ids and NON-PII previews — this step is free. Feed the ids to lusha.people.contacts.enrich to spend credits only on the ones worth revealing. CORRECTED at verify time: the pagination field is `pagination` (min size 10), not `pages`, and it DOES consume 1 credit (contactSearch, per 25 results) despite the docs prose calling it a 'free preview' — see cost block below."
     test_request:
       body: {pagination: {page: 0, size: 10}, filters: {contacts: {include: {jobTitles: ["Head of Marketing"]}}}}
-    cost: {type: per_result, value: null, currency: USD, note: "OBSERVED live 2026-07-28: charged 1 credit per up to 25 results (pricing.contactSearch), NOT free as the prose on this endpoint's docs page claims — verify against GET /v3/account/usage.pricing before trusting the docs text on any Lusha endpoint"}
+    cost: {type: per_result, value: 1, currency: credit, note: "OBSERVED live 2026-07-28: charged 1 credit per up to 25 results (pricing.contactSearch), NOT free as the prose on this endpoint's docs page claims — verify against GET /v3/account/usage.pricing before trusting the docs text on any Lusha endpoint"}
     docs_url: https://docs.lusha.com/apis/openapi/prospecting-search-and-enrich
 
   - id: lusha.people.contacts.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -98,12 +101,13 @@ endpoints:
       body: {ids: ["v1.-R1YwK7SIvBv1FVAOW1zmel9bZ4XD9mxNQ"], reveal: ["emails"]}
     cost:
       type: per_result
-      value: null
-      currency: USD
-      note: "billed per revealed datapoint across the batch (email and phone charged separately)."
+      value: 1
+      currency: credit
+      note: "billed per revealed datapoint across the batch (email and phone charged separately); Lusha does not publish the numeric V3 credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."
     docs_url: https://docs.lusha.com/apis/openapi/enrichment
 
   - id: lusha.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -120,12 +124,13 @@ endpoints:
       body: {companies: [{domain: "lusha.com"}]}
     cost:
       type: per_success
-      value: null
-      currency: USD
-      note: "billed per company record returned; a no-match is free."
+      value: 1
+      currency: credit
+      note: "billed per company record returned; a no-match is free. Lusha does not publish the numeric V3 credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."
     docs_url: https://docs.lusha.com/apis/openapi/company-search-and-enrich
 
   - id: lusha.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account
@@ -141,10 +146,11 @@ endpoints:
       note: "same two-step shape as the contact side: free ids and previews here, credits spent by POST /v3/companies/enrich on the ids you keep. CORRECTED at verify time: pagination field is `pagination` (min size 10) not `pages`; filters.companies.include has no `industries` key (real fields per the OpenAPI schema: domains, names, ids, sizes, revenues, mainIndustriesIds, technologies, locations, sicCodes, naicsCodes, signals). It ALSO consumes 1 credit like the contact side (companySearch) despite being called free preview in the prose."
     test_request:
       body: {pagination: {page: 0, size: 10}, filters: {companies: {include: {domains: ["lusha.com"]}}}}
-    cost: {type: per_result, value: null, currency: USD, note: "OBSERVED live 2026-07-28: charged 1 credit per up to 25 results (pricing.companySearch), not free as the docs prose claims"}
+    cost: {type: per_result, value: 1, currency: credit, note: "OBSERVED live 2026-07-28: charged 1 credit per up to 25 results (pricing.companySearch), not free as the docs prose claims"}
     docs_url: https://docs.lusha.com/apis/openapi/prospecting-search-and-enrich/searchprospectingcompanies
 
   - id: lusha.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

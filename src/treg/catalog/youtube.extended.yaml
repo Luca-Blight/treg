@@ -32,6 +32,7 @@ source:
   - https://developers.google.com/youtube/v3/determine_quota_cost
 endpoints:
 - id: youtube.x.youtube-captions-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -69,10 +70,12 @@ endpoints:
       required: true
       note: JSON body — the Caption resource; see the method's API reference for its fields
 - id: youtube.x.youtube-captions-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
   path: /upload/youtube/v3/captions
+  name: "Update a caption track"
   summary: captions.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -105,6 +108,7 @@ endpoints:
       required: true
       note: JSON body — the Caption resource; see the method's API reference for its fields
 - id: youtube.x.youtube-channelbanners-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -138,6 +142,7 @@ endpoints:
       required: true
       note: JSON body — the ChannelBannerResource resource; see the method's API reference for its fields
 - id: youtube.x.youtube-playlistimages-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -171,10 +176,12 @@ endpoints:
       required: true
       note: JSON body — the PlaylistImage resource; see the method's API reference for its fields
 - id: youtube.x.youtube-playlistimages-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
   path: /upload/youtube/v3/playlistImages
+  name: "Update a playlist cover image"
   summary: playlistImages.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -199,6 +206,7 @@ endpoints:
       required: true
       note: JSON body — the PlaylistImage resource; see the method's API reference for its fields
 - id: youtube.x.youtube-watermarks-set
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -227,6 +235,7 @@ endpoints:
       required: true
       note: JSON body — the InvideoBranding resource; see the method's API reference for its fields
 - id: youtube.x.youtube-abusereports-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -298,10 +307,12 @@ endpoints:
         type: string
         required: false
 - id: youtube.x.youtube-captions-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/captions
+  name: "Delete a caption track"
   summary: captions.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -364,6 +375,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /youtube/v3/captions/{id}
+  name: "Download a caption track"
   summary: captions.download — Downloads a caption track.
   scope: own_account
   cost:
@@ -396,10 +408,12 @@ endpoints:
         required: false
         note: tlang is the language code; machine translate the captions into this language.
 - id: youtube.x.youtube-channelsections-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/channelSections
+  name: "Delete a channel section"
   summary: channelSections.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -458,6 +472,7 @@ endpoints:
         required: true
         note: The *part* parameter specifies a comma-separated list of one or more channelSection resource properties that the API response will include. The part names that you can include in the parameter value are id, snippet, and contentDetails. If the parameter identifies a property that contains child prope
 - id: youtube.x.youtube-channelsections-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -491,10 +506,12 @@ endpoints:
       required: true
       note: JSON body — the ChannelSection resource; see the method's API reference for its fields
 - id: youtube.x.youtube-channelsections-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
   path: /youtube/v3/channelSections
+  name: "Update a channel section"
   summary: channelSections.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -519,10 +536,12 @@ endpoints:
       required: true
       note: JSON body — the ChannelSection resource; see the method's API reference for its fields
 - id: youtube.x.youtube-channels-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
   path: /youtube/v3/channels
+  name: "Update channel branding settings"
   summary: channels.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -547,6 +566,7 @@ endpoints:
       required: true
       note: JSON body — the Channel resource; see the method's API reference for its fields
 - id: youtube.x.youtube-commentthreads-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -572,10 +592,12 @@ endpoints:
       required: true
       note: JSON body — the CommentThread resource; see the method's API reference for its fields
 - id: youtube.x.youtube-comments-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/comments
+  name: "Delete a comment"
   summary: comments.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -634,6 +656,7 @@ endpoints:
         - html
         - plainText
 - id: youtube.x.youtube-comments-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -659,10 +682,12 @@ endpoints:
       required: true
       note: JSON body — the Comment resource; see the method's API reference for its fields
 - id: youtube.x.youtube-comments-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
   path: /youtube/v3/comments
+  name: "Update a comment"
   summary: comments.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -683,6 +708,7 @@ endpoints:
       required: true
       note: JSON body — the Comment resource; see the method's API reference for its fields
 - id: youtube.x.youtube-comments-markasspam
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -703,6 +729,7 @@ endpoints:
         required: true
         note: Flags the comments with the given IDs as spam in the caller's opinion.
 - id: youtube.x.youtube-comments-setmoderationstatus
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -736,6 +763,7 @@ endpoints:
         - likelySpam
         - rejected
 - id: youtube.x.youtube-i18nlanguages-list
+  kind: utility
   tier: extended
   platform: youtube
   method: GET
@@ -759,6 +787,7 @@ endpoints:
         required: true
         note: The *part* parameter specifies the i18nLanguage resource properties that the API response will include. Set the parameter value to snippet.
 - id: youtube.x.youtube-i18nregions-list
+  kind: utility
   tier: extended
   platform: youtube
   method: GET
@@ -782,10 +811,12 @@ endpoints:
         required: true
         note: The *part* parameter specifies the i18nRegion resource properties that the API response will include. Set the parameter value to snippet.
 - id: youtube.x.youtube-livebroadcasts-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/liveBroadcasts
+  name: "Delete a live broadcast"
   summary: liveBroadcasts.delete — Delete a given broadcast.
   scope: own_account
   cost:
@@ -871,6 +902,7 @@ endpoints:
         required: true
         note: The *part* parameter specifies a comma-separated list of one or more liveBroadcast resource properties that the API response will include. The part names that you can include in the parameter value are id, snippet, contentDetails, status and statistics.
 - id: youtube.x.youtube-livebroadcasts-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -904,6 +936,7 @@ endpoints:
       required: true
       note: JSON body — the LiveBroadcast resource; see the method's API reference for its fields
 - id: youtube.x.youtube-livebroadcasts-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
@@ -937,10 +970,12 @@ endpoints:
       required: true
       note: JSON body — the LiveBroadcast resource; see the method's API reference for its fields
 - id: youtube.x.youtube-livebroadcasts-bind
+  kind: action
   tier: extended
   platform: youtube
   method: POST
   path: /youtube/v3/liveBroadcasts/bind
+  name: "Bind a broadcast to a stream"
   summary: liveBroadcasts.bind — Bind a broadcast to a stream.
   scope: own_account
   cost:
@@ -972,6 +1007,7 @@ endpoints:
         required: false
         note: Stream to bind, if not set unbind the current one.
 - id: youtube.x.youtube-livebroadcasts-insertcuepoint
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1009,6 +1045,7 @@ endpoints:
       required: true
       note: JSON body — the Cuepoint resource; see the method's API reference for its fields
 - id: youtube.x.youtube-livebroadcasts-transition
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1050,10 +1087,12 @@ endpoints:
         required: true
         note: The *part* parameter specifies a comma-separated list of one or more liveBroadcast resource properties that the API response will include. The part names that you can include in the parameter value are id, snippet, contentDetails, and status.
 - id: youtube.x.youtube-livechatbans-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/liveChat/bans
+  name: "Remove a live chat ban"
   summary: liveChatBans.delete — Deletes a chat ban.
   scope: own_account
   cost:
@@ -1068,6 +1107,7 @@ endpoints:
         type: string
         required: true
 - id: youtube.x.youtube-livechatbans-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1093,10 +1133,12 @@ endpoints:
       required: true
       note: JSON body — the LiveChatBan resource; see the method's API reference for its fields
 - id: youtube.x.youtube-livechatmessages-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/liveChat/messages
+  name: "Delete a live chat message"
   summary: liveChatMessages.delete — Deletes a chat message.
   scope: own_account
   cost:
@@ -1151,6 +1193,7 @@ endpoints:
         required: false
         note: Specifies the size of the profile image that should be returned for each user.
 - id: youtube.x.youtube-livechatmessages-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1216,6 +1259,7 @@ endpoints:
         required: false
         note: Specifies the size of the profile image that should be returned for each user.
 - id: youtube.x.youtube-livechatmessages-transition
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1243,10 +1287,12 @@ endpoints:
         - statusUnspecified
         - closed
 - id: youtube.x.youtube-livechatmoderators-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/liveChat/moderators
+  name: "Remove a live chat moderator"
   summary: liveChatModerators.delete — Deletes a chat moderator.
   scope: own_account
   cost:
@@ -1293,6 +1339,7 @@ endpoints:
         required: true
         note: The *part* parameter specifies the liveChatModerator resource parts that the API response will include. Supported values are id and snippet.
 - id: youtube.x.youtube-livechatmoderators-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1318,6 +1365,7 @@ endpoints:
       required: true
       note: JSON body — the LiveChatModerator resource; see the method's API reference for its fields
 - id: youtube.x.youtube-livestreams-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
@@ -1388,6 +1436,7 @@ endpoints:
         required: true
         note: The *part* parameter specifies a comma-separated list of one or more liveStream resource properties that the API response will include. The part names that you can include in the parameter value are id, snippet, cdn, and status.
 - id: youtube.x.youtube-livestreams-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1421,6 +1470,7 @@ endpoints:
       required: true
       note: JSON body — the LiveStream resource; see the method's API reference for its fields
 - id: youtube.x.youtube-livestreams-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
@@ -1520,10 +1570,12 @@ endpoints:
         required: true
         note: The *part* parameter specifies the membershipsLevel resource parts that the API response will include. Supported values are id and snippet.
 - id: youtube.x.youtube-playlistimages-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/playlistImages
+  name: "Delete a playlist cover image"
   summary: playlistImages.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -1583,10 +1635,12 @@ endpoints:
         required: false
         note: The *part* parameter specifies a comma-separated list of one or more playlistImage resource properties that the API response will include. If the parameter identifies a property that contains child properties, the child properties will be included in the response.
 - id: youtube.x.youtube-playlistitems-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/playlistItems
+  name: "Remove an item from a playlist"
   summary: playlistItems.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -1605,6 +1659,7 @@ endpoints:
         required: false
         note: '*Note:* This parameter is intended exclusively for YouTube content partners. The *onBehalfOfContentOwner* parameter indicates that the request''s authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is inte'
 - id: youtube.x.youtube-playlistitems-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1634,10 +1689,12 @@ endpoints:
       required: true
       note: JSON body — the PlaylistItem resource; see the method's API reference for its fields
 - id: youtube.x.youtube-playlistitems-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
   path: /youtube/v3/playlistItems
+  name: "Update a playlist item"
   summary: playlistItems.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -1662,10 +1719,12 @@ endpoints:
       required: true
       note: JSON body — the PlaylistItem resource; see the method's API reference for its fields
 - id: youtube.x.youtube-playlists-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/playlists
+  name: "Delete a playlist"
   summary: playlists.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -1736,6 +1795,7 @@ endpoints:
         required: true
         note: The *part* parameter specifies a comma-separated list of one or more playlist resource properties that the API response will include. If the parameter identifies a property that contains child properties, the child properties will be included in the response. For example, in a playlist resource, the
 - id: youtube.x.youtube-playlists-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1769,10 +1829,12 @@ endpoints:
       required: true
       note: JSON body — the Playlist resource; see the method's API reference for its fields
 - id: youtube.x.youtube-playlists-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
   path: /youtube/v3/playlists
+  name: "Update a playlist"
   summary: playlists.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -1797,10 +1859,12 @@ endpoints:
       required: true
       note: JSON body — the Playlist resource; see the method's API reference for its fields
 - id: youtube.x.youtube-subscriptions-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/subscriptions
+  name: "Unsubscribe from a channel"
   summary: subscriptions.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -1883,6 +1947,7 @@ endpoints:
         required: true
         note: The *part* parameter specifies a comma-separated list of one or more subscription resource properties that the API response will include. If the parameter identifies a property that contains child properties, the child properties will be included in the response. For example, in a subscription resou
 - id: youtube.x.youtube-subscriptions-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -1940,10 +2005,12 @@ endpoints:
         required: true
         note: The *part* parameter specifies the superChatEvent resource parts that the API response will include. This parameter is currently not supported.
 - id: youtube.x.youtube-tests-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
   path: /youtube/v3/tests
+  name: "Run API connectivity test"
   summary: tests.insert — POST method.
   scope: own_account
   cost:
@@ -1969,10 +2036,12 @@ endpoints:
       required: true
       note: JSON body — the TestItem resource; see the method's API reference for its fields
 - id: youtube.x.youtube-thirdpartylinks-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/thirdPartyLinks
+  name: "Delete a third-party link"
   summary: thirdPartyLinks.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -2040,6 +2109,7 @@ endpoints:
         - channelToStoreLink
         - channelToAffiliateProgramLink
 - id: youtube.x.youtube-thirdpartylinks-insert
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -2069,10 +2139,12 @@ endpoints:
       required: true
       note: JSON body — the ThirdPartyLink resource; see the method's API reference for its fields
 - id: youtube.x.youtube-thirdpartylinks-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
   path: /youtube/v3/thirdPartyLinks
+  name: "Update a third-party link"
   summary: thirdPartyLinks.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -2097,6 +2169,7 @@ endpoints:
       required: true
       note: JSON body — the ThirdPartyLink resource; see the method's API reference for its fields
 - id: youtube.x.youtube-videoabusereportreasons-list
+  kind: utility
   tier: extended
   platform: youtube
   method: GET
@@ -2120,6 +2193,7 @@ endpoints:
         required: true
         note: The *part* parameter specifies the videoCategory resource parts that the API response will include. Supported values are id and snippet.
 - id: youtube.x.youtube-videocategories-list
+  kind: utility
   tier: extended
   platform: youtube
   method: GET
@@ -2170,10 +2244,12 @@ endpoints:
         required: false
         note: The ID of the video to retrieve.
 - id: youtube.x.youtube-videos-delete
+  kind: action
   tier: extended
   platform: youtube
   method: DELETE
   path: /youtube/v3/videos
+  name: "Delete a video"
   summary: videos.delete — Deletes a resource.
   scope: own_account
   cost:
@@ -2192,10 +2268,12 @@ endpoints:
         required: false
         note: '*Note:* This parameter is intended exclusively for YouTube content partners. The *onBehalfOfContentOwner* parameter indicates that the request''s authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is inte'
 - id: youtube.x.youtube-videos-update
+  kind: action
   tier: extended
   platform: youtube
   method: PUT
   path: /youtube/v3/videos
+  name: "Update video metadata"
   summary: videos.update — Updates an existing resource.
   scope: own_account
   cost:
@@ -2243,6 +2321,7 @@ endpoints:
         required: false
         note: '*Note:* This parameter is intended exclusively for YouTube content partners. The *onBehalfOfContentOwner* parameter indicates that the request''s authorization credentials identify a YouTube CMS user who is acting on behalf of the content owner specified in the parameter value. This parameter is inte'
 - id: youtube.x.youtube-videos-rate
+  kind: action
   tier: extended
   platform: youtube
   method: POST
@@ -2269,10 +2348,12 @@ endpoints:
         - like
         - dislike
 - id: youtube.x.youtube-videos-reportabuse
+  kind: action
   tier: extended
   platform: youtube
   method: POST
   path: /youtube/v3/videos/reportAbuse
+  name: "Report a video for abuse"
   summary: videos.reportAbuse — Report abuse for a video.
   scope: own_account
   cost:
@@ -2321,6 +2402,7 @@ endpoints:
         required: false
         note: Required. The `**part**` parameter specifies a comma-separated list of one or more `videoStat` resource properties that the API response will include. If the parameter identifies a property that contains child properties, the child properties will be included in the response. For example, in a `vide
 - id: youtube.x.youtube-watermarks-unset
+  kind: action
   tier: extended
   platform: youtube
   method: POST

@@ -60,8 +60,9 @@ async def test_platform_detail_groups_the_same_job_across_providers(clients: Asy
 
     ep = next(e for e in profile["endpoints"] if e["provider"] == "tikhub")
     assert set(ep) == {"id", "provider", "provider_display", "name", "summary", "method", "path",
-                       "scope", "tier", "domain", "call_template", "cost", "verified", "docs_url",
+                       "scope", "tier", "kind", "domain", "call_template", "cost", "verified", "docs_url",
                        "has_example", "input"}
+    assert ep["kind"] == "data", "an endpoint with no explicit kind is data (the browse surface)"
     assert ep["provider_display"] == P.get("tikhub").display_name
     assert ep["method"] == "GET" and ep["path"].startswith("/")
     assert ep["tier"] == "core", "an endpoint with no explicit tier is core, not hidden"
@@ -74,7 +75,10 @@ async def test_every_listed_endpoint_carries_its_platform(clients: AsyncClient):
         body = (await clients.get(f"/catalog/platforms/{slug}")).json()
         ids = {e["id"] for c in body["capabilities"] for e in c["endpoints"]}
         ids |= {e["id"] for e in body["extended"]}
-        assert ids == {e["id"] for e in cs.load().for_platform(slug)}
+        # the default view is the BROWSE surface — account/utility plumbing is served only under
+        # ?include_hidden=1, so the listing equals the platform's data + action endpoints
+        assert ids == {e["id"] for e in cs.load().for_platform(slug)
+                       if e["kind"] not in cs.HIDDEN_KINDS}
 
 
 # ---- platform detail: the domain ledger the dashboard renders -----------------------------
@@ -89,9 +93,11 @@ async def test_the_ledger_files_every_row_under_a_domain_with_other_last(clients
     sizes = [len(d["rows"]) for d in doms[:-1]]
     assert sizes == sorted(sizes, reverse=True)
 
-    # every endpoint on the platform appears exactly once, in exactly one section
+    # every browse-surface endpoint appears exactly once, in exactly one section (the default
+    # ledger drops account/utility plumbing — see the hidden-count test below)
     ids = [e["id"] for d in doms for r in d["rows"] for e in r["endpoints"]]
-    assert sorted(ids) == sorted(e["id"] for e in cs.load().for_platform("tiktok"))
+    assert sorted(ids) == sorted(e["id"] for e in cs.load().for_platform("tiktok")
+                                 if e["kind"] not in cs.HIDDEN_KINDS)
     assert len(ids) == len(set(ids))
 
 
@@ -215,6 +221,46 @@ async def test_unknown_platform_is_404(clients: AsyncClient):
     assert "myspace" in r.text
 
 
+async def test_management_endpoints_are_hidden_from_counts_and_the_default_view(
+        clients: AsyncClient, monkeypatch, tmp_path):
+    """`kind: account`/`utility` are real inventory but PLUMBING (webhooks, saved lists, token
+    helpers). They must never inflate the census counts, and the default platform view leaves them
+    out — the browse surface is data + action. `?include_hidden=1` returns the whole surface, each
+    endpoint carrying its `kind` so a client can file the plumbing behind its own expander."""
+    (tmp_path / "capabilities.yaml").write_text(
+        "platforms: {web: Web}\ncapabilities: {web.backlinks.summary: Backlinks}\n")
+    (tmp_path / "moz.yaml").write_text(
+        "provider: moz\nsource: {docs: https://moz.com}\nendpoints:\n"
+        "  - id: moz.web.backlinks.summary\n    capability: web.backlinks.summary\n"
+        "    platform: web\n    method: POST\n    path: /d\n    kind: data\n"
+        "  - id: moz.web.post\n    platform: web\n    method: POST\n    path: /a\n    kind: action\n"
+        "  - id: moz.web.list.create\n    platform: web\n    method: POST\n    path: /acc\n    kind: account\n"
+        "  - id: moz.web.token\n    platform: web\n    method: GET\n    path: /util\n    kind: utility\n")
+    cat = cs.load(directory=tmp_path)
+    monkeypatch.setattr(cs, "load", lambda *a, **k: cat)
+
+    # census: only data + action count — never the account/utility plumbing
+    census = {p["slug"]: p for p in (await clients.get("/catalog/platforms")).json()["platforms"]}
+    assert census["web"]["endpoints"] == 2, "management endpoints do not inflate the tile count"
+
+    # default platform detail: management endpoints are absent from every shape it returns
+    body = (await clients.get("/catalog/platforms/web")).json()
+    ids = ({e["id"] for c in body["capabilities"] for e in c["endpoints"]}
+           | {e["id"] for e in body["extended"]}
+           | {e["id"] for d in body["domains"] for r in d["rows"] for e in r["endpoints"]})
+    assert ids == {"moz.web.backlinks.summary", "moz.web.post"}
+    assert body["hidden_count"] == 2, "but the page is told how many were set aside"
+
+    # ?include_hidden=1: the whole surface comes back, each endpoint carrying its kind
+    full = (await clients.get("/catalog/platforms/web?include_hidden=1")).json()
+    shown = {e["id"]: e for d in full["domains"] for r in d["rows"] for e in r["endpoints"]}
+    assert set(shown) == {"moz.web.backlinks.summary", "moz.web.post",
+                          "moz.web.list.create", "moz.web.token"}
+    assert shown["moz.web.list.create"]["kind"] == "account"
+    assert shown["moz.web.token"]["kind"] == "utility"
+    assert full["hidden_count"] == 2
+
+
 # ---- search ------------------------------------------------------------------------------
 async def test_search_finds_the_job_across_providers_best_first(clients: AsyncClient):
     """The discover half of the loop: an agent knows the JOB ("tiktok comments"), not the shelf it
@@ -296,6 +342,20 @@ async def test_call_template_carries_method_and_body_for_a_post(clients: AsyncCl
     tmpl = body["call_template"]
     assert tmpl.startswith("treg call dataforseo.web.backlinks.summary --method POST")
     assert "--data '[{\"target\":\"moz.com\"" in tmpl, "single-quoted JSON survives a shell paste"
+
+
+async def test_a_credit_price_is_served_in_usd_per_provider(clients: AsyncClient):
+    """A "credit" is a provider-scoped unit, not a currency: scrapecreators credits carry a
+    published per-credit price and convert, PDL publishes none so its endpoints stay native."""
+    priced = (await clients.get("/catalog/endpoints/scrapecreators.x.v1-amazon-shop")).json()["endpoint"]["cost"]
+    assert priced["currency"] == "credit" and priced["value"]
+    assert priced["usd"] == round(priced["value"] * cs.load().credit_rates["scrapecreators"], 6)
+    assert priced["usd"] > 0, "a credit rate exists, so the dashboard gets a comparable number"
+
+    native = (await clients.get("/catalog/endpoints/pdl.x.person-identify")).json()["endpoint"]["cost"]
+    assert native["currency"] == "credit" and native["value"]
+    assert cs.load().credit_rates["pdl"] is None
+    assert native["usd"] is None, "no published rate: display credits, never a guessed dollar"
 
 
 async def test_unknown_endpoint_is_404(clients: AsyncClient):

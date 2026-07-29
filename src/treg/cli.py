@@ -3237,13 +3237,23 @@ def _cost_label(cost) -> str:
     if value in (None, ""):
         return kind or "-"
     unit = {"per call": "call", "per result": "result", "per success": "success"}.get(kind, kind or "call")
-    # unified USD display: the server computes `usd` from the billing currency via fx.yaml.
-    # Native value only when no rate exists (then the currency prefix marks it as unconverted).
+    # unified USD display: the server computes `usd` from the billing currency (or, for
+    # `currency: credit`, the provider's credit rate) via fx.yaml. The USD number leads so rows
+    # stay comparable; the native amount trails in parentheses as the secondary fact.
+    # Native ALONE only when no rate exists — a bare credit count is never a price.
     usd = cost.get("usd")
     if usd is not None:
-        return f"${usd:g}/{unit}"
-    sign = "$" if currency == "USD" else f"{currency} "
-    return f"{sign}{value:g}/{unit}"
+        native = "" if currency in ("USD", "") else f" ({_native_amount(value, currency)})"
+        return f"${usd:g}/{unit}{native}"
+    return f"{_native_amount(value, currency)}/{unit}"
+
+
+def _native_amount(value, currency: str) -> str:
+    """The provider's own number in its own unit. "credit" is a provider-scoped unit, not a
+    currency, so it reads as a noun ("3 credits") rather than a currency prefix ("credit 3")."""
+    if currency == "credit":
+        return f"{value:g} credit{'' if value == 1 else 's'}"
+    return f"${value:g}" if currency in ("USD", "") else f"{currency} {value:g}"
 
 
 
@@ -3288,8 +3298,8 @@ def cmd_catalog(args, cfg) -> None:
                 print("no catalog on this registry")
                 return
             # grouped under the marketplace categories, in the same order the dashboard tabs use
-            order = ["SEO", "Social", "Advertising", "Enrichment", "E-commerce",
-                     "Reviews & Apps", "China Social", "Community", "Other"]
+            order = ["SEO/AEO", "Social", "Advertising", "Enrichment", "E-commerce",
+                     "Reviews & Apps", "Community", "Other"]
             by_cat: dict[str, list] = {}
             for p in rows:
                 by_cat.setdefault(p.get("category") or "Other", []).append(p)
@@ -3307,7 +3317,8 @@ def cmd_catalog(args, cfg) -> None:
             print(f"\n{len(rows)} platforms — `treg catalog <platform>` for its endpoints")
             return
 
-        r = c.get(f"/catalog/platforms/{quote(args.platform, safe='')}")
+        _hidden = "?include_hidden=1" if getattr(args, "show_all", False) else ""
+        r = c.get(f"/catalog/platforms/{quote(args.platform, safe='')}{_hidden}")
         if r.status_code != 200 or _JSON_OVERRIDE:
             _show(r)
             return
@@ -3340,12 +3351,15 @@ def _print_catalog_endpoint(e: dict, connected: set = frozenset()) -> None:
 
 def _cost_usd(cost: dict | None) -> str:
     """Cost in ONE currency so a search table is comparable down the column — the provider's own
-    currency (what `_cost_label` shows) makes CNY and USD rows look like the same number."""
+    unit (CNY, or a provider-scoped credit) makes unlike rows look like the same number. Narrow
+    column, so USD stands alone here; `treg catalog get` carries the native amount alongside it."""
     if not isinstance(cost, dict):
         return "-"
     usd = cost.get("usd")
     if usd is None:
-        return _cost_label(cost)  # unknown rate: better the original number than nothing
+        # no rate for this unit (a provider that publishes no per-credit price): the native
+        # amount, labelled as such, beats an invented dollar figure
+        return _cost_label(cost)
     unit = {"per_call": "call", "per_result": "result", "per_success": "success",
             "per call": "call", "per result": "result", "per success": "success"}.get(cost.get("type"), "call")
     # 3 significant digits: no decision turns on the 5th decimal of a sub-cent price, and the full
@@ -3415,7 +3429,10 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
     cost = e.get("cost") or {}
     _line("cost", " ".join(filter(None, [
         _cost_usd(cost) if cost else "not priced",
-        f"({cost['currency']} {cost['value']:g})" if cost.get("currency", "USD") != "USD" and cost.get("value") is not None else "",
+        # the provider's own number, as the secondary fact behind the USD one. Skipped when there
+        # is no USD figure — `_cost_usd` already fell back to the native amount, unduplicated.
+        f"({_native_amount(cost['value'], cost['currency'])})"
+        if cost.get("currency", "USD") != "USD" and cost.get("value") is not None and cost.get("usd") is not None else "",
     ])))
     if cost.get("note"):
         _line("", _clip(cost["note"], 96))
@@ -4092,6 +4109,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="a platform slug (tiktok, web, google, …), or `search <query>` / `get <endpoint-id>`")
     ct.add_argument("rest", nargs="*", metavar="<args>", help="the search query, or the endpoint id for `get`")
     ct.add_argument("--limit", type=int, default=25, help="search: how many results (default: 25, max 100)")
+    ct.add_argument("--all", action="store_true", dest="show_all",
+                    help="include management endpoints (account/utility CRUD) hidden from the browse by default")
     ct.set_defaults(fn=cmd_catalog)
 
     # ---- connections (connecting a provider lives here now; `oauth` is the hidden old spelling) ----

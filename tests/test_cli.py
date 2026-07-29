@@ -637,6 +637,19 @@ def test_catalog_get_renders_params_siblings_and_the_command(monkeypatch, capsys
     assert '"comments"' in out                                      # the example response, inline
 
 
+def test_a_credit_price_reads_as_dollars_with_the_credits_behind_it():
+    """A bare credit count is not a price — a reader cannot compare "1 credit" to "$0.001". When
+    the server priced the credit, dollars lead; only an unpriced credit shows alone."""
+    priced = {"type": "per_call", "value": 1, "currency": "credit", "usd": 0.00188}
+    assert cli._cost_label(priced) == "$0.00188/call (1 credit)"
+    assert cli._cost_usd(priced) == "$0.00188/call"                 # narrow comparison column
+
+    unpriced = {"type": "per_success", "value": 3, "currency": "credit", "usd": None}
+    assert cli._cost_label(unpriced) == "3 credits/success"         # native, labelled as credits
+    assert cli._cost_usd(unpriced) == "3 credits/success"
+    assert "$" not in cli._cost_usd(unpriced), "no rate, no invented dollar figure"
+
+
 def test_catalog_get_needs_an_id_and_404s_helpfully(monkeypatch, capsys):
     p = cli.build_parser()
     with pytest.raises(SystemExit):

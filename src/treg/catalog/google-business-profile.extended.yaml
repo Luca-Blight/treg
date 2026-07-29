@@ -37,6 +37,7 @@ source:
   - https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
 endpoints:
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-create
+  kind: account
   tier: extended
   platform: google-business
   method: POST
@@ -57,6 +58,7 @@ endpoints:
       required: true
       note: JSON body — the Account resource; see the method's API reference for its fields
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-get
+  kind: account
   tier: extended
   platform: google-business
   method: GET
@@ -72,7 +74,9 @@ endpoints:
         type: string
         required: true
         note: Required. The name of the account to fetch.
+  capability: google-business.accounts
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-patch
+  kind: account
   tier: extended
   platform: google-business
   method: PATCH
@@ -103,10 +107,12 @@ endpoints:
       required: true
       note: JSON body — the Account resource; see the method's API reference for its fields
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-admins-list
+  kind: account
   tier: extended
   platform: google-business
   method: GET
   path: /v1/accounts/{accountsId}/admins
+  name: "List account admins"
   summary: admins.list — Lists the admins for the specified account.
   scope: own_account
   cost: *id001
@@ -118,6 +124,7 @@ endpoints:
         required: true
         note: Required. The name of the account from which to retrieve a list of admins. `accounts/{account_id}/admins`.
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-admins-create
+  kind: account
   tier: extended
   platform: google-business
   method: POST
@@ -139,6 +146,7 @@ endpoints:
       required: true
       note: JSON body — the Admin resource; see the method's API reference for its fields
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-admins-delete
+  kind: account
   tier: extended
   platform: google-business
   method: DELETE
@@ -155,6 +163,7 @@ endpoints:
         required: true
         note: Required. The resource name of the admin to remove from the account. `accounts/{account_id}/admins/{admin_id}`.
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-admins-patch
+  kind: account
   tier: extended
   platform: google-business
   method: PATCH
@@ -181,6 +190,7 @@ endpoints:
       required: true
       note: JSON body — the Admin resource; see the method's API reference for its fields
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-invitations-list
+  kind: account
   tier: extended
   platform: google-business
   method: GET
@@ -202,10 +212,12 @@ endpoints:
         required: false
         note: Optional. Filtering the response is supported via the Invitation.target_type field.
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-invitations-accept
+  kind: account
   tier: extended
   platform: google-business
   method: POST
   path: /v1/accounts/{accountsId}/invitations/{invitationsId}:accept
+  name: "Accept an account invitation"
   summary: invitations.accept — Accepts the specified invitation.
   scope: own_account
   cost: *id001
@@ -222,10 +234,12 @@ endpoints:
       required: true
       note: JSON body — the AcceptInvitationRequest resource; see the method's API reference for its fields
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-accounts-invitations-decline
+  kind: account
   tier: extended
   platform: google-business
   method: POST
   path: /v1/accounts/{accountsId}/invitations/{invitationsId}:decline
+  name: "Decline an account invitation"
   summary: invitations.decline — Declines the specified invitation.
   scope: own_account
   cost: *id001
@@ -242,6 +256,7 @@ endpoints:
       required: true
       note: JSON body — the DeclineInvitationRequest resource; see the method's API reference for its fields
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-accounts-locations-create
+  kind: action
   tier: extended
   platform: google-business
   method: POST
@@ -273,6 +288,7 @@ endpoints:
       required: true
       note: JSON body — the Location resource; see the method's API reference for its fields
 - id: google-business-profile.x.notifications-mybusinessnotifications-accounts-getnotificationsetting
+  kind: account
   tier: extended
   platform: google-business
   method: GET
@@ -290,6 +306,7 @@ endpoints:
         required: true
         note: Required. The resource name of the notification setting we are trying to fetch.
 - id: google-business-profile.x.notifications-mybusinessnotifications-accounts-updatenotificationsetting
+  kind: account
   tier: extended
   platform: google-business
   method: PATCH
@@ -317,6 +334,7 @@ endpoints:
       required: true
       note: JSON body — the NotificationSetting resource; see the method's API reference for its fields
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-attributes-list
+  kind: utility
   tier: extended
   platform: google-business
   method: GET
@@ -357,7 +375,9 @@ endpoints:
         type: boolean
         required: false
         note: Optional. If set to true, metadata for all available attributes are returned, disregarding `parent` and `category_name` fields. `language_code` and `region_code` are required when `show_all` is set to true.
+  capability: google-business.attributes.catalog
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-categories-list
+  kind: utility
   tier: extended
   platform: google-business
   method: GET
@@ -398,7 +418,9 @@ endpoints:
         - CATEGORY_VIEW_UNSPECIFIED
         - BASIC
         - FULL
+  capability: google-business.categories
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-categories-batchget
+  kind: utility
   tier: extended
   platform: google-business
   method: GET
@@ -431,6 +453,7 @@ endpoints:
         - CATEGORY_VIEW_UNSPECIFIED
         - BASIC
         - FULL
+  capability: google-business.categories
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-chains-get
   tier: extended
   platform: google-business
@@ -448,11 +471,13 @@ endpoints:
         type: string
         required: true
         note: Required. The chain's resource name, in the format `chains/{chain_place_id}`.
+  capability: google-business.chains
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-chains-search
   tier: extended
   platform: google-business
   method: GET
   path: /v1/chains:search
+  name: "Search business chains"
   summary: chains.search — Searches the chain based on chain name.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -468,6 +493,7 @@ endpoints:
         type: integer
         required: false
         note: The maximum number of matched chains to return from this query. The default is 10. The maximum possible value is 500.
+  capability: google-business.chains
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-googlelocations-search
   tier: extended
   platform: google-business
@@ -485,7 +511,9 @@ endpoints:
       type: object
       required: true
       note: JSON body — the SearchGoogleLocationsRequest resource; see the method's API reference for its fields
+  capability: google-business.locations.search
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-locations-delete
+  kind: action
   tier: extended
   platform: google-business
   method: DELETE
@@ -524,11 +552,14 @@ endpoints:
         type: string
         required: false
         note: Required. Read mask to specify what fields will be returned in the response.
+  capability: google-business.locations
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-locations-patch
+  kind: action
   tier: extended
   platform: google-business
   method: PATCH
   path: /v1/locations/{locationsId}
+  name: "Update a business location"
   summary: locations.patch — Updates the specified location.
   scope: own_account
   host: mybusinessbusinessinformation.googleapis.com
@@ -571,7 +602,9 @@ endpoints:
         type: string
         required: true
         note: Required. Resource name of the location.
+  capability: google-business.verification.status
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-locations-admins-list
+  kind: account
   tier: extended
   platform: google-business
   method: GET
@@ -588,6 +621,7 @@ endpoints:
         required: true
         note: Required. The name of the location to list admins of. `locations/{location_id}/admins`.
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-locations-admins-create
+  kind: account
   tier: extended
   platform: google-business
   method: POST
@@ -609,6 +643,7 @@ endpoints:
       required: true
       note: JSON body — the Admin resource; see the method's API reference for its fields
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-locations-admins-delete
+  kind: account
   tier: extended
   platform: google-business
   method: DELETE
@@ -625,6 +660,7 @@ endpoints:
         required: true
         note: Required. The resource name of the admin to remove from the location.
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-locations-admins-patch
+  kind: account
   tier: extended
   platform: google-business
   method: PATCH
@@ -667,7 +703,9 @@ endpoints:
         type: string
         required: true
         note: Required. Google identifier for this location in the form of `locations/{location_id}/attributes`.
+  capability: google-business.attributes
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-locations-updateattributes
+  kind: action
   tier: extended
   platform: google-business
   method: PATCH
@@ -741,7 +779,9 @@ endpoints:
         type: string
         required: false
         note: Optional. If specified, returns the next page of place action links.
+  capability: google-business.actionlinks
 - id: google-business-profile.x.placeactions-mybusinessplaceactions-locations-placeactionlinks-create
+  kind: action
   tier: extended
   platform: google-business
   method: POST
@@ -764,6 +804,7 @@ endpoints:
       required: true
       note: JSON body — the PlaceActionLink resource; see the method's API reference for its fields
 - id: google-business-profile.x.placeactions-mybusinessplaceactions-locations-placeactionlinks-delete
+  kind: action
   tier: extended
   platform: google-business
   method: DELETE
@@ -785,6 +826,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}/placeActionLinks/{placeActionLinksId}
+  name: "Get a place action link"
   summary: placeActionLinks.get — Gets the specified place action link.
   scope: own_account
   host: mybusinessplaceactions.googleapis.com
@@ -797,6 +839,7 @@ endpoints:
         required: true
         note: Required. The name of the place action link to fetch.
 - id: google-business-profile.x.placeactions-mybusinessplaceactions-locations-placeactionlinks-patch
+  kind: action
   tier: extended
   platform: google-business
   method: PATCH
@@ -861,7 +904,9 @@ endpoints:
         type: string
         required: false
         note: Optional. If specified, the next page of questions is retrieved.
+  capability: google-business.qanda
 - id: google-business-profile.x.qanda-mybusinessqanda-locations-questions-create
+  kind: action
   tier: extended
   platform: google-business
   method: POST
@@ -884,6 +929,7 @@ endpoints:
       required: true
       note: JSON body — the Question resource; see the method's API reference for its fields
 - id: google-business-profile.x.qanda-mybusinessqanda-locations-questions-delete
+  kind: action
   tier: extended
   platform: google-business
   method: DELETE
@@ -901,6 +947,7 @@ endpoints:
         required: true
         note: Required. The name of the question to delete.
 - id: google-business-profile.x.qanda-mybusinessqanda-locations-questions-patch
+  kind: action
   tier: extended
   platform: google-business
   method: PATCH
@@ -958,6 +1005,7 @@ endpoints:
         required: false
         note: Optional. If specified, the next page of answers is retrieved.
 - id: google-business-profile.x.qanda-mybusinessqanda-locations-questions-answers-delete
+  kind: action
   tier: extended
   platform: google-business
   method: DELETE
@@ -975,6 +1023,7 @@ endpoints:
         required: true
         note: Required. The name of the question to delete an answer for.
 - id: google-business-profile.x.qanda-mybusinessqanda-locations-questions-answers-upsert
+  kind: action
   tier: extended
   platform: google-business
   method: POST
@@ -996,6 +1045,7 @@ endpoints:
       type: object
       required: true
       note: JSON body — the UpsertAnswerRequest resource; see the method's API reference for its fields
+  capability: google-business.qanda.answer
 - id: google-business-profile.x.businessprofileperformance-businessprofileperformance-locations-searchkeywords-impressions-monthly-list
   tier: extended
   platform: google-business
@@ -1046,6 +1096,7 @@ endpoints:
         type: string
         required: false
         note: Optional. A token indicating the next paginated result to be returned.
+  capability: google-business.insights.keywords
 - id: google-business-profile.x.verifications-mybusinessverifications-locations-verifications-list
   tier: extended
   platform: google-business
@@ -1073,6 +1124,7 @@ endpoints:
         required: false
         note: If specified, returns the next page of verifications.
 - id: google-business-profile.x.verifications-mybusinessverifications-locations-verifications-complete
+  kind: action
   tier: extended
   platform: google-business
   method: POST
@@ -1099,7 +1151,7 @@ endpoints:
   platform: google-business
   method: GET
   path: /v1/locations/{locationsId}:fetchMultiDailyMetricsTimeSeries
-  name: "Get multiple daily performance metrics"
+  name: "Get multiple daily metrics time series"
   summary: 'locations.fetchMultiDailyMetricsTimeSeries — Returns the values for each date from a given time range that are associated with the specific daily metrics. Note: Only daily data is available. Hourly metrics are not supported. Example request: `GET https://businessprofileperformance.googleapis.com/v1/locations/12345:fetchMultiDailyMetricsTimeSeries?dailyMetrics=WEBSITE_CLICKS&dailyMetrics=CALL_CLICK'
   scope: own_account
   host: businessprofileperformance.googleapis.com
@@ -1153,6 +1205,7 @@ endpoints:
         type: integer
         required: false
         note: Year of the date. Must be from 1 to 9999, or 0 to specify a date without a year.
+  capability: google-business.insights
 - id: google-business-profile.x.verifications-mybusinessverifications-locations-fetchverificationoptions
   tier: extended
   platform: google-business
@@ -1263,6 +1316,7 @@ endpoints:
         type: integer
         required: false
         note: Seconds of a minute. Must be greater than or equal to 0 and typically must be less than or equal to 59. An API may allow the value 60 if it allows leap-seconds.
+  capability: google-business.insights
 - id: google-business-profile.x.businessinformation-mybusinessbusinessinformation-locations-getgoogleupdated
   tier: extended
   platform: google-business
@@ -1285,7 +1339,9 @@ endpoints:
         type: string
         required: false
         note: Required. Read mask to specify what fields will be returned in the response.
+  capability: google-business.locations.live
 - id: google-business-profile.x.accountmanagement-mybusinessaccountmanagement-locations-transfer
+  kind: action
   tier: extended
   platform: google-business
   method: POST
@@ -1307,6 +1363,7 @@ endpoints:
       required: true
       note: JSON body — the TransferLocationRequest resource; see the method's API reference for its fields
 - id: google-business-profile.x.verifications-mybusinessverifications-locations-verify
+  kind: action
   tier: extended
   platform: google-business
   method: POST
@@ -1329,6 +1386,7 @@ endpoints:
       required: true
       note: JSON body — the VerifyLocationRequest resource; see the method's API reference for its fields
 - id: google-business-profile.x.placeactions-mybusinessplaceactions-placeactiontypemetadata-list
+  kind: utility
   tier: extended
   platform: google-business
   method: GET
@@ -1358,6 +1416,7 @@ endpoints:
         required: false
         note: Optional. If specified, the next page of place action type metadata is retrieved. The `pageToken` is returned when a call to `placeActionTypeMetadata.list` returns more results than can fit into the requested page size.
 - id: google-business-profile.x.verifications-mybusinessverifications-verificationtokens-generate
+  kind: utility
   tier: extended
   platform: google-business
   method: POST
@@ -1385,7 +1444,9 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.posts
 - id: google-business-profile.x.v4-localposts-create
+  kind: action
   tier: extended
   platform: google-business
   method: POST
@@ -1396,6 +1457,7 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.posts.create
 - id: google-business-profile.x.v4-media-list
   tier: extended
   platform: google-business
@@ -1407,16 +1469,20 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.media
 - id: google-business-profile.x.v4-media-create
+  kind: action
   tier: extended
   platform: google-business
   method: POST
   path: /v4/accounts/{account_id}/locations/{location_id}/media
+  name: "Add a photo or video"
   summary: media.create — Add a photo or video to one of your listings
   scope: own_account
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.media.upload
 - id: google-business-profile.x.v4-reviews-get
   tier: extended
   platform: google-business
@@ -1428,7 +1494,9 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.reviews
 - id: google-business-profile.x.v4-reviews-deletereply
+  kind: action
   tier: extended
   platform: google-business
   method: DELETE
@@ -1450,3 +1518,4 @@ endpoints:
   host: mybusiness.googleapis.com
   cost: *id001
   docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews
+  capability: google-business.reviews

@@ -12,9 +12,10 @@
 # NOT VERIFIED: no live calls were made in this pass (see docs_url per entry; verification
 # is a separate pass per docs/context/architecture/catalog.md).
 #
-# Platforms wanted but missing from capabilities.yaml (mapped to `web` here instead):
-# apple-music, bluesky, github, kick, komi, linkbio, linkme, linktree, pillar, pinterest,
-# rumble, snapchat, soundcloud, spotify, truthsocial, twitch, age-gender(image detection).
+# 2026-07-28: platform slugs added to capabilities.yaml and endpoints re-filed off `web`:
+# apple-music, bluesky, github, kick, pinterest, rumble, snapchat, soundcloud, spotify,
+# truthsocial, twitch, plus komi/linkbio/linkme/linktree/pillar under `linkinbio`.
+# Only detect-age-gender (image detection, no platform) remains on `web`.
 
 provider: scrapecreators
 source:
@@ -24,6 +25,7 @@ source:
   - https://docs.scrapecreators.com/openapi.json
 endpoints:
 - id: scrapecreators.x.v1-account-credit-balance
+  kind: account
   tier: extended
   platform: account
   capability: account.usage
@@ -40,6 +42,7 @@ endpoints:
   example_response: examples/scrapecreators.x.v1-account-credit-balance.json
   observed_time: 1.09
 - id: scrapecreators.x.v1-account-get-api-usage
+  kind: account
   tier: extended
   platform: account
   method: GET
@@ -71,6 +74,7 @@ endpoints:
   example_response: examples/scrapecreators.x.v1-account-get-api-usage.json
   observed_time: 1.15
 - id: scrapecreators.x.v1-account-get-daily-usage-count
+  kind: account
   tier: extended
   platform: account
   method: GET
@@ -84,6 +88,7 @@ endpoints:
   example_response: examples/scrapecreators.x.v1-account-get-daily-usage-count.json
   observed_time: 1.09
 - id: scrapecreators.x.v1-account-get-most-used-routes
+  kind: account
   tier: extended
   platform: account
   method: GET
@@ -136,7 +141,7 @@ endpoints:
   observed_time: 8.1
 - id: scrapecreators.x.v1-apple-music-album
   tier: extended
-  platform: web
+  platform: apple-music
   method: GET
   path: /v1/apple-music/album
   name: Get Apple Music Album
@@ -164,7 +169,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-apple-music-artist
   tier: extended
-  platform: web
+  platform: apple-music
   method: GET
   path: /v1/apple-music/artist
   name: Get Apple Music Artist
@@ -192,10 +197,10 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-apple-music-search
   tier: extended
-  platform: web
+  platform: apple-music
   method: GET
   path: /v1/apple-music/search
-  name: Search Apple Music Search
+  name: "Search Apple Music"
   summary: Searches Apple Music and returns public result sections for artists, albums, songs, playlists, stations, and music videos.
   cost:
     type: per_call
@@ -220,7 +225,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-apple-music-track
   tier: extended
-  platform: web
+  platform: apple-music
   method: GET
   path: /v1/apple-music/track
   name: Get Apple Music Track
@@ -248,7 +253,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-bluesky-post
   tier: extended
-  platform: web
+  platform: bluesky
   method: GET
   path: /v1/bluesky/post
   name: Get Bluesky Post
@@ -269,9 +274,10 @@ endpoints:
     queryParams:
       url: https://bsky.app/profile/espn.com/post/3lqdfq7fkvm2g
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: bluesky.post.detail
 - id: scrapecreators.x.v1-bluesky-profile
   tier: extended
-  platform: web
+  platform: bluesky
   method: GET
   path: /v1/bluesky/profile
   name: Get Bluesky Profile
@@ -292,9 +298,10 @@ endpoints:
     queryParams:
       handle: espn.com
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: bluesky.user.profile
 - id: scrapecreators.x.v1-bluesky-user-posts
   tier: extended
-  platform: web
+  platform: bluesky
   method: GET
   path: /v1/bluesky/user/posts
   name: List Bluesky Posts
@@ -320,7 +327,9 @@ endpoints:
     queryParams:
       handle: espn.com
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: bluesky.user.posts
 - id: scrapecreators.x.v1-detect-age-gender
+  kind: utility
   tier: extended
   platform: web
   method: GET
@@ -348,7 +357,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /v1/facebook/adLibrary/ad
-  name: Get Facebook ad library Ad Details
+  name: "Get Facebook Ad Details"
   summary: Retrieves detailed information about a specific Facebook ad by its ID or URL.
   cost:
     type: per_call
@@ -386,7 +395,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /v1/facebook/adLibrary/ad/transcript
-  name: Get Facebook ad library Ad Transcript
+  name: "Get Facebook Ad Transcript"
   summary: Retrieves a transcript for a single Facebook Ad Library video ad by ID or URL.
   cost:
     type: per_call
@@ -420,7 +429,7 @@ endpoints:
   capability: meta-ads.library.advertiser
   method: GET
   path: /v1/facebook/adLibrary/company/ads
-  name: List Facebook ad library Company Ads
+  name: "List Facebook Company Ads"
   summary: Fetches all ads currently running for a specific company from the Meta Ad Library.
   cost:
     type: per_call
@@ -494,7 +503,7 @@ endpoints:
   capability: meta-ads.library.search
   method: GET
   path: /v1/facebook/adLibrary/search/ads
-  name: Search Facebook ad library Search
+  name: "Search Facebook Ads"
   summary: Searches the Meta Ad Library by keyword and returns matching ads.
   cost:
     type: per_call
@@ -567,7 +576,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /v1/facebook/adLibrary/search/companies
-  name: Search Facebook ad library for Companies
+  name: "Search Facebook Ad Library Companies"
   summary: Searches for companies by name in the Meta Ad Library and returns their page IDs for use with other ad library endpoints.
   cost:
     type: per_call
@@ -615,12 +624,13 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-event-details.json
   observed_time: 0.89
+  capability: facebook.event.detail
 - id: scrapecreators.x.v1-facebook-events
   tier: extended
   platform: facebook
   method: GET
   path: /v1/facebook/events
-  name: List Facebook events in a city
+  name: "List Facebook Events by City"
   summary: Get the events of a city.
   cost:
     type: per_call
@@ -649,6 +659,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-events.json
   observed_time: 3.19
+  capability: facebook.events.city
 - id: scrapecreators.x.v1-facebook-events-search
   tier: extended
   platform: facebook
@@ -679,6 +690,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-events-search.json
   observed_time: 1.99
+  capability: facebook.search.events
 - id: scrapecreators.x.v1-facebook-group
   tier: extended
   platform: facebook
@@ -709,6 +721,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-group.json
   observed_time: 1.71
+  capability: facebook.group.info
 - id: scrapecreators.x.v1-facebook-group-posts
   tier: extended
   platform: facebook
@@ -749,6 +762,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-group-posts.json
   observed_time: 3.0
+  capability: facebook.group.posts
 - id: scrapecreators.x.v1-facebook-marketplace-item
   tier: extended
   platform: facebook
@@ -779,6 +793,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-marketplace-item.json
   observed_time: 2.77
+  capability: facebook.marketplace.item.detail
 - id: scrapecreators.x.v1-facebook-marketplace-location-search
   tier: extended
   platform: facebook
@@ -804,6 +819,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-marketplace-location-search.json
   observed_time: 1.3
+  capability: facebook.marketplace.location.search
 - id: scrapecreators.x.v1-facebook-marketplace-search
   tier: extended
   platform: facebook
@@ -891,6 +907,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-marketplace-search.json
   observed_time: 2.33
+  capability: facebook.marketplace.search
 - id: scrapecreators.x.v1-facebook-post
   tier: extended
   platform: facebook
@@ -921,6 +938,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-post.json
   observed_time: 3.59
+  capability: facebook.post.detail
 - id: scrapecreators.x.v1-facebook-post-comment-replies
   tier: extended
   platform: facebook
@@ -955,6 +973,7 @@ endpoints:
       feedback_id: ZmVlZGJhY2s6MzM3MzYxMzI5OTQ4Nzc1NV8xOTI5NTk0OTE3Njg3MTcz
       expansion_token: "<omitted: expires>"
   unverified: 'http 500: Error at scrapeFacebookCommentReplies: A server error field_exception occured. C'
+  capability: facebook.comment.replies
 - id: scrapecreators.x.v1-facebook-post-comments
   tier: extended
   platform: facebook
@@ -1018,6 +1037,7 @@ endpoints:
     queryParams:
       cache_max_age: 7d
   unverified: 'http 400: You must provide a url'
+  capability: facebook.post.transcript
 - id: scrapecreators.x.v1-facebook-profile
   tier: extended
   platform: facebook
@@ -1058,6 +1078,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-profile.json
   observed_time: 4.21
+  capability: facebook.user.profile
 - id: scrapecreators.x.v1-facebook-profile-events
   tier: extended
   platform: facebook
@@ -1088,6 +1109,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-profile-events.json
   observed_time: 3.32
+  capability: facebook.page.events
 - id: scrapecreators.x.v1-facebook-profile-photos
   tier: extended
   platform: facebook
@@ -1123,6 +1145,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-profile-photos.json
   observed_time: 1.63
+  capability: facebook.page.photos
 - id: scrapecreators.x.v1-facebook-profile-posts
   tier: extended
   platform: facebook
@@ -1194,9 +1217,10 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-facebook-profile-reels.json
   observed_time: 3.41
+  capability: facebook.page.reels
 - id: scrapecreators.x.v1-github-repository
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/repository
   name: Get GitHub Repository
@@ -1217,9 +1241,10 @@ endpoints:
     queryParams:
       url: https://github.com/torvalds/linux
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.repo.profile
 - id: scrapecreators.x.v1-github-trending-developers
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/trending/developers
   name: List GitHub Trending Developers
@@ -1245,9 +1270,10 @@ endpoints:
     queryParams:
       language: javascript
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.trending.developers
 - id: scrapecreators.x.v1-github-trending-repositories
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/trending/repositories
   name: List GitHub Trending Repositories
@@ -1278,9 +1304,10 @@ endpoints:
     queryParams:
       language: javascript
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.trending.repositories
 - id: scrapecreators.x.v1-github-user
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/user
   name: Get GitHub User
@@ -1306,9 +1333,10 @@ endpoints:
     queryParams:
       handle: torvalds
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.user.profile
 - id: scrapecreators.x.v1-github-user-activity
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/user/activity
   name: Get GitHub Activity
@@ -1344,9 +1372,10 @@ endpoints:
     queryParams:
       handle: kentcdodds
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.user.activity
 - id: scrapecreators.x.v1-github-user-contributions
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/user/contributions
   name: List GitHub Contributions
@@ -1377,9 +1406,10 @@ endpoints:
     queryParams:
       handle: torvalds
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.user.contributions
 - id: scrapecreators.x.v1-github-user-followers
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/user/followers
   name: List GitHub Followers
@@ -1410,9 +1440,10 @@ endpoints:
     queryParams:
       handle: torvalds
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.user.followers
 - id: scrapecreators.x.v1-github-user-following
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/user/following
   name: List GitHub Following
@@ -1443,9 +1474,10 @@ endpoints:
     queryParams:
       handle: kentcdodds
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.user.following
 - id: scrapecreators.x.v1-github-user-pull-requests
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/user/pull-requests
   name: List GitHub Pull Requests
@@ -1481,9 +1513,10 @@ endpoints:
     queryParams:
       handle: torvalds
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.user.pull_requests
 - id: scrapecreators.x.v1-github-user-repositories
   tier: extended
-  platform: web
+  platform: github
   method: GET
   path: /v1/github/user/repositories
   name: List GitHub Repositories
@@ -1529,12 +1562,13 @@ endpoints:
     queryParams:
       handle: torvalds
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: github.user.repos
 - id: scrapecreators.x.v1-google-ad
   tier: extended
-  platform: google
+  platform: google-ads
   method: GET
   path: /v1/google/ad
-  name: Get Google ad library Ad Details
+  name: "Get Google Ad Details"
   summary: Retrieves detailed information about a specific Google ad including advertiserId, creativeId, format, firstShown, lastShown, and overallImpressions.
   cost:
     type: per_call
@@ -1561,10 +1595,10 @@ endpoints:
   observed_time: 3.01
 - id: scrapecreators.x.v1-google-adlibrary-advertisers-search
   tier: extended
-  platform: google
+  platform: google-ads
   method: GET
   path: /v1/google/adLibrary/advertisers/search
-  name: Search Google ad library Advertiser Search
+  name: "Search Google Advertisers"
   summary: Searches the Google Ad Transparency Library for advertisers by name.
   cost:
     type: per_call
@@ -1591,11 +1625,10 @@ endpoints:
   observed_time: 1.11
 - id: scrapecreators.x.v1-google-company-ads
   tier: extended
-  platform: google
-  capability: google.ads.transparency
+  platform: google-ads
   method: GET
   path: /v1/google/company/ads
-  name: List Google ad library Company Ads
+  name: "List Google Company Ads"
   summary: Fetches public ads for a company from the Google Ad Transparency Library by domain or advertiser_id.
   cost:
     type: per_call
@@ -1666,7 +1699,7 @@ endpoints:
   capability: google.serp.organic
   method: GET
   path: /v1/google/search
-  name: Search Google Search
+  name: "Search Google"
   summary: Performs a Google search and returns organic results with url, title, and description for each result.
   cost:
     type: per_call
@@ -2054,7 +2087,7 @@ endpoints:
   observed_time: 1.03
 - id: scrapecreators.x.v1-kick-clip
   tier: extended
-  platform: web
+  platform: kick
   method: GET
   path: /v1/kick/clip
   name: Get Kick Clip
@@ -2077,7 +2110,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-komi
   tier: extended
-  platform: web
+  platform: linkinbio
   method: GET
   path: /v1/komi
   name: Get Komi page
@@ -2202,7 +2235,7 @@ endpoints:
   observed_time: 4.88
 - id: scrapecreators.x.v1-linkbio
   tier: extended
-  platform: web
+  platform: linkinbio
   method: GET
   path: /v1/linkbio
   name: Get Linkbio page
@@ -2234,7 +2267,7 @@ endpoints:
   capability: linkedin.ad.detail
   method: GET
   path: /v1/linkedin/ad
-  name: Get LinkedIn ad library Ad Details
+  name: "Get LinkedIn Ad Details"
   summary: Retrieves detailed information about a specific LinkedIn ad by URL.
   cost:
     type: per_call
@@ -2260,7 +2293,7 @@ endpoints:
   capability: linkedin.search.ads
   method: GET
   path: /v1/linkedin/ads/search
-  name: Search LinkedIn ad library Ads
+  name: "Search LinkedIn Ads"
   summary: Searches the LinkedIn Ad Library by company name, keyword, or companyId with optional country and date filters.
   cost:
     type: per_call
@@ -2482,7 +2515,7 @@ endpoints:
   observed_time: 17.75
 - id: scrapecreators.x.v1-linkme
   tier: extended
-  platform: web
+  platform: linkinbio
   method: GET
   path: /v1/linkme
   name: Get Linkme Profile
@@ -2510,7 +2543,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-linktree
   tier: extended
-  platform: web
+  platform: linkinbio
   method: GET
   path: /v1/linktree
   name: Get Linktree page
@@ -2538,7 +2571,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-pillar
   tier: extended
-  platform: web
+  platform: linkinbio
   method: GET
   path: /v1/pillar
   name: Get Pillar page
@@ -2566,7 +2599,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-pinterest-board
   tier: extended
-  platform: web
+  platform: pinterest
   method: GET
   path: /v1/pinterest/board
   name: Get Pinterest Board
@@ -2597,9 +2630,10 @@ endpoints:
     queryParams:
       url: https://www.pinterest.com/lizmrodgers/moms-night/
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: pinterest.board.pins
 - id: scrapecreators.x.v1-pinterest-pin
   tier: extended
-  platform: web
+  platform: pinterest
   method: GET
   path: /v1/pinterest/pin
   name: Get Pinterest Pin
@@ -2630,12 +2664,13 @@ endpoints:
     queryParams:
       url: https://www.pinterest.com/pin/1124351863225567517/
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: pinterest.pin.detail
 - id: scrapecreators.x.v1-pinterest-search
   tier: extended
-  platform: web
+  platform: pinterest
   method: GET
   path: /v1/pinterest/search
-  name: Search Pinterest Search
+  name: "Search Pinterest"
   summary: Searches Pinterest for pins matching a query, returning results with id, url, title, description, images, link, domain, board info, and pinner details.
   cost:
     type: per_call
@@ -2663,9 +2698,10 @@ endpoints:
     queryParams:
       query: Italian Pot Roast
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: pinterest.search.pins
 - id: scrapecreators.x.v1-pinterest-user-boards
   tier: extended
-  platform: web
+  platform: pinterest
   method: GET
   path: /v1/pinterest/user/boards
   name: List Pinterest User Boards
@@ -2691,6 +2727,7 @@ endpoints:
     queryParams:
       handle: broadstbullycom
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: pinterest.user.boards
 - id: scrapecreators.x.v1-reddit-post-comments
   tier: extended
   platform: reddit
@@ -2764,7 +2801,7 @@ endpoints:
   capability: reddit.search.posts
   method: GET
   path: /v1/reddit/search
-  name: Search Reddit Search
+  name: "Search Reddit"
   summary: Searches across all of Reddit for posts matching a query.
   cost:
     type: per_call
@@ -2886,7 +2923,7 @@ endpoints:
   platform: reddit
   method: GET
   path: /v1/reddit/subreddit/search
-  name: Search Reddit Subreddit Search
+  name: "Search Within Subreddit"
   summary: Searches within a specific subreddit for posts, comments, and media matching a query.
   cost:
     type: per_call
@@ -2923,7 +2960,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-rumble-channel-videos
   tier: extended
-  platform: web
+  platform: rumble
   method: GET
   path: /v1/rumble/channel/videos
   name: List Rumble Channel Videos
@@ -2954,12 +2991,13 @@ endpoints:
     queryParams:
       handle: CuteCats223
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: rumble.channel.videos
 - id: scrapecreators.x.v1-rumble-search
   tier: extended
-  platform: web
+  platform: rumble
   method: GET
   path: /v1/rumble/search
-  name: Search Rumble Search
+  name: "Search Rumble"
   summary: Searches Rumble videos by keyword.
   cost:
     type: per_call
@@ -2982,9 +3020,10 @@ endpoints:
     queryParams:
       query: funny cats
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: rumble.search.videos
 - id: scrapecreators.x.v1-rumble-video
   tier: extended
-  platform: web
+  platform: rumble
   method: GET
   path: /v1/rumble/video
   name: Get Rumble Video
@@ -3005,9 +3044,10 @@ endpoints:
     queryParams:
       url: https://rumble.com/v79xhhm-discovery-why-glenn-wants-israel-to-sue-the-new-york-times.html
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: rumble.video.detail
 - id: scrapecreators.x.v1-rumble-video-comments
   tier: extended
-  platform: web
+  platform: rumble
   method: GET
   path: /v1/rumble/video/comments
   name: List Rumble Comments
@@ -3028,9 +3068,10 @@ endpoints:
     queryParams:
       url: https://rumble.com/v792vns-the-splc-is-a-deceitful-and-poisonous-group.-but-was-their-behavior-crimina.html?e9s=rel_v2_ep
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: rumble.video.comments
 - id: scrapecreators.x.v1-rumble-video-transcript
   tier: extended
-  platform: web
+  platform: rumble
   method: GET
   path: /v1/rumble/video/transcript
   name: Get Rumble Transcript
@@ -3051,9 +3092,10 @@ endpoints:
     queryParams:
       url: https://rumble.com/valm19-funny-cat-funny-cat.html
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: rumble.video.transcript
 - id: scrapecreators.x.v1-snapchat-profile
   tier: extended
-  platform: web
+  platform: snapchat
   method: GET
   path: /v1/snapchat/profile
   name: Get Snapchat User Profile
@@ -3076,7 +3118,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-snapchat-spotlight
   tier: extended
-  platform: web
+  platform: snapchat
   method: GET
   path: /v1/snapchat/spotlight
   name: Get Snapchat Spotlight by Link
@@ -3099,7 +3141,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-snapchat-spotlight-comments
   tier: extended
-  platform: web
+  platform: snapchat
   method: GET
   path: /v1/snapchat/spotlight/comments
   name: List Snapchat Spotlight Comments by Link
@@ -3127,7 +3169,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-soundcloud-artist
   tier: extended
-  platform: web
+  platform: soundcloud
   method: GET
   path: /v1/soundcloud/artist
   name: Get SoundCloud Artist
@@ -3155,7 +3197,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-soundcloud-artist-tracks
   tier: extended
-  platform: web
+  platform: soundcloud
   method: GET
   path: /v1/soundcloud/artist/tracks
   name: List SoundCloud Artist Tracks
@@ -3188,7 +3230,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-soundcloud-track
   tier: extended
-  platform: web
+  platform: soundcloud
   method: GET
   path: /v1/soundcloud/track
   name: Get SoundCloud Track
@@ -3211,7 +3253,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-spotify-album
   tier: extended
-  platform: web
+  platform: spotify
   method: GET
   path: /v1/spotify/album
   name: Get Spotify Album
@@ -3237,9 +3279,10 @@ endpoints:
     queryParams:
       id: 0pgrg7phBbnwGJ2HBEl9EG
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: spotify.album.detail
 - id: scrapecreators.x.v1-spotify-artist
   tier: extended
-  platform: web
+  platform: spotify
   method: GET
   path: /v1/spotify/artist
   name: Get Spotify Artist
@@ -3265,9 +3308,10 @@ endpoints:
     queryParams:
       id: 0cGUm45nv7Z6M6qdXYQGTX
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: spotify.artist.detail
 - id: scrapecreators.x.v1-spotify-podcast
   tier: extended
-  platform: web
+  platform: spotify
   method: GET
   path: /v1/spotify/podcast
   name: Get Spotify Podcast
@@ -3293,9 +3337,10 @@ endpoints:
     queryParams:
       id: 3mliji9352UAk3XnWElnDV
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: spotify.podcast.detail
 - id: scrapecreators.x.v1-spotify-podcast-episodes
   tier: extended
-  platform: web
+  platform: spotify
   method: GET
   path: /v1/spotify/podcast/episodes
   name: List Spotify Podcast Episodes
@@ -3326,12 +3371,13 @@ endpoints:
     queryParams:
       id: 4rOoJ6Egrf8K2IrywzwOMk
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: spotify.podcast.episodes
 - id: scrapecreators.x.v1-spotify-search
   tier: extended
-  platform: web
+  platform: spotify
   method: GET
   path: /v1/spotify/search
-  name: Search Spotify Search
+  name: "Search Spotify"
   summary: Search Spotify for tracks, artists, albums, episodes, podcasts, and audiobooks.
   cost:
     type: per_call
@@ -3349,9 +3395,10 @@ endpoints:
     queryParams:
       query: my first million
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: spotify.search
 - id: scrapecreators.x.v1-spotify-track
   tier: extended
-  platform: web
+  platform: spotify
   method: GET
   path: /v1/spotify/track
   name: Get Spotify Track
@@ -3377,6 +3424,7 @@ endpoints:
     queryParams:
       id: 1ITJflybJsfarsUtiBvkfK
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: spotify.track.detail
 - id: scrapecreators.x.v1-threads-post
   tier: extended
   platform: threads
@@ -3538,7 +3586,7 @@ endpoints:
   capability: tiktok-ads.library.ad.detail
   method: GET
   path: /v1/tiktok/ad-library/ad
-  name: Get TikTok ad library Ad Library Ad
+  name: "Get TikTok Ad Library Ad"
   summary: Fetches one TikTok ad by ID or URL.
   cost:
     type: per_call
@@ -3562,7 +3610,7 @@ endpoints:
   capability: tiktok-ads.library.search
   method: GET
   path: /v1/tiktok/ad-library/search
-  name: Search TikTok ad library Ad Library Search
+  name: "Search TikTok Ad Library"
   summary: Searches TikTok's public Ads Library by advertiser name or keyword.
   cost:
     type: per_call
@@ -3892,7 +3940,7 @@ endpoints:
   capability: tiktok.search.general
   method: GET
   path: /v1/tiktok/search/top
-  name: Search TikTok Top Search
+  name: "Search TikTok Top Results"
   summary: Searches TikTok's 'Top' results by query — returns both videos and photo carousels, unlike keyword search which only returns videos.
   cost:
     type: per_call
@@ -4005,7 +4053,7 @@ endpoints:
   capability: tiktok-shop.shop.products
   method: GET
   path: /v1/tiktok/shop/products
-  name: List a TikTok Shop store's products
+  name: "List TikTok Shop Products"
   summary: Lists all products from a specific TikTok Shop store by its URL.
   cost:
     type: per_call
@@ -4101,7 +4149,7 @@ endpoints:
   capability: tiktok.music.videos
   method: GET
   path: /v1/tiktok/song/videos
-  name: List TikTok videos using a song
+  name: "List TikTok Song Videos"
   summary: Fetches TikTok videos that use a specific sound or song, identified by its clipId.
   cost:
     type: per_call
@@ -4377,7 +4425,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-truthsocial-post
   tier: extended
-  platform: web
+  platform: truthsocial
   method: GET
   path: /v1/truthsocial/post
   name: Get Truth Social Post
@@ -4400,7 +4448,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-truthsocial-profile
   tier: extended
-  platform: web
+  platform: truthsocial
   method: GET
   path: /v1/truthsocial/profile
   name: Get Truth Social Profile
@@ -4423,7 +4471,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-truthsocial-user-posts
   tier: extended
-  platform: web
+  platform: truthsocial
   method: GET
   path: /v1/truthsocial/user/posts
   name: List Truth Social User Posts
@@ -4461,7 +4509,7 @@ endpoints:
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
 - id: scrapecreators.x.v1-twitch-clip
   tier: extended
-  platform: web
+  platform: twitch
   method: GET
   path: /v1/twitch/clip
   name: Get Twitch Clip
@@ -4485,9 +4533,10 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/scrapecreators.x.v1-twitch-clip.json
   observed_time: 1.34
+  capability: twitch.clip.detail
 - id: scrapecreators.x.v1-twitch-profile
   tier: extended
-  platform: web
+  platform: twitch
   method: GET
   path: /v1/twitch/profile
   name: Get Twitch Profile
@@ -4513,9 +4562,10 @@ endpoints:
     queryParams:
       handle: ishowspeed
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: twitch.user.profile
 - id: scrapecreators.x.v1-twitch-user-schedule
   tier: extended
-  platform: web
+  platform: twitch
   method: GET
   path: /v1/twitch/user/schedule
   name: Get Twitch User Schedule
@@ -4536,9 +4586,10 @@ endpoints:
     queryParams:
       handle: emongg
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: twitch.user.schedule
 - id: scrapecreators.x.v1-twitch-user-videos
   tier: extended
-  platform: web
+  platform: twitch
   method: GET
   path: /v1/twitch/user/videos
   name: List Twitch User Videos
@@ -4567,6 +4618,7 @@ endpoints:
     queryParams:
       handle: ishowspeed
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: twitch.user.videos
 - id: scrapecreators.x.v1-twitter-community
   tier: extended
   platform: x
@@ -4590,6 +4642,7 @@ endpoints:
     queryParams:
       url: https://x.com/i/communities/1926186499399139650
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: x.community.detail
 - id: scrapecreators.x.v1-twitter-community-tweets
   tier: extended
   platform: x
@@ -4613,6 +4666,7 @@ endpoints:
     queryParams:
       url: https://x.com/i/communities/1926186499399139650
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: x.community.posts
 - id: scrapecreators.x.v1-twitter-profile
   tier: extended
   platform: x
@@ -4703,6 +4757,7 @@ endpoints:
     queryParams:
       url: https://x.com/TheoVon/status/1916982720317821050
   skipped: not called — $1.0000 would exceed this run's $45.00 budget
+  capability: x.post.transcript
 - id: scrapecreators.x.v1-twitter-user-tweets
   tier: extended
   platform: x
@@ -5012,7 +5067,7 @@ endpoints:
   capability: youtube.search.videos
   method: GET
   path: /v1/youtube/search
-  name: Search YouTube Search
+  name: "Search YouTube"
   summary: Searches YouTube by keyword query and returns matching videos, channels, playlists, shorts, shelves, and live streams.
   cost:
     type: per_call

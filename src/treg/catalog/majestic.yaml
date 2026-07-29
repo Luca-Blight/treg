@@ -202,6 +202,7 @@ endpoints:
     docs_url: https://developer-support.majestic.com/api/commands/get-top-pages.shtml
 
   - id: majestic.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

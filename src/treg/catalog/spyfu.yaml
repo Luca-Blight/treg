@@ -195,7 +195,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /apis/competitors_api/v2/ppc/getTopCompetitors
-    name: "List a domain's paid search competitors"
+    name: "List a domain's PPC ad competitors"
     summary: "Find the domains bidding against a target on the same Google Ads keywords"
     input:
       queryParams:

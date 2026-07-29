@@ -22,6 +22,7 @@ source:
 pricing_url: https://data.crunchbase.com/docs/using-the-api  # No free API tier — the API is a paid add-on to Crunchbase Pro.
 endpoints:
   - id: crunchbase.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -44,6 +45,7 @@ endpoints:
     docs_url: https://data.crunchbase.com/docs/examples-organization-api
 
   - id: crunchbase.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account
@@ -69,6 +71,7 @@ endpoints:
     docs_url: https://data.crunchbase.com/docs/examples-search-api
 
   - id: crunchbase.people.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -90,6 +93,7 @@ endpoints:
     docs_url: https://data.crunchbase.com/docs/examples-person-api
 
   - id: crunchbase.people.search
+    domain: contacts
     capability: people.search
     platform: people
     scope: any_account
@@ -113,12 +117,13 @@ endpoints:
     docs_url: https://data.crunchbase.com/docs/examples-search-api
 
   - id: crunchbase.account.usage
+    kind: utility
     capability: account.usage
     platform: account
     scope: own_account
     method: GET
     path: /autocompletes
-    name: "Check key validity and resolve entity name"
+    name: "Resolve name to permalink (key check)"
     summary: "Check the key works and resolve a company or person name to its permalink (free)"
     input:
       queryParams:

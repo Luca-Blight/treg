@@ -27,6 +27,7 @@ limits: "monthly credit pool; 429 once exhausted"
 pricing_url: https://hunter.io/pricing  # Finding an email costs 1 credit; verifying costs 0.5. Annual billing ~30% cheaper.; free tier: 50 credits/month
 endpoints:
   - id: hunter.people.email.find
+    domain: contacts
     capability: people.email.find
     platform: people
     scope: any_account
@@ -48,12 +49,13 @@ endpoints:
       queryParams: {domain: "stripe.com", full_name: "Patrick Collison"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 SEARCH credit, charged only when an email is found; a miss is free."
     docs_url: https://hunter.io/api-documentation/v2#email-finder
 
   - id: hunter.people.email.verify
+    domain: contacts
     capability: people.email.verify
     platform: people
     scope: any_account
@@ -69,12 +71,13 @@ endpoints:
       queryParams: {email: "steli@close.io"}
     cost:
       type: per_call
-      value: null
-      currency: USD
+      value: 0.5
+      currency: credit
       note: "0.5 VERIFICATION credits per call — half a credit, a separate pool from search credits. Re-verifying the same address within the plan period is not re-charged."
     docs_url: https://hunter.io/api-documentation/v2#email-verifier
 
   - id: hunter.companies.emails
+    domain: contacts
     capability: people.search
     platform: people
     scope: any_account
@@ -102,12 +105,13 @@ endpoints:
       queryParams: {domain: "stripe.com", limit: 1}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 SEARCH credit per 10 emails returned (rounded up); a domain with no results is free."
     docs_url: https://hunter.io/api-documentation/v2#domain-search
 
   - id: hunter.people.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -125,12 +129,13 @@ endpoints:
       queryParams: {email: "steli@close.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 0.2
+      currency: credit
       note: "0.2 credits, billed CONDITIONALLY — charged only when email, full name AND position all come back. A 404 or a partial record is free."
     docs_url: https://hunter.io/api-documentation/v2#people-enrichment
 
   - id: hunter.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -147,12 +152,13 @@ endpoints:
       queryParams: {domain: "stripe.com"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 0.2
+      currency: credit
       note: "0.2 credits, billed CONDITIONALLY — charged only when company name, category/description/tags, location or country code AND company size all come back. A 404 or a partial record is free. Still the cheapest companies.enrich in this catalog."
     docs_url: https://hunter.io/api-documentation/v2#company-enrichment
 
   - id: hunter.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

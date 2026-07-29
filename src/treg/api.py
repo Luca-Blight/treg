@@ -277,8 +277,12 @@ async def catalog_platforms() -> dict:
     cat = catalog_store.load()
     rows = []
     for slug, plat in cat.platforms.items():
-        eps = cat.for_platform(slug)
-        if not eps:  # a taxonomy entry no provider implements yet is noise on a marketplace grid
+        # The census counts the BROWSE surface only: account/utility ("management") endpoints are
+        # real inventory but they are not what a marketplace tile advertises, so they never inflate
+        # the endpoint/capability/verified counts or the "from …" price. They still ship in the
+        # platform-detail list (with `kind` set) — see catalog_platform's ?include_hidden.
+        eps = [e for e in cat.for_platform(slug) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+        if not eps:  # a taxonomy entry no provider implements (or only plumbing) is grid noise
             continue
         rows.append({
             "slug": slug,
@@ -286,13 +290,14 @@ async def catalog_platforms() -> dict:
             "category": plat["category"],
             "featured": plat.get("featured"),  # rank within its category's Featured shelf; null = not featured
             "summary": plat.get("summary", ""),
-            # cheapest priced endpoint, for the card's "from …" corner. Cross-currency ordering uses
-            # a rough CNY→USD factor; the ORIGINAL value+currency is returned for display.
+            # cheapest priced endpoint, for the card's "from …" corner. Ordering compares the
+            # server-computed USD figure, so CNY rows and provider-credit rows sort against dollar
+            # rows honestly; the ORIGINAL value+currency rides along for display.
             # cheapest PAID option — zero-cost utility routes (rate-card freebies) would otherwise
             # advertise a misleading "from $0"; genuinely free own-account access is signaled by the
             # UI separately when a platform has only free endpoints (price_from stays null).
             "price_from": min(
-                (c for e in eps if (c := cat.cost_view(e.get("cost"))) and c["usd"]),
+                (c for e in eps if (c := cat.cost_view(e.get("cost"), e.get("provider"))) and c["usd"]),
                 key=lambda c: c["usd"],
                 default=None,
             ),
@@ -306,13 +311,21 @@ async def catalog_platforms() -> dict:
 
 
 @app.get("/catalog/platforms/{slug}", include_in_schema=False)
-async def catalog_platform(slug: str) -> dict:
+async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     """Open: one platform's operations, grouped by capability so the same job across providers sits
-    on one row — that grouping is what makes comparison (and a future failover router) possible."""
+    on one row — that grouping is what makes comparison (and a future failover router) possible.
+
+    By default the account/utility ("management") endpoints are dropped from every shape below — the
+    browse view is data + action. `?include_hidden=1` returns the whole surface (each endpoint still
+    carries `kind`, so a client can file the plumbing behind an expander); `hidden_count` always
+    reports how many were set aside so a caller can label that expander without a second request."""
     cat = catalog_store.load()
     eps = cat.for_platform(slug)
     if not eps:
         raise HTTPException(status_code=404, detail=f"unknown platform {slug!r}")
+    hidden_count = len([e for e in eps if e["kind"] in catalog_store.HIDDEN_KINDS])
+    if not include_hidden:
+        eps = [e for e in eps if e["kind"] not in catalog_store.HIDDEN_KINDS]
     grouped: dict[str, list[dict]] = {}
     extended: list[dict] = []
     pairs: list[tuple[dict, dict]] = []
@@ -338,6 +351,9 @@ async def catalog_platform(slug: str) -> dict:
             for cap in sorted(grouped)
         ],
         "extended": extended,
+        # account/utility endpoints set aside — how many, so the page can label its expander. When
+        # ?include_hidden=1 they are already folded into the shapes above (tagged by `kind`).
+        "hidden_count": hidden_count,
         # The ledger the platform page renders: sections by subject, ordered and merged server-side
         # so every client shows the same page (see `catalog_store.domain_rows`).
         "domains": catalog_store.domain_rows(pairs, cat.capabilities),

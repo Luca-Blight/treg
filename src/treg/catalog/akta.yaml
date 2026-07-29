@@ -36,6 +36,7 @@ source:
 
 endpoints:
   - id: akta.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -53,13 +54,14 @@ endpoints:
     cost:
       type: per_success
       value: null
-      currency: USD
-      note: "priced PER SECTION requested: 2 credits each for firmographic, business_model, company_assessment, product_offering and technology; 1.5 for management_profile and strategic_signal; 1 for customer_profile and industry; 0.5 for trust_signal, company_hierarchy, digital_presence, financial_estimate and location; 5 for the Enterprise-only mna_and_investment. Credits are $0.05 pay-as-you-go, $0.04 on subscription."
+      currency: credit
+      note: "priced PER SECTION requested, no single count applies: 2 credits each for firmographic, business_model, company_assessment, product_offering and technology; 1.5 for management_profile and strategic_signal; 1 for customer_profile and industry; 0.5 for trust_signal, company_hierarchy, digital_presence, financial_estimate and location; 5 for the Enterprise-only mna_and_investment. Credits are $0.05 pay-as-you-go, $0.04 on subscription."
     verified: 2026-07-28
     example_response: examples/akta.companies.enrich.json
     docs_url: https://docs.akta.pro/api-reference/company-data
 
   - id: akta.companies.search
+    domain: companies
     capability: companies.search
     platform: companies
     scope: any_account
@@ -79,6 +81,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/supporting-apis/company-search
 
   - id: akta.companies.news
+    domain: other
     capability: companies.news
     platform: companies
     scope: any_account
@@ -108,14 +111,15 @@ endpoints:
       queryParams: {company: "canva.com", limit: 1}
     cost:
       type: per_call
-      value: null
-      currency: USD
-      note: "0.1 credit per call PLUS 0.01 credit per article returned, so `limit` is the dial: the default 10 articles costs 0.2 credits, the max 1,000 costs 10.1."
+      value: 0.1
+      currency: credit
+      note: "0.1 credit base fee per call PLUS 0.01 credit per article returned, so `limit` is the dial: the default 10 articles costs 0.2 credits, the max 1,000 costs 10.1. value here is the base per-call fee only."
     verified: 2026-07-28
     example_response: examples/akta.companies.news.json
     docs_url: https://docs.akta.pro/api-reference/news-signals
 
   - id: akta.companies.headcount_trend
+    domain: other
     capability: companies.headcount_trend
     platform: companies
     scope: any_account
@@ -129,16 +133,18 @@ endpoints:
       note: "LinkedIn-derived workforce metrics: current headcount, growth across several time windows, and the functional breakdown"
     test_request:
       queryParams: {company: "canva.com"}
-    cost: {type: per_success, value: null, currency: USD, note: "2.5 Akta credits per request"}
+    cost: {type: per_success, value: 2.5, currency: credit, note: "2.5 Akta credits per request"}
     unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, not a call error — every /company/{jobs,posts,website-traffic,employee-reviews,headcount-trends,product-reviews-with-products} route on this key returned the identical 403 message)"
     docs_url: https://docs.akta.pro/api-reference/alternative-data/headcount-trends
 
   - id: akta.companies.reviews
+    domain: other
     capability: companies.reviews
     platform: companies
     scope: any_account
     method: GET
     path: /v1/company/employee-reviews/
+    name: "Get company employee reviews"
     summary: "Read employee reviews and ratings for a company"
     input:
       queryParams:
@@ -148,11 +154,12 @@ endpoints:
       note: "sibling alt-data routes share this shape (company + limit + offset): /v1/company/product-reviews/ 1.5 cr per 50, /v1/company/jobs/ 4 cr per 10, /v1/company/posts/ 1 cr per 10, /v1/company/website-traffic/ 1.5 cr"
     test_request:
       queryParams: {company: "canva.com", limit: 1}
-    cost: {type: per_success, value: null, currency: USD, note: "1.5 Akta credits per 50 reviews returned"}
+    cost: {type: per_success, value: 1.5, currency: credit, note: "1.5 Akta credits per 50 reviews returned"}
     unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, same message as the other alternative-data routes)"
     docs_url: https://docs.akta.pro/api-reference/alternative-data/employee-reviews
 
   - id: akta.companies.industry.resolve
+    kind: utility
     capability: companies.industry.resolve
     platform: companies
     scope: any_account

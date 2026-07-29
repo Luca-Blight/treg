@@ -29,6 +29,7 @@ source:
 pricing_url: https://leadmagic.io/pricing
 endpoints:
   - id: leadmagic.people.email.find
+    domain: contacts
     capability: people.email.find
     platform: people
     scope: any_account
@@ -49,14 +50,15 @@ endpoints:
       body: {full_name: "Jane Doe", domain: "leadmagic.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per email found; a null result costs nothing. Dollar value depends on plan."
     verified: 2026-07-28
     example_response: examples/leadmagic.people.email.find.json
     docs_url: https://leadmagic.io/docs/api-reference/email-finder
 
   - id: leadmagic.people.email.verify
+    domain: contacts
     capability: people.email.verify
     platform: people
     scope: any_account
@@ -73,14 +75,15 @@ endpoints:
       body: {email: "test@leadmagic-nonexistent-domain-test.com"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 0.25
+      currency: credit
       note: "0.25 credits per DEFINITIVE result (valid or invalid) — four validations to a credit. 'unknown' results and RFC syntax failures are free. Rate limit 300 req/min."
     verified: 2026-07-28
     example_response: examples/leadmagic.people.email.verify.json
     docs_url: https://leadmagic.io/docs/api-reference/email-validation
 
   - id: leadmagic.people.enrich
+    domain: contacts
     capability: people.enrich
     platform: people
     scope: any_account
@@ -97,14 +100,15 @@ endpoints:
       body: {profile_url: "https://www.linkedin.com/in/satyanadella"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per profile matched; free when the profile cannot be resolved."
     verified: 2026-07-28
     example_response: examples/leadmagic.people.enrich.json
     docs_url: https://leadmagic.io/docs/reference/profile-search
 
   - id: leadmagic.people.phone.find
+    domain: contacts
     capability: people.phone.find
     platform: people
     scope: any_account
@@ -123,14 +127,15 @@ endpoints:
       body: {profile_url: "https://www.linkedin.com/in/nonexistent-test-profile-xyz123"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 5
+      currency: credit
       note: "5 credits when a mobile number is found; free when nothing is returned."
     verified: 2026-07-28
     example_response: examples/leadmagic.people.phone.find.json
     docs_url: https://leadmagic.io/docs/api-reference/mobile-finder
 
   - id: leadmagic.companies.enrich
+    domain: companies
     capability: companies.enrich
     platform: companies
     scope: any_account
@@ -149,14 +154,15 @@ endpoints:
       body: {company_domain: "leadmagic.io"}
     cost:
       type: per_success
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per company matched; free when no company is found."
     verified: 2026-07-28
     example_response: examples/leadmagic.companies.enrich.json
     docs_url: https://leadmagic.io/docs/v1/reference/search-company
 
   - id: leadmagic.people.search
+    domain: contacts
     capability: people.search
     platform: people
     scope: any_account
@@ -180,18 +186,20 @@ endpoints:
       body: {company_domain: "leadmagic.io", titles: ["Head of Marketing"], limit: 1, include_contact_details: false}
     cost:
       type: per_result
-      value: null
-      currency: USD
+      value: 1
+      currency: credit
       note: "1 credit per person returned, PLUS 1 credit per email and 5 per mobile when include_contact_details is true. No results, no charge. A limit=25 search revealing mobiles can therefore cost 150+ credits — set limit deliberately."
     unverified: "http 401 invalid_api_key — this key's plan does not include v3 people search; the sibling /v3/companies/search route on the SAME key succeeded (200, 1 credit), so this is a plan/feature gate on this one route, not a broken key or a broken endpoint"
     docs_url: https://leadmagic.io/docs/reference/people-search
 
   - id: leadmagic.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account
     method: GET
     path: /v1/credits
+    name: "Check credit balance"
     summary: "Check the LeadMagic credit balance (free and unthrottled)"
     input:
       note: "no parameters — the key rides in the X-API-Key header; it returns {credits}. POST /v1/credits/refresh forces a balance refresh when the number looks stale, and GET /v1/credits/health validates the key alone"

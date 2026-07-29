@@ -254,6 +254,7 @@ endpoints:
 
   # --- Account (free) ---------------------------------------------------------------------------
   - id: serpapi.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account

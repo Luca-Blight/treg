@@ -64,7 +64,7 @@ endpoints:
   capability: companies.search
   method: GET
   path: /discover/people
-  name: Discover companies with email counts
+  name: "Discover companies with email counts (people activity)"
   summary: Returns companies matching Discover filters together with their personal/generic email counts
   input:
     queryParams:
@@ -94,6 +94,7 @@ endpoints:
   example_response: examples/hunter.x.discover-people.json
   observed_time: 1.25
 - id: hunter.x.discover-views-list
+  kind: account
   tier: extended
   platform: companies
   method: GET
@@ -113,6 +114,7 @@ endpoints:
   example_response: examples/hunter.x.discover-views-list.json
   observed_time: 1.21
 - id: hunter.x.discover-views-get
+  kind: account
   tier: extended
   platform: companies
   method: GET
@@ -132,6 +134,7 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api-documentation/v2#discover
 - id: hunter.x.discover-views-create
+  kind: account
   tier: extended
   platform: companies
   method: POST
@@ -155,6 +158,7 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api-documentation/v2#discover
 - id: hunter.x.discover-views-delete
+  kind: account
   tier: extended
   platform: companies
   method: DELETE
@@ -177,7 +181,7 @@ endpoints:
   platform: companies
   method: GET
   path: /domain-finder
-  name: Find a company's domain from its name
+  name: "Find company domain"
   summary: Returns the most likely domain name(s) for a given company name
   input:
     queryParams:
@@ -281,6 +285,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/hunter.x.multi-domain-search.json
   observed_time: 1.08
+  capability: people.search
 - id: hunter.x.multi-domain-search-reveal
   tier: extended
   platform: people
@@ -298,16 +303,17 @@ endpoints:
   untestable: handles are opaque ids minted by a prior multi-domain-search call; none exist without one
   cost:
     type: per_success
-    value: null
-    currency: USD
+    value: 1
+    currency: credit
     note: 1 SEARCH credit per personal email revealed; 1 credit per domain for generic emails
   docs_url: https://hunter.io/api-documentation/v2#multi-domain-search
+  capability: people.enrich
 - id: hunter.x.combined-find
   tier: extended
   platform: people
   method: GET
   path: /combined/find
-  name: Enrich a person and their company by email
+  name: "Enrich person and company by email"
   summary: Retrieves person and company information from a single email address
   input:
     queryParams:
@@ -324,14 +330,16 @@ endpoints:
       email: steli@close.io
   cost:
     type: per_success
-    value: null
-    currency: USD
+    value: 0.2
+    currency: credit
     note: 0.2 credits, billed conditionally (only when the combined record comes back complete); a 404 or partial record is free — same rate as the /people/find and /companies/find enrichment routes
   docs_url: https://hunter.io/api-documentation/v2#email-enrichment
   verified: '2026-07-28'
   example_response: examples/hunter.x.combined-find.json
   observed_time: 1.46
+  capability: people.enrich
 - id: hunter.x.leads-list
+  kind: account
   tier: extended
   platform: people
   method: GET
@@ -372,6 +380,7 @@ endpoints:
   example_response: examples/hunter.x.leads-list.json
   observed_time: 1.03
 - id: hunter.x.leads-get
+  kind: account
   tier: extended
   platform: people
   method: GET
@@ -390,6 +399,7 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-create
+  kind: account
   tier: extended
   platform: people
   method: POST
@@ -449,6 +459,7 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-update
+  kind: account
   tier: extended
   platform: people
   method: PUT
@@ -481,6 +492,7 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-delete
+  kind: account
   tier: extended
   platform: people
   method: DELETE
@@ -499,11 +511,12 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-lists-list
+  kind: account
   tier: extended
   platform: people
   method: GET
   path: /leads_lists
-  name: List lead lists
+  name: "List leads lists"
   summary: Your saved leads lists, used to organize leads into named collections
   input:
     queryParams:
@@ -527,6 +540,7 @@ endpoints:
   example_response: examples/hunter.x.leads-lists-list.json
   observed_time: 0.51
 - id: hunter.x.leads-lists-get
+  kind: account
   tier: extended
   platform: people
   method: GET
@@ -545,6 +559,7 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-lists-create
+  kind: account
   tier: extended
   platform: people
   method: POST
@@ -568,6 +583,7 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-lists-update
+  kind: account
   tier: extended
   platform: people
   method: PUT
@@ -594,6 +610,7 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-lists-delete
+  kind: account
   tier: extended
   platform: people
   method: DELETE
@@ -612,6 +629,7 @@ endpoints:
     currency: USD
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.custom-attributes-list
+  kind: account
   tier: extended
   platform: people
   method: GET
@@ -629,6 +647,7 @@ endpoints:
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
   unverified: 'http 404: <!DOCTYPE html> <html> <head> <title>404 Not Found • Hunter</title> <meta conten'
 - id: hunter.x.custom-attributes-create
+  kind: account
   tier: extended
   platform: people
   method: POST
@@ -649,6 +668,7 @@ endpoints:
     currency: USD
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.custom-attributes-update
+  kind: account
   tier: extended
   platform: people
   method: PUT
@@ -672,6 +692,7 @@ endpoints:
     currency: USD
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.custom-attributes-delete
+  kind: account
   tier: extended
   platform: people
   method: DELETE
@@ -690,6 +711,7 @@ endpoints:
     currency: USD
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.campaigns-list
+  kind: account
   tier: extended
   platform: people
   method: GET
@@ -718,6 +740,7 @@ endpoints:
   example_response: examples/hunter.x.campaigns-list.json
   observed_time: 2.46
 - id: hunter.x.campaigns-recipients-list
+  kind: account
   tier: extended
   platform: people
   method: GET
@@ -736,6 +759,7 @@ endpoints:
     currency: USD
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.campaigns-recipients-add
+  kind: account
   tier: extended
   platform: people
   method: POST
@@ -765,6 +789,7 @@ endpoints:
     note: no search/verification credit charged; consumes the account's sending quota instead
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.campaigns-recipients-remove
+  kind: account
   tier: extended
   platform: people
   method: DELETE

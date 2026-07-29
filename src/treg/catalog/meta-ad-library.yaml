@@ -66,6 +66,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /ads_archive
+    name: "List ads by advertiser (Page)"
     summary: "List every ad a specific Facebook Page is currently running"
     input:
       queryParams:

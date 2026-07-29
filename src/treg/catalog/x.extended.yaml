@@ -27,6 +27,7 @@ source:
   - https://api.twitter.com/2/openapi.json
 endpoints:
 - id: x.x.get-account-activity-subscription-count
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -41,6 +42,7 @@ endpoints:
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
 - id: x.x.validate-account-activity-subscription
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -61,6 +63,7 @@ endpoints:
         type: string
         required: true
 - id: x.x.create-account-activity-subscription
+  kind: account
   tier: extended
   platform: x
   method: POST
@@ -86,6 +89,7 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.get-account-activity-subscriptions
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -105,6 +109,7 @@ endpoints:
         type: string
         required: true
 - id: x.x.delete-account-activity-subscription
+  kind: account
   tier: extended
   platform: x
   method: DELETE
@@ -127,6 +132,7 @@ endpoints:
         type: string
         required: true
 - id: x.x.activity-stream
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -155,6 +161,7 @@ endpoints:
         required: false
         note: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp from which the activities will be provided.
 - id: x.x.delete-activity-subscriptions-by-ids
+  kind: account
   tier: extended
   platform: x
   method: DELETE
@@ -174,6 +181,7 @@ endpoints:
         type: array
         required: true
 - id: x.x.get-activity-subscriptions
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -198,6 +206,7 @@ endpoints:
         required: false
         note: A base32hex-encoded pagination token.
 - id: x.x.create-activity-subscription
+  kind: account
   tier: extended
   platform: x
   method: POST
@@ -218,6 +227,7 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.delete-activity-subscription
+  kind: account
   tier: extended
   platform: x
   method: DELETE
@@ -237,6 +247,7 @@ endpoints:
         type: string
         required: true
 - id: x.x.update-activity-subscription
+  kind: account
   tier: extended
   platform: x
   method: PUT
@@ -261,10 +272,12 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.article-create-draft
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/articles/draft
+  name: "Article create draft"
   summary: Create draft Article
   scope: own_account
   cost:
@@ -279,11 +292,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.article.draft.create
 - id: x.x.article-publish
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/articles/{article_id}/publish
+  name: "Article publish"
   summary: Publish Article
   scope: own_account
   cost:
@@ -297,11 +313,13 @@ endpoints:
       article_id:
         type: string
         required: true
+  capability: x.article.publish
 - id: x.x.list-scheduled-broadcasts
   tier: extended
   platform: x
   method: GET
   path: /2/broadcasts/scheduled
+  name: "List scheduled broadcasts"
   summary: List scheduled broadcasts
   scope: any_account
   cost:
@@ -325,11 +343,14 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.broadcast.list
 - id: x.x.create-scheduled-broadcast
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/broadcasts/scheduled
+  name: "Create scheduled broadcast"
   summary: Create a scheduled broadcast
   scope: own_account
   cost:
@@ -345,11 +366,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.broadcast.create
 - id: x.x.delete-scheduled-broadcast
+  kind: action
   tier: extended
   platform: x
   method: DELETE
   path: /2/broadcasts/scheduled/{id}
+  name: "Delete scheduled broadcast"
   summary: Delete a scheduled broadcast
   scope: own_account
   cost:
@@ -368,11 +392,13 @@ endpoints:
       roll_forward:
         type: boolean
         required: false
+  capability: x.broadcast.delete
 - id: x.x.get-scheduled-broadcast
   tier: extended
   platform: x
   method: GET
   path: /2/broadcasts/scheduled/{id}
+  name: "Get scheduled broadcast"
   summary: Get a scheduled broadcast
   scope: any_account
   cost:
@@ -387,11 +413,14 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.broadcast.detail
 - id: x.x.update-scheduled-broadcast
+  kind: action
   tier: extended
   platform: x
   method: PUT
   path: /2/broadcasts/scheduled/{id}
+  name: "Update scheduled broadcast"
   summary: Update a scheduled broadcast
   scope: own_account
   cost:
@@ -411,11 +440,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.broadcast.update
 - id: x.x.go-live-scheduled-broadcast
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/broadcasts/scheduled/{id}/live
+  name: "Go live scheduled broadcast"
   summary: Go live on a scheduled broadcast
   scope: own_account
   cost:
@@ -430,11 +462,14 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.broadcast.go_live
 - id: x.x.send-broadcast-chat
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/broadcasts/{id}/chat
+  name: "Send broadcast chat"
   summary: Send a chat message to a live broadcast
   scope: own_account
   cost:
@@ -454,6 +489,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.broadcast.chat.send
 - id: x.x.get-chat-conversations
   tier: extended
   platform: x
@@ -477,11 +513,14 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.chat.conversations.list
 - id: x.x.create-chat-conversation
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/chat/conversations/group
+  name: "Create chat conversation"
   summary: Create Chat Group Conversation
   scope: own_account
   cost:
@@ -497,11 +536,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.group.create
 - id: x.x.initialize-chat-group
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/chat/conversations/group/initialize
+  name: "Initialize chat group"
   summary: Initialize Chat Group
   scope: own_account
   cost:
@@ -511,6 +553,7 @@ endpoints:
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
+  capability: x.chat.group.initialize
 - id: x.x.get-chat-conversation
   tier: extended
   platform: x
@@ -531,6 +574,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.chat.conversation.detail
 - id: x.x.get-chat-conversation-events
   tier: extended
   platform: x
@@ -558,7 +602,9 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.chat.conversation.events
 - id: x.x.add-conversation-keys
+  kind: utility
   tier: extended
   platform: x
   method: POST
@@ -584,10 +630,12 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.add-chat-group-members
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/members
+  name: "Add chat group members"
   summary: Add members to a Chat group conversation
   scope: own_account
   cost:
@@ -607,11 +655,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.group.members.add
 - id: x.x.send-chat-message
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/messages
+  name: "Send chat message"
   summary: Send Chat Message
   scope: own_account
   cost:
@@ -631,11 +682,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.message.send
 - id: x.x.delete-chat-messages
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/messages/delete
+  name: "Delete chat messages"
   summary: Delete Chat messages
   scope: own_account
   cost:
@@ -655,11 +709,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.message.delete
 - id: x.x.mark-chat-conversation-read
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/read
+  name: "Mark chat conversation read"
   summary: Mark Conversation as Read
   scope: own_account
   cost:
@@ -680,10 +737,12 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.send-chat-typing-indicator
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/chat/conversations/{id}/typing
+  name: "Send chat typing indicator"
   summary: Send Typing Indicator
   scope: own_account
   cost:
@@ -699,10 +758,12 @@ endpoints:
         type: string
         required: true
 - id: x.x.chat-media-upload-initialize
+  kind: utility
   tier: extended
   platform: x
   method: POST
   path: /2/chat/media/upload/initialize
+  name: "Chat media upload initialize"
   summary: Initialize Chat Media Upload
   scope: own_account
   cost:
@@ -718,11 +779,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.media.upload
 - id: x.x.chat-media-upload-append
+  kind: utility
   tier: extended
   platform: x
   method: POST
   path: /2/chat/media/upload/{id}/append
+  name: "Chat media upload append"
   summary: Append Chat Media Upload
   scope: own_account
   cost:
@@ -742,11 +806,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.media.upload
 - id: x.x.chat-media-upload-finalize
+  kind: utility
   tier: extended
   platform: x
   method: POST
   path: /2/chat/media/upload/{id}/finalize
+  name: "Chat media upload finalize"
   summary: Finalize Chat Media Upload
   scope: own_account
   cost:
@@ -766,11 +833,13 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.chat.media.upload
 - id: x.x.chat-media-download
   tier: extended
   platform: x
   method: GET
   path: /2/chat/media/{id}/{media_hash_key}
+  name: "Chat media download"
   summary: Download Chat Media
   scope: any_account
   cost:
@@ -788,11 +857,13 @@ endpoints:
       media_hash_key:
         type: string
         required: true
+  capability: x.chat.media.download
 - id: x.x.search-communities
   tier: extended
   platform: x
   method: GET
   path: /2/communities/search
+  name: "Search communities"
   summary: Search Communities
   scope: any_account
   cost:
@@ -815,6 +886,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.community.search
 - id: x.x.get-communities-by-id
   tier: extended
   platform: x
@@ -835,7 +907,9 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.community.detail
 - id: x.x.get-compliance-jobs
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -858,10 +932,12 @@ endpoints:
         type: string
         required: false
 - id: x.x.create-compliance-jobs
+  kind: account
   tier: extended
   platform: x
   method: POST
   path: /2/compliance/jobs
+  name: "Create compliance jobs"
   summary: Create Compliance Job
   scope: own_account
   cost:
@@ -877,6 +953,7 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.get-compliance-jobs-by-id
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -896,6 +973,7 @@ endpoints:
         type: string
         required: true
 - id: x.x.delete-connections-by-uuids
+  kind: account
   tier: extended
   platform: x
   method: DELETE
@@ -916,6 +994,7 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.get-connection-history
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -944,6 +1023,7 @@ endpoints:
         type: string
         required: false
 - id: x.x.delete-all-connections
+  kind: account
   tier: extended
   platform: x
   method: DELETE
@@ -958,6 +1038,7 @@ endpoints:
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
 - id: x.x.delete-connections-by-endpoint
+  kind: account
   tier: extended
   platform: x
   method: DELETE
@@ -977,6 +1058,7 @@ endpoints:
         type: string
         required: true
 - id: x.x.create-direct-messages-conversation
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -997,11 +1079,13 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.dm.conversation.create
 - id: x.x.dm-conversations-media-download
   tier: extended
   platform: x
   method: GET
   path: /2/dm_conversations/media/{dm_id}/{media_id}/{resource_id}
+  name: "Dm conversations media download"
   summary: Download DM Media
   scope: own_account
   cost:
@@ -1022,6 +1106,7 @@ endpoints:
       resource_id:
         type: string
         required: true
+  capability: x.dm.media.download
 - id: x.x.get-direct-messages-events-by-participant-id
   tier: extended
   platform: x
@@ -1053,7 +1138,9 @@ endpoints:
       event_types:
         type: array
         required: false
+  capability: x.dm.events.list
 - id: x.x.create-direct-messages-by-participant-id
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -1078,7 +1165,9 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.dm.message.send
 - id: x.x.create-direct-messages-by-conversation-id
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -1103,6 +1192,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.dm.message.send
 - id: x.x.get-direct-messages-events-by-conversation-id
   tier: extended
   platform: x
@@ -1134,6 +1224,7 @@ endpoints:
       event_types:
         type: array
         required: false
+  capability: x.dm.events.list
 - id: x.x.get-direct-messages-events
   tier: extended
   platform: x
@@ -1161,11 +1252,14 @@ endpoints:
       event_types:
         type: array
         required: false
+  capability: x.dm.events.list
 - id: x.x.delete-direct-messages-events
+  kind: action
   tier: extended
   platform: x
   method: DELETE
   path: /2/dm_events/{event_id}
+  name: "Delete direct messages events"
   summary: Delete DM event
   scope: own_account
   cost:
@@ -1180,6 +1274,7 @@ endpoints:
       event_id:
         type: string
         required: true
+  capability: x.dm.event.delete
 - id: x.x.get-direct-messages-events-by-id
   tier: extended
   platform: x
@@ -1200,11 +1295,14 @@ endpoints:
       event_id:
         type: string
         required: true
+  capability: x.dm.event.detail
 - id: x.x.stream-likes-compliance
+  kind: utility
   tier: extended
   platform: x
   method: GET
   path: /2/likes/compliance/stream
+  name: "Stream likes compliance"
   summary: Stream Likes compliance data
   scope: own_account
   cost:
@@ -1232,6 +1330,7 @@ endpoints:
   platform: x
   method: GET
   path: /2/likes/firehose/stream
+  name: "Stream likes firehose"
   summary: Stream all Likes
   scope: any_account
   cost:
@@ -1283,6 +1382,7 @@ endpoints:
   platform: x
   method: GET
   path: /2/likes/sample10/stream
+  name: "Stream likes sample10"
   summary: Stream sampled Likes
   scope: any_account
   cost:
@@ -1330,6 +1430,7 @@ endpoints:
         required: false
         note: A comma separated list of Tweet fields to display.
 - id: x.x.create-lists
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -1350,7 +1451,9 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.create
 - id: x.x.delete-lists
+  kind: action
   tier: extended
   platform: x
   method: DELETE
@@ -1370,6 +1473,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.list.delete
 - id: x.x.get-lists-by-id
   tier: extended
   platform: x
@@ -1390,7 +1494,9 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.list.detail
 - id: x.x.update-lists
+  kind: action
   tier: extended
   platform: x
   method: PUT
@@ -1415,6 +1521,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.update
 - id: x.x.get-lists-followers
   tier: extended
   platform: x
@@ -1443,6 +1550,7 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.list.followers
 - id: x.x.get-lists-members
   tier: extended
   platform: x
@@ -1471,7 +1579,9 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.list.members
 - id: x.x.add-lists-member
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -1496,7 +1606,9 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.member.add
 - id: x.x.remove-lists-member-by-user-id
+  kind: action
   tier: extended
   platform: x
   method: DELETE
@@ -1519,6 +1631,7 @@ endpoints:
       user_id:
         type: string
         required: true
+  capability: x.list.member.remove
 - id: x.x.get-lists-posts
   tier: extended
   platform: x
@@ -1547,6 +1660,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.list.posts
 - id: x.x.get-media-by-media-keys
   tier: extended
   platform: x
@@ -1566,6 +1680,7 @@ endpoints:
       media_keys:
         type: array
         required: true
+  capability: x.media.detail
 - id: x.x.get-media-analytics
   tier: extended
   platform: x
@@ -1594,11 +1709,14 @@ endpoints:
       granularity:
         type: string
         required: false
+  capability: x.media.analytics
 - id: x.x.create-media-metadata
+  kind: utility
   tier: extended
   platform: x
   method: POST
   path: /2/media/metadata
+  name: "Create media metadata"
   summary: Create Media metadata
   scope: own_account
   cost:
@@ -1614,11 +1732,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.metadata.set
 - id: x.x.delete-media-subtitles
+  kind: utility
   tier: extended
   platform: x
   method: DELETE
   path: /2/media/subtitles
+  name: "Delete media subtitles"
   summary: Delete Media subtitles
   scope: own_account
   cost:
@@ -1634,11 +1755,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.subtitles.delete
 - id: x.x.create-media-subtitles
+  kind: utility
   tier: extended
   platform: x
   method: POST
   path: /2/media/subtitles
+  name: "Create media subtitles"
   summary: Create Media subtitles
   scope: own_account
   cost:
@@ -1654,7 +1778,9 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.subtitles.create
 - id: x.x.get-media-upload-status
+  kind: utility
   tier: extended
   platform: x
   method: GET
@@ -1677,7 +1803,9 @@ endpoints:
       command:
         type: string
         required: false
+  capability: x.media.upload.status
 - id: x.x.media-upload
+  kind: utility
   tier: extended
   platform: x
   method: POST
@@ -1698,11 +1826,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.upload
 - id: x.x.initialize-media-upload
+  kind: utility
   tier: extended
   platform: x
   method: POST
   path: /2/media/upload/initialize
+  name: "Initialize media upload"
   summary: Initialize media upload
   scope: own_account
   cost:
@@ -1718,11 +1849,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.upload
 - id: x.x.append-media-upload
+  kind: utility
   tier: extended
   platform: x
   method: POST
   path: /2/media/upload/{id}/append
+  name: "Append media upload"
   summary: Append Media Upload
   scope: own_account
   cost:
@@ -1742,11 +1876,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.media.upload
 - id: x.x.finalize-media-upload
+  kind: utility
   tier: extended
   platform: x
   method: POST
   path: /2/media/upload/{id}/finalize
+  name: "Finalize media upload"
   summary: Finalize Media upload
   scope: own_account
   cost:
@@ -1761,6 +1898,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.media.upload
 - id: x.x.get-media-by-media-key
   tier: extended
   platform: x
@@ -1780,11 +1918,13 @@ endpoints:
       media_key:
         type: string
         required: true
+  capability: x.media.detail
 - id: x.x.search-news
   tier: extended
   platform: x
   method: GET
   path: /2/news/search
+  name: "Search news"
   summary: Search News
   scope: any_account
   cost:
@@ -1804,6 +1944,7 @@ endpoints:
       max_age_hours:
         type: integer
         required: false
+  capability: x.search.news
 - id: x.x.get-news
   tier: extended
   platform: x
@@ -1823,7 +1964,9 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.news.detail
 - id: x.x.create-community-notes
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -1843,7 +1986,9 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.community_notes.create
 - id: x.x.evaluate-community-notes
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -1863,6 +2008,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.community_notes.evaluate
 - id: x.x.search-community-notes-written
   tier: extended
   platform: x
@@ -1888,6 +2034,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.community_notes.search_written
 - id: x.x.search-eligible-posts
   tier: extended
   platform: x
@@ -1916,7 +2063,9 @@ endpoints:
       post_selection:
         type: string
         required: false
+  capability: x.community_notes.eligible_posts
 - id: x.x.delete-community-notes
+  kind: action
   tier: extended
   platform: x
   method: DELETE
@@ -1935,7 +2084,9 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.community_notes.delete
 - id: x.x.get-open-api-spec
+  kind: utility
   tier: extended
   platform: x
   method: GET
@@ -1969,6 +2120,7 @@ endpoints:
       ids:
         type: array
         required: true
+  capability: x.space.detail
 - id: x.x.get-spaces-by-creator-ids
   tier: extended
   platform: x
@@ -1989,11 +2141,13 @@ endpoints:
       user_ids:
         type: array
         required: true
+  capability: x.space.by_creator
 - id: x.x.search-spaces
   tier: extended
   platform: x
   method: GET
   path: /2/spaces/search
+  name: "Search spaces"
   summary: Search Spaces
   scope: any_account
   cost:
@@ -2014,6 +2168,7 @@ endpoints:
       max_results:
         type: integer
         required: false
+  capability: x.search.spaces
 - id: x.x.get-spaces-by-id
   tier: extended
   platform: x
@@ -2034,6 +2189,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.space.detail
 - id: x.x.get-spaces-buyers
   tier: extended
   platform: x
@@ -2062,6 +2218,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.space.ticket_buyers
 - id: x.x.get-spaces-posts
   tier: extended
   platform: x
@@ -2090,6 +2247,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.space.posts
 - id: x.x.get-trends-by-woeid
   tier: extended
   platform: x
@@ -2113,6 +2271,7 @@ endpoints:
       max_trends:
         type: integer
         required: false
+  capability: x.trending.topics
 - id: x.x.get-posts-by-ids
   tier: extended
   platform: x
@@ -2132,6 +2291,7 @@ endpoints:
       ids:
         type: array
         required: true
+  capability: x.post.detail
 - id: x.x.get-posts-analytics
   tier: extended
   platform: x
@@ -2160,11 +2320,14 @@ endpoints:
       granularity:
         type: string
         required: false
+  capability: x.post.analytics
 - id: x.x.stream-posts-compliance
+  kind: utility
   tier: extended
   platform: x
   method: GET
   path: /2/tweets/compliance/stream
+  name: "Stream posts compliance"
   summary: Stream Posts compliance data
   scope: own_account
   cost:
@@ -2236,6 +2399,7 @@ endpoints:
       search_count.fields:
         type: string
         required: false
+  capability: x.post.counts
 - id: x.x.get-posts-counts-recent
   tier: extended
   platform: x
@@ -2282,11 +2446,13 @@ endpoints:
       search_count.fields:
         type: string
         required: false
+  capability: x.post.counts
 - id: x.x.stream-posts-firehose
   tier: extended
   platform: x
   method: GET
   path: /2/tweets/firehose/stream
+  name: "Stream posts firehose"
   summary: Stream all Posts
   scope: any_account
   cost:
@@ -2342,6 +2508,7 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/firehose/stream/lang/en
+  name: "Stream posts firehose en"
   summary: Stream English Posts
   scope: any_account
   cost:
@@ -2397,6 +2564,7 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/firehose/stream/lang/ja
+  name: "Stream posts firehose ja"
   summary: Stream Japanese Posts
   scope: any_account
   cost:
@@ -2452,6 +2620,7 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/firehose/stream/lang/ko
+  name: "Stream posts firehose ko"
   summary: Stream Korean Posts
   scope: any_account
   cost:
@@ -2507,6 +2676,7 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/firehose/stream/lang/pt
+  name: "Stream posts firehose pt"
   summary: Stream Portuguese Posts
   scope: any_account
   cost:
@@ -2558,6 +2728,7 @@ endpoints:
         required: false
         note: YYYY-MM-DDTHH:mm:ssZ. The latest UTC timestamp to which the Posts will be provided.
 - id: x.x.stream-labels-compliance
+  kind: utility
   tier: extended
   platform: x
   method: GET
@@ -2590,6 +2761,7 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/sample/stream
+  name: "Stream posts sample"
   summary: Stream sampled Posts
   scope: any_account
   cost:
@@ -2633,6 +2805,7 @@ endpoints:
   platform: x
   method: GET
   path: /2/tweets/sample10/stream
+  name: "Stream posts sample10"
   summary: Stream 10% sampled Posts
   scope: any_account
   cost:
@@ -2728,6 +2901,7 @@ endpoints:
       sort_order:
         type: string
         required: false
+  capability: x.search.posts
 - id: x.x.search-posts-recent
   tier: extended
   platform: x
@@ -2774,11 +2948,13 @@ endpoints:
       sort_order:
         type: string
         required: false
+  capability: x.search.posts
 - id: x.x.stream-posts
   tier: extended
   platform: x
   method: GET
   path: /2/tweets/search/stream
+  name: "Stream posts"
   summary: Stream filtered Posts
   scope: any_account
   cost:
@@ -2825,7 +3001,9 @@ endpoints:
         type: array
         required: false
         note: A comma separated list of Place fields to display.
+  capability: x.post.stream
 - id: x.x.get-rules
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -2851,7 +3029,9 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.post.stream.rules
 - id: x.x.update-rules
+  kind: account
   tier: extended
   platform: x
   method: POST
@@ -2878,7 +3058,9 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.stream.rules
 - id: x.x.get-rule-counts
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -2898,6 +3080,7 @@ endpoints:
         type: string
         required: false
 - id: x.x.get-webhooks-stream-links
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -2912,10 +3095,12 @@ endpoints:
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
 - id: x.x.delete-webhooks-stream-link
+  kind: account
   tier: extended
   platform: x
   method: DELETE
   path: /2/tweets/search/webhooks/{webhook_id}
+  name: "Delete webhooks stream link"
   summary: Delete stream link
   scope: own_account
   cost:
@@ -2930,10 +3115,12 @@ endpoints:
         type: string
         required: true
 - id: x.x.create-webhooks-stream-link
+  kind: account
   tier: extended
   platform: x
   method: POST
   path: /2/tweets/search/webhooks/{webhook_id}
+  name: "Create webhooks stream link"
   summary: Create stream link
   scope: own_account
   cost:
@@ -2948,6 +3135,7 @@ endpoints:
         type: string
         required: true
 - id: x.x.delete-posts
+  kind: action
   tier: extended
   platform: x
   method: DELETE
@@ -2966,6 +3154,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.post.delete
 - id: x.x.get-posts-by-id
   tier: extended
   platform: x
@@ -2985,6 +3174,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.post.detail
 - id: x.x.get-posts-liking-users
   tier: extended
   platform: x
@@ -3013,6 +3203,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.post.likers
 - id: x.x.get-posts-quoted-posts
   tier: extended
   platform: x
@@ -3043,6 +3234,7 @@ endpoints:
       exclude:
         type: array
         required: false
+  capability: x.post.quotes
 - id: x.x.get-posts-reposted-by
   tier: extended
   platform: x
@@ -3070,6 +3262,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.post.reposters
 - id: x.x.get-posts-reposts
   tier: extended
   platform: x
@@ -3097,7 +3290,9 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.post.reposters
 - id: x.x.hide-posts-reply
+  kind: action
   tier: extended
   platform: x
   method: PUT
@@ -3122,7 +3317,9 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.reply.hide
 - id: x.x.get-usage
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -3160,6 +3357,7 @@ endpoints:
       ids:
         type: array
         required: true
+  capability: x.user.profile
 - id: x.x.get-users-by-usernames
   tier: extended
   platform: x
@@ -3179,11 +3377,14 @@ endpoints:
       usernames:
         type: array
         required: true
+  capability: x.user.profile
 - id: x.x.stream-users-compliance
+  kind: utility
   tier: extended
   platform: x
   method: GET
   path: /2/users/compliance/stream
+  name: "Stream users compliance"
   summary: Stream Users compliance data
   scope: own_account
   cost:
@@ -3224,7 +3425,9 @@ endpoints:
     currency: USD
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
+  capability: x.trending.personalized
 - id: x.x.get-users-public-keys
+  kind: utility
   tier: extended
   platform: x
   method: GET
@@ -3268,11 +3471,13 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.reposts_of_me
 - id: x.x.search-users
   tier: extended
   platform: x
   method: GET
   path: /2/users/search
+  name: "Search users"
   summary: Search Users
   scope: any_account
   cost:
@@ -3292,6 +3497,7 @@ endpoints:
       next_token:
         type: string
         required: false
+  capability: x.search.users
 - id: x.x.get-users-by-id
   tier: extended
   platform: x
@@ -3311,6 +3517,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.user.profile
 - id: x.x.get-users-affiliates
   tier: extended
   platform: x
@@ -3338,6 +3545,7 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.user.affiliates
 - id: x.x.get-users-blocking
   tier: extended
   platform: x
@@ -3365,6 +3573,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.user.blocking
 - id: x.x.get-users-bookmarks
   tier: extended
   platform: x
@@ -3393,7 +3602,9 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.bookmarks
 - id: x.x.create-users-bookmark
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -3418,6 +3629,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.bookmark.add
 - id: x.x.get-users-bookmark-folders
   tier: extended
   platform: x
@@ -3446,7 +3658,9 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.bookmark_folders
 - id: x.x.create-users-bookmark-folder
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -3471,6 +3685,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.bookmark_folder.create
 - id: x.x.get-users-bookmarks-by-folder-id
   tier: extended
   platform: x
@@ -3502,7 +3717,9 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.bookmarks
 - id: x.x.delete-users-bookmark
+  kind: action
   tier: extended
   platform: x
   method: DELETE
@@ -3525,7 +3742,9 @@ endpoints:
       tweet_id:
         type: string
         required: true
+  capability: x.post.bookmark.remove
 - id: x.x.block-users-dms
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -3545,7 +3764,9 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.user.dm.block
 - id: x.x.unblock-users-dms
+  kind: action
   tier: extended
   platform: x
   method: POST
@@ -3565,6 +3786,7 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.user.dm.block
 - id: x.x.get-users-followed-lists
   tier: extended
   platform: x
@@ -3593,11 +3815,14 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.user.followed_lists
 - id: x.x.follow-list
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/users/{id}/followed_lists
+  name: "Follow list"
   summary: Follow List
   scope: own_account
   cost:
@@ -3617,11 +3842,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.follow
 - id: x.x.unfollow-list
+  kind: action
   tier: extended
   platform: x
   method: DELETE
   path: /2/users/{id}/followed_lists/{list_id}
+  name: "Unfollow list"
   summary: Unfollow a List
   scope: own_account
   cost:
@@ -3639,6 +3867,7 @@ endpoints:
       list_id:
         type: string
         required: true
+  capability: x.list.follow
 - id: x.x.get-users-followers
   tier: extended
   platform: x
@@ -3667,6 +3896,7 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.followers
 - id: x.x.get-users-following
   tier: extended
   platform: x
@@ -3695,11 +3925,14 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.following
 - id: x.x.follow-user
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/users/{id}/following
+  name: "Follow user"
   summary: Follow User
   scope: own_account
   cost:
@@ -3719,6 +3952,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.user.follow
 - id: x.x.get-users-liked-posts
   tier: extended
   platform: x
@@ -3747,11 +3981,14 @@ endpoints:
         type: string
         required: false
         note: A base32hex-encoded pagination token.
+  capability: x.user.liked_posts
 - id: x.x.like-post
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/users/{id}/likes
+  name: "Like post"
   summary: Like Post
   scope: own_account
   cost:
@@ -3771,11 +4008,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.like
 - id: x.x.unlike-post
+  kind: action
   tier: extended
   platform: x
   method: DELETE
   path: /2/users/{id}/likes/{tweet_id}
+  name: "Unlike post"
   summary: Unlike Post
   scope: own_account
   cost:
@@ -3793,6 +4033,7 @@ endpoints:
       tweet_id:
         type: string
         required: true
+  capability: x.post.like
 - id: x.x.get-users-list-memberships
   tier: extended
   platform: x
@@ -3820,6 +4061,7 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.user.list_memberships
 - id: x.x.get-users-mentions
   tier: extended
   platform: x
@@ -3861,6 +4103,7 @@ endpoints:
       until_id:
         type: string
         required: false
+  capability: x.user.mentions
 - id: x.x.get-users-muting
   tier: extended
   platform: x
@@ -3888,11 +4131,14 @@ endpoints:
       pagination_token:
         type: string
         required: false
+  capability: x.user.muting
 - id: x.x.mute-user
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/users/{id}/muting
+  name: "Mute user"
   summary: Mute User
   scope: own_account
   cost:
@@ -3912,6 +4158,7 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.user.mute
 - id: x.x.get-users-owned-lists
   tier: extended
   platform: x
@@ -3940,6 +4187,7 @@ endpoints:
         type: string
         required: false
         note: A 64-bit signed integer.
+  capability: x.user.owned_lists
 - id: x.x.get-users-pinned-lists
   tier: extended
   platform: x
@@ -3960,11 +4208,14 @@ endpoints:
       id:
         type: string
         required: true
+  capability: x.user.pinned_lists
 - id: x.x.pin-list
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/users/{id}/pinned_lists
+  name: "Pin list"
   summary: Pin List
   scope: own_account
   cost:
@@ -3984,11 +4235,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.list.pin
 - id: x.x.unpin-list
+  kind: action
   tier: extended
   platform: x
   method: DELETE
   path: /2/users/{id}/pinned_lists/{list_id}
+  name: "Unpin list"
   summary: Unpin a List
   scope: own_account
   cost:
@@ -4006,7 +4260,9 @@ endpoints:
       list_id:
         type: string
         required: true
+  capability: x.list.pin
 - id: x.x.get-users-public-key
+  kind: utility
   tier: extended
   platform: x
   method: GET
@@ -4027,6 +4283,7 @@ endpoints:
         type: string
         required: true
 - id: x.x.add-user-public-key
+  kind: utility
   tier: extended
   platform: x
   method: POST
@@ -4052,10 +4309,12 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.repost-post
+  kind: action
   tier: extended
   platform: x
   method: POST
   path: /2/users/{id}/retweets
+  name: "Repost post"
   summary: Repost Post
   scope: own_account
   cost:
@@ -4074,11 +4333,14 @@ endpoints:
       type: object
       required: true
       note: JSON body; see the operation's reference for its fields
+  capability: x.post.repost
 - id: x.x.unrepost-post
+  kind: action
   tier: extended
   platform: x
   method: DELETE
   path: /2/users/{id}/retweets/{source_tweet_id}
+  name: "Unrepost post"
   summary: Unrepost Post
   scope: own_account
   cost:
@@ -4095,6 +4357,7 @@ endpoints:
       source_tweet_id:
         type: string
         required: true
+  capability: x.post.repost
 - id: x.x.get-users-timeline
   tier: extended
   platform: x
@@ -4139,11 +4402,14 @@ endpoints:
       exclude:
         type: array
         required: false
+  capability: x.user.timeline
 - id: x.x.unfollow-user
+  kind: action
   tier: extended
   platform: x
   method: DELETE
   path: /2/users/{source_user_id}/following/{target_user_id}
+  name: "Unfollow user"
   summary: Unfollow User
   scope: own_account
   cost:
@@ -4161,11 +4427,14 @@ endpoints:
       target_user_id:
         type: string
         required: true
+  capability: x.user.follow
 - id: x.x.unmute-user
+  kind: action
   tier: extended
   platform: x
   method: DELETE
   path: /2/users/{source_user_id}/muting/{target_user_id}
+  name: "Unmute user"
   summary: Unmute User
   scope: own_account
   cost:
@@ -4183,7 +4452,9 @@ endpoints:
       target_user_id:
         type: string
         required: true
+  capability: x.user.mute
 - id: x.x.get-webhooks
+  kind: account
   tier: extended
   platform: x
   method: GET
@@ -4198,10 +4469,12 @@ endpoints:
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
 - id: x.x.create-webhooks
+  kind: account
   tier: extended
   platform: x
   method: POST
   path: /2/webhooks
+  name: "Create webhooks"
   summary: Create webhook
   scope: own_account
   cost:
@@ -4217,10 +4490,12 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.create-webhook-replay-job
+  kind: account
   tier: extended
   platform: x
   method: POST
   path: /2/webhooks/replay
+  name: "Create webhook replay job"
   summary: Create replay job for webhook
   scope: own_account
   cost:
@@ -4236,10 +4511,12 @@ endpoints:
       required: true
       note: JSON body; see the operation's reference for its fields
 - id: x.x.delete-webhooks
+  kind: account
   tier: extended
   platform: x
   method: DELETE
   path: /2/webhooks/{webhook_id}
+  name: "Delete webhooks"
   summary: Delete webhook
   scope: own_account
   cost:
@@ -4254,10 +4531,12 @@ endpoints:
         type: string
         required: true
 - id: x.x.validate-webhooks
+  kind: account
   tier: extended
   platform: x
   method: PUT
   path: /2/webhooks/{webhook_id}
+  name: "Validate webhooks"
   summary: Validate webhook
   scope: own_account
   cost:

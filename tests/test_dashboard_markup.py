@@ -110,8 +110,8 @@ def test_the_tab_bar_is_all_plus_the_catalog_categories_plus_platform():
     # categories themselves are whatever the catalog rows carry, so this list may not gate them.
     order = INDEX[INDEX.index("platCategories(){") :][:900]
     assert (
-        "['SEO','Social','Advertising','Enrichment','E-commerce','Reviews & Apps',"
-        "'China Social','Community']" in order
+        "['SEO/AEO','Social','Advertising','Enrichment','E-commerce','Reviews & Apps',"
+        "'Community']" in order
     )
 
 
@@ -358,7 +358,7 @@ def test_the_platform_is_one_table_not_a_stack_of_capability_cards():
     block = _ledger()
     assert '<table class="ledger">' in block
     assert 'v-for="sec in platLedger"' in block
-    assert '<tr class="lsec">' in block
+    assert '<tr class="lsec"' in block
     assert "cap-card" not in INDEX, "the capability card is gone, and so is its CSS"
 
 
@@ -370,7 +370,7 @@ def test_sections_are_domains_with_other_pinned_last():
     fn = src[src.index("def domain_rows("):]
     assert "key=lambda d: (d == DOMAIN_OTHER, -len(sections[d]), d)" in fn
     # ...and the page renders that order rather than re-sorting it.
-    led = INDEX[INDEX.index("platLedger(){") :][:500]
+    led = INDEX[INDEX.index("platLedger(){") :][:900]
     assert "this.platData.domains||[]" in led
 
 
@@ -517,6 +517,38 @@ def test_the_long_metered_phrasing_never_reaches_a_collapsed_line():
     facts = INDEX[INDEX.index("epFacts(e){") :][:900]
     assert "does not publish the rate" in facts
     assert "this.priceUnit(c.type)" in facts, "...naming the unit it IS billed by"
+
+
+def test_a_domain_section_needs_a_visible_row_to_exist():
+    """A section filed the account/utility plumbing under whatever capability id it happened to
+    carry, which conjured sections that had nothing else in them — CAMPAIGNS 0, LOCATION 0, PERSON
+    0, SCHOOL 0, TITLE 0 on the People page. A domain renders only if a browse row lands in it."""
+    led = INDEX[INDEX.index("platLedger(){") :][:1200]
+    assert "if(r.mgmt || (this.platDomain && r.domain!==this.platDomain)) continue;" in led
+    assert ".filter(s=>vis[s.domain])" in led, "no visible row, no section"
+
+
+def test_management_endpoints_collapse_into_one_actions_section_at_the_bottom():
+    """Account/utility routes are the provider's own plumbing (webhooks, saved lists, token
+    helpers). ONE collapsed section for the whole platform, at the foot of the ledger, counted in
+    its heading — not one expander per domain, and not filed by a domain that means nothing here."""
+    block = _ledger()
+    assert 'v-if="sec.actions"' in block and ">Actions" in block
+    assert '@click="platActionsOpen=!platActionsOpen"' in block
+    assert "{{sec.count}}" in block
+    assert "lmore" not in INDEX, "the per-section management expander and its CSS are gone"
+    led = INDEX[INDEX.index("platLedger(){") :][:1200]
+    assert "out.push({domain:'Actions', actions:true" in led
+    assert "rows:this.platActionsOpen?acts:[]" in led, "collapsed by default, and it renders no rows"
+    # ...and it is platform-wide, so a domain chip hides it rather than filtering it
+    fn = INDEX[INDEX.index("platActionRows(){") :][:220]
+    assert "this.platDomain ? [] : this.platRowsPreDomain.filter(r=>r.mgmt)" in fn
+    # ...and "All" counts what the domain chips add up to, not the plumbing behind them
+    assert "{{platBrowseCount}}" in block
+    assert "platBrowseCount(){ return this.platRowsPreDomain.filter(r=>!r.mgmt).length; }" in INDEX
+    # ...and an Actions row says which kind of plumbing it is — the only thing telling them apart
+    assert 'v-if="r.mgmt" class="chip lkind"' in block
+    assert "{{r.endpoints[0].kind}}" in block
 
 
 def test_the_filter_bar_narrows_by_domain_text_and_verification():

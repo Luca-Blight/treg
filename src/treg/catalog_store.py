@@ -27,10 +27,25 @@ EXAMPLES_DIRNAME = "examples"
 CAPABILITIES_FILE = "capabilities.yaml"
 FX_FILE = "fx.yaml"
 
+# What an endpoint IS, so the marketplace can browse the useful surface and tuck the plumbing away:
+#   data    — fetch/scrape/enrich a resource (the DEFAULT when `kind:` is absent).
+#   action  — a meaningful WRITE on the connected user's own account (post, reply, update a budget).
+#   account — the provider's own bookkeeping CRUD (create/delete a lead-list, manage webhooks).
+#   utility — helpers with no data of their own (token generators, enum/location lookups, decrypt).
+# `data`+`action` are the browse surface; `account`+`utility` are "management endpoints" — served in
+# the endpoint list with `kind` set, but kept OUT of the census counts and the default platform view.
+KINDS = ("data", "action", "account", "utility")
+DEFAULT_KIND = "data"
+HIDDEN_KINDS = frozenset({"account", "utility"})  # served, but never inflate the browse counts
+
 
 @dataclass(frozen=True)
 class Catalog:
     fx: dict[str, float] = field(default_factory=dict)           # currency -> USD rate (fx.yaml)
+    # provider service -> USD per credit, or None when the provider publishes no per-credit price.
+    # Credits are PROVIDER-scoped, never a currency: one scrapecreators credit and one lusha credit
+    # are unrelated, so this cannot live in `fx` alongside CNY.
+    credit_rates: dict[str, float | None] = field(default_factory=dict)
     platforms: dict[str, dict] = field(default_factory=dict)     # slug -> {label, category}
     capabilities: dict[str, str] = field(default_factory=dict)   # id -> description
     endpoints: list[dict] = field(default_factory=list)          # normalized endpoint dicts
@@ -46,14 +61,18 @@ class Catalog:
     def for_provider(self, service: str) -> list[dict]:
         return [e for e in self.endpoints if e["provider"] == service]
 
-    def cost_view(self, cost) -> dict | None:
+    def cost_view(self, cost, provider: str | None = None) -> dict | None:
         """A cost dict with a computed `usd` field. Source of truth stays in the provider's
         BILLING currency; USD is derived at serve time from fx.yaml so a rate refresh re-prices
-        the whole catalog at once. `usd` is None when the value or rate is unknown."""
+        the whole catalog at once. `usd` is None when the value or rate is unknown.
+
+        Currency "credit" is not a currency but a provider-scoped unit, so it converts with the
+        PROVIDER's credit rate (fx.yaml `credit_rates_usd`) — hence `provider`. A provider with a
+        null rate keeps `usd` None and the client displays the native credit count."""
         if not isinstance(cost, dict):
             return None
         value, cur = cost.get("value"), cost.get("currency", "USD")
-        rate = self.fx.get(cur)
+        rate = self.credit_rates.get(provider) if cur == "credit" else self.fx.get(cur)
         usd = round(value * rate, 6) if isinstance(value, (int, float)) and rate else None
         return {**cost, "usd": usd}
 
@@ -126,9 +145,16 @@ def _parse(directory: Path) -> Catalog:
 
     for ep in endpoints:  # a platform seen only in provider files still deserves a label
         platforms.setdefault(ep["platform"], {"label": ep["platform"], "category": "Other"})
-    fx = dict((_read_yaml(directory / FX_FILE) or {}).get("rates_to_usd") or {"USD": 1.0})
-    return Catalog(fx=fx, platforms=platforms, capabilities=capabilities, endpoints=endpoints,
-                   by_id=by_id, provider_meta=provider_meta)
+    fx_doc = _read_yaml(directory / FX_FILE) or {}
+    fx = dict(fx_doc.get("rates_to_usd") or {"USD": 1.0})
+    # Each entry is a {usd, basis, source, checked} block; only the rate is served, and `usd: null`
+    # (no published per-credit price) is kept as an explicit None so display stays native.
+    credit_rates = {
+        str(service): (v.get("usd") if isinstance(v, dict) else v)
+        for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
+    }
+    return Catalog(fx=fx, credit_rates=credit_rates, platforms=platforms, capabilities=capabilities,
+                   endpoints=endpoints, by_id=by_id, provider_meta=provider_meta)
 
 
 # The subject an endpoint is ABOUT, within its platform — the section a platform page files it
@@ -156,9 +182,15 @@ DOMAIN_NOISE = {"live", "task_post", "task_get", "task_ready", "tasks_ready", "t
                 # provider BRAND/family segments: how the vendor organises its API, not what the
                 # route is about — reading them as a subject put a "dataforseo_labs" heading on the
                 # Google page. Filtered here so such routes classify by their function keywords.
-                "dataforseo_labs", "appendix", "ai_optimization"}
+                # `web_vN` is the "web" delivery marker with a version glued on (TikHub's
+                # `/xiaohongshu/web_v3/…`); left in, it grew a "web_v3"/"web_v2" section per platform.
+                "dataforseo_labs", "appendix", "ai_optimization", "web_v2", "web_v3", "web_v4"}
 _VERSION_SEG = re.compile(r"v\d+(?:\.\d+)*")
 _WORD_SEG = re.compile(r"[a-z][a-z0-9_]*")
+# The WHOLE words of a path segment — split on non-letters AND at camelCase humps, so a keyword
+# matches a word boundary, never a fragment: `ads` must not fire inside `leads`/`threads`, `user`
+# not inside `abuser`, while `searchAnalytics` still yields `search` + `analytics`.
+_WORDS = re.compile(r"[A-Z]?[a-z]+")
 
 
 def _domain(raw: dict, capability: str, platform: str) -> str:
@@ -175,18 +207,24 @@ def _domain(raw: dict, capability: str, platform: str) -> str:
     parts = capability.split(".")
     if len(parts) >= 3 and parts[1]:
         return parts[1]
-    segments = [s for s in str(raw.get("path") or "").lower().split("/")
-                if s and s not in DOMAIN_NOISE and not _VERSION_SEG.fullmatch(s)]
+    segments = [s for s in str(raw.get("path") or "").split("/")
+                if s and s.lower() not in DOMAIN_NOISE and not _VERSION_SEG.fullmatch(s.lower())]
     # The PATH only, never the summary. Prose says "the Live SERP API…" and "your own post…" about
     # endpoints that are neither, and one false heading is worse than a row in `other`: a section a
-    # visitor doesn't trust is a section they stop reading.
-    haystack = " ".join(segments)
+    # visitor doesn't trust is a section they stop reading. Match keywords at WORD boundaries, not by
+    # raw substring: substring put an "ads" section on the People page (it lives inside `leads`) and a
+    # "user" one on abuse reports (inside `abuser`). A stem key (`keyword` → `keywords`) still matches
+    # by prefix; a short key (`ads`, `llm`) must hit a whole word, so `ads` ≠ `leads`/`adset`.
+    words = [w.lower() for seg in segments for w in _WORDS.findall(seg)]
     for key, domain in DOMAIN_KEYWORDS:
-        if key in haystack:
-            return domain
+        stem = key.rstrip("_")  # `ad_` → `ad`: the singular still matches the `ad`/`adGroup` word
+        for w in words:
+            if w.startswith(stem) and (len(stem) > 3 or w == stem):
+                return domain
     # Only a GROUPING segment counts — one with an operation name after it. The last segment IS the
     # operation ("generate_xbogus"), and a section per operation is not a section at all.
-    candidates = [s for s in segments if s != platform and _WORD_SEG.fullmatch(s)]
+    seg_lc = [s.lower() for s in segments]
+    candidates = [s for s in seg_lc if s != platform and _WORD_SEG.fullmatch(s)]
     return candidates[0] if len(candidates) > 1 else DOMAIN_OTHER
 
 
@@ -220,6 +258,9 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         "platform": platform,
         "domain": _domain(raw, capability, platform),
         "scope": raw.get("scope") or "",
+        # what the endpoint IS (see KINDS): default `data`, so every un-annotated route stays on the
+        # browse surface and only the deliberately-marked plumbing (account/utility) is tucked away.
+        "kind": str(raw.get("kind") or DEFAULT_KIND).strip().lower() or DEFAULT_KIND,
         "method": (raw.get("method") or "GET").upper(),
         "path": raw.get("path") or "",
         # optional short display title; `summary` stays the provider's own description, verbatim
@@ -279,12 +320,14 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         "path": ep["path"],
         "scope": ep["scope"],
         "tier": ep["tier"],
+        # data | action | account | utility — the front-end hides account/utility behind an expander
+        "kind": ep.get("kind") or DEFAULT_KIND,
         # the section of its platform page this row files under (see `_domain`)
         "domain": ep.get("domain") or DOMAIN_OTHER,
         # the whole point of a row is the call it stands for, so the line that makes it is part of
         # the row — not a second request away
         "call_template": call_template(ep),
-        "cost": cat.cost_view(ep["cost"]) if cat else ep["cost"],
+        "cost": cat.cost_view(ep["cost"], ep["provider"]) if cat else ep["cost"],
         "verified": ep["verified"],
         "docs_url": ep["docs_url"],
         "has_example": bool(ep["example_file"]),
@@ -343,7 +386,9 @@ def domain_rows(pairs: list[tuple[dict, dict]], capabilities: dict[str, str]) ->
     for row in rows:
         sections.setdefault(row["domain"], []).append(row)
     for section in sections.values():
-        section.sort(key=lambda r: (r["kind"] != "merged", r["description"].lower(), r["endpoints"][0]["id"]))
+        # merged first (a comparable job beats a lone route), then the widely-supported jobs — the
+        # ones the most providers implement, i.e. the popular ones — before the niche, then alpha.
+        section.sort(key=lambda r: (r["kind"] != "merged", -len(r["endpoints"]), r["description"].lower()))
     order = sorted(sections, key=lambda d: (d == DOMAIN_OTHER, -len(sections[d]), d))
     return [{"domain": d, "rows": sections[d]} for d in order]
 

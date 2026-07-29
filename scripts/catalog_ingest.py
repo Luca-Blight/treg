@@ -162,8 +162,9 @@ def carry_verification(provider: str, endpoints: list[dict]) -> int:
     Those fields are the only ones NOT derived from upstream: verification stamps are the result
     of an actual paid call made by scripts/catalog_verify_extended.py, and `capability` is a
     reviewed mapping into the capabilities.yaml taxonomy (2026-07-28 batch onwards). `name` (the
-    short display title) is carried on the same guard: ingest generates one where the spec offers
-    it, but a reviewed/hand-set title must survive a re-ingest just like a reviewed capability.
+    short display title) and `kind` (data | action | account | utility — a reviewed judgement the
+    ingest cannot re-derive) are carried on the same guard: ingest generates a title where the spec
+    offers one, but a reviewed/hand-set title or kind must survive a re-ingest like a capability.
     Regenerating the file must not silently discard them, so they are carried across by id, as long as the
     route itself (method + path) still matches — a route that moved is a different endpoint and
     its old result means nothing.
@@ -191,7 +192,7 @@ def carry_verification(provider: str, endpoints: list[dict]) -> int:
             continue
         if prev.get("method") != ep.get("method") or prev.get("path") != ep.get("path"):
             continue
-        for field in ("verified", "example_response", "unverified", "capability", "name"):
+        for field in ("verified", "example_response", "unverified", "capability", "name", "kind"):
             if prev.get(field) is not None:
                 ep[field] = prev[field]
         if prev.get("capability") is not None and prev.get("platform"):

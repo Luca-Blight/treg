@@ -89,6 +89,7 @@ endpoints:
     docs_url: https://apify.com/s-r/tiktok-ads-library
 
   - id: apify.web.scrape.job.start
+    kind: utility
     capability: web.scrape.job.start
     platform: web
     scope: any_account
@@ -111,11 +112,13 @@ endpoints:
     docs_url: https://docs.apify.com/api/v2/act-runs-post
 
   - id: apify.web.scrape.job.status
+    kind: utility
     capability: web.scrape.job.status
     platform: web
     scope: any_account
     method: GET
     path: /actor-runs/{run_id}
+    name: "Check scraper run status"
     summary: "Check whether a background scraper run has finished"
     input:
       pathParams:
@@ -132,6 +135,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /datasets/{dataset_id}/items
+    name: "Download scraper run results"
     summary: "Download the results of a finished scraper run"
     input:
       pathParams:
@@ -147,12 +151,13 @@ endpoints:
     docs_url: https://docs.apify.com/api/v2/dataset-items-get
 
   - id: apify.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: any_account
     method: GET
     path: /users/me
-    name: "Check Apify plan and usage"
+    name: "Check plan and usage"
     summary: "Check your Apify plan, credit usage and remaining monthly limits"
     input:
       note: "no parameters. Returns the account's plan, monthly usage in USD and the limits it is measured against — the pre-flight check before a large pay-per-result pull, and the cheapest way to prove a token is valid (a bad token 401s here)"

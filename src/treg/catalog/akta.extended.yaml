@@ -20,6 +20,7 @@ source:
 
 endpoints:
   - id: akta.x.product-reviews
+    domain: other
     tier: extended
     platform: companies
     method: GET
@@ -37,13 +38,14 @@ endpoints:
       queryParams: {company: "canva.com"}
     cost:
       type: per_success
-      value: null
-      currency: USD
-      note: "0.0 credits for the product-list-only call (no `products` param); 1.5 credits per 50 reviews returned once `products` is passed"
+      value: 1.5
+      currency: credit
+      note: "0.0 credits for the product-list-only call (no `products` param); 1.5 credits per 50 reviews returned once `products` is passed — value here is the marginal per-50-reviews rate that applies once billed"
     unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap — even the free product-list-only call is blocked; see akta.yaml header note on the alternative-data family)"
     docs_url: https://docs.akta.pro/api-reference/alternative-data/product-reviews
 
   - id: akta.x.jobs
+    domain: companies
     tier: extended
     platform: companies
     method: GET
@@ -58,11 +60,12 @@ endpoints:
       note: "synchronous GET; response also reports total open-role count and credits consumed."
     test_request:
       queryParams: {company: "canva.com", limit: 1}
-    cost: {type: per_success, value: null, currency: USD, note: "4 Akta credits per 10 job listings returned (llms-full.txt sample response)"}
+    cost: {type: per_success, value: 4, currency: credit, note: "4 Akta credits per 10 job listings returned (llms-full.txt sample response)"}
     unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, same message across the whole alternative-data family)"
     docs_url: https://docs.akta.pro/api-reference/alternative-data/job-posts
 
   - id: akta.x.social-posts
+    domain: other
     tier: extended
     platform: companies
     method: GET
@@ -77,11 +80,12 @@ endpoints:
       note: "synchronous GET; response also reports total posts available and credits consumed."
     test_request:
       queryParams: {company: "canva.com", limit: 1}
-    cost: {type: per_success, value: null, currency: USD, note: "1 Akta credit per 10 posts returned (llms-full.txt sample response)"}
+    cost: {type: per_success, value: 1, currency: credit, note: "1 Akta credit per 10 posts returned (llms-full.txt sample response)"}
     unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, same message across the whole alternative-data family)"
     docs_url: https://docs.akta.pro/api-reference/alternative-data/social-posts
 
   - id: akta.x.website-traffic
+    domain: other
     tier: extended
     platform: companies
     method: GET
@@ -94,11 +98,12 @@ endpoints:
       note: "single request returns the most recent month's engagements plus a historical monthly-visits series and a traffic_sources channel breakdown."
     test_request:
       queryParams: {company: "canva.com"}
-    cost: {type: per_success, value: null, currency: USD, note: "1.5 Akta credits per request (llms-full.txt sample response)"}
+    cost: {type: per_success, value: 1.5, currency: credit, note: "1.5 Akta credits per request (llms-full.txt sample response)"}
     unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, same message across the whole alternative-data family)"
     docs_url: https://docs.akta.pro/api-reference/alternative-data/website-traffic
 
   - id: akta.x.company-addition
+    kind: account
     tier: extended
     platform: companies
     method: POST
@@ -116,6 +121,7 @@ endpoints:
     docs_url: https://docs.akta.pro/api-reference/supporting-apis/company-addition-api
 
   - id: akta.x.request-status
+    kind: utility
     tier: extended
     platform: companies
     method: GET

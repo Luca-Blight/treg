@@ -87,10 +87,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.adcreative-create
+  kind: action
   tier: extended
   platform: meta-ads
   method: POST
   path: /{ad_account_id}/adcreatives
+  name: "Create ad creative"
   summary: Create an ad creative
   scope: own_account
   cost:
@@ -119,6 +121,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/adlabels
+  name: "List ad labels"
   summary: Labels used to group campaigns, ad sets and ads
   scope: own_account
   cost:
@@ -156,10 +159,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.ad-create
+  kind: action
   tier: extended
   platform: meta-ads
   method: POST
   path: /{ad_account_id}/ads
+  name: "Create ad"
   summary: Create an ad from a creative inside an ad set
   scope: own_account
   cost:
@@ -184,6 +189,7 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.adset-create
+  kind: action
   tier: extended
   platform: meta-ads
   method: POST
@@ -203,6 +209,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/adspixels
+  name: "List ad pixels"
   summary: Meta pixels on the account and when each last fired
   scope: own_account
   cost:
@@ -216,6 +223,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/advideos
+  name: "List ad videos"
   summary: Videos uploaded to the ad account
   scope: own_account
   cost:
@@ -225,10 +233,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.campaign-create
+  kind: action
   tier: extended
   platform: meta-ads
   method: POST
   path: /{ad_account_id}/campaigns
+  name: "Create campaign"
   summary: Create a campaign (objective, status, special ad categories)
   scope: own_account
   cost:
@@ -257,6 +267,7 @@ endpoints:
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/customconversions
+  name: "List custom conversions"
   summary: Custom conversions defined on the account and their rules
   scope: own_account
   cost:
@@ -266,6 +277,7 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-delivery-estimate
+  kind: utility
   tier: extended
   platform: meta-ads
   method: GET
@@ -280,10 +292,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-reachestimate
+  kind: utility
   tier: extended
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/reachestimate
+  name: "Estimate audience reach"
   summary: Estimated audience size for a targeting spec
   scope: own_account
   cost:
@@ -293,10 +307,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-targetingbrowse
+  kind: utility
   tier: extended
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/targetingbrowse
+  name: "Browse targeting taxonomy"
   summary: Browse the targeting taxonomy as a tree
   scope: own_account
   cost:
@@ -306,6 +322,7 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-targetingsearch
+  kind: utility
   tier: extended
   platform: meta-ads
   method: GET
@@ -320,10 +337,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-targetingsuggestions
+  kind: utility
   tier: extended
   platform: meta-ads
   method: GET
   path: /{ad_account_id}/targetingsuggestions
+  name: "Suggest related targeting interests"
   summary: Interests related to ones you already target
   scope: own_account
   cost:
@@ -347,10 +366,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.ad-update
+  kind: action
   tier: extended
   platform: meta-ads
   method: POST
   path: /{ad_id}
+  name: "Update ad"
   summary: Update an ad — pause it or swap its creative
   scope: own_account
   cost:
@@ -376,6 +397,7 @@ endpoints:
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
   scope_gap: treg's OAuth app does not request this; needs leads_retrieval
 - id: meta-ads.x.ad-previews
+  kind: utility
   tier: extended
   platform: meta-ads
   method: GET
@@ -404,6 +426,7 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.adset-update
+  kind: action
   tier: extended
   platform: meta-ads
   method: POST
@@ -461,10 +484,12 @@ endpoints:
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.campaign-update
+  kind: action
   tier: extended
   platform: meta-ads
   method: POST
   path: /{campaign_id}
+  name: "Update campaign"
   summary: Update a campaign — pause it, rename it, change its budget
   scope: own_account
   cost:

@@ -49,6 +49,7 @@ endpoints:
   # Worth calling before any sweep: it reports credits remaining, so an agent can refuse a job it
   # cannot pay for. It is also the credential health-check and costs nothing.
   - id: seranking.account.usage
+    kind: account
     capability: account.usage
     platform: account
     scope: own_account
