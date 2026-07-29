@@ -1,0 +1,31 @@
+{
+  "code": 200,
+  "request_id": "83e0d10d-1bc9-4ec4-9cd9-c80196985a6c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:01",
+  "time_stamp": 1785220141,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-App-API/fetch_hot_board_categories_api_v1_kuaishou_app_fetch_hot_board_categories_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/83e0d10d-1bc9-4ec4-9cd9-c80196985a6c?sign=82d1118a13be35519174319d78af8c39946e1ede16ea2a864b3ecf081e4efc38",
+  "router": "/api/v1/kuaishou/app/fetch_hot_board_categories",
+  "params": {},
+  "data": {
+    "result": 1,
+    "boards": [
+      {
+        "boardId": 1,
+        "type": 1,
+        "boardName": "热榜",
+        "showType": 1,
+        "fromPage": 14
+      },
+      "… 5 more item(s) truncated"
+    ],
+    "debug_id": "f16fcee2",
+    "debug_info": "gAAAAABqaEwtenBtpzKtmq8D7HLPijBHaiePsTtG7BsjCy98caMvUcGgg_CC0_H6xHrKgnDAkNYAiCNLMiGtIdmUbhYy6sqKzE7EogLXkMgycclphy1JOnuYLNKoOzbZfBl505hbkRJQJMnVanlhvNTyyTsKA2NXedzZaYpiuWYHdnfU7N8kebRxBfeY3B8bTXh9ZTGx… [292 chars]"
+  }
+}

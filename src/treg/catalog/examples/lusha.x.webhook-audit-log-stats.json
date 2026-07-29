@@ -1,0 +1,9 @@
+{
+  "total": 0,
+  "success": 0,
+  "failed": 0,
+  "permanentFailure": 0,
+  "dlq": 0,
+  "totalCreditsConsumed": 0,
+  "successRate": "0%"
+}

@@ -1,0 +1,29 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": "Success"
+    },
+    "data_description": {
+      "interaction": "… 3 field(s) truncated",
+      "interaction_enrollment": "… 3 field(s) truncated",
+      "play_medium": "… 3 field(s) truncated",
+      "play_medium_enrollment": "… 3 field(s) truncated",
+      "video_view_rate": "… 3 field(s) truncated",
+      "video_view_rate_enrollment": "… 3 field(s) truncated"
+    },
+    "latest_item_info": [
+      "… 23 field(s) truncated",
+      "… 14 more item(s) truncated"
+    ],
+    "latest_item_statics_antispam": {},
+    "latest_star_item_info": [
+      "… 23 field(s) truncated",
+      "… 3 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:04.927464023",
+  "requestId": "716cd23367af44e589ba76ac9359e2… [32 chars total]"
+}

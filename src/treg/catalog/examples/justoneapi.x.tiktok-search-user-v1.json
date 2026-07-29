@@ -1,0 +1,53 @@
+{
+  "code": 0,
+  "data": {
+    "type": 1,
+    "user_list": [
+      {
+        "user_info": "… 37 field(s) truncated",
+        "position": null,
+        "uniqid_position": null,
+        "effects": null,
+        "musics": null,
+        "items": null,
+        "mix_list": null,
+        "challenges": null
+      },
+      "… 9 more item(s) truncated"
+    ],
+    "challenge_list": null,
+    "music_list": null,
+    "cursor": 10,
+    "has_more": 1,
+    "status_code": 0,
+    "qc": "",
+    "rid": "20260728060020CA9534A179092D12ECCC",
+    "log_pb": {
+      "impr_id": "20260728060020CA9534A179092D12ECCC"
+    },
+    "extra": {
+      "now": 1785218420000,
+      "logid": "20260728060020CA9534A179092D12ECCC",
+      "fatal_item_ids": [],
+      "search_request_id": "",
+      "server_stream_time": 421,
+      "api_debug_info": null
+    },
+    "input_keyword": "coffee",
+    "global_doodle_config": {
+      "keyword": "coffee",
+      "display_filter_bar": 1,
+      "new_source": "",
+      "search_channel": "tiktok_user",
+      "tns_search_result": "Pass",
+      "hide_results": false,
+      "feedback_survey": null,
+      "hit_shark": false,
+      "hit_dolphin": false
+    },
+    "feedback_type": "user"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:23.411453772",
+  "requestId": "7923449767b645ef8f4a87394acb53eb"
+}

@@ -1,0 +1,50 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0877 sec.",
+  "cost": 0.01248,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0541-0000-0830e1b4f0d9",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0776 sec.",
+      "cost": 0.01248,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "search_intent",
+        "se_type": "google",
+        "language_code": "en",
+        "keywords": [
+          "login page",
+          "… 3 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "language_code": "en",
+          "items_count": 4,
+          "items": [
+            {
+              "keyword": "login page",
+              "keyword_intent": {
+                "label": "navigational",
+                "probability": 0.9999
+              },
+              "secondary_keyword_intents": null
+            },
+            "… 3 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

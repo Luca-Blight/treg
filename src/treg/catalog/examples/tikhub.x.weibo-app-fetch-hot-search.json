@@ -1,0 +1,50 @@
+{
+  "code": 200,
+  "request_id": "477b08fe-6ac7-48d4-8395-8b0908348f30",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:27",
+  "time_stamp": 1785220227,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-App-API/fetch_hot_search_api_v1_weibo_app_fetch_hot_search_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/477b08fe-6ac7-48d4-8395-8b0908348f30?sign=2cd3e3da71e331a99d28c6631a73f8a7dabd3c4d56e73c4532f934f34a2b149d",
+  "router": "/api/v1/weibo/app/fetch_hot_search",
+  "params": {
+    "category": "realtimehot",
+    "page": "1",
+    "count": "5",
+    "region_name": "北京"
+  },
+  "data": {
+    "pageTitle": "{}",
+    "pageHeader": "{}",
+    "pageRefresh": "{}",
+    "pageData": "{}",
+    "config": "{}",
+    "refreshInfo": "{}",
+    "channelInfo": {
+      "channels": [
+        "… {10 field(s) truncated}",
+        "… 9 more item(s) truncated"
+      ],
+      "channelConfig": {
+        "selectInfo": "… {3 field(s) truncated}",
+        "auto_refresh_config": "… {10 field(s) truncated}",
+        "refresh_configs": "… {10 field(s) truncated}"
+      }
+    },
+    "loadedInfo": "{}",
+    "items": [
+      {
+        "text": "… {2 field(s) truncated}",
+        "category": "cell",
+        "type": "text"
+      },
+      "… 7 more item(s) truncated"
+    ],
+    "pageTabBar": "{}"
+  }
+}

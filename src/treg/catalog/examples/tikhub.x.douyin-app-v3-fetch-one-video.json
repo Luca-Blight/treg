@@ -1,0 +1,38 @@
+{
+  "code": 200,
+  "request_id": "d75352bc-490a-4ce8-bfbc-bed0b18da630",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:55",
+  "time_stamp": 1785220075,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/fetch_one_video_ap… [98 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d75352bc-490a-4c… [150 chars]",
+  "router": "/api/v1/douyin/app/v3/fetch_one_video",
+  "params": {
+    "aweme_id": "7448118827402972455"
+  },
+  "data": {
+    "aweme_detail": {
+      "diversion_bar_info": "… [0 item(s) truncated]",
+      "authentication_token": "<omitted: expires>",
+      "img_bitrate": null,
+      "enable_comment_sticker_rec": false,
+      "hybrid_label": null,
+      "comment_permission_info": "… {5 field(s) truncated}",
+      "xigua_task": "… {1 field(s) truncated}",
+      "photo_search_entrance": "… {1 field(s) truncated}",
+      "publish_plus_alienation": "… {1 field(s) truncated}",
+      "poi_patch_info": "… {2 field(s) truncated}",
+      "should_open_ad_report": false,
+      "cf_recheck_ts": 0,
+      "caption_template_id": 0,
+      "with_promotional_music": false,
+      "xigua_base_info": "… {4 field(s) truncated}",
+      "…": "179 more field(s) truncated"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "code": 200,
+  "request_id": "d4cccad6-916c-405b-a790-5bd833a60316",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:00",
+  "time_stamp": 1785220260,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Twitter-Web-API/fetch_user_tweet_rep… [112 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d4cccad6-916c-40… [150 chars]",
+  "router": "/api/v1/twitter/web/fetch_user_tweet_replies",
+  "params": {
+    "screen_name": "elonmusk"
+  },
+  "data": {
+    "timeline": [
+      "… {18 field(s) truncated}",
+      "… 29 more item(s) truncated"
+    ],
+    "next_cursor": "<omitted: expires>",
+    "user": {
+      "status": "active",
+      "profile": null,
+      "rest_id": "44196397",
+      "blue_verified": true,
+      "verification_type": null,
+      "affiliates": "… {1 field(s) truncated}",
+      "business_account": "… [0 item(s) truncated]",
+      "avatar": "https://pbs.twimg.com/profile_images/2053244804520427520/m8m… [76 chars]",
+      "header_image": "https://pbs.twimg.com/profile_banners/44196397/1774145451",
+      "desc": "",
+      "name": "Elon Musk",
+      "protected": false,
+      "location": "",
+      "friends": 1376,
+      "sub_count": 241035327,
+      "statuses_count": 106249,
+      "media_count": 4655,
+      "created_at": "Tue Jun 02 20:12:29 +0000 2009",
+      "pinned_tweet_ids_str": null,
+      "id": "44196397"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "inspectionResult": {
+    "inspectionResultLink": "https://search.google.com/search-console/inspect?resource_id=sc-domain:example.com&id=ECan_KfNQTeyTi3dCn5SsQ&utm_medium=link&utm_source=api",
+    "indexStatusResult": {
+      "verdict": "PASS",
+      "coverageState": "Submitted and indexed",
+      "robotsTxtState": "ALLOWED",
+      "indexingState": "INDEXING_ALLOWED",
+      "lastCrawlTime": "2026-07-28T03:20:47Z",
+      "pageFetchState": "SUCCESSFUL",
+      "googleCanonical": "https://example.com/",
+      "userCanonical": "https://example.com/",
+      "sitemap": [
+        "https://example.com/sitemap.xml"
+      ],
+      "referringUrls": [
+        "https://example.com/ide-extension",
+        "https://absorb.md/recommendations?type=tool&page=4",
+        "… 2 more item(s) truncated"
+      ],
+      "crawledAs": "MOBILE"
+    },
+    "mobileUsabilityResult": {
+      "verdict": "VERDICT_UNSPECIFIED"
+    }
+  },
+  "_scrubbed": true
+}

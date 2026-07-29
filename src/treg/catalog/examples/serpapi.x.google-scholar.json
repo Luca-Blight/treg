@@ -1,0 +1,74 @@
+{
+  "search_metadata": {
+    "id": "6a6898bf71577f79ad5e5763",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/b8gvyJW5dZOhqnXTZf59kA/6a6898bf… [81 chars]",
+    "created_at": "2026-07-28 11:55:43 UTC",
+    "processed_at": "2026-07-28 11:55:43 UTC",
+    "google_scholar_url": "https://scholar.google.com/scholar?q=biology&hl=en",
+    "raw_html_file": "https://serpapi.com/searches/b8gvyJW5dZOhqnXTZf59kA/6a6898bf… [81 chars]",
+    "total_time_taken": 6.29
+  },
+  "search_parameters": {
+    "engine": "google_scholar",
+    "q": "biology",
+    "hl": "en"
+  },
+  "search_information": {
+    "organic_results_state": "Results for exact spelling",
+    "total_results": 7460000,
+    "time_taken_displayed": 0.06,
+    "query_displayed": "biology"
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "A new biology for a new century",
+      "result_id": "KNJ0p4CbwgoJ",
+      "link": "https://journals.asm.org/doi/abs/10.1128/mmbr.68.2.173-186.2… [63 chars]",
+      "snippet": "… molecular biology's lead … in biology that 20th century bi… [194 chars]",
+      "publication_info": "… {2 field(s) truncated}",
+      "resources": "… [1 item(s) truncated]",
+      "inline_links": "… {5 field(s) truncated}"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "query": "molecular biology",
+      "link": "https://scholar.google.com/scholar?hl=en&as_sdt=0,5&qsp=1&q=… [84 chars]"
+    },
+    "… 7 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://scholar.google.com/scholar?start=10&q=biology&hl=en&… [70 chars]",
+    "other_pages": {
+      "2": "https://scholar.google.com/scholar?start=10&q=biology&hl=en&… [70 chars]",
+      "3": "https://scholar.google.com/scholar?start=20&q=biology&hl=en&… [70 chars]",
+      "4": "https://scholar.google.com/scholar?start=30&q=biology&hl=en&… [70 chars]",
+      "5": "https://scholar.google.com/scholar?start=40&q=biology&hl=en&… [70 chars]",
+      "6": "https://scholar.google.com/scholar?start=50&q=biology&hl=en&… [70 chars]",
+      "7": "https://scholar.google.com/scholar?start=60&q=biology&hl=en&… [70 chars]",
+      "8": "https://scholar.google.com/scholar?start=70&q=biology&hl=en&… [70 chars]",
+      "9": "https://scholar.google.com/scholar?start=80&q=biology&hl=en&… [70 chars]",
+      "10": "https://scholar.google.com/scholar?start=90&q=biology&hl=en&… [70 chars]"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+    "next": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+      "3": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+      "4": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+      "5": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+      "6": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+      "7": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+      "8": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+      "9": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]",
+      "10": "https://serpapi.com/search.json?as_sdt=0%2C5&engine=google_s… [91 chars]"
+    }
+  }
+}

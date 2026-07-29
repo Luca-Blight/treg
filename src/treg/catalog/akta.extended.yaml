@@ -1,0 +1,136 @@
+provider: akta
+source:
+  method: openapi
+  ingested: 2026-07-28
+  spec_urls:
+    - https://docs.akta.pro/openapi.json
+    - https://docs.akta.pro/llms-full.txt
+
+# Core (akta.yaml) already curates: /v1/company/search/, /v1/company/enrichment/, /v1/news/,
+# /v1/company/headcount-trends/, /v1/company/employee-reviews/, /v1/industry/search/. This file
+# covers the rest of the OpenAPI's 12 paths — the other alt-data routes plus the two free
+# supporting routes (company addition, request status).
+#
+# TRAILING SLASHES ARE MANDATORY on every path — same 307-without-slash trap as core (see
+# akta.yaml's header). Every path below carries it deliberately.
+#
+# Pricing: credits convert to USD at $0.05 pay-as-you-go / $0.04 on subscription (see akta.yaml).
+# cost.value stays null because the rate depends on the caller's plan; the credit count lives in
+# cost.note, taken from llms-full.txt's documented per-call `credits_consumed` values.
+
+endpoints:
+  - id: akta.x.product-reviews
+    domain: other
+    tier: extended
+    platform: companies
+    method: GET
+    path: /v1/company/product-reviews/
+    name: "Get a company's product catalog and reviews"
+    summary: "Fetches a company's product catalog and detailed reviews per product including ratings, star distribution, pros, cons, pricing and individual review content."
+    input:
+      queryParams:
+        company: {type: string, required: true, note: "company website (e.g. 'canva.com') or a company UUID from Company Search", example: "canva.com"}
+        products: {type: array, required: false, note: "product_id values to fetch reviews for (repeat the param per id); omitted → returns the free product list only, no reviews"}
+        limit: {type: integer, required: false, note: "max reviews to return per product, default 0, max 50 — only applies when products is set", example: 0}
+        offset: {type: integer, required: false, note: "reviews to skip before returning records, default 0"}
+      note: "two-step API: call without `products` first — free, returns the product catalog and its ids; call again with `products` to bill for reviews. 1.5 credits per 50 reviews returned."
+    test_request:
+      queryParams: {company: "canva.com"}
+    cost:
+      type: per_success
+      value: 1.5
+      currency: credit
+      note: "0.0 credits for the product-list-only call (no `products` param); 1.5 credits per 50 reviews returned once `products` is passed — value here is the marginal per-50-reviews rate that applies once billed"
+    unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap — even the free product-list-only call is blocked; see akta.yaml header note on the alternative-data family)"
+    docs_url: https://docs.akta.pro/api-reference/alternative-data/product-reviews
+
+  - id: akta.x.jobs
+    domain: companies
+    tier: extended
+    platform: companies
+    method: GET
+    path: /v1/company/jobs/
+    name: "Get a company's live job postings"
+    summary: "Fetches live LinkedIn and Indeed job listings for a company, including title, location, description, compensation, experience level, and extracted key skills."
+    input:
+      queryParams:
+        company: {type: string, required: true, note: "company website (e.g. 'canva.com') or a company UUID from Company Search", example: "canva.com"}
+        limit: {type: integer, required: false, note: "max job listings to return, default 10", example: 1}
+        offset: {type: integer, required: false, note: "listings to skip before returning records, default 0"}
+      note: "synchronous GET; response also reports total open-role count and credits consumed."
+    test_request:
+      queryParams: {company: "canva.com", limit: 1}
+    cost: {type: per_success, value: 4, currency: credit, note: "4 Akta credits per 10 job listings returned (llms-full.txt sample response)"}
+    unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, same message across the whole alternative-data family)"
+    docs_url: https://docs.akta.pro/api-reference/alternative-data/job-posts
+
+  - id: akta.x.social-posts
+    domain: other
+    tier: extended
+    platform: companies
+    method: GET
+    path: /v1/company/posts/
+    name: "Get a company's social media posts"
+    summary: "Fetches social media posts published by a company, including content type, text, publish date, paid/repost flags, an AI classification, and detailed engagement metrics."
+    input:
+      queryParams:
+        company: {type: string, required: true, note: "company website (e.g. 'canva.com') or a company UUID from Company Search", example: "canva.com"}
+        limit: {type: integer, required: false, note: "max posts to return, default 10", example: 1}
+        offset: {type: integer, required: false, note: "posts to skip before returning records, default 0"}
+      note: "synchronous GET; response also reports total posts available and credits consumed."
+    test_request:
+      queryParams: {company: "canva.com", limit: 1}
+    cost: {type: per_success, value: 1, currency: credit, note: "1 Akta credit per 10 posts returned (llms-full.txt sample response)"}
+    unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, same message across the whole alternative-data family)"
+    docs_url: https://docs.akta.pro/api-reference/alternative-data/social-posts
+
+  - id: akta.x.website-traffic
+    domain: other
+    tier: extended
+    platform: companies
+    method: GET
+    path: /v1/company/website-traffic/
+    name: "Get a company's website traffic signals"
+    summary: "Fetches a company's website traffic signals, including engagement metrics, historical monthly visit estimates, and a breakdown of traffic by acquisition source."
+    input:
+      queryParams:
+        company: {type: string, required: true, note: "company website (e.g. 'canva.com') or a company UUID from Company Search", example: "canva.com"}
+      note: "single request returns the most recent month's engagements plus a historical monthly-visits series and a traffic_sources channel breakdown."
+    test_request:
+      queryParams: {company: "canva.com"}
+    cost: {type: per_success, value: 1.5, currency: credit, note: "1.5 Akta credits per request (llms-full.txt sample response)"}
+    unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, same message across the whole alternative-data family)"
+    docs_url: https://docs.akta.pro/api-reference/alternative-data/website-traffic
+
+  - id: akta.x.company-addition
+    kind: account
+    tier: extended
+    platform: companies
+    method: POST
+    path: /v1/company/addition-requests/
+    name: "Request a missing company be added"
+    summary: "Submits a company that is not yet in akta.pro's database to be added, returning a request ID to track, or the existing company if it is already present. This is a free endpoint — it does not consume API credits."
+    input:
+      body:
+        company_name: {type: string, required: true, note: "name of the company to add", example: "solios"}
+        website: {type: string, required: true, note: "primary website URL, used to disambiguate and resolve the company", example: "https://www.soleosenergy.com/"}
+      bodyType: json
+      note: "if the company already exists, no request is created and the existing company's details are returned directly instead of a request_id"
+    untestable: "writes a real addition request against Akta's database with no safe/no-op input — a live call would create persistent state on their side, not just spend credits"
+    cost: {type: free, value: 0, currency: USD, note: "documented free — does not consume credits"}
+    docs_url: https://docs.akta.pro/api-reference/supporting-apis/company-addition-api
+
+  - id: akta.x.request-status
+    kind: utility
+    tier: extended
+    platform: companies
+    method: GET
+    path: /v1/status/{request_id}/
+    name: "Check an async request's status"
+    summary: "Returns the current status of an asynchronous request, such as a company addition request, by its request ID. This is a free endpoint — it does not consume API credits."
+    input:
+      pathParams:
+        request_id: {type: string, required: true, note: "the request id returned when the original (e.g. company-addition) request was submitted", example: "2db01b38-5c81-4b3f-b76d-8b36aeed603b"}
+    untestable: "requires a real request_id minted by a prior company-addition call, which no example value can substitute for"
+    cost: {type: free, value: 0, currency: USD, note: "documented free — does not consume credits"}
+    docs_url: https://docs.akta.pro/api-reference/supporting-apis/request-status

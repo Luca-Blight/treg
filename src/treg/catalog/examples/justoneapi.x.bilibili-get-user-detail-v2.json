@@ -1,0 +1,144 @@
+{
+  "code": 0,
+  "data": {
+    "common": {
+      "userInfo": "… 5 field(s) truncated",
+      "serverConfig": "… 5 field(s) truncated",
+      "abtest": "… 1 field(s) truncated",
+      "ua": "Mozilla/5.0 (Linux; Android 10… [232 chars total]",
+      "browser": "… 28 field(s) truncated",
+      "defDomain": "",
+      "autoFallback": "… 10 field(s) truncated",
+      "isWxTagLaunch": false,
+      "noCallApp": false,
+      "switch": "… 1 field(s) truncated"
+    },
+    "home": {
+      "hotList": "… 4 field(s) truncated"
+    },
+    "channel": {
+      "channelConfig": "… 0 item(s) truncated",
+      "channelData": "… 0 field(s) truncated",
+      "serverFetched": null
+    },
+    "video": {
+      "error": 0,
+      "isClient": false,
+      "breadcrumb": "… 0 field(s) truncated",
+      "viewInfo": "… 0 field(s) truncated",
+      "upInfo": "… 0 field(s) truncated",
+      "related": "… 4 field(s) truncated",
+      "tags": "… 0 item(s) truncated",
+      "elec": "… 0 field(s) truncated",
+      "p": 0,
+      "avid": 0,
+      "bvid": "",
+      "quality": 16,
+      "streamQuality": 16,
+      "playUrlInfo": "… 0 field(s) truncated",
+      "supportFormats": "… 0 item(s) truncated",
+      "playState": "init",
+      "bsource": "",
+      "gameMode": false,
+      "keyword": "",
+      "trackId": "",
+      "togglePlay": true,
+      "isTab3": false,
+      "isCustom": false,
+      "isSem": false,
+      "reportMsg": "… 0 field(s) truncated",
+      "pageType": "share",
+      "isFromNaturalSearch": false,
+      "playerSettings": "… 0 field(s) truncated",
+      "videoPageSettings": "… 0 field(s) truncated",
+      "isRelatedUp": false,
+      "archiveType": 0,
+      "archiveConfigId": "",
+      "eventConfig": "… 8 field(s) truncated",
+      "hotWord": "",
+      "hotSearchVideoList": "… 0 item(s) truncated",
+      "qnExp": null
+    },
+    "search": {
+      "searchAllResult": "… 5 field(s) truncated",
+      "searchBangumiResult": "… 4 field(s) truncated",
+      "searchUserResult": "… 4 field(s) truncated",
+      "searchFilmResult": "… 4 field(s) truncated",
+      "openAppDialog": true,
+      "keyword": "",
+      "isCustom": false,
+      "bsource": "",
+      "blacklistArchive": "… 0 item(s) truncated"
+    },
+    "space": {
+      "mid": 946974,
+      "info": "… 42 field(s) truncated",
+      "feedList": "… 4 field(s) truncated"
+    },
+    "opus": {
+      "id": "",
+      "detail": null,
+      "preview": null,
+      "isClient": false,
+      "fallback": "… 2 field(s) truncated",
+      "verifyData": null,
+      "isTab3": false,
+      "uniqueK": ""
+    },
+    "tag": {
+      "tagInfo": "… 0 field(s) truncated",
+      "tagSimilar": "… 0 item(s) truncated",
+      "tagRelated": "… 4 field(s) truncated"
+    },
+    "topic": {
+      "topicDetail": "… 0 field(s) truncated",
+      "activities": "… 0 field(s) truncated",
+      "ads": "… 0 field(s) truncated",
+      "topicId": 0,
+      "topicListResult": "… 5 field(s) truncated",
+      "relevantTopics": "… 0 item(s) truncated",
+      "headerTextColor": 0,
+      "isExpanded": false
+    },
+    "playlist": {
+      "mediaId": "",
+      "ps": 20,
+      "tid": 0,
+      "playlistType": 3,
+      "p": 1,
+      "isClient": false,
+      "hasMore": true,
+      "mediaData": "… 4 field(s) truncated",
+      "mediaList": "… 0 item(s) truncated",
+      "randomList": "… 0 item(s) truncated",
+      "videoIndex": 0,
+      "videoInfo": "… 0 field(s) truncated",
+      "playMode": "order",
+      "playUrl": "… 0 item(s) truncated",
+      "forbidPreview": false,
+      "playEnd": false,
+      "playSum": 0
+    },
+    "tribee": {
+      "tribeeBaseInfo": "… 0 field(s) truncated",
+      "tribeeList": "… 0 item(s) truncated",
+      "tribeeListTotal": 0,
+      "tribeeInviteDefer": null,
+      "tribeeInviteInfo": null,
+      "tribeeSteamHomeInfo": "… 0 field(s) truncated"
+    },
+    "route": {
+      "name": "space",
+      "path": "/space/946974",
+      "hash": "",
+      "query": "… 0 field(s) truncated",
+      "params": "… 1 field(s) truncated",
+      "fullPath": "/space/946974",
+      "meta": "… 0 field(s) truncated",
+      "from": "… 7 field(s) truncated"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:45.412806593",
+  "requestId": "0ef8289247884ef1a4f6cd2023ab1f… [32 chars total]"
+}

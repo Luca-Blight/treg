@@ -1,0 +1,35 @@
+{
+  "code": 200,
+  "request_id": "03c817cf-8142-42d2-bff6-b0c22ca63f80",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:07",
+  "time_stamp": 1785220387,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Media-Platform-V2-API/fetch_account_articles_api_v1_wechat_mp_v2_fetch_account_articles_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/03c817cf-8142-42d2-bff6-b0c22ca63f80?sign=8df09738b49b4d7b6cc5eab891e6e633951b23092d4b3fe918530291d01292dd",
+  "router": "/api/v1/wechat_mp/v2/fetch_account_articles",
+  "params": {
+    "username": "gh_363b924965e9",
+    "page_size": 20,
+    "offset": "",
+    "item_show_type": null,
+    "raw": true
+  },
+  "data": {
+    "biz_username": "gh_363b924965e9",
+    "is_end": 0,
+    "count": 10,
+    "next_offset": "WABgAGiBura87/3cs2pwAA==",
+    "articles": [
+      "… {8 field(s) truncated}",
+      "… 9 more item(s) truncated"
+    ],
+    "pages": 1,
+    "debug_id": "054eb4d0",
+    "debug_info": "gAAAAABqaE0junBfltqoJB0U61-Iu7MCVfaBysaiz5NdJJxQ013rzVqzRu8Nkf2sACY5Bkc0aE14WzMSWa2885iRwzg555yeUkk68hejYl-BdDEH65BRUKOY3TFCT7l8PAzHdxwNqHi2R-PLBaUVRl2IB7E28SLpSMnvdcaeNvdtm6oIz-JtWGKaq-UAg0CeBsABO_xG… [292 chars]"
+  }
+}

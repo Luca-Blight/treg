@@ -1,0 +1,141 @@
+# unverified — endpoints require a connected OAuth account; verify via a treg connection later.
+# Transcribed from official docs 2026-07-28; no credential was available at curation time, and the
+# registry entry is UNCONFIGURED (treg holds no Snapchat client id/secret yet).
+#
+# Snapchat Marketing API on adsapi.snapchat.com/v1 with a plain `Authorization: Bearer` — one
+# credential, so a connect yields a callable tool on its own. Everything below is own_account.
+# Scope granted: snapchat-marketing-api — a single grant covering read and write, so as with Google
+# and Microsoft the safety rail is which operation you call, not the token.
+#
+# THE HIERARCHY IS A CHAIN, and the first two links are not optional: user → organization → ad
+# account → campaign → ad squad → ad. You cannot list ad accounts without an organization_id, and
+# `ad squad` is what Snapchat calls what every other platform calls an ad set.
+#
+# EVERY RESPONSE IS DOUBLE-WRAPPED. Snapchat answers {"request_status":"SUCCESS", "campaigns":
+# [{"sub_request_status":"SUCCESS", "campaign":{…}}]} — the object you want is nested two levels
+# inside a per-item envelope, and a partial failure shows up as a per-item sub_request_status while
+# the outer request_status still reads SUCCESS.
+provider: snapchat-ads
+source:
+  docs: https://developers.snap.com/api/marketing-api/Ads-API/authentication
+  openapi: null
+  curated: 2026-07-28
+
+pricing_url: https://developers.snap.com/api/marketing-api/Ads-API/introduction
+endpoints:
+  - id: snapchat-ads.organizations
+    capability: snapchat-ads.organizations
+    platform: snapchat-ads
+    scope: own_account
+    method: GET
+    path: /me/organizations
+    name: "Organizations"
+    summary: "List the Snapchat business organizations you belong to"
+    input:
+      queryParams:
+        with_ad_accounts: {type: boolean, required: false, note: "true nests each organization's ad accounts into the same response, saving the second call below", example: true}
+      note: "the mandatory first call: an organization id is the only way into the ad accounts. GET /me alone returns just the member's own id and email"
+    cost: {type: free, note: "included with the connected account; Snapchat rate-limits per app and per organization rather than charging per call"}
+    docs_url: https://developers.snap.com/api/marketing-api/Ads-API/organizations
+
+  - id: snapchat-ads.accounts
+    capability: snapchat-ads.accounts
+    platform: snapchat-ads
+    scope: own_account
+    method: GET
+    path: /organizations/{organization_id}/adaccounts
+    name: "Accounts"
+    summary: "List the Snapchat ad accounts in a business organization"
+    input:
+      pathParams:
+        organization_id: {type: string, required: true, note: "UUID from /me/organizations", example: "8adc3db7-8148-4fbf-999c-8d2266369d74"}
+      queryParams:
+        limit: {type: integer, required: false, example: 50}
+        cursor: {type: string, required: false, note: "paging.next_link carries the cursor for the next page"}
+      note: "returns each ad account's id, name, currency, timezone and funding sources. This is treg's connection resource picker. All ids across this API are UUIDs, not numbers"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://developers.snap.com/api/marketing-api/Ads-API/adaccounts
+
+  - id: snapchat-ads.query
+    capability: snapchat-ads.query
+    platform: snapchat-ads
+    scope: own_account
+    method: GET
+    path: /adaccounts/{ad_account_id}/stats
+    name: "Get ad account performance stats"
+    summary: "Get spend, impressions and swipes for your whole Snapchat ad account"
+    input:
+      pathParams:
+        ad_account_id: {type: string, required: true, note: "UUID", example: "8adc3db7-8148-4fbf-999c-8d2266369d74"}
+      queryParams:
+        granularity: {type: string, required: true, note: "TOTAL | DAY | HOUR | LIFETIME", example: "DAY"}
+        fields: {type: string, required: false, note: "comma-separated metrics; omitting it returns only impressions and spend", example: "impressions,swipes,spend,video_views,conversion_purchases,screen_time_millis"}
+        start_time: {type: string, required: false, note: "ISO 8601 WITH offset and aligned to midnight in the AD ACCOUNT's timezone — 2026-06-28T00:00:00-07:00. A non-midnight or wrong-offset value is rejected outright; required for DAY/HOUR", example: "2026-06-28T00:00:00-07:00"}
+        end_time: {type: string, required: false, note: "ISO 8601, same alignment rule; exclusive", example: "2026-07-28T00:00:00-07:00"}
+        breakdown: {type: string, required: false, note: "campaign | adsquad | ad — returns one stats row per child entity instead of one account total", example: "campaign"}
+        swipe_up_attribution_window: {type: string, required: false, note: "1_DAY | 7_DAY (default) | 28_DAY", example: "28_DAY"}
+        view_attribution_window: {type: string, required: false, note: "1_HOUR | 3_HOUR | 6_HOUR | 1_DAY (default) | 7_DAY | 28_DAY"}
+      note: "spend is in MICRO-CURRENCY: 1000000 = 1 unit of the account currency. `swipes` is Snapchat's click. Hourly granularity is capped at a short window (about 7 days) and TOTAL/DAY at roughly 31 days per request — a longer range is an error, not a truncated result"
+    cost: {type: free, note: "included with the connected account; stats endpoints carry the tightest rate limits, and wide breakdowns count heavily against them"}
+    docs_url: https://developers.snap.com/api/marketing-api/Ads-API/measurement
+
+  - id: snapchat-ads.campaigns
+    capability: snapchat-ads.campaigns
+    platform: snapchat-ads
+    scope: own_account
+    method: GET
+    path: /adaccounts/{ad_account_id}/campaigns
+    name: "List campaigns"
+    summary: "List the campaigns in your Snapchat ad account with status, objective and budget"
+    input:
+      pathParams:
+        ad_account_id: {type: string, required: true, example: "8adc3db7-8148-4fbf-999c-8d2266369d74"}
+      queryParams:
+        limit: {type: integer, required: false, example: 50}
+        cursor: {type: string, required: false}
+        read_deleted_entities: {type: boolean, required: false, note: "false by default — deleted campaigns are hidden unless asked for"}
+      note: "daily_budget_micro and lifetime_spend_cap_micro are in micro-currency. `status` is what you set (ACTIVE | PAUSED); the delivery reality shows up in the separate ad-squad level and in stats"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://developers.snap.com/api/marketing-api/Ads-API/campaigns
+
+  - id: snapchat-ads.campaign.stats
+    capability: snapchat-ads.campaign.stats
+    platform: snapchat-ads
+    scope: own_account
+    method: GET
+    path: /campaigns/{campaign_id}/stats
+    name: "Campaign stats"
+    summary: "Get spend, impressions and swipes for one Snapchat campaign"
+    input:
+      pathParams:
+        campaign_id: {type: string, required: true, note: "UUID from the campaigns list", example: "92e1c28a-a331-45b4-8c26-fd3e0eea8c39"}
+      queryParams:
+        granularity: {type: string, required: true, note: "TOTAL | DAY | HOUR | LIFETIME", example: "TOTAL"}
+        fields: {type: string, required: false, example: "impressions,swipes,spend,conversion_purchases,attachment_total_view_time_millis"}
+        start_time: {type: string, required: false, note: "ISO 8601 aligned to ad-account-timezone midnight", example: "2026-06-28T00:00:00-07:00"}
+        end_time: {type: string, required: false, example: "2026-07-28T00:00:00-07:00"}
+        breakdown: {type: string, required: false, note: "adsquad | ad — one row per child of this campaign", example: "adsquad"}
+        swipe_up_attribution_window: {type: string, required: false, example: "7_DAY"}
+      note: "identical shape to the account-level report, scoped to one campaign; /adsquads/{id}/stats and /ads/{id}/stats are the same again further down. LIFETIME granularity ignores start_time/end_time and returns the campaign's all-time totals"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://developers.snap.com/api/marketing-api/Ads-API/measurement
+
+  - id: snapchat-ads.ads
+    capability: snapchat-ads.ads
+    platform: snapchat-ads
+    scope: own_account
+    method: GET
+    path: /adaccounts/{ad_account_id}/ads
+    name: "List ads"
+    summary: "List the ads in your Snapchat ad account with their creatives and types"
+    input:
+      pathParams:
+        ad_account_id: {type: string, required: true, example: "8adc3db7-8148-4fbf-999c-8d2266369d74"}
+      queryParams:
+        limit: {type: integer, required: false, example: 50}
+        cursor: {type: string, required: false}
+        read_deleted_entities: {type: boolean, required: false}
+      note: "each ad carries a creative_id and a `type` (SNAP_AD | STORY | COLLECTION | DYNAMIC_SNAP_AD). The media itself is two hops away: GET /creatives/{id} gives the media id, GET /media/{id} the asset — the ad object holds no playable URL"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://developers.snap.com/api/marketing-api/Ads-API/ads
+

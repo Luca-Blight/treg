@@ -1,0 +1,51 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "35.2072 sec.",
+  "cost": 0.0054,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0572-0000-443062fc9a0a",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "35.0586 sec.",
+      "cost": 0.0054,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "business_data",
+        "function": "my_business_info",
+        "se": "google",
+        "language_code": "en",
+        "location_name": "New York,New York,United States",
+        "keyword": "RustyBrick, Inc.",
+        "se_type": "my_business_info",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "RustyBrick, Inc.",
+          "se_domain": "google.com",
+          "location_code": 1023191,
+          "language_code": "en",
+          "check_url": "https://www.google.com/maps?cid=2946633002421908862&hl=en&gl=US",
+          "datetime": "2026-07-28 10:34:43 +00:00",
+          "item_types": [
+            "google_business_info"
+          ],
+          "items_count": 1,
+          "items": [
+            "… {42 field(s) truncated}"
+          ]
+        }
+      ]
+    }
+  ]
+}

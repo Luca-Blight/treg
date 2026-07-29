@@ -1,0 +1,33 @@
+{
+  "code": 200,
+  "request_id": "e3f2565c-c733-40e2-88b8-4a32fe0a0fc3",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:48",
+  "time_stamp": 1785220248,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-V2-API/fetch_social_ranking_api_v1_weibo_web_v2_fetch_social_ranking_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/e3f2565c-c733-40e2-88b8-4a32fe0a0fc3?sign=58ab79f3bad2b0c1b7b2703b20bc6ef7903a9ca1364cb494266ab08fd1b33230",
+  "router": "/api/v1/weibo/web_v2/fetch_social_ranking",
+  "params": {},
+  "data": {
+    "band_list": [
+      {
+        "m_category": "民生新闻",
+        "word_scheme": "#LV回应茉莉奶白案#",
+        "loc_page": 4,
+        "word": "LV回应茉莉奶白案",
+        "num": 949255,
+        "flag": 0,
+        "note": "LV回应茉莉奶白案",
+        "emoticon": "",
+        "topic_flag": 1,
+        "rank": 0
+      },
+      "… 49 more item(s) truncated"
+    ]
+  }
+}

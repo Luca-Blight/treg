@@ -1,0 +1,35 @@
+{
+  "code": 200,
+  "request_id": "3292825d-495d-47d5-9cda-3b51ac3a0df1",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-28 00:22:23",
+  "time_stamp": 1785223343,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/search_posts_api_v1_linkedin_web_search_posts_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/3292825d-495d-47d5-9cda-3b51ac3a0df1?sign=10dc595515f53d06a9ccdce48e350c4b8a2338beacb4348b15c7171a7f068338",
+  "router": "/api/v1/linkedin/web/search_posts",
+  "params": {
+    "keyword": "data",
+    "page": "1"
+  },
+  "data": {
+    "page": 1,
+    "total": 365,
+    "has_more": true,
+    "data": [
+      {
+        "id": "7487537040826368002",
+        "url": "https://www.linkedin.com/feed/update/urn:li:activity:7487537040826368002",
+        "title": "📊 Every Data Analyst starts somewhere—but every journey comes with challenges.\n\nLearning Data Analytics is more than just mastering tools like Excel, SQL, Python, or Power BI. It's about staying curio… [1080 chars]",
+        "activity": "… {4 field(s) truncated}",
+        "created_at": "2026-07-27T16:22:23.848Z",
+        "author": "… {4 field(s) truncated}"
+      },
+      "… 9 more item(s) truncated"
+    ]
+  }
+}

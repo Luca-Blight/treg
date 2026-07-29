@@ -1,0 +1,194 @@
+{
+  "code": 0,
+  "data": {
+    "responseContext": {
+      "visitorData": "CgtmZllsbU1jeW1WbyjpkaDTBjIKCgJaQRIEGgAgYGLfAgrcAjIwLllUPUpXM0UxUWZMTFBPTTBlNFp6MUdZdEdZQzlVX01kWVBpVEtSekdIYUhWVS1QVUotWU15QjZVVk91emdqLW9hQWxNWGtad1Zza0VLaUhlREtxZmVpZHd5dFk5ZkFhb2tKQjlTdGVSNW5LWi1QbUJMdlE3aC1ZOW5QR0QxcEhncTRWY3FmUG50alhNbGd6dUxkSmhqRWsxTWdEbjZUQnBwYUc4aXl0UEljTlhvYnV6ZzZWanNXZDVH… [519 chars total]",
+      "serviceTrackingParams": [
+        {
+          "service": "ECATCHER",
+          "params": [
+            {
+              "key": "client.version",
+              "value": "1.60"
+            },
+            {
+              "key": "client.name",
+              "value": "ANDROID_VR"
+            }
+          ]
+        }
+      ],
+      "maxAgeSeconds": 0,
+      "rolloutToken": "<omitted: expires>",
+      "responseId": "IhMI2cnmj5_0lQMVRFdIAB0e1iv6"
+    },
+    "playabilityStatus": {
+      "status": "OK",
+      "playableInEmbed": true,
+      "miniplayer": {
+        "miniplayerRenderer": {
+          "playbackMode": "PLAYBACK_MODE_ALLOW"
+        }
+      },
+      "contextParams": "Q0FFU0FnZ0M="
+    },
+    "streamingData": {
+      "expiresInSeconds": "21540",
+      "formats": [
+        {
+          "itag": 18,
+          "url": "https://rr1---sn-p25g5uvqvn-jvg6.googlevideo.com/videoplayback?expire=1785224521&ei=6QhoapmxEcSuobIPnqyv0Q8&ip=190.112.103.41&id=o-AEJrZ3cpFrRhRygr7ufs_j7pm_P2t7ALqZ0N7EMMC_h2&itag=18&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=850&met=1785202921%2C&mh=VD&mm=31%2C29&mn=sn-p25g5uvqvn-jvg6%… [519 chars total]",
+          "mimeType": "video/mp4; codecs=\"avc1.42001E, mp4a.40.2\"",
+          "bitrate": 266531,
+          "width": 320,
+          "height": 240,
+          "lastModified": "1772437158054287",
+          "quality": "small",
+          "fps": 15,
+          "qualityLabel": "240p",
+          "projectionType": "RECTANGULAR",
+          "audioQuality": "AUDIO_QUALITY_LOW",
+          "approxDurationMs": "19063",
+          "audioSampleRate": "44100",
+          "audioChannels": 2,
+          "qualityOrdinal": "QUALITY_ORDINAL_360P"
+        }
+      ],
+      "adaptiveFormats": [
+        {
+          "itag": 133,
+          "url": "https://rr1---sn-p25g5uvqvn-jvg6.googlevideo.com/videoplayback?expire=1785224521&ei=6QhoapmxEcSuobIPnqyv0Q8&ip=190.112.103.41&id=o-AEJrZ3cpFrRhRygr7ufs_j7pm_P2t7ALqZ0N7EMMC_h2&itag=133&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=850&met=1785202921%2C&mh=VD&mm=31%2C29&mn=sn-p25g5uvqvn-jvg6… [519 chars total]",
+          "mimeType": "video/mp4; codecs=\"avc1.4d400c\"",
+          "bitrate": 183848,
+          "width": 320,
+          "height": 240,
+          "initRange": {
+            "start": "0",
+            "end": "738"
+          },
+          "indexRange": {
+            "start": "739",
+            "end": "806"
+          },
+          "lastModified": "1767107069601671",
+          "contentLength": "433081",
+          "quality": "small",
+          "fps": 15,
+          "qualityLabel": "240p",
+          "projectionType": "RECTANGULAR",
+          "averageBitrate": 182995,
+          "approxDurationMs": "18933",
+          "qualityOrdinal": "QUALITY_ORDINAL_240P"
+        },
+        {
+          "itag": 134,
+          "url": "https://rr1---sn-p25g5uvqvn-jvg6.googlevideo.com/videoplayback?expire=1785224521&ei=6QhoapmxEcSuobIPnqyv0Q8&ip=190.112.103.41&id=o-AEJrZ3cpFrRhRygr7ufs_j7pm_P2t7ALqZ0N7EMMC_h2&itag=134&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=850&met=1785202921%2C&mh=VD&mm=31%2C29&mn=sn-p25g5uvqvn-jvg6… [519 chars total]",
+          "mimeType": "video/mp4; codecs=\"avc1.4d400c\"",
+          "bitrate": 150749,
+          "width": 320,
+          "height": 240,
+          "initRange": {
+            "start": "0",
+            "end": "738"
+          },
+          "indexRange": {
+            "start": "739",
+            "end": "806"
+          },
+          "lastModified": "1767107115984294",
+          "contentLength": "322379",
+          "quality": "small",
+          "fps": 15,
+          "qualityLabel": "240p",
+          "projectionType": "RECTANGULAR",
+          "averageBitrate": 136218,
+          "highReplication": true,
+          "approxDurationMs": "18933",
+          "qualityOrdinal": "QUALITY_ORDINAL_360P"
+        },
+        "… 1 more item(s) truncated"
+      ],
+      "serverAbrStreamingUrl": "https://rr1---sn-p25g5uvqvn-jvg6.googlevideo.com/videoplayback?expire=1785224521&ei=6QhoapmxEcSuobIPnqyv0Q8&ip=190.112.103.41&id=o-AEJrZ3cpFrRhRygr7ufs_j7pm_P2t7ALqZ0N7EMMC_h2&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=850&met=1785202921%2C&mh=VD&mm=31%2C29&mn=sn-p25g5uvqvn-jvg6%2Csn-j5c… [519 chars total]"
+    },
+    "playbackTracking": {
+      "videostatsPlaybackUrl": {
+        "baseUrl": "https://s.youtube.com/api/stats/playback?cl=951728945&docid=jNQXAC9IVRw&ei=6QhoapmxEcSuobIPnqyv0Q8&fexp=v1%2C24004644%2C72597%2C188063%2C24849%2C117293%2C148655%2C140910%2C26322828%2C95345%2C62075%2C1057%2C13%2C11%2C15%2C5554%2C43128%2C29037%2C57035%2C36805%2C3479%2C13030%2C1064%2C5484%2C68739%2C361… [519 chars total]",
+        "headers": [
+          {
+            "headerType": "USER_AUTH"
+          },
+          {
+            "headerType": "VISITOR_ID"
+          },
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "videostatsDelayplayUrl": {
+        "baseUrl": "https://s.youtube.com/api/stats/delayplay?cl=951728945&docid=jNQXAC9IVRw&ei=6QhoapmxEcSuobIPnqyv0Q8&fexp=v1%2C24004644%2C72597%2C188063%2C24849%2C117293%2C148655%2C140910%2C26322828%2C95345%2C62075%2C1057%2C13%2C11%2C15%2C5554%2C43128%2C29037%2C57035%2C36805%2C3479%2C13030%2C1064%2C5484%2C68739%2C36… [519 chars total]",
+        "headers": [
+          {
+            "headerType": "USER_AUTH"
+          },
+          {
+            "headerType": "VISITOR_ID"
+          },
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "videostatsWatchtimeUrl": {
+        "baseUrl": "https://s.youtube.com/api/stats/watchtime?cl=951728945&docid=jNQXAC9IVRw&ei=6QhoapmxEcSuobIPnqyv0Q8&fexp=v1%2C24004644%2C72597%2C188063%2C24849%2C117293%2C148655%2C140910%2C26322828%2C95345%2C62075%2C1057%2C13%2C11%2C15%2C5554%2C43128%2C29037%2C57035%2C36805%2C3479%2C13030%2C1064%2C5484%2C68739%2C36… [519 chars total]",
+        "headers": [
+          {
+            "headerType": "USER_AUTH"
+          },
+          {
+            "headerType": "VISITOR_ID"
+          },
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "ptrackingUrl": {
+        "baseUrl": "https://www.youtube.com/ptracking?ei=6QhoapmxEcSuobIPnqyv0Q8&oid=dFIR5Xizh4gV7hqFcgZIQQ&plid=AAZXofH5v-i0YpD6&pltype=content&ptchn=4QobU6STFB0P71PMvOGN5A&ptk=youtube_single&video_id=jNQXAC9IVRw",
+        "headers": [
+          {
+            "headerType": "USER_AUTH"
+          },
+          {
+            "headerType": "VISITOR_ID"
+          },
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "qoeUrl": {
+        "baseUrl": "https://s.youtube.com/api/stats/qoe?cl=951728945&docid=jNQXAC9IVRw&ei=6QhoapmxEcSuobIPnqyv0Q8&el=detailpage&event=streamingstats&fexp=v1%2C24004644%2C72597%2C188063%2C24849%2C117293%2C148655%2C140910%2C26322828%2C95345%2C62075%2C1057%2C13%2C11%2C15%2C5554%2C43128%2C29037%2C57035%2C36805%2C3479%2C130… [519 chars total]",
+        "headers": [
+          {
+            "headerType": "USER_AUTH"
+          },
+          {
+            "headerType": "VISITOR_ID"
+          },
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "atrUrl": {
+        "baseUrl": "https://s.youtube.com/api/stats/atr?c=ANDROID_VR&docid=jNQXAC9IVRw&ei=6QhoapmxEcSuobIPnqyv0Q8&len=19&ns=yt&plid=AAZXofH5v-i0YpD6&ver=2&vm=CAEQARgEOjJBSHFpSlRKTkZ2VWIwVTkzWVItTjRsbW9GRlFGUmlJaDdUUWZNWTVfWkhKUDAyV1A2UWJfQUxkcUFQSmdYZmFaY0dlNDc0eEFudWFhSW11a0Z4RUpCUzFuRURyN0tOLTNSaUtHUkdqQWJmaENlOUxBbz… [345 chars total]",
+        "elapsedMediaTimeSeconds": 3,
+        "headers": [
+          {
+            "headerType": "USER_AUTH"
+          },
+          {
+            "headerType": "VISITOR_ID"
+          },
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "videostatsScheduledFlushWalltimeSeconds": [
+        10,
+        20,
+        "… 1 more item(s) truncated"
+      ]
+    }
+  }
+}

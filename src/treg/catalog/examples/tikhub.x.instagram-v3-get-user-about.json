@@ -1,0 +1,40 @@
+{
+  "code": 200,
+  "request_id": "a076f1a1-7125-4f33-8849-c4b2faecaadc",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:20",
+  "time_stamp": 1785220340,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V3-API/get_user_about_api_v1_instagram_v3_get_user_about_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/a076f1a1-7125-4f33-8849-c4b2faecaadc?sign=19e4929e492630512913cb5e8c5be184a938dd29e7210692b57612b5b8811fc0",
+  "router": "/api/v1/instagram/v3/get_user_about",
+  "params": {
+    "username": "instagram"
+  },
+  "data": {
+    "__ar": 1,
+    "rid": "Ak6yPweD5MBN3EiUV_v6s0O",
+    "payload": {
+      "layout": {
+        "bloks_payload": {
+          "ft": "… {1 field(s) truncated}",
+          "data": "… [4 item(s) truncated]",
+          "props": "… [3 item(s) truncated]",
+          "templates": "… {6 field(s) truncated}",
+          "error_attribution": "… {2 field(s) truncated}",
+          "payload_spec_ids": "… [43 item(s) truncated]",
+          "tree": "… {1 field(s) truncated}"
+        }
+      },
+      "server_data": {
+        "falco_log_policy_map": null,
+        "controller_name": "IGAboutThisAccountScreenController"
+      }
+    },
+    "lid": "7667462976946235572"
+  }
+}

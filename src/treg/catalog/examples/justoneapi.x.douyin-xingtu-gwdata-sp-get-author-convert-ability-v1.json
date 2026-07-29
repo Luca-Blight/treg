@@ -1,0 +1,18 @@
+{
+  "code": 0,
+  "data": {
+    "avg_sales_amount_range": "-",
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "component_click_cnt_range": "-",
+    "component_click_rate_range": "-",
+    "gpm_range": "-",
+    "rec_product_price_range": "-",
+    "related_cpc_range": "-"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:26.878626338",
+  "requestId": "3ebd24db7d904696b14c56de80a4870d"
+}

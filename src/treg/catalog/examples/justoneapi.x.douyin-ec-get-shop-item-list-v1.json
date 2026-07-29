@@ -1,0 +1,39 @@
+{
+  "code": 0,
+  "data": {
+    "page": 1,
+    "products": [
+      {
+        "promotion_id": "3819264790812033082",
+        "product_id": "3802031092786135609",
+        "title": "【3C认证可上飞机】自带线快充20000充电宝大容量小巧移动电源",
+        "price": 1.91,
+        "cover": "https://lf3-cm.ecombdstatic.com/obj/ecom-shop-material/jpeg_m_c1ef744d33506cacd5814265fb31dfcb_sx_2138510_www2048-2048",
+        "product_tags": [
+          "极速退款",
+          "7天无理由退货"
+        ],
+        "month_sales": 54681
+      },
+      {
+        "promotion_id": "3822579262205067543",
+        "product_id": "3822572860480815360",
+        "title": "【3C认证可上飞机】大容量自带4线充电宝快充便携移动电源小体积",
+        "price": 1.91,
+        "cover": "https://lf3-cm.ecombdstatic.com/obj/ecom-shop-material/png_m_bdb29966c820147dadd7eeab63a1965e_sx_4727441_www2048-2048",
+        "product_tags": [
+          "极速退款",
+          "7天无理由退货"
+        ],
+        "month_sales": 10194
+      },
+      "… 8 more item(s) truncated"
+    ],
+    "shop_id": "251094601",
+    "total": 24,
+    "total_pages": 3
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:17.5545097",
+  "requestId": "33dcc01b207d4aadac4d69b538a4e0d6"
+}

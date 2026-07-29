@@ -1,0 +1,52 @@
+{
+  "code": 200,
+  "request_id": "c10dac22-e13f-4b91-9587-f4a286a99dc5",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:55",
+  "time_stamp": 1785220195,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-App-V3-API/fetch_hashtag_deta… [108 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c10dac22-e13f-4b… [150 chars]",
+  "router": "/api/v1/tiktok/app/v3/fetch_hashtag_detail",
+  "params": {
+    "ch_id": "7551"
+  },
+  "data": {
+    "ch_info": {
+      "allow_upload_cover": true,
+      "author": "… {24 field(s) truncated}",
+      "banner_list": null,
+      "cha_attrs": null,
+      "cha_name": "cat",
+      "cid": "7551",
+      "collect_stat": 0,
+      "connect_music": "… [0 item(s) truncated]",
+      "desc": "",
+      "extra_attr": "… {1 field(s) truncated}",
+      "hashtag_profile": "https://p16-common-sign.tiktokcdn-us.com/musically-maliva-ob… [314 chars]",
+      "is_challenge": 0,
+      "is_commerce": false,
+      "is_pgcshow": false,
+      "is_strong_music": false,
+      "…": "9 more field(s) truncated"
+    },
+    "dynamic_list": null,
+    "extra": {
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "logid": "2026072806295570FC30FDD7E7C3145602",
+      "now": 1785220195000
+    },
+    "log_pb": {
+      "impr_id": "2026072806295570FC30FDD7E7C3145602"
+    },
+    "rec_list": null,
+    "slide_list": null,
+    "status_code": 0,
+    "status_msg": "",
+    "version": "v2"
+  }
+}

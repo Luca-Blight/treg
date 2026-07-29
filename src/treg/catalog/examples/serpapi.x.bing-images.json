@@ -1,0 +1,74 @@
+{
+  "search_metadata": {
+    "id": "6a6898b03d34ddf289199729",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/8OnvT3UhSdLd_raRO1jExQ/6a6898b0… [81 chars]",
+    "created_at": "2026-07-28 11:55:28 UTC",
+    "processed_at": "2026-07-28 11:55:28 UTC",
+    "bing_images_url": "https://www.bing.com/images/search?q=coffee&ns=n&form=QBILPG",
+    "raw_html_file": "https://serpapi.com/searches/8OnvT3UhSdLd_raRO1jExQ/6a6898b0… [81 chars]",
+    "total_time_taken": 1.54
+  },
+  "search_parameters": {
+    "engine": "bing_images",
+    "q": "coffee",
+    "device": "desktop"
+  },
+  "images_results": [
+    {
+      "thumbnail": "https://serpapi.com/searches/6a6898b03d34ddf289199729/images… [109 chars]",
+      "link": "https://www.bing.com/images/search?view=detailV2&ccid=jf24%2… [506 chars]",
+      "title": "Coffee Cups With Coffee Beans",
+      "size": "2068×1379",
+      "source": "https://ar.inspiredpencil.com/pictures-2023/coffee-cups-with… [73 chars]",
+      "domain": "ar.inspiredpencil.com",
+      "source_logo": "https://th.bing.com/th/id/ODF.FzwW1T8CT0TkwyioPmXtiw?w=12&h=… [96 chars]",
+      "original": "https://cff2.earth.com/uploads/2019/02/01135732/How-lactic-a… [107 chars]",
+      "description": "Coffee Cups With Coffee Beans",
+      "position": 1
+    },
+    "… 34 more item(s) truncated"
+  ],
+  "suggested_searches": [
+    {
+      "thumbnail": "https://th.bing.com/th?q=coffee+beans&w=42&h=42&c=7&rs=1&p=0… [126 chars]",
+      "link": "https://www.bing.com/images/search?q=coffee+beans&FORM=RESTA… [61 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=bing_i… [80 chars]",
+      "name": "coffee beans"
+    },
+    "… 49 more item(s) truncated"
+  ],
+  "refined_searches": [
+    {
+      "thumbnail": "https://th.bing.com/th?q=coffee+beans+close+up&w=120&h=120&c… [160 chars]",
+      "link": "https://www.bing.com/images/search?q=coffee+beans+close+up&F… [70 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=bing_i… [89 chars]",
+      "name": "Beans Close Up"
+    },
+    "… 11 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "thumbnail": "https://th.bing.com/th?q=Coffee+Mugs&w=199&h=58&c=1&rs=1&qlt… [137 chars]",
+      "link": "https://www.bing.com/images/search?q=Coffee+Mugs&fsm=1&FORM=… [66 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=bing_i… [79 chars]",
+      "name": "Coffee Mugs"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "shopping_results": [
+    {
+      "thumbnail": "https://th.bing.com/th/id/ODF.9AvTw9ZS8sDjCCV12R110g?w=16&h=… [80 chars]",
+      "link": "https://www.bing.com/aclick?ld=e8_v45TTIDEiPZSQc-I0BoxTVUCUz… [1313 chars]",
+      "price": "$33.00",
+      "title": "Caf Bustelo Dark Roast Coffee - ULINE",
+      "seller": "Uline",
+      "position": 1
+    },
+    "… 71 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "next": "https://serpapi.com/search.json?count=35&device=desktop&engi… [92 chars]",
+    "current": "https://serpapi.com/search.json?device=desktop&engine=bing_i… [74 chars]"
+  }
+}

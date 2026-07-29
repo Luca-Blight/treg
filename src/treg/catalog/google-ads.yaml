@@ -1,0 +1,165 @@
+# Live-verified 2026-07-28 through the treg /call proxy (connection: google-ads). All 5 endpoints
+# PASS, including listAccessibleCustomers — treg's tool binds the developer token alongside the
+# OAuth bearer, so a proxied caller needs neither, and no login-customer-id was required.
+# EXCEPT the googleAds:search request shape and the API VERSION, transcribed from
+# oauth_providers.GOOGLE_ADS.examples, where v21 was live-verified on 2026-07-22. The version is
+# in the URL path and a wrong guess returns an HTML 404 with no hint — treat v21 as load-bearing
+# and re-check it against the registry entry before assuming a 404 is anything else.
+#
+# TWO CREDENTIALS PER CALL. Every request carries the user's OAuth bearer AND a `developer-token`
+# header from an approved Google Ads manager (MCC) account; most also need `login-customer-id`
+# (the manager account id, digits only, no dashes) when acting on a client account. treg binds the
+# developer token onto the provisioned tool, so an agent calling through the proxy supplies
+# neither — but a direct caller that omits them gets DEVELOPER_TOKEN_PROHIBITED, not a 401.
+#
+# Scope granted: adwords (`manage`) — Google has no read-only Ads scope, so read and write share
+# one grant and safety comes from the request, not the token (see validateOnly below).
+#
+# The keyword endpoints are the interesting crossover: google.keywords.ideas and
+# google.keywords.volume are the same jobs dataforseo.yaml sells per call, sourced here from
+# Google's own planner at no marginal cost — but only for someone who has an Ads account.
+provider: google-ads
+source:
+  docs: https://developers.google.com/google-ads/api/docs/start
+  openapi: null
+  curated: 2026-07-28
+
+limits: "daily operation quota depends on access level (basic vs standard)"
+pricing_url: https://developers.google.com/google-ads/api/docs/access-levels  # The API is free; the ad spend it manages is not. Basic access has a daily operation cap; standard access raises it.
+endpoints:
+  - id: google-ads.accounts
+    capability: google-ads.accounts
+    platform: google-ads
+    scope: own_account
+    method: GET
+    path: /v21/customers:listAccessibleCustomers
+    name: "List accessible accounts"
+    summary: "List the Google Ads accounts your login can reach"
+    input:
+      note: "no parameters. Returns {resourceNames: [\"customers/6186675831\", …]} — ids ONLY, no names, which is why treg runs a second GAQL lookup (SELECT customer.descriptive_name FROM customer) per row to label the picker. Still needs the developer-token header"
+    cost: {type: free, note: "included with the connected account; the Google Ads API charges nothing but enforces per-developer-token daily operation limits (a Basic-access token is capped at 15,000 operations/day)"}
+    test_request: {queryParams: {}}
+    verified: 2026-07-28
+    example_response: examples/google-ads.accounts.json
+    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v21/customers/listAccessibleCustomers
+
+  - id: google-ads.query
+    capability: google-ads.query
+    platform: google-ads
+    scope: own_account
+    method: POST
+    path: /v21/customers/{customer_id}/googleAds:search
+    name: "Run a custom GAQL query"
+    summary: "Run a GAQL query against your Google Ads account (campaigns, spend, clicks, conversions)"
+    input:
+      pathParams:
+        customer_id: {type: string, required: true, note: "10-digit account id, DIGITS ONLY — strip the dashes Google's UI shows", example: "6186675831"}
+      body:
+        query: {type: string, required: true, note: "GAQL. Metrics come back only when the FROM resource supports them and a segments.date filter is present", example: "SELECT campaign.name, campaign.status, metrics.cost_micros, metrics.clicks FROM campaign WHERE segments.date DURING LAST_30_DAYS"}
+        pageToken: {type: string, required: false}
+      bodyType: json
+      note: "request shape and the v21 version previously live-verified via the registry entry's examples. NO pageSize — v21 rejects it with PAGE_SIZE_NOT_SUPPORTED (verified live 2026-07-28); the page is fixed at 10,000 rows, so cap the result set with GAQL's own LIMIT clause. Money is in MICROS: divide cost_micros by 1,000,000 for the account currency. googleAds:searchStream is the same query without paging, for large pulls"
+    cost: {type: free, note: "included with the connected account; counts against the developer token's daily operation limit"}
+    test_request:
+      pathParams: {customer_id: "2277522568"}
+      body: {query: "SELECT customer.id, customer.descriptive_name, customer.currency_code, customer.time_zone FROM customer LIMIT 1"}
+    verified: 2026-07-28
+    example_response: examples/google-ads.query.json
+    docs_url: https://developers.google.com/google-ads/api/docs/query/overview
+
+  - id: google-ads.google.keywords.ideas
+    # Same capability dataforseo.yaml serves per paid call — sourced here from Google's own Keyword
+    # Planner, so the volumes ARE the reference numbers rather than a vendor's model of them.
+    capability: google.keywords.ideas
+    platform: google
+    scope: own_account
+    method: POST
+    path: /v21/customers/{customer_id}:generateKeywordIdeas
+    name: "Generate keyword ideas from a seed"
+    summary: "Related keyword ideas from Google's own Keyword Planner, with volume and competition"
+    input:
+      pathParams:
+        customer_id: {type: string, required: true, note: "digits only", example: "6186675831"}
+      body:
+        keywordSeed: {type: object, required: false, note: "{\"keywords\":[\"coffee beans\"]} — up to 20 seeds", example: {"keywords": ["coffee beans"]}}
+        urlSeed: {type: object, required: false, note: "{\"url\":\"https://example.com\"} — ideas from a page's content"}
+        siteSeed: {type: object, required: false, note: "{\"site\":\"example.com\"} — ideas from a whole domain"}
+        geoTargetConstants: {type: array, required: false, note: "e.g. [\"geoTargetConstants/2840\"] = United States; omit for worldwide", example: ["geoTargetConstants/2840"]}
+        language: {type: string, required: false, note: "e.g. \"languageConstants/1000\" = English", example: "languageConstants/1000"}
+        includeAdultKeywords: {type: boolean, required: false, example: false}
+        keywordPlanNetwork: {type: string, required: false, note: "GOOGLE_SEARCH | GOOGLE_SEARCH_AND_PARTNERS (default)", example: "GOOGLE_SEARCH"}
+      bodyType: json
+      note: "exactly one of keywordSeed | urlSeed | siteSeed | keywordAndUrlSeed. Unlike googleAds:search, this route DOES accept pageSize — use it, the unbounded response is thousands of ideas. Volumes are BUCKETED for accounts with little spend — the same limitation the Keyword Planner UI has, not an API fault"
+    cost: {type: free, note: "included with the connected account; counts against the developer token's daily operation limit"}
+    test_request:
+      pathParams: {customer_id: "2277522568"}
+      body:
+        keywordSeed: {keywords: ["coffee beans"]}
+        geoTargetConstants: ["geoTargetConstants/2840"]
+        language: "languageConstants/1000"
+        keywordPlanNetwork: "GOOGLE_SEARCH"
+        pageSize: 3
+    verified: 2026-07-28
+    example_response: examples/google-ads.google.keywords.ideas.json
+    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v21/customers/generateKeywordIdeas
+
+  - id: google-ads.google.keywords.volume
+    capability: google.keywords.volume
+    platform: google
+    scope: own_account
+    method: POST
+    path: /v21/customers/{customer_id}:generateKeywordHistoricalMetrics
+    name: "Get historical keyword search volume"
+    summary: "Get Google search volume, competition and bid range for a list of keywords"
+    input:
+      pathParams:
+        customer_id: {type: string, required: true, note: "digits only", example: "6186675831"}
+      body:
+        keywords: {type: array, required: true, note: "up to 10,000 keyword strings in one request", example: ["coffee beans", "espresso machine"]}
+        geoTargetConstants: {type: array, required: false, example: ["geoTargetConstants/2840"]}
+        language: {type: string, required: false, example: "languageConstants/1000"}
+        keywordPlanNetwork: {type: string, required: false, example: "GOOGLE_SEARCH"}
+        historicalMetricsOptions: {type: object, required: false, note: "{\"yearMonthRange\":{\"start\":{\"year\":2025,\"month\":\"AUGUST\"},\"end\":{\"year\":2026,\"month\":\"JULY\"}}} for the monthly series"}
+      bodyType: json
+      note: "returns avgMonthlySearches, competition, competitionIndex and the low/high top-of-page bid in micros, plus monthlySearchVolumes when the range option is set. Google folds close variants together, so the response can return fewer rows than were sent"
+    cost: {type: free, note: "included with the connected account; counts against the developer token's daily operation limit"}
+    test_request:
+      pathParams: {customer_id: "2277522568"}
+      body:
+        keywords: ["coffee beans"]
+        geoTargetConstants: ["geoTargetConstants/2840"]
+        language: "languageConstants/1000"
+        keywordPlanNetwork: "GOOGLE_SEARCH"
+    verified: 2026-07-28
+    example_response: examples/google-ads.google.keywords.volume.json
+    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v21/customers/generateKeywordHistoricalMetrics
+
+  - id: google-ads.budget.update
+    kind: action
+    capability: google-ads.budget.update
+    platform: google-ads
+    scope: own_account
+    method: POST
+    path: /v21/customers/{customer_id}/campaignBudgets:mutate
+    name: "Update campaign budget"
+    summary: "Change a campaign's daily budget in your Google Ads account"
+    input:
+      pathParams:
+        customer_id: {type: string, required: true, note: "digits only", example: "6186675831"}
+      body:
+        operations: {type: array, required: true, note: "[{\"update\":{\"resourceName\":\"customers/6186675831/campaignBudgets/123\",\"amountMicros\":\"50000000\"},\"updateMask\":\"amountMicros\"}] — updateMask is mandatory and lists exactly the fields being changed", example: [{"update": {"resourceName": "customers/6186675831/campaignBudgets/123", "amountMicros": "50000000"}, "updateMask": "amountMicros"}]}
+        validateOnly: {type: boolean, required: false, note: "true dry-runs the mutation and changes nothing — ALWAYS send this first; the adwords scope has no read-only mode, so validateOnly is the only safety rail", example: true}
+      bodyType: json
+      note: "amountMicros is the DAILY budget in micros of the account currency: $1 = 1000000. Get the budget resourceName from a GAQL query on campaign_budget first. Spends real money on the next impression — treg's audit log records the call, but the change is immediate and irreversible"
+    cost: {type: free, note: "the API call is free; the budget it sets is not. Counts against the developer token's daily operation limit"}
+    # DRY RUN ONLY. validateOnly:true is what makes replaying this safe, and amountMicros repeats the
+    # budget's existing value, so even a lost validateOnly would be a no-op. Never drop either.
+    test_request:
+      pathParams: {customer_id: "2277522568"}
+      body:
+        operations: [{update: {resourceName: "customers/2277522568/campaignBudgets/15467408112", amountMicros: "30000000"}, updateMask: "amountMicros"}]
+        validateOnly: true
+    verified: 2026-07-28
+    example_response: examples/google-ads.budget.update.json
+    docs_url: https://developers.google.com/google-ads/api/rest/reference/rest/v21/customers/campaignBudgets/mutate
+

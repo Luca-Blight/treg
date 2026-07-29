@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "e54eeb8b-b7a9-44a0-8662-1ea942871282",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:39",
+  "time_stamp": 1785220179,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/PiPiXia-App-API/fetch_home_short_drama_feed_api_v1_pipixia_app_fetch_home_short_drama_feed_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/e54eeb8b-b7a9-44a0-8662-1ea942871282?sign=c06f6951d6d494b61dfee0dc3a55a32dd9f6095e3d8d3f714c102e3359546b54",
+  "router": "/api/v1/pipixia/app/fetch_home_short_drama_feed",
+  "params": {
+    "page": "1"
+  },
+  "data": {
+    "code": 0,
+    "data": [
+      {
+        "cell_id": "2040003",
+        "cell_type": 204,
+        "cell_name": "大家都在看",
+        "show_num": 0,
+        "visible_refresh": 0,
+        "channel_id": "94349610839",
+        "feed_data": {
+          "is_recommend": true,
+          "has_more": true,
+          "book_data": [
+            "… {4 field(s) truncated}",
+            "… 5 more item(s) truncated"
+          ]
+        }
+      },
+      "… 1 more item(s) truncated"
+    ],
+    "extra": {
+      "enable_grey": "0"
+    },
+    "log_id": "20260728142938499684ED3FC989490A87",
+    "message": "success"
+  }
+}

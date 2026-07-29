@@ -1,0 +1,25 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "__typename": "Title",
+      "id": "tt0111161",
+      "titleText": "… 2 field(s) truncated",
+      "originalTitleText": "… 2 field(s) truncated",
+      "releaseYear": "… 3 field(s) truncated",
+      "releaseDate": "… 8 field(s) truncated",
+      "titleType": "… 8 field(s) truncated",
+      "primaryImage": "… 5 field(s) truncated",
+      "runtime": "… 1 field(s) truncated",
+      "akas": "… 4 field(s) truncated",
+      "alternateVersions": "… 4 field(s) truncated",
+      "countriesOfOrigin": "… 1 field(s) truncated",
+      "filmingLocations": "… 4 field(s) truncated",
+      "officialLinks": "… 1 field(s) truncated",
+      "spokenLanguages": "… 1 field(s) truncated"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:01.105758577",
+  "requestId": "c333b2001b6a438a9e3b41f0f1ae53… [32 chars total]"
+}

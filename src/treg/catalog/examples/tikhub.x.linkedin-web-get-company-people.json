@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "7b4b1543-321f-4a9a-ada4-186553cfc8bb",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:40:14",
+  "time_stamp": 1785220814,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/get_company_people_api_v1_linkedin_web_get_company_people_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/7b4b1543-321f-4a9a-ada4-186553cfc8bb?sign=2353c53950b8280f995a03dee5e06e74d596ddbd8d9e4672137c4a877e83c5e3",
+  "router": "/api/v1/linkedin/web/get_company_people",
+  "params": {
+    "company_id": "1066442",
+    "page": "1"
+  },
+  "data": {
+    "page": 1,
+    "total": 6062,
+    "has_more": true,
+    "data": [
+      {
+        "id": "566434386",
+        "urn": "ACoAACHDGlIB7YcTAfA-v_LQo8j2TRkYNFGmXeQ",
+        "url": "https://www.linkedin.com/in/cong-xie-816845139",
+        "public_identifier": "cong-xie-816845139",
+        "full_name": "Cong Xie",
+        "title": "Software Engineer at Datadog",
+        "location": "New York City Metropolitan Area",
+        "is_verified": false,
+        "is_premium": false,
+        "is_top_voice": false,
+        "is_open_to_work": false,
+        "is_hiring": false,
+        "avatar": [
+          "… {4 field(s) truncated}"
+        ]
+      },
+      "… 9 more item(s) truncated"
+    ]
+  }
+}

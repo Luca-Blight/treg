@@ -1,0 +1,49 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0856 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0587-0000-54ae2de6dea7",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0798 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "categories_for_keywords",
+        "se_type": "google",
+        "language_code": "en",
+        "keywords": [
+          "dentist new york",
+          "… 2 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "language_code": "en",
+          "items_count": 3,
+          "items": [
+            {
+              "keyword": "dentist new york",
+              "categories": [
+                10487,
+                "… 6 more item(s) truncated"
+              ]
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

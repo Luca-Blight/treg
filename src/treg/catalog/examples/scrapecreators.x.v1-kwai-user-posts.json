@@ -1,0 +1,36 @@
+{
+  "success": true,
+  "credits_remaining": 19808,
+  "credits_charged": 1,
+  "posts": [
+    {
+      "id": "5235584677554109980",
+      "photo_id": 5235584677554110000,
+      "url": "https://www.kwai.com/@KwaiBrasilOficial/photo/5235584677554109980",
+      "caption": "Apenas um sonho e 3 ingredientes: manteiga, amido de milho e leite condensado. E olha que sequilho delicioso derretendo … [169 chars]",
+      "cover_caption": "Apenas um sonho e 3 ingredientes: manteiga, amido de milho e leite condensado. E olha que sequilho delicioso derretendo … [155 chars]",
+      "created_at": "2026-07-27T23:00:00.335Z",
+      "created_at_text": "2026-07-28 07:00:00",
+      "video_url": "https://aws-br-cdn.kwai.net/upic/2026/07/25/03/BMjAyNjA3MjUwMzA2MjZfNTU4ODQzMDkzXzE1MDExMTE2Mzk5MjM0Nl8zXzM=_b_B26477437… [197 chars]",
+      "video_urls": "… [2 item(s) truncated]",
+      "cover_url": "https://p1-kimg.kwai.net/kimg/EKzM1y8qkAEKAnMzEg1waG90by1vdmVyc2VhGnt1cGljLzIwMjYvMDcvMjUvMDMvQk1qQXlOakEzTWpVd016QTJNal… [238 chars]",
+      "…": "11 more field(s) truncated"
+    },
+    "… 18 more item(s) truncated"
+  ],
+  "albums": [
+    {
+      "id": "158672451519119877",
+      "author_id": 558843093,
+      "author_name": "Kwai Brasil Oficial",
+      "count": 2,
+      "view_count": 5560,
+      "first_photo_caption": "Qual é a sua #ManiaDeTorcedor? Comentem usando a #TorcidaNoKwai! E não percam nada na Não-Transmissão Oficial no @KwaiBr… [141 chars]",
+      "first_photo_cover_url": "http://aws-br-pic.kwai.net/upic/2026/07/09/04/BMjAyNjA3MDkwNDI0MTFfNTU4ODQzMDkzXzE1MDExMTA4OTU1NzgyNV8zXzM=_oscn2_Bd315a… [152 chars]",
+      "first_photo_cover_urls": "… [2 item(s) truncated]"
+    },
+    "… 19 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>",
+  "has_more": true
+}

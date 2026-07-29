@@ -1,0 +1,57 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "4.0587 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0139-0000-cb430c53dbab",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "4.0024 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "se_type": "autocomplete",
+        "se": "google",
+        "api": "serp",
+        "function": "live",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "albert einstein",
+        "client": "gws-wiz-serp",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "albert einstein",
+          "type": "autocomplete",
+          "se_domain": "google.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.google.com/search?q=albert+einstein&hl=en&gl=US&uule=w+CAIQIFISCQs2MuSEtepUEUK33kOSuTsc",
+          "datetime": "2026-07-28 10:34:45 +00:00",
+          "spell": null,
+          "refinement_chips": null,
+          "item_types": [
+            "autocomplete"
+          ],
+          "se_results_count": 0,
+          "items_count": 10,
+          "items": [
+            "… {9 field(s) truncated}",
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

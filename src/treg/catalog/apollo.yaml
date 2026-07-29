@@ -1,0 +1,194 @@
+provider: apollo
+source:
+  docs: https://docs.apollo.io/reference/
+  openapi: null # Apollo publishes reference docs (readme.io) but no fetchable OpenAPI document
+  curated: 2026-07-28
+# UNVERIFIED — no credential available at curation time; every path, parameter and price below is
+# transcribed from Apollo's official reference docs 2026-07-28. Nothing here has been called.
+#
+# PARAMETER LOCATION TRAP — the single biggest first-call failure on this provider. Apollo puts
+# almost everything in the QUERY STRING, even on POST. Of the six endpoints below, exactly one has a
+# JSON body: the `details` array on /people/bulk_match. Everything else — including both POST search
+# endpoints — takes query params, with arrays written in `field[]=value` form.
+#
+# PATH TRAP: people search is POST /mixed_people/api_search. The older /mixed_people/search is the
+# in-app search route and answers 403 on API/Basic plans; several integrators published deprecation
+# notices about exactly this. Do not "simplify" the path back.
+#
+# Billing (https://docs.apollo.io/docs/api-pricing): Apollo meters CREDITS, the per-month allowance
+# depends on the plan, and no public $/credit exists — so cost.value is null throughout and the
+# credit rule lives in cost.note. Three rules matter:
+#   1. Enrichment charges only when credit-consuming data comes BACK. A miss costs 0.
+#   2. A mobile phone is eight times the price of an email: 1 credit for demographics or an email,
+#      +8 if a mobile is returned, hence Apollo's own "1-9 credits per person". `reveal_phone_number`
+#      is therefore the expensive switch, it defaults to false, and treg leaves it off.
+#   3. The two searches are priced DIFFERENTLY from each other: people search is free (and returns
+#      no contact details at all), while company search costs 1 credit per PAGE. Do not assume
+#      "search is free" as a blanket rule here.
+# Waterfall flags (run_waterfall_email / run_waterfall_phone) fall through to third-party vendors,
+# and some of those vendors bill per lookup EVEN WHEN NOTHING IS FOUND — the one place where
+# Apollo's otherwise-clean "no data, no charge" rule does not hold.
+
+limits: "credit pool plus per-minute caps that differ per endpoint"
+pricing_url: https://www.apollo.io/pricing  # Per USER per month. API access for custom integrations requires Organization. Exporting a mobile number commonly costs 5 credits. Credits do NOT roll over.; free tier: 10 expor
+endpoints:
+  - id: apollo.people.enrich
+    domain: contacts
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /people/match
+    name: "Enrich a person by email or LinkedIn"
+    summary: "Enrich a person from an email, LinkedIn URL or name + company — title, contact details"
+    input:
+      queryParams:
+        email: {type: string, required: false, note: "work or personal email of the person", example: "tim@apple.com"}
+        hashed_email: {type: string, required: false, note: "MD5 or SHA-256 hash of the email, when you cannot send it in the clear"}
+        first_name: {type: string, required: false, example: "Tim"}
+        last_name: {type: string, required: false, example: "Cook"}
+        name: {type: string, required: false, note: "full name; use instead of first_name + last_name"}
+        organization_name: {type: string, required: false, note: "the person's employer, to disambiguate common names", example: "Apple"}
+        domain: {type: string, required: false, note: "employer's domain, with no www and no @", example: "apple.com"}
+        linkedin_url: {type: string, required: false, example: "http://www.linkedin.com/in/tim-cook"}
+        id: {type: string, required: false, note: "Apollo person id from a previous search"}
+        reveal_personal_emails: {type: boolean, required: false, note: "unlocks personal emails; default false", example: false}
+        reveal_phone_number: {type: boolean, required: false, note: "adds 8 CREDITS when a mobile is found. The number is returned ASYNCHRONOUSLY to webhook_url, not inline, so webhook_url becomes required; default false", example: false}
+        run_waterfall_email: {type: boolean, required: false, note: "fall through to third-party vendors when Apollo's own data misses; some vendors bill even on a miss; default false"}
+        run_waterfall_phone: {type: boolean, required: false, note: "as run_waterfall_email, for phone numbers; default false"}
+        webhook_url: {type: string, required: false, note: "REQUIRED when reveal_phone_number is true"}
+      note: "POST, but every parameter rides in the QUERY STRING — there is no JSON body. Supply the strongest identifier you have: email > linkedin_url > name + domain. A request with none of them cannot match"
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "1-9 credits per person, charged only when credit-consuming data is returned: 1 credit for demographics or an email, plus 8 credits if a mobile phone comes back (reveal_phone_number defaults off). No match, no charge. Waterfall vendors may bill even on a miss. No public $/credit."
+    docs_url: https://docs.apollo.io/reference/people-enrichment
+
+  - id: apollo.people.search
+    domain: contacts
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /mixed_people/api_search
+    name: "Search contacts by title, company or location"
+    summary: "Search Apollo's 200M+ contacts by title, seniority, company, location or tech (free)"
+    input:
+      queryParams:
+        "person_titles[]": {type: "array[string]", required: false, note: "job titles, matched loosely (OR across the list)", example: ["head of marketing"]}
+        "person_seniorities[]": {type: "array[string]", required: false, note: "owner, founder, c_suite, partner, vp, head, director, manager, senior, entry, intern"}
+        "person_locations[]": {type: "array[string]", required: false, note: "where the PERSON lives", example: ["California, US"]}
+        "organization_locations[]": {type: "array[string]", required: false, note: "where their COMPANY's HQ is"}
+        "q_organization_domains_list[]": {type: "array[string]", required: false, note: "restrict to employees of these company domains; max 1,000", example: ["apollo.io"]}
+        "organization_num_employees_ranges[]": {type: "array[string]", required: false, note: "employee-count bands as 'min,max' strings", example: ["1,10"]}
+        "contact_email_status[]": {type: "array[string]", required: false, note: "verified, unverified, likely to engage, unavailable"}
+        "currently_using_any_of_technology_uids[]": {type: "array[string]", required: false, note: "tech-stack filter, e.g. salesforce"}
+        "revenue_range[min]": {type: integer, required: false, note: "annual revenue floor, integer with no symbols"}
+        "revenue_range[max]": {type: integer, required: false, note: "annual revenue ceiling"}
+        page: {type: integer, required: false, note: "1-based; max 500 pages", example: 1}
+        per_page: {type: integer, required: false, note: "max 100", example: 1}
+      note: "query-string params on a POST, with arrays in field[]=value form. RETURNS NO EMAILS OR PHONE NUMBERS AT ALL — that is why it is free. Pipe the person ids into apollo.people.enrich to get contact data, which is where the credits go. Result set is capped at 50,000 records"
+    cost: {type: free, value: 0, currency: USD, note: "documented free — 0 credits, because no contact data is returned. Counts against the plan's request limits only"}
+    docs_url: https://docs.apollo.io/reference/people-api-search
+
+  - id: apollo.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /organizations/enrich
+    name: "Enrich a company by domain or name"
+    summary: "Enrich a company from domain, name or LinkedIn — industry, headcount, revenue, funding"
+    input:
+      queryParams:
+        domain: {type: string, required: false, note: "company domain without protocol or www — the strongest identifier", example: "apollo.io"}
+        website: {type: string, required: false, note: "full website URL, as an alternative to domain"}
+        name: {type: string, required: false, note: "company name; ambiguous on its own"}
+        linkedin_url: {type: string, required: false, note: "the company's LinkedIn page URL"}
+      note: "at least one of domain | website | name | linkedin_url. Requires the organizations_enrich scope on the key"
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "1 credit per organization returned; unmatched requests are free."
+    docs_url: https://docs.apollo.io/reference/organization-enrichment
+
+  - id: apollo.companies.search
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /mixed_companies/search
+    name: "Search companies by industry, size or tech"
+    summary: "Search Apollo's companies by industry, headcount, revenue, funding or technology"
+    input:
+      queryParams:
+        "q_organization_domains_list[]": {type: "array[string]", required: false, note: "restrict to these domains; max 1,000", example: ["apollo.io"]}
+        "organization_num_employees_ranges[]": {type: "array[string]", required: false, note: "employee-count bands as 'min,max' strings", example: ["1,10"]}
+        "organization_locations[]": {type: "array[string]", required: false, note: "company HQ locations", example: ["California, US"]}
+        "organization_not_locations[]": {type: "array[string]", required: false, note: "locations to EXCLUDE"}
+        "revenue_range[min]": {type: integer, required: false, note: "annual revenue floor, integer with no symbols"}
+        "revenue_range[max]": {type: integer, required: false, note: "annual revenue ceiling"}
+        "currently_using_any_of_technology_uids[]": {type: "array[string]", required: false, note: "tech-stack filter, e.g. salesforce"}
+        latest_funding_amount_range: {type: object, required: false, note: "min/max of the most recent funding round"}
+        total_funding_range: {type: object, required: false, note: "min/max of total funding raised"}
+        page: {type: integer, required: false, example: 1}
+        per_page: {type: integer, required: false, note: "max 100 — but see the cost note: the charge is per PAGE, so a LARGER per_page is cheaper per company", example: 1}
+      note: "query-string params on a POST, arrays in field[]=value form. Result set capped at 50,000 records. UNLIKE people search, this one is not free"
+    cost:
+      type: per_call
+      value: 1
+      currency: credit
+      note: "1 credit per PAGE returned (0 when there are no results) — not per company. Fewer, fuller pages therefore cost less than many small ones, the opposite of most providers in this catalog."
+    docs_url: https://docs.apollo.io/reference/organization-search
+
+  - id: apollo.people.bulk_enrich
+    domain: contacts
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /people/bulk_match
+    name: "Enrich multiple people in one batch"
+    summary: "Enrich up to 10 people in one call, using the same identifiers as single-person enrichment"
+    input:
+      bodyType: json
+      body:
+        details: {type: "array[object]", required: true, note: "1-10 objects (max 10 per request), each carrying the same identifier keys as /people/match — email, first_name, last_name, domain, linkedin_url, …", example: [{"first_name": "Tim", "last_name": "Cook", "domain": "apple.com"}]}
+      queryParams:
+        reveal_personal_emails: {type: boolean, required: false, note: "applies to the whole batch"}
+        reveal_phone_number: {type: boolean, required: false, note: "applies to the whole batch; +8 credits per mobile found, and requires webhook_url"}
+        run_waterfall_email: {type: boolean, required: false}
+        run_waterfall_phone: {type: boolean, required: false}
+        webhook_url: {type: string, required: false, note: "required when reveal_phone_number is true"}
+      note: "the ONE endpoint in this file with a real JSON body — and even here the flags stay in the query string while only `details` rides in the body"
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "priced per person MATCHED in the batch on the same 1-9 credit scale as single enrichment (1 baseline, +8 if a mobile is revealed), not per call; unmatched rows are free."
+    docs_url: https://docs.apollo.io/reference/bulk-people-enrichment
+
+  - id: apollo.account.usage
+    kind: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /auth/health
+    name: "Check API key status"
+    summary: "Check that the Apollo API key is live and logged in (spends no credits)"
+    input:
+      note: "no parameters — the key rides in the X-Api-Key header. Some third-party guides show this path without the /api segment; the official base is /api/v1/auth/health, which is what treg's base_url already encodes"
+    expect:
+      json_path: is_logged_in
+      equals: true
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      note: "free in practice — absent from Apollo's pricing table, and Apollo states endpoints that return no credit-consuming data cost 0 credits — but the docs never say so verbatim for this route."
+    docs_url: https://docs.apollo.io/reference/authentication

@@ -1,0 +1,68 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.7977 sec.",
+  "cost": 0.103,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0659-0000-bd5ad65c9dac",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.7845 sec.",
+      "cost": 0.103,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "top_mentioned_pages_lite",
+        "language_code": "en",
+        "location_code": 2840,
+        "platform": "chat_gpt",
+        "target": [
+          {
+            "keyword": "bmw",
+            "search_scope": [
+              "answer"
+            ]
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "links_scope": "sources",
+        "initial_dataset_filters": [
+          [
+            "ai_search_volume",
+            "… 2 more item(s) truncated"
+          ]
+        ],
+        "limit": 3
+      },
+      "result": [
+        {
+          "total_count": 733,
+          "offset": 0,
+          "items_count": 3,
+          "aggregated_metrics": null,
+          "items": [
+            {
+              "page": "https://www.autozone.com/",
+              "location": 2840,
+              "language": "en",
+              "platform": "chat_gpt",
+              "metrics": {
+                "mentions": 7,
+                "ai_search_volume": 2831
+              }
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "333d6fff-1f5d-445e-9fc2-3b4de69fff84",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:49",
+  "time_stamp": 1785220129,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Xingtu-V2-API/get_ranking_lis… [122 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/333d6fff-1f5d-44… [150 chars]",
+  "router": "/api/v1/douyin/xingtu_v2/get_ranking_list_catalog",
+  "params": {
+    "biz_scene": "douyin_flow_split_video_author_ranks"
+  },
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "catalog": {
+      "1": "… [39 item(s) truncated]",
+      "10": "… [30 item(s) truncated]",
+      "11": "… [12 item(s) truncated]",
+      "12": "… [9 item(s) truncated]",
+      "13": "… [9 item(s) truncated]",
+      "14": "… [5 item(s) truncated]",
+      "16": "… [6 item(s) truncated]",
+      "17": "… [324 item(s) truncated]",
+      "18": "… [342 item(s) truncated]",
+      "2": "… [36 item(s) truncated]",
+      "3": "… [36 item(s) truncated]",
+      "38": "… [6 item(s) truncated]",
+      "4": "… [24 item(s) truncated]",
+      "5": "… [36 item(s) truncated]",
+      "6": "… [36 item(s) truncated]",
+      "7": "… [30 item(s) truncated]",
+      "8": "… [30 item(s) truncated]",
+      "9": "… [24 item(s) truncated]"
+    }
+  }
+}

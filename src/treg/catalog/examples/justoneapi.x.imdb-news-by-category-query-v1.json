@@ -1,0 +1,49 @@
+{
+  "code": 0,
+  "data": {
+    "news": {
+      "__typename": "NewsConnection",
+      "edges": [
+        {
+          "node": {
+            "__typename": "News",
+            "id": "ni65945269",
+            "byline": "Rebecca Rubin",
+            "date": "2026-07-26T14:46:29Z",
+            "externalUrl": "https://variety.com/2026/film/box-office/the-odyssey-box-office-massive-second-weekend-1236821417/",
+            "articleTitle": {
+              "plainText": "Box Office: ‘The Odyssey’ Sails to $90 Million in Massive Second Weekend"
+            },
+            "image": {
+              "__typename": "Image",
+              "id": "rm3918577922",
+              "url": "https://m.media-amazon.com/images/M/MV5BN2JkMTU0NjMtNDk4YS00OTZhLTgzMDctMDc3NzJmZDY5NThhXkEyXkFqcGc@._V1_.jpg",
+              "height": 2049,
+              "width": 2946
+            },
+            "text": {
+              "plainText": "Updated: “The Odyssey” continued its epic box office journey, scoring a sensational $90 million from 3,943 North American theaters in its second weekend of release. That’s a tally that most films, esp… [1012 chars total]"
+            },
+            "source": {
+              "homepage": {
+                "url": "http://variety.com/",
+                "label": "Variety - Film News"
+              },
+              "description": null
+            }
+          }
+        },
+        "… 99 more item(s) truncated"
+      ],
+      "total": 1076368,
+      "pageInfo": {
+        "__typename": "NewsPageInfo",
+        "hasNextPage": true,
+        "endCursor": "<omitted: expires>"
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:54.823917676",
+  "requestId": "003a7d42fa364afdac366ba1b9fa4821"
+}

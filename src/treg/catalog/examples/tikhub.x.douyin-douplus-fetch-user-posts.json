@@ -1,0 +1,37 @@
+{
+  "code": 200,
+  "request_id": "a000e3d1-6f5a-4dff-866e-0a5f5d6d2cc5",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:16",
+  "time_stamp": 1785220096,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-DouPlus-API/fetch_user_posts_api_v1_douyin_douplus_fetch_user_posts_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/a000e3d1-6f5a-4dff-866e-0a5f5d6d2cc5?sign=c95400408a3629e1eb7a707b2d21e8784ec5aec6567c6388b8718fcae4641e60",
+  "router": "/api/v1/douyin/douplus/fetch_user_posts",
+  "params": {},
+  "data": {
+    "code": 0,
+    "msg": "success",
+    "data": {
+      "itemInfoList": [
+        {
+          "AwemeInfo": "… {7 field(s) truncated}",
+          "DouplusUserPostTag": "爆款预定",
+          "ItemSource": "… {2 field(s) truncated}",
+          "IsAd": false,
+          "IsOver90Days": false,
+          "IsItemPromotional": false,
+          "CanMountEnterpriseShopCartType": 2,
+          "PlayletType": 0
+        },
+        "… 8 more item(s) truncated"
+      ],
+      "hasMore": true,
+      "cursor": "<omitted: expires>"
+    }
+  }
+}

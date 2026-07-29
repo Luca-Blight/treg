@@ -1,0 +1,61 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0964 sec.",
+  "cost": 0.012,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0483-0000-af6ad7c839b4",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0791 sec.",
+      "cost": 0.012,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "domain_analytics",
+        "function": "domain_technologies",
+        "se": "technologies",
+        "target": "dataforseo.com"
+      },
+      "result": [
+        {
+          "type": "domain_technology_item",
+          "domain": "dataforseo.com",
+          "title": "Powerful API Stack For Data-Driven SEO Tools – DataForSEO",
+          "description": "We provide comprehensive data solutions for SEO and SEM analytics via API. DataForSEO is a trusted partner for 750+ SEO software companies and agencies.",
+          "meta_keywords": [
+            "eretur"
+          ],
+          "domain_rank": 325,
+          "last_visited": "2026-07-24 10:17:32 +00:00",
+          "country_iso_code": "US",
+          "language_code": "en",
+          "content_language_code": "en",
+          "phone_numbers": [
+            "+3726027642"
+          ],
+          "emails": [
+            "info@dataforseo.com"
+          ],
+          "social_graph_urls": null,
+          "technologies": {
+            "servers": "… {4 field(s) truncated}",
+            "web_development": "… {3 field(s) truncated}",
+            "add_ons": "… {1 field(s) truncated}",
+            "content": "… {3 field(s) truncated}",
+            "media": "… {1 field(s) truncated}",
+            "marketing": "… {2 field(s) truncated}",
+            "communication": "… {1 field(s) truncated}"
+          }
+        }
+      ]
+    }
+  ]
+}

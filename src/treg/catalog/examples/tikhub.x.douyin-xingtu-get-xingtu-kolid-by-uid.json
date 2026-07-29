@@ -1,0 +1,31 @@
+{
+  "code": 200,
+  "request_id": "1b52ea62-04e5-4025-a635-0d00bb430d2d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:45",
+  "time_stamp": 1785220125,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Xingtu-API/get_xingtu_kolid_by_uid_api_v1_douyin_xingtu_get_xingtu_kolid_by_uid_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/1b52ea62-04e5-4025-a635-0d00bb430d2d?sign=3d0eb3ea4e25bdac22d741e45c7ae7db20ee5b861c9a8863b6cc5738eeddbae9",
+  "router": "/api/v1/douyin/xingtu/get_xingtu_kolid_by_uid",
+  "params": {
+    "uid": "70452002324"
+  },
+  "data": {
+    "avatar_uri": "https://p3.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn-avt-0015_c4e2e748d8821f51fcc1a51b05f2b389.jpeg?from=3782654143",
+    "base_resp": {
+      "status_code": 0,
+      "status_message": "Success"
+    },
+    "core_user_id": "70452002324",
+    "finish_rate_ovr": 0,
+    "hot_list_ranks": [],
+    "id": "7048929565493690398",
+    "nick_name": "黛米Demi",
+    "tag": "生活"
+  }
+}

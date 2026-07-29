@@ -42,7 +42,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from . import audit, crypto, demo as demo_seed, email as email_sender, health, injectors, localrun, oauth
+from . import audit, catalog_store, crypto, demo as demo_seed, email as email_sender, health, injectors, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings
@@ -259,6 +259,192 @@ async def providers_catalog() -> dict:
     See [env-import](../docs/context/interface/env-import.md)."""
     from . import providers as prov
     return {"version": prov.CATALOG_VERSION, "providers": prov.CATALOG}
+
+
+# ---- endpoint catalog (what you can DO once connected) ------------------------------------
+# The credential registry above answers "how do I connect Moz?"; these answer "and then what can I
+# call?" — platform-grouped operations with cost, verification date and captured example responses.
+# Open like /providers.json: the data is curated public documentation, no org's anything is in it.
+# See docs/context/architecture/catalog.md.
+def _provider_display(service: str) -> str:
+    p = oauth_providers.get(service)
+    return p.display_name if p else service
+
+
+@app.get("/catalog/platforms", include_in_schema=False)
+async def catalog_platforms() -> dict:
+    """Open: the platform shelves of the endpoint catalog, busiest first."""
+    cat = catalog_store.load()
+    rows = []
+    for slug, plat in cat.platforms.items():
+        # The census counts the BROWSE surface only: account/utility ("management") endpoints are
+        # real inventory but they are not what a marketplace tile advertises, so they never inflate
+        # the endpoint/capability/verified counts or the "from …" price. They still ship in the
+        # platform-detail list (with `kind` set) — see catalog_platform's ?include_hidden.
+        eps = [e for e in cat.for_platform(slug) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+        if not eps:  # a taxonomy entry no provider implements (or only plumbing) is grid noise
+            continue
+        rows.append({
+            "slug": slug,
+            "label": plat["label"],
+            "category": plat["category"],
+            "featured": plat.get("featured"),  # rank within its category's Featured shelf; null = not featured
+            "summary": plat.get("summary", ""),
+            # cheapest priced endpoint, for the card's "from …" corner. Ordering compares the
+            # server-computed USD figure, so CNY rows and provider-credit rows sort against dollar
+            # rows honestly; the ORIGINAL value+currency rides along for display.
+            # cheapest PAID option — zero-cost utility routes (rate-card freebies) would otherwise
+            # advertise a misleading "from $0"; genuinely free own-account access is signaled by the
+            # UI separately when a platform has only free endpoints (price_from stays null).
+            "price_from": min(
+                (c for e in eps if (c := cat.cost_view(e.get("cost"), e.get("provider"))) and c["usd"]),
+                key=lambda c: c["usd"],
+                default=None,
+            ),
+            "capabilities": len({e["capability"] for e in eps if e["capability"]}),
+            "endpoints": len(eps),
+            "verified": len([e for e in eps if e["verified"]]),
+            "providers": sorted({e["provider"] for e in eps}),
+        })
+    rows.sort(key=lambda r: (-r["endpoints"], r["slug"]))
+    return {"platforms": rows, "generated_from": "catalog"}
+
+
+@app.get("/catalog/platforms/{slug}", include_in_schema=False)
+async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
+    """Open: one platform's operations, grouped by capability so the same job across providers sits
+    on one row — that grouping is what makes comparison (and a future failover router) possible.
+
+    By default the account/utility ("management") endpoints are dropped from every shape below — the
+    browse view is data + action. `?include_hidden=1` returns the whole surface (each endpoint still
+    carries `kind`, so a client can file the plumbing behind an expander); `hidden_count` always
+    reports how many were set aside so a caller can label that expander without a second request."""
+    cat = catalog_store.load()
+    eps = cat.for_platform(slug)
+    if not eps:
+        raise HTTPException(status_code=404, detail=f"unknown platform {slug!r}")
+    hidden_count = len([e for e in eps if e["kind"] in catalog_store.HIDDEN_KINDS])
+    if not include_hidden:
+        eps = [e for e in eps if e["kind"] not in catalog_store.HIDDEN_KINDS]
+    grouped: dict[str, list[dict]] = {}
+    extended: list[dict] = []
+    pairs: list[tuple[dict, dict]] = []
+    for ep in eps:
+        view = catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
+        pairs.append((ep, view))
+        if ep["capability"]:
+            grouped.setdefault(ep["capability"], []).append(view)
+        else:
+            extended.append(view)
+    for views in grouped.values():
+        # core before mapped-extended, verified before not — same convention as search ranking
+        views.sort(key=lambda v: (v["tier"] != "core", not v["verified"], v["id"]))
+    return {
+        "platform": {"slug": slug,
+                     "label": cat.platforms.get(slug, {}).get("label", slug),
+                     "category": cat.platforms.get(slug, {}).get("category", "Other")},
+        # The capability grouping `treg catalog` renders. The dashboard reads `domains` below, but
+        # this is the shape the CLI has been written against since the catalog shipped, and the same
+        # endpoints appear in both — a client picks the axis it wants, neither is a subset.
+        "capabilities": [
+            {"id": cap, "description": cat.capabilities.get(cap, ""), "endpoints": grouped[cap]}
+            for cap in sorted(grouped)
+        ],
+        "extended": extended,
+        # account/utility endpoints set aside — how many, so the page can label its expander. When
+        # ?include_hidden=1 they are already folded into the shapes above (tagged by `kind`).
+        "hidden_count": hidden_count,
+        # The ledger the platform page renders: sections by subject, ordered and merged server-side
+        # so every client shows the same page (see `catalog_store.domain_rows`).
+        "domains": catalog_store.domain_rows(pairs, cat.capabilities),
+        # Provider-wide facts (limits, pricing page, docs), once per provider rather than copied onto
+        # every row — an expanded endpoint needs them and shouldn't cost a second request.
+        "providers": {
+            service: {"service": service, "display_name": _provider_display(service),
+                      **cat.provider_meta.get(service, {})}
+            for service in sorted({ep["provider"] for ep in eps})
+        },
+    }
+
+
+@app.get("/catalog/search", include_in_schema=False)
+async def catalog_search(q: str = "", limit: int = 25) -> dict:
+    """Open: free-text search across the whole catalog — the DISCOVER half of the loop.
+
+    An agent that knows what it wants ("tiktok comments") shouldn't have to guess which platform
+    shelf hides it. Ranking is plain token matching (see `catalog_store.search`) so results are
+    reproducible and explainable; `hints` carries the next command, since finding the endpoint is
+    never the goal — inspecting or calling it is."""
+    cat = catalog_store.load()
+    limit = max(1, min(limit, 100))
+    ranked, total = catalog_store.search(q, cat, limit)
+    results = [
+        catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
+        | catalog_store.endpoint_context(ep, cat)
+        | {"score": score}
+        for ep, score in ranked
+    ]
+    if not q.strip():
+        hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
+    elif not results:
+        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves"]
+    else:
+        hints = [f"treg catalog get {results[0]['id']}   # params, cost and an example response",
+                 f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
+        if total > len(results):
+            hints.append(f"{total - len(results)} more matches — raise limit (max 100)")
+    return {"query": q, "count": len(results), "total": total, "results": results, "hints": hints}
+
+
+@app.get("/catalog/endpoints/{endpoint_id}", include_in_schema=False)
+async def catalog_endpoint(endpoint_id: str) -> dict:
+    """Open: everything about ONE endpoint — the INSPECT half of the loop.
+
+    Deliberately one round-trip: params, cost, the sibling providers offering the same capability
+    (so a price/verification comparison needs no second call), a paste-ready `call_template`, and the
+    captured example response inline — an agent shouldn't have to fetch /catalog/examples to learn
+    the response shape it is about to parse."""
+    cat = catalog_store.load()
+    ep = cat.by_id.get(endpoint_id)
+    if ep is None:
+        raise HTTPException(status_code=404, detail=f"unknown endpoint {endpoint_id!r}")
+    view = (catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
+            | catalog_store.endpoint_context(ep, cat))
+    siblings = [
+        catalog_store.endpoint_view(other, _provider_display(other["provider"]), cat)
+        for other in sorted(cat.for_capability(ep["capability"]), key=lambda e: e["id"])
+        if other["id"] != ep["id"]
+    ]
+    example = None
+    path = catalog_store.example_path(endpoint_id)
+    if path is not None and path.is_file():
+        try:
+            example = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            example = None
+    return {
+        "endpoint": view,
+        "provider": {"service": ep["provider"], "display_name": _provider_display(ep["provider"]),
+                     **cat.provider_meta.get(ep["provider"], {})},
+        "siblings": siblings,
+        "call_template": catalog_store.call_template(ep),
+        "example_response": example,
+        "hints": [f"{catalog_store.call_template(ep)}   # run it — key injected server-side"]
+                 + ([f"treg catalog get {siblings[0]['id']}   # the same job from {siblings[0]['provider']}"]
+                    if siblings else []),
+    }
+
+
+@app.get("/catalog/examples/{endpoint_id}", include_in_schema=False)
+async def catalog_example(endpoint_id: str) -> Response:
+    """Open: the captured response of one endpoint, as recorded by scripts/catalog_verify.py.
+
+    The id is resolved through the loaded catalog BEFORE any path is built, so raw input never
+    reaches the filesystem. The files are truncated + PII-scrubbed public data (see the fragment)."""
+    path = catalog_store.example_path(endpoint_id)
+    if path is None or not path.is_file():
+        raise HTTPException(status_code=404, detail=f"no example response for {endpoint_id!r}")
+    return Response(content=path.read_bytes(), media_type="application/json")
 
 
 # ---- human login via GitHub OAuth (dashboard sessions) ------------------------------------
@@ -4205,6 +4391,38 @@ async def _free_connection_name(base: str, org_id: int, db: AsyncSession) -> str
     return next(f"{base}-{n}" for n in range(2, 1000) if f"{base}-{n}" not in taken)
 
 
+def _provider_bindings(provider, secret: Secret) -> list[dict]:
+    """The binding list that injects `secret` the way this registry provider authenticates.
+
+    A pasted-secret provider's value is a plain string, not an oauth blob — injecting it with
+    secret_field="access_token" would try to read a JSON field that isn't there. A key may ride in
+    a header (default) or a query param (Semrush's ?key=…). A provider needing a second credential
+    that TREG holds (Google Ads' developer token) gets it as a platform binding — read from settings
+    at call time, never copied into the org's secrets."""
+    if provider.uses_pasted_secret:
+        if provider.token_location == "query":
+            bindings = [{
+                "secret_id": secret.id, "injector": "env", "location": "query",
+                "name": provider.token_param, "format": provider.token_format,
+            }]
+        else:
+            bindings = [{
+                "secret_id": secret.id, "injector": "env", "location": "header",
+                "name": provider.token_header, "format": provider.token_format,
+            }]
+    else:
+        bindings = [{
+            "secret_id": secret.id, "injector": "oauth", "location": "header",
+            "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
+        }]
+    if provider.needs_extra_credential and provider.extra_credential_is_platform:
+        bindings.append({
+            "platform_setting": provider.extra_credential_setting, "injector": "env",
+            "location": "header", "name": provider.extra_credential_header, "format": "{secret}",
+        })
+    return bindings
+
+
 async def _autoprovision_provider_tool(
     provider, secret: Secret, pending: PendingOAuth, db: AsyncSession
 ) -> None:
@@ -4222,39 +4440,14 @@ async def _autoprovision_provider_tool(
             select(Tool).where(Tool.org_id == secret.org_id, Tool.name == tool_name)
         )
     ).scalars().first()
-    # A pasted-secret provider's value is a plain string, not an oauth blob — injecting it with
-    # secret_field="access_token" would try to read a JSON field that isn't there. A key may ride in
-    # a header (default) or a query param (Semrush's ?key=…).
-    if provider.uses_pasted_secret:
-        if provider.token_location == "query":
-            bindings = [{
-                "secret_id": secret.id, "injector": "env", "location": "query",
-                "name": provider.token_param, "format": provider.token_format,
-            }]
-        else:
-            bindings = [{
-                "secret_id": secret.id, "injector": "env", "location": "header",
-                "name": provider.token_header, "format": provider.token_format,
-            }]
-    else:
-        bindings = [{
-            "secret_id": secret.id, "injector": "oauth", "location": "header",
-            "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
-        }]
-    # A provider needing a second credential that TREG holds (Google Ads' developer token) gets it
-    # as a platform binding — read from settings at call time, never copied into the org's secrets.
-    # This is the point of the registry: the user waits weeks for their own, or uses ours instantly.
-    if provider.needs_extra_credential and provider.extra_credential_is_platform:
-        bindings.append({
-            "platform_setting": provider.extra_credential_setting, "injector": "env",
-            "location": "header", "name": provider.extra_credential_header, "format": "{secret}",
-        })
+    bindings = _provider_bindings(provider, secret)
     # A registry tool with a probe can self-validate on `health --run` instead of sitting at
     # "unchecked" until something happens to call it.
     health_check = (
         {"method": "GET", "path": provider.probe_path, "expect_status": 200}
         if provider.probe_path else None
     )
+    examples = _provider_tool_examples(provider)
     if existing is not None:
         existing.bindings = bindings
         existing.base_url = provider.base_url
@@ -4262,15 +4455,37 @@ async def _autoprovision_provider_tool(
         # Reconnecting is how an already-provisioned tool picks up a probe — or examples — added
         # to the registry since it was made.
         existing.health_check = health_check or existing.health_check
-        if provider.examples and not existing.examples:
-            existing.examples = [dict(e) for e in provider.examples]
+        if examples and not existing.examples:
+            existing.examples = examples
         return
     db.add(Tool(
         org_id=secret.org_id, name=tool_name, owner=pending.owner,
         base_url=provider.base_url, host=_host_of(provider.base_url),
         bindings=bindings, health_check=health_check,
-        examples=[dict(e) for e in provider.examples],
+        examples=examples,
     ))
+
+
+CATALOG_STAMP_CAP = 12  # a tool's examples are read by a human/agent scanning, not a full API doc
+
+
+def _provider_tool_examples(provider) -> list[dict]:
+    """The provisioned tool's `examples`: the registry's hand-written ones first, then the endpoint
+    catalog's verified core operations for the same provider.
+
+    This is what makes a fresh connection immediately useful — the agent gets real paths with the
+    inputs they need instead of guessing them from the provider's docs and burning paid calls."""
+    out = [dict(e) for e in provider.examples]
+    seen = {(e.get("method", "").upper(), (e.get("path") or "").lstrip("/")) for e in out}
+    for ex in catalog_store.tool_examples(provider.service):
+        if len(out) >= CATALOG_STAMP_CAP:
+            break
+        key = (ex["method"], ex["path"].lstrip("/"))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(ex)
+    return out
 
 
 @app.get("/oauth/providers")
@@ -5238,11 +5453,148 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         await db.execute(select(Tool).where(Tool.name == name, Tool.org_id == org_id))
     ).scalar_one_or_none()
     if tool is None:
-        raise HTTPException(status_code=404, detail=f"no tool {name!r} in this org")
+        detail = f"no tool {name!r} in this org"
+        # A bare provider name (`treg call tikhub /path`) stays a miss, but points at the
+        # marketplace form instead of dead-ending — its endpoints are callable without a tool.
+        if oauth_providers.get(name) is not None or name in catalog_store.load().provider_meta:
+            detail += (f" — but {name!r} is a marketplace provider; call its endpoints directly: "
+                       f"treg catalog search <what you need> → treg call <endpoint-id>")
+        raise HTTPException(status_code=404, detail=detail)
     base = tool.base_url.rstrip("/")
     # No path → the base URL itself, WITHOUT a trailing slash: a base pinned to a full resource
     # (e.g. .../v1/charges) must relay as-is — Stripe 404s `/v1/charges/`.
     return tool, (f"{base}/{path.lstrip('/')}" if path else base)
+
+
+# ---- direct marketplace calls: `treg call <catalog-endpoint-id>`, no tool registration ----------
+# See docs/context/interface/cli-audit-2026-07-28.md (design section). The registry stays "our
+# stuff"; the catalog is "everything callable". Credential ladder: (1) an org tool bound to the
+# provider — resolved via the URL-passthrough shape, so ACLs and ambiguity handling are identical —
+# then (2) an org credential matching the provider, injected via a VIRTUAL tool that is never
+# persisted (no registry pollution), then (3) an actionable error naming the connect/secret fix.
+# Tier 4 (treg's own metered key) is deferred until billing exists; `account.*` endpoints are
+# excluded from it by design (they are inherently my-credential-scoped).
+
+def _catalog_endpoint_for(rest: str) -> dict | None:
+    """The catalog endpoint `rest` names, or None. Only a dotted, slash-free rest can be an
+    endpoint id, so tool names and URL/named shapes never reach the catalog lookup."""
+    if "/" in rest or "." not in rest or rest.startswith("http"):
+        return None
+    return catalog_store.load().by_id.get(rest)
+
+
+async def _marketplace_secret(service: str, org_id: int, db: AsyncSession) -> Secret | None:
+    """Tier 2's credential: an org secret tagged with this provider (registry connects), else one
+    NAMED exactly for it (`treg secret add tikhub …`). Newest wins — a reconnect supersedes."""
+    tagged = (await db.execute(
+        select(Secret).where(Secret.org_id == org_id, Secret.provider == service)
+        .order_by(Secret.id.desc())
+    )).scalars().first()
+    if tagged is not None:
+        return tagged
+    return (await db.execute(
+        select(Secret).where(Secret.org_id == org_id, Secret.name == service)
+        .order_by(Secret.id.desc())
+    )).scalars().first()
+
+
+def _marketplace_no_credential(service: str, ep_id: str, provider) -> HTTPException:
+    """Tier 3: the actionable dead-end. Every line names a real command; a pasted-key provider
+    gets the `secret add` route too (name it for the service so the ladder finds it)."""
+    lines = [f"no {service} credential in this org — {ep_id} is a marketplace endpoint"]
+    lines.append(f"  connect one:  treg connections connect --provider {service}")
+    if provider.uses_pasted_secret:
+        lines.append(f"  or add a key: treg secret add {service} --env-var {service.upper().replace('-', '_')}_API_KEY")
+    lines.append(f"  or register the tool yourself: treg tool add {service} --base-url {provider.base_url} …")
+    return HTTPException(status_code=404, detail="\n".join(lines))
+
+
+def _marketplace_upstream(ep: dict, provider, query_params) -> tuple[str, set[str]]:
+    """The full upstream URL for an endpoint-id call, with `{placeholder}` path params filled from
+    the caller's query params (they are consumed — dropped from the relayed query). Missing
+    required params fail HERE, before a credential is touched or money spent."""
+    path, consumed = ep["path"] or "/", set()
+    for name in re.findall(r"{(\w+)}", path):
+        value = query_params.get(name)
+        if value is None:
+            raise HTTPException(status_code=400, detail=(
+                f"{ep['id']} needs --query {name}=<value> (a path parameter of {ep['path']})"))
+        path = path.replace("{%s}" % name, quote(value, safe=""))
+        consumed.add(name)
+    inp = ep.get("input") or {}
+    required = [k for k, v in (inp.get("queryParams") or {}).items()
+                if isinstance(v, dict) and v.get("required") and query_params.get(k) is None]
+    if required:
+        raise HTTPException(status_code=400, detail=(
+            f"{ep['id']} requires --query " + " --query ".join(f"{k}=<value>" for k in required)))
+    return provider.base_url.rstrip("/") + "/" + path.lstrip("/"), consumed
+
+
+async def _resolve_marketplace_call(
+    ep: dict, request: Request, caller: Caller, db: AsyncSession
+) -> tuple[Tool, str, set[str]]:
+    """Walk the credential ladder for a catalog endpoint id → (tool, upstream URL, consumed params).
+
+    The tool is either the org's own registered tool for that provider (tier 1 — passthrough
+    resolution, so ACL filtering and the provider-owned tiebreak apply unchanged) or a virtual,
+    never-persisted Tool named after the ENDPOINT (tier 2) — so the audit trail records the
+    endpoint id, and a member's restricted tool list can never contain it (governance: restricted
+    members get no direct marketplace calls; `_require_tool_use` enforces that downstream)."""
+    service = ep["provider"]
+    provider = oauth_providers.get(service)
+    if provider is None or not provider.base_url:
+        raise HTTPException(status_code=502, detail=(
+            f"{ep['id']} is cataloged but {service!r} isn't proxy-callable yet"))
+    if request.method.upper() != (ep.get("method") or "GET").upper():
+        raise HTTPException(status_code=400, detail=(
+            f"{ep['id']} is {ep['method']} — add --method {ep['method']}"))
+    upstream, consumed = _marketplace_upstream(ep, provider, request.query_params)
+    try:  # tier 1 — the org registered this provider: their tool, their bindings, their ACLs
+        tool, resolved = await _resolve_call(upstream, caller, db)
+        return tool, resolved, consumed
+    except HTTPException as exc:
+        if exc.status_code != 404:  # 403 (ACL) / 409 (ambiguous) are real answers, not fall-through
+            raise
+    secret = await _marketplace_secret(service, caller.org_id, db)  # tier 2 — credential, no tool
+    if secret is None:
+        raise _marketplace_no_credential(service, ep["id"], provider)
+    virtual = Tool(  # NEVER added to the session — no registry pollution, by design
+        org_id=caller.org_id, name=ep["id"], owner=secret.owner,
+        base_url=provider.base_url, host=_host_of(provider.base_url),
+        bindings=_provider_bindings(provider, secret),
+    )
+    return virtual, upstream, consumed
+
+
+@app.get("/catalog/endpoints/{endpoint_id}/access", include_in_schema=False)
+async def catalog_endpoint_access(
+    endpoint_id: str, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Authenticated dry-run of the marketplace credential ladder — which tier would serve YOU.
+    Read by `treg catalog get` to print an honest access line under RUN IT (the open catalog
+    endpoints stay unauthenticated; this one needs to know who is asking)."""
+    ep = catalog_store.load().by_id.get(endpoint_id)
+    if ep is None:
+        raise HTTPException(status_code=404, detail=f"unknown endpoint {endpoint_id!r}")
+    service = ep["provider"]
+    provider = oauth_providers.get(service)
+    if provider is None or not provider.base_url:
+        return {"tier": "none", "detail": f"{service} isn't proxy-callable yet"}
+    probe = provider.base_url.rstrip("/") + "/" + (ep["path"] or "/").lstrip("/")
+    try:
+        tool, _ = await _resolve_call(probe, caller, db)
+        return {"tier": "tool", "detail": f"will use this org's registered {tool.name!r} tool"}
+    except HTTPException as exc:
+        if exc.status_code == 403:
+            return {"tier": "restricted", "detail": "a registered tool exists but your access is restricted — ask an admin"}
+        if exc.status_code != 404:
+            raise
+    if await _marketplace_secret(service, caller.org_id, db) is not None:
+        return {"tier": "credential", "detail": f"will use this org's {service} credential (no tool needed)"}
+    hint = (f"connect with: treg connections connect --provider {service}"
+            if not provider.uses_pasted_secret else
+            f"connect with: treg connections connect --provider {service}, or treg secret add {service} …")
+    return {"tier": "none", "detail": f"no {service} credential in this org yet — {hint}"}
 
 
 async def _relay_live_demo(request: Request, upstream_url: str, key: str, visitor: str):
@@ -5285,7 +5637,16 @@ async def call_tool(
         _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
         if sep:
             rest = raw_rest
-    tool, upstream_url = await _resolve_call(rest, caller, db)
+    drop_params: set[str] = set()
+    try:
+        tool, upstream_url = await _resolve_call(rest, caller, db)
+    except HTTPException as exc:
+        # Not a tool → maybe a marketplace endpoint id (`treg call tikhub.tiktok.video.comments`).
+        # Only the 404 falls through, so an org tool with the same name always wins.
+        ep = _catalog_endpoint_for(rest) if exc.status_code == 404 else None
+        if ep is None:
+            raise
+        tool, upstream_url, drop_params = await _resolve_marketplace_call(ep, request, caller, db)
     _require_tool_use(caller, tool)  # per-member tool + project ACL (NULL access = all; admins exempt)
     # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
     # shape the caller used (named or URL-passthrough), and the relay never follows redirects, so a
@@ -5345,7 +5706,8 @@ async def call_tool(
                 raise HTTPException(status_code=502, detail=f"oauth refresh failed: {exc}")
             secrets[sid] = secret
         try:
-            response = await relay(request, upstream_url, tool, secrets, request.app.state.http)
+            response = await relay(request, upstream_url, tool, secrets, request.app.state.http,
+                                   drop_params=drop_params or None)
         except ValueError as exc:  # a binding/injector mismatch (e.g. non-JSON secret on an oauth binding)
             raise HTTPException(status_code=502, detail=f"credential injection failed: {exc}")
         except httpx.RequestError as exc:  # upstream down/timeout is a gateway fault, not treg's 500

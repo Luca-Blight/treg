@@ -1,0 +1,23 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": "Success"
+    },
+    "hot_comment_tokens": [
+      {
+        "comment_token": "好看",
+        "hot_rate": 347
+      },
+      {
+        "comment_token": "泳衣",
+        "hot_rate": 233
+      },
+      "… 8 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:05.690476802",
+  "requestId": "b6f150dc395f46759715443ef855d996"
+}

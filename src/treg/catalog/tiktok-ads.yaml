@@ -1,0 +1,132 @@
+# unverified — endpoints require a connected OAuth account; verify via a treg connection later.
+# Transcribed from official docs 2026-07-28; no credential was available at curation time, and the
+# registry entry warns this provider cannot be connected yet at all — TikTok's token exchange and
+# its `Access-Token` header are non-standard OAuth that treg's oauth.py does not implement. Treat
+# every path below as documented-but-uncalled.
+#
+# THE TWO SHAPE SURPRISES. Auth is an `Access-Token: <token>` header — NOT `Authorization: Bearer`.
+# And the HTTP status is almost always 200: success and failure are distinguished by the envelope
+# {"code": 0, "message": "OK", "data": {...}}, where a non-zero `code` is the error (40001 bad
+# params, 40100 auth). Anything checking response.ok will read failures as successes.
+#
+# Trailing slashes are load-bearing: /campaign/get/ works, /campaign/get does not. Array and object
+# parameters ride in the QUERY STRING as JSON strings — metrics=["spend","impressions"],
+# filtering={"campaign_ids":["123"]} — url-encoded, which is why these reads are GETs with
+# structured params instead of POST bodies.
+#
+# Scope: the registry declares a nominal `ads.management`; TikTok's real scopes are numeric ids
+# picked in the developer portal, and an endpoint outside the granted set fails with code 40002
+# rather than a 403.
+#
+# NOT HERE: TikTok's public ad library. The Commercial Content Library / Research API lives on
+# open.tiktokapis.com behind a separate research-access application, not on business-api.tiktok.com,
+# so it cannot be expressed against this provider's base_url. The tiktok-ads.library.search
+# capability is served instead by apify.yaml's TikTok ad-library actor.
+provider: tiktok-ads
+source:
+  docs: https://business-api.tiktok.com/portal/docs
+  openapi: null
+  curated: 2026-07-28
+
+pricing_url: https://business-api.tiktok.com/portal/docs
+endpoints:
+  - id: tiktok-ads.accounts
+    capability: tiktok-ads.accounts
+    platform: tiktok-ads
+    scope: own_account
+    method: GET
+    path: /oauth2/advertiser/get/
+    name: "List ad accounts"
+    summary: "List the TikTok ad accounts this connection can manage"
+    input:
+      queryParams:
+        app_id: {type: string, required: true, note: "the developer app id — this endpoint authenticates with app_id + secret ALONGSIDE the Access-Token header, unlike every other endpoint here", example: "7000000000000000000"}
+        secret: {type: string, required: true, note: "the app secret. Because it is a request parameter rather than a header, treg must bind it as a secret param on the provisioned tool; it must never be handed to an agent"}
+      note: "the connection resource picker: returns data.list[] of {advertiser_id, advertiser_name}. Every other endpoint needs one of these advertiser_ids. Ids are strings — long enough to lose precision if parsed as a JSON number"
+    cost: {type: free, note: "included with the connected account; TikTok rate-limits per app and per advertiser (roughly 10 requests/second per advertiser on reporting) rather than charging per call"}
+    docs_url: https://business-api.tiktok.com/portal/docs?id=1738455508553729
+
+  - id: tiktok-ads.query
+    capability: tiktok-ads.query
+    platform: tiktok-ads
+    scope: own_account
+    method: GET
+    path: /report/integrated/get/
+    name: "Get ad performance metrics"
+    summary: "Get spend, impressions, clicks and conversions for your TikTok ads"
+    input:
+      queryParams:
+        advertiser_id: {type: string, required: true, example: "7000000000000000000"}
+        report_type: {type: string, required: true, note: "BASIC (performance) | AUDIENCE (demographic breakdowns) | PLAYABLE_MATERIAL | CATALOG | BC", example: "BASIC"}
+        data_level: {type: string, required: true, note: "AUCTION_ADVERTISER | AUCTION_CAMPAIGN | AUCTION_ADGROUP | AUCTION_AD — must match the id dimension you ask for", example: "AUCTION_CAMPAIGN"}
+        dimensions: {type: array, required: true, note: "JSON array in the query string. One id dimension plus optionally stat_time_day for a daily series: [\"campaign_id\",\"stat_time_day\"]", example: ["campaign_id", "stat_time_day"]}
+        metrics: {type: array, required: false, note: "JSON array; defaults to a thin set, so always name them", example: ["spend", "impressions", "clicks", "ctr", "cpc", "conversion", "cost_per_conversion"]}
+        start_date: {type: string, required: false, note: "YYYY-MM-DD, in the advertiser's timezone; required unless query_lifetime is true", example: "2026-06-28"}
+        end_date: {type: string, required: false, note: "YYYY-MM-DD; the window is capped (about 30 days for most report types)", example: "2026-07-28"}
+        query_lifetime: {type: boolean, required: false, note: "true returns all-time totals and forbids start_date/end_date", example: false}
+        filtering: {type: array, required: false, note: "JSON array of filter objects, e.g. [{\"field_name\":\"campaign_ids\",\"filter_type\":\"IN\",\"filter_value\":\"[\\\"123\\\"]\"}]"}
+        order_field: {type: string, required: false, example: "spend"}
+        order_type: {type: string, required: false, note: "ASC | DESC", example: "DESC"}
+        page: {type: integer, required: false, example: 1}
+        page_size: {type: integer, required: false, note: "max 1000, default 200", example: 100}
+      note: "spend is a decimal STRING in the advertiser's currency (not micros). Dimensions and metrics are validated as a pair: asking for a metric the chosen data_level does not support fails the whole request with code 40002 instead of dropping the column. Attribution follows the ad account's window, so today's conversions keep changing for days"
+    cost: {type: free, note: "included with the connected account; heavy reporting is bounded by TikTok's per-advertiser QPS limits"}
+    docs_url: https://business-api.tiktok.com/portal/docs?id=1740302848100353
+
+  - id: tiktok-ads.campaigns
+    capability: tiktok-ads.campaigns
+    platform: tiktok-ads
+    scope: own_account
+    method: GET
+    path: /campaign/get/
+    name: "List ad campaigns"
+    summary: "List the campaigns in your TikTok ad account with objective, status and budget"
+    input:
+      queryParams:
+        advertiser_id: {type: string, required: true, example: "7000000000000000000"}
+        filtering: {type: object, required: false, note: "JSON object in the query string: {\"primary_status\":\"STATUS_DELIVERY_OK\"} or {\"campaign_ids\":[\"123\"]}", example: {"primary_status": "STATUS_DELIVERY_OK"}}
+        fields: {type: array, required: false, note: "JSON array; omit for the default field set", example: ["campaign_id", "campaign_name", "objective_type", "budget", "budget_mode", "operation_status"]}
+        page: {type: integer, required: false, example: 1}
+        page_size: {type: integer, required: false, note: "max 1000, default 10 — the small default is the usual reason a campaign looks missing", example: 100}
+      note: "budget is a number in the account currency and budget_mode says whether it is daily (BUDGET_MODE_DAY) or lifetime. Two status fields disagree on purpose: operation_status is what you set (ENABLE/DISABLE), primary_status is what TikTok is actually doing (delivering, budget exceeded, in review)"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://business-api.tiktok.com/portal/docs?id=1739315828649986
+
+  - id: tiktok-ads.adgroups
+    capability: tiktok-ads.adgroups
+    platform: tiktok-ads
+    scope: own_account
+    method: GET
+    path: /adgroup/get/
+    name: "List ad groups"
+    summary: "List the ad groups in your TikTok ad account with targeting, bid and schedule"
+    input:
+      queryParams:
+        advertiser_id: {type: string, required: true, example: "7000000000000000000"}
+        filtering: {type: object, required: false, note: "{\"campaign_ids\":[\"123\"]} to scope to one campaign", example: {"campaign_ids": ["1234567890123456789"]}}
+        fields: {type: array, required: false, example: ["adgroup_id", "adgroup_name", "campaign_id", "budget", "bid_price", "billing_event", "optimization_goal", "placement_type", "operation_status"]}
+        page: {type: integer, required: false, example: 1}
+        page_size: {type: integer, required: false, example: 100}
+      note: "the ad group is where TikTok keeps targeting, placements, bidding and schedule — the audience definition an agent usually wants is here, not on the campaign"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://business-api.tiktok.com/portal/docs?id=1739314558673922
+
+  - id: tiktok-ads.ads
+    capability: tiktok-ads.ads
+    platform: tiktok-ads
+    scope: own_account
+    method: GET
+    path: /ad/get/
+    name: "List ads with creatives"
+    summary: "List the ads in your TikTok ad account with their creatives and landing pages"
+    input:
+      queryParams:
+        advertiser_id: {type: string, required: true, example: "7000000000000000000"}
+        filtering: {type: object, required: false, note: "{\"adgroup_ids\":[\"123\"]} or {\"ad_ids\":[\"456\"]}", example: {"adgroup_ids": ["1234567890123456789"]}}
+        fields: {type: array, required: false, example: ["ad_id", "ad_name", "adgroup_id", "ad_format", "ad_text", "video_id", "image_ids", "landing_page_url", "call_to_action", "operation_status"]}
+        page: {type: integer, required: false, example: 1}
+        page_size: {type: integer, required: false, example: 100}
+      note: "creatives come back as ids (video_id, image_ids), not playable URLs — resolve them through the file/video/ad/get/ endpoint to get preview links, which expire"
+    cost: {type: free, note: "included with the connected account"}
+    docs_url: https://business-api.tiktok.com/portal/docs?id=1735735588640770
+

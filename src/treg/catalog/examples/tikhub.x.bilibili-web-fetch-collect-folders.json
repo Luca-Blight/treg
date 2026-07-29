@@ -1,0 +1,41 @@
+{
+  "code": 200,
+  "request_id": "211cf0e7-5e3f-4f72-bc0a-4c859a092a66",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:41",
+  "time_stamp": 1785220061,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_collect_folders_api_v1_bilibili_web_fetch_collect_folders_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/211cf0e7-5e3f-4f72-bc0a-4c859a092a66?sign=0729b88c8cecb2dda012939206033ee9b62d87e8ffbc150e913f5f7cd3ae0f54",
+  "router": "/api/v1/bilibili/web/fetch_collect_folders",
+  "params": {
+    "uid": "178360345"
+  },
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "count": 4,
+      "list": [
+        {
+          "id": 2885112845,
+          "fid": 28851128,
+          "mid": 178360345,
+          "attr": 22,
+          "title": "好抽象",
+          "fav_state": 0,
+          "media_count": 16,
+          "is_kid_playlist": false,
+          "kid_playlist_desc": ""
+        },
+        "… 3 more item(s) truncated"
+      ],
+      "season": null
+    }
+  }
+}

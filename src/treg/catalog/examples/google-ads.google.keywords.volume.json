@@ -1,0 +1,29 @@
+{
+  "results": [
+    {
+      "text": "coffee beans",
+      "keywordMetrics": {
+        "competition": "HIGH",
+        "monthlySearchVolumes": [
+          {
+            "month": "JULY",
+            "year": "2025",
+            "monthlySearches": "201000"
+          },
+          {
+            "month": "AUGUST",
+            "year": "2025",
+            "monthlySearches": "201000"
+          },
+          "… 10 more item(s) truncated"
+        ],
+        "avgMonthlySearches": "201000",
+        "competitionIndex": "97",
+        "lowTopOfPageBidMicros": "247816",
+        "highTopOfPageBidMicros": "5265659"
+      }
+    }
+  ],
+  "_scrubbed": true,
+  "_scrubbed_note": "public-figure or reference data; account-specific values masked where present"
+}

@@ -1,0 +1,30 @@
+{
+  "request": {
+    "pageUrl": "https://forum.gl-inet.com/t/ssh-connection-protocol-does-not-work-well-between-vpn-clients/22779",
+    "api": "discussion",
+    "version": 3
+  },
+  "objects": [
+    {
+      "nextPage": "https://forum.gl-inet.com/t/ssh-connection-protocol-does-not-work-well-between-vpn-clients/22779/2",
+      "confidence": 0.2521824773481806,
+      "diffbotUri": "discussion|3|1809718089",
+      "type": "discussion",
+      "title": "SSH connection protocol does not work well between VPN clients",
+      "posts": [
+        "… {11 field(s) truncated}",
+        "… 11 more item(s) truncated"
+      ],
+      "tags": [
+        "… {5 field(s) truncated}",
+        "… 1 more item(s) truncated"
+      ],
+      "rssUrl": "https://forum.gl-inet.com/t/ssh-connection-protocol-does-not-work-well-between-vpn-clients/22779.rss",
+      "numPages": 1,
+      "humanLanguage": "en",
+      "pageUrl": "https://forum.gl-inet.com/t/ssh-connection-protocol-does-not-work-well-between-vpn-clients/22779",
+      "numPosts": 12,
+      "participants": 4
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+{
+  "code": 0,
+  "data": {
+    "aweme_list": [],
+    "backtrace": "",
+    "components": null,
+    "cursor": 20,
+    "extra": {
+      "api_debug_info": null,
+      "fatal_item_ids": [],
+      "logid": "20260728014141AB70D933971B8E3BFDF0",
+      "now": 1785202902000,
+      "search_request_id": "",
+      "server_stream_time": 1267
+    },
+    "feedback_type": "video",
+    "global_doodle_config": {
+      "display_filter_bar": 1,
+      "feedback_survey": [
+        {
+          "feedback_type": "video",
+          "long_stress_info": null,
+          "multiple_choices": [
+            {
+              "key": "Dislike",
+              "value": "Dislike"
+            },
+            {
+              "key": "Unrelated content",
+              "value": "Unrelated content"
+            },
+            "… 1 more item(s) truncated"
+          ],
+          "send_us_multiple_choices": null
+        }
+      ],
+      "hide_results": false,
+      "hit_dolphin": false,
+      "hit_shark": true,
+      "keyword": "coffee",
+      "new_source": "switch_tab",
+      "search_channel": "musically_video",
+      "search_intent": {},
+      "tns_search_result": "Pass"
+    },
+    "has_more": 1,
+    "log_pb": {
+      "impr_id": "20260728014141AB70D933971B8E3BFDF0"
+    },
+    "search_item_list": [
+      {
+        "aweme_info": {
+          "ad_aweme_source": 1,
+          "added_sound_music_info": {
+            "album": "SWAG II",
+            "allow_offline_music_to_detail_page": false,
+            "artists": [
+              {
+                "avatar": {
+                  "uri": "tos-useast5-avt-0068-tx/1d396e10eef62d7a7da7da38635514c9",
+                  "url_list": [
+                    "https://p19-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/1d396e10eef62d7a7da7da38635514c9~tplv-tiktokx-cropcenter-q:168:168:q70.heic?dr=8833&idc=useast5&ps=87d6e48a&refresh_token=76b05563&s=SEARCH&sc=avatar&shcp=c1333099&shp=d05b14bd&t=223449c4&x-expires=1785286800&x-signature=KdCnv5IdlenVXE… [316 chars total]",
+                    "https://p16-common-sign.tiktokcdn-us.com/tos-useast5-avt-0068-tx/1d396e10eef62d7a7da7da38635514c9~tplv-tiktokx-cropcenter-q:168:168:q70.heic?dr=8833&idc=useast5&ps=87d6e48a&refresh_token=0587e1ec&s=SEARCH&sc=avatar&shcp=c1333099&shp=d05b14bd&t=223449c4&x-expires=1785286800&x-signature=WjxrBKKFZJ8hGm… [316 chars total]",
+                    "… 1 more item(s) truncated"
+                  ],
+                  "url_prefix": null
+                },
+                "enter_type": 2,
+                "follow_status": 0,
+                "follower_status": 0,
+                "handle": "justinbieber",
+                "is_block": false,
+                "is_blocked": false,
+                "is_private_account": false,
+                "is_verified": true,
+                "is_visible": false,
+                "nick_name": "Justin Bieber",
+                "sec_uid": "MS4wLjABAAAAIDvnmw4IM9I6Jk7M0up6Fd4JC_OtGgVCwsy0vu51T9CGyxQwGLEmN_QZY1v2TYY5",
+                "status": 1,
+                "uid": "6756702871704192005"
+              }
+            ],
+            "audition_duration": 60,
+            "author": "Justin Bieber",
+            "author_deleted": false,
+            "author_position": null,
+            "avatar_medium": {
+              "data_size": 0,
+              "height": 720,
+              "uri": "tos-useast8-avt-0068-tx2/4e2c27601a28113b6bdcef6ae27f69e8",
+              "url_list": [
+                "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/4e2c27601a28113b6bdcef6ae27f69e8~tplv-tiktokx-cropcenter-q:720:720:q70.heic?dr=8836&idc=useast5&ps=87d6e48a&refresh_token=2b2ebbfa&s=SEARCH&sc=avatar&shcp=c1333099&shp=d05b14bd&t=223449c4&x-expires=1785286800&x-signature=dgWDy3GzeL%2B… [319 chars total]",
+                "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/4e2c27601a28113b6bdcef6ae27f69e8~tplv-tiktokx-cropcenter-q:720:720:q70.heic?dr=8836&idc=useast5&ps=87d6e48a&refresh_token=4e4a2673&s=SEARCH&sc=avatar&shcp=c1333099&shp=d05b14bd&t=223449c4&x-expires=1785286800&x-signature=%2BqfGFNOA%2F… [321 chars total]",
+                "… 1 more item(s) truncated"
+              ],
+              "url_prefix": null,
+              "width": 720
+            },
+            "avatar_thumb": {
+              "data_size": 0,
+              "height": 720,
+              "uri": "tos-useast8-avt-0068-tx2/4e2c27601a28113b6bdcef6ae27f69e8",
+              "url_list": [
+                "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/4e2c27601a28113b6bdcef6ae27f69e8~tplv-tiktokx-cropcenter-q:100:100:q70.heic?dr=8835&idc=useast5&ps=87d6e48a&refresh_token=c937f9c0&s=SEARCH&sc=avatar&shcp=c1333099&shp=d05b14bd&t=223449c4&x-expires=1785286800&x-signature=Vn9V9pnRxBU2w… [319 chars total]",
+                "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/4e2c27601a28113b6bdcef6ae27f69e8~tplv-tiktokx-cropcenter-q:100:100:q70.heic?dr=8835&idc=useast5&ps=87d6e48a&refresh_token=23ee7865&s=SEARCH&sc=avatar&shcp=c1333099&shp=d05b14bd&t=223449c4&x-expires=1785286800&x-signature=cpxJDPaw7Fk7J… [319 chars total]",
+                "… 1 more item(s) truncated"
+              ],
+              "url_prefix": null,
+              "width": 720
+            },
+            "binded_challenge_id": 0,
+            "can_be_stitched": false,
+            "can_not_reuse": false,
+            "collect_stat": 0,
+            "commercial_right_type": 3,
+            "cover_large": {
+              "height": 720,
+              "uri": "tos-alisg-v-2774/o4GtKfNJLgCZDeAIAF5ECwBQrBxFIKLAo5YhAG",
+              "url_list": [
+                "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/o4GtKfNJLgCZDeAIAF5ECwBQrBxFIKLAo5YhAG~tplv-tiktokx-cropcenter:720:720.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=d05b14bd&idc=useast5"
+              ],
+              "url_prefix": null,
+              "width": 720
+            },
+            "cover_medium": {
+              "height": 720,
+              "uri": "tos-alisg-v-2774/o4GtKfNJLgCZDeAIAF5ECwBQrBxFIKLAo5YhAG",
+              "url_list": [
+                "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/o4GtKfNJLgCZDeAIAF5ECwBQrBxFIKLAo5YhAG~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=d05b14bd&idc=useast5"
+              ],
+              "url_prefix": null,
+              "width": 720
+            },
+            "cover_thumb": {
+              "height": 720,
+              "uri": "tos-alisg-v-2774/o4GtKfNJLgCZDeAIAF5ECwBQrBxFIKLAo5YhAG",
+              "url_list": [
+                "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/o4GtKfNJLgCZDeAIAF5ECwBQrBxFIKLAo5YhAG~tplv-tiktokx-cropcenter:100:100.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=d05b14bd&idc=useast5"
+              ],
+              "url_prefix": null,
+              "width": 720
+            },
+            "create_time": 1757057786,
+            "dmv_auto_show": false,
+            "duration": 60,
+            "duration_high_precision": {
+              "audition_duration_precision": 60,
+              "duration_precision": 60,
+              "shoot_duration_precision": 60,
+              "video_duration_precision": 60
+            },
+            "external_song_info": [],
+            "extra": "{\"amplitude_peak\":0.985428,\"beats\":{\"audio_effect_onset\":\"https://sf19.tiktokcdn-us.com/obj/tos-alisg-v-2774/ooM1RFF9AIDhevAKDyAAfIECi7I7mz1CMAHfeE\",\"beats_tracker\":\"https://sf16.tiktokcdn-us.com/obj/tos-alisg-v-2774/oog7mfEkiI0A1ACxeE9FlFDEIVDAZ7KPeAf5HT\",\"energy_trace\":\"https://sf19.tiktokcdn-us.c… [519 chars total]",
+            "has_commerce_right": false,
+            "has_commerce_right_strict": false,
+            "has_human_voice": false,
+            "id": 7546504289062160400,
+            "id_str": "7546504289062160400",
+            "is_audio_url_with_cookie": false,
+            "is_author_artist": true,
+            "is_commerce_music": true,
+            "is_commerce_music_strict": true,
+            "is_matched_metadata": false,
+            "is_original": false,
+            "is_original_sound": false,
+            "is_pgc": true,
+            "is_play_music": false,
+            "is_shooting_allow": true,
+            "language": "English",
+            "log_extra": "{\"meta_song_matched_type\":\"pgc\",\"ttm_matched_type\":\"\",\"ttm_track_id\":\"\",\"matched_meta_song_id\":\"\",\"vid\":\"\",\"owner_id\":\"\"}",
+            "lyric_short_position": null,
+            "matched_song": {
+              "author": "Justin Bieber",
+              "chorus_info": {
+                "duration_ms": 24767,
+                "start_ms": 140352
+              },
+              "choruses": null,
+              "cover_medium": {
+                "height": 720,
+                "uri": "tos-alisg-v-2774/o4GtKfNJLgCZDeAIAF5ECwBQrBxFIKLAo5YhAG",
+                "url_list": [
+                  "https://p16-common.tiktokcdn-us.com/tos-alisg-v-2774/o4GtKfNJLgCZDeAIAF5ECwBQrBxFIKLAo5YhAG~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=d05b14bd&idc=useast5",
+                  "https://p19-common.tiktokcdn-us.com/tos-alisg-v-2774/o4GtKfNJLgCZDeAIAF5ECwBQrBxFIKLAo5YhAG~tplv-tiktokx-cropcenter:200:200.jpeg?dr=9584&t=4d5b0474&ps=933b5bde&shp=08d74b56&shcp=d05b14bd&idc=useast5"
+                ],
+                "url_prefix": null,
+                "width": 720
+              },
+              "full_duration": 248903,
+              "h5_url": "",
+              "id": "7546487761574905873",
+              "performers": null,
+              "title": "EVERYTHING HALLELUJAH",
+              "verses": null
+            },
+            "meme_song_info": {},
+            "mid": "7546504289062160400",
+            "multi_bit_rate_play_info": null,
+            "music_group_use_count": 0
+          }
+        }
+      }
+    ]
+  }
+}

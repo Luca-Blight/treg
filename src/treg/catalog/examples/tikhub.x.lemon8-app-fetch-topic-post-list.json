@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "5b1ddd87-24a6-4887-a084-5cc4977b8336",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:12",
+  "time_stamp": 1785220152,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Lemon8-App-API/fetch_topic_post_list_api_v1_lemon8_app_fetch_topic_post_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/5b1ddd87-24a6-4887-a084-5cc4977b8336?sign=945d6308f46fc70a2ba21d377e77c042033ba89d1aa894686258dbf95f690f04",
+  "router": "/api/v1/lemon8/app/fetch_topic_post_list",
+  "params": {
+    "category": "590",
+    "category_parameter": "7174447913778593798",
+    "hashtag_name": "lemon8christmas"
+  },
+  "data": {
+    "data": {
+      "duration": 2,
+      "has_more": true,
+      "items": [
+        "… {77 field(s) truncated}",
+        "… 9 more item(s) truncated"
+      ],
+      "latency_info": {
+        "gostream": 974814,
+        "loader": 251782,
+        "planner": 21,
+        "provider": 700948,
+        "stream_api": 1255142
+      },
+      "login_status": 1,
+      "module_offset": 20,
+      "session_impr_id": 7667462170061310221,
+      "tip": "10 stories from TopBuzz",
+      "total_number": 10
+    },
+    "message": "success",
+    "server_time": "1785220152.26"
+  }
+}

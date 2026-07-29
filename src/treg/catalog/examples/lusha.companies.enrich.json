@@ -1,0 +1,109 @@
+{
+  "requestId": "9017f0fa-95e2-4eb1-a280-94397090cd38",
+  "results": [
+    {
+      "id": "v1.A1gXjPYd63SSPjSvxO4uwqXqE5ilJV9S",
+      "name": "Lusha",
+      "alternativeName": "lusha",
+      "domain": "www.lusha.com",
+      "emailDomain": "lusha.com",
+      "homepageUrl": "https://lusha.com",
+      "alternativeDomains": [
+        "lusha.com"
+      ],
+      "description": "Lusha is the B2B data and sales intelligence system used by sales, marketing, recruiting, RevOps teams, and AI agents to find contacts, enrich records, and track real-world buying signals. It works with your CRM, automation tools, and existing GTM stack.\n300M+ business contacts and 30M+ company profiles across North America, EMEA, APAC, and LATAM. \nEmail verification at 95–98% by region.\n Direct dial accuracy at 90%+. \n7M new signals processed every week — funding rounds, leadership changes, hir… [1561 chars total]",
+      "companyOffering": "Lusha is a crowdsourced data platform for B2B sales and marketing that connects sales, business development, and HR professionals.",
+      "companyType": "Private Company",
+      "yearFounded": 2016,
+      "employeeCount": {
+        "exact": 357,
+        "min": 201,
+        "max": 500
+      },
+      "industry": "Technology, Information & Media",
+      "subIndustry": "Information Services",
+      "specialities": [
+        "data accuracy",
+        "data enrichment",
+        "… 6 more item(s) truncated"
+      ],
+      "sicCodes": [
+        {
+          "code": 7371,
+          "description": "Custom computer programming services"
+        }
+      ],
+      "naicsCodes": [
+        {
+          "code": 541511,
+          "description": "Custom Computer Programming Services"
+        }
+      ],
+      "location": {
+        "city": "Boston",
+        "state": "Massachusetts",
+        "stateCode": "MA",
+        "country": "United States",
+        "countryIso2": "US",
+        "continent": "North America",
+        "zipCode": "02199"
+      },
+      "socialLinks": {
+        "linkedin": "https://www.linkedin.com/company/lushadata",
+        "crunchbase": [
+          "https://www.crunchbase.com/organization/lusha/signals_and_news",
+          "https://www.crunchbase.com/organization/lusha-co-embedded",
+          "… 5 more item(s) truncated"
+        ]
+      },
+      "linkedinFollowers": 66792,
+      "funding": {
+        "rounds": [
+          {
+            "currency": "USD",
+            "roundAmount": 205000000,
+            "roundType": "Private Equity Round",
+            "roundDate": "Nov 10, 2021"
+          },
+          {
+            "currency": "USD",
+            "roundAmount": 40000000,
+            "roundType": "Private Equity Round",
+            "roundDate": "Feb 10, 2021"
+          }
+        ],
+        "totalRounds": 2,
+        "totalRoundsAmount": 245000000,
+        "currency": "USD",
+        "isIpo": false,
+        "lastRoundType": "Private Equity Round",
+        "lastRoundAmount": 205000000,
+        "lastRoundDate": "Nov 10, 2021"
+      },
+      "popularityTier": 1,
+      "logoUrl": "https://logo.lusha.co/brightdata/year=2024/month=05/day=03/j_lvq47h0g13te1b3wpu.e7b0795e7affc9953dadd43e6fce99a2c5260043.file_lvq4cfwv17kcb9m4ej.logo_cached.jpg",
+      "businessModel": [
+        "B2B"
+      ],
+      "additionalDescriptions": [
+        "Lusha is the B2B data and sales intelligence system used by sales, marketing, recruiting, RevOps teams, and AI agents to find contacts, enrich records, and track real-world buying signals. It works with your CRM, automation tools, and existing GTM stack.\n300M+ business contacts and 30M+ company profiles across North America, EMEA, APAC, and LATAM. \nEmail verification at 95–98% by region.\n Direct dial accuracy at 90%+. \n7M new signals processed every week — funding rounds, leadership changes, hir… [1561 chars total]",
+        "Lusha Systems Ltd. offers a platform for finding B2B contact and company information globally.",
+        "… 1 more item(s) truncated"
+      ],
+      "emails": [
+        {
+          "email": "Support@Lusha.com"
+        }
+      ],
+      "keywords": [
+        "contact information",
+        "data accuracy",
+        "… 10 more item(s) truncated"
+      ]
+    }
+  ],
+  "billing": {
+    "creditsCharged": 2,
+    "resultsReturned": 1
+  }
+}

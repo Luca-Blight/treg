@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "f2bb28af-d757-4a8f-88d3-13a2a10a9d3c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:15",
+  "time_stamp": 1785220095,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-DouPlus-API/fetch_video_detail_api_v1_douyin_douplus_fetch_video_detail_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f2bb28af-d757-4a8f-88d3-13a2a10a9d3c?sign=1ed8a2eb2454ce556683c807b93aad0d8133f967a3240f47d37fc9cfd18e5d5f",
+  "router": "/api/v1/douyin/douplus/fetch_video_detail",
+  "params": {},
+  "data": {
+    "code": 0,
+    "msg": "success",
+    "data": {
+      "hasMore": false,
+      "cursor": 0,
+      "itemList": [
+        {
+          "AwemeInfo": {
+            "AwemeId": "7651708301280906538",
+            "Desc": "观看major下来，理性讨论下战队排名 #csgo茄子 #茄子cs解说 #科隆major #csgo",
+            "CreateTime": "1781552198000",
+            "Author": "… {9 field(s) truncated}",
+            "Video": "… {10 field(s) truncated}",
+            "Statistics": "… {4 field(s) truncated}",
+            "IsPhoto": false
+          },
+          "ItemSource": {
+            "SourceType": 1,
+            "ItemGeneraion": 0
+          },
+          "IsAd": false,
+          "HasLocalAnchor": false,
+          "PlayletType": 0
+        }
+      ]
+    }
+  }
+}

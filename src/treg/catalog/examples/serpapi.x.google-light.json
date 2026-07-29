@@ -1,0 +1,36 @@
+{
+  "search_metadata": {
+    "id": "6a6898d2f3fc7b4144404f06",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/0mTl5WSgbz8uvp05H--AIQ/6a6898d2f3fc7b4144404f06.json",
+    "created_at": "2026-07-28 11:56:02 UTC",
+    "processed_at": "2026-07-28 11:56:02 UTC",
+    "google_light_url": "https://www.google.com/search?q=coffee&oq=coffee&sourceid=chrome&ie=UTF-8&gbv=1",
+    "raw_html_file": "https://serpapi.com/searches/0mTl5WSgbz8uvp05H--AIQ/6a6898d2f3fc7b4144404f06.html",
+    "total_time_taken": 0.5
+  },
+  "search_parameters": {
+    "engine": "google_light",
+    "q": "coffee",
+    "google_domain": "google.com",
+    "device": "desktop"
+  },
+  "search_information": {
+    "query_displayed": "coffee",
+    "organic_results_state": "Results for exact spelling"
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "Coffee - Wikipedia",
+      "link": "https://en.wikipedia.org/wiki/Coffee",
+      "displayed_link": "en.wikipedia.org › wiki › Coffee",
+      "snippet": "Coffee is a beverage brewed from roasted ground coffee beans. Darkly colored and bitter, coffee has a stimulating effect on humans due to its caffeine content,"
+    },
+    "… 8 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "current": 1,
+    "next": "https://serpapi.com/search.json?device=desktop&engine=google_light&gl=us&google_domain=google.com&hl=en&q=coffee&start=10&location=Austin%2C+TX%2C+Texas%2C+United+States"
+  }
+}

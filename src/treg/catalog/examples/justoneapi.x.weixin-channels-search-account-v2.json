@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "data": {
+    "v2_info_list": [
+      "… 5 field(s) truncated",
+      "… 59 more item(s) truncated"
+    ],
+    "video_object_list": [
+      "… 36 field(s) truncated",
+      "… 49 more item(s) truncated"
+    ],
+    "continue_flag": 1,
+    "last_buffer": "",
+    "req_p": "192.168.1.129:2020"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:15:42.341858175",
+  "requestId": "8d8d3e89ae7b4f378a9175f60bccb9… [32 chars total]"
+}

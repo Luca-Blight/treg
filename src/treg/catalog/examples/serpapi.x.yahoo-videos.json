@@ -1,0 +1,52 @@
+{
+  "search_metadata": {
+    "id": "6a6898e073bf591f8321467d",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/pgXoaS1maof9CrpfPhEtOQ/6a6898e0… [81 chars]",
+    "created_at": "2026-07-28 11:56:16 UTC",
+    "processed_at": "2026-07-28 11:56:16 UTC",
+    "yahoo_videos_url": "https://video.search.yahoo.com/search/video?p=coffee",
+    "raw_html_file": "https://serpapi.com/searches/pgXoaS1maof9CrpfPhEtOQ/6a6898e0… [81 chars]",
+    "total_time_taken": 1.68
+  },
+  "search_parameters": {
+    "engine": "yahoo_videos",
+    "device": "desktop",
+    "p": "coffee"
+  },
+  "shopping_results": [
+    {
+      "link": "https://www.amazon.com/Maxwell-House-Decaf-Keurig-Coffee/dp/… [294 chars]",
+      "title": "Maxwell House K-Cup Coffee Pods, 10 Ct, Decaf House Blend Me… [70 chars]",
+      "thumbnail": "https://sp.yimg.com/ib/th?id=OPHS.uMCYixJgZV2Dug474C474&o=5&… [80 chars]",
+      "position": 1
+    },
+    "… 35 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "title": "Best coffee",
+      "link": "https://video.search.yahoo.com/search/video;_ylt=AwrEo9rgmGh… [188 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=yahoo_… [80 chars]",
+      "thumbnail": "https://tse1.mm.bing.net/th?q=Best+Coffee&pid=Api&mkt=en-US&… [92 chars]",
+      "position": 1
+    },
+    "… 14 more item(s) truncated"
+  ],
+  "videos_results": [
+    {
+      "thumbnail": "https://tse3.mm.bing.net/th/id/OVP.XZdoO4V2GZfevJbJpWCQQgHgF… [90 chars]",
+      "link": "https://video.search.yahoo.com/search/video;_ylt=AwrEo9rgmGh… [187 chars]",
+      "original": "https://www.youtube.com/watch?v=xUoFhcQBiZY",
+      "title": "How To Make The Best Coffee, According To Science",
+      "duration": "13:47",
+      "views": "youtube.com",
+      "position": 1
+    },
+    "… 59 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "next": "https://serpapi.com/search.json?b=61&device=desktop&engine=y… [80 chars]",
+    "current": "https://serpapi.com/search.json?device=desktop&engine=yahoo_… [75 chars]"
+  }
+}

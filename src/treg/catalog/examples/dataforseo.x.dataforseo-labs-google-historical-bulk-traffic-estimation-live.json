@@ -1,0 +1,78 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0823 sec.",
+  "cost": 0.1236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0563-0000-f750859d1e0d",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0770 sec.",
+      "cost": 0.1236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "historical_bulk_traffic_estimation",
+        "se_type": "google",
+        "targets": [
+          "dataforseo.com",
+          "… 2 more item(s) truncated"
+        ],
+        "location_code": 2840,
+        "language_code": "en",
+        "date_from": "2026-04-24",
+        "date_to": "2026-06-24",
+        "item_types": [
+          "organic",
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 3,
+          "items_count": 3,
+          "items": [
+            {
+              "se_type": "google",
+              "target": "cnn.com",
+              "metrics": {
+                "organic": [
+                  {
+                    "year": 2026,
+                    "month": 6,
+                    "etv": 110708925.48835732,
+                    "count": 3578724
+                  },
+                  "… 2 more item(s) truncated"
+                ],
+                "paid": [
+                  {
+                    "year": 2026,
+                    "month": 6,
+                    "etv": 189.12600088119507,
+                    "count": 14
+                  },
+                  "… 2 more item(s) truncated"
+                ],
+                "local_pack": null,
+                "featured_snippet": null
+              }
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

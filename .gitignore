@@ -43,3 +43,10 @@ skills-lock.json
 
 # Local planning / handoffs — private, never committed.
 .context/
+
+# Working docs that are plans/audits, not the shipped design record — they go stale the day
+# after they are written and read as commitments they are not.
+docs/context/interface/*-plan.md
+docs/context/interface/*-audit-*.md
+docs/assets/restyle-*.png
+docs/context/interface/*-proposal.md

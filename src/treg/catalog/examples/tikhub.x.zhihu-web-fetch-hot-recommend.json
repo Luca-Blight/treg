@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "request_id": "cc4d8472-789e-4e60-8cea-d6ee76c93f17",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:08",
+  "time_stamp": 1785220268,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Zhihu-Web-API/fetch_hot_recommend_api_v1_zhihu_web_fetch_hot_recommend_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/cc4d8472-789e-4e60-8cea-d6ee76c93f17?sign=8e3e51d932b22c5096f5845e6b26b4c0f15fcd8614acde0f0b22aef8bb1b559a",
+  "router": "/api/v1/zhihu/web/fetch_hot_recommend",
+  "params": {},
+  "data": {
+    "data": [
+      "… {10 field(s) truncated}",
+      "… 5 more item(s) truncated"
+    ],
+    "paging": {
+      "is_end": false,
+      "is_start": false,
+      "next": "https://www.zhihu.com/api/v3/feed/topstory/recommend?action=down&ad_interval=-10&after_id=6&desktop=true&end_offset=6&page_number=2&session_token=<omitted: expires>",
+      "previous": "https://www.zhihu.com/api/v3/feed/topstory/recommend?action=pull&ad_interval=-10&before_id=6&desktop=true&end_offset=6&page_number=2&session_token=<omitted: expires>",
+      "totals": 0
+    },
+    "fresh_text": "推荐已更新"
+  }
+}

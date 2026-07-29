@@ -1,0 +1,34 @@
+{
+  "success": true,
+  "credits_remaining": 19811,
+  "credits_charged": 1,
+  "reels": [
+    {
+      "id": "3940144772517544096",
+      "__typename": "XDTGraphVideo",
+      "shortcode": "DauNMt5hUCg",
+      "url": "https://www.instagram.com/reel/DauNMt5hUCg/",
+      "caption": "MOST DOGS NEED FAR MORE EXERCISE THAN THEY CURRENTLY ARE GETTING TO BE HAPPY & HEALTHY •\n-\nCesar Milan aka the Dog Whisperer was my guest on the recent Huberman Lab podcast. \n\nMost people do not walk … [1705 chars]",
+      "thumbnail_src": "https://scontent-lga3-2.cdninstagram.com/v/t51.82787-15/742802667_18446780476136501_8244550257039975450_n.jpg?stp=c0.280.720.720a_dst-jpg_e15_s640x640_tt6&_nc_ht=scontent-lga3-2.cdninstagram.com&_nc_c… [474 chars]",
+      "display_url": "https://scontent-lga3-2.cdninstagram.com/v/t51.82787-15/742802667_18446780476136501_8244550257039975450_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-lga3-2.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2gGficB… [449 chars]",
+      "video_url": "https://scontent-lga3-3.cdninstagram.com/o1/v/t2/f2/m86/AQPb8_qc04G55aLhi1NOtulPEciqO6Nzvii17sDX4YzylhYKS92xN_WbYWUq4alkCBqMwUHKzDZ5bV9BR8lguwGQI151U6a4wWmjBDc.mp4?_nc_cat=104&_nc_sid=5e9851&_nc_ht=sc… [1058 chars]",
+      "has_audio": true,
+      "accessibility_caption": null,
+      "video_view_count": 1546,
+      "video_play_count": 3363541,
+      "product_type": "clips",
+      "video_duration": 31.531,
+      "clips_music_attribution_info": {
+        "artist_name": "hubermanlab",
+        "song_name": "Original audio",
+        "uses_original_audio": true,
+        "should_mute_audio": false,
+        "should_mute_audio_reason": "",
+        "audio_id": "28061679846760683"
+      },
+      "…": "10 more field(s) truncated"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "next_page": 2
+}

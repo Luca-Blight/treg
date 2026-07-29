@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "2355716d-0c3b-4af0-9309-bc4acf74280f",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:58",
+  "time_stamp": 1785220138,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V1-API/fetch_user_info_by_… [108 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2355716d-0c3b-4a… [150 chars]",
+  "router": "/api/v1/instagram/v1/fetch_user_info_by_id",
+  "params": {
+    "user_id": "25025320"
+  },
+  "data": {
+    "status": true,
+    "ai_agent_owner_username": null,
+    "biography": "Discover what's new on Instagram 🔎✨",
+    "bio_links": [
+      "… {4 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "fb_profile_biolink": null,
+    "biography_with_entities": {
+      "raw_text": "Discover what's new on Instagram 🔎✨",
+      "entities": "… [0 item(s) truncated]"
+    },
+    "blocked_by_viewer": false,
+    "restricted_by_viewer": null,
+    "country_block": false,
+    "eimu_id": "117943452927407",
+    "external_url": "https://www.youtube.com/watch?v=H6G9PcvHjj4",
+    "external_url_linkshimmed": "https://l.instagram.com/?u=https%3A%2F%2Fwww.youtube.com%2Fw… [181 chars]",
+    "edge_followed_by": {
+      "count": 685855155
+    },
+    "fbid": "17841400039600391",
+    "followed_by_viewer": false,
+    "…": "49 more field(s) truncated"
+  }
+}

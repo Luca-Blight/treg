@@ -1,0 +1,26 @@
+{
+  "request": {
+    "pageUrl": "https://slashdot.org/",
+    "api": "list",
+    "version": 3
+  },
+  "objects": [
+    {
+      "diffbotUri": "list|3|1845629100",
+      "icon": "https://slashdot.org/favicon.ico",
+      "pageUrl": "https://slashdot.org/",
+      "type": "list",
+      "title": "News for nerds, stuff that matters, & software",
+      "items": [
+        {
+          "link": "https://www.dexerto.com/entertainment/arizona-state-launches-influencer-degree-where-students-must-gain-real-followers-3391012/",
+          "date": "Tue, 28 Jul 2026 00:00:00 GMT",
+          "summary": "Arizona State University has launched a 120-credit bachelor's degree in content creation that teaches video, podcasting, branding, analytics, media law, and social strategy. For their capstone, studen… [1612 chars]",
+          "title": "Arizona State Launches Influencer Degree Where Students Must Gain Real Followers (dexerto.com) 13",
+          "BeauHD": "on Tuesday July 28, 2026 @07:00AM from the likes-for-credits dept."
+        },
+        "… 17 more item(s) truncated"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "request_id": "927d7238-d5fc-480e-a88a-e469517e9a69",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:48",
+  "time_stamp": 1785220308,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-Web-API/fetch_one_video_api… [96 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/927d7238-d5fc-48… [150 chars]",
+  "router": "/api/v1/kuaishou/web/fetch_one_video",
+  "params": {
+    "share_text": "https://www.kuaishou.com/f/X-f2k5KJpiXN1SY"
+  },
+  "data": [
+    {
+      "singlePicture": false,
+      "type": 1,
+      "manifest": "… {10 field(s) truncated}",
+      "duration": 58750,
+      "timestamp": 1731058886384,
+      "likeCount": 97986,
+      "width": 720,
+      "height": 1280,
+      "mainMvUrls": "… [2 item(s) truncated]",
+      "commentCount": 3246,
+      "forwardCount": 0,
+      "viewCount": 1835584,
+      "shareCount": 6295,
+      "coverUrls": "… [2 item(s) truncated]",
+      "headUrl": "https://p2-pro.a.yximgs.com/uhead/AB/2025/08/11/21/BMjAyNTA4… [106 chars]",
+      "userSex": "M",
+      "kwaiId": "quanshaogmod",
+      "webpCoverUrls": "… [2 item(s) truncated]",
+      "headUrls": "… [2 item(s) truncated]",
+      "verified": false,
+      "soundTrack": "… {18 field(s) truncated}",
+      "tagShow": "… {4 field(s) truncated}",
+      "commentShowType": 2,
+      "userName": "权少爱吃小汉堡🍔",
+      "userId": 228905802,
+      "…": "12 more field(s) truncated"
+    }
+  ]
+}

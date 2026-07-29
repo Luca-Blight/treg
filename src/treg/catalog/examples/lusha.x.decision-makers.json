@@ -1,0 +1,13 @@
+{
+  "requestId": "04060fd7-5271-4892-9341-a3d99c2a7773",
+  "results": [],
+  "pagination": {
+    "page": 0,
+    "size": 100,
+    "total": 0
+  },
+  "billing": {
+    "creditsCharged": 0,
+    "resultsReturned": 0
+  }
+}

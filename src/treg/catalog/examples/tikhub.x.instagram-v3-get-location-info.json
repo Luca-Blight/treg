@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "2fe76f49-6c91-4363-973d-d9ad7e2c45ac",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:19",
+  "time_stamp": 1785220339,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V3-API/get_location_info_api_v1_instagram_v3_get_location_info_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2fe76f49-6c91-4363-973d-d9ad7e2c45ac?sign=2a68824f4427b50a4aeeef51c78eaff8b85a2383d0fa3742aebd55dc23c0c019",
+  "router": "/api/v1/instagram/v3/get_location_info",
+  "params": {
+    "location_id": "1016248898"
+  },
+  "data": {
+    "pk": "1016248898",
+    "id": "1016248898",
+    "name": "창원",
+    "address": "",
+    "city": "Changwon",
+    "lng": null,
+    "lat": null,
+    "external_id_source": null,
+    "external_id": 144811708967490,
+    "location": {
+      "pk": "1016248898",
+      "id": "1016248898",
+      "name": "창원",
+      "address": "",
+      "city": "Changwon",
+      "lng": null,
+      "lat": null,
+      "external_id_source": null,
+      "external_id": 144811708967490
+    },
+    "nearby_locations": [],
+    "_backend": "igrapi"
+  }
+}

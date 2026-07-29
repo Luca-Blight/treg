@@ -1,0 +1,32 @@
+{
+  "code": 0,
+  "data": {
+    "result": 1,
+    "recoPcursor": "no_more",
+    "ussid": "MTRfNDcwNTYxMDMzMl8xNzg1MjE4ND… [44 chars total]",
+    "portalFlag": true,
+    "extParams": {
+      "disablePhotoInsert": false,
+      "rsRecoAfterPlayInterval": 2,
+      "dynamicShard": false,
+      "isShowPymkUserPhotos": true,
+      "searchTaskParam": "… 0 field(s) truncated",
+      "streamExtParams": "{\"single\":false,\"predict\":fals… [82 chars total]",
+      "isShowScrollTopButton": false,
+      "subtagWithPic": false
+    },
+    "feeds": [
+      "… 64 field(s) truncated",
+      "… 19 more item(s) truncated"
+    ],
+    "pcursor": "1",
+    "llsid": "2006114175823394002",
+    "jumpToSlideMode": false,
+    "host-name": "public-bjmt-c34-kce-node254.id… [52 chars total]",
+    "recoInterestFlag": false,
+    "responseCode": 0
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:18.117808058",
+  "requestId": "3e92235804da4952b739e87b8ea48a… [32 chars total]"
+}

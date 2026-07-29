@@ -1,0 +1,14 @@
+{
+  "results": [
+    {
+      "page": "www.google.com/url?sa=t&url=http%3A%2F%2Fmoz.com",
+      "title": "Redirect Notice",
+      "domain_authority": 100,
+      "spam_score": 19,
+      "matching_target_indexes": [
+        0
+      ]
+    }
+  ],
+  "next_token": "AaPmPoxmbnFo"
+}

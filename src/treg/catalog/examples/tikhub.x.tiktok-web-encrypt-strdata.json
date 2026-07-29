@@ -1,0 +1,22 @@
+{
+  "code": 200,
+  "request_id": "727f9a36-1a70-4ac4-a165-0927b1f5ef20",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:15",
+  "time_stamp": 1785220215,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/encrypt_strData_api_v1_tiktok_web_encrypt_strData_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/727f9a36-1a70-4ac4-a165-0927b1f5ef20?sign=1cdc76520923730f6f82490f969d4d813b0c75952b21765dbd0b14c347e016b0",
+  "router": "/api/v1/tiktok/web/encrypt_strData",
+  "params": {
+    "data_length": 905
+  },
+  "data": {
+    "encrypted": "3DoWKMW+bOLe8xap+uI1uU9stsoqDiBSjpN0atiVN8scUeeek+V/NyufaZFJjSzcZvXY9izHCN3w3YpzpuRutkCSe8wjMAKiC2J6ELq7GwJrUR05x/n167uFGv1GiUdVIwBLRfCGOQpiKo5r9GBZ/hkyfnQXbq5z85xuHTokCHKNhY2xDAXbk3jmk41TZD9+w2GZm/74… [872 chars]",
+    "length": 872
+  }
+}

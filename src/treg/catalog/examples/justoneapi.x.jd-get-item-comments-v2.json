@@ -1,0 +1,47 @@
+{
+  "code": 0,
+  "data": {
+    "filters": [
+      "… 4 field(s) truncated",
+      "… 7 more item(s) truncated"
+    ],
+    "items": [
+      "… 33 field(s) truncated",
+      "… 9 more item(s) truncated"
+    ],
+    "sortMode": 5,
+    "summary": {
+      "afterCount": 54,
+      "afterCountStr": "54",
+      "averageScore": 5,
+      "commentCount": 1000,
+      "commentCountStr": "1000+",
+      "defaultGoodCount": 1000,
+      "defaultGoodCountStr": "1000+",
+      "fixCount": 0,
+      "generalCount": 0,
+      "generalCountStr": "0",
+      "generalRate": 0.0,
+      "generalRateShow": 0,
+      "goodCount": 200,
+      "goodCountStr": "200+",
+      "goodRate": 1.0,
+      "mainSkuId": 10160545687002,
+      "oneYear": 0,
+      "poorCount": 0,
+      "poorCountStr": "0",
+      "poorRate": 0.0,
+      "poorRateShow": 0,
+      "positiveRate": 100,
+      "showCount": 100,
+      "showCountStr": "100+",
+      "skuId": 10160545687002,
+      "videoCount": 9,
+      "videoCountStr": "9"
+    },
+    "totalPages": 44
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:31.92273135",
+  "requestId": "0fc079e8c2f540978587ac47541854… [32 chars total]"
+}

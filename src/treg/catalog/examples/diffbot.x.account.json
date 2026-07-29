@@ -1,0 +1,26 @@
+{
+  "planCredits": 10000,
+  "planStart": "2026-07-28",
+  "created": "2026-07-28",
+  "usage": [
+    {
+      "date": "2026-07-28",
+      "subtitles": 0,
+      "nlp": 1,
+      "entities": 5,
+      "credits": 136,
+      "refresh": 0,
+      "proxies": 0,
+      "videos": 0,
+      "extractions": 10,
+      "facets": 0
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "name": "REDACTED",
+  "plan": "kgfree",
+  "email": "person@example.com",
+  "token": "REDACTED",
+  "status": "active",
+  "_scrubbed": true
+}

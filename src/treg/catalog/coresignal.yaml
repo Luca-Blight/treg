@@ -1,0 +1,130 @@
+provider: coresignal
+source:
+  docs: https://docs.coresignal.com/api-introduction/authorization
+  openapi: null # Coresignal documents the Multi-source API on docs.coresignal.com; no fetchable spec
+  curated: 2026-07-28
+# UNVERIFIED — no credential available at curation time; every path, parameter and price below is
+# transcribed from Coresignal's official Multi-source API (cdapi/v2) documentation 2026-07-28.
+# Nothing here has been called.
+#
+# Auth quirk carried over from the registry: the key rides in a header literally named `apikey`
+# (one word, lowercase). Coresignal has NO credits/usage/balance REST endpoint at all — the running
+# balance is returned as the `x-credits-remaining` RESPONSE HEADER on every call, so a client tracks
+# spend by reading headers rather than polling an account route. That is also why the registry
+# probes with an empty POST body (a valid key answers 400 and is not charged, an invalid key 401),
+# and why this file has no `account.usage` entry: there is nothing to point one at.
+#
+# COLLECTION TRAP: `/search/filter` (plain named-field filters) exists ONLY on the `_base` and
+# `_post` collections. The `_multi_source` collections used below expose `/search/es_dsl` and
+# nothing else, so an Elasticsearch DSL body is mandatory here — there is no simpler filter form to
+# fall back to. The cheaper `company_base` / `employee_base` collections do have `/search/filter`
+# and cost 10 credits per collect instead of 20.
+#
+# THE TWO-STEP SHAPE, which is the whole cost model, and the numbers are steep enough to plan
+# around. SEARCH is FREE and returns only an array of record ids; COLLECT and ENRICH each cost
+# 20 CREDITS and return one full record. So a search matching 500 companies costs nothing and then
+# costs 10,000 credits to actually read — narrowing the query is the entire optimisation. Skip the
+# search whenever you already hold an identifier: the company side has a dedicated
+# /company_multi_source/enrich?website=…, and on the employee side COLLECT itself accepts a LinkedIn
+# shorthand name in place of an id — there is no separate employee enrich route on the docs site.
+# (The `/search/es_dsl/preview` variants return records inline rather than ids and also cost 20.)
+#
+# Credits are sold per plan and Coresignal does not publish a public per-credit dollar price, so
+# priced endpoints below carry `cost.currency: credit` (the credit count) rather than a USD value.
+
+pricing_url: https://coresignal.com/pricing/  # Search returns ids for free; COLLECTING each record costs a credit.
+endpoints:
+  - id: coresignal.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /company_multi_source/enrich
+    name: "Enrich a company by website or LinkedIn URL"
+    summary: "Enrich a company from its website or LinkedIn URL — firmographics, funding, headcount"
+    input:
+      queryParams:
+        website: {type: string, required: true, note: "the company's website — this endpoint is keyed on the domain and nothing else", example: "coresignal.com"}
+        fields: {type: string, required: false, note: "a field to return; repeat the parameter to request several. Omit for the full record. Does not change the price"}
+      note: "the cheap path when you already know the domain — it skips the search step entirely. For a LinkedIn URL instead, use coresignal.companies.collect, whose id segment also accepts a company shorthand name"
+    cost:
+      type: per_success
+      value: 20
+      currency: credit
+      note: "20 Coresignal credits per successful (HTTP 200) company record; a no-match is free. Credits are sold per plan; no public per-credit price."
+    docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/enrich
+
+  - id: coresignal.companies.search
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /company_multi_source/search/es_dsl
+    name: "Search companies by filter"
+    summary: "Find companies by Elasticsearch filter (industry, size, country) — ids only, free"
+    input:
+      bodyType: json
+      body:
+        query: {type: object, required: true, note: "an Elasticsearch DSL query over the company schema, e.g. {\"bool\": {\"must\": [{\"match\": {\"industry\": \"Software Development\"}}]}}", example: {"bool": {"must": [{"match": {"website": "coresignal.com"}}]}}}
+      note: "returns an ARRAY OF IDS, not records — feed each id to coresignal.companies.collect to read it (20 credits each), so narrow the query before you page. There is NO /search/filter on a multi_source collection; es_dsl is the only search form. Query params: items_per_page (1-1000, default 1000) and `after` for cursor paging"
+    cost: {type: free, value: 0, currency: USD, note: "search returns ids only and consumes no credits; the cost lands on the collect step"}
+    docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/elasticsearch-dsl
+
+  - id: coresignal.companies.collect
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /company_multi_source/collect/{id}
+    name: "Get a company's full record"
+    summary: "Read one company's full record by the id a company search returned"
+    input:
+      pathParams:
+        id: {type: string, required: true, note: "a numeric company id from coresignal.companies.search, OR the company's LinkedIn shorthand name (the slug, NOT a full URL)", example: "12345678"}
+      note: "the paid half of search+collect. Budget one credit per id and narrow the id list before looping"
+    cost:
+      type: per_call
+      value: 20
+      currency: credit
+      note: "20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10."
+    docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/collect
+
+  - id: coresignal.people.enrich
+    domain: contacts
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: GET
+    path: /employee_multi_source/collect/{identifier}
+    name: "Get a person's full profile"
+    summary: "One person's full record — role, employer, work history, education — by LinkedIn URL or id"
+    input:
+      pathParams:
+        identifier: {type: string, required: true, note: "a numeric Coresignal employee id from coresignal.people.search, OR the person's LinkedIn shorthand name (the profile slug, NOT a full URL) — the same route serves both, which is why there is no separate employee enrich endpoint on the docs site", example: "12345678"}
+      note: "the employee side has NO /enrich route (unlike companies): collect IS the enrichment call when you hand it a profile URL rather than an id. Coresignal's depth here is the full employment history, not just the current role"
+    cost:
+      type: per_call
+      value: 20
+      currency: credit
+      note: "20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10."
+    docs_url: https://docs.coresignal.com/employee-api/multi-source-employee-api/collect
+
+  - id: coresignal.people.search
+    domain: contacts
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /employee_multi_source/search/es_dsl
+    name: "Search people by filter"
+    summary: "Find people by Elasticsearch filter (title, employer, country) — ids only, free"
+    input:
+      bodyType: json
+      body:
+        query: {type: object, required: true, note: "an Elasticsearch DSL query over the employee schema, e.g. {\"bool\": {\"must\": [{\"match\": {\"active_experience_title\": \"Head of Marketing\"}}]}}", example: {"bool": {"must": [{"match": {"active_experience_title": "Head of Marketing"}}]}}}
+      note: "returns an ARRAY OF IDS — read each with coresignal.people.enrich (20 credits each). There is NO /search/filter on a multi_source collection; es_dsl is the only search form. Query params: items_per_page (1-1000, default 1000) and `after` for cursor paging"
+    cost: {type: free, value: 0, currency: USD, note: "search returns ids only and consumes no credits"}
+    docs_url: https://docs.coresignal.com/employee-api/multi-source-employee-api/elasticsearch-dsl

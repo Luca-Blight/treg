@@ -1,0 +1,53 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "id": "tt0111161",
+      "canRate": {
+        "isRatable": true
+      },
+      "ratingsSummary": {
+        "aggregateRating": 9.3
+      },
+      "featuredReviews": {
+        "edges": [
+          {
+            "node": {
+              "__typename": "Review",
+              "id": "rw0348718",
+              "title": {
+                "id": "tt0111161"
+              },
+              "author": {
+                "id": "ur1005460",
+                "nickName": "speedreid"
+              },
+              "authorRating": null,
+              "helpfulness": {
+                "__typename": "ReviewHelpfulness",
+                "upVotes": 1729,
+                "downVotes": 246,
+                "score": 0.8601467439137566
+              },
+              "summary": {
+                "originalText": "Prepare to be moved"
+              },
+              "text": {
+                "originalText": {
+                  "plainText": "I have never seen such an amazing film since I saw The Shawshank Redemption. Shawshank encompasses friendships, hardships, hopes, and dreams.  And what is so great about the movie is that it moves you… [1002 chars total]"
+                }
+              },
+              "language": "en-US",
+              "submissionDate": "2001-02-08",
+              "spoiler": false
+            }
+          },
+          "… 4 more item(s) truncated"
+        ]
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:06.746753403",
+  "requestId": "13b69d17a79c48149121e843e46c12f9"
+}

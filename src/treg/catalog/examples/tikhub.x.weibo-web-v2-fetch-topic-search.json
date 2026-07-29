@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "5f7d28ad-c038-44aa-a4ba-dcd6ff7fe10f",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:49",
+  "time_stamp": 1785220249,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-V2-API/fetch_topic_search_api_v1_weibo_web_v2_fetch_topic_search_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/5f7d28ad-c038-44aa-a4ba-dcd6ff7fe10f?sign=5b16c62caccb79a0d36a6532d8412bc997ade39f8eadfd725b538a75972d9fb0",
+  "router": "/api/v1/weibo/web_v2/fetch_topic_search",
+  "params": {
+    "query": "yu7",
+    "page": "1"
+  },
+  "data": {
+    "parsed_data": {
+      "items": [
+        {
+          "topic": {
+            "name": "#yu7#",
+            "name_plain": "yu7",
+            "url": "https://s.weibo.com/weibo?q=%23yu7%23"
+          },
+          "cover": {
+            "thumb": "https://wx2.sinaimg.cn/thumb180/0024cZx9ly8i9uwigeas5j6050050wel02.jpg",
+            "large": "https://wx2.sinaimg.cn/large/0024cZx9ly8i9uwigeas5j6050050wel02.jpg"
+          },
+          "desc": null,
+          "discuss_count": 12000,
+          "read_count": 11799000
+        },
+        "… 15 more item(s) truncated"
+      ],
+      "count": 16,
+      "parse_success": true
+    }
+  }
+}

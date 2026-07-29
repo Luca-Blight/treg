@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "data": {
+    "data": {
+      "list": [
+        "… 51 field(s) truncated",
+        "… 1 more item(s) truncated"
+      ],
+      "next_cursor": -1
+    },
+    "ok": 1
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:27.400412229",
+  "requestId": "cd3b2f4503c5444283fdd3d3413b23a4"
+}

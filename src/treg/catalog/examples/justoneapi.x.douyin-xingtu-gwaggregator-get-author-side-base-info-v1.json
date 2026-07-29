@@ -1,0 +1,13 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "fans_growth_rate_30d": "-0.004914900299449292"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:09:59.165071936",
+  "requestId": "3aa5436036a3446c871df1bf96dc3d87"
+}

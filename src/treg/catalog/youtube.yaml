@@ -1,0 +1,227 @@
+# unverified — endpoints require a connected OAuth account; verify via a treg connection later.
+#
+# FIRST-PARTY tier: this is YouTube's own Data API v3, reached with the user's OAuth token, so the
+# data is authoritative (and includes the creator's own private/unlisted material) rather than
+# scraped. The same jobs are served any_account by tikhub.yaml / justoneapi.yaml — that overlap is
+# the point: a connected creator should get the official numbers, everyone else falls back to a
+# scraper.
+#
+# Scopes: treg's YouTube app requests youtube.readonly for `read` (plus youtube.upload /
+# youtube / youtube.force-ssl for `post` / `manage`). It does NOT request
+# yt-analytics.readonly (removed 2026-07-28, commit 2dd6bcd), so the YouTube ANALYTICS API
+# (views/watch-time/revenue reports on youtubeanalytics.googleapis.com) is deliberately absent
+# below — the lifetime channel counters in channels.list?mine=true are what the granted scopes
+# actually reach.
+#
+# Cost: the Data API bills no money; it spends a daily QUOTA of 10,000 units per Google Cloud
+# project. Unit prices differ enormously by method and are recorded per endpoint below, because
+# that difference (search.list = 100 units vs playlistItems.list = 1 unit) is the single most
+# expensive thing an agent can get wrong here.
+provider: youtube
+source:
+  docs: https://developers.google.com/youtube/v3/docs
+  openapi: https://youtube.googleapis.com/$discovery/rest?version=v3
+  curated: 2026-07-28
+
+limits: "10,000 quota units/day by default; raises require a review"
+pricing_url: https://developers.google.com/youtube/v3/determine_quota_cost  # A SEARCH costs 100 units; a list costs 1. Search burns the daily budget ~100x faster — prefer list when you already hold ids.; free tier: 10000 quota units/day
+endpoints:
+  - id: youtube.youtube.channel.profile
+    capability: youtube.channel.profile
+    platform: youtube
+    scope: own_account
+    method: GET
+    path: /youtube/v3/channels
+    name: "Get your channel's profile and stats"
+    summary: "Get your YouTube channel's profile and lifetime stats (subscribers, views, video count)"
+    input:
+      queryParams:
+        part: {type: string, required: true, note: "comma-separated resource parts; snippet+statistics is the useful pair", example: "snippet,statistics"}
+        mine: {type: boolean, required: false, note: "true = the connected account's own channel", example: true}
+        id: {type: string, required: false, note: "UC… channel id — use INSTEAD of mine to read any public channel", example: "UCX6OQ3DkcsbYNE6H8uQQuVA"}
+        forHandle: {type: string, required: false, note: "@handle — resolves a handle to a channel", example: "@MrBeast"}
+      note: "exactly one of mine | id | forHandle. contentDetails.relatedPlaylists.uploads from part=contentDetails is the uploads playlist id needed by youtube.channel.videos.uploads"
+    cost: {type: free, note: "included with the connected account; 1 quota unit of the project's 10,000/day"}
+    test_request:
+      queryParams: {part: "snippet,statistics", id: "UCBR8-60-B28hp2BmDPdntcQ"}
+    verified: 2026-07-28
+    example_response: examples/youtube.youtube.channel.profile.json
+    docs_url: https://developers.google.com/youtube/v3/docs/channels/list
+
+  - id: youtube.youtube.channel.videos
+    capability: youtube.channel.videos
+    platform: youtube
+    scope: own_account
+    method: GET
+    path: /youtube/v3/search
+    name: "List your channel's videos, newest first"
+    summary: "List your own channel's videos, newest first (includes private and unlisted ones)"
+    # forMine is the only search filter that reaches a creator's non-public uploads, which is the
+    # whole reason to use the OAuth route over a scraper. It costs 100 units — a hundredth of the
+    # daily quota per call — so for a plain public listing prefer the .uploads variant below.
+    input:
+      queryParams:
+        part: {type: string, required: true, example: "snippet"}
+        forMine: {type: boolean, required: true, note: "restricts results to the connected account's videos", example: true}
+        type: {type: string, required: true, note: "must be 'video' whenever forMine is set — the API rejects any other type", example: "video"}
+        order: {type: string, required: false, note: "date (default relevance) | rating | title | viewCount", example: "date"}
+        maxResults: {type: integer, required: false, note: "1–50, default 5", example: 25}
+        pageToken: {type: string, required: false, note: "nextPageToken from the previous response"}
+    cost: {type: free, note: "included with the connected account; 100 quota units — the daily 10,000 allows ~100 of these calls"}
+    test_request:
+      queryParams: {part: "snippet", channelId: "UCBR8-60-B28hp2BmDPdntcQ", type: "video", maxResults: 2}
+    verified: 2026-07-28
+    example_response: examples/youtube.youtube.channel.videos.json
+    docs_url: https://developers.google.com/youtube/v3/docs/search/list
+
+  - id: youtube.youtube.channel.videos.uploads
+    # Same capability, hundredth of the quota: every channel has an "uploads" playlist holding all
+    # its public videos, and reading a playlist costs 1 unit against search.list's 100. Use this
+    # unless you specifically need private/unlisted videos or a non-chronological order.
+    capability: youtube.channel.videos
+    platform: youtube
+    scope: any_account
+    method: GET
+    path: /youtube/v3/playlistItems
+    name: "List channel uploads via playlist (low cost)"
+    summary: "List a channel's uploaded videos cheaply, via its uploads playlist"
+    input:
+      queryParams:
+        part: {type: string, required: true, example: "snippet,contentDetails"}
+        playlistId: {type: string, required: true, note: "the uploads playlist id — read it from youtube.channel.profile with part=contentDetails (contentDetails.relatedPlaylists.uploads); it is the channel id with UC… rewritten to UU…", example: "UUX6OQ3DkcsbYNE6H8uQQuVA"}
+        maxResults: {type: integer, required: false, note: "1–50, default 5", example: 50}
+        pageToken: {type: string, required: false}
+      note: "returns ids and snippets only — pass contentDetails.videoId into youtube.video.detail for view counts"
+    cost: {type: free, note: "included with the connected account; 1 quota unit"}
+    test_request:
+      queryParams: {part: "snippet", playlistId: "UUBR8-60-B28hp2BmDPdntcQ", maxResults: 2}
+    verified: 2026-07-28
+    example_response: examples/youtube.youtube.channel.videos.uploads.json
+    docs_url: https://developers.google.com/youtube/v3/docs/playlistItems/list
+
+  - id: youtube.youtube.video.detail
+    # any_account: videos.list serves ANY public video id once you hold a token — the OAuth
+    # credential authenticates the caller, it does not restrict which video can be read.
+    capability: youtube.video.detail
+    platform: youtube
+    scope: any_account
+    method: GET
+    path: /youtube/v3/videos
+    name: "Get a video's details and stats"
+    summary: "Get a YouTube video's metadata and stats (views, likes, comments, duration)"
+    input:
+      queryParams:
+        part: {type: string, required: true, note: "snippet=title/description/tags, statistics=counts, contentDetails=duration", example: "snippet,statistics,contentDetails"}
+        id: {type: string, required: true, note: "video id (the v= parameter of the watch URL); up to 50 comma-separated ids in one call", example: "dQw4w9WgXcQ"}
+      note: "batching 50 ids costs the same 1 unit as one id — always batch"
+    cost: {type: free, note: "included with the connected account; 1 quota unit per call regardless of how many ids"}
+    test_request:
+      queryParams: {part: "snippet,statistics", id: "dQw4w9WgXcQ"}
+    verified: 2026-07-28
+    example_response: examples/youtube.youtube.video.detail.json
+    docs_url: https://developers.google.com/youtube/v3/docs/videos/list
+
+  - id: youtube.youtube.video.comments
+    capability: youtube.video.comments
+    platform: youtube
+    scope: any_account
+    method: GET
+    path: /youtube/v3/commentThreads
+    name: "List comments on a video"
+    summary: "List the comments on a YouTube video (any public video, not just your own)"
+    input:
+      queryParams:
+        part: {type: string, required: true, example: "snippet,replies"}
+        videoId: {type: string, required: true, example: "dQw4w9WgXcQ"}
+        order: {type: string, required: false, note: "time (default) | relevance", example: "relevance"}
+        maxResults: {type: integer, required: false, note: "1–100, default 20", example: 20}
+        pageToken: {type: string, required: false}
+        textFormat: {type: string, required: false, note: "html (default) | plainText", example: "plainText"}
+      note: "returns top-level threads; each carries up to 5 replies — fetch the rest via comments.list with parentId. Videos with comments disabled answer 403 commentsDisabled"
+    cost: {type: free, note: "included with the connected account; 1 quota unit"}
+    test_request:
+      queryParams: {part: "snippet", videoId: "dQw4w9WgXcQ", maxResults: 2}
+    verified: 2026-07-28
+    example_response: examples/youtube.youtube.video.comments.json
+    docs_url: https://developers.google.com/youtube/v3/docs/commentThreads/list
+
+  - id: youtube.youtube.search.videos
+    capability: youtube.search.videos
+    platform: youtube
+    scope: any_account
+    method: GET
+    path: /youtube/v3/search
+    name: "Search videos by keyword"
+    summary: "Search YouTube videos by keyword"
+    input:
+      queryParams:
+        part: {type: string, required: true, example: "snippet"}
+        q: {type: string, required: true, example: "coffee"}
+        type: {type: string, required: false, note: "video | channel | playlist; omit to mix all three", example: "video"}
+        order: {type: string, required: false, note: "relevance (default) | date | viewCount | rating | title"}
+        publishedAfter: {type: string, required: false, note: "RFC 3339 timestamp", example: "2026-01-01T00:00:00Z"}
+        regionCode: {type: string, required: false, note: "ISO 3166-1 alpha-2", example: "US"}
+        maxResults: {type: integer, required: false, note: "1–50, default 5", example: 10}
+      note: "search results carry NO statistics — pass the returned video ids to youtube.video.detail for view/like counts"
+    cost: {type: free, note: "included with the connected account; 100 quota units — the most expensive Data API method, ~100 searches exhausts a day"}
+    test_request:
+      queryParams: {part: "snippet", q: "design tutorial", type: "video", maxResults: 2}
+    verified: 2026-07-28
+    example_response: examples/youtube.youtube.search.videos.json
+    docs_url: https://developers.google.com/youtube/v3/docs/search/list
+
+
+  # --- publishing (the `post` capability, scope youtube.upload) -------------------------------
+  #
+  # videos.insert is the most expensive thing in this file by a wide margin: 1,600 quota units
+  # against a daily budget of 10,000. That is SIX uploads per project per day, shared across every
+  # connected channel — the ceiling an agent hits first, long before any rate limit.
+  #
+  # Second gate, unrelated to scopes: until the Google Cloud project passes YouTube's API
+  # compliance audit, videos.insert SUCCEEDS but the video is locked to private however
+  # privacyStatus is set. That is not an error the response reports; the video simply stays
+  # private. See the note on oauth_providers._YOUTUBE_READ.
+  - id: youtube.youtube.video.upload
+    kind: action
+    capability: youtube.video.upload
+    platform: youtube
+    scope: own_account
+    method: POST
+    path: /upload/youtube/v3/videos
+    name: "Upload a video"
+    summary: "Upload a video to your own YouTube channel"
+    input:
+      queryParams:
+        part: {type: string, required: true, note: "which parts of the metadata you are sending — snippet,status is the working minimum; add id to get it back", example: "id,snippet,status"}
+        uploadType: {type: string, required: true, note: "resumable for anything real (survives a dropped connection); multipart only for small files", example: "resumable"}
+        notifySubscribers: {type: boolean, required: false, note: "default true — subscribers get a notification. Set false for a re-upload or a correction", example: true}
+      body:
+        snippet: {type: object, required: true, note: "{\"title\": \"…\" (100 chars max), \"description\": \"…\" (5,000), \"tags\": [\"…\"] (500 chars total), \"categoryId\": \"22\"}", example: {title: "How we built it", description: "A walkthrough.", tags: ["engineering"], categoryId: "22"}}
+        status: {type: object, required: true, note: "{\"privacyStatus\": \"private\"|\"unlisted\"|\"public\", \"selfDeclaredMadeForKids\": false} — selfDeclaredMadeForKids is legally required and YouTube rejects the upload without it", example: {privacyStatus: "private", selfDeclaredMadeForKids: false}}
+      bodyType: json
+      note: "NOT on the usual host path: uploads go to /upload/youtube/v3/videos, and the metadata JSON above is only the FIRST leg. With uploadType=resumable this call returns HTTP 200 and a `Location` header — a session URL you then PUT the video bytes to (in one PUT, or in ranged chunks using Content-Range for resumability). Needs the `post` capability (youtube.upload); a `read` connection 403s. Upload the thumbnail afterwards via youtube.video.thumbnail.set — snippet.thumbnails on this call is ignored"
+    cost: {type: free, note: "no money, but 1,600 of the project's 10,000 daily quota units — roughly six uploads a day across ALL connected channels"}
+    unverified: "write action — this publishes to a real channel; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://developers.google.com/youtube/v3/docs/videos/insert
+
+  - id: youtube.youtube.video.thumbnail.set
+    kind: action
+    capability: youtube.video.thumbnail.set
+    platform: youtube
+    scope: own_account
+    method: POST
+    path: /upload/youtube/v3/thumbnails/set
+    name: "Set video thumbnail"
+    summary: "Set the custom thumbnail on one of your YouTube videos"
+    input:
+      queryParams:
+        videoId: {type: string, required: true, note: "the id videos.insert returned", example: "dQw4w9WgXcQ"}
+        uploadType: {type: string, required: false, note: "media for a straight single-shot upload of the image bytes", example: "media"}
+      body:
+        image: {type: string, required: true, note: "the raw image bytes as the request body (Content-Type: image/jpeg or image/png), NOT a JSON field and NOT a URL — 2 MB cap, 1280x720 recommended", example: "<binary image body>"}
+      bodyType: form
+      note: "same /upload/ host path as the video upload. Custom thumbnails need the channel to be verified — an unverified channel gets HTTP 403 forbidden even though the scope is correct, which reads like a permissions bug and is not one"
+    cost: {type: free, note: "no money; 50 of the project's 10,000 daily quota units"}
+    unverified: "write action — modifies a real published video; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://developers.google.com/youtube/v3/docs/thumbnails/set
+

@@ -1,0 +1,55 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "2.4522 sec.",
+  "cost": 0.024036,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280923-2171-0463-0000-56cb08a10e71",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.4412 sec.",
+      "cost": 0.024036,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "content_analysis",
+        "… 2 more item(s) truncated"
+      ],
+      "data": {
+        "api": "content_analysis",
+        "function": "search",
+        "keyword_fields": {
+          "snippet": "logitech"
+        },
+        "keyword": "logitech",
+        "page_type": [
+          "ecommerce",
+          "news",
+          "… 3 more item(s) truncated"
+        ],
+        "search_mode": "as_is",
+        "filters": [
+          "main_domain",
+          "=",
+          "… 1 more item(s) truncated"
+        ],
+        "order_by": [
+          "content_info.sentiment_connotations.anger,desc"
+        ],
+        "limit": 10
+      },
+      "result": [
+        {
+          "offset_token": "<omitted: expires>",
+          "total_count": 0,
+          "items_count": 0,
+          "items": null
+        }
+      ]
+    }
+  ]
+}

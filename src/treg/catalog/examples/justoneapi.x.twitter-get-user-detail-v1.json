@@ -1,0 +1,41 @@
+{
+  "code": 0,
+  "data": {
+    "status": "active",
+    "profile": "elonmusk",
+    "rest_id": "44196397",
+    "blue_verified": true,
+    "verification_type": null,
+    "affiliates": {
+      "label": {
+        "badge": {
+          "url": "https://pbs.twimg.com/profile_images/1955359038532653056/OSHY3ewP_bigger.jpg"
+        },
+        "description": "X",
+        "url": {
+          "url": "https://twitter.com/X",
+          "urlType": "DeepLink"
+        },
+        "userLabelDisplayType": "Badge",
+        "userLabelType": "BusinessLabel"
+      }
+    },
+    "business_account": [],
+    "avatar": "https://pbs.twimg.com/profile_images/2053244804520427520/m8mdWZCG_normal.jpg",
+    "header_image": "https://pbs.twimg.com/profile_banners/44196397/1774145451",
+    "desc": "",
+    "name": "Elon Musk",
+    "protected": false,
+    "location": null,
+    "friends": 1376,
+    "sub_count": 241034508,
+    "statuses_count": 106249,
+    "media_count": 4655,
+    "pinned_tweet_ids_str": null,
+    "created_at": "Tue Jun 02 20:12:29 +0000 2009",
+    "id": "44196397"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:29.133320165",
+  "requestId": "eb5dcd6ab9604198aa9357e24888904c"
+}

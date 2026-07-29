@@ -1,0 +1,35 @@
+{
+  "code": 200,
+  "request_id": "1c083b55-98d6-4dab-b0ce-9ddd4ee0730a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:23",
+  "time_stamp": 1785220283,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V2-API/fetch_similar_users_api_v1_instagram_v2_fetch_similar_users_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/1c083b55-98d6-4dab-b0ce-9ddd4ee0730a?sign=393b2c50bec9ab7bf855f71a671aee1868428666e86e7a1b54e8fc5b040ee38d",
+  "router": "/api/v1/instagram/v2/fetch_similar_users",
+  "params": {
+    "username": "instagram",
+    "user_id": "18527"
+  },
+  "data": {
+    "data": {
+      "count": 78,
+      "items": [
+        {
+          "full_name": "Khabane Lame",
+          "id": "779085683",
+          "is_private": false,
+          "is_verified": true,
+          "profile_pic_url": "https://scontent-bru2-1.cdninstagram.com/v/t51.2885-19/432373533_320859554307276_5871068525874555840_n.jpg?stp=dst-jpg_e0_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby43OTIuYzIifQ&_n… [559 chars]",
+          "username": "khaby00"
+        },
+        "… 77 more item(s) truncated"
+      ]
+    }
+  }
+}

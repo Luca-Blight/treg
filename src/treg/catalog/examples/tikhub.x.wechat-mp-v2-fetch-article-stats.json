@@ -1,0 +1,51 @@
+{
+  "code": 200,
+  "request_id": "732ee55a-dfd0-47e4-b953-2cc7ba1bc150",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:11",
+  "time_stamp": 1785220391,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Media-Platform-V2-API/fetch_a… [117 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/732ee55a-dfd0-47… [150 chars]",
+  "router": "/api/v1/wechat_mp/v2/fetch_article_stats",
+  "params": {
+    "url": "https://mp.weixin.qq.com/s/TSNQKkRpN1qbKsT7BvzqIw",
+    "raw": true
+  },
+  "data": {
+    "show_like": 1,
+    "show_old_like": 1,
+    "show_share": 1,
+    "show_like_gray": 0,
+    "show_old_like_gray": 0,
+    "show_share_gray": 0,
+    "comment_enabled": 1,
+    "like_count": 22,
+    "old_like_count": 111,
+    "share_count": 977,
+    "comment_count": 28,
+    "get_data_succ": 1,
+    "collect_count": 34,
+    "show_collect": 1,
+    "show_collect_gray": 0,
+    "read_num": 28485,
+    "show_read": 1,
+    "show_friend_seen": 2,
+    "friend_subscribe_count": 0,
+    "is_subscribed": 0,
+    "star_num": 0,
+    "show_star": 1,
+    "can_use_star": 0,
+    "original_content_num": 0,
+    "verify_status": 2,
+    "friend_seen_info": {
+      "friend_info": []
+    },
+    "debug_id": "14ff31aa",
+    "debug_info": "gAAAAABqaE0nxvpv1X7-MKHiOikPLa9Tz90PgeDRlcxebDFPYtMQRBPqqBZf… [292 chars]"
+  }
+}

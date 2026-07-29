@@ -1,0 +1,210 @@
+# All 7 endpoints below live-verified 2026-07-28 (see per-entry `verified:`/`example_response:`).
+#
+# Bright Data's Web Scraper API (api.brightdata.com/datasets/v3/…), reached with an account API
+# token as `Authorization: Bearer`. Everything here is scope any_account: these are managed
+# scrapers pointed at public URLs, not a connection to your own social accounts.
+#
+# ⚠️ Auth quirk found during verification: `curl -H "Authorization: Bearer <token>"` against ANY
+# route on this host (including the free /datasets/list) answers 401 "Auth method is not
+# supported" — but the identical header sent by httpx (what catalog_verify.py uses) succeeds. A
+# garbage Bearer token gets a different message ("Invalid credentials") from both clients, so the
+# token itself is fine; Bright Data appears to fingerprint/reject the bare curl client specifically
+# (plausible for an anti-bot vendor guarding its own API). Don't diagnose this provider with curl.
+#
+# The shape that governs this whole file: Bright Data does not expose one endpoint per site.
+# It exposes ONE generic scraper runner plus ~1000 "datasets", and the dataset_id query parameter
+# is what decides which site is scraped and what the output columns are. So the entries below come
+# in two kinds:
+#   - the generic runner (scrape / trigger / progress / snapshot / datasets) — dataset_id is an
+#     input the caller supplies, and the endpoint serves the whole scraper library;
+#   - two pinned shortcuts (Instagram profiles, LinkedIn profiles) where the docs publish a stable
+#     dataset_id, so the operation maps onto a real cross-provider capability and can be compared
+#     against tikhub / justoneapi. Other dataset ids exist but are not documented as literals and
+#     are deliberately NOT guessed here — discover them at runtime via brightdata.account.datasets.list.
+#
+# Sync vs async: POST /datasets/v3/scrape blocks and returns rows, but gives up after 1 minute and
+# answers 202 + snapshot_id instead. Anything bigger than a handful of URLs should go through
+# POST /datasets/v3/trigger → poll GET /datasets/v3/progress/{id} → GET /datasets/v3/snapshot/{id}.
+# Snapshots are retained 16 days.
+#
+# Billing is pay-per-success: $1.50 per 1000 records delivered, no charge for blocked or failed
+# requests, with a free allowance and volume tiers. The management endpoints (progress, snapshot
+# download, dataset list) do not bill — you pay for records collected, not for reading them back.
+provider: brightdata
+source:
+  docs: https://docs.brightdata.com/scraping-automation/web-data-apis/web-scraper-api/overview
+  openapi: null
+  curated: 2026-07-28
+
+
+pricing_url: https://brightdata.com/pricing
+endpoints:
+  - id: brightdata.web.scrape.structured
+    capability: web.scrape.structured
+    platform: web
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Scrape URLs into structured records"
+    summary: "Scrape one or more URLs into structured records and get them back in the same call"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "which managed scraper to run — it decides both the site and the output columns. List them with brightdata.account.datasets.list", example: "gd_l1vikfch901nx3by4"}
+        format: {type: string, required: false, note: "json (default) | ndjson | csv", example: "json"}
+        include_errors: {type: boolean, required: false, note: "adds a per-input error report to the output"}
+        custom_output_fields: {type: string, required: false, note: "pipe-separated field list to trim the response", example: "url|about.updated_on"}
+      body:
+        input: {type: array, required: true, note: "array of input objects for the chosen scraper — usually [{url: …}]", example: [{"url": "https://www.instagram.com/instagram"}]}
+      bodyType: json
+      note: "the API reference documents the body as {input: [...]}, while the quickstarts post a bare array [{url: …}] to the same path — both appear in official docs, so treat the array as the payload and the wrapper as optional until verified. HARD 1-minute timeout: past that the call returns HTTP 202 with a snapshot_id and you must collect the rows from brightdata.web.scrape.job.results instead. Use trigger/progress/snapshot for anything beyond a few URLs"
+    test_request:
+      queryParams: {dataset_id: "gd_l1vikfch901nx3by4", format: "json"}
+      body: [{"url": "https://www.instagram.com/instagram"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success — blocked or failed requests are not charged. Free allowance ~5000 records/month; volume plans drop toward $0.75/1000"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.web.scrape.structured.json
+    docs_url: https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests
+
+  - id: brightdata.web.scrape.job.start
+    capability: web.scrape.job.start
+    platform: web
+    scope: any_account
+    method: POST
+    path: /datasets/v3/trigger
+    name: "Start async scrape job for URLs"
+    summary: "Start an asynchronous scraping job over a batch of URLs and get a snapshot id back"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "which managed scraper to run", example: "gd_l1vikfch901nx3by4"}
+        include_errors: {type: boolean, required: false, note: "include a per-input error report in the snapshot"}
+        format: {type: string, required: false, note: "json | ndjson | jsonl | csv"}
+        type: {type: string, required: false, note: "set to discover_new to run a discovery crawl instead of scraping the given URLs", example: "discover_new"}
+        discover_by: {type: string, required: false, note: "with type=discover_new: keyword | best_sellers_url | category_url | location"}
+        limit_per_input: {type: integer, required: false, note: "cap records produced per input row — the main guard on discovery spend", example: 10}
+        limit_multiple_results: {type: integer, required: false, note: "cap total records across the whole job"}
+        notify: {type: boolean, required: false, note: "fire a webhook when the job finishes"}
+        endpoint: {type: string, required: false, note: "webhook URL used when notify is set"}
+        auth_header: {type: string, required: false, note: "Authorization header value Bright Data should send to your webhook"}
+        uncompressed_webhook: {type: boolean, required: false}
+        custom_output_fields: {type: string, required: false, note: "pipe-separated field list"}
+      body:
+        input: {type: array, required: true, note: "one object per target, usually {url: …}. The body is posted as a BARE JSON array of these — `input` is a label for the array here, not a wrapper field to send", example: [{"url": "https://www.instagram.com/instagram"}]}
+      bodyType: json
+      note: "returns {snapshot_id: \"s_…\"} immediately; nothing is billed until records are delivered. Always set limit_per_input on a discovery run — a discover_new job with no cap decides for itself how many records to produce, and each one is billable"
+    test_request:
+      queryParams: {dataset_id: "gd_l1vikfch901nx3by4"}
+      body: [{"url": "https://www.instagram.com/instagram"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records delivered, pay-per-success; the trigger call itself is free — the job's records are what bill"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.web.scrape.job.start.json
+    docs_url: https://docs.brightdata.com/api-reference/web-scraper-api/asynchronous-requests
+
+  - id: brightdata.web.scrape.job.status
+    kind: utility
+    capability: web.scrape.job.status
+    platform: web
+    scope: any_account
+    method: GET
+    path: /datasets/v3/progress/{snapshot_id}
+    name: "Check async scrape job status"
+    summary: "Check whether an asynchronous scraping job has finished"
+    input:
+      pathParams:
+        snapshot_id: {type: string, required: true, note: "the snapshot_id returned by brightdata.web.scrape.job.start", example: "s_00000000000000000"}
+      note: "status is one of starting | running | ready | failed; only `ready` means the snapshot can be downloaded. 404 means the snapshot id is unknown to this account. No `expect` is set: every one of those statuses is a correct answer, so the only success condition is HTTP 2xx"
+    test_request:
+      pathParams: {snapshot_id: "sd_ms4lyair2704eraq24"}
+    cost: {type: free, note: "management API — polling a job is not billed; you pay for the records the job delivers"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.web.scrape.job.status.json
+    docs_url: https://docs.brightdata.com/api-reference/web-scraper-api/management-apis/monitor-progress
+
+  - id: brightdata.web.scrape.job.results
+    capability: web.scrape.job.results
+    platform: web
+    scope: any_account
+    method: GET
+    path: /datasets/v3/snapshot/{snapshot_id}
+    name: "Download async scrape job results"
+    summary: "Download the records produced by a finished scraping job"
+    input:
+      pathParams:
+        snapshot_id: {type: string, required: true, note: "the snapshot_id returned by brightdata.web.scrape.job.start", example: "s_00000000000000000"}
+      queryParams:
+        format: {type: string, required: false, note: "json (array) | ndjson | jsonl (one record per line) | csv", example: "json"}
+        compress: {type: boolean, required: false, note: "gzip the download"}
+        batch_size: {type: integer, required: false, note: "split the snapshot into batches; minimum 1000 records"}
+        part: {type: integer, required: false, note: "which batch to fetch when batch_size is set"}
+      note: "call only once brightdata.web.scrape.job.status reports ready — downloading early returns the job's running state rather than rows. Snapshots are retained for 16 days after collection"
+    test_request:
+      pathParams: {snapshot_id: "sd_ms4lyair2704eraq24"}
+      queryParams: {format: "json"}
+    cost: {type: free, note: "management API — re-downloading a snapshot is not billed; the records were charged when the job ran"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.web.scrape.job.results.json
+    docs_url: https://docs.brightdata.com/api-reference/scrapers/delivery-apis/download-snapshot
+
+  - id: brightdata.instagram.user.profile
+    capability: instagram.user.profile
+    platform: instagram
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Get Instagram user profile"
+    summary: "Get the public profile of an Instagram user (followers, bio, verification)"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented Instagram — Profiles dataset", example: "gd_l1vikfch901nx3by4"}
+        format: {type: string, required: false, example: "json"}
+      body:
+        input: {type: array, required: true, note: "one object per profile URL — a username alone is not accepted", example: [{"url": "https://www.instagram.com/instagram"}]}
+      bodyType: json
+      note: "same generic runner as brightdata.web.scrape.structured with the dataset_id fixed, which is why the id and output columns are stable enough to compare against tikhub / justoneapi. Batching several profile URLs into one call is both cheaper and faster than one call each; past 1 minute it falls back to 202 + snapshot_id"
+    test_request:
+      queryParams: {dataset_id: "gd_l1vikfch901nx3by4", format: "json"}
+      body: [{"url": "https://www.instagram.com/instagram"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records — one profile is one record; pay-per-success"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.instagram.user.profile.json
+    docs_url: https://docs.brightdata.com/datasets/scrapers/instagram/quickstart
+
+  - id: brightdata.linkedin.user.profile
+    capability: linkedin.user.profile
+    platform: linkedin
+    scope: any_account
+    method: POST
+    path: /datasets/v3/scrape
+    name: "Get LinkedIn member profile"
+    summary: "Get a public LinkedIn member profile (headline, experience, education)"
+    input:
+      queryParams:
+        dataset_id: {type: string, required: true, note: "pinned to the documented LinkedIn — Profiles dataset", example: "gd_l1viktl72bvl7bjuj0"}
+        format: {type: string, required: false, example: "json"}
+      body:
+        input: {type: array, required: true, note: "one object per profile URL (linkedin.com/in/…)", example: [{"url": "https://www.linkedin.com/in/satyanadella"}]}
+      bodyType: json
+      note: "the any_account counterpart to linkedin.yaml's OAuth profile read: that one returns only the connected member, this one returns any public profile URL. Company and job datasets exist too, but their dataset ids are not published as literals in the docs and are not guessed here"
+    test_request:
+      queryParams: {dataset_id: "gd_l1viktl72bvl7bjuj0", format: "json"}
+      body: [{"url": "https://www.linkedin.com/in/satyanadella"}]
+    cost: {type: per_result, value: 0.0015, currency: USD, note: "$1.50 per 1000 records — one profile is one record; pay-per-success"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.linkedin.user.profile.json
+    docs_url: https://docs.brightdata.com/datasets/scrapers/linkedin/quickstart
+
+  - id: brightdata.account.datasets.list
+    kind: account
+    capability: account.datasets.list
+    platform: account
+    scope: any_account
+    method: GET
+    path: /datasets/list
+    name: "List available datasets and scrapers"
+    summary: "List the datasets and scrapers your Bright Data account can run, with their ids"
+    input:
+      note: "how you discover the dataset_id every other endpoint here needs, without hardcoding ids from blog posts. Returns id, name and size per dataset, covering the Web Scraper API datasets across 250+ domains. NOTE the path sits outside the /datasets/v3/ family the rest of this file uses, and differs from the /datasets/v3/datasets guess recorded as brightdata's probe_path in oauth_providers.py — reconcile the two once a token is available"
+    test_request: {queryParams: {}}
+    cost: {type: free, note: "management API — listing datasets does not bill"}
+    verified: 2026-07-28
+    example_response: examples/brightdata.account.datasets.list.json
+    docs_url: https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-list

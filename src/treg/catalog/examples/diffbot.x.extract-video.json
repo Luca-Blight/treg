@@ -1,0 +1,33 @@
+{
+  "request": {
+    "pageUrl": "https://www.youtube.com/watch?v=hFZFjoX2cGg",
+    "api": "video",
+    "version": 3
+  },
+  "objects": [
+    {
+      "date": "Sun, 24 May 2020 07:00:00 GMT",
+      "images": [
+        {
+          "title": "Backyard Squirrel Maze 1.0- Ninja Warrior Course",
+          "url": "https://i.ytimg.com/vi/hFZFjoX2cGg/maxresdefault.jpg",
+          "primary": true
+        }
+      ],
+      "author": "https://www.youtube.com/@MarkRober",
+      "mime": "video/mp4",
+      "naturalHeight": 360,
+      "diffbotUri": "video|3|1870173316",
+      "type": "video",
+      "title": "Backyard Squirrel Maze 1.0- Ninja Warrior Course",
+      "url": "https://rr2---sn-8xgp1vo-ab5k.googlevideo.com/videoplayback?expire=1783561226&ei=qqdOar_6LLq0kucPk6G2yAM&ip=75.197.54.91&id=o-ADXxgto9LZ1G1NJRUY90G4DYIgBeBL-D2C0d0_lzNeq7&itag=18&source=youtube&requir… [1118 chars]",
+      "naturalWidth": 640,
+      "duration": "0:00",
+      "humanLanguage": "en",
+      "html": "<video controls><source src=\"https://rr2---sn-8xgp1vo-ab5k.googlevideo.com/videoplayback?expire=1783561226&ei=qqdOar_6LLq0kucPk6G2yAM&ip=75.197.54.91&id=o-ADXxgto9LZ1G1NJRUY90G4DYIgBeBL-D2C0d0_lzNeq7&… [2970 chars]",
+      "pageUrl": "https://www.youtube.com/watch?v=hFZFjoX2cGg",
+      "text": "Show transcript\nVideos\nAbout",
+      "viewCount": 146034187
+    }
+  ]
+}

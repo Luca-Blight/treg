@@ -1,0 +1,34 @@
+{
+  "code": 0,
+  "data": {
+    "search": {
+      "dynamic": {
+        "components": {
+          "__typename": "SearchResultsMainLayout",
+          "appliedState": {
+            "__typename": "SearchAppliedState",
+            "pane": "posts",
+            "filters": "… 4 item(s) truncated"
+          },
+          "main": {
+            "edges": "… 1 item(s) truncated",
+            "pageInfo": "… 4 field(s) truncated"
+          },
+          "top": {
+            "filterBar": "… 2 item(s) truncated",
+            "navigation": "… 3 field(s) truncated",
+            "filterModal": null
+          },
+          "telemetry": {
+            "__typename": "SearchElementTelemetry",
+            "trackingContext": "… 8 field(s) truncated",
+            "events": "… 2 item(s) truncated"
+          }
+        }
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:20.546261417",
+  "requestId": "dab88ff60fe84f16ac53bfef07d99cdf"
+}

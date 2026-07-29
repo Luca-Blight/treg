@@ -1,0 +1,64 @@
+{
+  "search_metadata": {
+    "id": "6a6898c3822c5f4884ad61bf",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/4PCjYsKxZZTvcwucBT3vWw/6a6898c3… [81 chars]",
+    "created_at": "2026-07-28 11:55:47 UTC",
+    "processed_at": "2026-07-28 11:55:47 UTC",
+    "google_images_url": "https://www.google.com/search?as_st=y&udm=2&q=coffee&oq=coff… [74 chars]",
+    "raw_html_file": "https://serpapi.com/searches/4PCjYsKxZZTvcwucBT3vWw/6a6898c3… [81 chars]",
+    "total_time_taken": 3.22
+  },
+  "search_parameters": {
+    "engine": "google_images",
+    "q": "coffee",
+    "google_domain": "google.com",
+    "hl": "en",
+    "gl": "us",
+    "device": "desktop"
+  },
+  "search_information": {
+    "image_results_state": "Results for exact spelling"
+  },
+  "suggested_searches": [
+    {
+      "name": "Cafe",
+      "link": "https://www.google.com/search?sca_esv=fbf2635dd64e7c8e&hl=en… [326 chars]",
+      "uds": "AJ5uw1_a2D0D09lxm8gpKKOTUn4rOkiStpelGehVEaNj26oBX0JXhIcWdfbM… [162 chars]",
+      "q": "cafe coffee",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google… [285 chars]",
+      "thumbnail": "https://serpapi.com/searches/6a6898c3822c5f4884ad61bf/images… [109 chars]"
+    },
+    "… 32 more item(s) truncated"
+  ],
+  "images_results": [
+    {
+      "position": 1,
+      "thumbnail": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSfXgsc… [103 chars]",
+      "related_content_id": "aDNGRUpTRTFhV09LQU1cIixcIjkwajVJVFE3WllSZTFN",
+      "serpapi_related_content_link": "https://serpapi.com/search.json?engine=google_images_related… [153 chars]",
+      "source": "Allrecipes",
+      "source_logo": "https://serpapi.com/images/i/iVBORw0KGgoAAAANSUhEUgAAABAAAAA… [493 chars]",
+      "title": "Top Tips for Making a Perfect Cappuccino at Home Every Time",
+      "link": "https://www.allrecipes.com/how-to-make-a-cappuccino-recipe-8… [66 chars]",
+      "tag": "Recipe",
+      "original": "https://www.allrecipes.com/thmb/chsZz0jqIHWYz39ViZR-9k_BkkE=… [204 chars]",
+      "…": "3 more field(s) truncated"
+    },
+    "… 99 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "link": "https://www.google.com/search?sca_esv=fbf2635dd64e7c8e&hl=en… [223 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=google… [121 chars]",
+      "query": "coffee cartoon",
+      "highlighted_words": "… [1 item(s) truncated]",
+      "thumbnail": "https://serpapi.com/searches/6a6898c3822c5f4884ad61bf/images… [109 chars]"
+    },
+    "… 11 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "current": 0,
+    "next": "https://serpapi.com/search.json?device=desktop&engine=google… [119 chars]"
+  }
+}

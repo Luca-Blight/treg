@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "credits_remaining": 19842,
+  "credits_charged": 1,
+  "id": "366190054572553",
+  "url": "https://www.facebook.com/groups/366190054572553",
+  "name": "Python Programming",
+  "description": "Let's share our knowledge on Python Programming",
+  "privacy": {
+    "label": "Public",
+    "description": "Anyone can see who's in the group and what they post."
+  },
+  "visibility": {
+    "label": "Visible",
+    "description": "Anyone can find this group."
+  },
+  "categories": [
+    {
+      "id": "242504017103922",
+      "name": "Software & tech"
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "created_at": "2020-10-14T11:05:03.000Z",
+  "history_summary": "Group created on October 14, 2020. Name last changed on October 16, 2020.",
+  "member_count": 711270,
+  "member_count_text": "711,270 total members",
+  "administrator_count": 3,
+  "…": "6 more field(s) truncated"
+}

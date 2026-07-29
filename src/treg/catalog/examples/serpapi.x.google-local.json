@@ -1,0 +1,65 @@
+{
+  "search_metadata": {
+    "id": "6a6898c8f2593a7a5a595d99",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/nhgMtYHQp0e6NGOD4k642A/6a6898c8… [81 chars]",
+    "created_at": "2026-07-28 11:55:52 UTC",
+    "processed_at": "2026-07-28 11:55:52 UTC",
+    "google_local_url": "https://www.google.com/search?q=Coffee&uule=j+WzIsMzIsbnVsbC… [160 chars]",
+    "raw_html_file": "https://serpapi.com/searches/nhgMtYHQp0e6NGOD4k642A/6a6898c8… [81 chars]",
+    "total_time_taken": 10.84
+  },
+  "search_parameters": {
+    "engine": "google_local",
+    "q": "Coffee",
+    "location_requested": "New York, New York, United States",
+    "location_used": "New York,New York,United States",
+    "google_domain": "google.com",
+    "hl": "en",
+    "gl": "us",
+    "device": "desktop"
+  },
+  "local_map": {
+    "gps_coordinates": {
+      "latitude": 40.713370305696756,
+      "longitude": -74.00643825531006
+    }
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "rating": 4.9,
+      "reviews": 491,
+      "reviews_original": "(491)",
+      "price": "$1–10",
+      "description": "\"Wonderful coffee/matcha, delicious banana bread, and lovely… [70 chars]",
+      "thumbnail": "https://serpapi.com/searches/6a6898c8f2593a7a5a595d99/images… [109 chars]",
+      "thumbnail_large": "https://lh3.googleusercontent.com/gps-proxy/ALd4DhG5_9qNfDzL… [250 chars]",
+      "place_id": "3738640204286220643",
+      "place_id_search": "https://serpapi.com/search.json?device=desktop&engine=google… [187 chars]",
+      "…": "5 more field(s) truncated"
+    },
+    "… 19 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://www.google.com/search?q=Coffee&uule=j+WzIsMzIsbnVsbC… [169 chars]",
+    "other_pages": {
+      "2": "https://www.google.com/search?q=Coffee&uule=j+WzIsMzIsbnVsbC… [169 chars]",
+      "3": "https://www.google.com/search?q=Coffee&uule=j+WzIsMzIsbnVsbC… [169 chars]",
+      "4": "https://www.google.com/search?q=Coffee&uule=j+WzIsMzIsbnVsbC… [169 chars]",
+      "5": "https://www.google.com/search?q=Coffee&uule=j+WzIsMzIsbnVsbC… [169 chars]"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?device=desktop&engine=google… [168 chars]",
+    "next": "https://serpapi.com/search.json?device=desktop&engine=google… [168 chars]",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?device=desktop&engine=google… [168 chars]",
+      "3": "https://serpapi.com/search.json?device=desktop&engine=google… [168 chars]",
+      "4": "https://serpapi.com/search.json?device=desktop&engine=google… [168 chars]",
+      "5": "https://serpapi.com/search.json?device=desktop&engine=google… [168 chars]"
+    }
+  }
+}

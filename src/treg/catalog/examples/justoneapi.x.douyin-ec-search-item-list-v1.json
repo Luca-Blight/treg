@@ -1,0 +1,41 @@
+{
+  "code": 0,
+  "data": {
+    "promotions": [],
+    "has_more": true,
+    "extra": {
+      "channel_id": "200",
+      "material_type": "promotion_id",
+      "recall_type": "Search",
+      "search_id": "b1f2b6db7601bcd730d396007a71b502cf9d906d14b9c846a7a8b085c581… [160 chars total]",
+      "session_id": "<omitted: expires>"
+    },
+    "promotions_pc": null,
+    "log_id": "202607281359506A3025FB9C9C5983E0D9",
+    "total": 500,
+    "shops": null,
+    "summary_promotions": [
+      {
+        "product_id": "3833249427875823701",
+        "promotion_id": "3833254268144582751",
+        "base_model": {
+          "product_info": "… 9 field(s) truncated",
+          "promotion_info": "… 4 field(s) truncated",
+          "marketing_info": "… 1 field(s) truncated",
+          "shop_info": "… 4 field(s) truncated",
+          "tag_info": "… 2 field(s) truncated",
+          "extend_info": "… 2 field(s) truncated"
+        },
+        "custom_model": {
+          "selection_square_model": "… 4 field(s) truncated"
+        }
+      },
+      "… 29 more item(s) truncated"
+    ],
+    "summary_shops": [],
+    "summary_authors": []
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:52.455801588",
+  "requestId": "3f42a74a638e4d8b8e8c90a52f75325c"
+}

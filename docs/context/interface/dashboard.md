@@ -12,6 +12,7 @@ sources:
 related:
   - interface/api.md
   - interface/landing-sandbox.md
+  - architecture/catalog.md
   - architecture/super-admin.md
   - architecture/multi-tenancy.md
 ---
@@ -218,12 +219,25 @@ TikTok, LinkedIn, YouTube, …) without touching the CLI. `loadConnections` fetc
 (server route `oauth_providers_list` → `oauth_providers.listing()`, each row carrying `service`,
 `display_name`, `category`, `summary`, `capabilities`, `scope_detail`, `auth_kind`, `supports_discovery`,
 and a **`configured`** flag = whether *this* deployment holds the provider's client credentials) plus
-**`GET /connections`** (`list_connections` — the org's existing grants). The list view groups providers by
-category (`providerGroups` computed → `shownGroups` filtered by the `mkCat` chip row), rendering a card
-grid; the whole card is the click target (`openProvider(service)`). Each card shows a **provider logo**
-served by convention from **`/logos/<service>.svg`** (`.plogo-tile`/`.plogo`, `@error` hides a missing
-file) — the `StaticFiles` mount `_LOGO_DIR` (`src/treg/web/logos/`). `connCount` labels how many accounts
-are already connected.
+**`GET /connections`** (`list_connections` — the org's existing grants).
+
+The list view opens on a **tab bar** (`.mk-tabs`, `mkTabs` computed): `All`, then **one tab per catalog
+category derived from the data**, then `Platform`. The middle is deliberately not a hard-coded list —
+categories keep changing (`Social media` became `Social`, `China Social` is new, and the AI-search shelf
+has been called both `AI Search` and `AEO / GEO`) and a hard-coded list silently drops the tiles it does
+not name. The strip **scrolls with its scrollbar hidden** (`scrollbar-width:none` +
+`::-webkit-scrollbar{display:none}` on `.mk-tabs`); a right-edge `mask-image` fade is what hints there is
+more, and it falls on empty space when the tabs all fit. The rule under the tabs lives on the
+**`.mk-tabs-wrap`** parent, because a masked border fades out 26px short of the right edge and reads as a
+rendering fault. Every tab but the last is the **platform axis**
+(which data you want — see the catalog section below); the **last tab, `Platform`, is this integration marketplace**
+(which account you hold), unchanged: providers grouped by category (`providerGroups` computed →
+`shownGroups` filtered by the `mkCat` chip row) as a card grid, the whole card being the click target
+(`openProvider(service)`). Each card shows a **provider logo** served by convention from
+**`/logos/<service>.svg`** (`.plogo-tile`/`.plogo`, `@error` hides a missing file) — the `StaticFiles`
+mount `_LOGO_DIR` (`src/treg/web/logos/`). `connCount` labels how many accounts are already connected.
+The tab bar itself is `v-if`'d on `plats.list.length` and `mkTabActive` collapses to `'platform'` when
+the catalog is absent, so a build that predates `/catalog` renders exactly the old marketplace.
 
 **One integration** is its own view (`view==='provider'`, `mkProvider`/`mkConns` keyed on `mkService`) at a
 shareable path **`/app/marketplace/<service>`** (server route `dashboard_marketplace` — plain SPA, **no**
@@ -251,6 +265,293 @@ be callable (e.g. Google Ads' developer token — surfaced by the `needSecondCre
 (`_record_connected_identity`, `_enrich_resource_labels`). The three post-connect dialogs (`tokenAsk`, `capAsk`,
 `resPick`) live at **app-root level**, not nested in the view — a nested copy failed to render on an integration
 page (Connect looked dead).
+
+## Endpoint catalog — the platform axis of the marketplace (`view==='platform'`)
+The marketplace's second browse surface answers "what data can I actually pull?" rather than "whose
+account can I attach?" — see `architecture/catalog.md` for the data behind it, and it is the marketplace's
+**default** view. `loadPlatforms` reads **`GET /catalog/platforms`** (once per session; cached on
+`plats.loaded`), whose rows carry a **`category`** and a **`featured`** rank (`int|null`). `platCategories`
+groups the rows **by whatever category they carry**, sorts those groups into the founder's canonical
+reading order (SEO · Social · Advertising · Enrichment · E-commerce · Reviews & Apps · China Social ·
+Community, then anything new alphabetically) and **drops `Other`** — the taxonomy's bucket for things like
+`account`, whose capabilities only make sense inside a platform page, never as a tile. The order list is
+only an *order*: a category the catalog invents still gets a shelf and a tab, at the end — but at the end
+is where a RENAMED category silently lands, which is how `AEO / GEO` once sorted after `Community`, so a
+rename means editing this list. The **answer engines** (ChatGPT, Perplexity, Gemini, Claude, Doubao, AI
+search overall) were that shelf twice over; they are **unfeatured SEO platforms** now, which lands them in
+SEO's overflow row rather than in a category of six. `platCatGroups` is that list whole on the
+`All` tab and filtered to one entry on a category tab, so the section headings never disappear and the
+page never loses its place.
+
+**Featured shelves.** A category of 14 platforms is a wall you scroll past rather than read, so past **8
+tiles** `platCatGroups` shows only the rows with a `featured` rank as full tiles and collapses the rest
+into one **`.pt-more` row**: a stack of the hidden platforms' little marks (`.pt-mini`) plus
+`moreLabel(rest)` — *"See Zhihu, WeChat Channels, and 6 more"* — two names so the row says what *kind* of
+thing is hidden, then a count, then an **arrow** that slides on hover — the row's whole affordance. It is
+deliberately NOT a dashed box: a dashed border reads as a drop zone or a placeholder and drew more
+attention than the cards above it. Clicking sets `platShelfOpen[category]` and the shelf renders whole,
+inline — which is how the six answer engines surface under SEO. Tiles sort by **rank ascending, then endpoint count descending** (the unranked tail has nothing
+else left to sort by). Two guards: a category whose rows are *all* unranked is never collapsed (an empty
+grid over a "more" row would hide the whole category behind a click), and the shelf header's count is
+`g.total` — the whole category, not the visible tiles, so "SEO 5" can't sit under a tab reading "SEO 10".
+
+Each shelf is headed by a **real heading** (`.sec-head` → `<h2 class="sec-h">` at 19px semibold, a count
+pill, and the one-line explainer under it) rather than the small muted caption the rest of the dashboard
+uses for table groups. The marketplace is *browsed by category*, so the category has to be the loudest
+thing on the page after its title; as a caption the whole surface read as undifferentiated.
+
+**The platform card** (`.pt-card`, a 320px-min responsive grid) carries everything needed to choose a
+platform without opening it, and every field comes off the `/catalog/platforms` row — no detail call:
+
+- **Head** — the platform's own mark (`/logos/platforms/<slug>.svg`, a second convention alongside the
+  provider logos), the short label (`platShort` drops the ` — gloss` / ` (parenthetical)` the catalog
+  labels carry), and the **category** as a muted subtitle. The name **wraps to two lines** rather than
+  ellipsising: "Google Search Con…" is a card that cannot say what it is.
+- **Connection state** (`.pt-conn`, top-right) — a green **`Connected`** `.chip.go` when `platConnected`
+  finds *any* provider serving this platform already connected, else a muted "not connected". This corner
+  used to carry a provider logo stack; it now answers the only browse-time question that changes what you
+  do next — call it today, or sign up first. *Which* provider serves it is a decision for the platform
+  page, not a fact worth a card slot.
+- **No summary paragraph.** It repeated what the name and category already said, and made every card
+  tall enough that a shelf of twelve became a scroll — cards went from ~200px to ~110px when it came
+  out, which is what left room for the name to wrap. The data is still served and still used: it is
+  the card's hover `title`.
+- **Footer** — the endpoint count on the left, and on the right the starting price from the row's
+  `price_from`, via `platPrice` (see **Prices are unified USD** below).
+  A `price_from` that exists but publishes no number renders **nothing** — "from —" says less than
+  silence. Absent price data is ambiguous on its own, since it covers both "rate unpublished" and
+  "nothing to charge for", so `platPrice` splits them on **auth kind**: a platform whose every provider is
+  an `oauth` integration reads **"free with your account"** (the account you connect is the licence),
+  while a key-auth provider with no published rate stays silent. Note that `price_from` arrives as
+  `null` *or* as an empty `{}`, and the empty object has to be normalised to null first — being truthy,
+  it otherwise short-circuits the auth-kind branch and silently costs an OAuth-only platform its
+  "free with your account".
+
+**Prices are unified USD.** Every price the marketplace displays — the card footer, the capability card's
+"from", and the per-endpoint cost chip — is the **server's computed `usd`** field on `cost` / `price_from`,
+formatted by `usdNum`: two significant figures under a dollar (`$0.015`, `$0.00015`), cents at or above one.
+The FX table lives in the catalog (`fx.yaml`) so a rate refresh re-prices every surface at once, and the
+dashboard carries **no** conversion constant of its own — one here would drift from the CLI the moment the
+table changed. Wherever the provider bills in something else, the native figure follows as a muted
+`.cost-nat` suffix (`¥0.10`, two decimals — money keeps its cents) with the conversion spelled out in the
+tooltip, so nobody has to wonder whether we invented the number. Two carve-outs: `type: free` keeps its
+"free" / "free with your account" wording, and a `quota_rows` price is excluded **before** `usd` is read —
+it is a row count, not money, and the server would convert it into dollars quite happily.
+
+Every catalogued platform is currently drawn, but a missing file falls back through
+`@error → platLogoBad[slug]` to a **generated initial tile** coloured by a
+hash of the slug (`platTileBg`), stable across reloads and needing no colour table. Everything catalog-related is
+**additive and failure-tolerant** — `loadPlatforms` swallows its error, so a deployment whose build predates
+`/catalog` shows the marketplace exactly as it was rather than an error or an empty section.
+
+**A platform** is its own view (`openPlatform(slug)` → `loadPlatform` → **`GET /catalog/platforms/{slug}`**).
+Unlike `/app/marketplace/<service>` it is a **hash route** — `/app#platform/<slug>` — because there is
+no server route that would serve the SPA for a hard reload of a `/app/platforms/<slug>` path; boot and
+`popstate` read it via `platformFromHash`. The page is **ONE ledger** — a single table sectioned by
+DOMAIN (user · video · search · shop · …) — rendered from the response's `domains[]`, which the server
+has already ordered and merged (`catalog_store.domain_rows`). The old per-capability card stack made the
+shape of a platform unreadable: every job looked the same size and nothing could be compared without
+opening two cards.
+
+Its header is **`.plat-head`, a single stacked column** — mark + title on one full-width line, the intro
+under it at a readable measure, then the providers as their own wrapping `.plat-provs` row. It
+deliberately does *not* use the two-column `.tut-head` the other pages share: a platform can be served
+by a dozen providers (`people` has 8, `companies` 10), and as a right-hand column that chip list takes
+half the width and wraps the title into a three-line ribbon ("People & / contact / data").
+
+**Sections are domains, `other` always last.** A domain is the subject an endpoint is about within its
+platform, resolved once at load time (`catalog_store._domain`): an explicit `domain:` in the yaml, else
+the capability id's middle segment (`tiktok.video.comments` → `video`), else a keyword read off the
+**path** — never the summary, since prose says "the Live SERP API…" about endpoints that are nothing of
+the kind — else the path's grouping segment (`/v3/backlinks/anchors/live` → `backlinks`, with delivery
+modes like `/live`, versions and `/json` stripped first), else `other`. Sections run busiest-first with
+`other` pinned to the end: it is the junk drawer, and its position is the one that carries meaning.
+
+**A domain section renders only if a browse row lands in it, and all the plumbing collapses into one
+section.** The page loads `?include_hidden=1`, so `account`/`utility` endpoints arrive tagged by
+`kind`; they are the provider's own machinery (webhooks, saved lists, token exchanges, enum lookups),
+not the data anyone came to browse. Filing them per-domain conjured sections that existed only because
+a hidden endpoint carried that capability id — the People page grew CAMPAIGNS 0, LOCATION 0, PERSON 0,
+SCHOOL 0, TITLE 0, each with nothing in it but an expander. So: a domain needs at least one visible
+row to exist, and **every** management endpoint on the platform lands in a single collapsed
+**Actions** section at the foot of the ledger, its domain ignored, counted in its heading
+("Actions · 24"). Inside, they render as ordinary rows plus a `kind` chip — account vs utility is the
+only thing distinguishing one from the next. A platform with no such endpoints (telegram) grows no
+Actions section at all. Because Actions is platform-wide rather than a domain, selecting a domain chip
+**hides** it rather than filtering it, and neither the chip counts, the `All` count nor the
+`N rows · M endpoints` line ever counts it — opening Actions must not make the browse surface appear
+to grow.
+
+**Within a section, merged rows lead.** A capability **two or more providers** implement is ONE row —
+that comparison is the reason the catalog groups by capability at all, and burying it under fifty
+single endpoints is how the old page hid it. Everything else is a single row led by the endpoint's
+**`name`** (its curated short title), falling back to a **clipped** `summary` — `clip(…, 90)` cuts at
+a word boundary and the `.lsum b` two-line clamp catches the rest, because a summary is documentation
+prose and DataForSEO's run to a paragraph. The full text is never lost: the clipped row keeps it in a
+`title` attribute and the expansion shows it whole. The capability id stays in the data as a join key
+and never becomes a heading.
+
+**The merged row's middle cell is a strip of THREE pills and a `+N`** — never four, and it cannot
+wrap (`flex-wrap:nowrap; overflow:hidden`). A wrapped strip gave the shelf ragged row heights and
+left the title cell's border ending mid-row; a collapsed merged row is now exactly as tall as a
+single one (37.5px on every row of tiktok, web and google). The hidden providers' names ride in the
+`+N` chip's tooltip, and the full list is one click down on the sub-rows.
+
+A pill is **per provider** (`provPills`), not per endpoint — TikHub's four takes on the same job
+would otherwise repeat four identical pills — carrying the provider's name, its **cheapest priced**
+endpoint's price, and a ✓ if any of its endpoints is verified. Since only three are ever shown they
+are sorted **cheapest first, then verified**, with the providers that have no price to show (whose
+pill would be a bare name) at the tail. `pillPrice` shows a price only when there IS one: a published
+number or `free`; a `quota_rows` label only if it fits in eight characters ("2 rows" yes); and
+**nothing at all** for a credit-metered or dashboard-only rate. That last rule is why the pills fit —
+four copies of "per result · price in provider dashboard" is what wrapped the row in the first place,
+and it is also why `costShort` says **`credit-priced`** on the sub-rows while the sentence explaining
+the unit and where the rate lives sits in the expanded facts list. The cheapest across the whole row
+stays in the price column, and the provider/endpoint counts live in the cell's tooltip rather than on
+a second line of their own.
+
+**Merged rows expand in TWO levels.** Clicking one opens its providers as collapsed `.lsub` sub-rows —
+one line each: logo, name, `costShort`, ✓/·, the connected chip, and a truncated `METHOD path`.
+Clicking a sub-row (`toggleEp` → `epOpen[e.id]`) opens **that** provider's instruction. Dropping six
+full parameter tables on one click buried the comparison the merge exists to make. A single row has
+nothing to compare, so it skips the middle level and renders its detail straight away — the SAME
+`.lep` block either way (`v-if="r.kind!=='merged' || epOpen[e.id]"`), so the two paths cannot present
+the instruction differently. Inside a merged sub-row the detail drops the provider/route header the
+sub-row above already shows, and leads with the chips.
+
+**The filter bar is sticky** under the top bar, and the section headings stick under *it* (`--lbar-top` /
+`--lsec-top`); the domain chips **scroll** rather than wrap, because a bar that grew a second row as you
+filtered would push the headings out from under it. Text, `verified only` and the domain chips narrow the
+same row list (`platRowsPreDomain` → `platLedger`); a section with no surviving rows disappears rather
+than showing an empty heading, chip counts are taken after the other two filters so a chip never promises
+rows they have already removed, and a live `N rows · M endpoints` line counts both — a merged row stands
+for several endpoints. Both the wrapper and the table drop their `overflow` clip (an `overflow:hidden`
+ancestor is a scroll container, and a sticky heading inside one never escapes it) and the table is
+`table-layout:fixed`, so a nowrap path or `treg call` line scrolls **inside** its cell instead of widening
+the table past the page.
+
+**No ledger cell may carry its own `display`.** A `<td>` with `display:flex` stops being a table-cell: the
+browser wraps it in an anonymous cell that stretches to the row height while the flex box sizes to its
+content and keeps the border. The separator under column one then lands ~1px above the one under column
+two — a seam running the length of the table, with the hover and connected-row backgrounds split along it.
+The layout flex lives on `.lsum-i`, a wrapper INSIDE the cell. A markup test asserts it, and a DOM sweep
+over four platforms at two widths, collapsed and expanded, found every cell of every row sharing one top
+and one bottom.
+
+The price column is the same unified USD as everywhere else (`capCheapest` → `costUsd`, native figure as a
+muted `.cost-nat` suffix). Two things can never win "cheapest": an endpoint with no published rate, and a
+`quota_rows` price (a row quota is not a price, and "from —" would be worse than naming the cheapest rate
+we do know). A **connected** `own_account` or `free` row counts as **free** (`capFree`) — the OAuth account
+you already hold is the licence. When nothing is priced but a row carries a `cost.note`, the cell reads
+**"see provider"** rather than an em-dash: the enrichment providers (Apollo, PDL, Hunter, Coresignal,
+Lusha, Diffbot…) bill in their own credits, so their price *is* documented, just not in dollars — and that
+is the whole People/Company half of the catalog.
+
+Each `.lep` block is provider logo + name, `METHOD path` (mono), a compact cost chip (`costLabel`:
+`$0.015/success (¥0.10)`, `1 row`, `free`, and `per success · price in provider dashboard` when the
+billing unit is known but the rate is not published), a `verified <date>` / `unverified` chip, a **scope**
+chip, and a tier chip. Scope is the load-bearing distinction in a mixed list: `own_account` rows (the
+OAuth providers) read **`your account`** in teal with the hint "reads the account YOU connect via OAuth,
+not arbitrary public accounts", while `any_account` scraper rows read a muted `any account`. Under them
+sit the parameters block, the provider-wide facts (`epFacts`: the cost note, `limits` and the rate card,
+served once per provider in the response's `providers` map rather than copied onto 2,000 rows), the
+paste-ready **`treg call`** line the row carries as `call_template` with a Copy button, the docs link and
+the lazy example toggle. **Connection awareness** reuses the marketplace's own state: `catConnected` reads
+`connCount` (from `/connections`), a row with a connected provider carries a green rule down its leading
+edge (`.lrow.go td:first-child`), and the **Connect** button deep-links to the provider's existing
+integration page — shown only when `mkKnown(service)`, since the catalog can name a provider this
+deployment carries no client credentials for.
+
+**The runnable green.** `.chip.ok` is not styled anywhere in the file, so it renders as muted grey — which
+is how a ready capability came to look identical to an unavailable one. `.chip.go` (+ the haloed `.godot`)
+is the marketplace's single "you can call this right now" green, used in exactly three places: the
+platform card's `Connected` corner, a connected provider's `connected` chip, and a ledger row whose
+provider is connected, which carries the green as a rule down its leading edge (`.lrow.go td:first-child`)
+so it survives being skimmed. Everything unconnected stays muted.
+
+An expanded row leads with the endpoint's chips and summary, then splits into **two tabs**: **Request**
+(the parameters, the provider facts, and the `treg call` line) and **Example response** (the captured
+JSON). Stacked, those two documents made the expansion a page you scrolled rather than read. Request
+leads — it is the half that tells you whether the endpoint is callable at all — and the response tab is
+**not rendered at all** when `has_example` is false. Not greyed out, and no "no example captured"
+placeholder either: a disabled tab is a promise the catalog can't keep, and it draws the eye to the one
+thing that isn't there. Those endpoints show a single tab, which reads as a label for the pane under it.
+`epTabOf` also folds a stale `res` state back to `req`, so an endpoint can never be left showing a pane
+whose tab is gone.
+
+Both panes are the **same bounded box**: `.prm` and `.cat-ex pre` cap at **320px** and scroll inside
+themselves. A DataForSEO body carries thirty parameters, and uncapped a single expansion pushed every
+row below it off the screen.
+
+The tab bar's right side carries the two things you should never have to scroll for: the provider's
+**docs** (falling back to its pricing page) and **Connect**, which wears the ink fill (`.btn.primary`
+over `--inverse`) — the strongest treatment the design language has, since connecting the provider is
+the one action that unblocks every row on the page and it used to be a ghost button under a parameter
+table. Once connected the button is replaced in place by the green **`Connected`** chip. Everything
+here renders identically in a single row's expansion and in a merged row's provider sub-row, because
+both paths share the one `.lep` block.
+
+**Example responses** load when their tab is FIRST opened (`setEpTab` → `loadExample`, guarded by
+`if(this.platEx[e.id]) return`), never with the page and never twice — a platform can carry hundreds of
+endpoints and the captured responses are the heaviest thing in the catalog.
+
+**Parameters** come from the row's own `input` field (`{pathParams?, queryParams?, body?, bodyType?,
+note?}`, each param map being `{name: {type, required, note, example}}`) and render *before* the example
+toggle: the response half was already there and this half was not, which made every endpoint look
+uncallable until you left for the provider's docs. `paramSections` groups them **query → path → body**,
+the order you fill them in for the common GET; the body section labels its `bodyType`, and `input.note`
+becomes a hint line above the whole block. `fmtExample` stringifies object/array examples so they don't
+render as `[object Object]`. `input` is null on **every** extended endpoint (~1850 of them, against 250
+mapped ones), so the empty case is the common one and gets an explicit "the provider's docs have them"
+line rather than an empty table. `.prm-t` explicitly resets the global `table`/`th` chrome (panel
+background, border, radius, filled header bar), which otherwise reads as a stray highlight inside the
+`.prm` box and clips the first column against the table's own border. Navigation runs both ways: an integration page carries a
+**Covered in the catalog** chip row (`mkPlatforms`) into the platform pages, and each platform page
+header links back out to the providers that serve it (`platProviders`). `tests/test_dashboard_markup.py`
+locks the structure (top-level view, the row/detail `<template>` pair inside the `.ttable`, the
+`v-if`'d tab bar and its `platform` fallback, the derived tab list and category order, tiles wearing the
+platform's own logo with the generated-initial fallback, the `Platform` tab still carrying the provider
+shelves and their connect flow, the category heading being a real heading, the card's four regions
+(mark + name + category, the connected-state corner, the count/price footer — and NO summary
+paragraph, with the name wrapping instead of ellipsising), the
+unified-USD price rule (server `usd`, no local FX constant, native suffix, `{}`-normalisation,
+`quota_rows` excluded first) and its OAuth-only "free with your account" branch,
+the runnable green on all three of its surfaces, the stacked platform header, the always-both
+provider/endpoint counts, the credit-priced fallback ranking ahead of "price not published",
+the parameters block sitting before the example
+toggle with its query/path/body order and its no-params fallback,
+the featured-shelf split and its two guards, the ledger being one table
+with `other`-last domain sections that need a visible row to exist, the single platform-wide Actions
+section holding every management endpoint, and merged-before-single rows, a row title that is a name or a clipped
+summary and never a paragraph, the collapsed merged row's non-wrapping three-pills-and-a-count strip, its pills being per-provider,
+sorted cheapest-first and priced only when the price is a real number,
+the two-level expansion (provider sub-rows, then one detail block shared with the single-row path), the
+long metered phrasing never reaching a collapsed line, the filter bar's three controls and their chip
+counts, both sticky layers and the overflow rules that let them stick, the two-tab expansion (Request first, no response tab at
+all without an example, both panes capped at 320px), the prominent Connect in the tab bar with its
+Connected state, the `treg call` line and the provider facts, the cross-currency cheapest rules, the credit-priced "see provider" fallback, the scope
+chips, and lazy examples). `tests/test_catalog_api.py` locks the server half: the section order, the
+merged/single split, the domain resolution ladder, and a delivery-mode path segment never becoming a
+subject.
+
+## Code surfaces (every page)
+Snippet blocks (`.lc-codewrap` on Getting started, the in-app CLI tutorial's `.term` panes, the
+standalone `/tutorial`, the connect/setup instruction panes, the ledger's `treg call` line and captured
+responses) are **theme-aware, surface and ink together**. They were not: the generic
+`[data-theme=light] pre` rule outranks `.lc-codewrap pre`, so light mode painted a light panel INSIDE
+the dark wrapper while the syntax ramp stayed drawn for a dark block — a near-white command on a
+near-white background, bright cyan URLs, and a dark copy pill. That is also why the earlier
+"terminal surfaces stay dark in both themes" rule is gone: in light mode a code block is now a light
+block with dark ink, which is what makes the ramp legible.
+
+Two token sets carry it (index.html §3.8, mirrored in tutorial.html, which has its own copy of the
+sheet): `--code-bg` / `--code-ink` / `--code-line` / `--code-btn` for the surface, and
+`--sx-cmd` / `--sx-var` / `--sx-str` / `--sx-flag` / `--sx-cmt` / `--sx-punct` for the ramp. Every
+light value clears **4.5:1** on `--code-bg` (measured worst case across all pages: 4.67 light, 5.62
+dark, including the muted "expected result" panes, which use the ramp's comment grey rather than
+`--muted` at 3.7:1). The inner `<pre>` rule is `:root`-qualified so it out-specifies BOTH generic
+`pre` rules, and a markup test forbids a hex literal inside any `.hl-*` / `.s-*` rule — a literal is
+one theme's value, and three earlier generations of this ramp each left one behind.
 
 ## Shareable detail pages (`/app/skills/<name>`, `/app/tools/<name>`)
 A skill or a tool has its own deep-linkable page so a member can **share** the exact thing (`view==='detail'`,

@@ -1,0 +1,21 @@
+{
+  "code": 200,
+  "request_id": "c5dcb6b2-6b16-47eb-92a8-0a19701485f8",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:59",
+  "time_stamp": 1785220319,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/device_register_api_v1_tiktok_web_device_register_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c5dcb6b2-6b16-47eb-92a8-0a19701485f8?sign=d62b03c6947f6f1dad3d270a479377033e9dd777c38079181c6711acf3eabe0d",
+  "router": "/api/v1/tiktok/web/device_register",
+  "params": {},
+  "data": {
+    "deviceId": "7667462845173581343",
+    "cookie": "<omitted: expires>",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
+  }
+}

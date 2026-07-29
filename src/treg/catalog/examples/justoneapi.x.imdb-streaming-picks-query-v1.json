@@ -1,0 +1,31 @@
+{
+  "code": 0,
+  "data": {
+    "streamingTitles": [
+      {
+        "titles": {
+          "edges": [
+            {
+              "node": {
+                "title": {
+                  "id": "tt0427340"
+                }
+              }
+            },
+            {
+              "node": {
+                "title": {
+                  "id": "tt30494226"
+                }
+              }
+            },
+            "… 23 more item(s) truncated"
+          ]
+        }
+      }
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:58.767318803",
+  "requestId": "04c211364ca94a20a276921b3ecef90d"
+}

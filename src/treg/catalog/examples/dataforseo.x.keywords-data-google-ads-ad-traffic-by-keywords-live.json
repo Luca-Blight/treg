@@ -1,0 +1,51 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "1.6774 sec.",
+  "cost": 0.09,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0370-0000-203006a8a5eb",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "1.6640 sec.",
+      "cost": 0.09,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "ad_traffic_by_keywords",
+        "se": "google_ads",
+        "location_code": 2840,
+        "language_code": "en",
+        "bid": 999,
+        "match": "exact",
+        "keywords": [
+          "seo marketing"
+        ]
+      },
+      "result": [
+        {
+          "keyword": null,
+          "location_code": 2840,
+          "language_code": "en",
+          "date_interval": "next_month",
+          "search_partners": false,
+          "bid": 999,
+          "match": "exact",
+          "impressions": null,
+          "ctr": null,
+          "average_cpc": 26.36,
+          "cost": 518.88,
+          "clicks": 19.68
+        }
+      ]
+    }
+  ]
+}

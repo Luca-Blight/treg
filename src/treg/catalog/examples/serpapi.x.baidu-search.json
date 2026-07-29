@@ -1,0 +1,102 @@
+{
+  "search_metadata": {
+    "id": "6a6898a7998aad556e46f6ae",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/TAawz71XuUFECEpMiu49mg/6a6898a7… [81 chars]",
+    "created_at": "2026-07-28 11:55:19 UTC",
+    "processed_at": "2026-07-28 11:55:19 UTC",
+    "baidu_url": "https://www.baidu.com/s?wd=coffee&oq=coffee&tn=baidu&ie=utf-… [65 chars]",
+    "raw_html_file": "https://serpapi.com/searches/TAawz71XuUFECEpMiu49mg/6a6898a7… [81 chars]",
+    "total_time_taken": 17.16
+  },
+  "search_parameters": {
+    "q": "coffee",
+    "f": "8",
+    "device": "desktop",
+    "engine": "baidu"
+  },
+  "search_information": {
+    "query_displayed": "coffee"
+  },
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "Coffee(自媒体创作者) - 百度百科",
+      "link": "https://baike.baidu.com/item/Coffee/65521355",
+      "thumbnail": "https://gimg3.baidu.com/search/src=https%3A%2F%2Fbkimg.cdn.b… [307 chars]",
+      "rich_snippet": "… [1 item(s) truncated]",
+      "sitelinks": "… [2 item(s) truncated]",
+      "displayed_brand": "百度百科"
+    },
+    "… 7 more item(s) truncated"
+  ],
+  "answer_box": [
+    {
+      "position": 1,
+      "link": "http://nourl.ubs.baidu.com/85",
+      "type": "dictionary_result",
+      "common_definition": "coffee - 咖啡",
+      "british": "… {3 field(s) truncated}",
+      "american": "… {3 field(s) truncated}",
+      "definitions": "… [1 item(s) truncated]",
+      "example_sentence": "… {2 field(s) truncated}",
+      "variations": "… [1 item(s) truncated]"
+    }
+  ],
+  "people_also_search_for": [
+    {
+      "text": "coffee咖啡",
+      "link": "https://www.baidu.com/s?wd=coffee%E5%92%96%E5%95%A1&usm=4&ie… [205 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [90 chars]"
+    },
+    "… 7 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "query": "coffee咖啡",
+      "link": "https://www.baidu.com/s?wd=coffee%E5%92%96%E5%95%A1&tn=baidu… [206 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [90 chars]"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "top_searches": [
+    {
+      "position": 1,
+      "text": "习近平对侨务工作作出重要指示",
+      "link": "https://www.baidu.com/s?wd=%E4%B9%A0%E8%BF%91%E5%B9%B3%E5%AF… [392 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [192 chars]"
+    },
+    "… 30 more item(s) truncated"
+  ],
+  "pagination": {
+    "current": 1,
+    "next": "https://www.baidu.com/s?wd=coffee&pn=10&oq=coffee&ie=utf-8&u… [179 chars]",
+    "other_pages": {
+      "2": "https://www.baidu.com/s?wd=coffee&pn=10&oq=coffee&ie=utf-8&u… [168 chars]",
+      "3": "https://www.baidu.com/s?wd=coffee&pn=20&oq=coffee&ie=utf-8&u… [168 chars]",
+      "4": "https://www.baidu.com/s?wd=coffee&pn=30&oq=coffee&ie=utf-8&u… [168 chars]",
+      "5": "https://www.baidu.com/s?wd=coffee&pn=40&oq=coffee&ie=utf-8&u… [168 chars]",
+      "6": "https://www.baidu.com/s?wd=coffee&pn=50&oq=coffee&ie=utf-8&u… [168 chars]",
+      "7": "https://www.baidu.com/s?wd=coffee&pn=60&oq=coffee&ie=utf-8&u… [168 chars]",
+      "8": "https://www.baidu.com/s?wd=coffee&pn=70&oq=coffee&ie=utf-8&u… [168 chars]",
+      "9": "https://www.baidu.com/s?wd=coffee&pn=80&oq=coffee&ie=utf-8&u… [168 chars]",
+      "10": "https://www.baidu.com/s?wd=coffee&pn=90&oq=coffee&ie=utf-8&u… [168 chars]"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+    "next": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+    "other_pages": {
+      "2": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+      "3": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+      "4": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+      "5": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+      "6": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+      "7": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+      "8": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+      "9": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]",
+      "10": "https://serpapi.com/search.json?device=desktop&engine=baidu&… [88 chars]"
+    }
+  }
+}

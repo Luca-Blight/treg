@@ -1,0 +1,49 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "8.5810 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0389-0000-1b6d7c25b2e6",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "8.5702 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "domain_intersection",
+        "se_type": "google",
+        "target1": "mom.com",
+        "target2": "quora.com",
+        "language_code": "en",
+        "location_code": 2840,
+        "include_serp_info": true,
+        "limit": 3
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "target1": "mom.com",
+          "target2": "quora.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 23204,
+          "items_count": 3,
+          "items": [
+            "… {4 field(s) truncated}",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

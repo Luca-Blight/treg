@@ -1,0 +1,76 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.3312 sec.",
+  "cost": 0.006,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0575-0000-944ae181d627",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.3185 sec.",
+      "cost": 0.006,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "merged_data",
+        "se": "dataforseo_trends",
+        "keywords": [
+          "rugby",
+          "… 1 more item(s) truncated"
+        ],
+        "date_from": "2026-04-24",
+        "date_to": "2026-06-24",
+        "type": "web",
+        "location_name": "United States"
+      },
+      "result": [
+        {
+          "keywords": [
+            "rugby",
+            "… 1 more item(s) truncated"
+          ],
+          "type": "trends",
+          "location_code": 2840,
+          "language_code": null,
+          "datetime": "2026-07-28 10:34:57 +00:00",
+          "items_count": 3,
+          "items": [
+            {
+              "position": 1,
+              "type": "dataforseo_trends_graph",
+              "keywords": [
+                "rugby",
+                "… 1 more item(s) truncated"
+              ],
+              "data": [
+                {
+                  "date_from": "2026-04-24",
+                  "date_to": "2026-04-24",
+                  "timestamp": 1776988800,
+                  "values": [
+                    19,
+                    "… 1 more item(s) truncated"
+                  ]
+                },
+                "… 60 more item(s) truncated"
+              ],
+              "averages": [
+                19,
+                "… 1 more item(s) truncated"
+              ]
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

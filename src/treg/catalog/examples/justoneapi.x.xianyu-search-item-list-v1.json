@@ -1,0 +1,68 @@
+{
+  "code": 0,
+  "data": {
+    "appBar": {},
+    "division": {},
+    "extraFilterValue": {
+      "hideExcludeMultiPlacesSellers": "true",
+      "divisionList": "… 0 item(s) truncated"
+    },
+    "filterPanelDO": [
+      "… 2 field(s) truncated",
+      "… 5 more item(s) truncated"
+    ],
+    "filterSheetDO": {
+      "useFilterSheet": "true"
+    },
+    "flexFilter": {
+      "data": "… 2 item(s) truncated",
+      "property": "… 0 field(s) truncated",
+      "protocol": "MultiLevelFilterBar"
+    },
+    "needDecryptKeys": [
+      "resultList.data.item.main.exCo… [74 chars total]",
+      "… 27 more item(s) truncated"
+    ],
+    "relateResultPrefixBar": [],
+    "resultInfo": {
+      "enableGraphSearchResPageStyleUpdated": "true",
+      "forceUseTppRepair": "false",
+      "hasNextPage": "true",
+      "hidePriceFilter": "false",
+      "loadingTextList": "… 9 item(s) truncated",
+      "maxPrice": "",
+      "minPrice": "",
+      "screenAdapter": "false",
+      "scrollParams": "… 5 field(s) truncated",
+      "searchResControlFields": "… 15 field(s) truncated",
+      "showLoginGuideBar": "true",
+      "singleControl": "false",
+      "sqiControlFields": "… 79 field(s) truncated",
+      "subTitle": "",
+      "trackParams": "… 12 field(s) truncated",
+      "useWaterFall": "true"
+    },
+    "resultList": [
+      "… 3 field(s) truncated",
+      "… 9 more item(s) truncated"
+    ],
+    "resultPrefixBar": [
+      "… 3 field(s) truncated",
+      "… 1 more item(s) truncated"
+    ],
+    "tabList": [
+      "… 4 field(s) truncated",
+      "… 4 more item(s) truncated"
+    ],
+    "topList": [],
+    "topMoreInfoDO": {
+      "params": "… 2 field(s) truncated",
+      "showMoreIcon": "true",
+      "target": "fleamarket://FunShare?more=tru… [31 chars total]",
+      "trackParams": "… 3 field(s) truncated"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:40.677704338",
+  "requestId": "a037abc17bbd4393afcfc6db5e343a… [32 chars total]"
+}

@@ -1,0 +1,68 @@
+{
+  "code": 0,
+  "data": {
+    "paging": {
+      "is_end": false,
+      "next": "https://api.zhihu.com/search_v3?advert_count=0&correction=1&… [350 chars total]"
+    },
+    "data": [
+      {
+        "type": "gaokao",
+        "highlight": {},
+        "object": {
+          "type": "major",
+          "major_info": "… 13 field(s) truncated",
+          "attached_info_bytes": "Os0BEiAzMmU5ZGM3NTZlNjMwNTEwMmMxZDFiYjgxOWE4NWQzMRh6Sgzkurrl… [280 chars total]"
+        },
+        "hit_labels": null,
+        "index": 0,
+        "id": "0ea2cc3a-3048-402e-a710-5ab9e5fae076"
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "hit_labels": null,
+    "related_search_result": [],
+    "search_action_info": {
+      "attached_info_bytes": "OrABEiAzMmU5ZGM3NTZlNjMwNTEwMmMxZDFiYjgxOWE4NWQzMUoM5Lq65bel… [240 chars total]",
+      "lc_idx": 20,
+      "search_hash_id": "32e9dc756e6305102c1d1bb819a85d31",
+      "isfeed": false
+    },
+    "is_brand_word": false,
+    "pendant": {
+      "ID": 71,
+      "type": "custom",
+      "pic": "https://pic1.zhimg.com/v2-35d32363208a353b8fb36ba59bc61009.p… [62 chars total]",
+      "link": "https://www.zhihu.com/search?q=%E4%BA%BA%E7%94%9F%E9%80%89%E… [147 chars total]",
+      "bottom": 80,
+      "right": 0,
+      "height": 100,
+      "width": 100,
+      "token": ""
+    },
+    "sensitive_level": -1,
+    "warning": "",
+    "filter_items": null,
+    "ab_params": "dm_content_quota=3;dm_ai_card_cache=0;dm_ai_filter=0;dm_ques… [1196 chars total]",
+    "item_in_view": [
+      {
+        "type": "user_survey",
+        "index": 5,
+        "token": "<omitted: expires>"
+      },
+      "… 1 more item(s) truncated"
+    ],
+    "domain_info": {
+      "first_category": "科技"
+    },
+    "is_koc_words": false,
+    "is_hit_koc_cache": false,
+    "strategy_res_list": [
+      "ac_ai_card",
+      "… 1 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:51.732860491",
+  "requestId": "d505946be4d44193a47549e27d8a8445"
+}

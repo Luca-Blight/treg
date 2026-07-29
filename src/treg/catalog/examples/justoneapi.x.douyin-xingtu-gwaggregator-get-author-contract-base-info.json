@@ -1,0 +1,16 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "credit_score": "100",
+    "modify_time": "1785209411",
+    "new_credit_score": 70,
+    "process_order_cnt": "0"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:09:52.538873314",
+  "requestId": "d5dd43a153fd4d498d91663b67ba5018"
+}

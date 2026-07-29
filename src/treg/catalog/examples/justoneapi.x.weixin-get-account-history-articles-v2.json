@@ -1,0 +1,49 @@
+{
+  "code": 0,
+  "data": {
+    "VideoFinderInfo": {},
+    "AccountInfo": {
+      "UserName": "gh_363b924965e9",
+      "ServiceType": 0,
+      "NickName": "人民日报",
+      "HeadImgUrl": "https://wx.qlogo.cn/mmhead/Q3auHgzwzM5Dlw4H8vWoicXPXccEVkWYgrmSiavKwjaTkYuqswgXi… [86 chars total]",
+      "RegisterBody": "人民日报社",
+      "Signature": "参与、沟通、记录时代。"
+    },
+    "HasArtile": true,
+    "MsgList": {
+      "Msg": [
+        {
+          "BaseInfo": {
+            "MsgId": 2667023842,
+            "MsgType": 49,
+            "DateTime": 1785215201,
+            "UniqueId": "0_2667023842",
+            "TabActionType": 1
+          },
+          "AppMsg": {
+            "BaseInfo": "… 5 field(s) truncated",
+            "DetailInfo": "… 1 item(s) truncated"
+          }
+        },
+        "… 9 more item(s) truncated"
+      ],
+      "PagingInfo": {
+        "Offset": "WABgAGiBura87/3cs2pwAA==",
+        "IsEnd": 0
+      },
+      "FeaturedList": [],
+      "FeaturedUpdateTime": 1785215970
+    },
+    "PagingInfo": {
+      "Offset": "WABgAGiBura87/3cs2pwAA==",
+      "IsEnd": 0
+    },
+    "IPWording": "IP属地：北京",
+    "Gender": -1,
+    "BanReason": []
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:11:35.146901689",
+  "requestId": "c331f2774f4d48f59610d93bbdfb8d12"
+}

@@ -1,0 +1,56 @@
+{
+  "code": 200,
+  "request_id": "8aab5477-7120-4eea-818c-7b7b1056c183",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:18",
+  "time_stamp": 1785220218,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/fetch_search_user_api… [96 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/8aab5477-7120-4e… [150 chars]",
+  "router": "/api/v1/tiktok/web/fetch_search_user",
+  "params": {
+    "keyword": "TikTok"
+  },
+  "data": {
+    "type": 1,
+    "user_list": [
+      "… {8 field(s) truncated}",
+      "… 9 more item(s) truncated"
+    ],
+    "challenge_list": null,
+    "music_list": null,
+    "cursor": 10,
+    "has_more": 1,
+    "status_code": 0,
+    "qc": "",
+    "rid": "2026072806301870CC71552B3D7913AD87",
+    "log_pb": {
+      "impr_id": "2026072806301870CC71552B3D7913AD87"
+    },
+    "extra": {
+      "now": 1785220218000,
+      "logid": "2026072806301870CC71552B3D7913AD87",
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "search_request_id": "",
+      "server_stream_time": 466,
+      "api_debug_info": null
+    },
+    "input_keyword": "TikTok",
+    "global_doodle_config": {
+      "keyword": "TikTok",
+      "display_filter_bar": 1,
+      "new_source": "",
+      "search_channel": "tiktok_user",
+      "tns_search_result": "Pass",
+      "hide_results": false,
+      "feedback_survey": null,
+      "hit_shark": false,
+      "hit_dolphin": false
+    },
+    "feedback_type": "user"
+  }
+}

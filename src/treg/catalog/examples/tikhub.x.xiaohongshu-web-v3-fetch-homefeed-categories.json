@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "request_id": "25c199c6-97bb-4596-8c6c-efed22d12cc3",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:22",
+  "time_stamp": 1785220402,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-Web-V3-API/fetch_homefeed_categories_api_v1_xiaohongshu_web_v3_fetch_homefeed_categories_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/25c199c6-97bb-4596-8c6c-efed22d12cc3?sign=e2f69ce3de71d8d57d96acf5d64a9871e3f40b2c9b4773e61652ead7b8ac1e3a",
+  "router": "/api/v1/xiaohongshu/web_v3/fetch_homefeed_categories",
+  "params": {},
+  "data": {
+    "ok": true,
+    "status": 200,
+    "data": {
+      "categories": [
+        {
+          "id": "homefeed.fashion_v3",
+          "name": "穿搭"
+        },
+        "… 10 more item(s) truncated"
+      ]
+    },
+    "code": 0,
+    "success": true,
+    "msg": "成功"
+  }
+}

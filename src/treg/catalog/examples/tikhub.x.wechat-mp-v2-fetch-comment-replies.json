@@ -1,0 +1,28 @@
+{
+  "code": 200,
+  "request_id": "f6d27579-88b9-426a-96e8-61b039eb0623",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:13",
+  "time_stamp": 1785220393,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Media-Platform-V2-API/fetch_comment_replies_api_v1_wechat_mp_v2_fetch_comment_replies_pos… [121 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f6d27579-88b9-426a-96e8-61b039eb0623?sign=b8e96e1f13b8c6399f691010c21249576d… [150 chars]",
+  "router": "/api/v1/wechat_mp/v2/fetch_comment_replies",
+  "params": {
+    "url": "http://mp.weixin.qq.com/s?__biz=Mzk3NTA0MzM5NA==&mid=2247483745&idx=1&sn=3f34e768cf457a501038991ed30be1f4#rd",
+    "content_id": "12109128638545265979",
+    "offset": 0,
+    "all_pages": false,
+    "raw": true
+  },
+  "data": {
+    "error": "getcomment ret=-3(会话可能过期,先调一次 comments(url) 刷新)",
+    "message": "请求参数可能有误（如无效的文章 URL / finder username / 视频 object_id），请检查参数后重试。注意：使用无效参数的请求被微信处理后仍会计费。",
+    "debug_id": "6fb4bd8b",
+    "debug_info": "gAAAAABqaE0pI4A7tdZpqcg5qr6e7TM-JneQ98jv1Hl-viQq6jXqfdrDbdYkcuSfxjq6B9ToQoDsY00heNdCOSLd0wu6NobwQo3SIE7IWHgAclWJywqsVGEz… [292 chars]"
+  }
+}

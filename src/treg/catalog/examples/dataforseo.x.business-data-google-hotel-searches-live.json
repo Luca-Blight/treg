@@ -1,0 +1,57 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "6.3048 sec.",
+  "cost": 0.004,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0293-0000-3fcfe963d14e",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "5.7540 sec.",
+      "cost": 0.004,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "business_data",
+        "function": "hotel_searches",
+        "se": "google",
+        "language_code": "en",
+        "location_name": "New York,New York,United States",
+        "keyword": "cheap hotel",
+        "check_in": "2026-08-24",
+        "check_out": "2026-08-25",
+        "currency": "USD",
+        "adults": 2,
+        "children": [
+          "14"
+        ],
+        "sort_by": "highest_rating",
+        "tag": "example",
+        "se_type": "hotel_searches",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "cheap hotel, New York,New York,United States",
+          "location_code": 1023191,
+          "language_code": "en",
+          "check_url": "https://www.google.com/travel/search?q=cheap+hotel%2c+New+York%2cNew+York%2cUnited+States&hl=en&gl=US&ap=KigKEgnRNUE70gVEQBGzfR4Ueq9SwBISCbWv6TWmsERAEX3XW6NJUVLAMAA&ts=CAESDgoCCAMKAggDCgQIAhAOGngKWhIu… [372 chars]",
+          "datetime": "2026-07-28 10:34:15 +00:00",
+          "items_count": 18,
+          "items": [
+            "… {9 field(s) truncated}",
+            "… 17 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

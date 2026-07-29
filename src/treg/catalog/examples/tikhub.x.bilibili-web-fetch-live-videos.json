@@ -1,0 +1,46 @@
+{
+  "code": 200,
+  "request_id": "d0663cec-50bf-47eb-bd06-c9807d2600e0",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:44",
+  "time_stamp": 1785220064,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_collect_folders_api_v1_bilibili_web_fetch_live_videos_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d0663cec-50bf-47eb-bd06-c9807d2600e0?sign=5ceecd5a9791e61626a52d96a61828705b3914486c479b39dbc13590a96981d3",
+  "router": "/api/v1/bilibili/web/fetch_live_videos",
+  "params": {
+    "room_id": "1815229528"
+  },
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "current_quality": 4,
+      "accept_quality": [
+        "4"
+      ],
+      "current_qn": 10000,
+      "quality_description": [
+        {
+          "qn": 10000,
+          "desc": "原画"
+        }
+      ],
+      "durl": [
+        {
+          "url": "https://d1--ov-gotcha07.bilivideo.com/live-bvc/923571/live_1777360364_82518558.flv?expires=1785223664&len=0&oi=803624020&pt=android&qn=10000&trid=100032736c32318e54de5ad3ca44136a684b&bmt=1&sigparams=c… [595 chars]",
+          "length": 0,
+          "order": 1,
+          "stream_type": 0,
+          "p2p_type": -1
+        },
+        "… 1 more item(s) truncated"
+      ]
+    }
+  }
+}

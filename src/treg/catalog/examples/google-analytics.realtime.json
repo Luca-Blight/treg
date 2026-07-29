@@ -1,0 +1,43 @@
+{
+  "dimensionHeaders": [
+    {
+      "name": "country"
+    }
+  ],
+  "metricHeaders": [
+    {
+      "name": "activeUsers",
+      "type": "TYPE_INTEGER"
+    }
+  ],
+  "rows": [
+    {
+      "dimensionValues": [
+        {
+          "value": "India"
+        }
+      ],
+      "metricValues": [
+        {
+          "value": "1234"
+        }
+      ]
+    },
+    {
+      "dimensionValues": [
+        {
+          "value": "Singapore"
+        }
+      ],
+      "metricValues": [
+        {
+          "value": "1234"
+        }
+      ]
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "rowCount": 23,
+  "kind": "analyticsData#runRealtimeReport",
+  "_scrubbed": true
+}

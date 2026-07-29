@@ -1,0 +1,50 @@
+{
+  "code": 200,
+  "request_id": "f88462b4-593d-42f2-ae9d-a507e21bcc61",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:50",
+  "time_stamp": 1785220190,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Telegram-Web-API/fetch_post_detail_a… [100 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f88462b4-593d-42… [150 chars]",
+  "router": "/api/v1/telegram/web/fetch_post_detail",
+  "params": {
+    "channel": "durov",
+    "post_id": "510"
+  },
+  "data": {
+    "id": 510,
+    "channel": "durov",
+    "url": "https://t.me/durov/510",
+    "type": "album",
+    "date": "2026-05-12T17:28:39+00:00",
+    "text": "🌍 With 400 validators across 6 continents, TON is one of the… [264 chars]",
+    "text_html": "🌍 With 400 validators across 6 continents, TON is one of the… [270 chars]",
+    "views": "3.55M",
+    "author": "Pavel Durov",
+    "is_forwarded": false,
+    "forwarded_from": null,
+    "reply_to": null,
+    "link_preview": null,
+    "media": {
+      "photos": [
+        "https://cdn4.telesco.pe/file/ovNSJHq8ZZhaF5LC8KCz43C7kZMRh8e… [375 chars]",
+        "… 1 more item(s) truncated"
+      ],
+      "videos": [],
+      "has_unsupported": true
+    },
+    "reactions": [
+      {
+        "emoji": "⭐",
+        "count": "8.23K",
+        "paid": true
+      },
+      "… 5 more item(s) truncated"
+    ]
+  }
+}

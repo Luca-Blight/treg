@@ -1,0 +1,50 @@
+{
+  "code": 200,
+  "request_id": "36a62a05-fc78-4297-a97f-3b6ebee460d1",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:50",
+  "time_stamp": 1785220370,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Search-API/fetch_search_suggest_api_v1_douyin_search_fetch_search_suggest_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/36a62a05-fc78-4297-a97f-3b6ebee460d1?sign=2c45a8b280dfb92d515eb22ee12b15b70a… [150 chars]",
+  "router": "/api/v1/douyin/search/fetch_search_suggest",
+  "params": {
+    "keyword": "人工智能"
+  },
+  "data": {
+    "sug_list": [
+      "… {5 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "sug_virtual_list": null,
+    "status_code": 0,
+    "status_msg": "",
+    "rid": "202607281432508FA4016EB42DFE523D58",
+    "words_query_record": {
+      "info": "{}",
+      "words_source": "sug",
+      "query_id": "6527568579963917582"
+    },
+    "extra": {
+      "now": 1785220370000,
+      "logid": "202607281432508FA4016EB42DFE523D58",
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "search_request_id": ""
+    },
+    "log_pb": {
+      "impr_id": "202607281432508FA4016EB42DFE523D58"
+    },
+    "time_cost": {
+      "stream_inner": "135",
+      "server_engine_cost": "122"
+    },
+    "words_lists": [],
+    "cache_conf": {
+      "enable": false
+    }
+  }
+}

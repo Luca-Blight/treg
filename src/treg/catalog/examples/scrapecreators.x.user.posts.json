@@ -1,0 +1,57 @@
+{
+  "success": true,
+  "credits_remaining": 19848,
+  "credits_charged": 1,
+  "tweets": [
+    {
+      "__typename": "Tweet",
+      "core": {
+        "user_results": "… {1 field(s) truncated}"
+      },
+      "edit_control": {
+        "edit_tweet_ids": "… [1 item(s) truncated]",
+        "editable_until_msecs": "1785076…",
+        "edits_remaining": "5",
+        "is_edit_eligible": false
+      },
+      "is_translatable": false,
+      "legacy": {
+        "bookmark_count": 1320,
+        "bookmarked": false,
+        "conversation_control": "… {2 field(s) truncated}",
+        "conversation_id_str": "2081372…",
+        "created_at": "Sun Jul…",
+        "display_text_range": "… [2 item(s) truncated]",
+        "entities": "… {0 field(s) truncated}",
+        "favorite_count": 2579,
+        "favorited": false,
+        "full_text": "I'm see…",
+        "id_str": "2081372…",
+        "is_quote_status": true,
+        "lang": "en",
+        "quote_count": 271,
+        "quoted_status_id_str": "2081184…",
+        "…": "5 more field(s) truncated"
+      },
+      "note_tweet": {
+        "is_expandable": true,
+        "note_tweet_results": "… {1 field(s) truncated}"
+      },
+      "quick_promote_eligibility": {
+        "eligibility": "Ineligi…"
+      },
+      "quoted_status_result": {
+        "result": "… {10 field(s) truncated}"
+      },
+      "rest_id": "2081372…",
+      "source": "<a href…",
+      "unmention_data": {},
+      "views": {
+        "count": "1765648",
+        "state": "Enabled…"
+      },
+      "url": "https:/…"
+    },
+    "… 2 more item(s) truncated"
+  ]
+}

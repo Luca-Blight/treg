@@ -1,0 +1,39 @@
+{
+  "code": 200,
+  "request_id": "45c9e833-e443-4387-aab4-5320c576eb4b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:10",
+  "time_stamp": 1785220390,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Media-Platform-V2-API/fetch_a… [119 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/45c9e833-e443-43… [150 chars]",
+  "router": "/api/v1/wechat_mp/v2/fetch_article_detail",
+  "params": {
+    "url": "https://mp.weixin.qq.com/s/TSNQKkRpN1qbKsT7BvzqIw",
+    "raw": true
+  },
+  "data": {
+    "noNeedUpdate": false,
+    "itemIdx": 1,
+    "clientCacheTime": 600,
+    "tmplVersions": [
+      "… {12 field(s) truncated}"
+    ],
+    "pbRequestMsgInfo": null,
+    "itemPictureUrls": [],
+    "bizUin": 3236757533,
+    "url": "https://mp.weixin.qq.com/s/TSNQKkRpN1qbKsT7BvzqIw",
+    "nativePageNeedFullScreenForceUrl": false,
+    "forceUrl": "",
+    "traceFlag": 2048,
+    "itemShowType": 0,
+    "lastModifyTime": 1741148529,
+    "msgId": 2247780992,
+    "tmplVersion": 8363712,
+    "…": "3 more field(s) truncated"
+  }
+}

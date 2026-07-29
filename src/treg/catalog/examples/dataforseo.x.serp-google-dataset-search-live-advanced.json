@@ -1,0 +1,62 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "17.4373 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0139-0000-f57472240c4b",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "17.3706 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "google",
+        "se_type": "dataset_search",
+        "keyword": "water quality",
+        "last_updated": "1m",
+        "file_formats": [
+          "archive",
+          "… 1 more item(s) truncated"
+        ],
+        "usage_rights": "noncommercial",
+        "is_free": true,
+        "topics": [
+          "natural_sciences",
+          "… 1 more item(s) truncated"
+        ],
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "water quality",
+          "se_domain": "datasetsearch.research.google.com",
+          "language_code": "en",
+          "check_url": "https://datasetsearch.research.google.com/search?query=water%20quality&hl=en&filters=WyJbXCJ1cGRhdGVkX2RhdGVcIixbXCIxbVwiXV0iLCJbXCJmaWxlX2Zvcm1hdF9jbGFzc1wiLFtcIjdcIixcIjVcIl1dIiwiW1wibGljZW5zZV9jbGF… [353 chars]",
+          "datetime": "2026-07-28 10:35:02 +00:00",
+          "spell": null,
+          "item_types": [
+            "dataset"
+          ],
+          "se_results_count": 15,
+          "items_count": 15,
+          "items": [
+            "… {21 field(s) truncated}",
+            "… 14 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "id": "tt0111161",
+      "titleType": {
+        "__typename": "TitleType",
+        "id": "movie",
+        "text": "Movie",
+        "categories": [
+          {
+            "id": "movie",
+            "text": "Movie",
+            "value": "movie"
+          }
+        ],
+        "canHaveEpisodes": false,
+        "isEpisode": false,
+        "isSeries": false,
+        "displayableProperty": {
+          "value": {
+            "plainText": ""
+          }
+        }
+      },
+      "principalCredits": [
+        {
+          "credits": [
+            {
+              "__typename": "Crew"
+            }
+          ]
+        },
+        "… 2 more item(s) truncated"
+      ],
+      "credits": {
+        "__typename": "CreditConnection",
+        "edges": [
+          {
+            "node": {
+              "__typename": "Cast",
+              "characters": [
+                {
+                  "id": "Captain Hadley",
+                  "name": "Captain Hadley"
+                }
+              ],
+              "name": {
+                "__typename": "Name",
+                "id": "nm0000317",
+                "nameText": {
+                  "text": "Clancy Brown"
+                },
+                "primaryImage": {
+                  "__typename": "Image",
+                  "id": "rm1769979648",
+                  "url": "https://m.media-amazon.com/images/M/MV5BMTUxODY3NjAzMF5BMl5BanBnXkFtZTcwMTQ5MjYwNg@@._V1_.jpg",
+                  "height": 2048,
+                  "width": 1418
+                }
+              }
+            }
+          },
+          "… 14 more item(s) truncated"
+        ],
+        "total": 546
+      }
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:03.495116122",
+  "requestId": "3c0be05f61fd456d982e9e031f47e6d2"
+}

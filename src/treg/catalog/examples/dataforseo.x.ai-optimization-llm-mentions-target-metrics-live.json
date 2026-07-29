@@ -1,0 +1,62 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "9.3323 sec.",
+  "cost": 0.101,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0651-0000-959fcc4083de",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "9.3217 sec.",
+      "cost": 0.101,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "target_metrics",
+        "language_code": "en",
+        "location_code": 2840,
+        "platform": "chat_gpt",
+        "target": [
+          {
+            "domain": "en.wikipedia.org",
+            "search_filter": "exclude"
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "initial_dataset_filters": [
+          [
+            "ai_search_volume",
+            "… 2 more item(s) truncated"
+          ]
+        ],
+        "internal_list_limit": 10
+      },
+      "result": [
+        {
+          "total_count": 0,
+          "offset": 0,
+          "items_count": 0,
+          "aggregated_metrics": {
+            "location": "… [1 item(s) truncated]",
+            "language": "… [1 item(s) truncated]",
+            "platform": "… [1 item(s) truncated]",
+            "sources_domain": "… [10 item(s) truncated]",
+            "search_results_domain": "… [10 item(s) truncated]",
+            "brand_entities_title": "… [10 item(s) truncated]",
+            "brand_entities_category": "… [10 item(s) truncated]",
+            "total": "… {2 field(s) truncated}"
+          },
+          "items": []
+        }
+      ]
+    }
+  ]
+}

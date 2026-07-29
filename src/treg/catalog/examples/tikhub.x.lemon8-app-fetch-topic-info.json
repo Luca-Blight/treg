@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "c5c371b4-cb65-406e-b5d1-a24b2ecca6bb",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:11",
+  "time_stamp": 1785220151,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Lemon8-App-API/fetch_topic_info_api_… [94 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c5c371b4-cb65-40… [150 chars]",
+  "router": "/api/v1/lemon8/app/fetch_topic_info",
+  "params": {
+    "forum_id": "7174447913778593798"
+  },
+  "data": {
+    "data": {
+      "id": 7174447913778593798,
+      "name": "lemon8christmas",
+      "name_span": "",
+      "description": "Christmas GIVEAWAY is BACK!! Enter and unbox your Christmas … [70 chars]",
+      "avatar": "… {3 field(s) truncated}",
+      "share_url": "https://www.lemon8-app.com/topic/7174447913778593798?user_id… [80 chars]",
+      "color": "",
+      "status": 1,
+      "inner_forum_type": 0,
+      "recommend_status": 0,
+      "follower_count": 2418,
+      "talk_count": 0,
+      "views_count": 22593595,
+      "background": "… {8 field(s) truncated}",
+      "user_subscription": 0,
+      "…": "10 more field(s) truncated"
+    },
+    "message": "success",
+    "rec_impr_id": 0,
+    "server_time": "1785220150.97",
+    "titlebar": ""
+  }
+}

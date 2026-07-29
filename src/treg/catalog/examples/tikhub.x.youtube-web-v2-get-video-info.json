@@ -1,0 +1,40 @@
+{
+  "code": 200,
+  "request_id": "eff547fe-33f1-423a-806f-d0bc9d59f386",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:06",
+  "time_stamp": 1785220266,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_video_info_ap… [98 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/eff547fe-33f1-42… [150 chars]",
+  "router": "/api/v1/youtube/web_v2/get_video_info",
+  "params": {
+    "video_id": "oaSNBz4qMQY",
+    "language_code": "zh-CN"
+  },
+  "data": {
+    "video_id": "oaSNBz4qMQY",
+    "title": "We Found A Scary Hidden Paintings in Minecraft",
+    "description": "Today, we've moved into a sorcerer village! This village hid… [329 chars]",
+    "length_seconds": "",
+    "keywords": null,
+    "thumbnails": [],
+    "author": "Maizen",
+    "channel_id": "UCJHBJ7F-nAIlMGolm0Hu4vg",
+    "channel_handle": "@maizenofficial",
+    "channel_url": "https://www.youtube.com/channel/UCJHBJ7F-nAIlMGolm0Hu4vg",
+    "channel_avatar_thumbnails": [
+      "… {3 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "subscriber_count_text": "1740万位订阅者",
+    "is_verified": true,
+    "badge_tooltip": "已验证",
+    "view_count": "",
+    "…": "28 more field(s) truncated"
+  }
+}

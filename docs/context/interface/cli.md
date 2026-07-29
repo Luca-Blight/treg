@@ -16,7 +16,13 @@ A thin client over the API in `src/treg/cli.py` — every command is one HTTP ca
 Every command/subcommand carries a `description` + `help` on each argument + a copy-paste **Examples**
 epilog (a `mk()` helper + `_ex()` + `RawDescriptionHelpFormatter`), so `treg <cmd> -h` is self-teaching.
 `treg --version` / `treg version` print `cli_version()` (package metadata); `treg update` (`cmd_update`)
-re-runs the server's `install.sh` to upgrade the CLI in place.
+re-runs the server's `install.sh` to upgrade the CLI in place. A global **`--json`** flag (stripped in
+`main` like `--org`) makes the human-table commands (`org ls`, `agents ls`, `catalog` in all its forms)
+emit raw JSON instead — one stable contract for agents; commands that already print JSON are unaffected.
+**`TREG_CONFIG`** points the CLI at an alternate config file (CI/agents/tests; default
+`~/.treg/config.json`). `org use` validates the slug against `/orgs` before persisting (a typo'd slug
+exits naming your real teams; offline degrades to set + warn), and the server's "choose an org" 400 is
+followed by a stderr line naming the bad `--org`/active-org value.
 
 Every command builds its client via `_client(cfg)`, which returns a `_RegistryClient` (an
 `httpx.Client` subclass). It survives an upstream WAF: when a request's body is 403'd by an edge (a
@@ -50,6 +56,42 @@ set them in the runtime's env (Claude Code settings env, Codex config, a project
 config file stays the human's. This is what makes the dashboard's "Scope this agent" promotion
 real on a shared machine (the same per-process pattern other agent credential gateways use).
 The override never touches the config file, so `treg login` can't accidentally persist it.
+
+## The top-level IA (`treg --help`)
+`build_parser()` returns a `_GroupedHelpParser` whose `format_help` renders the front page from the
+`HELP_GROUPS` table (five groups, fixed order) instead of argparse's flat alphabetical wall — so the
+listing is curated copy, not registration order. Anything **not** in `HELP_GROUPS` still parses; it is
+simply absent from every listing, which is how the back-compat aliases survive. A subparser is hidden
+by the `alias()` helper, which just omits `help=` (argparse only lists a subparser that has one);
+`mk()` is the visible form. Subcommand `-h` is untouched — the top-level `add_subparsers` pins
+`parser_class=argparse.ArgumentParser`, because argparse otherwise clones the *parent's* class into
+every subparser and `treg call -h` would print the grouped front page instead of its own help.
+
+```
+MARKETPLACE   catalog
+CORE          tool · skill · secret · connections · call · cli
+BULK UPLOAD   scan · upload
+TEAM MGMT     audit · org · invites · accept · agents · admin
+CONFIG        config · login · logout · onboard · update · version
+```
+
+**Old → new.** Every one of these still parses and routes exactly as before — hidden, not removed:
+
+| old spelling | canonical now | note |
+|---|---|---|
+| `treg add …` | `treg tool add …` | one spelling for registering a tool; `cmd_add`'s name-or-id `--secret` sugar is unchanged |
+| `treg oauth connect …` | `treg connections connect …` | same flags (`name`, `--provider`, `--capability`, `--client-secret`, `--scopes`) |
+| `treg oauth providers` | `treg connections providers` | |
+| `treg run …` | `treg cli run …` | |
+| `treg runs` | `treg cli runs` (or `treg audit --runs`) | |
+| `treg calls` | `treg audit --calls` | |
+| `treg shell start\|stop` | `treg cli shell start\|stop` | |
+| `sudo treg setup-local-run` | `sudo treg cli setup` | |
+| `treg import` | `treg upload` | pre-existing alias |
+| `treg health` | — | still works; dropped from the front page, `connections` carries the health story |
+
+Bare **`treg connections`** now lists (the subparser is `required=False` with a parent
+`set_defaults(fn=cmd_connections_ls)`); every other namespace still requires a subcommand.
 
 ## Commands
 - **Team policy + scoping (all under `org`, all admin+):**
@@ -126,10 +168,11 @@ The override never touches the config file, so `treg login` can't accidentally p
   ONE named var from an `.env` (default `./.env`) via `providers.env_values` — the correct, value-internal way
   to register an **unmatched** key: it strips a balanced quote pair (so `KEY="v"` stores `v`, not `"v"` — the
   malformation agents hit hand-extracting with grep/cut) and the value never lands on the command line.
-- **`add`** — a friendly top-level shortcut for `tool add`: `treg add <name> --base-url URL [--secret
-  <name|id>]` (`cmd_add`). `--secret` accepts a secret **name** (resolved to its id via `_resolve_secret_ref`)
-  or an id; default injection is a Bearer token in the `Authorization` header. `--header`/`--format`
-  override it; `--base` aliases `--base-url`.
+- **`add`** (hidden alias) — the old friendly shortcut for `tool add`: `treg add <name> --base-url URL
+  [--secret <name|id>]` (`cmd_add`). `--secret` accepts a secret **name** (resolved to its id via
+  `_resolve_secret_ref`) or an id; default injection is a Bearer token in the `Authorization` header.
+  `--header`/`--format` override it; `--base` aliases `--base-url`. Kept for old scripts and cached
+  agent instructions; `tool add` is what we teach.
 - **`tool add`** (`name`; `--base-url`; single-binding `--secret`/`--injector`/`--auth-*`/`--secret-field`;
   friendly multi-binding `--bind 'secret=ID,injector=oauth,name=...,format=...'` parsed by `_parse_bind`;
   raw `--binding '<json>'`; `--health '<json>'`) · **`tool ls`** · **`tool rm`** · **`tool update ID`**
@@ -150,12 +193,30 @@ The override never touches the config file, so `treg login` can't accidentally p
   unknown bin isn't server-allow-listed, so it runs locally until an admin allow-lists it. Brains in
   `providers.py` + `skills.py`; see [env-import](env-import.md).
 - **`call`** (`target`, optional `path`; `--method`, `--query K=V` repeatable, `--data`, `--file`,
-  `--content-type`, `--header 'K: V'` repeatable) → two shapes: named `call <tool> <path>` or agent-native
-  single URL `call https://host/full/path` (path omitted) → both hit `/call/<rest>`. **`--header`** adds an
+  `--content-type`, `--header 'K: V'` repeatable) → three shapes: named `call <tool> <path>`, agent-native
+  single URL `call https://host/full/path` (path omitted), or a **catalog endpoint id**
+  `call tikhub.tiktok.video.comments` — all hit `/call/<rest>`. **`--header`** adds an
   extra request header the binding can't know (e.g. Google Ads' per-call `login-customer-id`); an
-  **injected credential always wins**, so a `--header` can never overwrite the secret the proxy injects ·
-  **`calls`** (`--limit`).
-- **`run`** (`treg run <tool> [--local|--server] [--] <cli args…>`, `cmd_run`) — a **dispatcher** that picks
+  **injected credential always wins**, so a `--header` can never overwrite the secret the proxy injects.
+  The **endpoint-id shape** (dotted, slash-free; an org tool with the same name always wins) walks the
+  marketplace credential ladder server-side (`_resolve_marketplace_call` in api.py): ① an org tool for
+  the provider (via passthrough resolution, so ACLs apply unchanged), ② an org secret tagged with or
+  NAMED for the provider, injected through a **virtual, never-persisted tool named after the endpoint**
+  (audit records the endpoint id; `tool ls` stays clean), ③ an actionable 404 naming the
+  `connections connect` / `secret add` fix. Tier ④ (treg's own metered key) waits on billing. The server
+  validates method + required params BEFORE money is spent, and fills `{placeholder}` path params from
+  `--query` (consumed — dropped from the relayed query via `relay(drop_params=…)`). Members restricted
+  via `--tools` get no marketplace calls; a bare provider name (`call tikhub /path`) still 404s but
+  points at the endpoint-id form. See [cli-audit-2026-07-28](cli-audit-2026-07-28.md) (design section).
+- **`audit`** (`cmd_audit`, `--limit`, `--calls` | `--runs`) — the single "who did what" view. `--calls`
+  and `--runs` delegate to `cmd_calls` / `cmd_runs` verbatim (the old `treg calls` / `treg runs` output,
+  byte for byte). The **default merged view** is the only new behaviour in the consolidation: it fetches
+  both `GET /calls` and `GET /runs` (no new endpoint), normalises each row to
+  `{kind, id, user_email, tool, detail, result, where, created_at}`, sorts by `created_at` descending and
+  truncates to `--limit`. It **drops the `kind == "local_run"` CallRecords**, because `/runs` already
+  surfaces those same grants as its `where: "local"` rows — otherwise every local run would be listed
+  twice. Call ids are prefixed `c…`; run ids keep `/runs`' own `s…`/`l…` prefixes, so nothing collides.
+- **`cli run`** (`treg cli run <tool> [--local|--server] [--] <cli args…>`, `cmd_run`) — a **dispatcher** that picks
   a tier by flag: `_run_local` (default) or `_run_server`. `args` is an `argparse.REMAINDER`, which silently
   swallows a treg flag typed AFTER the tool name; `cmd_run` guards against that by reading the **real**
   `sys.argv` and refusing a tier flag (`--server`/`--local`/`--timeout`) placed after the tool but before the
@@ -170,7 +231,7 @@ The override never touches the config file, so `treg login` can't accidentally p
     the exit code through. Shared core `_run_helper` — which, on a **shared-key** run (grant sets
     `redact_output`), scrubs the injected value out of the CLI's stdout/stderr via `_StreamRedactor`
     (boundary-safe streaming). Without setup it runs as the member, **best-effort**, with a warning.
-    **`setup-local-run`** (`cmd_setup_local_run`, run once with sudo — now **Linux AND macOS**; macOS creates
+    **`cli setup`** (`cmd_setup_local_run`, run once with sudo — now **Linux AND macOS**; macOS creates
     the treg-run user via `dscl`/`_create_run_user`) creates the treg-run user, installs the runner
     (root-owned, can only invoke `__run-helper`), writes a narrow sudoers rule, and installs the **egress
     allow-list** (`_install_egress` → [local-run](../architecture/local-run.md); `--no-egress` skips it,
@@ -184,13 +245,13 @@ The override never touches the config file, so `treg login` can't accidentally p
     via `TREG_RUN_FSJAIL`) so it can't drop the key in a member-readable file — see [local-run](../architecture/local-run.md).
   - **`--server`** (Tier 0, `_run_server`) — run a runnable skill's CLI **on the registry server** (`POST
     /run`, `--timeout` cap 600), secrets injected server-side, stdout/stderr + exit code streamed back.
-    **`runs`** (`cmd_runs`, `--limit`) shows the run audit log — now **BOTH tiers**: `GET /runs` merges
+    **`cli runs`** (`cmd_runs`, `--limit`) shows the run audit log — now **BOTH tiers**: `GET /runs` merges
     server runs and local grants, each tagged `where` (`server`|`local`; a local success has a null exit
     code, since only failures report back).
-  **`calls`** shows the local `GRANT`/`DENY`/`REPORT` audit rows.
-- **`shell`** (`cmd_shell_start`/`cmd_shell_stop`) — **`shell start`** opens a subshell where the team's
+  `treg audit --calls` shows the local `GRANT`/`DENY`/`REPORT` audit rows.
+- **`cli shell`** (`cmd_shell_start`/`cmd_shell_stop`) — **`cli shell start`** opens a subshell where the team's
   registered CLIs run with the credential injected transparently (a shim dir first on `PATH` routes each to
-  `treg run`); **`shell stop`** (or `exit`) leaves. `--server-for a,b` routes named tools to the server
+  `treg run`); **`cli shell stop`** (or `exit`) leaves. `--server-for a,b` routes named tools to the server
   (key never on the machine, if `server_runnable`), `--ttl MIN` auto-closes. See [shell](shell.md).
 - **`admin`** (super-admin, cross-tenant): `login --token`, `stats`, `orgs`, `org <id>`, `users`,
   `tools`, `calls`, `health`, `grant`/`revoke <user_id>`, `suspend-user`/`rm-user <user_id>`,
@@ -198,17 +259,42 @@ The override never touches the config file, so `treg login` can't accidentally p
   or falls back to the active org token (works for an `is_superadmin` user). See
   [super-admin](../architecture/super-admin.md).
 - **`skill`** (`init --dir`, `add --dir`, `scaffold <dir> [--out]`, `push <file>`, `ls`, `rm`) — see below.
-- **`health`** (`--run`).
-- **`oauth`** — **`oauth providers`** (`cmd_oauth_providers` → `GET /oauth/providers`) lists the services
-  treg holds its **own** approved OAuth app for. **`oauth connect`** (`cmd_oauth_connect`) has two modes:
-  **registry** — `--provider <service>` (e.g. `google-search-console`), optional `--capability` to pick a
-  scope set (default read) and optional `name`, so treg's app supplies the client credentials; or
+- **`health`** (`--run`) — still parses; off the front page since the consolidation.
+- **`connections`** (`cmd_connections_ls`/`_resources`/`_use`/`_rm`, plus `cmd_oauth_connect` +
+  `cmd_oauth_providers`, which kept their names when the namespace moved) — your
+  connected accounts, and where you connect a new one. Bare **`treg connections`** (or **`ls`**) →
+  `GET /connections` (health + expiry). **`connect`** (`cmd_oauth_connect`, ex-`oauth connect`) has two
+  modes: **registry** — `--provider <service>` (e.g. `google-search-console`), optional `--capability` to
+  pick a scope set (default read) and optional `name`, so treg's app supplies the client credentials; or
   **bring-your-own** — `name --client-secret <file> --scopes …` reads your own Google OAuth client JSON
   (`_byo_body`). Either posts `/oauth/start`, prints the consent URL, and polls `/oauth/status` ~5 min.
-- **`connections`** (`cmd_connections_ls`/`_resources`/`_use`/`_rm`) — your connected accounts: **`ls`**
-  (`GET /connections`, health + expiry), **`resources <id>`** (`GET /connections/{id}/resources` — the
-  sites/properties/accounts it can act on), **`use <id> <resource_ref>`** (`POST /connections/{id}/resource`
-  — select which one), **`rm <id>`** (`DELETE /connections/{id}` — disconnect).
+  **`providers`** (`cmd_oauth_providers` → `GET /oauth/providers`, ex-`oauth providers`) lists the services
+  treg holds its **own** approved OAuth app for. **`resources <id>`** (`GET /connections/{id}/resources` —
+  the sites/properties/accounts it can act on), **`use <id> <resource_ref>`**
+  (`POST /connections/{id}/resource` — select which one), **`rm <id>`** (`DELETE /connections/{id}` —
+  disconnect). The old **`oauth`** namespace stays as a hidden alias of `connect` + `providers`.
+- **`catalog [platform]`** (`cmd_catalog`) — the **endpoint** catalog: what you can CALL, as opposed to
+  `connections providers`, which is what you can CONNECT. No arg → `GET /catalog/platforms`, one aligned row
+  per platform (endpoints / verified / capabilities / the providers serving it), busiest first. With a
+  slug → `GET /catalog/platforms/{slug}`, grouped **by capability** so the same job across providers sits
+  under one heading (`provider  METHOD  path  cost  verified-date|unverified  tier`), with any unmapped
+  extended endpoints last. `_cost_label` renders the catalog's cost block as a scannable
+  `$0.001/success`. Unauthenticated (`_client(cfg, auth=False)`) — the catalog is public, and it's the
+  one thing worth reading *before* signing up. The CLI never parses the YAML itself (that needs pyyaml,
+  a server extra); see [catalog](../architecture/catalog.md).
+- **`catalog search <query…> [--limit]`** (`_catalog_search`) — find an endpoint by what it DOES when you
+  don't know which shelf it sits on (`GET /catalog/search`). A compact ranked table: endpoint id,
+  platform, provider, cost, `✓`/`·` verified, tier, clipped summary — footer hint `treg catalog get <id>`.
+  Cost prints in **USD** (`_cost_usd`, 3 significant digits) rather than `_cost_label`'s source currency:
+  the column is only worth reading if CNY and USD rows compare.
+- **`catalog get <endpoint-id>`** (`_catalog_get`) — the last stop before `treg call`
+  (`GET /catalog/endpoints/{id}`): summary, provider + limits/pricing_url, cost in USD *and* the original
+  currency with its note, verified date, the capability with a **siblings** table (same job, other
+  providers — price and verification side by side), a `PARAMS` table by location with required first
+  (`_print_params`), the paste-ready `RUN IT` command, and the example response pretty-printed, clipped at
+  40 lines with a pointer to the full JSON. `search`/`get` are matched as positional **verbs** inside
+  `cmd_catalog`, not argparse subcommands, so `treg catalog <platform>` keeps working and a multi-word
+  query needs no quoting.
 
 `_parse_bind` defaults every field to a bearer `Authorization` header; only `secret=` is required, so a
 multi-credential tool needs no JSON.

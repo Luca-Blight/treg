@@ -1,0 +1,52 @@
+{
+  "code": 200,
+  "request_id": "d76bf067-aba2-4a59-9278-49f84a546926",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:42",
+  "time_stamp": 1785220122,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/handler_user_profile_… [108 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d76bf067-aba2-4a… [150 chars]",
+  "router": "/api/v1/douyin/web/handler_user_profile_v3",
+  "params": {
+    "uid": "1673937488185292"
+  },
+  "data": {
+    "data": {
+      "id": 1673937488185292,
+      "short_id": 34676388729,
+      "nickname": "一只小喵",
+      "gender": 2,
+      "signature": "<omitted: expires>",
+      "level": 0,
+      "birthday": 0,
+      "telephone": "",
+      "avatar_thumb": "… {10 field(s) truncated}",
+      "avatar_medium": "… {10 field(s) truncated}",
+      "avatar_large": "… {10 field(s) truncated}",
+      "verified": true,
+      "experience": 0,
+      "city": "",
+      "status": 1,
+      "create_time": 0,
+      "modify_time": 1785076560,
+      "secret": 0,
+      "share_qrcode_uri": "",
+      "income_share_percent": 0,
+      "badge_image_list": "… [1 item(s) truncated]",
+      "follow_info": "… {9 field(s) truncated}",
+      "pay_grade": "… {20 field(s) truncated}",
+      "fans_club": "… {2 field(s) truncated}",
+      "special_id": "",
+      "…": "87 more field(s) truncated"
+    },
+    "extra": {
+      "now": 1785220122689
+    },
+    "status_code": 0
+  }
+}

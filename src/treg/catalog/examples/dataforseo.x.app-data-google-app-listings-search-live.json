@@ -1,0 +1,55 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.2634 sec.",
+  "cost": 0.11,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0554-0000-d3def0dfd8ac",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.2447 sec.",
+      "cost": 0.11,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "app_data",
+        "function": "search",
+        "se": "google",
+        "title": "vpn",
+        "description": "vpn",
+        "categories": [
+          "Tools"
+        ],
+        "order_by": [
+          "item.installs_count,asc"
+        ],
+        "filters": [
+          [
+            "item.rating.value",
+            "… 2 more item(s) truncated"
+          ]
+        ],
+        "limit": 10
+      },
+      "result": [
+        {
+          "total_count": 260,
+          "count": 10,
+          "offset": 0,
+          "offset_token": "<omitted: expires>",
+          "items": [
+            "… {7 field(s) truncated}",
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

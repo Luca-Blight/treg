@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "request_id": "43cbc76b-719d-4dbc-9985-e71850ac93a6",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:59",
+  "time_stamp": 1785220079,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/generate_douyin_short_url_api_v1_douyin_app_v3_generate_douyin_short_url_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/43cbc76b-719d-4dbc-9985-e71850ac93a6?sign=088192efd43f9bd425a042d107fde22247b49ac729fb30a7ee72bfab6d32aa8c",
+  "router": "/api/v1/douyin/app/v3/generate_douyin_short_url",
+  "params": {
+    "url": "https://www.douyin.com/passport/web/logout/"
+  },
+  "data": {
+    "code": 0,
+    "message": "success",
+    "now": 1785220079,
+    "data": [
+      {
+        "status": "success",
+        "target": "https://www.douyin.com/passport/web/logout/",
+        "short_url": "https://v.douyin.com/Z1oRb-AYwJ8/"
+      }
+    ]
+  }
+}

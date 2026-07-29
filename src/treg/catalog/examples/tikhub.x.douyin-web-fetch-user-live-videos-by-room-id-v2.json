@@ -1,0 +1,52 @@
+{
+  "code": 200,
+  "request_id": "ddacc28c-5c21-4aab-8af2-05c0dbdea58a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:36",
+  "time_stamp": 1785220116,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_user_live_video… [134 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ddacc28c-5c21-4a… [150 chars]",
+  "router": "/api/v1/douyin/web/fetch_user_live_videos_by_room_id_v2",
+  "params": {
+    "room_id": "7462723839303093032"
+  },
+  "data": {
+    "data": {
+      "id": 7462723839303093032,
+      "id_str": "7462723839303093032",
+      "status": 0,
+      "owner_user_id": 82194685715,
+      "title": "一个不让人emo的惊悚游戏~主业捉诡、副业助眠",
+      "user_count": 0,
+      "create_time": 0,
+      "linkmic_layout": 0,
+      "finish_time": 0,
+      "dynamic_cover_uri": "",
+      "dynamic_cover_dict": "… {0 field(s) truncated}",
+      "last_ping_time": 0,
+      "live_id": 0,
+      "stream_provider": 0,
+      "os_type": 0,
+      "client_version": 0,
+      "with_linkmic": false,
+      "enable_room_perspective": false,
+      "cover": "… {10 field(s) truncated}",
+      "share_url": "",
+      "anchor_share_text": "",
+      "user_share_text": "",
+      "stream_id": 0,
+      "stream_id_str": "",
+      "stream_url": "… {28 field(s) truncated}",
+      "…": "135 more field(s) truncated"
+    },
+    "extra": {
+      "now": 1785220115979
+    },
+    "status_code": 0
+  }
+}

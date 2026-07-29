@@ -1,0 +1,62 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0494 sec.",
+  "cost": 0.09,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280654-2171-0367-0000-38c54f3f7e90",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0176 sec.",
+      "cost": 0.09,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "keywords_data",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "search_volume",
+        "se": "google_ads",
+        "keywords": [
+          "coffee"
+        ],
+        "location_code": 2840,
+        "language_code": "en"
+      },
+      "result": [
+        {
+          "keyword": "coffee",
+          "spell": null,
+          "location_code": 2840,
+          "language_code": "en",
+          "search_partners": false,
+          "competition": "LOW",
+          "competition_index": 17,
+          "search_volume": 6120000,
+          "low_top_of_page_bid": 1.12,
+          "high_top_of_page_bid": 24.3,
+          "cpc": 0.65,
+          "monthly_searches": [
+            {
+              "year": 2026,
+              "month": 6,
+              "search_volume": 6120000
+            },
+            {
+              "year": 2026,
+              "month": 5,
+              "search_volume": 6120000
+            },
+            "… 10 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

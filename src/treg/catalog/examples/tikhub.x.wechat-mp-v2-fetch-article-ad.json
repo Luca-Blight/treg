@@ -1,0 +1,25 @@
+{
+  "code": 200,
+  "request_id": "270a1cbd-374a-4ab1-96df-1ed4d997ffa1",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:15",
+  "time_stamp": 1785220395,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Media-Platform-V2-API/fetch_article_ad_api_v1_wechat_mp_v2_fetch_article_ad_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/270a1cbd-374a-4ab1-96df-1ed4d997ffa1?sign=4b39c8b6739c06c7fbdb36e53dabc1d10d8f07022e2f53d2d43b6ef5f589f558",
+  "router": "/api/v1/wechat_mp/v2/fetch_article_ad",
+  "params": {
+    "url": "https://mp.weixin.qq.com/s/TSNQKkRpN1qbKsT7BvzqIw",
+    "raw": true
+  },
+  "data": {
+    "pages": 0,
+    "results": [],
+    "debug_id": "4994a031",
+    "debug_info": "gAAAAABqaE0rDtdZCq5-ErmPCfR1-yuVJGEhoVSABQhMdeCmtRDbm2Io1Pss4nBK7K1xUgYtwJsrLI_EmlsCPaTgtRl4aw2_Ucaupr_i60RRZNSeBZMYBvVINOM-0tD2WaTDzWehao3N9ydXnXEmxAxavz5UwyBWd9IYrhVBMbaSZnQlBrnUGsHXbjZaVIwlfA-KZK9l… [268 chars]"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "request_id": "c489e425-d62c-4fd3-a835-367da5dd387b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:01",
+  "time_stamp": 1785220081,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/fetch_video_mix_de… [112 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/c489e425-d62c-4f… [150 chars]",
+  "router": "/api/v1/douyin/app/v3/fetch_video_mix_detail",
+  "params": {
+    "mix_id": "7302011174286002217"
+  },
+  "data": {
+    "status_code": 0,
+    "status_msg": "",
+    "mix_info": {
+      "mix_id": "7302011174286002217",
+      "mix_name": "我炼气我无敌",
+      "cover_url": "… {4 field(s) truncated}",
+      "status": "… {2 field(s) truncated}",
+      "statis": "… {5 field(s) truncated}",
+      "desc": "",
+      "author": "… {193 field(s) truncated}",
+      "extra": "{\"content_sub_type\":0,\"sub_type\":0,\"game_content_collection_… [190 chars]",
+      "share_info": "… {7 field(s) truncated}",
+      "mix_type": 0,
+      "create_time": 1700131961,
+      "update_time": 1723711054,
+      "ids": null,
+      "watched_item": "",
+      "is_serial_mix": 0,
+      "…": "5 more field(s) truncated"
+    },
+    "extra": {
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "logid": "2026072814280043C219CAB60000772F94",
+      "now": 1785220080000
+    },
+    "log_pb": {
+      "impr_id": "2026072814280043C219CAB60000772F94"
+    }
+  }
+}

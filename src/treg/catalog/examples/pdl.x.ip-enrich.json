@@ -1,0 +1,48 @@
+{
+  "status": 200,
+  "data": {
+    "ip": {
+      "address": "72.212.42.169",
+      "location": {
+        "name": "phoenix, arizona, united states",
+        "locality": "phoenix",
+        "region": "arizona",
+        "metro": "phoenix, arizona",
+        "country": "united states",
+        "continent": "north america",
+        "postal_code": "85001",
+        "geo": "33.44838,-112.07404",
+        "timezone": "america/phoenix"
+      }
+    },
+    "company": {
+      "confidence": "very high",
+      "id": "eiisgcMIV8PBXTHPacYzCgAep3cx",
+      "name": "hydropoint data systems",
+      "display_name": "HydroPoint Data Systems",
+      "website": "hydropoint.com",
+      "industry": "renewables & environment",
+      "employee_count": 120,
+      "size": "51-200",
+      "inferred_revenue": "$100M-$250M",
+      "location": {
+        "name": "petaluma, california, united states",
+        "locality": "petaluma",
+        "region": "california",
+        "metro": "santa rosa, california",
+        "country": "united states",
+        "continent": "north america",
+        "street_address": "1722 corporate circle",
+        "address_line_2": null,
+        "postal_code": "94954",
+        "geo": "38.27,-122.63"
+      },
+      "tags": [
+        "smart irrigation",
+        "leak monitoring",
+        "… 8 more item(s) truncated"
+      ]
+    },
+    "dataset_version": "1.1.0.2026w27"
+  }
+}

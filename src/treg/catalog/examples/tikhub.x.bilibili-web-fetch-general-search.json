@@ -1,0 +1,50 @@
+{
+  "code": 200,
+  "request_id": "d496f75e-76fb-489b-8462-6708e0988ddf",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:44",
+  "time_stamp": 1785220064,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_general_search_api_v1_bilibili_web_fetch_general_search_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d496f75e-76fb-489b-8462-6708e0988ddf?sign=2a9ea12113a8a0e9071b167763e42ba9e3bb466d688f194a230e31c297fd006c",
+  "router": "/api/v1/bilibili/web/fetch_general_search",
+  "params": {
+    "keyword": "火影忍者",
+    "order": "totalrank",
+    "page": "1",
+    "page_size": "5"
+  },
+  "data": {
+    "code": 0,
+    "message": "OK",
+    "ttl": 1,
+    "data": {
+      "seid": "7140789773304070829",
+      "page": 1,
+      "pagesize": 5,
+      "numResults": 1000,
+      "numPages": 200,
+      "suggest_keyword": "",
+      "rqt_type": "search",
+      "exp_list": {
+        "100010": true,
+        "5500": true,
+        "6699": true
+      },
+      "is_hit_web_inf": false,
+      "egg_hit": 0,
+      "result": [
+        "… {66 field(s) truncated}",
+        "… 4 more item(s) truncated"
+      ],
+      "show_column": 0,
+      "in_black_key": 0,
+      "in_white_key": 0,
+      "next": 2
+    }
+  }
+}

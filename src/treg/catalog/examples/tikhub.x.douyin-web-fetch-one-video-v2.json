@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "07dc60eb-475e-4bca-b9f9-efd001dfae1b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:34",
+  "time_stamp": 1785220114,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_one_video_api_v… [95 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/07dc60eb-475e-4b… [150 chars]",
+  "router": "/api/v1/douyin/web/fetch_one_video_v2",
+  "params": {
+    "aweme_id": "7372484719365098803"
+  },
+  "data": {
+    "aweme_detail": {
+      "activity_video_type": 0,
+      "anchors": null,
+      "authentication_token": "<omitted: expires>",
+      "author": "… {53 field(s) truncated}",
+      "author_mask_tag": 0,
+      "author_user_id": 95823111667,
+      "aweme_control": "… {4 field(s) truncated}",
+      "aweme_id": "7372484719365098803",
+      "aweme_listen_struct": "… {1 field(s) truncated}",
+      "aweme_type": 0,
+      "aweme_type_tags": "",
+      "boost_status": 0,
+      "can_cache_to_local": true,
+      "caption": "你对我的好我一直记得 因为只有你把我当小孩#双子座",
+      "cf_assets_type": 0,
+      "…": "129 more field(s) truncated"
+    },
+    "log_pb": {
+      "impr_id": "20260728142833644F0454D0215813F809"
+    },
+    "status_code": 0
+  }
+}

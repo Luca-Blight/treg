@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "request_id": "f0629e24-4578-40bf-81c5-f9eb7b4a019a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:33",
+  "time_stamp": 1785220113,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_related_posts_api_v1_douyin_web_fetch_related_posts_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f0629e24-4578-40bf-81c5-f9eb7b4a019a?sign=1b4241889c1657750b585a9ca30ad58532deb50e269fd1a3b82a7f017a8774c1",
+  "router": "/api/v1/douyin/web/fetch_related_posts",
+  "params": {
+    "aweme_id": "7393365489105358132",
+    "count": "5"
+  },
+  "data": {
+    "aweme_list": [
+      "… {107 field(s) truncated}",
+      "… 9 more item(s) truncated"
+    ],
+    "chime_video_list": null,
+    "filter_infos": null,
+    "has_more": 1,
+    "log_pb": {
+      "impr_id": "20260728142831272668134CA940EB5BD4"
+    },
+    "status_code": 0
+  }
+}

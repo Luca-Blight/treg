@@ -1,0 +1,25 @@
+{
+  "code": 200,
+  "request_id": "5f73dc8c-a61e-4389-93d9-74f039901ba5",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:17",
+  "time_stamp": 1785220097,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Index-API/fetch_brand_hot_videos_time_scope_api_v1_douyin_index_fetch_brand_hot_videos_time_scope_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/5f73dc8c-a61e-4389-93d9-74f039901ba5?sign=5480ec0b9d3b519edd93818a5b85e89e780c7a46f0760002de4e091f002d49d9",
+  "router": "/api/v1/douyin/index/fetch_brand_hot_videos_time_scope",
+  "params": {},
+  "data": {
+    "start_week": "20260503",
+    "end_week": "20260726",
+    "latest_day": "20260726",
+    "BaseResp": {
+      "StatusMessage": "",
+      "StatusCode": 0
+    }
+  }
+}

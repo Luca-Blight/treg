@@ -1,0 +1,51 @@
+{
+  "search_metadata": {
+    "id": "6a6898de03b136a9ef90a56a",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/ADJ1E0Je_fALq3p6Tqsu_A/6a6898de… [81 chars]",
+    "created_at": "2026-07-28 11:56:14 UTC",
+    "processed_at": "2026-07-28 11:56:14 UTC",
+    "yahoo_images_url": "https://images.search.yahoo.com/search/images?p=coffee",
+    "raw_html_file": "https://serpapi.com/searches/ADJ1E0Je_fALq3p6Tqsu_A/6a6898de… [81 chars]",
+    "total_time_taken": 1.53
+  },
+  "search_parameters": {
+    "engine": "yahoo_images",
+    "p": "coffee",
+    "device": "desktop"
+  },
+  "images_results": [
+    {
+      "thumbnail": "https://tse3.mm.bing.net/th/id/OIP.jf24_9rD1rlkihHfd1Wg7AHaE… [83 chars]",
+      "link": "https://images.search.yahoo.com/search/images;_ylt=AwrigYTem… [257 chars]",
+      "title": "Coffee Cups With Coffee Beans",
+      "original": "https://cff2.earth.com/uploads/2019/02/01135732/How-lactic-a… [107 chars]",
+      "source": "https://ar.inspiredpencil.com/pictures-2023/coffee-cups-with… [73 chars]",
+      "dimensions": "2068x1379",
+      "position": 1
+    },
+    "… 59 more item(s) truncated"
+  ],
+  "related_searches": [
+    {
+      "name": "coffee Art PNG",
+      "link": "https://images.search.yahoo.com/search/images;_ylt=AwrigYTem… [179 chars]",
+      "thumbnail": "https://tse1.mm.bing.net/th?q=Coffee+Art+PNG&r=0&pid=Api&mkt… [99 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=yahoo_… [83 chars]"
+    },
+    "… 11 more item(s) truncated"
+  ],
+  "suggested_searches": [
+    {
+      "name": "coffee Art",
+      "link": "https://images.search.yahoo.com/search/images;_ylt=AwrigYTem… [200 chars]",
+      "serpapi_link": "https://serpapi.com/search.json?device=desktop&engine=yahoo_… [79 chars]",
+      "thumbnail": "https://tse2.mm.bing.net/th?q=Coffee+Art&r=0&pid=Api&mkt=en-… [95 chars]"
+    },
+    "… 14 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "next": "https://serpapi.com/search.json?b=61&device=desktop&engine=y… [80 chars]",
+    "current": "https://serpapi.com/search.json?device=desktop&engine=yahoo_… [75 chars]"
+  }
+}

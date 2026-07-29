@@ -1,0 +1,52 @@
+{
+  "code": 200,
+  "request_id": "0ae802a6-f13c-4752-8558-283c63e282d1",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:44",
+  "time_stamp": 1785220364,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Search-API/fetch_challenge_search_v1_api_v1_douyin_search_fetch_challenge_search_v1_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/0ae802a6-f13c-4752-8558-283c63e282d1?sign=cc0149d1363e65d8886567d34ef8625c98… [150 chars]",
+  "router": "/api/v1/douyin/search/fetch_challenge_search_v1",
+  "params": {
+    "keyword": "猫咪",
+    "cursor": 0,
+    "sort_type": "0",
+    "publish_time": "0",
+    "filter_duration": "0",
+    "content_type": "0",
+    "search_id": "",
+    "backtrace": ""
+  },
+  "data": {
+    "challenge_list": [
+      "… {3 field(s) truncated}",
+      "… 18 more item(s) truncated"
+    ],
+    "cursor": 20,
+    "has_more": 1,
+    "is_match": false,
+    "status_code": 0,
+    "qc": "",
+    "keyword_disabled": 0,
+    "ad_info": {},
+    "extra": {
+      "now": 1785220364000,
+      "logid": "2026072814324381B9A234F1E15C6D731E",
+      "fatal_item_ids": "… [0 item(s) truncated]",
+      "search_request_id": "",
+      "scenes": null
+    },
+    "log_pb": {
+      "impr_id": "2026072814324381B9A234F1E15C6D731E",
+      "stab_extra": "… {1 field(s) truncated}"
+    },
+    "global_doodle_config": {
+      "keyword": "猫咪"
+    }
+  }
+}

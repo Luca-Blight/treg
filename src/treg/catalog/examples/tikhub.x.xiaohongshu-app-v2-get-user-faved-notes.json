@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "2929984e-07db-4edc-b61d-da7b43a686b7",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:19",
+  "time_stamp": 1785220399,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/get_user_faved_notes_api_v1_xiaohongshu_app_v2_get_user_faved_notes_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2929984e-07db-4edc-b61d-da7b43a686b7?sign=e646c7c2bfe4a72cc54c66af6e19d03566ec1c68584bfe6af8509072161c69d9",
+  "router": "/api/v1/xiaohongshu/app_v2/get_user_faved_notes",
+  "params": {
+    "user_id": "5a8cf39111be10466d285d6b",
+    "share_text": "https://xhslink.com/a/EZ4M9TwMA6c3"
+  },
+  "data": {
+    "code": 0,
+    "success": true,
+    "data": {
+      "cursor": "<omitted: expires>",
+      "fallback": false,
+      "has_more": true,
+      "need_clean": true,
+      "notes": [
+        "… {26 field(s) truncated}",
+        "… 4 more item(s) truncated"
+      ]
+    },
+    "msg": "成功",
+    "debug_id": "81e98b94",
+    "debug_info": "gAAAAABqaE0v8d9GqcmYxcsQLY-AIXZO5d_Pqo1vh-FXTuRM4kEGEeFAW63ziiXcmH96l67_WTiJYxfbaL8b3BkjM9zUJoRepdj8ufb8PrUvawplakQLP0maIDd5nann5R8YczNgJH3xwQryLkadE8soAqJRpzVcD3Qfq5orhvfTFJF4W1JL1gwOGA_CtULt6g5JkhIv… [440 chars]"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "1.8286 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280923-2171-0591-0000-ad73ac0c9033",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "1.8154 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "keywords_data",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "keywords_data",
+        "function": "bulk_search_volume",
+        "se": "clickstream_data",
+        "location_code": 2840,
+        "tag": "test-tag",
+        "keywords": [
+          "you tube",
+          "youtube",
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "location_code": 2840,
+          "items_count": 3,
+          "items": [
+            {
+              "keyword": "youtub",
+              "search_volume": 394659,
+              "monthly_searches": [
+                {
+                  "year": 2026,
+                  "month": 6,
+                  "search_volume": 394659
+                },
+                {
+                  "year": 2026,
+                  "month": 5,
+                  "search_volume": 398846
+                },
+                "… 10 more item(s) truncated"
+              ]
+            },
+            {
+              "keyword": "you tube",
+              "search_volume": 3600080,
+              "monthly_searches": [
+                {
+                  "year": 2026,
+                  "month": 6,
+                  "search_volume": 3600080
+                },
+                {
+                  "year": 2026,
+                  "month": 5,
+                  "search_volume": 3687794
+                },
+                "… 10 more item(s) truncated"
+              ]
+            },
+            "… 1 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

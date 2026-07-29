@@ -1,0 +1,52 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "13.7111 sec.",
+  "cost": 0.006,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0139-0000-d53b17241f73",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "13.6529 sec.",
+      "cost": 0.006,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "youtube",
+        "se_type": "video_info",
+        "language_code": "en",
+        "location_code": 2840,
+        "video_id": "vQXvyV0zIP4",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "video_id": "vQXvyV0zIP4",
+          "se_domain": "youtube.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.youtube.com/watch?v=vQXvyV0zIP4",
+          "datetime": "2026-07-28 10:34:40 +00:00",
+          "spell": null,
+          "item_types": [
+            "youtube_video_info"
+          ],
+          "items_count": 1,
+          "items": [
+            "… {26 field(s) truncated}"
+          ]
+        }
+      ]
+    }
+  ]
+}

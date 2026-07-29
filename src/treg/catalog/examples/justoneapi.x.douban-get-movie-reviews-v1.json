@@ -1,0 +1,37 @@
+{
+  "code": 0,
+  "data": {
+    "reviews": [
+      {
+        "cid": "17730622",
+        "review_url": "https://movie.douban.com/review/17730622/",
+        "avatar": "https://img1.doubanio.com/icon/u210053982-9.jpg",
+        "username": "一纪绝尘",
+        "time": "2026-07-27 19:10:21",
+        "title": "《永远心跳漏一拍》观后感",
+        "rating": "推荐",
+        "description": "这篇影评可能有剧透以下仅为个人看剧时记忆深刻的片段和感受 •很喜欢尼克妈妈每次开导迷茫的尼克，即使生活再不如意，依然积极向上的妈妈。 -尼克：“你还好吧？” -陶：“不好，但也没你想的那么难过。无论发生什么，我们都没有停止相爱。不论我们是否在一起，她是否在我身边，我知道她会一直...",
+        "upvote_count": 0,
+        "downvote_count": 0,
+        "reply_count": 0
+      },
+      {
+        "cid": "17727583",
+        "review_url": "https://movie.douban.com/review/17727583/",
+        "avatar": "https://img2.doubanio.com/icon/u187239211-1.jpg",
+        "username": "西风儿",
+        "time": "2026-07-26 06:32:09",
+        "title": "好",
+        "rating": "推荐",
+        "description": "《永远心跳漏一拍》以电影形式温柔作结，为这段青春画下句点。面对异地恋的现实考验，尼克与查理在疑虑与不安中彼此确认，展现了健康关系里的坦诚与勇敢。影片虽在群像刻画上略显仓促，但那份如春日阳光般轻盈纯粹的爱意依旧动人。它告诉我们，爱不仅是玫瑰色的甜蜜，更是友情...",
+        "upvote_count": 0,
+        "downvote_count": 0,
+        "reply_count": 0
+      },
+      "… 12 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:03.300118219",
+  "requestId": "b6479da081444bd6b99521facc9b048a"
+}

@@ -1,0 +1,68 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.1034 sec.",
+  "cost": 0.0126,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0383-0000-20fbb2a65092",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0980 sec.",
+      "cost": 0.0126,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "serp_competitors",
+        "se_type": "google",
+        "keywords": [
+          "phone"
+        ],
+        "language_name": "English",
+        "location_code": 2840,
+        "item_types": [
+          "organic"
+        ],
+        "limit": 5
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "seed_keywords": [
+            "phone"
+          ],
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 48,
+          "items_count": 5,
+          "items": [
+            {
+              "se_type": "google",
+              "domain": "apps.apple.com",
+              "avg_position": 1,
+              "median_position": 1,
+              "rating": 99,
+              "etv": 167200,
+              "keywords_count": 1,
+              "visibility": 1,
+              "relevant_serp_items": 1,
+              "keywords_positions": {
+                "phone": [
+                  1
+                ]
+              }
+            },
+            "… 4 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

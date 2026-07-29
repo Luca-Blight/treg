@@ -1,0 +1,43 @@
+{
+  "code": 200,
+  "request_id": "eaeb7a06-e3e9-42a3-85c7-9a4d505820e3",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:28",
+  "time_stamp": 1785220408,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/fetch_live_gift_list_… [102 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/eaeb7a06-e3e9-42… [150 chars]",
+  "router": "/api/v1/tiktok/web/fetch_live_gift_list",
+  "params": {
+    "room_id": "7381444193462078214"
+  },
+  "data": {
+    "data": {
+      "beacon_bubble_priorities": "… {8 field(s) truncated}",
+      "cold_gift_hash": "",
+      "doodle_templates": "… [0 item(s) truncated]",
+      "dynamic_restriction": "… {1 field(s) truncated}",
+      "exclusive_recommend_infos": "… {0 field(s) truncated}",
+      "gift_configs": "… {1 field(s) truncated}",
+      "gift_label_priorities": "… {18 field(s) truncated}",
+      "gift_name_group_map": "… {0 field(s) truncated}",
+      "gift_resource_group_map": "… {0 field(s) truncated}",
+      "gifts": "… [619 item(s) truncated]",
+      "gifts_info": "… {39 field(s) truncated}",
+      "hash": "",
+      "hot_fields": "… [0 item(s) truncated]",
+      "is_full_gift_data": false,
+      "pages": "… [2 item(s) truncated]",
+      "…": "6 more field(s) truncated"
+    },
+    "extra": {
+      "log_id": "20260728143327E2163AE31281B8D5584D",
+      "now": 1785220408105
+    },
+    "status_code": 0
+  }
+}

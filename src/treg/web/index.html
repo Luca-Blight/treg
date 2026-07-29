@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="/tutorial.js"></script>
 <script src="/dashboard-tour/tour.js"></script>
@@ -74,6 +74,148 @@
   .mk-perm-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
   .mk-perm-l li{font-size:12.5px;line-height:1.45;color:var(--muted);display:flex;gap:7px;align-items:flex-start}
   .mk-tick{color:var(--ok,#7bbf7b);flex:0 0 auto}
+  /* Endpoint catalog (marketplace → Browse by platform). Deliberately reuses .mk-card and .ttable:
+     the only genuinely new furniture is the METHOD+path line and the expandable example row. */
+  /* own_account vs any_account is the load-bearing distinction in a capability list, so the
+     OAuth-only rows are the ones that get colour. */
+  .chip.own{color:var(--teal);border-color:color-mix(in srgb,var(--teal) 42%,var(--line));background:color-mix(in srgb,var(--teal) 10%,transparent)}
+  /* "You can call this right now." The one green in the marketplace, so it cannot be confused with
+     the verified/health greens elsewhere: filled, weighted, and led by a haloed dot.
+     (`.chip.ok` alone is unstyled and renders muted grey — which is how a ready capability came to
+     look identical to an unavailable one.) */
+  .chip.go{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--green);
+    border-color:color-mix(in srgb,var(--green) 48%,var(--line));
+    background:color-mix(in srgb,var(--green) 14%,transparent)}
+  .godot{width:6px;height:6px;border-radius:50%;background:var(--green);flex:0 0 6px;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 24%,transparent)}
+  .chip.any{color:var(--muted)}
+  /* Marketplace tab bar: All + one tab per catalog category + Platform (the provider shelves).
+     Scrolls rather than wraps — ten tabs and a narrow window must not become two ragged rows.
+     The rule under the tabs lives on the WRAPPER, not the scroller: the scroller carries a mask,
+     and a masked border would fade out 26px short of the right edge and read as a rendering bug. */
+  .mk-tabs-wrap{border-bottom:1px solid var(--line);margin:6px 0 16px}
+  /* Scrollbar hidden, scrolling kept. The right edge fades instead, so a cut-off tab hints that
+     there is more — and because the tabs are left-aligned, the fade falls on empty space (and
+     changes nothing) whenever they all fit. Fading the LEFT edge too would clip "All" at rest. */
+  .mk-tabs{display:flex;gap:2px;overflow-x:auto;margin-bottom:-1px;
+    scrollbar-width:none;-ms-overflow-style:none;
+    -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);
+    mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+  .mk-tabs::-webkit-scrollbar{display:none}
+  .mk-tabs button{background:none;border:0;color:var(--muted);padding:9px 10px;white-space:nowrap;
+    border-bottom:2px solid transparent;font-family:var(--mono);font-size:12.5px;cursor:pointer}
+  .mk-tabs button:hover{color:var(--ink)}
+  .mk-tabs button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+  .mk-tabs button span{color:var(--muted);font-size:11px;margin-left:5px}
+  /* A section heading is a real heading, not a caption: the page is browsed by category, so the
+     category has to be the loudest thing on it after the page title. */
+  .tgroup.shelf{margin-bottom:34px}
+  .sec-head{margin:0 0 13px}
+  .sec-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0}
+  .sec-h b{font-size:19px;font-weight:600;letter-spacing:-.35px;line-height:1.25;color:var(--ink)}
+  .sec-n{background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+    padding:1px 9px;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+  .sec-hint{display:block;margin-top:4px;font-size:12.5px;color:var(--muted);line-height:1.5}
+  /* Platform cards. The card IS the platform: its mark and name, who serves it, what it covers,
+     how much of it there is and what the cheapest call costs — enough to choose without opening it.
+     Providers appear only as a logo stack; the capability x provider matrix lives inside. */
+  .pt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px}
+  .pt-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 17px;
+    display:flex;flex-direction:column;gap:11px;cursor:pointer;min-width:0;
+    color:var(--ink);font-family:inherit;text-align:left;
+    transition:border-color .12s ease,transform .12s ease}
+  .pt-card:hover{border-color:var(--muted);transform:translateY(-1px)}
+  .pt-card:focus-visible{outline:2px solid var(--muted);outline-offset:2px}
+  .pt-top{display:flex;align-items:flex-start;gap:11px;min-width:0}
+  /* Same near-white surface rule as .plogo-tile: brand marks are drawn for white and half of them
+     vanish on one of our two themes if left bare. The generated fallback keeps its own colour. */
+  .pt-logo{width:40px;height:40px;flex:0 0 40px;border-radius:11px;background:#fbfaf7;
+    border:1px solid rgba(0,0,0,.07);display:grid;place-items:center;overflow:hidden}
+  .pt-logo img{width:25px;height:25px;object-fit:contain;display:block}
+  .pt-logo.gen{border-color:transparent}
+  .pt-logo .pt-i{font-size:17px;font-weight:700;color:#fff;font-family:var(--sans);line-height:1}
+  /* With the description gone there is room for the whole name: "Google Search Console" wraps to
+     a second line rather than ellipsizing to "Google Search Con…", which is a card that can't say
+     what it is. Two lines is the cap — past that the shelf stops being a grid of equals. */
+  .pt-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    font-size:14.5px;font-weight:600;line-height:1.3;letter-spacing:-.2px}
+  .pt-cat{display:block;font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:1px}
+  /* Can I call this today? The card corner answers that and nothing else. */
+  .pt-conn{margin-left:auto;flex:0 0 auto;padding-left:8px}
+  .pt-quiet{font-size:11px;color:var(--muted);opacity:.72;white-space:nowrap}
+  .pt-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-top:auto;padding-top:10px;border-top:1px solid var(--line);font-size:11.5px}
+  .pt-eps{color:var(--muted);display:inline-flex;align-items:center;gap:6px;font-family:var(--mono)}
+  .pt-dot{width:5px;height:5px;border-radius:50%;background:var(--muted);opacity:.65;flex:0 0 5px}
+  .pt-price{color:var(--muted);font-family:var(--mono);white-space:nowrap}
+  .pt-price b{color:var(--ink);font-weight:600}
+  .pt-price.free b{color:var(--teal)}
+  /* The provider's own figure, alongside the converted one. Muted and small: it is provenance,
+     not the number you compare on — but leaving it out invites "where did that price come from?" */
+  .cost-nat{margin-left:5px;color:var(--muted);opacity:.8;font-weight:400;font-size:.92em}
+  /* The tail of a long shelf: one quiet row — a stack of the marks it is hiding, two of their
+     names, and an arrow. NOT a dashed box: a dashed border reads as a drop zone or a placeholder,
+     and it drew more attention than the cards it sits under. */
+  .pt-more{display:flex;align-items:center;gap:11px;width:100%;margin-top:10px;
+    background:none;border:0;border-radius:var(--r);padding:9px 13px;
+    color:var(--muted);font-family:inherit;font-size:12.5px;text-align:left;cursor:pointer;
+    transition:color .12s ease}
+  .pt-more:hover{color:var(--ink)}
+  .pt-more:focus-visible{outline:2px solid var(--muted);outline-offset:2px}
+  /* The arrow says the row expands; it slides a little on hover, which is the whole affordance. */
+  .pt-more-a{flex:0 0 auto;margin-left:-5px;font-size:13px;color:var(--muted2);
+    transition:transform .18s var(--ease),color .18s var(--ease)}
+  .pt-more:hover .pt-more-a{transform:translateX(2px);color:var(--ink)}
+  .pt-stack{display:flex;flex:0 0 auto}
+  .pt-mini{width:22px;height:22px;flex:0 0 22px;border-radius:6px;background:#fbfaf7;
+    border:1px solid rgba(0,0,0,.07);display:grid;place-items:center;overflow:hidden;
+    margin-right:-6px;box-shadow:0 0 0 1px var(--bg)}
+  .pt-mini:last-child{margin-right:0}
+  .pt-mini img{width:14px;height:14px;object-fit:contain;display:block}
+  .pt-mini.gen{border-color:transparent}
+  .pt-mini .pt-i{font-size:10px;font-weight:700;color:#fff;font-family:var(--sans);line-height:1}
+  .pt-more-t{min-width:0}
+  /* Platform page header: one full-width column. See the template for why it is not .tut-head. */
+  .plat-head{margin-bottom:4px}
+  .plat-title{display:flex;align-items:center;gap:13px;min-width:0}
+  .plat-title h1{margin:0;min-width:0}
+  .plat-intro{margin:10px 0 0;max-width:74ch}
+  .plat-provs{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:14px}
+  .plat-provs-l{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-right:2px}
+  /* What you have to SEND, one block per location. Dense on purpose: it sits inside an expanded
+     table row, and a param list that needs its own scroll is a param list nobody reads. */
+  .prm{margin:0 0 12px;border:1px solid var(--line);border-radius:var(--rb);
+    background:color-mix(in srgb,var(--panel) 55%,transparent);padding:11px 12px}
+  .prm-h{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px}
+  .prm-note{margin:0 0 9px;font-size:12px;color:var(--muted);line-height:1.5;max-width:82ch}
+  .prm-sec + .prm-sec{margin-top:11px}
+  .prm-loc{font-size:11.5px;font-weight:600;color:var(--ink);margin-bottom:5px}
+  .prm-type{margin-left:7px;font-weight:400;font-size:10.5px;color:var(--muted)}
+  /* The global `table` rule paints a panel, a border and a radius, and `th` a filled header bar —
+     all of which fight the .prm box this already sits inside, and clip the first column against
+     the table's own border. This is a bare grid; the box around it is the chrome. */
+  .prm-t{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed;
+    background:none;border:0;border-radius:0}
+  .prm-t th{background:none;text-align:left;font-weight:500;color:var(--muted);font-size:10.5px;
+    text-transform:uppercase;letter-spacing:.06em;padding:0 10px 5px 0;border-bottom:1px solid var(--line)}
+  .prm-t th:nth-child(1){width:23%} .prm-t th:nth-child(2){width:13%} .prm-t th:nth-child(3){width:13%}
+  .prm-t td{padding:6px 10px 6px 0;vertical-align:top;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+  .prm-t tr:last-child td{border-bottom:0}
+  .prm-n{color:var(--ink);font-weight:600;word-break:break-word}
+  .prm-ty{color:var(--muted)}
+  .prm-req{color:var(--amber);font-size:10.5px}
+  .prm-opt{color:var(--muted);font-size:10.5px;opacity:.75}
+  .prm-d{color:var(--muted);line-height:1.5}
+  .prm-ex{display:block;margin-top:2px;color:var(--teal);word-break:break-word}
+  .prm-none{margin:0 0 12px;font-size:12px;color:var(--muted);opacity:.8}
+  /* The path is the fact you came for, so it keeps ink colour where .ttable .th would mute it, and
+     wraps rather than widening the table (some provider paths are 70+ chars). */
+  .cat-path{color:var(--ink);white-space:normal;word-break:break-all}
+  .cat-m{color:var(--teal);font-weight:600;margin-right:7px}
+  .cat-d td{background:var(--panel2)}
+  .cat-sum{margin:0 0 10px;color:var(--muted);line-height:1.5;max-width:78ch;font-size:12.5px}
+  .cat-ex{margin-top:10px} .cat-ex pre{max-height:340px}
+  .chip.ver{color:var(--green);border-color:color-mix(in srgb,var(--green) 42%,var(--line));background:color-mix(in srgb,var(--green) 10%,transparent)}
   .plogo-tile{width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:#fbfaf7;
     border:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:center}
   .plogo{width:19px;height:19px;object-fit:contain;display:block}
@@ -102,7 +244,10 @@
   .search input{flex:1;border:0;background:none;color:var(--ink);outline:none;font-family:var(--mono);font-size:13px}
   .iconbtn{background:var(--panel2);border:1px solid var(--line);border-radius:var(--rb);width:34px;height:34px;display:grid;place-items:center;color:var(--ink);box-sizing:border-box}
   .ava{width:32px;height:32px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:12px}
-  .layout{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 57px)}
+  /* minmax(0,1fr): a plain 1fr track's implied min-width:auto lets a wide child (the marketplace
+     tab strip) stretch the track past the viewport, putting a horizontal scrollbar on the PAGE
+     instead of inside the strip's own overflow-x container. */
+  .layout{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 57px)}
   .side{border-right:1px solid var(--line);padding:12px 10px;background:var(--panel);display:flex;flex-direction:column}
   .side .nav{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:9px 11px;border-radius:var(--rb);font-size:13.5px}
   .side .nav:hover{background:var(--panel2)} .side .nav.active{background:var(--panel2);color:var(--accent);font-weight:600}
@@ -210,9 +355,6 @@
   .phase2{opacity:.5} .hint{font-family:var(--mono);font-size:11px;color:var(--amber);border:1px dashed var(--amber);border-radius:6px;padding:2px 7px}
   a{color:var(--accent);text-decoration:none;cursor:pointer}
   .banner{background:color-mix(in srgb,var(--red) 15%,transparent);color:var(--red);border:1px solid var(--red);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12.5px}
-  /* snippet syntax colors */
-  .s-proxy{color:var(--accent);font-weight:600} .s-host{color:var(--green)} .s-path{color:var(--amber);font-weight:600}
-  .s-token{color:#5f9ea0} .s-cmt{color:var(--muted);font-style:italic} .s-kw{font-weight:700}
   .explain{font-family:var(--sans);font-size:12px;color:var(--muted);margin:2px 0 12px}
   .skill-drop{display:flex;gap:14px;align-items:center;padding:18px;border:1.5px dashed var(--line);border-radius:10px;cursor:pointer;background:var(--panel2)}
   .skill-drop:hover{border-color:var(--accent)} .skill-drop .sd-ic{font-size:24px;line-height:1}
@@ -254,13 +396,13 @@
   .tut-label{display:flex;align-items:center;gap:8px;font-family:var(--sans);font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:16px 0 6px}
   .tut-label .copy{margin-left:auto;border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:6px;padding:2px 9px;font-size:11px;font-family:var(--mono)}
   .tut-label .copy:hover{color:var(--ink);border-color:var(--accent)}
-  pre.term{max-height:none} pre.term.out{color:var(--muted)}
+  pre.term{max-height:none}
+  /* the "expected result" pane is secondary, but it is still body copy in a code block —
+     --muted lands at 3.7:1 on the light surface, the syntax ramp's comment grey at 4.7 */
+  pre.term.out{color:var(--sx-cmt)}
   .tut-notice{border-left:3px solid var(--amber);background:color-mix(in srgb,var(--amber) 9%,transparent);padding:10px 13px;border-radius:0 8px 8px 0;margin:16px 0;font-size:12px;font-family:var(--sans)} .tut-notice b{color:var(--amber)}
   .tgl{display:inline-flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none} .tgl input{margin:0;cursor:pointer} .btn.sm.active{border-color:var(--accent);color:var(--accent)}
   .tut-foot{display:flex;gap:10px;align-items:center;margin-top:20px;padding-top:14px;border-top:1px solid var(--line)} .tut-foot .pos{color:var(--muted);font-size:12px;margin:0 auto}
-  .hl-comment{color:var(--muted);font-style:italic} .hl-string{color:var(--green)} .hl-var{color:#5f9ea0}
-  .hl-flag{color:var(--amber)} .hl-env{color:var(--muted)} .hl-cmd{color:var(--accent);font-weight:600}
-  .hl-key{color:#5f9ea0} .hl-str{color:var(--green)} .hl-num{color:var(--amber)} .hl-kw{color:var(--accent)} .hl-punct{color:var(--muted)}
   .tour-mat{border-radius:14px;padding:min(4vw,36px);display:flex;justify-content:center;margin:2px 0 4px;transition:background .3s}
   .tour-mat img{width:100%;max-width:960px;height:auto;border-radius:9px;box-shadow:0 16px 44px rgba(0,0,0,.36),0 3px 9px rgba(0,0,0,.22);display:block}
   @media(max-width:760px){.tut-body{grid-template-columns:1fr}.tut-nav{border-right:0;border-bottom:1px solid var(--line);position:static;max-height:210px}}
@@ -413,7 +555,6 @@
   :root[data-theme=light] .lc-codewrap{background:#201c15}
   .lc-codewrap pre{margin:0;background:transparent;border:0;color:#f0e9d9;padding:14px 46px 14px 16px;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:12px}
   .lc-cp{position:absolute;top:9px;right:9px;font-size:11px;background:#2a251d;color:#f0e9d9;border:1px solid #3b352a;border-radius:6px;padding:3px 9px;cursor:pointer} .lc-cp:hover{border-color:var(--accent);color:var(--accent)}
-  .hl-cmd{color:#e0703f} .hl-str{color:#7fae72} .hl-flag{color:#d0a24a}
   /* triptych */
   .lc-tri{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px} @media(max-width:760px){.lc-tri{grid-template-columns:1fr}}
   .lc-pain{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
@@ -473,13 +614,391 @@ th{background:rgba(0,0,0,.25)}
   background:#0d0c0b;box-shadow:rgba(0,0,0,.35) 0 2px 6px 0 inset}
 .chip{border-radius:999px}
 .hint{color:var(--amber);border-color:rgba(216,210,194,.4)}
-.s-token,.hl-var,.hl-key{color:#19D0E8}
 /* sidebar: pinned below the top bar with its own scroll, so HELP + the account
    footer stay on screen no matter how long the main column gets */
 .side{position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;align-self:start}
 @media(max-width:760px){.side{position:static;height:auto;overflow:visible}}
 /* light theme keeps its paper palette but adopts the new fonts + shapes */
 [data-theme="light"] body::before{display:none}
+
+/* ================================================================
+   RESTYLE — Phase 1 (tokens) + the platform-card grid.
+   Reference: https://rows.gg/demo (values read off the live site).
+   The agentreach prototype is a second-hand implementation of the
+   same look; where the two disagree, rows.gg wins.
+   See docs/context/interface/restyle-plan.md for the full mapping,
+   the remaining phases, and the open questions.
+
+   Last block in the sheet on purpose: it overrides the pixel reskin
+   above by source order alone, so the whole change reverts by
+   deleting from here to the end of the sheet.
+   ================================================================ */
+:root{
+  --bg:#161518; --surface:#1e1d20; --panel:#1c1b1e; --panel2:#232226;
+  --ink:#f0f0ee; --muted:#989898; --muted2:#6f6f6d;
+  --line:#f3f3f512; --line2:#f3f3f524; --hover:#f4f4f50a;
+  --accent:#6fcdf0; --onAccent:#06282e; --teal:#6fcdf0;
+  --green:#45e39e; --amber:#f0c249; --red:#f08a84;
+  --inverse:#f8f8f7; --inverse-ink:#1a1a1a;
+  /* rows.gg layers its elevation instead of using one blur; on dark the alphas
+     are raised, since 4–8% black is invisible against a #161518 page. */
+  --shadow-sm:0 1px 2px #00000052;
+  --shadow-md:0 1px 2px -1px #0000003d,0 4px 6px -1px #00000052;
+  --shadow-lg:0 1px 2px -1px #0000003d,0 4px 6px -1px #00000052,0 8px 16px #00000052;
+  /* The two curves rows.gg actually ships: --ease drives colour/shadow/size,
+     --ease-out is reserved for transforms. Both are far quicker than they look. */
+  --ease:cubic-bezier(.2,.72,.25,1); --ease-out:cubic-bezier(.22,1,.36,1);
+  --r:15px; --rb:10px;
+  --sans:"Suisse Intl","Inter","Segoe UI",system-ui,sans-serif;
+}
+[data-theme="light"]{
+  --bg:#f4f4f1; --surface:#fff; --panel:#fafaf9; --panel2:#f0f0ee;
+  --ink:#1a1a1a; --muted:#7c7c7c; --muted2:#989898;
+  --line:#2626231a; --line2:#25252233; --hover:#2a2a250a;
+  --accent:#1a7da6; --onAccent:#fff; --teal:#1a7da6;
+  --green:#118453; --amber:#ba6603; --red:#c0362f;
+  --inverse:#1a1a1a; --inverse-ink:#f8f8f7;
+  --shadow-sm:0 1px 2px #00000014;
+  --shadow-md:0 1px 2px -1px #0000000a,0 4px 6px -1px #0000000f;
+  --shadow-lg:0 1px 2px -1px #0000000a,0 4px 6px -1px #0000000f,0 8px 16px #0000000a;
+}
+/* The theme toggle cross-fades rather than cutting. */
+body{transition:background .24s var(--ease),color .24s var(--ease)}
+/* rows.gg's focus ring: a hole punched in the page colour, then the ink — it
+   reads on a card and on the page background without an offset outline. */
+:focus-visible{outline:0;box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
+@media (prefers-reduced-motion: reduce){body{transition:none}}
+
+/* ---- platform cards (marketplace shelves) ---- */
+/* The shelf heading: a title, and the count as the source's quiet mono pill. */
+.sec-h b{font-family:var(--sans);font-size:17px;font-weight:500;letter-spacing:-.3px}
+.sec-n{background:none;border-color:var(--line2);font-size:11px;font-weight:450;
+  color:var(--muted);padding:2px 10px;letter-spacing:.1px}
+.sec-hint{font-family:var(--sans);font-size:12px;color:var(--muted);max-width:64ch}
+/* A card is a surface, not a box: no border, an ambient shadow at rest, and a deeper one
+   on hover. The lift is the shadow itself — no translate, so a 40-card grid stays still. */
+.pt-card{background:var(--surface);border:0;border-radius:var(--r);padding:16px 18px;gap:10px;
+  box-shadow:var(--shadow-sm);
+  transition:box-shadow .24s var(--ease),background-color .2s var(--ease)}
+.pt-card:hover{border-color:transparent;transform:none;box-shadow:var(--shadow-md)}
+.pt-card:focus-visible{outline:0;box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
+.pt-name{font-family:var(--sans);font-size:14px;font-weight:500;letter-spacing:-.2px}
+.pt-cat{font-family:var(--sans);font-size:11px;color:var(--muted);letter-spacing:.1px}
+.pt-quiet{font-size:11px;color:var(--muted2);opacity:1}
+.pt-foot{border-top:1px solid var(--line);padding-top:10px;font-size:11px}
+/* Denser without the description: a name, its category, and the two facts. */
+.pt-card{padding:14px 16px;gap:12px}
+.pt-eps,.pt-price{color:var(--muted2);font-variant-numeric:tabular-nums}
+.pt-price b{font-weight:500;color:var(--muted)}
+/* The loud green "Connected" chip is a deliberate exception to rows.gg's quiet pills —
+   "you can call this right now" has to survive being skimmed across 40 cards. It keeps
+   its fill and its haloed dot; every OTHER chip goes quiet (see the pill rule below). */
+.pt-more{border:0;border-radius:var(--r);color:var(--muted);
+  font-family:var(--sans);font-size:12px;
+  transition:color .2s var(--ease),background-color .2s var(--ease)}
+.pt-more:hover{color:var(--ink);background:var(--hover)}
+.pt-mini{box-shadow:0 0 0 1px var(--bg)}
+
+/* ================================================================
+   RESTYLE — Phase 2 (marketplace) + Phase 3 (the rest).
+   Reference: https://rows.gg/demo. Decisions locked with the founder:
+   light is the default theme, Geist Pixel on h1 only, NO brand accent
+   (colour is reserved for status), 10px buttons, the green Connected
+   chip stays loud, neutral charcoal, card density unchanged.
+   ================================================================ */
+
+/* ---- 3.0 the light theme was half-tokenised ----
+   The pixel reskin above hardcodes a dark value on nine surfaces with no theme
+   guard, which is why light mode rendered a dark top bar and sidebar with dark
+   text on them, and dark inputs inside light content. Every rule below either
+   routes through a token or is scoped to a theme. Nothing here is a colour
+   literal except the code surfaces, which are intentionally dark in both. */
+/* Native controls — <select> popups, checkboxes, scrollbars — are painted by the UA,
+   not by our tokens. Without color-scheme they stay light-on-light in dark mode. */
+:root{color-scheme:dark} [data-theme=light]{color-scheme:light}
+input[type=checkbox],input[type=radio]{accent-color:var(--ink)}
+.top{background:var(--panel);border-bottom:1px solid var(--line)}
+.side{background:var(--panel)}
+.stat{background:var(--surface);border-color:transparent;box-shadow:var(--shadow-sm)}
+.card{background:var(--surface);border-color:transparent;box-shadow:var(--shadow-sm)}
+.modal,.drawer,.onb-panel{background:var(--surface);box-shadow:var(--shadow-lg)}
+.ttable-wrap,table{box-shadow:none}
+.ttable-wrap{background:var(--surface);border-color:var(--line)}
+table{background:var(--surface)}
+/* rows.gg's column heads are label text over a rule, not a filled bar. */
+th{background:none;color:var(--muted2);font-weight:450;border-bottom:1px solid var(--line2)}
+.frow input,.frow select,.field input,.field select,.search,.msel,.bindinput,.si-input{
+  background:var(--surface);box-shadow:none;border:1px solid var(--line2);color:var(--ink)}
+.frow input::placeholder,.field input::placeholder,.search input::placeholder{color:var(--muted2)}
+:root:not([data-theme=light]) pre{background:var(--panel2);box-shadow:none;border-color:var(--line)}
+[data-theme=light] pre{background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
+/* The scanline grain is a dark-theme texture; on paper it reads as dirt. */
+[data-theme=light] body::before{display:none}
+.scrim,.lc-scrim{background:color-mix(in srgb,var(--inverse-ink) 55%,transparent)}
+
+/* ---- 3.1 no brand accent ----
+   rows.gg has no accent colour: emphasis is ink, and colour is reserved for status.
+   Rather than rewrite 66 call sites, --accent becomes ink and --onAccent the page —
+   which turns every accent FILL into rows.gg's inverse button and every accent TEXT
+   into ink. Status tokens (--green/--amber/--red/--teal) are untouched. */
+:root,[data-theme=light]{--accent:var(--ink);--onAccent:var(--bg)}
+/* Syntax highlighting is the one place colour is not status and not decoration:
+   it is how a long command stays readable. It keeps its own ramp — see 3.8, where the
+   ramp is themed, because a ramp drawn for a dark block is invisible on a light one. */
+
+/* ---- 3.2 type: Geist Pixel on h1 only, everything else sans ----
+   Mono is kept for what it is good at — identifiers, counts, commands, code. */
+body{font-family:var(--sans)}
+h1{font-family:var(--display)}
+h2,h3,h4,.tut-main h2{font-family:var(--sans);font-weight:500;letter-spacing:-.2px}
+.btn,.seg button,.tabs button,.mk-tabs button,.side .nav,.frow input,.frow select,
+.field input,.field select,.search input,.msel,.bindinput,.sub,.lead,p,label,
+.side .grp,.acct-you,.kv,.chip,.badge{font-family:var(--sans)}
+.stat .n{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.mono,pre,code,.term,.cli,.ttable .tn b,.side .ac-label{font-family:var(--mono)}
+h1{font-size:22px;letter-spacing:-.44px} h2{font-size:17px} h3{font-size:15px}
+.sub{font-size:12.5px;color:var(--muted);max-width:74ch}
+/* 450 "book" is a real weight in this design — it is why secondary labels sit
+   between regular and medium instead of going grey-and-bold. */
+.side .grp,th,.kv b,.tgh,.stat .l{font-weight:450;text-transform:none;letter-spacing:.1px}
+
+/* ---- 3.3 controls: 10px, not pills ----
+   Chips and badges stay round; only the BUTTONS square off. */
+.btn,.btn.ico,.btn.sm.ico,.iconbtn,.seg,.seg button{border-radius:var(--rb)}
+.btn{border:1px solid var(--line2);background:none;color:var(--ink);font-weight:450;
+  transition:background-color .18s var(--ease),border-color .18s var(--ease),
+             color .18s var(--ease),transform .12s var(--ease-out)}
+.btn:hover{border-color:var(--line2);background:var(--hover)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--inverse);border-color:var(--inverse);color:var(--inverse-ink);
+  box-shadow:none;font-weight:500}
+.btn.primary:hover{background:var(--inverse);border-color:var(--inverse);opacity:.88}
+.seg button.on,.lc-wstab.on{background:var(--inverse);color:var(--inverse-ink);box-shadow:none}
+.seg button.on span{color:color-mix(in srgb,var(--inverse-ink) 55%,transparent)}
+.iconbtn{background:none;border:1px solid var(--line2);color:var(--muted);
+  transition:background-color .18s var(--ease),color .18s var(--ease)}
+.iconbtn:hover{background:var(--hover);color:var(--ink)}
+
+/* ---- 3.4 tabs and nav: ink, not accent ---- */
+.tabs button.active,.mk-tabs button.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:500}
+.side .nav{transition:background-color .18s var(--ease),color .18s var(--ease)}
+.side .nav:hover{background:var(--hover)}
+.side .nav.active{background:var(--panel2);color:var(--ink);font-weight:500}
+a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--line2)}
+a:hover{text-decoration-color:var(--muted)}
+
+/* ---- 3.5 quiet pills (the Connected chip keeps its fill — see above) ----
+   One status token drives both text and border; the border is that colour at 30%. */
+.chip{border-radius:999px;font-size:10px;font-weight:450;letter-spacing:.09px;padding:2px 9px;
+  border:1px solid var(--line2);color:var(--muted);background:none}
+.chip.env{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 30%,transparent);background:none}
+.chip.oauth,.chip.run,.chip.own{color:var(--teal);border-color:color-mix(in srgb,var(--teal) 30%,transparent);background:none}
+.chip.ver{color:var(--green);border-color:color-mix(in srgb,var(--green) 30%,transparent);background:none}
+.chip.secret_file,.chip.demo{color:var(--muted);border-color:var(--line2);background:none}
+.badge{border-radius:999px;font-size:10px;font-weight:450;padding:2px 9px;border:1px solid transparent}
+.badge.ok{color:var(--green);border-color:color-mix(in srgb,var(--green) 30%,transparent);background:none}
+.badge.invalid{color:var(--red);border-color:color-mix(in srgb,var(--red) 30%,transparent);background:none}
+.badge.unknown{color:var(--muted);border-color:var(--line2);background:none}
+.role{font-weight:500;font-size:10px;letter-spacing:.09px}
+.role.admin{color:var(--muted)}
+.sec-n,.tgh-n{border-radius:999px}
+
+/* ---- 3.6 surfaces: the marketplace's other cards, matched to .pt-card ---- */
+.mk-card,.mk-perm{background:var(--surface);border:0;border-radius:var(--r);
+  box-shadow:var(--shadow-sm);
+  transition:box-shadow .24s var(--ease),background-color .2s var(--ease)}
+.mk-card:hover{border-color:transparent;transform:none;box-shadow:var(--shadow-md)}
+.mk-card:focus-visible{outline:0;
+  box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--ink)}
+.mk-chip{border-radius:999px;padding:4px 12px;font-size:11px;font-weight:450;
+  background:none;border:1px solid var(--line2);color:var(--muted);
+  transition:background-color .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
+.mk-chip:hover{background:var(--hover);color:var(--ink)}
+.mk-chip.on{background:var(--inverse);color:var(--inverse-ink);border-color:var(--inverse)}
+.mk-chip.on span{color:color-mix(in srgb,var(--inverse-ink) 55%,transparent)}
+.mk-empty{border-color:var(--line2);color:var(--muted2);font-size:12px}
+.ttable tr:hover td{background:var(--hover)}
+.dropdown{background:var(--surface);border-color:var(--line2);box-shadow:var(--shadow-lg)}
+.orgblock,.side-acct,.orgsel,.search{background:none;border:1px solid var(--line2)}
+.tswitch input:checked+.knob{background:var(--ink)}
+.tswitch input:checked+.knob::after{background:var(--bg)}
+.spin{border-top-color:var(--ink)}
+.onb-steps li.on .onb-num{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.loginbox{background:var(--surface);border:0;border-radius:var(--r);box-shadow:var(--shadow-md)}
+
+/* ---- 3.7 the platform ledger ----
+   ONE table per platform, filed into sticky domain sections. Two sticky layers stack under the
+   57px top bar: the filter bar, then the section headings beneath it — so --lsec-top is the top
+   bar plus the bar's own height, and the bar's height is fixed by scrolling its chips instead of
+   wrapping them. */
+:root{--lbar-top:57px;--lsec-top:107px}
+.lbar{position:sticky;top:var(--lbar-top);z-index:6;background:var(--bg);
+  display:flex;align-items:center;gap:8px;padding:12px 0 9px;margin-top:8px}
+.lchips{display:flex;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent)}
+.lchips::-webkit-scrollbar{display:none}
+.lbar .mk-chip{padding:3px 11px;font-size:11.5px;white-space:nowrap;cursor:pointer}
+.lchk{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);
+  cursor:pointer;user-select:none;white-space:nowrap}
+.lfind{flex:0 0 auto;width:190px;background:var(--surface);border:1px solid var(--line2);
+  border-radius:var(--rb);color:var(--ink);font-family:var(--sans);font-size:12.5px;padding:6px 11px}
+.lfind::placeholder{color:var(--muted2)}
+.lstat{margin:0 0 10px;font-size:11.5px;color:var(--muted2);font-variant-numeric:tabular-nums}
+.lclear{background:none;border:0;padding:0 0 0 6px;color:var(--muted);font:inherit;cursor:pointer;
+  text-decoration:underline;text-underline-offset:2px}
+.lclear:hover{color:var(--ink)}
+/* Both the wrapper and the table drop their overflow clip: an `overflow:hidden` ancestor is a
+   scroll container, and a sticky heading inside one never leaves it. */
+.lwrap{overflow:visible;border-radius:var(--r)}
+/* Fixed layout, so a nowrap path or `treg call` line inside an expanded row scrolls INSIDE its
+   cell instead of widening the table past the page. */
+.ledger{overflow:visible;table-layout:fixed}
+.ledger th{padding:9px 12px 7px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+  white-space:nowrap;color:var(--muted2)}
+.lth-w{width:33%} .lth-p{width:170px} .lth-v{width:38px}
+.ledger td{padding:8px 12px;font-size:12.5px;vertical-align:top;border-bottom:1px solid var(--line)}
+.ledger tr:last-child td{border-bottom:0}
+.lsec td{position:sticky;top:var(--lsec-top);z-index:4;background:var(--panel2);padding:6px 12px;
+  font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.lsec td span{margin-left:7px;font-weight:450;letter-spacing:0;color:var(--muted2)}
+.lrow{cursor:pointer}
+.lrow:hover td{background:var(--hover)}
+/* The management-endpoints expander at the foot of a section — the same muted "show more" gesture
+   as the platform-tile .pt-more, keeping account/utility plumbing one click out of the browse view. */
+/* The one collapsed section at the foot of the ledger. Its heading is a button, so it reads as a
+   section that opens rather than a row that does something. */
+.lsec-btn{display:inline-flex;align-items:center;gap:7px;padding:0;border:0;background:none;
+  font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}
+.lsec-btn:hover{color:var(--ink)}
+.lsec-btn .lcar{transition:transform .12s}
+.lsec-btn[aria-expanded="true"] .lcar{transform:rotate(90deg)}
+/* Same rule down the leading edge the capability list used: the row you can call today is the
+   reason to read the table, so it is findable without reading. */
+.lrow.go td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--green) 75%,transparent)}
+.lsum-i{display:flex;align-items:flex-start;gap:7px;max-width:430px}
+.lsum b{font-weight:500;color:var(--ink);line-height:1.45}
+/* DataForSEO's summaries are paragraphs. Two lines keeps the ledger scannable; the full text is
+   one click away, in the expansion. */
+.lsum b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lcar{flex:0 0 auto;display:inline-block;font-size:9px;line-height:2;color:var(--muted2);
+  transition:transform .15s var(--ease)}
+.lrow.open .lcar{transform:rotate(90deg)}
+.ln{margin-left:7px;font-size:11px;color:var(--muted2);white-space:nowrap}
+/* A merged row's providers, priced side by side — the comparison the merge exists to make. Short
+   pills only (see `pillPrice`), so a six-provider row costs a second line at worst. */
+.lprovs{display:flex;flex-wrap:nowrap;overflow:hidden;gap:4px}
+.pchip.more{color:var(--muted2)}
+.pchip{display:inline-flex;align-items:center;gap:5px;background:var(--panel2);border-radius:7px;
+  padding:2px 8px;font-size:11px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pchip b{color:var(--ink);font-weight:500}
+.lpath{display:block;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:11px;color:var(--muted)}
+.lpath b{margin-right:7px;font-family:var(--sans);font-weight:500;color:var(--ink)}
+/* What KIND of plumbing an Actions row is — account (the provider's own records) or utility
+   (a helper). Only ever rendered inside the Actions section, where the distinction is the only
+   thing separating one row from the next. */
+.lkind{margin-left:8px;font-family:var(--sans);vertical-align:1px}
+.lprice{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.vmark{color:var(--green);font-weight:600}
+.xmark{color:var(--muted2)}
+/* The expansion: one block per endpoint — a merged row shows its providers stacked, a single row
+   shows the same block alone, so the two can never present the instruction differently. */
+/* Level two: one collapsed line per provider, and the detail under whichever one is opened. */
+.lgrp + .lgrp{margin-top:4px}
+.lsub{display:flex;align-items:center;gap:8px;width:100%;padding:6px 9px;
+  background:var(--surface);border:1px solid var(--line2);border-radius:var(--rb);
+  color:var(--ink);font-family:inherit;font-size:12px;text-align:left;cursor:pointer;
+  transition:border-color .2s var(--ease),background-color .2s var(--ease)}
+.lsub:hover{background:var(--hover)}
+.lsub.on{border-color:var(--line2);background:var(--hover)}
+.lsub.on .lcar{transform:rotate(90deg)}
+.lsub b{font-weight:500;white-space:nowrap}
+.lsub-price{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.lsub-path{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  text-align:right;font-size:11px;color:var(--muted2)}
+.lsub .plogo-tile{width:20px;height:20px;flex:0 0 20px;border-radius:6px}
+.lsub .plogo{width:13px;height:13px}
+.lsub .chip.go{font-size:9.5px;padding:1px 7px}
+.lgrp .lep{padding:12px 9px 2px}
+/* The detail's tab bar: two panes on the left, and on the right the two things you should never
+   have to scroll for — the provider's docs and the Connect button. */
+.ltabs{display:flex;align-items:center;gap:4px;margin:0 0 11px;
+  border-bottom:1px solid var(--line2);padding-bottom:7px}
+.ltab{background:none;border:0;border-radius:var(--rb);padding:5px 11px;
+  font-family:inherit;font-size:12px;font-weight:450;color:var(--muted);cursor:pointer;
+  transition:background-color .2s var(--ease),color .2s var(--ease)}
+.ltab:hover:not(:disabled){background:var(--hover);color:var(--ink)}
+.ltab.on{background:var(--inverse);color:var(--inverse-ink);font-weight:500}
+.ltab:disabled{color:var(--muted2);opacity:.55;cursor:default}
+.ltabs-r{margin-left:auto;display:flex;align-items:center;gap:7px;flex:0 0 auto}
+/* Connect is the one action that unblocks every row on the page, so it wears the strongest
+   treatment the design language has — the same ink fill as the active tab. */
+.ltabs-r .btn.primary{background:var(--inverse);color:var(--inverse-ink);border-color:var(--inverse)}
+.lep-id{margin-top:8px;font-size:10.5px;color:var(--muted2)}
+.lep + .lep{margin-top:15px;padding-top:15px;border-top:1px solid var(--line2)}
+.lep-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.lep-h b{font-size:12.5px;font-weight:500}
+.lep-chips{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.lfacts{margin:0 0 11px;padding-left:17px;max-width:82ch;font-size:11.5px;line-height:1.6;color:var(--muted)}
+/* A DataForSEO body can carry thirty parameters. Capped and scrolled, the expansion stays a card
+   you read; uncapped it becomes a page that pushes every row below it off the screen. The captured
+   response gets the SAME cap, so the two panes are the same size box. */
+.prm{max-height:320px;overflow-y:auto}
+.cat-ex pre{max-height:320px}
+/* The line that actually runs it — `treg call` proxies the key server-side, so it is paste-ready
+   on a machine that holds no credential. */
+.lcall{display:flex;align-items:center;gap:9px;margin:0 0 11px;padding:7px 9px;
+  background:var(--surface);border:1px solid var(--line2);border-radius:var(--rb)}
+.lcall code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-size:11.5px;color:var(--ink)}
+
+/* ================================================================
+   RESTYLE — 3.8 code surfaces follow the theme.
+   Light mode used to paint the code BLOCK light (the generic
+   `[data-theme=light] pre` rule outranks `.lc-codewrap pre`) while the
+   syntax ramp stayed drawn for a dark block — a near-white command on a
+   near-white background, bright cyan URLs, a dark copy pill. Two fixes,
+   both structural: the ramp becomes a themed variable set, and the code
+   surface is a token as well, so a block and the ink on it can never be
+   specified by different generations of this sheet again.
+   ================================================================ */
+:root{
+  --code-bg:#161518; --code-ink:#f0f0ee; --code-line:var(--line2); --code-btn:#2c2b30;
+  --sx-cmd:#f0f0ee; --sx-var:#6fcdf0; --sx-str:#45e39e; --sx-flag:#f0c249;
+  --sx-cmt:#9a9a9a; --sx-punct:#9a9a9a;
+}
+[data-theme=light]{
+  --code-bg:#f4f4f1; --code-ink:#1a1a1a; --code-line:var(--line2); --code-btn:#e6e6e2;
+  /* Every value below clears 4.5:1 on --code-bg: ink command, a deep green URL, a burnt
+     amber flag, a slate identifier, a grey comment that is still readable italic. */
+  --sx-cmd:#1a1a1a; --sx-var:#16688a; --sx-str:#0f7346; --sx-flag:#9a5502;
+  --sx-cmt:#6b6b6b; --sx-punct:#6b6b6b;
+}
+/* The surface. Both selectors are :root-qualified so they outrank the older
+   `:root[data-theme=light] .term` / `.lc-codewrap` rules earlier in the sheet. */
+.term,.lc-codewrap,
+:root[data-theme=light] .term,:root[data-theme=light] .lc-codewrap{
+  background:var(--code-bg);color:var(--code-ink);border:1px solid var(--code-line)}
+/* The inner <pre> is a PANE of its wrapper, not a block of its own — it must beat both
+   generic `pre` rules, which is what painted a light panel inside a dark wrapper. */
+.lc-codewrap pre,
+:root[data-theme=light] .lc-codewrap pre,
+:root:not([data-theme=light]) .lc-codewrap pre{
+  background:transparent;border:0;box-shadow:none;color:var(--code-ink)}
+.lc-cp{background:var(--code-btn);color:var(--code-ink);border:1px solid var(--code-line)}
+.lc-cp:hover{background:var(--code-btn);border-color:var(--code-ink);color:var(--code-ink)}
+/* One ramp, themed, covering all three generations of token class in this file. */
+.hl-cmd,.hl-kw,.s-kw{color:var(--sx-cmd);font-weight:600}
+.s-token,.hl-var,.hl-key,.s-proxy{color:var(--sx-var)}
+.s-proxy{font-weight:600}
+.hl-str,.hl-string,.s-host{color:var(--sx-str)}
+.hl-flag,.hl-num,.s-path{color:var(--sx-flag)}
+.s-path{font-weight:600}
+.hl-comment,.s-cmt{color:var(--sx-cmt);font-style:italic}
+.hl-punct,.hl-env{color:var(--sx-punct)}
 </style>
 </head>
 <body>
@@ -799,7 +1318,89 @@ th{background:rgba(0,0,0,.25)}
             <span class="mono">{{staleConns.map(c=>c.name).join(', ')}}</span>
           </div>
 
-          <div class="mk-filters">
+          <!-- The marketplace has two axes, and the tab bar is the choice between them: every tab
+               but the last asks WHICH DATA you want (platform tiles, grouped by category), while
+               "Platform" is the original integration shelf — which ACCOUNT you hold. Data-first is
+               the default because that is the question an agent actually arrives with. -->
+          <div class="mk-tabs-wrap" v-if="plats.list.length">
+            <div class="mk-tabs" role="tablist" aria-label="Marketplace">
+              <button v-for="t in mkTabs" :key="t.key" role="tab" :aria-selected="mkTabActive===t.key"
+                      :class="{on:mkTabActive===t.key}" @click="mkTab=t.key">{{t.label}} <span>{{t.n}}</span></button>
+            </div>
+          </div>
+
+          <!-- Platform tiles: the endpoint catalog's own axis. Absent — silently — on a server
+               whose build has no /catalog, which then only has the Platform tab to show. -->
+          <template v-if="mkTabActive!=='platform'">
+            <div class="tgroup shelf" v-for="g in platCatGroups" :key="g.category">
+              <div class="sec-head">
+                <h2 class="sec-h"><b>{{g.category}}</b><span class="sec-n">{{g.total}}</span></h2>
+                <span class="sec-hint" v-if="g.hint">{{g.hint}}</span>
+              </div>
+              <div class="pt-grid">
+                <!-- The card is a NAME and two facts, nothing more: a description paragraph made
+                     every card tall enough that a shelf of twelve became a scroll, and it repeated
+                     what the name and category already said. The summary survives as the hover
+                     title, so nothing is lost for the one visitor who wants it. -->
+                <button v-for="pl in g.items" :key="pl.slug" class="pt-card"
+                        :title="pl.summary ? pl.label+' — '+pl.summary : pl.label"
+                        :aria-label="'Open '+pl.label" @click="openPlatform(pl.slug)">
+                  <div class="pt-top">
+                    <!-- A platform's OWN mark, not its providers': the card is the platform. Anything
+                         we haven't drawn falls back to a generated initial tile, not a broken image. -->
+                    <span class="pt-logo" :class="{gen:platLogoBad[pl.slug]}"
+                          :style="platLogoBad[pl.slug] ? {background:platTileBg(pl.slug)} : null">
+                      <img v-if="!platLogoBad[pl.slug]" :src="'/logos/platforms/'+pl.slug+'.svg'" alt=""
+                           aria-hidden="true" @error="platLogoBad[pl.slug]=true">
+                      <span v-else class="pt-i">{{platInitial(pl)}}</span>
+                    </span>
+                    <span style="min-width:0">
+                      <span class="pt-name">{{platShort(pl.label)}}</span>
+                      <span class="pt-cat">{{pl.category}}</span>
+                    </span>
+                    <!-- The corner answers the only question that changes what you do next: can I
+                         call this today, or is there a signup between me and it? Which provider
+                         serves it is a decision for the platform page, not a browse-time fact. -->
+                    <span class="pt-conn">
+                      <span v-if="platConnected(pl)" class="chip go"
+                            :title="'You have a connected account for '+platConnNames(pl)"><span class="godot"></span>Connected</span>
+                      <span v-else class="pt-quiet" title="No connected account for any provider serving this platform yet">not connected</span>
+                    </span>
+                  </div>
+                  <div class="pt-foot">
+                    <span class="pt-eps"><span class="pt-dot"></span>{{pl.endpoints}} endpoint{{pl.endpoints===1?'':'s'}}</span>
+                    <span v-if="platPrice(pl)" class="pt-price" :class="{free:platPrice(pl).free}"
+                          :title="platPriceTitle(pl)"><template v-if="!platPrice(pl).free">from </template><b>{{platPrice(pl).text}}</b><span
+                          v-if="platPrice(pl).native" class="cost-nat">({{platPrice(pl).native}})</span></span>
+                  </div>
+                </button>
+              </div>
+              <!-- The tail of a long shelf, as one row: a stack of the marks plus two names, so it
+                   reads as "there is more of this kind here" rather than as a bare count. -->
+              <button v-if="g.rest.length" class="pt-more" @click="platShelfOpen[g.category]=true"
+                      :aria-label="'Show the other '+g.rest.length+' '+g.category+' platforms'">
+                <span class="pt-stack">
+                  <span v-for="pl in g.rest.slice(0,7)" :key="pl.slug" class="pt-mini" :title="pl.label"
+                        :class="{gen:platLogoBad[pl.slug]}"
+                        :style="platLogoBad[pl.slug] ? {background:platTileBg(pl.slug)} : null">
+                    <img v-if="!platLogoBad[pl.slug]" :src="'/logos/platforms/'+pl.slug+'.svg'" alt=""
+                         aria-hidden="true" @error="platLogoBad[pl.slug]=true">
+                    <span v-else class="pt-i">{{platInitial(pl)}}</span>
+                  </span>
+                </span>
+                <span class="pt-more-t">{{moreLabel(g.rest)}}</span>
+                <span class="pt-more-a" aria-hidden="true">→</span>
+              </button>
+            </div>
+            <div v-if="!platCatGroups.length" class="mk-empty">
+              No catalogued platforms{{mkTabActive==='all'?'':' in '+mkTabActive}} on this server yet — the
+              <b>Platform</b> tab lists every integration you can connect.
+            </div>
+          </template>
+
+          <!-- The original marketplace: integrations grouped by category, unchanged. -->
+          <template v-if="mkTabActive==='platform'">
+          <div class="mk-filters" style="margin-top:0">
             <button class="mk-chip" :class="{on:mkCat===''}" @click="mkCat=''">All <span>{{providers.length}}</span></button>
             <button v-for="g in providerGroups" :key="g.category" class="mk-chip"
                     :class="{on:mkCat===g.category}" @click="mkCat=g.category">{{g.category}} <span>{{g.items.length}}</span></button>
@@ -832,7 +1433,7 @@ th{background:rgba(0,0,0,.25)}
               </div>
             </div>
           </div>
-
+          </template>
 
         </template>
 
@@ -933,6 +1534,250 @@ th{background:rgba(0,0,0,.25)}
               </div>
             </div>
           </div>
+
+          <!-- Cross-link into the endpoint catalog: from "I hold this account" to "here is what it
+               pulls, next to every other provider that serves the same platform". -->
+          <div class="tgroup" v-if="mkPlatforms.length">
+            <div class="tgh">Covered in the catalog <span class="tgh-n">{{mkPlatforms.length}}</span>
+              <span class="tgh-hint">the platforms {{mkProvider.display_name}} serves — compare its endpoints with the other providers'</span></div>
+            <div class="mk-filters" style="margin:0">
+              <button v-for="pl in mkPlatforms" :key="pl.slug" class="mk-chip" @click="openPlatform(pl.slug)">{{pl.label}} <span>{{pl.endpoints}}</span></button>
+            </div>
+          </div>
+        </template>
+
+        <!-- MARKETPLACE: one platform, from the endpoint catalog -->
+        <template v-if="view==='platform'">
+          <!-- Stacked, not the two-column .tut-head the other pages use: a platform can be served by
+               a dozen providers, and as a right-hand column that chip list steals half the width and
+               wraps the title into a three-line ribbon ("People & / contact / data"). Full-width
+               title, then the intro at a readable measure, then the providers as their own row. -->
+          <div class="plat-head">
+            <button class="btn sm" style="margin-bottom:12px" @click="go('connections')">← Marketplace</button>
+            <div class="plat-title">
+              <span class="pt-logo" style="width:44px;height:44px;flex:0 0 44px"
+                    :class="{gen:platLogoBad[platSlug]}"
+                    :style="platLogoBad[platSlug] ? {background:platTileBg(platSlug)} : null">
+                <img v-if="!platLogoBad[platSlug]" :src="'/logos/platforms/'+platSlug+'.svg'" alt=""
+                     aria-hidden="true" @error="platLogoBad[platSlug]=true">
+                <span v-else class="pt-i">{{platInitial({label:platLabel, slug:platSlug})}}</span>
+              </span>
+              <h1>{{platLabel}}</h1>
+            </div>
+            <p class="sub plat-intro">Every endpoint treg knows for this platform, one ledger, filed by subject — jobs several
+              providers do sit on a single row, so you can compare price and coverage before you spend a call.</p>
+            <div class="plat-provs" v-if="platProviders.length">
+              <span class="plat-provs-l">Providers</span>
+              <button v-for="s in platProviders" :key="s" class="btn sm" @click="openProvider(s)">{{provName(s)}} →</button>
+            </div>
+          </div>
+
+          <div v-if="platLoading" class="mk-empty" style="margin-top:14px">Loading the catalog…</div>
+          <div v-else-if="platErr" class="mk-empty" style="margin-top:14px">{{platErr}}</div>
+          <template v-else-if="platData">
+            <!-- THE LEDGER. One table for the whole platform, filed into sticky domain sections
+                 (user · video · search · shop · …, "other" always last). Within a section the
+                 MERGED rows come first — a job several providers do, on one comparable line —
+                 then the endpoints only one provider offers, each led by its own summary, because
+                 "Get Showcase Product List" says more than the capability id ever could. -->
+            <div class="lbar">
+              <!-- The chips scroll rather than wrap: a bar that grows a second row as you filter
+                   would shift the sticky section headings out from under it. -->
+              <div class="lchips">
+                <button class="mk-chip" :class="{on:!platDomain}" @click="platDomain=''">All <span>{{platBrowseCount}}</span></button>
+                <button v-for="d in platDomainTabs" :key="d.domain" class="mk-chip"
+                        :class="{on:platDomain===d.domain}"
+                        @click="platDomain = platDomain===d.domain ? '' : d.domain">{{d.domain}} <span>{{d.n}}</span></button>
+              </div>
+              <label class="lchk"><input type="checkbox" v-model="platVerifiedOnly"> verified only</label>
+              <input class="lfind" v-model="platQ" placeholder="filter… e.g. comments, showcase">
+            </div>
+            <!-- Two numbers, because a merged row is several endpoints: what you are scrolling
+                 through, and how much of the catalog that actually is. -->
+            <div class="lstat">{{platStats.rows}} row{{platStats.rows===1?'':'s'}} · {{platStats.eps}} endpoint{{platStats.eps===1?'':'s'}}<span
+                  v-if="platDomain || platQ || platVerifiedOnly"> · filtered <button class="lclear" @click="platClearFilters">clear</button></span></div>
+
+            <div class="ttable-wrap lwrap" v-if="platLedger.length"><table class="ledger">
+              <thead><tr><th class="lth-w">What it does</th><th>Providers / route</th><th class="lth-p">Price</th><th class="lth-v">✓</th></tr></thead>
+              <!-- A row, its section heading and its expanded detail are all table rows, so each
+                   level rides a wrapper tag — a tbody per group would strip the row separators. -->
+              <template v-for="sec in platLedger" :key="sec.domain">
+                <tr class="lsec" :class="{on:sec.actions}"><td colspan="4">
+                  <!-- The one collapsed section: every account/utility endpoint on the platform,
+                       whatever domain it nominally belongs to. -->
+                  <button v-if="sec.actions" class="lsec-btn" :aria-expanded="platActionsOpen"
+                          @click="platActionsOpen=!platActionsOpen"><span class="lcar">▸</span>Actions
+                    <span>{{sec.count}}</span></button>
+                  <template v-else>{{sec.domain}} <span>{{sec.rows.length}}</span></template>
+                </td></tr>
+                <template v-for="r in sec.rows" :key="r.key">
+                  <!-- EVERY row expands, merged or not: the row says what it does, the expansion
+                       says how to call it, and which of the two a visitor needs is not something
+                       the row shape can decide for them. -->
+                  <tr class="lrow" :class="{open:platOpen[r.key], go:r.ready}" @click="toggleRow(r)"
+                      :aria-expanded="!!platOpen[r.key]">
+                    <!-- The flex lives on a wrapper INSIDE the cell, never on the <td>. A td with
+                         `display:flex` stops being a table-cell: the browser wraps it in an
+                         anonymous cell that stretches to the row height while the flex box sizes to
+                         its content and keeps the border — so the row separator under column one
+                         landed a pixel above the one under column two, and the hover background
+                         split along the same seam. -->
+                    <td class="lsum">
+                      <div class="lsum-i">
+                        <span class="lcar">▸</span>
+                        <span style="min-width:0">
+                          <b :title="r.description!==r.title ? r.description : null">{{r.title}}</b>
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <!-- One pill PER PROVIDER — not per endpoint, or TikHub's four takes on the
+                           same job repeat four identical pills. A pill is a name, a price only when
+                           the price is a real number, and a ✓. THREE of them, then a +N chip: the
+                           strip never wraps, so a merged row is exactly as tall as a single one.
+                           The full list is one click down, on the provider sub-rows. -->
+                      <div v-if="r.kind==='merged'" class="lprovs" :title="r.provTitle">
+                        <span v-for="pill in r.pills" :key="pill.name" class="pchip">
+                          <b>{{pill.name}}</b><span v-if="pill.price">{{pill.price}}</span><span
+                              v-if="pill.verified" class="vmark">✓</span></span>
+                        <span v-if="r.pillsMore" class="pchip more" :title="r.pillsMoreTitle">+{{r.pillsMore}}</span>
+                      </div>
+                      <span v-else class="lpath mono"><b>{{r.endpoints[0].provider_display||r.endpoints[0].provider}}</b>
+                        <span class="cat-m">{{r.endpoints[0].method}}</span>{{r.endpoints[0].path}}<!--
+                        --><span v-if="r.mgmt" class="chip lkind"
+                              :title="r.endpoints[0].kind==='account' ? 'Manages the provider account itself — lists, campaigns, webhooks' : 'A helper route: token exchange, enum lookups, format cleanup'">{{r.endpoints[0].kind}}</span></span>
+                    </td>
+                    <td class="lprice" :title="r.priceTitle">{{r.price}}<span
+                          v-if="r.priceNative" class="cost-nat">({{r.priceNative}})</span></td>
+                    <td><span v-if="r.verified" class="vmark" title="Called for real against the live API, and the response captured">✓</span><span
+                          v-else class="xmark" title="Documented, but treg has not called it with a live key yet">·</span></td>
+                  </tr>
+                  <tr v-if="platOpen[r.key]" :key="r.key+'::d'" class="cat-d">
+                    <td colspan="4">
+                      <!-- TWO LEVELS on a merged row: it opens to its providers, one collapsed line
+                           each, and a provider opens to its own instruction. Dropping six full
+                           parameter tables on one click buried the comparison the merge exists to
+                           make. A single row has nothing to compare, so it skips the middle level
+                           and its detail renders straight away — same block either way, so the two
+                           paths can never present the instruction differently. -->
+                      <div class="lgrp" v-for="e in r.endpoints" :key="e.id">
+                        <button v-if="r.kind==='merged'" class="lsub" :class="{on:epOpen[e.id]}"
+                                :aria-expanded="!!epOpen[e.id]" @click.stop="toggleEp(e)">
+                          <span class="lcar">▸</span>
+                          <span class="plogo-tile"><img class="plogo" :src="'/logos/'+e.provider+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span>
+                          <b>{{e.provider_display||e.provider}}</b>
+                          <span class="lsub-price" :title="costTitle(e.cost)">{{costShort(e.cost)}}</span>
+                          <span v-if="e.verified" class="vmark" :title="'Called for real on '+e.verified">✓</span>
+                          <span v-else class="xmark" title="Documented, but treg has not called it with a live key yet">·</span>
+                          <span v-if="catConnected(e.provider)" class="chip go" title="You already have a connected account that can call this"><span class="godot"></span>connected</span>
+                          <span class="lsub-path mono"><span class="cat-m">{{e.method}}</span>{{e.path}}</span>
+                        </button>
+                        <div class="lep" v-if="r.kind!=='merged' || epOpen[e.id]">
+                          <div class="lep-h">
+                            <!-- On a merged row the sub-row above already names the provider and the
+                                 route, so the detail leads with the chips instead of repeating them. -->
+                            <template v-if="r.kind!=='merged'">
+                              <span class="plogo-tile"><img class="plogo" :src="'/logos/'+e.provider+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'"></span>
+                              <b>{{e.provider_display||e.provider}}</b>
+                              <span class="mono cat-path"><span class="cat-m">{{e.method}}</span>{{e.path}}</span>
+                            </template>
+                          <span class="lep-chips">
+                            <!-- The short form even here: the chip is a label, and "per result ·
+                                 price in provider dashboard" is a sentence. It rides in the facts
+                                 list below, where a sentence belongs. -->
+                            <span class="chip" :title="costTitle(e.cost)">{{costShort(e.cost)}}<span
+                                  v-if="costNative(e.cost)" class="cost-nat">({{costNative(e.cost)}})</span></span>
+                            <span v-if="e.verified" class="chip ver" :title="'Called for real on '+e.verified+' and the response captured'">verified {{e.verified}}</span>
+                            <span v-else class="chip" title="Documented, but treg has not called it with a live key yet">unverified</span>
+                            <!-- Scope is the difference between "point this at any handle" and "this
+                                 only ever sees the account you connected", which changes what you
+                                 can build. -->
+                            <span v-if="e.scope==='own_account'" class="chip own"
+                                  title="Reads the account YOU connect via OAuth, not arbitrary public accounts">your account</span>
+                            <span v-else-if="e.scope==='any_account'" class="chip any"
+                                  title="Reads any public account, page or query — no OAuth connection to that account needed">any account</span>
+                            <span v-if="e.tier && e.tier!=='core'" class="chip">{{e.tier}}</span>
+                          </span>
+                        </div>
+                        <p class="cat-sum">{{e.summary||'No summary in the catalog for this endpoint.'}}</p>
+                        <!-- TABS. What you SEND and what comes BACK are two documents, and stacking
+                             them made the expansion a page you scrolled rather than read. The bar
+                             also carries the two things you want without scrolling at all: the
+                             provider's docs, and the Connect button — the one action on this page
+                             that unblocks every row, so it gets the strongest treatment the design
+                             language has (ink fill), not a ghost button below the fold. -->
+                        <div class="ltabs">
+                          <button class="ltab" :class="{on:epTabOf(e)==='req'}" @click.stop="setEpTab(e,'req')">Request</button>
+                          <!-- No captured response means no tab and no placeholder: a greyed-out tab
+                               is a promise the catalog can't keep, and it draws the eye to the one
+                               thing that isn't there. Endpoints without an example just have one
+                               tab, which reads as a label for the pane under it. -->
+                          <button v-if="e.has_example" class="ltab" :class="{on:epTabOf(e)==='res'}"
+                                  @click.stop="setEpTab(e,'res')">Example response</button>
+                          <span class="ltabs-r">
+                            <a v-if="e.docs_url" class="btn sm" :href="e.docs_url" target="_blank" rel="noopener" @click.stop>Docs ↗</a>
+                            <a v-else-if="provFact(e.provider,'pricing_url')" class="btn sm" :href="provFact(e.provider,'pricing_url')" target="_blank" rel="noopener" @click.stop>Pricing ↗</a>
+                            <span v-if="catConnected(e.provider)" class="chip go" title="You already have a connected account that can call this"><span class="godot"></span>Connected</span>
+                            <button v-else-if="mkKnown(e.provider)" class="btn sm primary" @click.stop="openProvider(e.provider)"
+                                    :title="'Connect '+(e.provider_display||e.provider)+' to call this'">Connect {{e.provider_display||e.provider}}</button>
+                          </span>
+                        </div>
+                        <div v-show="epTabOf(e)==='req'">
+                        <!-- What you have to SEND. The captured response answered "what comes back"
+                             while this half was missing, which made every endpoint look uncallable
+                             until you left for the provider's docs. Query first, then path, then
+                             body: the order you fill them in for the common GET case. -->
+                        <div class="prm" v-if="paramSections(e).length || (e.input && e.input.note)">
+                          <div class="prm-h">Parameters</div>
+                          <p class="prm-note" v-if="e.input && e.input.note">{{e.input.note}}</p>
+                          <div class="prm-sec" v-for="s in paramSections(e)" :key="s.key">
+                            <div class="prm-loc">{{s.label}}<span v-if="s.type" class="prm-type mono">{{s.type}}</span></div>
+                            <table class="prm-t">
+                              <tr><th>Name</th><th>Type</th><th>Required</th><th>Notes</th></tr>
+                              <tr v-for="p in s.rows" :key="p.name">
+                                <td class="prm-n mono">{{p.name}}</td>
+                                <td class="prm-ty mono">{{p.type||'—'}}</td>
+                                <td><span v-if="p.required" class="prm-req">required</span><span v-else class="prm-opt">optional</span></td>
+                                <td class="prm-d">
+                                  <span v-if="p.note">{{p.note}}</span>
+                                  <span v-if="p.example!=null" class="prm-ex mono">e.g. {{fmtExample(p.example)}}</span>
+                                </td>
+                              </tr>
+                            </table>
+                          </div>
+                        </div>
+                        <p v-else class="prm-none">The catalog has no parameter reference for this endpoint yet — the provider's docs have them.</p>
+                        <!-- The provider-wide facts an expanded row needs and a table cell can't
+                             hold: how it meters, what it rate-limits, where the rate card lives. -->
+                        <ul class="lfacts" v-if="epFacts(e).length"><li v-for="(f,fi) in epFacts(e)" :key="fi">{{f}}</li></ul>
+                        <!-- The line that actually runs it. `treg call` proxies the key server-side,
+                             so this is paste-ready with no key on the machine that runs it. -->
+                        <!-- The line that actually runs it, at the bottom of the Request tab — the
+                             last thing you read before you go and run it. -->
+                        <div class="lcall" v-if="e.call_template">
+                          <code class="mono">{{e.call_template}}</code>
+                          <button class="btn sm" @click.stop="copyCall(e)">{{platCopied===e.id?'✓ copied':'Copy'}}</button>
+                        </div>
+                        <div class="lep-id mono">{{e.id}}</div>
+                        </div>
+                        <!-- Fetched when the tab is first opened, never with the page: a platform can
+                             carry hundreds of endpoints and the captured responses are the heaviest
+                             thing in the catalog. -->
+                        <div class="cat-ex" v-show="epTabOf(e)==='res'">
+                          <div v-if="!platEx[e.id] || platEx[e.id].loading" class="mk-quiet" style="font-size:12px">Loading the captured response…</div>
+                          <div v-else-if="platEx[e.id].err" class="mk-quiet" style="font-size:12px">{{platEx[e.id].err}}</div>
+                          <pre v-else class="code">{{platEx[e.id].text}}</pre>
+                        </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </template>
+            </table></div>
+            <div v-else class="mk-empty" style="margin-top:14px">Nothing on this platform matches that filter — clear it, or
+              <button class="lclear" @click="platClearFilters">start over</button>.</div>
+          </template>
         </template>
 
         <template v-if="view==='tools'">
@@ -2268,7 +3113,7 @@ createApp({
   data(){
     let cfg={active:null,orgs:{}}; try{ cfg=JSON.parse(localStorage.getItem(LS))||cfg; }catch(e){}
     return {
-      theme: localStorage.getItem('treg-theme')||'dark',
+      theme: localStorage.getItem('treg-theme')||'light',
       cfg, tokenInput:'', busy:false, loginErr:'', addOrg:false, orgMenu:false, orgMenuStyle:null,
       emailInput:'', codeInput:'', emailStage:false, devCode:'', pendingInvites:[], invitePrefill:'', inviteChoice:false, inviteBusy:false,
       inviteSel:{}, inviteLinkOrg:null, inviteErr:'',  // multi-select accept: checked ids, the org_id the clicked email link was for, partial-failure note
@@ -2298,6 +3143,24 @@ createApp({
       // holds an approved app for; `connections` is what this org has actually connected.
       providers:[], connections:[], connErr:'', connBusy:false, confirmDisc:null, resPick:null,
       mkCat:'', mkService:null,  // marketplace: active category filter, and the open integration
+      // Marketplace tab bar: 'all' + one key per catalog category, plus 'platform' for the
+      // original integration shelves. Data-first is the default view.
+      mkTab:'all',
+      platLogoBad:{},  // platform slug → we have no /logos/platforms/<slug>.svg, so draw the initial tile
+      // Endpoint catalog (GET /catalog/*): the platform axis of the marketplace. Everything here is
+      // optional — a server without the catalog routes just renders no platform shelf.
+      plats:{list:[], loaded:false, loading:false},
+      platSlug:null, platData:null, platErr:'', platLoading:false,
+      platShelfOpen:{},    // category → its featured shelf has been expanded to the full tile list
+      // The ledger's filter bar. All three narrow the SAME row list, and a section with no
+      // surviving rows disappears rather than showing an empty heading.
+      platDomain:'', platQ:'', platVerifiedOnly:false,
+      platOpen:{},         // ledger row key → row expanded
+      platActionsOpen:false,  // the single platform-wide account/utility ("Actions") section is open
+      epOpen:{},           // endpoint id → its provider sub-row (level two, merged rows only) is open
+      epTab:{},            // endpoint id → which pane of its detail is showing ('req' | 'res')
+      platEx:{},           // endpoint id → {open, loading, err, text} for the lazily-fetched example
+      platCopied:'',       // endpoint id whose `treg call` line was just copied
       capAsk:null,  // the access question, asked when Connect is clicked
       tokenAsk:null,  // bring-your-own-bot setup (Slack): a form, not a redirect
       extraCred:{}, extraBusy:null,  // second credential a provider needs on top of OAuth (Google Ads' developer token)
@@ -2343,7 +3206,7 @@ createApp({
     // would just be a second place to keep the order in step with the registry.
     providerGroups(){
       const hints={
-        'SEO':'search visibility and site analytics — treg holds the approved app',
+        'SEO/AEO':'search visibility and site analytics — treg holds the approved app',
         'Advertising':'read spend and performance, or manage campaigns',
         'Social media':'publish and read back as the connected account',
         'Community':'bring your own workspace bot',
@@ -2366,6 +3229,168 @@ createApp({
     // Which capabilities ANY account here already holds — a page-level "you have this" summary,
     // since the permission list describes the integration, not one account.
     mkGranted(){ const s=new Set(); for(const c of this.mkConns) for(const cap of (c.capabilities||[])) s.add(cap); return s; },
+    // ---- endpoint catalog ----
+    // Platform tiles grouped by the category the catalog assigns each platform. "Other" (the
+    // taxonomy's bucket for things like `account`) gets no tile — those capabilities are only
+    // meaningful inside a platform page, not as a destination of their own.
+    // The canonical reading order. It is only an ORDER, not the list: the categories themselves come
+    // from the data, so a category the catalog invents tomorrow still gets a shelf and a tab (sorted
+    // to the end) instead of vanishing. A hint is optional for the same reason.
+    platCategories(){
+      // The founder's reading order. The answer engines (ChatGPT, Perplexity, Gemini…) used to be
+      // their own shelf; they are SEO now, unfeatured, so they surface inside its "see more" row
+      // rather than as a category of six. The list is a lookup, not a schema — a category the
+      // catalog invents tomorrow still gets a shelf, sorted to the end.
+      const order=['SEO/AEO','Social','Advertising','Enrichment','E-commerce','Reviews & Apps','Community'];
+      const hints={
+        'SEO/AEO':'rankings, keywords and backlinks — what search engines know, and what the answer engines say',
+        'Social':'posts, profiles and comments, straight from the feeds',
+        'Enrichment':'people and company records, resolved from an email or a domain',
+        'Advertising':'ad libraries and creator marketplaces — what is being promoted, and for how much',
+        'E-commerce':'listings, prices and sellers across the marketplaces',
+        'Reviews & Apps':'app stores and review sites — what people rate, and what they say',
+        'Community':'forums and chat, where people answer each other',
+      };
+      const by={};
+      for(const pl of this.plats.list){ const c=pl.category||'Other'; if(c==='Other') continue; (by[c]=by[c]||[]).push(pl); }
+      const known=order.filter(c=>by[c]);
+      const rest=Object.keys(by).filter(c=>!order.includes(c)).sort();
+      return known.concat(rest).map(c=>({category:c, hint:hints[c]||'', items:by[c]}));
+    },
+    mkTabs(){
+      const out=[{key:'all', label:'All', n:this.platCategories.reduce((a,g)=>a+g.items.length,0)}];
+      for(const g of this.platCategories) out.push({key:g.category, label:g.category, n:g.items.length});
+      out.push({key:'platform', label:'Platform', n:this.providers.length});
+      return out;
+    },
+    // A build without /catalog has no tiles to show, so it falls back to the integration shelves
+    // rather than opening on an empty tab.
+    mkTabActive(){ return this.platCategories.length ? this.mkTab : 'platform'; },
+    // Shelves, with the long ones cut down to their featured tiles. A category of 14 platforms is a
+    // wall you scroll past rather than read, so past PLAT_SHELF_MAX only the catalog's `featured`
+    // ranks get a full tile and the tail collapses into one "See X, Y, and N more" row. Rank first,
+    // then endpoint count — the tail sorts by size alone, which is the only signal it has left.
+    platCatGroups(){
+      const groups = this.mkTabActive==='all' ? this.platCategories
+        : this.platCategories.filter(g=>g.category===this.mkTabActive);
+      return groups.map(g=>{
+        const items=[...g.items].sort((a,b)=>
+          (a.featured==null?1e9:a.featured)-(b.featured==null?1e9:b.featured) || (b.endpoints||0)-(a.endpoints||0));
+        const feat=items.filter(p=>p.featured!=null);
+        // Nothing ranked means nothing to feature — showing an empty shelf over a "more" row would
+        // hide the whole category behind a click.
+        // `total` stays the whole category so the shelf's count matches its tab — a header reading
+        // "SEO 5" under a tab reading "SEO 10" looks like tiles went missing.
+        if(items.length<=8 || !feat.length || this.platShelfOpen[g.category]) return {...g, items, rest:[], total:items.length};
+        return {...g, items:feat, rest:items.filter(p=>p.featured==null), total:items.length};
+      });
+    },
+    mkPlatforms(){ return this.plats.list.filter(pl=>(pl.providers||[]).includes(this.mkService)); },
+    platRow(){ return this.plats.list.find(pl=>pl.slug===this.platSlug)||null; },
+    platLabel(){ return (this.platData&&this.platData.platform&&this.platData.platform.label)
+      || (this.platRow&&this.platRow.label) || this.platSlug || 'Platform'; },
+    platProviders(){  // providers with endpoints here, in catalog order; only ones treg can connect
+      const seen=[]; for(const g of (this.platData&&this.platData.capabilities||[])) for(const e of (g.endpoints||[])) if(!seen.includes(e.provider)) seen.push(e.provider);
+      for(const e of (this.platData&&this.platData.extended||[])) if(!seen.includes(e.provider)) seen.push(e.provider);
+      return seen.filter(s=>this.providers.some(p=>p.service===s)); },
+    // ---- the ledger ----
+    // Sections, their order and the merged/single split are all decided by the server (see
+    // catalog_store.domain_rows) so the CLI, the API and this page can't disagree about what the
+    // platform contains. Everything below is presentation the server has no business knowing:
+    // the price label, whether the row is callable TODAY (which depends on who is logged in), and
+    // the haystack the filter box searches.
+    platRowsAll(){
+      if(!this.platData) return [];
+      const out=[];
+      for(const sec of (this.platData.domains||[])) for(const r of (sec.rows||[])){
+        const eps=r.endpoints||[]; if(!eps.length) continue;
+        const cheapest=this.capCheapest(eps);
+        const provs=[...new Set(eps.map(e=>e.provider_display||e.provider))];
+        const pills=this.provPills(eps);
+        out.push({...r, domain:sec.domain, endpoints:eps,
+          // What the row SHOWS. The server already picked `name` over `summary` where a curated
+          // name exists; this is the guard for the rows where one doesn't yet — a DataForSEO
+          // summary is documentation prose and would render a paragraph in a table cell. The full
+          // text is never lost: the expansion shows it whole.
+          title:this.clip(r.description, 90),
+          // Who serves it, as plain text — the collapsed row names the providers and prices none
+          // of them. Three names is what fits on one line; the rest become a count, with the whole
+          // list in the title attribute.
+          // Three pills and a +N. Never four, never a wrap: the strip is what decides whether a
+          // merged row is one line, and one line is the rule.
+          pills:pills.slice(0,3), pillsMore:Math.max(0, pills.length-3),
+          pillsMoreTitle:pills.slice(3).map(x=>x.name).join(', '),
+          // Providers AND endpoints, always both — one provider can offer the same job three ways,
+          // so the two numbers differ and the endpoint count standing in for the provider count read
+          // "6 providers" on a 3-provider row. Both live in the cell's tooltip rather than on a
+          // second line, because a second line is exactly what made these rows look broken.
+          provN:provs.length,
+          provTitle:provs.length+' provider'+(provs.length===1?'':'s')+' · '+eps.length+
+                    ' endpoint'+(eps.length===1?'':'s')+' — '+provs.join(', '),
+          // the capability is the join key when there is one; an unmapped row is its endpoint
+          key:(r.capability||'')+'|'+eps[0].id,
+          // a "management" row is one whose every endpoint is plumbing (account/utility) — those
+          // fold behind a per-section expander instead of sitting in the main ledger.
+          mgmt: eps.every(e=>e.kind==='account'||e.kind==='utility'),
+          // "from $0.001" on a merged row, the flat label on a single one — and never "from free",
+          // which reads as a hedge on the one price that needs none.
+          price: cheapest ? ((r.kind==='merged'&&eps.length>1&&cheapest.n>0?'from ':'')+cheapest.label)
+                 // No dollar figure anywhere, but a cost note: the credit-metered providers
+                 // (Apollo, PDL, Hunter…) whose price IS documented, in their own units.
+                 : (eps.some(e=>e.cost&&e.cost.note) ? 'see provider' : '—'),
+          // the provider's own figure, so nobody has to wonder whether we invented the converted one
+          priceNative: cheapest ? cheapest.native : '',
+          priceTitle: r.kind==='merged'
+            ? 'The cheapest of the '+eps.length+' providers on this row — open it for each one'
+            : this.costTitle(eps[0].cost),
+          verified: eps.some(e=>!!e.verified),
+          ready: eps.some(e=>this.catConnected(e.provider)),
+          hay: (r.description+' '+r.domain+' '+(r.capability||'')+' '+eps.map(e=>
+                 e.provider+' '+(e.provider_display||'')+' '+e.path+' '+e.summary).join(' ')).toLowerCase()});
+      }
+      return out; },
+    // The text box and the verified checkbox narrow the row list; the domain chips then narrow it
+    // again. Splitting it here is what lets each chip carry the count it would actually show.
+    platRowsPreDomain(){
+      const q=this.platQ.trim().toLowerCase();
+      return this.platRowsAll.filter(r=>(!this.platVerifiedOnly||r.verified) && (!q||r.hay.includes(q))); },
+    platDomainTabs(){
+      // Only the browse surface counts on the chips: management rows (account/utility) live behind
+      // a per-section expander, not in the domain tally.
+      const n={}; for(const r of this.platRowsPreDomain) if(!r.mgmt) n[r.domain]=(n[r.domain]||0)+1;
+      // The server's order (busiest first, "other" last) is the one the chips keep — a chip bar
+      // that reshuffles as you type is unusable.
+      return (this.platData&&this.platData.domains||[]).filter(s=>n[s.domain]).map(s=>({domain:s.domain, n:n[s.domain]})); },
+    platLedger(){
+      // Browse rows (data/action) make the domain sections; a section with no visible row does not
+      // render AT ALL. Filing management rows per-domain conjured sections that existed only
+      // because a hidden endpoint carried that capability id — CAMPAIGNS 0, SCHOOL 0, TITLE 0.
+      const vis={};
+      for(const r of this.platRowsPreDomain){
+        if(r.mgmt || (this.platDomain && r.domain!==this.platDomain)) continue;
+        (vis[r.domain]=vis[r.domain]||[]).push(r); }
+      const out=(this.platData&&this.platData.domains||[]).filter(s=>vis[s.domain])
+        .map(s=>({domain:s.domain, rows:vis[s.domain]}));
+      // ...and every management endpoint on the platform lands in ONE collapsed section at the
+      // bottom, its domain ignored: account/utility routes are the provider's own plumbing, and
+      // which capability id they happen to carry is not a fact worth a heading.
+      const acts=this.platActionRows;
+      if(acts.length) out.push({domain:'Actions', actions:true, count:acts.length,
+                                rows:this.platActionsOpen?acts:[]});
+      return out; },
+    // What "All" counts: the same population the domain chips add up to. Counting the management
+    // rows here made the All chip disagree with both the chips beside it and the stat line under it.
+    platBrowseCount(){ return this.platRowsPreDomain.filter(r=>!r.mgmt).length; },
+    // Platform-wide, so a domain chip (which is a browse axis) hides it rather than filtering it.
+    platActionRows(){
+      return this.platDomain ? [] : this.platRowsPreDomain.filter(r=>r.mgmt); },
+    // Two numbers, because a merged row stands for several endpoints — the browse surface only, so
+    // the header count never jumps when the management expander is opened.
+    platStats(){
+      let rows=0, eps=0;
+      for(const r of this.platRowsPreDomain){ if(r.mgmt || (this.platDomain && r.domain!==this.platDomain)) continue;
+        rows++; eps+=r.endpoints.length; }
+      return {rows, eps}; },
     catalogDeny(){ const c=this.tForm.cli; return (c && this.catalogClis && this.catalogClis[c.bin]) || []; },
     catalogExtra(){  // catalog patterns not already in the own list — the union dedupes at run time, so showing both would double up
       const own=new Set((this.tForm.cli&&this.tForm.cli.deny||[]).map(p=>p.trim())); return this.catalogDeny.filter(p=>!own.has(p)); },
@@ -3304,6 +4329,7 @@ createApp({
         ]);
         this.providers=ps||[]; this.connections=cs||[];
       }catch(e){ this.connErr=String(e.message||e); }
+      this.loadPlatforms();  // fire-and-forget: the catalog must never hold up the connect UI
     },
     async connectProvider(p, capability, conn){
       // Consent happens in a popup so the dashboard keeps its state; we poll for the result
@@ -3514,7 +4540,246 @@ createApp({
       // The consent popup can return before /connections has been re-read, and a deep link may
       // arrive before the first load — either way the page needs the data it renders from.
       if(!this.connections.length || !this.providers.length) this.loadConnections();
+      this.loadPlatforms();
       window.scrollTo(0,0); },
+    // ---- endpoint catalog (/catalog/*) ----
+    // The catalog is additive: every failure here leaves the marketplace exactly as it was, so a
+    // server that predates these routes shows no platform shelf rather than an error.
+    async loadPlatforms(){
+      if(this.plats.loaded || this.plats.loading) return;
+      this.plats.loading=true;
+      try{ const d=await this.api('/catalog/platforms'); this.plats.list=(d&&d.platforms)||[]; this.plats.loaded=true; }
+      catch(e){ this.plats.list=[]; }
+      finally{ this.plats.loading=false; } },
+    // Platform pages are hash routes (/app#platform/<slug>): unlike /app/marketplace/<service> there
+    // is no server route to serve the SPA on a hard reload of a /app/platforms/<slug> path.
+    platformFromHash(){ const m=/^#platform\/(.+)$/.exec(location.hash||''); return m?decodeURIComponent(m[1]):null; },
+    openPlatform(slug, fromPop){ this.resetConfirms();
+      this.detail=null; this.platSlug=slug; this.view='platform'; this.platOpen={}; this.epOpen={}; this.epTab={}; this.platEx={}; this.platActionsOpen=false;
+      this.platClearFilters(); this.platCopied='';
+      if(!fromPop) history.pushState({platform:slug}, '', '/app#platform/'+encodeURIComponent(slug));
+      this.loadPlatforms();                                   // the header's provider links need the list
+      if(!this.providers.length) this.loadConnections();       // and connected/not-connected needs both
+      this.loadPlatform();
+      window.scrollTo(0,0); },
+    async loadPlatform(){ if(!this.platSlug) return;
+      this.platErr=''; this.platLoading=true; this.platData=null;
+      // include_hidden=1: pull the account/utility endpoints too. They render behind a per-section
+      // "N management endpoints" expander rather than in the main ledger — the page decides that,
+      // client-side, off each endpoint's `kind` (see platRowsAll / platLedger).
+      try{ this.platData=await this.api('/catalog/platforms/'+encodeURIComponent(this.platSlug)+'?include_hidden=1'); }
+      catch(e){ this.platErr = e.status===404
+        ? 'No catalog for this platform on this server yet.'
+        : 'Could not load the endpoint catalog'+(e.detail?': '+e.detail:'.'); }
+      finally{ this.platLoading=false; } },
+    // Tile furniture. Catalog labels carry a parenthetical or an em-dash gloss ("Google Search
+    // (SERPs, keyword data)") that reads as noise under a logo — the tile shows the name, the
+    // title attribute keeps the whole thing.
+    platShort(label){ return String(label||'').split(' — ')[0].split(' (')[0].trim(); },
+    platInitial(pl){ return (this.platShort(pl.label)||pl.slug||'?').slice(0,1).toUpperCase(); },
+    // Deterministic hue from the slug: an undrawn platform keeps the same colour across reloads
+    // and differs from its neighbours, with no colour table to maintain.
+    platTileBg(slug){ let h=0; const s=String(slug||'');
+      for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))%360;
+      return 'hsl('+h+' 44% 42%)'; },
+    // The catalog bills in several currencies, so every price the marketplace SHOWS is the server's
+    // computed `usd` — one unit, so two numbers on the same screen can actually be compared. The
+    // native amount rides along as a muted suffix wherever the provider bills in something else, so
+    // nobody has to wonder whether we invented the figure.
+    // Sub-cent rates get two significant figures ($0.015, $0.00015); a dollar or more gets cents.
+    usdNum(n){
+      n=Number(n);
+      if(n>=1) return n.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+      const s=n.toPrecision(2);
+      if(s.indexOf('e')>=0) return n.toFixed(8).replace(/0+$/,'').replace(/\.$/,'');  // < 1e-6
+      return s.replace(/0+$/,'').replace(/\.$/,''); },
+    priceUnit(type){ return {per_call:'call', per_success:'success', per_result:'result', quota_rows:'row'}[type]
+                        || String(type||'').replace(/_/g,' '); },
+    // "¥0.10" — the provider's own figure, shown next to the converted one, never instead of it.
+    nativeAmount(c){
+      if(!c || c.currency==='USD' || c.value==null) return '';
+      const sym={CNY:'¥'}[c.currency], n=Number(c.value);
+      // Money keeps its cents: ¥0.10, not ¥0.1. Below a cent, show what precision there is.
+      const num=n>=0.01 ? n.toFixed(2) : n.toFixed(6).replace(/0+$/,'').replace(/\.$/,'');
+      return sym ? sym+num : num+' '+c.currency; },
+    costNative(c){ return this.nativeAmount(c); },
+    // The card's starting price. `price_from` arrives as null OR as an empty object, and an empty
+    // one must read as "no price on the row" — otherwise it short-circuits the OAuth-free branch
+    // below and an OAuth-only platform silently loses its "free with your account".
+    platPrice(pl){
+      const raw=pl && pl.price_from;
+      const pf=(raw && Object.keys(raw).length) ? raw : null;
+      if(pf && pf.type==='free') return {free:true, text:'free with your account'};
+      if(pf && typeof pf.usd==='number')
+        return {free:false, text:'$'+this.usdNum(pf.usd)+' / '+this.priceUnit(pf.type), native:this.nativeAmount(pf)};
+      if(pf) return null;   // priced, but no published number — "from —" says less than silence
+      // No price at all AND every provider is an OAuth integration: the account you connect IS the
+      // licence, so the platform is free to call once connected. A key-auth provider with no
+      // published rate is a different thing — unknown, not free — and shows nothing.
+      const provs=(pl && pl.providers)||[];
+      const oauthOnly=provs.length && provs.every(s=>{
+        const p=this.providers.find(x=>x.service===s); return p && p.auth_kind==='oauth'; });
+      return oauthOnly ? {free:true, text:'free with your account'} : null; },
+    platPriceTitle(pl){
+      const p=this.platPrice(pl); if(!p) return '';
+      if(p.free) return 'Served only by OAuth integrations — connect the account and the calls cost nothing extra';
+      const pf=pl.price_from||{};
+      return ['The cheapest published rate across this platform’s endpoints',
+              p.native ? 'billed as '+p.native+' / '+this.priceUnit(pf.type)+', converted at the catalog’s FX rate' : '',
+              pf.note].filter(Boolean).join(' — '); },
+    catConnected(service){ return !!this.connCount[service]; },
+    // A platform is callable today if ANY provider serving it is connected — the card is browsing,
+    // not routing, so which one it is stays a question for the platform page.
+    platConnected(pl){ return ((pl&&pl.providers)||[]).some(s=>this.catConnected(s)); },
+    platConnNames(pl){ return ((pl&&pl.providers)||[]).filter(s=>this.catConnected(s)).map(s=>this.provName(s)).join(', '); },
+    // The endpoint's inputs, grouped by where they go. Query first, then path, then body: the order
+    // you fill them in for the common GET, and the order the provider's own docs tend to use.
+    paramSections(e){
+      const i=(e&&e.input)||{}, out=[];
+      const add=(key,label,map,type)=>{
+        const names=Object.keys(map||{});
+        if(names.length) out.push({key, label, type, rows:names.map(n=>({name:n, ...map[n]}))}); };
+      add('query','Query', i.queryParams);
+      add('path','Path', i.pathParams);
+      add('body','Body', i.body, i.bodyType);
+      return out; },
+    // Examples arrive as real JSON values, so an array or object has to be stringified rather than
+    // rendered as "[object Object]".
+    fmtExample(v){ return (typeof v==='object') ? JSON.stringify(v) : String(v); },
+    // The comparable price, in USD, straight from the server's computed `usd` — the FX table lives
+    // in the catalog so a rate refresh re-prices every screen at once, and the dashboard cannot
+    // drift from the CLI by carrying its own constant. Anything with no published number, and a row
+    // quota (which is not a price at all), can never win "cheapest": showing "from —" would be
+    // worse than showing the cheapest thing we do know the price of.
+    costUsd(c){
+      if(!c || !c.type) return null;
+      if(c.type==='free') return 0;
+      if(c.type==='quota_rows') return null;
+      return typeof c.usd==='number' ? c.usd : null; },
+    // An OAuth endpoint you have already connected costs nothing MORE to call — the account is the
+    // licence — so a connected own_account row is the free path, and usually the right answer.
+    capFree(e){ return this.catConnected(e.provider) && (e.scope==='own_account' || (e.cost&&e.cost.type==='free')); },
+    capCheapest(eps){
+      let best=null;
+      for(const e of (eps||[])){
+        const free=this.capFree(e), n=free?0:this.costUsd(e.cost);
+        if(n==null) continue;
+        if(best===null || n<best.n)
+          best={n, label:(free||n===0)?'free':this.costLabel(e.cost), native:(free||n===0)?'':this.nativeAmount(e.cost)};
+      }
+      return best; },
+    // "See Zhihu, Toutiao, and 6 more" — two names so the row says what KIND of thing is hiding,
+    // then a count, because eight more names is the wall the shelf exists to avoid.
+    moreLabel(rest){
+      const names=rest.slice(0,2).map(p=>this.platShort(p.label));
+      if(rest.length<=2) return 'See '+names.join(' and ');
+      return 'See '+names.join(', ')+', and '+(rest.length-2)+' more'; },
+    // Cut at the last word boundary before the limit, so a clipped line ends on a word rather than
+    // mid-token. A curated `name` is short by construction, so this is a no-op on those rows.
+    clip(text, n){ const s=String(text||'').trim(); if(s.length<=n) return s;
+      const cut=s.slice(0,n); const sp=cut.lastIndexOf(' ');
+      return (sp>n*0.6 ? cut.slice(0,sp) : cut).replace(/[\s,;:.—-]+$/,'')+'…'; },
+    platClearFilters(){ this.platDomain=''; this.platQ=''; this.platVerifiedOnly=false; },
+    // Every ledger row expands, merged or not: the row says what it does, the expansion says how to
+    // call it, and which of the two a visitor needs is not something the row shape can decide.
+    toggleRow(r){ this.platOpen[r.key] = !this.platOpen[r.key]; },
+    // The per-section "N management endpoints" expander: reveals the account/utility rows folded
+    // out of the browse ledger (see platLedger).
+    // Level two: a provider sub-row under a merged row opens its own instruction. Single rows have
+    // nothing to compare and skip this level entirely.
+    toggleEp(e){ this.epOpen[e.id] = !this.epOpen[e.id]; },
+    // One pill per provider on a merged row, carrying that provider's CHEAPEST priced endpoint —
+    // the number a comparison turns on — and a ✓ if any of its endpoints is verified.
+    provPills(eps){
+      const by=new Map();
+      for(const e of eps){
+        const cur=by.get(e.provider), n=this.costUsd(e.cost);
+        if(!cur) by.set(e.provider, {name:e.provider_display||e.provider, cost:e.cost, n, verified:!!e.verified});
+        else { cur.verified = cur.verified || !!e.verified;
+               if(n!=null && (cur.n==null || n<cur.n)){ cur.cost=e.cost; cur.n=n; } }
+      }
+      // Cheapest first, then verified: only three of these are ever shown, so the three that
+      // survive have to be the ones worth seeing. Unpriced providers sort to the tail — they are
+      // exactly the ones whose pill would say nothing but a name.
+      return [...by.values()]
+        .sort((a,b)=>(a.n==null)-(b.n==null) || (a.n-b.n) || (b.verified-a.verified))
+        .map(p=>({name:p.name, verified:p.verified, price:this.pillPrice(p.cost)})); },
+    // A pill prices an endpoint only when there IS a price: a published number, or "free". A
+    // credit-metered or dashboard-only rate has no number to show, and saying so at length is what
+    // broke the row — the pill just drops it, and the sub-row below carries the full story.
+    pillPrice(c){
+      if(!c || !c.type) return '';
+      if(c.type==='free') return 'free';
+      if(c.type==='quota_rows'){ const l=this.costLabel(c); return l.length<=8 ? l : ''; }
+      return typeof c.usd==='number' ? this.costLabel(c) : ''; },
+    // A price small enough for a collapsed line: "$0.024/call", "2 rows", "free", "credit-priced".
+    // The long form ("per success · price in provider dashboard") is true but belongs in the
+    // expanded detail — inline it wraps a row onto three lines, which is what broke the merged rows.
+    costShort(c){
+      if(!c || !c.type) return '—';
+      if(c.type==='free') return 'free';
+      if(c.value==null) return 'credit-priced';
+      return this.costLabel(c); },
+    mkKnown(service){ return this.providers.some(p=>p.service===service); },
+    provName(service){ const p=this.providers.find(x=>x.service===service); return p?p.display_name:service; },
+    // Provider-wide facts, served once per provider on the platform response rather than copied
+    // onto every row.
+    provFact(service, key){ const p=(this.platData&&this.platData.providers||{})[service]; return (p&&p[key])||''; },
+    // The sentences an expanded row needs and a table cell can't hold: how it meters, what it
+    // rate-limits, where the rate card is. Only ones we actually have — an empty list hides the box.
+    epFacts(e){
+      const out=[], c=e.cost;
+      // Where a credit-metered price actually lives. The chip can only say "credit-priced"; this is
+      // the sentence that tells you the unit and where to read the rate.
+      if(c && c.type!=='free' && c.value==null)
+        out.push('Billed per '+this.priceUnit(c.type)+' — the provider does not publish the rate, so '
+                 +'the number is in your plan on their dashboard.');
+      if(c && c.note) out.push(c.note);
+      const limits=this.provFact(e.provider,'limits'); if(limits) out.push('Limits: '+limits);
+      const pricing=this.provFact(e.provider,'pricing_url'); if(pricing) out.push('Rate card: '+pricing);
+      return out; },
+    async copyCall(e){
+      if(await this.toClipboard(e.call_template||'')){
+        this.platCopied=e.id; setTimeout(()=>{ if(this.platCopied===e.id) this.platCopied=''; },1500); } },
+    // Which pane of an endpoint's detail is showing. What you SEND and what comes BACK are two
+    // documents; stacking them made the expansion a page you scrolled rather than read.
+    epTabOf(e){ const t=this.epTab[e.id];
+      return (t==='res' && !e.has_example) ? 'req' : (t || 'req'); },
+    setEpTab(e, tab){
+      if(tab==='res' && !e.has_example) return;      // no such tab; nothing to show
+      this.epTab[e.id]=tab;
+      if(tab==='res') this.loadExample(e); },
+    // Fetched when the response tab is FIRST opened, never with the page: a platform can carry
+    // hundreds of endpoints and the captured responses are the heaviest thing in the catalog.
+    async loadExample(e){
+      if(this.platEx[e.id]) return;                  // already loaded, loading, or failed
+      this.platEx[e.id]={loading:true, err:'', text:''};
+      const slot=this.platEx[e.id];
+      try{ const d=await this.api('/catalog/examples/'+encodeURIComponent(e.id)); slot.text=JSON.stringify(d,null,2); }
+      catch(err){ slot.err = err.status===404 ? 'No example was captured for this endpoint.' : 'Could not load the example response.'; }
+      finally{ slot.loading=false; } },
+    // Price, compact enough to sit in a table cell, and always in USD: "$0.015/success", "1 row",
+    // "free", "—". The provider's own figure follows as a muted suffix (see `costNative`).
+    costLabel(c){
+      if(!c || !c.type) return '—';
+      if(c.type==='free') return 'free';
+      // Known billing unit, unpublished number: say which, and where the number lives. A bare
+      // "per success" reads as free, and "—" hides that we do know how it's metered.
+      if(c.value==null){
+        const per={per_call:'call', per_success:'success', per_result:'result'}[c.type];
+        return per ? 'per '+per+' · price in provider dashboard' : '—'; }
+      if(c.type==='quota_rows'){
+        const n=Number(c.value); return n+' row'+(n===1?'':'s'); }
+      // A published number the FX table can't convert (an unknown currency) still beats silence —
+      // fall back to the native figure rather than dropping the price entirely.
+      if(typeof c.usd!=='number') return this.nativeAmount(c)+'/'+this.priceUnit(c.type);
+      return '$'+this.usdNum(c.usd)+'/'+this.priceUnit(c.type); },
+    costTitle(c){ if(!c) return 'The catalog has no price for this endpoint';
+      const nat=this.nativeAmount(c);
+      return [c.note,
+              nat ? 'billed as '+nat+'/'+this.priceUnit(c.type)+', converted at the catalog’s FX rate' : '',
+              c.value==null&&c.type!=='free' ? 'billed '+c.type.replace(/_/g,' ')+' — the provider does not publish the rate, check your plan in their dashboard' : ''].filter(Boolean).join(' — ')
+        || 'What this endpoint costs at the provider'; },
     openDetail(kind, name, fromPop){ this.resetConfirms();
       this.detail={kind, name}; this.view='detail'; this.detailFile='SKILL.md'; this.detailCopied=''; this.detailNote='';
       if(!fromPop) history.pushState({detail:{kind,name}}, '', '/app/'+(kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(name));
@@ -3738,6 +5003,8 @@ createApp({
     window.addEventListener('popstate', e=>{  // browser Back moves between views (was exiting the app)
       const mk=(e.state&&e.state.mk)||this.mkFromPath(location.pathname);
       if(mk){ this.openProvider(mk, true); return; }
+      const pf=(e.state&&e.state.platform)||this.platformFromHash();
+      if(pf){ this.openPlatform(pf, true); return; }
       const d=(e.state&&e.state.detail)||this.routeFromPath(location.pathname);
       if(d){ this.openDetail(d.kind, d.name, true); return; }
       const v=(e.state&&e.state.view)||(location.hash||'').replace('#','')||'tools';
@@ -3772,6 +5039,8 @@ createApp({
       // enter that team — the emailed "Sign in & accept" click was the consent. Otherwise the normal
       // first-run / invite-banner flow.
       if(mkRoute){ this.maybeOnboard(); this.openProvider(mkRoute, true); return; }
+      const pfRoute=this.platformFromHash();
+      if(pfRoute){ this.maybeOnboard(); this.openPlatform(pfRoute, true); return; }
       let landed=false;
       if(route) landed=await this.autoAcceptShare(route);
       if(!landed) this.maybeOnboard();
@@ -3781,7 +5050,8 @@ createApp({
           this.detailNote='This share link was sent to '+inv+' — you’re signed in as '+this.me+'. Sign out (⏻) and sign in with that email to accept the invite.'; }
       return; }  // GitHub/email session
     if(this.token){ await this.loadAll();
-      if(mkRoute) this.openProvider(mkRoute, true); else if(route) this.openDetail(route.kind, route.name, true);
+      const pfTok=this.platformFromHash();
+      if(mkRoute) this.openProvider(mkRoute, true); else if(pfTok) this.openPlatform(pfTok, true); else if(route) this.openDetail(route.kind, route.name, true);
       return; }      // token-in-browser fallback
     // A marketplace link is only meaningful to a member, so a logged-out visitor gets the front
     // door rather than the share gate (which exists to accept skill/tool shares).

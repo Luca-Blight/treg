@@ -1,0 +1,25 @@
+{
+  "code": 200,
+  "request_id": "b2dfc85b-1742-4885-9c11-a2522441899b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:51",
+  "time_stamp": 1785220191,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Ads-API/get_recommended_ads_api_v1_tiktok_ads_get_recommended_ads_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/b2dfc85b-1742-4885-9c11-a2522441899b?sign=1b3cbd59c570eac6012859c3d7a51229e1f1d95a4887b2563fb046d5ec0bc8f1",
+  "router": "/api/v1/tiktok/ads/get_recommended_ads",
+  "params": {
+    "material_id": "7213258221116751874"
+  },
+  "data": {
+    "code": 0,
+    "msg": "OK",
+    "data": {
+      "materials": []
+    }
+  }
+}

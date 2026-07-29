@@ -1,0 +1,94 @@
+{
+  "search_metadata": {
+    "id": "6a6898b6c986afd89694a62a",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/sdND8CcF-1C6-nYQ65DBoQ/6a6898b6… [81 chars]",
+    "created_at": "2026-07-28 11:55:34 UTC",
+    "processed_at": "2026-07-28 11:55:34 UTC",
+    "duckduckgo_url": "https://duckduckgo.com/?q=apple&kl=us-en",
+    "raw_html_file": "https://serpapi.com/searches/sdND8CcF-1C6-nYQ65DBoQ/6a6898b6… [81 chars]",
+    "prettify_html_file": "https://serpapi.com/searches/sdND8CcF-1C6-nYQ65DBoQ/6a6898b6… [85 chars]",
+    "total_time_taken": 6.38
+  },
+  "search_parameters": {
+    "engine": "duckduckgo",
+    "q": "apple",
+    "kl": "us-en"
+  },
+  "search_information": {
+    "organic_results_state": "Results for exact spelling"
+  },
+  "ads": [
+    {
+      "position": 1,
+      "title": "iPhone Deals now - Wireless Without the Hassle",
+      "link": "https://duckduckgo.com/y.js?ad_domain=cellularsales.com&ad_p… [1733 chars]",
+      "source": "cellularsales.com",
+      "snippet": "Cellular Sales makes wireless easy with honest pricing & fri… [142 chars]",
+      "sitelinks": "… [2 item(s) truncated]"
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "Apple",
+      "link": "https://www.apple.com/",
+      "snippet": "Discover the innovative world of Apple and shop everything i… [172 chars]",
+      "favicon": "https://external-content.duckduckgo.com/ip3/www.apple.com.ic… [61 chars]"
+    },
+    "… 10 more item(s) truncated"
+  ],
+  "knowledge_graph": {
+    "title": "Apple Inc.",
+    "description": "Apple Inc. is an American multinational technology company h… [926 chars]",
+    "website": "https://www.apple.com/",
+    "thumbnail": "https://duckduckgo.com/i/b2e38b1bb938eb77.png",
+    "facts": {
+      "formerly_called": "Apple Computer Company (1976–1977), Apple Computer, Inc. (19… [68 chars]",
+      "type": "Public",
+      "traded_as": "NASDAQ: AAPL, Nasdaq-100 component, DJIA component, S&P 100 … [88 chars]",
+      "isin": "[ ISIN: [ US0378331005]]",
+      "industry": "Consumer electronics, Software services, Online services",
+      "founded": "April 01, 1976, in Los Altos, California, US",
+      "founders": "Steve Jobs, Steve Wozniak, Ronald Wayne",
+      "number_of_locations": "540 Apple Stores(2026)",
+      "area_served": "Worldwide",
+      "key_people": "Arthur Levinson (chairman), Tim Cook (CEO), John Ternus (CEO… [96 chars]",
+      "…": "8 more field(s) truncated"
+    },
+    "profiles": [
+      "… {3 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ],
+    "related_topics": [
+      "… {2 field(s) truncated}",
+      "… 20 more item(s) truncated"
+    ]
+  },
+  "news_results": [
+    {
+      "position": 1,
+      "title": "Apple dethrones Nvidia as the world's most valuable company",
+      "link": "https://www.msn.com/en-us/money/topstocks/apple-dethrones-nv… [112 chars]",
+      "snippet": "Nvidia has been hit by volatility as investors rethink parts… [143 chars]",
+      "source": "Insider",
+      "date": "16 hours ago",
+      "thumbnail": "https://www.bing.com/th?id=ONUT.NeAz9s2YCSzBCm4O-aqV2Q&pid=N… [63 chars]"
+    },
+    "… 4 more item(s) truncated"
+  ],
+  "news_results_link": "https://duckduckgo.com/?q=apple&kl=us-en&iar=news&ia=news",
+  "inline_images": [
+    {
+      "position": 1,
+      "title": "Soporte - Ecuapple",
+      "link": "https://ecuapple.ec/soporte/",
+      "thumbnail": "https://tse1.mm.bing.net/th/id/OIP.pIL_RkLM7aGxtb4UEdz7SwHaC… [69 chars]",
+      "image": "https://ecuapple.ec/wp-content/uploads/2022/09/Multi-Product… [203 chars]"
+    },
+    "… 19 more item(s) truncated"
+  ],
+  "inline_images_link": "https://duckduckgo.com/?q=apple&kl=us-en&iax=images&ia=image… [61 chars]",
+  "…": "2 more field(s) truncated"
+}

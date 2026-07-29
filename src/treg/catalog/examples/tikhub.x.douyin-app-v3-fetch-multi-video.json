@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "request_id": "d8b0f598-23c2-4d8c-bf74-fe84698a6590",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:42",
+  "time_stamp": 1785220362,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/fetch_multi_video_api_v1_douyin_app_v3_fetch_multi_video_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d8b0f598-23c2-4d8c-bf74-fe84698a6590?sign=4de9dcfd2eafa0ce67c1dd04f3297c167fdefa8668af6e0938bb1c9d7e549ad4",
+  "router": "/api/v1/douyin/app/v3/fetch_multi_video",
+  "params": {},
+  "data": {
+    "verification_filter_list": null,
+    "status_code": 0,
+    "extra": {},
+    "log_pb": {},
+    "filter_list": null,
+    "emoji_list": null,
+    "aweme_details": [
+      "… {193 field(s) truncated}"
+    ]
+  }
+}

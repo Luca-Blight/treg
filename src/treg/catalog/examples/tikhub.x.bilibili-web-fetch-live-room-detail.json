@@ -1,0 +1,51 @@
+{
+  "code": 200,
+  "request_id": "2536f0be-718f-4483-a6f2-469492f56c8b",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:43",
+  "time_stamp": 1785220063,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_collect_folde… [109 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2536f0be-718f-44… [150 chars]",
+  "router": "/api/v1/bilibili/web/fetch_live_room_detail",
+  "params": {
+    "room_id": "22816111"
+  },
+  "data": {
+    "code": 0,
+    "msg": "ok",
+    "message": "ok",
+    "data": {
+      "uid": 1437582453,
+      "room_id": 22816111,
+      "short_id": 0,
+      "attention": 877715,
+      "online": 0,
+      "is_portrait": false,
+      "description": "",
+      "live_status": 2,
+      "area_id": 745,
+      "parent_area_id": 9,
+      "parent_area_name": "虚拟主播",
+      "old_area_id": 6,
+      "background": "https://i0.hdslb.com/bfs/live/room_bg/c4eed3ef37ef4cd30bbcac… [82 chars]",
+      "title": "【生日舰礼】来点小众ARG解密",
+      "user_cover": "https://i0.hdslb.com/bfs/live/new_room_cover/c22b66253dc38cd… [89 chars]",
+      "keyframe": "",
+      "is_strict_room": false,
+      "live_time": "0000-00-00 00:00:00",
+      "tags": "",
+      "is_anchor": 0,
+      "room_silent_type": "medal",
+      "room_silent_level": 3,
+      "room_silent_second": -1,
+      "area_name": "虚拟Gamer",
+      "pendants": "",
+      "…": "12 more field(s) truncated"
+    }
+  }
+}

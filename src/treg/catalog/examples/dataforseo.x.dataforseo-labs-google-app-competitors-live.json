@@ -1,0 +1,72 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "11.1728 sec.",
+  "cost": 0.0132,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0450-0000-2646a6469ca7",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "11.1643 sec.",
+      "cost": 0.0132,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "app_competitors",
+        "se_type": "google",
+        "app_id": "org.telegram.messenger",
+        "language_name": "English",
+        "location_code": 2840,
+        "limit": 10
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "app_id": "org.telegram.messenger",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 149698,
+          "items_count": 10,
+          "items": [
+            {
+              "se_type": "google",
+              "app_id": "org.telegram.messenger",
+              "avg_position": 14.708448603289547,
+              "sum_position": 2238317,
+              "intersections": 152179,
+              "competitor_metrics": {
+                "google_play_search_organic": {
+                  "pos_1": 3805,
+                  "pos_2_3": 3931,
+                  "pos_4_10": 46950,
+                  "pos_11_100": 97493,
+                  "count": 152179,
+                  "search_volume": 10152166
+                }
+              },
+              "full_metrics": {
+                "google_play_search_organic": {
+                  "pos_1": 3805,
+                  "pos_2_3": 3931,
+                  "pos_4_10": 46950,
+                  "pos_11_100": 97493,
+                  "count": 152179,
+                  "search_volume": 10152166
+                }
+              }
+            },
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

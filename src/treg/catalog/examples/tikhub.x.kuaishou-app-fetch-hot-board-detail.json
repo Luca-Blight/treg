@@ -1,0 +1,30 @@
+{
+  "code": 200,
+  "request_id": "2d69f24a-0eb8-4b00-979c-5fda210593dc",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:02",
+  "time_stamp": 1785220142,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-App-API/fetch_hot_board_detail_api_v1_kuaishou_app_fetch_hot_board_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/2d69f24a-0eb8-4b00-979c-5fda210593dc?sign=2e470b14eb832d4b7d121618939da6fad0fdebd42b6e1fee4e254085e918ccbb",
+  "router": "/api/v1/kuaishou/app/fetch_hot_board_detail",
+  "params": {},
+  "data": {
+    "result": 1,
+    "hots": [
+      "… {11 field(s) truncated}",
+      "… 49 more item(s) truncated"
+    ],
+    "llsid": "2009944709625271409",
+    "host-name": "public-bjmt-c56-kce-node1038.idchb1az4.hb1.kwaidc.com",
+    "topHots": [
+      "… {9 field(s) truncated}"
+    ],
+    "debug_id": "0f47986a",
+    "debug_info": "gAAAAABqaEwu7gV61w8XMybY4whT8kz9aU7-zsUwvmzfpVt_pd2GPg6PYCVRdGEIB-FCvOddkcGWl4AXGhryHW4mCc-p7L8jjGSW-hHdR9kHm92o3d8wbCp9BWpF7kgSik13TAqLDYW0F8BbT7kvW7sPPDrIRk4dYr0eINUBal_wdJFJ9ZqiyZlnDnJ_HBx53ZqpwzYI… [292 chars]"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "12.0512 sec.",
+  "cost": 0.104,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0652-0000-e61b93d57204",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "12.0409 sec.",
+      "cost": 0.104,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "ai_optimization",
+        "function": "multi_target_metrics",
+        "language_code": "en",
+        "location_code": 2840,
+        "platform": "google",
+        "targets": [
+          {
+            "key": "chat_gpt",
+            "target": "… [1 item(s) truncated]"
+          },
+          "… 3 more item(s) truncated"
+        ],
+        "initial_dataset_filters": [
+          [
+            "ai_search_volume",
+            "… 2 more item(s) truncated"
+          ]
+        ],
+        "internal_list_limit": 5
+      },
+      "result": [
+        {
+          "total_count": 4,
+          "offset": 0,
+          "items_count": 4,
+          "aggregated_metrics": {
+            "location": "… [1 item(s) truncated]",
+            "language": "… [1 item(s) truncated]",
+            "platform": "… [1 item(s) truncated]",
+            "sources_domain": "… [5 item(s) truncated]",
+            "search_results_domain": "… [0 item(s) truncated]",
+            "brand_entities_title": "… [0 item(s) truncated]",
+            "brand_entities_category": "… [0 item(s) truncated]",
+            "total": "… {2 field(s) truncated}"
+          },
+          "items": [
+            "… {9 field(s) truncated}",
+            "… 3 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

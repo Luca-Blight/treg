@@ -1,0 +1,55 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "distributions": [
+      {
+        "description": "新锐白领居多,占比33%",
+        "distribution_list": [
+          {
+            "distribution_key": "资深中产",
+            "distribution_value": "1226"
+          },
+          {
+            "distribution_key": "小镇中老年",
+            "distribution_value": "866"
+          },
+          "… 6 more item(s) truncated"
+        ],
+        "image": [
+          "新锐白领居多"
+        ],
+        "origin_type": 10,
+        "type": 1024,
+        "type_display": "八大人群分布"
+      },
+      {
+        "description": "31到40岁居多,占比48%",
+        "distribution_list": [
+          {
+            "distribution_key": "50+",
+            "distribution_value": "475"
+          },
+          {
+            "distribution_key": "41-50",
+            "distribution_value": "1846"
+          },
+          "… 3 more item(s) truncated"
+        ],
+        "image": [
+          "31到40岁居多"
+        ],
+        "origin_type": 1,
+        "type": 2,
+        "type_display": "年龄分布"
+      },
+      "… 6 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:09:57.254048056",
+  "requestId": "436162bc2c854207ac27d62e880cb24b"
+}

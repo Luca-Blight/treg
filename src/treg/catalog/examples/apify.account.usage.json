@@ -1,0 +1,181 @@
+{
+  "data": {
+    "id": "2WfRSS5Wbbo3DnJbR",
+    "username": "REDACTED",
+    "profile": {
+      "name": "Account Owner"
+    },
+    "email": "REDACTED",
+    "proxy": {
+      "password": "REDACTED",
+      "groups": [
+        {
+          "name": "BUYPROXIES94952",
+          "description": "Proxies from USA 2",
+          "availableCount": 27
+        },
+        {
+          "name": "GOOGLE_SERP",
+          "description": "Enables downloading of Google Search result pages",
+          "availableCount": 0
+        },
+        "… 2 more item(s) truncated"
+      ]
+    },
+    "plan": {
+      "id": "STARTER",
+      "planVersion": 10,
+      "description": "Cost-effective plan for freelancers and developers.",
+      "isEnabled": true,
+      "tier": "BRONZE",
+      "monthlyBasePriceUsd": 29,
+      "monthlyUsageCreditsUsd": 29,
+      "enabledPlatformFeatures": [
+        "ACTORS",
+        "STORAGE",
+        "… 8 more item(s) truncated"
+      ],
+      "maxActorMemoryGbytes": 64,
+      "apiRateLimitBoosts": 0,
+      "maxMonthlyUsageUsd": 100,
+      "maxMonthlyActorComputeUnits": 1999999,
+      "maxMonthlyResidentialProxyGbytes": 49999,
+      "maxMonthlyProxySerps": 9999999,
+      "maxMonthlyExternalDataTransferGbytes": 999999,
+      "maxActorCount": 500,
+      "maxActorTaskCount": 5000,
+      "maxScheduleCount": 100,
+      "maxConcurrentActorRuns": 32,
+      "dataRetentionDays": 31,
+      "availableProxyGroups": {
+        "BUYPROXIES94952": 27,
+        "qfCaFFuCodXxAS59E": 3
+      },
+      "teamAccountSeatCount": 999,
+      "supportLevel": "CHAT",
+      "availableAddOns": [
+        "SHARED_DATACENTER_PROXIES",
+        "MAX_ACTOR_MEMORY_GBYTES",
+        "… 3 more item(s) truncated"
+      ],
+      "planPricing": {
+        "chargeableServiceUnitPricesUsd": {
+          "ACTOR_COMPUTE_UNITS": 0.2,
+          "PROXY_RESIDENTIAL_TRANSFER_GBYTES": 8,
+          "PROXY_SERPS": 0.0025,
+          "PROXY_UNBLOCKER_UNITS": 0.00015,
+          "DATA_TRANSFER_INTERNAL_GBYTES": 0.05,
+          "DATA_TRANSFER_EXTERNAL_GBYTES": 0.2,
+          "DATASET_TIMED_STORAGE_GBYTE_HOURS": 0.001,
+          "DATASET_READS": 4e-07,
+          "DATASET_WRITES": 5e-06,
+          "KEY_VALUE_STORE_TIMED_STORAGE_GBYTE_HOURS": 0.001,
+          "KEY_VALUE_STORE_READS": 5e-06,
+          "KEY_VALUE_STORE_WRITES": 5e-05,
+          "KEY_VALUE_STORE_LISTS": 5e-05,
+          "REQUEST_QUEUE_TIMED_STORAGE_GBYTE_HOURS": 0.004,
+          "REQUEST_QUEUE_READS": 4e-06,
+          "REQUEST_QUEUE_WRITES": 1e-05,
+          "PAID_ACTORS_FLAT_PRICE_PER_MONTH": 1,
+          "PAID_ACTORS_PER_DATASET_ITEM": 1,
+          "PAID_ACTORS_PER_EVENT": 1
+        },
+        "addOnMonthlyUnitPricesUsd": {
+          "SHARED_DATACENTER_PROXIES": 1,
+          "MAX_ACTOR_MEMORY_GBYTES": 1,
+          "TEAM_ACCOUNT_SEATS": 49,
+          "PRIORITY_SUPPORT": 100,
+          "ACCOUNT_MANAGER_SUPPORT": 100,
+          "API_RATE_LIMIT_BOOSTS": 300,
+          "PERSONALIZED_SUPPORT_HOURS": 150,
+          "MAX_CONCURRENT_ACTOR_RUNS": 5
+        },
+        "chargeableServicesVolumeDiscountTiers": {}
+      },
+      "overageThresholdUsd": 50,
+      "maxMonthlyUnblockerUnits": 99999990
+    },
+    "effectivePlatformFeatures": {
+      "ACTORS": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "STORAGE": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "SCHEDULER": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "PROXY": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "PROXY_EXTERNAL_ACCESS": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "PROXY_RESIDENTIAL": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "PROXY_SERPS": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "PROXY_UNBLOCKER": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "WEBHOOKS": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "ACTORS_PUBLIC_ALL": {
+        "isEnabled": true,
+        "disabledReason": null,
+        "disabledReasonType": null,
+        "isTrial": false,
+        "trialExpirationAt": null
+      },
+      "ACTORS_PUBLIC_DEVELOPER": {
+        "isEnabled": false,
+        "disabledReason": "The \"Selected public Actors for developers\" feature isn't enabled for your account. Please upgrade your plan or contact support@apify.com",
+        "disabledReasonType": "DISABLED",
+        "isTrial": false,
+        "trialExpirationAt": null
+      }
+    },
+    "createdAt": "2023-09-23T07:45:11.296Z",
+    "isPaying": true
+  },
+  "_scrubbed": true
+}

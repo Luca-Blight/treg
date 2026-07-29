@@ -1,0 +1,66 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.4053 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0391-0000-505d5ddd271c",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.3996 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "bulk_traffic_estimation",
+        "se_type": "google",
+        "targets": [
+          "dataforseo.com",
+          "… 2 more item(s) truncated"
+        ],
+        "location_code": 2840,
+        "language_code": "en",
+        "item_types": [
+          "organic",
+          "… 1 more item(s) truncated"
+        ]
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 3,
+          "items_count": 3,
+          "items": [
+            {
+              "se_type": "google",
+              "target": "cnn.com",
+              "metrics": {
+                "organic": {
+                  "etv": 95609986.96719275,
+                  "count": 3425907
+                },
+                "paid": {
+                  "etv": 66.83400136232376,
+                  "count": 7
+                },
+                "local_pack": null,
+                "featured_snippet": null
+              }
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

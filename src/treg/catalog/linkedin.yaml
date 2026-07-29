@@ -1,0 +1,132 @@
+# unverified — endpoints require a connected OAuth account; verify via a treg connection later.
+#
+# LinkedIn's grant is the narrowest of the eleven OAuth providers, and that shows here: treg's app
+# requests openid, profile, email and w_member_social, which permit exactly two things — identify
+# the member, and post to their own feed as themselves.
+#
+# DELIBERATELY ABSENT (the scopes are not requested, so cataloguing them would promise access treg
+# does not have):
+#   - reading a member's own posts or their engagement — needs r_member_social, which LinkedIn
+#     grants only through a partnership programme.
+#   - anything about a company Page (organization posts, follower stats, page analytics) — needs
+#     r_organization_social / rw_organization_admin via the Community Management API on a
+#     company-verified app.
+#   - Ads / Campaign Manager — needs the Marketing Developer Platform.
+# Add these here only after the corresponding scopes land in oauth_providers.LINKEDIN.
+#
+# Versioned-API quirk: /rest/* requires BOTH a `LinkedIn-Version: YYYYMM` header and
+# `X-Restli-Protocol-Version: 2.0.0`, and LinkedIn deprecates versions quarterly. /v2/userinfo is
+# the one path that needs neither, which is why it is also the connection's health probe.
+provider: linkedin
+source:
+  docs: https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin
+  openapi: null
+  curated: 2026-07-28
+
+limits: "daily application and per-member throttles"
+pricing_url: https://learn.microsoft.com/linkedin/  # Free, but most useful endpoints require Marketing or Community API approval.
+endpoints:
+  - id: linkedin.linkedin.user.profile
+    capability: linkedin.user.profile
+    platform: linkedin
+    scope: own_account
+    method: GET
+    path: /v2/userinfo
+    name: "Get the connected member's profile"
+    summary: "Get the connected LinkedIn member's identity (name, headline picture, email, member id)"
+    input:
+      note: "no parameters — the token identifies the member. Returns OpenID Connect claims: sub (the member id), name, given_name, family_name, picture, email, locale. The author URN every post needs is urn:li:person:{sub}"
+    cost: {type: free, note: "included with the connected account; LinkedIn applies daily per-app and per-member call limits, no per-call price"}
+    docs_url: https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2
+
+  - id: linkedin.linkedin.user.post.create
+    kind: action
+    capability: linkedin.user.post.create
+    platform: linkedin
+    scope: own_account
+    method: POST
+    path: /rest/posts
+    name: "Create a post"
+    summary: "Publish a text or link post to your own LinkedIn feed"
+    input:
+      body:
+        author: {type: string, required: true, note: "member URN — urn:li:person:{sub} from linkedin.user.profile; treg's connection already stores it", example: "urn:li:person:ABC123xyz"}
+        commentary: {type: string, required: true, note: "the post text; ( ) [ ] { } < > @ | ~ must be backslash-escaped", example: "Shipping something new today."}
+        visibility: {type: string, required: true, note: "PUBLIC | CONNECTIONS", example: "PUBLIC"}
+        distribution: {type: object, required: true, note: "send {\"feedDistribution\":\"MAIN_FEED\",\"targetEntities\":[],\"thirdPartyDistributionChannels\":[]}"}
+        lifecycleState: {type: string, required: true, example: "PUBLISHED"}
+        isReshareDisabledByAuthor: {type: boolean, required: false, example: false}
+      bodyType: json
+      note: "headers are mandatory and unusual: `LinkedIn-Version: 202601` (a YYYYMM version LinkedIn retires quarterly) and `X-Restli-Protocol-Version: 2.0.0`. Success is HTTP 201 with the post URN in the x-restli-id response header, not in the body. Images/video need a separate initializeUpload call first"
+    cost: {type: free, note: "included with the connected account; capped by LinkedIn's daily share throttles (per member and per app)"}
+    unverified: "write action — this publishes to a real feed; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api
+
+  # --- attaching media to a post --------------------------------------------------------------
+  #
+  # LinkedIn never accepts image or video bytes on /rest/posts. Media is a THREE-PARTY dance:
+  #   1. initializeUpload  → LinkedIn hands back a URN (urn:li:image:… / urn:li:video:…) and a
+  #      short-lived uploadUrl on a DIFFERENT host (LinkedIn's media CDN).
+  #   2. PUT the bytes to that uploadUrl. This is NOT a LinkedIn API path and therefore cannot be
+  #      catalogued or proxied as an endpoint — the caller PUTs it directly. Images and PDFs go in
+  #      ONE PUT of the whole file; chunking them overwrites the same URL and corrupts the asset.
+  #      Video is the only multipart case: 2 MB parts, each PUT returning an `etag` header.
+  #   3. attach the URN to the post body: one asset → content.media.id, several images →
+  #      content.multiImage.images[].id. The URN, never the uploadUrl, is what the post carries.
+  # Video adds a finalizeUpload step and then an async processing wait — attaching a video URN
+  # before it reports AVAILABLE makes /rest/posts reject the whole post.
+  - id: linkedin.linkedin.image.upload.init
+    kind: utility
+    capability: linkedin.image.upload
+    platform: linkedin
+    scope: own_account
+    method: POST
+    path: /rest/images?action=initializeUpload
+    name: "Start an image upload"
+    summary: "Start an image upload for a LinkedIn post and get the URN to attach"
+    input:
+      body:
+        initializeUploadRequest: {type: object, required: true, note: "{\"owner\": \"urn:li:person:{sub}\"} — the member URN from linkedin.user.profile", example: {owner: "urn:li:person:ABC123xyz"}}
+      bodyType: json
+      note: "same mandatory headers as the post route (LinkedIn-Version: 202601, X-Restli-Protocol-Version: 2.0.0). The response is {value: {uploadUrl, image}} — `image` is the urn:li:image:… you put in the post's content.media.id, `uploadUrl` is where you PUT the raw bytes in a single request (see the block comment). The URL expires quickly; upload right after initializing. A PDF carousel uses the identical shape at /rest/documents?action=initializeUpload and yields a urn:li:document:…"
+    cost: {type: free, note: "included with the connected account; no per-call price, LinkedIn throttles per member and per app"}
+    unverified: "write action — part of the publish flow; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api
+
+  - id: linkedin.linkedin.video.upload.init
+    kind: utility
+    capability: linkedin.video.upload
+    platform: linkedin
+    scope: own_account
+    method: POST
+    path: /rest/videos?action=initializeUpload
+    name: "Start a video upload"
+    summary: "Start a video upload for a LinkedIn post and get its part-upload URLs"
+    input:
+      body:
+        initializeUploadRequest: {type: object, required: true, note: "{\"owner\": \"urn:li:person:{sub}\", \"fileSizeBytes\": <exact byte count>, \"uploadCaptions\": false, \"uploadThumbnail\": false} — fileSizeBytes is mandatory and must be exact; LinkedIn sizes the part list from it", example: {owner: "urn:li:person:ABC123xyz", fileSizeBytes: 8388608, uploadCaptions: false, uploadThumbnail: false}}
+      bodyType: json
+      note: "returns {value: {video, uploadInstructions: [{uploadUrl, firstByte, lastByte}, …]}}. PUT each 2 MB part to its own uploadUrl and KEEP the `etag` response header of every part — finalizeUpload will not accept the video without the full ordered list. Then call linkedin.video.upload.finalize"
+    cost: {type: free, note: "included with the connected account; no per-call price, LinkedIn throttles per member and per app"}
+    unverified: "write action — part of the publish flow; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api
+
+  - id: linkedin.linkedin.video.upload.finalize
+    kind: utility
+    capability: linkedin.video.upload
+    platform: linkedin
+    scope: own_account
+    method: POST
+    path: /rest/videos?action=finalizeUpload
+    name: "Finish a video upload"
+    summary: "Finish a LinkedIn video upload so the video can be attached to a post"
+    input:
+      body:
+        finalizeUploadRequest: {type: object, required: true, note: "{\"video\": \"urn:li:video:…\", \"uploadToken\": \"\", \"uploadedPartIds\": [\"<etag of part 1>\", …]} — uploadToken is an empty string, and uploadedPartIds must be the etags IN UPLOAD ORDER", example: {video: "urn:li:video:C4E10AQ…", uploadToken: "", uploadedPartIds: ["etag-part-1", "etag-part-2"]}}
+      bodyType: json
+      note: "finalizing does not make the video usable — LinkedIn then transcodes it asynchronously. Poll GET /rest/videos/{url-encoded urn} until status is AVAILABLE before referencing it in content.media.id, or /rest/posts rejects the post. NOTE: a w_member_social (personal) token is write-only on /rest/documents, so a PDF carousel cannot be polled the same way — wait a fixed ~10s instead"
+    cost: {type: free, note: "included with the connected account; no per-call price, LinkedIn throttles per member and per app"}
+    unverified: "write action — part of the publish flow; requires a deliberate manual test, never an automated verify run"
+    docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api
+
+

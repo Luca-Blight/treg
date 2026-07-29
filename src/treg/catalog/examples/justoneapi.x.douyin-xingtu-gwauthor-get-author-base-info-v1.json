@@ -1,0 +1,75 @@
+{
+  "code": 0,
+  "data": {
+    "abandon_sign_result": 0,
+    "appeal_id": "0",
+    "author_avatar_frame_icon": 20,
+    "author_type": 2,
+    "avatar_uri": "https://p3.douyinpic.com/aweme/1080x1080/aweme-avatar/tos-cn… [123 chars total]",
+    "avg_play": 0,
+    "aweme_tags": [],
+    "base64_qrcode": "iVBORw0KGgoAAAANSUhEUgAAAWgAAAFoAQAAAABSnlx4AAACa0lEQVR4nO2a… [904 chars total]",
+    "base_resp": {
+      "status_code": 0,
+      "status_message": "Success"
+    },
+    "category_id": "5",
+    "city": "三亚市",
+    "content_theme_labels": [],
+    "core_user_id": "62781260366",
+    "create_time": "1613530519",
+    "creator_type": 0,
+    "e_commerce_enable": true,
+    "follower": 1244889,
+    "gender": 2,
+    "grade": 0,
+    "has_phone": true,
+    "id": "6930060811712856071",
+    "industry_list": [],
+    "is_cpm_project_author": false,
+    "is_game_author": false,
+    "is_online": true,
+    "is_plan_author": false,
+    "is_star": true,
+    "is_visible": false,
+    "lowest_price": 0,
+    "mcn_id": "7097151399645052965",
+    "mcn_introduction": "商务负责人：18930922899   \n在职商务微信→\n商务合作：yonghengyh101\n商务合作：yonghen… [123 chars total]",
+    "mcn_logo": "",
+    "mcn_name": "浙江文希传媒",
+    "modify_time": "1785175063",
+    "nick_name": "💍Coffee",
+    "online_status": 1,
+    "opened_task_category": "[4, 1, 103, 133]",
+    "platform": [
+      1,
+      "… 1 more item(s) truncated"
+    ],
+    "platform_channel": [
+      1
+    ],
+    "platform_source": 1,
+    "protocol_id": "20210524",
+    "province": "海南省",
+    "qrcode_url": "",
+    "sec_uid": "MS4wLjABAAAAtaT9iqG2mZ6KcFFFi59IKurLPS7gjbbChRyZrvqCIy0",
+    "short_id": "285284505",
+    "star_tags": [],
+    "status": 1,
+    "tags": "[\"\\u5267\\u60c5\\u641e\\u7b11\"]",
+    "tags_author_style": "[]",
+    "tags_ids": "[97]",
+    "tags_ids_level_two": "[98]",
+    "tags_level_two": "[\"\\u5267\\u60c5\"]",
+    "tags_relation": {
+      "剧情搞笑": [
+        "剧情"
+      ]
+    },
+    "task_status": 2,
+    "unique_id": "285284505"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:00.87567945",
+  "requestId": "3f962a004ca944948ed44f2d70c50846"
+}

@@ -989,6 +989,35 @@ JUSTONEAPI = OAuthProvider(
     probe_path="/api/tiktok/get-user-detail/v1?unique_id=tiktok",
 )
 
+SCRAPECREATORS = OAuthProvider(
+    service="scrapecreators",
+    display_name="ScrapeCreators",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your ScrapeCreators API key",
+    token_header="x-api-key",
+    token_format="{secret}",
+    setup_url="https://scrapecreators.com",
+    setup_action_label="Get your ScrapeCreators API key",
+    setup_steps=(
+        "Sign up at scrapecreators.com and open the dashboard.",
+        "Copy your API key.",
+    ),
+    setup_note="Data calls are billed per credit; the credit-balance check is free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Social media",
+    summary="Scrape public profiles, posts and ads across TikTok, Instagram, YouTube, LinkedIn, Reddit and 15+ platforms.",
+    base_url="https://api.scrapecreators.com",
+    docs_url="https://docs.scrapecreators.com",
+    # Free credit check. It answers HTTP 200 even for a BAD key ({"success":true,"creditCount":0}),
+    # so validity is the creditCount field, not the status (verified live 2026-07-28). A real key
+    # with 0 credits also fails, which is right: such a key gets 402 on every data endpoint anyway.
+    probe_path="/v1/account/credit-balance",
+    token_verify_field="creditCount",
+)
+
 # ---- SEO API-key providers -------------------------------------------------------------------
 
 DATAFORSEO = OAuthProvider(
@@ -1065,9 +1094,13 @@ MOZ = OAuthProvider(
     summary="Domain Authority, Page Authority, backlinks and link metrics.",
     base_url="https://lsapi.seomoz.com/v2",
     docs_url="https://moz.com/api/docs",
+    # POST /usage_data {} is Moz's quota meter: free, and it answers 200 even when the account's row
+    # quota is exhausted — so it probes key VALIDITY without ever spending or false-alarming on an
+    # empty quota. (/quota, probed before 2026-07-28, is not a real V2 route: the API's own error
+    # message enumerates the valid actions and /quota is absent — see src/treg/catalog/moz.yaml.)
     probe_method="POST",
-    probe_path="/quota",
-    probe_json={"path": "api.limits.data.rows"},  # free quota lookup
+    probe_path="/usage_data",
+    probe_json={},
 )
 
 MAJESTIC = OAuthProvider(
@@ -1435,6 +1468,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         LINKEDIN, SLACK, X, TIKTOK, FACEBOOK, INSTAGRAM, META_ADS,
         # API-key providers
         APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
+        SCRAPECREATORS,
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers

@@ -1,0 +1,53 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0191 sec.",
+  "cost": 0.024108,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0460-0000-e94eeb248b58",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0082 sec.",
+      "cost": 0.024108,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 3 more item(s) truncated"
+      ],
+      "data": {
+        "api": "backlinks",
+        "function": "timeseries_new_lost_summary",
+        "target": "dataforseo.com",
+        "date_from": "2026-04-24",
+        "date_to": "2026-06-24",
+        "group_range": "month"
+      },
+      "result": [
+        {
+          "target": "dataforseo.com",
+          "date_from": "2026-04-24",
+          "date_to": "2026-06-24",
+          "group_range": "month",
+          "items_count": 3,
+          "items": [
+            {
+              "type": "backlinks_timeseries_new_lost_summary",
+              "date": "2026-04-30 00:00:00 +00:00",
+              "new_backlinks": 1403,
+              "lost_backlinks": 17740,
+              "new_referring_domains": 141,
+              "lost_referring_domains": 127,
+              "new_referring_main_domains": 127,
+              "lost_referring_main_domains": 112
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

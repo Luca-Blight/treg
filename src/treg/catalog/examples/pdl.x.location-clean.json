@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "name": "san francisco, california, united states",
+  "locality": "san francisco",
+  "region": "california",
+  "metro": "san francisco, california",
+  "subregion": "city and county of san francisco",
+  "country": "united states",
+  "continent": "north america",
+  "type": "locality",
+  "geo": "37.79,-122.39"
+}

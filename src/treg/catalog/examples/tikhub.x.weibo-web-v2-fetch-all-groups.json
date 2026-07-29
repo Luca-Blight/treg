@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "e76ab88b-fe52-4a4b-a3ef-3d8bf79898e3",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:45",
+  "time_stamp": 1785220245,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-V2-API/fetch_all_groups_api_v1_weibo_web_v2_fetch_all_groups_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/e76ab88b-fe52-4a4b-a3ef-3d8bf79898e3?sign=15e1a38d568496ceb6624efa1f75d3dae60727166aafe6d4a45acfc10cc2ab66",
+  "router": "/api/v1/weibo/web_v2/fetch_all_groups",
+  "params": {},
+  "data": {
+    "groups": [
+      {
+        "title": "默认分组",
+        "group_type": 0,
+        "group": [
+          {
+            "gid": "100012048240330484",
+            "uid": "2048240330484",
+            "title": "全部关注",
+            "navigation_title": "关注",
+            "count": 0,
+            "type": "1",
+            "frequency": 0,
+            "sysgroup": 2,
+            "ad_scene": 1
+          },
+          "… 6 more item(s) truncated"
+        ]
+      },
+      "… 4 more item(s) truncated"
+    ],
+    "total_number": 66,
+    "fetch_hot": "1",
+    "is_new_segment": "1",
+    "feed_default": 1,
+    "trans_param": "0_1785220245",
+    "ok": 1
+  }
+}

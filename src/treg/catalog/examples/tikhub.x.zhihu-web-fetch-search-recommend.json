@@ -1,0 +1,29 @@
+{
+  "code": 200,
+  "request_id": "5cb9856d-b8ec-49f4-a77c-8a15f47037fa",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:08",
+  "time_stamp": 1785220268,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Zhihu-Web-API/fetch_search_recommend_api_v1_zhihu_web_fetch_search_recommend_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/5cb9856d-b8ec-49f4-a77c-8a15f47037fa?sign=7bb0d4b272dbb6637892a8ed20f3a51b158ae0e1d4fbd429d37a53e8b4a97573",
+  "router": "/api/v1/zhihu/web/fetch_search_recommend",
+  "params": {},
+  "data": {
+    "recommend_queries": {
+      "queries": [
+        "… {13 field(s) truncated}",
+        "… 11 more item(s) truncated"
+      ],
+      "recommend_hash_id": "a57a71ae9683440a5cbc468bdf54e550",
+      "attached_info": "OkaCAyBhNTdhNzFhZTk2ODM0NDBhNWNiYzQ2OGJkZjU0ZTU1MPIDIGNiZjhhNjI0MzA0ZmEyY2IyNjdhZWExZmI4OTQyYjA3"
+    },
+    "offset": 0,
+    "search_hash_id": "",
+    "switch_off": false
+  }
+}

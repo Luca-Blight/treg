@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "7b9a840b-d801-41b1-8838-55dd5568219a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:29",
+  "time_stamp": 1785220109,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Web-API/fetch_one_video_danmaku_api_v1_douyin_web_fetch_one_video_danmaku_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/7b9a840b-d801-41b1-8838-55dd5568219a?sign=1877c165319cc80e8ab10a482569d134e3bf1aa1f3acc58c5245f62a77acc574",
+  "router": "/api/v1/douyin/web/fetch_one_video_danmaku",
+  "params": {
+    "item_id": "7355433624046472498",
+    "duration": "15134",
+    "end_time": "15133",
+    "start_time": "0"
+  },
+  "data": {
+    "danmaku_list": null,
+    "start_time": 0,
+    "end_time": 32000,
+    "total": 6,
+    "log_pb": {
+      "impr_id": "20260728142828E535320C65E7BBE90917"
+    },
+    "status_code": 0,
+    "extra": {
+      "fatal_item_ids": [],
+      "logid": "20260728142828E535320C65E7BBE90917",
+      "now": 1785220108000
+    }
+  }
+}

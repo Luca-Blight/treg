@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "request_id": "e9e8b099-c587-4af7-ab26-8a208b238402",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:04",
+  "time_stamp": 1785220324,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-V2-API/get_video_streams… [110 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/e9e8b099-c587-4a… [150 chars]",
+  "router": "/api/v1/youtube/web_v2/get_video_streams_v2",
+  "params": {
+    "video_id": "dQw4w9WgXcQ",
+    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+  },
+  "data": {
+    "video_id": "dQw4w9WgXcQ",
+    "title": "Rick Astley - Never Gonna Give You Up (Official Video) (4K R… [68 chars]",
+    "author": "Rick Astley",
+    "length_seconds": "213",
+    "view_count": "1797342266",
+    "short_description": "The official video for “Never Gonna Give You Up” by Rick Ast… [2375 chars]",
+    "thumbnail": [
+      "… {3 field(s) truncated}",
+      "… 3 more item(s) truncated"
+    ],
+    "is_live": false,
+    "formats": [
+      "… {13 field(s) truncated}"
+    ],
+    "adaptive_formats": [
+      "… {14 field(s) truncated}",
+      "… 25 more item(s) truncated"
+    ],
+    "expires_in_seconds": "21540",
+    "available_qualities": [
+      "720p",
+      "… 7 more item(s) truncated"
+    ]
+  }
+}

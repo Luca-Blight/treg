@@ -1,0 +1,68 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "3.8068 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07280924-2171-0121-0000-02af02ff716d",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "3.7414 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "yahoo",
+        "se_type": "organic",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "albert einstein",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "albert einstein",
+          "type": "organic",
+          "se_domain": "us.search.yahoo.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://us.search.yahoo.com/search?p=albert+einstein&vl=lang_en&ei=UTF-8&fl=1&lat=37.09024&lon=-95.712891&locupdate=1&radius=150&fr2=p%3As%2Cv%3Aw%2Cm%3Aloc",
+          "datetime": "2026-07-28 06:24:12 +00:00",
+          "spell": null,
+          "refinement_chips": null,
+          "item_types": [
+            "organic",
+            "… 3 more item(s) truncated"
+          ],
+          "se_results_count": 0,
+          "pages_count": 1,
+          "items_count": 7,
+          "items": [
+            {
+              "type": "organic",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "page": 1,
+              "domain": "en.wikipedia.org",
+              "title": "Albert Einstein - Wikipedia",
+              "description": "Albert Einstein [a] (14 March 1879 – 18 April 1955) was a German-born theoretical physicist best known for developing the theory of relativity. Einstein also made important contributions to quantum th… [340 chars total]",
+              "url": "https://en.wikipedia.org/wiki/Albert_Einstein",
+              "breadcrumb": "https://en.wikipedia.org › wiki › Albert_Einstein"
+            },
+            "… 6 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "data": {
+    "status": "ok",
+    "timeline": [],
+    "next_cursor": "<omitted: expires>",
+    "prev_cursor": "<omitted: expires>"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:50.870764028",
+  "requestId": "bb167faba34b4b39a98c7c069da0296f"
+}

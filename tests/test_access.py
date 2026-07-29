@@ -200,3 +200,16 @@ async def test_tool_access_gates_skill_visibility(env):
 
     # the owner is never restricted
     assert {b["name"] for b in (await env.c.get("/bundles", headers=_h(env.owner))).json()} == {"beta", "gamma"}
+
+
+async def test_restricted_member_gets_no_marketplace_calls(env):
+    """Governance for direct catalog calls: a member scoped to a tool LIST can never satisfy the
+    virtual tool's name (the endpoint id), so the marketplace path is closed to them — while an
+    unrestricted member walks the ladder normally (here to tier 3, no credential)."""
+    await env.c.post("/secrets", headers=_h(env.owner), json={"name": "tikhub", "value": "MK"})
+    await _set_access(env, ["alpha"])
+    r = await env.c.get("/call/tikhub.tiktok.video.comments?aweme_id=7", headers=_h(env.member))
+    assert r.status_code == 403, r.text
+    await _set_access(env, None)  # unrestricted again → the org credential serves it
+    r = await env.c.get("/call/tikhub.tiktok.video.comments?aweme_id=7", headers=_h(env.member))
+    assert r.status_code == 200, r.text

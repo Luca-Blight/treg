@@ -1,0 +1,43 @@
+{
+  "code": 200,
+  "request_id": "48c50f5a-7f90-4509-8a1b-024381ed82de",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:17",
+  "time_stamp": 1785220157,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-V2-API/get_post_detail_… [102 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/48c50f5a-7f90-45… [150 chars]",
+  "router": "/api/v1/linkedin/web_v2/get_post_detail",
+  "params": {
+    "url": "https://www.linkedin.com/posts/orlenchner_scrapecon-activity… [85 chars]"
+  },
+  "data": {
+    "url": "https://www.linkedin.com/posts/orlenchner_scrapecon-activity… [85 chars]",
+    "id": "7180537307521769472",
+    "user_id": "orlenchner",
+    "use_url": "https://il.linkedin.com/in/orlenchner?trk=public_post_feed-a… [70 chars]",
+    "title": "#scrapecon | Or Lenchner",
+    "headline": "#scrapecon is just around the corner :)",
+    "post_text": "#scrapecon is just around the corner :)\n\nDon't miss my openi… [149 chars]",
+    "date_posted": "2024-04-01T12:11:42.013Z",
+    "hashtags": [
+      "#scrapecon"
+    ],
+    "embedded_links": [
+      "https://www.linkedin.com/feed/hashtag/scrapecon",
+      "… 1 more item(s) truncated"
+    ],
+    "images": [
+      "https://media.licdn.com/dms/image/v2/D4D22AQHGOkm31CahFQ/fee… [180 chars]"
+    ],
+    "videos": null,
+    "num_likes": 123,
+    "num_comments": 1,
+    "more_articles_by_user": null,
+    "…": "24 more field(s) truncated"
+  }
+}

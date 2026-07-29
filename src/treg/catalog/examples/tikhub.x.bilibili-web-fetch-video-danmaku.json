@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "request_id": "18f581c1-4491-4e19-a107-3f7408b7a4b1",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:47",
+  "time_stamp": 1785220067,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Bilibili-Web-API/fetch_one_video_api_v1_bilibili_web_fetch_video_danmaku_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/18f581c1-4491-4e19-a107-3f7408b7a4b1?sign=4ef93d579af898a685c3cbf537fc6eacfcdb5ebd12d987edb407daf86f6748f8",
+  "router": "/api/v1/bilibili/web/fetch_video_danmaku",
+  "params": {
+    "cid": "1639235405"
+  },
+  "data": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><i><chatserver>chat.bilibili.com</chatserver><chatid>1639235405</chatid><mission>0</mission><maxlimit>1000</maxlimit><state>0</state><real_name>0</real_name><sour… [100429 chars]"
+}

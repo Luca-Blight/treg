@@ -1,0 +1,229 @@
+provider: majestic
+source:
+  docs: https://developer-support.majestic.com/api/
+  openapi: null # Majestic publishes command reference pages, no machine-readable spec
+  curated: 2026-07-28
+
+# UNVERIFIED — no credential available at curation time; every command, parameter and price below is
+# transcribed from Majestic's official API command reference 2026-07-28. Nothing here has been called.
+#
+# House rules for this provider (they apply to EVERY endpoint below, so they are stated once):
+#
+#  1. ONE PATH, MANY COMMANDS. Majestic is not REST — every call is `GET /api/json` and the
+#     operation is chosen by the `cmd` query param. So every entry below shares `path: /api/json`
+#     and differs only in `cmd`. (`/api/command` serves the same commands as XML; JSON is what
+#     treg targets.) The docs' own examples use the developer host developer.majestic.com; the
+#     LIVE host is api.majestic.com, which is what treg's base_url points at.
+#  2. The OpenApp key rides as `?app_api_key=…` and is INJECTED by treg — never list it as user input.
+#  3. `datasource` PICKS THE INDEX AND CHANGES THE ANSWER. `fresh` is the recent-crawl index,
+#     `historic` spans 5+ years and is the DEFAULT. The docs say this "should be treated as
+#     mandatory to ensure the expected index is used" — always send it explicitly, because the two
+#     indexes return materially different backlink counts for the same target.
+#  4. HTTP 200 IS NOT SUCCESS. Majestic answers 200 even for a bad key or a rejected command;
+#     validity is the envelope's `Code` field — "OK" vs "FailedRequestViaAPI". Results arrive as
+#     `DataTables.<TableName>.Data`, an array of row objects, with the table name varying per
+#     command (Results / BackLinks / Matches / Subscriptions …) — it is named in each entry below.
+#  5. THREE SEPARATE METERS, NOT ONE. A Majestic plan carries three independent allowances and a
+#     command draws on different ones:
+#       - Index Item Units — consumed ONLY by GetIndexItemInfo, 1 per item queried.
+#       - Analysis Units   — a fixed per-CALL charge for most commands (1,000 or 5,000), levied
+#                            whether or not the call returns anything.
+#       - Retrieval Units  — 1 per ROW actually returned.
+#     So a list command costs a flat analysis fee PLUS a per-row retrieval fee, and `Count` is the
+#     dial on the second half only — a filtered call that returns nothing still burns the flat fee.
+#     None of these convert to a published $ price (they come with a paid plan), so `cost.value` is
+#     null throughout and the unit arithmetic lives in `cost.note`.
+
+pricing_url: https://majestic.com/plans-pricing
+endpoints:
+  - id: majestic.web.url.metrics
+    capability: web.url.metrics
+    platform: web
+    scope: any_account
+    method: GET
+    path: /api/json
+    name: "Get Trust Flow and Citation Flow for URLs"
+    summary: "Trust Flow, Citation Flow and link counts for up to 100 URLs or domains per call"
+    input:
+      queryParams:
+        cmd: {type: string, required: true, example: "GetIndexItemInfo"}
+        items: {type: integer, required: true, note: "how many item0..itemN params you are sending; 1 to 100", example: 1}
+        item0: {type: string, required: true, note: "the first target — a URL, subdomain or root domain. Additional targets go in item1, item2 … up to item(items-1)", example: "https://www.majestic.com/"}
+        datasource: {type: string, required: false, note: "fresh | historic (default historic) — send it explicitly, the two indexes disagree", example: "fresh"}
+        DesiredTopics: {type: integer, required: false, note: "how many Trust Flow topics to return per item; default 3, max 30 for root domains, 20 for subdomains, 10 for URLs"}
+        AddAllTopics: {type: integer, required: false, note: "1 adds the full TrustCategories column"}
+        EnableResourceUnitFailover: {type: integer, required: false, note: "1 lets the call fall back to Analysis + Retrieval units when Index Item Units run out; default 0"}
+      note: "the item0/item1/…/itemN convention is unique to this command — `items` is the COUNT of those params, not a target. Returns Trust Flow, Citation Flow, ACRank, ExtBackLinks, RefDomains, RefDomainsEDU/GOV, LastCrawlDate, Title and Language per item."
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 INDEX ITEM UNIT per item queried — this is the only command that spends the Index Item allowance, and it is a separate meter from Analysis/Retrieval Units. Batching 100 targets into one call costs the same 100 units as 100 single-target calls, but saves 99 round trips."
+    docs_url: https://developer-support.majestic.com/api/commands/get-index-item-info.shtml
+
+  - id: majestic.web.backlinks.summary
+    capability: web.backlinks.summary
+    platform: web
+    scope: any_account
+    method: GET
+    path: /api/json
+    name: "Get backlink summary for a domain"
+    summary: "Aggregate backlink profile of a domain — external links, referring domains, .edu/.gov"
+    input:
+      queryParams:
+        cmd: {type: string, required: true, example: "GetIndexItemInfo"}
+        items: {type: integer, required: true, note: "count of item0..itemN params; 1 to 100", example: 1}
+        item0: {type: string, required: true, note: "the domain to summarise", example: "majestic.com"}
+        datasource: {type: string, required: false, note: "fresh | historic (default historic)", example: "fresh"}
+      note: |
+        Majestic has NO dedicated backlink-summary command — GetIndexItemInfo IS the summary. The
+        same call that serves majestic.web.url.metrics also returns ExtBackLinks, RefDomains,
+        RefDomainsEDU, RefDomainsGOV, IndexedURLs and CrawledURLs, which is the aggregate profile.
+        This entry exists so the capability resolves for cross-provider comparison; prefer
+        majestic.web.url.metrics when you only want Trust Flow / Citation Flow.
+    cost:
+      type: per_result
+      value: null
+      currency: USD
+      note: "1 Index Item Unit per item queried — identical charge to majestic.web.url.metrics, because it is the same command. Calling both entries for one target costs 2 units; call it once and read both sets of columns."
+    docs_url: https://developer-support.majestic.com/api/commands/get-index-item-info.shtml
+
+  - id: majestic.web.backlinks.list
+    capability: web.backlinks.list
+    platform: web
+    scope: any_account
+    method: GET
+    path: /api/json
+    name: "List backlinks to a URL"
+    summary: "Individual backlinks to a URL or domain, with anchor text and both ends' Trust Flow"
+    input:
+      queryParams:
+        cmd: {type: string, required: true, example: "GetBackLinkData"}
+        item: {type: string, required: true, note: "the URL, domain or subdomain to get backlinks for — note this command uses `item`, NOT item0", example: "majestic.com"}
+        datasource: {type: string, required: false, note: "fresh | historic (default historic)", example: "fresh"}
+        Count: {type: integer, required: false, note: "rows to return; default 100, MAXIMUM 50,000. This is the retrieval-cost dial", example: 5}
+        From: {type: integer, required: false, note: "row offset to start from; default 0"}
+        Mode: {type: integer, required: false, note: "0 (default) includes deleted links; 1 excludes them"}
+        ShowDomainInfo: {type: integer, required: false, note: "1 adds a second DataTable describing the referring domains; default 0"}
+        MaxSourceURLsPerRefDomain: {type: integer, required: false, note: "cap links per referring domain — only -1 (default, uncapped), 1, 3 or 10 are accepted"}
+        MaxSameSourceURLs: {type: integer, required: false, note: "cap repeated links from the same source URL; default -1 (uncapped)"}
+        RefDomain: {type: string, required: false, note: "restrict to one referring domain — returns up to its top 10 backlinks"}
+        FilterTopic: {type: string, required: false, note: "restrict to a topic category as returned by GetTopics"}
+        UsePrefixScan: {type: integer, required: false, note: "1 enables prefix-mode querying"}
+        ConsumeResourcesForAdditionalProcessing: {type: integer, required: false, note: "1 enables SortBy*/Filters — and RAISES the Analysis Unit charge above the flat 5,000"}
+        SortBy1: {type: string, required: false, note: "requires ConsumeResourcesForAdditionalProcessing=1"}
+        SortDir1: {type: string, required: false}
+      note: "returns the `BackLinks` DataTable: SourceURL, AnchorText, SourceCitationFlow, SourceTrustFlow, TargetCitationFlow, TargetTrustFlow, FirstIndexedDate, LastSeenDate, LinkType, FlagDeleted, FlagNoFollow."
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "THE EXPENSIVE ONE: a flat 5,000 ANALYSIS UNITS per call — charged even if the call returns zero rows — PLUS 1 RETRIEVAL UNIT per row returned. Setting ConsumeResourcesForAdditionalProcessing=1 (needed for sorting/filtering) pushes the analysis charge higher still. Keep `Count` small and never call it speculatively."
+    docs_url: https://developer-support.majestic.com/api/commands/get-back-link-data.shtml
+
+  - id: majestic.web.linking_domains.list
+    capability: web.linking_domains.list
+    platform: web
+    scope: any_account
+    method: GET
+    path: /api/json
+    name: "List referring domains linking to a target"
+    summary: "Referring domains linking to a target, with Trust Flow, country, IP and link count"
+    input:
+      queryParams:
+        cmd: {type: string, required: true, example: "GetRefDomains"}
+        item0: {type: string, required: true, note: "the target — URL, subdomain or root domain. This command uses item0 (up to item3 for a multi-target comparison), NOT `item`", example: "majestic.com"}
+        datasource: {type: string, required: false, note: "fresh | historic (default historic)", example: "fresh"}
+        Count: {type: integer, required: false, note: "rows to return; default 100. This is the retrieval-cost dial", example: 10}
+        AnalysisDepth: {type: integer, required: false, note: "how many referring domains to consider; default 10,000, max 100,000"}
+        MinMatchesRequired: {type: integer, required: false, note: "only return sources matching at least this many of the item0..item3 targets; default 1"}
+        OrderBy1: {type: integer, required: false, note: "sort field as an integer 0-18 — see the docs table"}
+        OrderDir1: {type: integer, required: false, note: "1 = descending, 0 = ascending"}
+        UsePrefixScan: {type: integer, required: false, note: "1 enables prefix-mode querying"}
+      note: "returns a `Request` DataTable (TotalRefDomains and the resolved target) plus a `Results` DataTable: Domain, RefDomains, Matches, MatchedLinks, ExtBackLinks, IndexedURLs, FirstCrawled, LastSuccessfulCrawl, IP, SubNet, CountryCode, TLD, CitationFlow, TrustFlow. Passing item0..item3 turns this into a link-intersect across up to 4 targets."
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1,000 ANALYSIS UNITS per call (flat, charged even on an empty result) PLUS 1 RETRIEVAL UNIT per row returned. Five times cheaper per call than GetBackLinkData."
+    docs_url: https://developer-support.majestic.com/api/commands/get-ref-domains.shtml
+
+  - id: majestic.web.anchors.list
+    capability: web.anchors.list
+    platform: web
+    scope: any_account
+    method: GET
+    path: /api/json
+    name: "List anchor texts linking to a target"
+    summary: "Anchor texts pointing at a target, with referring-domain and link counts per phrase"
+    input:
+      queryParams:
+        cmd: {type: string, required: true, example: "GetAnchorText"}
+        item: {type: string, required: true, note: "the URL, subdomain or domain to analyse — this command uses `item`, not item0", example: "https://www.majestic.com/"}
+        datasource: {type: string, required: false, note: "fresh | historic (default historic)", example: "fresh"}
+        Count: {type: integer, required: false, note: "rows to return; 10 to 1,000, default 10. This is the retrieval-cost dial", example: 10}
+        from: {type: integer, required: false, note: "row offset for pagination (lowercase, unlike GetBackLinkData's `From`)"}
+        Mode: {type: integer, required: false, note: "CHANGES WHICH TABLE COMES BACK: 0 (default) = aggregated AnchorText rows, 1 = RefDomains rows, 2 = individual BackLinks rows"}
+        TextMode: {type: integer, required: false, note: "0 (default) or 1 — controls anchor-text normalisation"}
+        FilterAnchorText: {type: string, required: false, note: "only anchors containing this keyword", example: "majestic"}
+        FilterAnchorTextMode: {type: integer, required: false, note: "0, 1 or 2 — how FilterAnchorText is matched; default 0"}
+        FilterRefDomain: {type: string, required: false, note: "only anchors used by this referring domain"}
+        UsePrefixScan: {type: integer, required: false, note: "1 enables prefix-mode querying"}
+      note: "with the default Mode=0 the `AnchorText` DataTable carries AnchorText, RefDomains, TotalLinks, EstimatedLinkCitationFlow and EstimatedLinkTrustFlow. Note the parameter casing is inconsistent across Majestic commands — `from` here is lowercase."
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "1,000 ANALYSIS UNITS per call (flat, charged even on an empty result) PLUS 1 RETRIEVAL UNIT per row returned."
+    docs_url: https://developer-support.majestic.com/api/commands/get-anchor-text.shtml
+
+  - id: majestic.web.site.top_pages
+    capability: web.site.top_pages
+    platform: web
+    scope: any_account
+    method: GET
+    path: /api/json
+    name: "List a site's most-linked pages"
+    summary: "A site's most-linked pages, with Trust Flow, Citation Flow and backlink counts"
+    input:
+      queryParams:
+        cmd: {type: string, required: true, example: "GetTopPages"}
+        Query: {type: string, required: true, note: "the root domain, subdomain or URL — this command uses `Query` (capital Q), not `item` or `item0`", example: "majestic.com"}
+        datasource: {type: string, required: false, note: "fresh | historic (default historic)", example: "fresh"}
+        Count: {type: integer, required: false, note: "rows to return; 1 to 10,000, default 10. This is the retrieval-cost dial", example: 5}
+        StartDoc: {type: integer, required: false, note: "row offset for pagination; default 0"}
+        UsePrefixScan: {type: integer, required: false, note: "1 enables prefix-mode querying"}
+      note: "returns a `Matches` DataTable (ACRank, URL, Title, Date, ExtBackLinks, RefDomains, CitationFlow, TrustFlow) plus a `DomainInfo` DataTable summarising the whole site. The third command in this file that names its target differently — Query, not item/item0."
+    cost:
+      type: per_call
+      value: null
+      currency: USD
+      note: "5,000 ANALYSIS UNITS per call (flat, charged even on an empty result) PLUS 1 RETRIEVAL UNIT per row returned — as expensive per call as GetBackLinkData."
+    docs_url: https://developer-support.majestic.com/api/commands/get-top-pages.shtml
+
+  - id: majestic.account.usage
+    kind: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /api/json
+    name: "Get account usage and index status"
+    summary: "Remaining Analysis, Retrieval and Index Item units, plan dates and current index build"
+    input:
+      queryParams:
+        cmd: {type: string, required: true, example: "GetSubscriptionInfo"}
+        datasource: {type: string, required: false, note: "fresh | historic (default historic) — affects only which index the IndexInfo table describes"}
+      note: |
+        Returns five DataTables. `Subscriptions` carries the three meters that govern every other
+        endpoint in this file — IndexItemInfoResUnits, RetrievalResUnits, AnalysisResUnits — plus
+        Starts/Expires. `IndexInfo` names the current index build and its crawl date range, which is
+        how you tell whether metrics moved because the index refreshed. `SiteExplorerInfo`,
+        `CustomerSubscriptionSummary` and `SubscriptionPlans` describe the plan itself.
+        Any captured example must have customer ids and subscription ids masked before commit.
+    cost:
+      type: free
+      value: 0
+      currency: USD
+      note: "FREE — the docs state \"as no actual analysis is caused by calling this command, this command uses no resources\". It is the correct liveness probe for a Majestic key (and is what treg's registry probes), and the right thing to call before any GetBackLinkData or GetTopPages sweep to confirm the units are there."
+    docs_url: https://developer-support.majestic.com/api/commands/get-subscription-info.shtml

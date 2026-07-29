@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "domain": "stripe.com",
+      "company_name": "Stripe",
+      "logo": "https://logos.hunter.io/stripe.com",
+      "email_count": 2207
+    }
+  ],
+  "meta": {
+    "results": 1,
+    "params": {
+      "company": "Stripe",
+      "limit": 1,
+      "perfect_match": false
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "request_id": "ae9f2ddc-54e4-42fa-8ada-6b5645d8bf61",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:57",
+  "time_stamp": 1785220257,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-Web-V3-API/fetch_hot_list_api_v1_xiaohongshu_web_v3_fetch_hot_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ae9f2ddc-54e4-42fa-8ada-6b5645d8bf61?sign=ccdf5f421613dcddacf467630bfead5149b0ea4950998343fb6b08164b232b13",
+  "router": "/api/v1/xiaohongshu/web_v3/fetch_hot_list",
+  "params": {},
+  "data": {
+    "date": "2026-07-28",
+    "updated_at": "2026-06-07",
+    "items": [
+      {
+        "rank": 1,
+        "title": "用万能旅行拍照姿势美美出片",
+        "url": "https://www.xiaohongshu.com/search_result?keyword=%E7%94%A8%E4%B8%87%E8%83%BD%E6%97%85%E8%A1%8C%E6%8B%8D%E7%85%A7%E5%A7%BF%E5%8A%BF%E7%BE%8E%E7%BE%8E%E5%87%BA%E7%89%87&type=51",
+        "item_id": "231139944",
+        "hot": "918.6w",
+        "hot_value": 9186000,
+        "trend": "flat"
+      },
+      "… 19 more item(s) truncated"
+    ]
+  }
+}

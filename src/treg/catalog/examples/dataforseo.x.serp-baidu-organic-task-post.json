@@ -1,0 +1,36 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0152 sec.",
+  "cost": 0.0012,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0066-0000-bd416dbca1e4",
+      "status_code": 20100,
+      "status_message": "Task Created.",
+      "time": "0.0051 sec.",
+      "cost": 0.0012,
+      "result_count": 0,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "task_post",
+        "se": "baidu",
+        "se_type": "organic",
+        "location_code": 2156,
+        "keyword": "best iphone ever",
+        "tag": "some_string_123",
+        "priority": 2,
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": null
+    }
+  ]
+}

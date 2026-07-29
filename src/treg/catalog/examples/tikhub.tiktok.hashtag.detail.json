@@ -1,0 +1,67 @@
+{
+  "code": 200,
+  "request_id": "1ccf6979-2470-4562-8af9-179bca5df638",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 20:55:11",
+  "time_stamp": 1785210911,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/fetch_tag_detail_api_v1_tiktok_web_fetch_tag_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through the API again.",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/1ccf6979-2470-4562-8af9-179bca5df638?sign=290867cc060a2f246fa66bdc9edefd37f588fa75a6432ec781c4754eb9d75610",
+  "router": "/api/v1/tiktok/web/fetch_tag_detail",
+  "params": {
+    "tag_name": "coffee"
+  },
+  "data": {
+    "challengeInfo": {
+      "challenge": {
+        "coverLarger": "",
+        "coverMedium": "",
+        "coverThumb": "",
+        "desc": "We're celebrating International Coffee Day! Share your favourite coffee hacks, recommendations and stories with us!",
+        "id": "14104",
+        "isCommerce": false,
+        "profileLarger": "https://p19-common-sign.tiktokcdn.com/tiktok-obj/24552381a53125ba59471c5cb8b75ed1.png~tplv-tiktokx-origin.image?dr=14566&x-expires=1785229200&x-signature=<omitted: expires>&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=sg1",
+        "profileMedium": "https://p19-common-sign.tiktokcdn.com/tiktok-obj/24552381a53125ba59471c5cb8b75ed1.png~tplv-tiktokx-origin.image?dr=14566&x-expires=1785229200&x-signature=<omitted: expires>&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=sg1",
+        "profileThumb": "https://p19-common-sign.tiktokcdn.com/tiktok-obj/24552381a53125ba59471c5cb8b75ed1.png~tplv-tiktokx-origin.image?dr=14566&x-expires=1785229200&x-signature=<omitted: expires>&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=9b759fb9&idc=sg1",
+        "stats": {
+          "videoCount": 0,
+          "viewCount": 195400000000
+        },
+        "title": "coffee"
+      },
+      "challengeAnnouncement": {
+        "body": "",
+        "title": ""
+      },
+      "stats": {
+        "videoCount": 0,
+        "viewCount": 195400000000
+      },
+      "statsV2": {
+        "videoCount": "22539041",
+        "viewCount": "195353137067"
+      }
+    },
+    "extra": {
+      "fatal_item_ids": [],
+      "logid": "20260728115511AFF8AE520AA0BEC65AAD",
+      "now": 1785210911000
+    },
+    "log_pb": {
+      "impr_id": "20260728115511AFF8AE520AA0BEC65AAD"
+    },
+    "shareMeta": {
+      "desc": "Watch awesome short videos created with trending hashtag #coffee",
+      "title": "#coffee on TikTok"
+    },
+    "statusCode": 0,
+    "status_code": 0,
+    "status_msg": "",
+    "tt_chain_token": "<omitted: expires>",
+    "cookie": "<omitted: expires>"
+  }
+}

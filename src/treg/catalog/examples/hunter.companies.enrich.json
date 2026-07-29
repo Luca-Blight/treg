@@ -1,0 +1,128 @@
+{
+  "data": {
+    "id": "c60603a0-001c-5ca3-86a2-c571c6d43c25",
+    "name": "Stripe",
+    "legalName": "Stripe",
+    "domain": "stripe.com",
+    "domainAliases": [],
+    "site": {
+      "phoneNumbers": [
+        "+1 888 926 2289"
+      ],
+      "emailAddresses": [
+        "treasury-support@stripe.com",
+        "receipts@stripe.com",
+        "… 98 more item(s) truncated"
+      ]
+    },
+    "category": {
+      "sector": "Information Technology",
+      "industryGroup": "Software & Services",
+      "industry": "Internet Software & Services",
+      "subIndustry": "Internet",
+      "gicsCode": "45103010",
+      "sicCode": "36",
+      "sic4Codes": [
+        "73"
+      ],
+      "naicsCode": "51",
+      "naics6Codes": [
+        "519130"
+      ],
+      "naics6Codes2022": [
+        "519290"
+      ]
+    },
+    "tags": [
+      "financial services",
+      "payment processing",
+      "… 8 more item(s) truncated"
+    ],
+    "description": "Stripe is a fintech company that specializes in online payment processing services.",
+    "foundedYear": 2010,
+    "location": "South San Francisco, California, United States",
+    "timeZone": "America/Los_Angeles",
+    "utcOffset": -8,
+    "geo": {
+      "streetNumber": null,
+      "streetName": null,
+      "subPremise": null,
+      "streetAddress": null,
+      "city": "South San Francisco",
+      "postalCode": null,
+      "state": "California",
+      "stateCode": "CA",
+      "country": "United States",
+      "countryCode": "US",
+      "lat": 37.65466,
+      "lng": -122.40775
+    },
+    "logo": "https://logos.hunter.io/stripe.com",
+    "facebook": {
+      "handle": "175383762511776",
+      "likes": null
+    },
+    "linkedin": {
+      "handle": "company/stripe"
+    },
+    "twitter": {
+      "handle": "stripe",
+      "id": null,
+      "bio": null,
+      "followers": null,
+      "following": null,
+      "location": null,
+      "site": null,
+      "avatar": null
+    },
+    "crunchbase": {
+      "handle": null
+    },
+    "youtube": {
+      "handle": "stripe"
+    },
+    "instagram": {
+      "handle": null
+    },
+    "emailProvider": "google.com",
+    "type": "private",
+    "companyType": "privately held",
+    "ticker": null,
+    "identifiers": {
+      "usEIN": null
+    },
+    "phone": "+1 888 926 2289",
+    "metrics": {
+      "alexaUsRank": null,
+      "alexaGlobalRank": null,
+      "trafficRank": "very_high",
+      "employees": "10K-50K",
+      "marketCap": null,
+      "raised": null,
+      "annualRevenue": null,
+      "estimatedAnnualRevenue": null,
+      "fiscalYearEnd": null
+    },
+    "indexedAt": "2026-04-29",
+    "tech": [
+      "adobe-analytics",
+      "adyen",
+      "… 88 more item(s) truncated"
+    ],
+    "techCategories": [
+      "accounting_and_finance",
+      "advertising",
+      "… 30 more item(s) truncated"
+    ],
+    "fundingRounds": [],
+    "parent": {
+      "domain": null
+    },
+    "ultimateParent": {
+      "domain": null
+    }
+  },
+  "meta": {
+    "domain": "stripe.com"
+  }
+}

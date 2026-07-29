@@ -1,0 +1,52 @@
+{
+  "code": 0,
+  "data": {
+    "comment_info": [
+      {
+        "username": "v5_020b0a166104010000000000a19017a6395315000000b1afa7d8728e3… [210 chars total]",
+        "nickname": "周惠娟",
+        "content": "拼命说不放酱油，老柚是什么？",
+        "comment_id": "14974890956553980285",
+        "reply_comment_id": "0",
+        "head_url": "https://wx.qlogo.cn/mmhead/ver_1/S7phwFMUhibjpK6yZxnZInwbJrW… [149 chars total]",
+        "level_two_comment": [
+          "… 21 field(s) truncated"
+        ],
+        "createtime": "1785146112",
+        "like_flag": 0,
+        "like_count": 4,
+        "expand_comment_count": 3,
+        "last_buffer": "CK+SkLXR09TpzwEgr5KQtdHT1OnPATivkpC10dPU6c8B",
+        "continue_flag": 1,
+        "display_flag": 768,
+        "reply_content": "",
+        "up_continue_flag": 0,
+        "ext_flag": 32,
+        "author_contact": {
+          "username": "v5_020b0a166104010000000000a19017a6395315000000b1afa7d8728e3… [210 chars total]",
+          "nickname": "周惠娟",
+          "head_url": "https://wx.qlogo.cn/mmhead/ver_1/S7phwFMUhibjpK6yZxnZInwbJrW… [149 chars total]",
+          "bind_info": "… 0 item(s) truncated",
+          "menu": "… 0 item(s) truncated",
+          "reference_info": "… 0 item(s) truncated"
+        },
+        "content_type": 0,
+        "report_json": "{\"request_id\":7487752368805242560,\"rank_request_id\":74877523… [157 chars total]",
+        "dislike_count": 1,
+        "ip_region_info": {
+          "region_text": "澳大利亚"
+        },
+        "search_keyword_info": [],
+        "mentioned_user_info": [],
+        "interaction_label_list": []
+      },
+      "… 24 more item(s) truncated"
+    ],
+    "last_buffer": "CpUCGP2S8PzA/9/ozwEYrbG4z97c3+jPARjQk/iMyZTb6M8BGJ+QiLbulN/o… [420 chars total]",
+    "down_continue_flag": 1,
+    "req_p": "192.168.130.86:2020, 192.168.1.122:8090"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:14:40.720955343",
+  "requestId": "85df8f4789c94aa99af4ed48ed841475"
+}

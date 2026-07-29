@@ -1,0 +1,70 @@
+{
+  "search_metadata": {
+    "id": "6a6898e6cfa230e96e9dd0ea",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/s6h6Uodnfu-RDi42ft7gmA/6a6898e6… [81 chars]",
+    "created_at": "2026-07-28 11:56:22 UTC",
+    "processed_at": "2026-07-28 11:56:22 UTC",
+    "yelp_url": "https://www.yelp.com/search?find_desc=Coffee&find_loc=New+Yo… [75 chars]",
+    "raw_html_file": "https://serpapi.com/searches/s6h6Uodnfu-RDi42ft7gmA/6a6898e6… [81 chars]",
+    "total_time_taken": 2.21
+  },
+  "search_parameters": {
+    "engine": "yelp",
+    "find_desc": "Coffee",
+    "find_loc": "New York, NY, USA"
+  },
+  "filters": {
+    "category": [
+      "… {2 field(s) truncated}",
+      "… 43 more item(s) truncated"
+    ],
+    "price": [
+      "… {2 field(s) truncated}",
+      "… 3 more item(s) truncated"
+    ],
+    "distance": [
+      "… {2 field(s) truncated}",
+      "… 4 more item(s) truncated"
+    ]
+  },
+  "ads_results": [
+    {
+      "block_position": "top",
+      "place_ids": "… [2 item(s) truncated]",
+      "title": "Go Bagels",
+      "link": "https://www.yelp.com/adredir?ad_business_id=eKMWOi23yKyHXR7w… [366 chars]",
+      "reviews_link": "https://serpapi.com/search.json?engine=yelp_reviews&num=49&p… [98 chars]",
+      "categories": "… [2 item(s) truncated]",
+      "rating": 3.6,
+      "reviews": 27,
+      "neighborhoods": "Upper East Side",
+      "open_state": "Open until 3:00 pm",
+      "…": "5 more field(s) truncated"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "organic_results": [
+    {
+      "position": 1,
+      "place_ids": "… [2 item(s) truncated]",
+      "title": "Ten Thousand Coffee",
+      "link": "https://www.yelp.com/biz/ten-thousand-coffee-new-york?osq=Co… [64 chars]",
+      "reviews_link": "https://serpapi.com/search.json?engine=yelp_reviews&num=49&p… [98 chars]",
+      "categories": "… [1 item(s) truncated]",
+      "price": "$$",
+      "rating": 4.4,
+      "reviews": 440,
+      "neighborhoods": "Midtown West",
+      "…": "4 more field(s) truncated"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "pagination": {
+    "next": "https://www.yelp.com.au/search?find_loc=New+York%2C+NY%2C+US… [87 chars]"
+  },
+  "serpapi_pagination": {
+    "next_link": "https://serpapi.com/search.json?engine=yelp&find_desc=Coffee… [100 chars]",
+    "next": "https://serpapi.com/search.json?engine=yelp&find_desc=Coffee… [100 chars]"
+  }
+}

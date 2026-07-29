@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "7a3ac89d-5e7a-4c08-a013-237417bd7540",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:01",
+  "time_stamp": 1785220261,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-API/get_channel_info_api_v1_youtube_web_get_channel_info_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/7a3ac89d-5e7a-4c08-a013-237417bd7540?sign=54443a08906bb0c36127c461ad9c498715… [150 chars]",
+  "router": "/api/v1/youtube/web/get_channel_info",
+  "params": {
+    "channel_id": "UCXuqSBlHAE6Xw-yeJA0Tunw"
+  },
+  "data": {
+    "channel_id": "UCXuqSBlHAE6Xw-yeJA0Tunw",
+    "title": "Linus Tech Tips",
+    "description": "Linus Tech Tips is a passionate team of \"professionally curious\" experts in consumer technology and video production who… [208 chars]",
+    "subscriber_count": "16.9M subscribers",
+    "video_count": "7.8K videos",
+    "links": [
+      "… {2 field(s) truncated}",
+      "… 6 more item(s) truncated"
+    ],
+    "avatar": [
+      "… {3 field(s) truncated}",
+      "… 2 more item(s) truncated"
+    ],
+    "banner": [
+      "… {3 field(s) truncated}",
+      "… 5 more item(s) truncated"
+    ],
+    "verified": true,
+    "has_business_email": true,
+    "view_count": "9,693,961,744 views",
+    "country": "Canada",
+    "creation_date": "Nov 25, 2008"
+  }
+}

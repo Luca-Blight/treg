@@ -1,0 +1,68 @@
+{
+  "code": 0,
+  "data": {
+    "mAccumImpNum": 147007,
+    "mCpuvNum": 0,
+    "estimateVideoEngageCost": 3.770739064856712,
+    "pictureCase": 0,
+    "dateKey": "2026-07-26",
+    "tradeNames": [
+      "食品饮料",
+      "餐饮"
+    ],
+    "readMedian": 29000,
+    "readMedianBeyondRate": "98.6",
+    "mValidRawReadFeedNum": 26645,
+    "picReadCost": 0.43713658804168953,
+    "responseRate": "99.6",
+    "videoReadBeyondRate": "56.4",
+    "kolAdvantage": "品效型博主",
+    "mEngagementNumCompare": 98.34,
+    "mCpuvNumCompare": 0,
+    "estimateVideoCpmCompare": 30.42,
+    "estimateVideoEngageCostCompare": 26.25,
+    "estimatePictureCpuvCompare": 0,
+    "interactionBeyondRate": "98.3",
+    "activeDayInLast7": 7,
+    "fans30GrowthRate": "1.4",
+    "pictureReadCost": "40.6",
+    "mValidRawReadFeedCompare": 98.47,
+    "mEngagementNum": 1247,
+    "estimateVideoCpm": 56.59492586064712,
+    "videoReadCostV2": 1.6919912232583654,
+    "estimatePictureEngageCost": 1.971608832807571,
+    "estimateVideoCpuvCompare": 0,
+    "videoCase": 0,
+    "easyConnect": true,
+    "mEngagementNumOld": 0,
+    "picReadCostCompare": 100,
+    "noteNumber": 33,
+    "interactionMedian": 288,
+    "fans30GrowthBeyondRate": "89.8",
+    "kolAdvantageHover": "外溢指标处于前20%水位",
+    "estimatePictureCpmCompare": 44.61,
+    "estimatePictureEngageCostCompare": 42.76,
+    "estimatePictureCpuv": 0,
+    "noteType": [
+      {
+        "contentTag": "美食",
+        "percent": "97.0"
+      },
+      {
+        "contentTag": "摄影",
+        "percent": "3.0"
+      }
+    ],
+    "isActive": true,
+    "inviteNum": 279,
+    "pictureReadBeyondRate": "75.0",
+    "mAccumImpCompare": 98.98,
+    "estimatePictureCpm": 16.321307793750897,
+    "videoReadCostCompare": 100,
+    "estimateVideoCpuv": 0,
+    "videoReadCost": "166.5"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:55.584095502",
+  "requestId": "441f306fd93a4c54817f37f1c6b82e3a"
+}

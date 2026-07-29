@@ -1,0 +1,141 @@
+provider: thecompaniesapi
+source:
+  docs: https://www.thecompaniesapi.com/api
+  openapi: https://api.thecompaniesapi.com/v2/openapi # live spec; the paths below were checked against it
+  curated: 2026-07-28
+# UNVERIFIED — no credential available at curation time; nothing here has been called. The paths and
+# parameters were read from the LIVE v2 OpenAPI spec (https://api.thecompaniesapi.com/v2/openapi)
+# rather than prose, on 2026-07-28. Worth stating because the prose docs are wrong in at least one
+# place: there is no /companies/enrich route, whatever a getting-started page implies.
+#
+# Auth quirk carried over from the registry: the token rides as `Authorization: Basic <token>` with
+# the RAW token after "Basic " — it is NOT base64-encoded, despite the scheme name.
+#
+# Billing is refreshingly simple and fully public: 1 credit per company returned, charged only on a
+# hit (an empty result is free), and new accounts get 500 credits. Two flags change the price and
+# both are worth knowing: `simplified=true` returns a reduced record for ZERO credits (that is why
+# the registry's probe is /companies?simplified=true&size=1), and `refresh=true` forces a live
+# re-crawl for 10 EXTRA credits. On the search endpoint the price scales with `size`, so `size` is
+# the cost dial.
+#
+# This provider is company-only — there are no people endpoints — so it contributes nothing to the
+# people.* capabilities. The closest thing is the email-pattern route, which tells you the SHAPE of
+# a company's addresses (first.last@, finitial+last@) rather than any individual's address.
+
+
+pricing_url: https://www.thecompaniesapi.com/pricing
+endpoints:
+  - id: thecompaniesapi.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{domain}
+    name: "Enrich a company by domain"
+    summary: "Enrich a company from its domain — 80+ datapoints: industry, size, revenue, socials"
+    input:
+      pathParams:
+        domain: {type: string, required: true, note: "company domain, no protocol or www", example: "apple.com"}
+      queryParams:
+        simplified: {type: boolean, required: false, note: "returns a reduced record for ZERO credits — use it to check a domain exists before paying for the full profile", example: true}
+        refresh: {type: boolean, required: false, note: "forces a live re-crawl instead of the cached record; costs 10 EXTRA credits"}
+      note: "a domain with no company behind it returns an empty object and is not charged"
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "1 credit per company found; nothing when not found. `simplified=true` is free; `refresh=true` adds 10 credits. Dollar value depends on plan (500 free credits on signup)."
+    docs_url: https://www.thecompaniesapi.com/api/enrich-company-from-domain
+
+  - id: thecompaniesapi.companies.search
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies
+    name: "Search companies by attributes"
+    summary: "Search companies by industry, size, location, technology or any other attribute filter"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "a stringified, URL-encoded ARRAY of conditions, each {attribute, operator: 'and'|'or', sign: 'equals'|…, values: [...]}", example: "[{\"attribute\":\"about.industries\",\"operator\":\"or\",\"sign\":\"equals\",\"values\":[\"software\"]}]"}
+        size: {type: integer, required: false, note: "results per page, 1-100, default 10 — THIS IS THE PRICE DIAL: 1 credit per company returned", example: 1}
+        page: {type: integer, required: false, note: "1-based page number, default 1"}
+        search: {type: string, required: false, note: "extra free-text match on company name or domain"}
+        searchFields: {type: "array[string]", required: false, note: "which fields `search` applies to, e.g. domain, name"}
+        simplified: {type: boolean, required: false, note: "reduced records for ZERO credits — always preview a new query this way before paying for it", example: true}
+        domainsToExclude: {type: string, required: false, note: "comma-separated domains to drop from the results"}
+        linkedinToExclude: {type: string, required: false, note: "comma-separated LinkedIn URLs to drop"}
+        sortKey: {type: string, required: false, note: "field to sort by, e.g. meta.score, about.name"}
+        sortOrder: {type: string, required: false, note: "asc | desc"}
+        sortFields: {type: "array[object]", required: false, note: "multiple sort criteria, stringified and URL-encoded"}
+        actionId: {type: integer, required: false, note: "scope the search to a saved action"}
+      note: "POST /companies takes the identical fields as a JSON body, which is easier when the condition array is long. `searchFields` accepts about.name and domain.domain. Always set an explicit small `size` — the default of 10 bills for 10 companies. GET /companies/count returns just the match count and is widely treated as free, though that is not published"
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      note: "1 credit PER COMPANY RETURNED, so `size` is the price. `simplified=true` makes the whole call free."
+    docs_url: https://www.thecompaniesapi.com/api/search-companies
+
+  - id: thecompaniesapi.companies.enrich_by_email
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/by-email
+    name: "Enrich company by email"
+    summary: "Identify and enrich the company behind an email address"
+    input:
+      queryParams:
+        email: {type: string, required: true, note: "any address at the company; the domain is what does the work", example: "someone@apple.com"}
+        simplified: {type: boolean, required: false, note: "reduced record for zero credits"}
+      note: "the signup-qualification route — turn a new user's work email into their employer's firmographics. Free-mail domains (gmail.com and friends) return nothing"
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "presumed 1 credit per company found, matching domain enrichment — this route's price is NOT explicitly published, so treat the figure as an inference and confirm against a real response's credit accounting before relying on it."
+    docs_url: https://www.thecompaniesapi.com/api/enrich-company-from-email
+
+  - id: thecompaniesapi.companies.email_pattern
+    domain: companies
+    capability: companies.email_pattern
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/{domain}/email-patterns
+    name: "Get company email address patterns"
+    summary: "Find which email-address formats a company uses, and how common each one is"
+    input:
+      pathParams:
+        domain: {type: string, required: true, note: "company domain", example: "apple.com"}
+      queryParams:
+        emailsCount: {type: boolean, required: false, note: "include how many addresses back each pattern"}
+        precision: {type: number, required: false, note: "confidence floor for which patterns are returned"}
+      note: "returns the patterns (first.last@, flast@, first@) with a usage percentage each. It gives you the SHAPE, not a specific person's address — pair it with a verifier such as hunter.people.email.verify or leadmagic.people.email.verify to confirm a constructed address. This provider has NO email-verification endpoint of its own"
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "1 credit per request."
+    docs_url: https://www.thecompaniesapi.com/api/fetch-company-email-patterns
+
+  - id: thecompaniesapi.account.usage
+    kind: utility
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /companies
+    name: "Check API token validity"
+    summary: "Check the Companies API token works, without spending a credit"
+    input:
+      queryParams:
+        simplified: {type: boolean, required: true, note: "must be true — this is what makes the call free", example: true}
+        size: {type: integer, required: true, note: "keep it at 1", example: 1}
+      note: "the free simplified search doubles as the key-health check — this exact call is the registry's probe. There IS a real account route, GET /teams/{teamId}, which returns credits, creditsPack and isSubscriber, but it needs a numeric team id you must already know (there is no /teams/me) and its own cost is unpublished, so the free search is the safer health check"
+    cost: {type: free, value: 0, currency: USD, note: "free because of simplified=true; auth is still required, so a bad token is rejected"}
+    docs_url: https://www.thecompaniesapi.com/api/search-companies

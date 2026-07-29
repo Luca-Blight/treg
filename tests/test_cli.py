@@ -401,3 +401,260 @@ def test_call_content_type_flag_and_json_sniff(monkeypatch):
     assert sent_headers("--data", '{"ok":1}') == {"content-type": "application/json"}  # sniffed from JSON body
     assert sent_headers("--data", "plain text") == {}  # non-JSON body: no guess
     assert sent_headers("--data", "plain", "--content-type", "text/csv") == {"content-type": "text/csv"}  # flag wins
+
+
+# ---- command consolidation: grouped help + hidden back-compat aliases ----------------------
+def test_new_command_map_routes():
+    """The consolidated IA: `cli` wraps the run/shell tier, `connections` absorbed `oauth`,
+    `audit` unifies the two audit logs."""
+    p = cli.build_parser()
+    assert p.parse_args(["cli", "run", "stripe", "--", "get", "/v1/balance"]).fn is cli.cmd_run
+    assert p.parse_args(["cli", "runs"]).fn is cli.cmd_runs
+    assert p.parse_args(["cli", "shell", "start"]).fn is cli.cmd_shell_start
+    assert p.parse_args(["cli", "shell", "stop"]).fn is cli.cmd_shell_stop
+    assert p.parse_args(["cli", "setup"]).fn is cli.cmd_setup_local_run
+    assert p.parse_args(["connections"]).fn is cli.cmd_connections_ls        # bare = list
+    assert p.parse_args(["connections", "ls"]).fn is cli.cmd_connections_ls
+    assert p.parse_args(["connections", "connect", "--provider", "gsc"]).fn is cli.cmd_oauth_connect
+    assert p.parse_args(["connections", "providers"]).fn is cli.cmd_oauth_providers
+    a = p.parse_args(["audit", "--limit", "20"])
+    assert a.fn is cli.cmd_audit and a.limit == 20 and a.calls is False and a.runs is False
+
+
+def test_hidden_aliases_still_parse_and_route():
+    """Every removed/renamed top-level command keeps working for existing scripts + agent
+    instructions — it is only absent from --help."""
+    p = cli.build_parser()
+    for argv, fn in [
+        (["add", "stripe", "--base-url", "https://api.stripe.com", "--secret", "STRIPE_KEY"], cli.cmd_add),
+        (["oauth", "providers"], cli.cmd_oauth_providers),
+        (["oauth", "connect", "--provider", "gsc"], cli.cmd_oauth_connect),
+        (["run", "stripe", "--", "get", "/v1/balance"], cli.cmd_run),
+        (["runs"], cli.cmd_runs),
+        (["calls"], cli.cmd_calls),
+        (["shell", "start"], cli.cmd_shell_start),
+        (["shell", "stop"], cli.cmd_shell_stop),
+        (["setup-local-run"], cli.cmd_setup_local_run),
+        (["import"], cli.cmd_import),
+    ]:
+        assert p.parse_args(argv).fn is fn, argv
+
+
+def test_alias_flags_match_their_canonical_command():
+    """An alias is the SAME parser, not a stub: its flags must still parse."""
+    p = cli.build_parser()
+    assert p.parse_args(["run", "--server", "sk", "--", "x"]).server is True
+    assert p.parse_args(["cli", "run", "--server", "sk", "--", "x"]).server is True
+    assert p.parse_args(["shell", "start", "--ttl", "60"]).ttl == 60
+    assert p.parse_args(["cli", "shell", "start", "--ttl", "60"]).ttl == 60
+    assert p.parse_args(["setup-local-run", "--run-proof", "P"]).run_proof == "P"
+    assert p.parse_args(["cli", "setup", "--run-proof", "P"]).run_proof == "P"
+    assert p.parse_args(["runs", "--limit", "5"]).limit == 5
+    assert p.parse_args(["calls", "--limit", "5"]).limit == 5
+
+
+def test_help_is_grouped_and_hides_aliases():
+    help_ = cli.build_parser().format_help()
+    for header in ("MARKETPLACE", "CORE", "BULK UPLOAD", "TEAM MANAGEMENT", "CONFIG"):
+        assert f"\n{header}\n" in help_, header
+    # order is the approved IA, not argparse's registration order
+    positions = [help_.index(h) for h in ("MARKETPLACE", "CORE", "BULK UPLOAD", "TEAM MANAGEMENT", "CONFIG")]
+    assert positions == sorted(positions)
+    listed = {ln.split()[0] for ln in help_.splitlines() if ln.startswith("    ") and ln.strip()}
+    for gone in ("add", "oauth", "setup-local-run", "run", "runs", "calls", "shell", "import"):
+        assert gone not in listed, gone
+    for shown in ("catalog", "tool", "connections", "cli", "audit", "org", "config", "version"):
+        assert shown in listed, shown
+
+
+def test_help_groups_only_name_real_commands():
+    """HELP_GROUPS is hand-written copy; keep it from drifting off the real subparsers."""
+    p = cli.build_parser()
+    choices = next(a.choices for a in p._subparsers._group_actions if a.choices)
+    for _title, rows in cli.HELP_GROUPS:
+        for name, desc in rows:
+            assert name in choices, name
+            assert desc.endswith("."), name
+
+
+def test_audit_merges_calls_and_runs(monkeypatch, capsys):
+    """The default `audit` view interleaves both logs by time, and drops the `local_run`
+    CallRecords that /runs already reports as its local rows (else each shows up twice)."""
+    class _Resp:
+        status_code = 200
+        def __init__(self, body): self._b = body
+        def json(self): return self._b
+
+    bodies = {
+        "/calls": [
+            {"id": 2, "user_email": "a@x.dev", "tool_name": "stripe", "method": "GET",
+             "path": "v1/charges", "status_code": 200, "kind": "call", "created_at": "2026-07-28T10:00:00"},
+            {"id": 1, "user_email": "a@x.dev", "tool_name": "gh", "method": "GRANT",
+             "path": "pr list", "status_code": 200, "kind": "local_run", "created_at": "2026-07-28T09:00:00"},
+        ],
+        "/runs": [
+            {"id": "l1", "user_email": "a@x.dev", "tool": "gh", "argv": ["pr", "list"],
+             "exit_code": None, "where": "local", "created_at": "2026-07-28T09:00:00"},
+        ],
+    }
+
+    class _C:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def get(self, url, params=None): return _Resp(bodies[url])
+
+    monkeypatch.setattr(cli, "_client", lambda cfg: _C())
+    args = cli.build_parser().parse_args(["audit"])
+    cli.cmd_audit(args, {"base_url": "http://x"})
+    rows = json.loads(capsys.readouterr().out)
+    assert [r["kind"] for r in rows] == ["call", "run"]          # newest first
+    assert rows[0]["detail"] == "GET v1/charges" and rows[0]["where"] == "proxy"
+    assert rows[1]["detail"] == "pr list" and rows[1]["where"] == "local"
+
+
+def test_audit_filters_delegate_to_the_single_source_views(monkeypatch):
+    seen = []
+    monkeypatch.setattr(cli, "cmd_calls", lambda a, c: seen.append("calls"))
+    monkeypatch.setattr(cli, "cmd_runs", lambda a, c: seen.append("runs"))
+    p = cli.build_parser()
+    cli.cmd_audit(p.parse_args(["audit", "--calls"]), {})
+    cli.cmd_audit(p.parse_args(["audit", "--runs"]), {})
+    assert seen == ["calls", "runs"]
+    with pytest.raises(SystemExit):        # the two filters are mutually exclusive
+        p.parse_args(["audit", "--calls", "--runs"])
+
+
+def test_subcommand_help_is_not_the_grouped_top_level_page():
+    """add_subparsers clones the PARENT's class by default, which would make every `treg X -h`
+    print the top-level grouped page. The subparsers must stay plain ArgumentParsers."""
+    p = cli.build_parser()
+    choices = next(a.choices for a in p._subparsers._group_actions if a.choices)
+    for name in ("cli", "call", "connections", "audit", "tool"):
+        sub_help = choices[name].format_help()
+        assert "MARKETPLACE" not in sub_help, name
+        assert sub_help.startswith(f"usage: treg {name}"), name
+    assert "run" in choices["cli"].format_help()      # its OWN subcommands, though
+
+
+# ---- catalog search / get (the discover -> inspect pair) ----------------------------------
+def test_catalog_verbs_parse_without_displacing_a_platform_slug():
+    """`search`/`get` are positional verbs, not subparsers — so `treg catalog tiktok` still browses
+    a shelf, and the multi-word query needs no quoting."""
+    p = cli.build_parser()
+    a = p.parse_args(["catalog", "search", "tiktok", "comments", "--limit", "5"])
+    assert a.fn is cli.cmd_catalog and a.platform == "search" and a.rest == ["tiktok", "comments"] and a.limit == 5
+    g = p.parse_args(["catalog", "get", "tikhub.tiktok.video.comments"])
+    assert g.platform == "get" and g.rest == ["tikhub.tiktok.video.comments"]
+    assert p.parse_args(["catalog", "tiktok"]).rest == []
+    assert p.parse_args(["catalog"]).platform is None
+
+
+class _CatalogResp:
+    def __init__(self, body, status=200): self._b, self.status_code = body, status
+    def json(self): return self._b
+
+
+def _stub_catalog_client(monkeypatch, routes: dict):
+    class _C:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def get(self, url, params=None): return routes[url]
+    monkeypatch.setattr(cli, "_client", lambda cfg, auth=True: _C())
+
+
+_SEARCH_BODY = {
+    "query": "tiktok comments", "count": 2, "total": 9,
+    "results": [
+        {"id": "justoneapi.tiktok.video.comments", "provider": "justoneapi", "provider_display": "JustOneAPI",
+         "summary": "A post's comments, cursor-paginated", "method": "GET", "path": "/api/x", "scope": "any_account",
+         "tier": "core", "cost": {"type": "per_success", "value": 0.1, "currency": "CNY", "usd": 0.014},
+         "verified": "2026-07-28", "docs_url": "", "has_example": True, "input": None,
+         "capability": "tiktok.video.comments", "capability_description": "List a video's comments",
+         "platform": "tiktok", "platform_label": "TikTok", "score": 6},
+        {"id": "tikhub.x.douyin-web-fetch-video-comments", "provider": "tikhub", "provider_display": "TikHub",
+         "summary": "Douyin comments", "method": "GET", "path": "/api/y", "scope": "any_account",
+         "tier": "extended", "cost": None, "verified": None, "docs_url": "", "has_example": False, "input": None,
+         "capability": "", "capability_description": "", "platform": "douyin", "platform_label": "Douyin",
+         "score": 5},
+    ],
+    "hints": ["treg catalog get justoneapi.tiktok.video.comments   # params, cost, example response"],
+}
+
+
+def test_catalog_search_table_prices_in_usd_and_points_at_get(monkeypatch, capsys):
+    """The table has to be comparable down the COST column — the yaml's own CNY/USD mix isn't."""
+    _stub_catalog_client(monkeypatch, {"/catalog/search": _CatalogResp(_SEARCH_BODY)})
+    args = cli.build_parser().parse_args(["catalog", "search", "tiktok", "comments"])
+    cli.cmd_catalog(args, {"base_url": "http://x"})
+    out = capsys.readouterr().out
+    assert "9 matches" in out and "showing 2" in out
+    assert "justoneapi.tiktok.video.comments" in out and "$0.014/success" in out
+    assert "●" in out, "connected state is the actionable glyph (verified/tier are maintenance metadata)"
+    assert "treg catalog get justoneapi.tiktok.video.comments" in out
+
+
+def test_catalog_search_says_what_to_try_when_nothing_matches(monkeypatch, capsys):
+    _stub_catalog_client(monkeypatch, {"/catalog/search": _CatalogResp(
+        {"query": "zzz", "count": 0, "total": 0, "results": [], "hints": []})})
+    cli.cmd_catalog(cli.build_parser().parse_args(["catalog", "search", "zzz"]), {"base_url": "http://x"})
+    out = capsys.readouterr().out
+    assert "nothing matches" in out and "every word has to match" in out
+
+
+def test_catalog_get_renders_params_siblings_and_the_command(monkeypatch, capsys):
+    body = {
+        "endpoint": {
+            "id": "justoneapi.tiktok.video.comments", "provider": "justoneapi", "provider_display": "JustOneAPI",
+            "summary": "A post's comments", "method": "GET", "path": "/api/tiktok/get-post-comment/v1",
+            "scope": "any_account", "tier": "core",
+            "cost": {"type": "per_success", "value": 0.1, "currency": "CNY", "usd": 0.014, "note": "billed on success"},
+            "verified": "2026-07-28", "docs_url": "https://docs.example/comments", "has_example": True,
+            "input": {"queryParams": {
+                "awemeId": {"type": "string", "required": True, "note": "the post id", "example": "76662"},
+                "cursor": {"type": "string", "required": False, "note": "'0' for the first page"}}},
+            "capability": "tiktok.video.comments", "capability_description": "List a video's comments",
+            "platform": "tiktok", "platform_label": "TikTok"},
+        "provider": {"service": "justoneapi", "display_name": "JustOneAPI",
+                     "pricing_url": "https://justoneapi.com/", "limits": "60 req/min"},
+        "siblings": [{"id": "tikhub.tiktok.video.comments", "provider": "tikhub", "provider_display": "TikHub",
+                      "summary": "s", "method": "GET", "path": "/p", "scope": "any_account", "tier": "core",
+                      "cost": {"type": "per_call", "value": 0.001, "currency": "USD", "usd": 0.001},
+                      "verified": "2026-07-28", "docs_url": "", "has_example": True, "input": None}],
+        "call_template": "treg call justoneapi /api/tiktok/get-post-comment/v1 --query awemeId=76662",
+        "example_response": {"code": 0, "data": {"comments": [{"text": "hi"}]}},
+        "hints": [],
+    }
+    _stub_catalog_client(monkeypatch, {"/catalog/endpoints/justoneapi.tiktok.video.comments": _CatalogResp(body)})
+    cli.cmd_catalog(cli.build_parser().parse_args(
+        ["catalog", "get", "justoneapi.tiktok.video.comments"]), {"base_url": "http://x"})
+    out = capsys.readouterr().out
+    assert "$0.014/success" in out and "(CNY 0.1)" in out          # usd to compare, original to verify
+    provider = body["provider"]
+    assert provider["limits"] in out and provider["pricing_url"] in out
+    assert "tikhub.tiktok.video.comments" in out                    # the sibling, for comparison
+    assert "awemeId" in out and "the post id" in out and "e.g. 76662" in out
+    assert "treg call justoneapi /api/tiktok/get-post-comment/v1 --query awemeId=76662" in out
+    assert '"comments"' in out                                      # the example response, inline
+
+
+def test_a_credit_price_reads_as_dollars_with_the_credits_behind_it():
+    """A bare credit count is not a price — a reader cannot compare "1 credit" to "$0.001". When
+    the server priced the credit, dollars lead; only an unpriced credit shows alone."""
+    priced = {"type": "per_call", "value": 1, "currency": "credit", "usd": 0.00188}
+    assert cli._cost_label(priced) == "$0.00188/call (1 credit)"
+    assert cli._cost_usd(priced) == "$0.00188/call"                 # narrow comparison column
+
+    unpriced = {"type": "per_success", "value": 3, "currency": "credit", "usd": None}
+    assert cli._cost_label(unpriced) == "3 credits/success"         # native, labelled as credits
+    assert cli._cost_usd(unpriced) == "3 credits/success"
+    assert "$" not in cli._cost_usd(unpriced), "no rate, no invented dollar figure"
+
+
+def test_catalog_get_needs_an_id_and_404s_helpfully(monkeypatch, capsys):
+    p = cli.build_parser()
+    with pytest.raises(SystemExit):
+        cli.cmd_catalog(p.parse_args(["catalog", "get"]), {"base_url": "http://x"})
+    _stub_catalog_client(monkeypatch, {"/catalog/endpoints/nope.x": _CatalogResp({}, status=404)})
+    with pytest.raises(SystemExit):
+        cli.cmd_catalog(p.parse_args(["catalog", "get", "nope.x"]), {"base_url": "http://x"})
+    assert "find one with: treg catalog search" in capsys.readouterr().out

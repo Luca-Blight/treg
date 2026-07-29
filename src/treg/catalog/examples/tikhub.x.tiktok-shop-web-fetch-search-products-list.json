@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "request_id": "75cf282e-2e36-4fd5-9c5f-8629a0077e41",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:13",
+  "time_stamp": 1785220213,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Shop-Web-API/fetch_search_products_list_api_v1_tiktok_shop_web_fetch_search_products_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/75cf282e-2e36-4fd5-9c5f-8629a0077e41?sign=5bd2bd849d0f8c9f620f7edd224498f4ef26b169800568461c273a8c2af58f73",
+  "router": "/api/v1/tiktok/shop/web/fetch_search_products_list",
+  "params": {
+    "search_word": "labubu",
+    "offset": "0",
+    "region": "US"
+  },
+  "data": {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "products": [
+        "… {11 field(s) truncated}",
+        "… 29 more item(s) truncated"
+      ],
+      "shops": [
+        "… {4 field(s) truncated}",
+        "… 1 more item(s) truncated"
+      ],
+      "has_more": true,
+      "load_more_params": {
+        "offset": 30,
+        "page_token": "<omitted: expires>",
+        "api_source": 2
+      },
+      "filter_sections": [
+        "… {8 field(s) truncated}",
+        "… 5 more item(s) truncated"
+      ],
+      "filter_quick_options": [
+        "… {5 field(s) truncated}",
+        "… 12 more item(s) truncated"
+      ]
+    }
+  }
+}

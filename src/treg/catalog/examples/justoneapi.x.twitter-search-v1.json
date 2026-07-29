@@ -1,0 +1,62 @@
+{
+  "code": 0,
+  "data": {
+    "status": "ok",
+    "timeline": [
+      {
+        "type": "tweet",
+        "tweet_id": "2080378182469857576",
+        "screen_name": "OpenAI",
+        "bookmarks": 3396,
+        "favorites": 12815,
+        "created_at": "Thu Jul 23 19:43:04 +0000 2026",
+        "text": "ChatGPT Voice is now in the desktop app.\n\nControl your computer and direct multi… [350 chars total]",
+        "lang": "en",
+        "display_text_range": [
+          0,
+          "… 1 more item(s) truncated"
+        ],
+        "source": "<a href=\"https://mobile.twitter.com\" rel=\"nofollow\">Twitter Web App</a>",
+        "quotes": 1237,
+        "replies": 1204,
+        "conversation_id": "2080378182469857576",
+        "retweets": 1363,
+        "views": "4411676",
+        "entities": {
+          "hashtags": [],
+          "symbols": [],
+          "timestamps": [],
+          "urls": [],
+          "user_mentions": []
+        },
+        "user_info": {
+          "screen_name": "OpenAI",
+          "name": "OpenAI",
+          "created_at": "Sun Dec 06 22:51:08 +0000 2015",
+          "description": null,
+          "rest_id": "4398626122",
+          "followers_count": null,
+          "favourites_count": null,
+          "avatar": "https://pbs.twimg.com/profile_images/1885410181409820672/ztsaR0JW_normal.jpg",
+          "url": null,
+          "cover_image": null,
+          "verified_type": "Business",
+          "verified": true,
+          "friends_count": null,
+          "location": ""
+        },
+        "media": {
+          "video": [
+            "… 6 field(s) truncated"
+          ]
+        }
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "next_cursor": "<omitted: expires>",
+    "prev_cursor": "<omitted: expires>"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:32.961409612",
+  "requestId": "dd5fd5883429433283fe02cd98eca577"
+}

@@ -1,0 +1,36 @@
+{
+  "success": true,
+  "credits_remaining": 19840,
+  "credits_charged": 1,
+  "events": [
+    {
+      "id": "1516518949499691",
+      "schema_context": "{\"\\u0040context\":\"http:\\/\\/schema.org\",\"\\u0040type\":\"Event\",\"startDate\":\"2026-09-11T19:00:00-0400\",\"eventAttendanceMode\":\"https:\\/\\/schema.org\\/OfflineEventAttendanceMode\",\"name\":\"I LOVE THE 90's TOUR… [1590 chars]",
+      "cover_photo": {
+        "photo": "… {3 field(s) truncated}"
+      },
+      "cover_video": null,
+      "gif_cover_photo": null,
+      "online_event_setup": null,
+      "is_happening_now": false,
+      "day_time_sentence": "Fri, 11 Sep at 19:00 EDT",
+      "name": "I LOVE THE 90's TOUR with Vanilla Ice, Montell Jordan, Tone Loc, 2 Live Crew and more.",
+      "is_online": false,
+      "ticketing_context_row": {
+        "price_range_text": null
+      },
+      "event_place": {
+        "__typename": "FreeformPlace",
+        "contextual_name": "Ferg's Sports Bar & Grill",
+        "__isNode": "FreeformPlace",
+        "id": "122136407445198419"
+      },
+      "eventUrl": "https://www.facebook.com/events/1516518949499691/",
+      "can_page_viewer_invite_as_user": false,
+      "can_viewer_invite": false,
+      "…": "13 more field(s) truncated"
+    },
+    "… 11 more item(s) truncated"
+  ],
+  "cursor": "<omitted: expires>"
+}

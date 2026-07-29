@@ -1,0 +1,47 @@
+{
+  "code": 0,
+  "data": {
+    "ok": 1,
+    "data": {
+      "hotgovs": [
+        "… 12 field(s) truncated"
+      ],
+      "hotgov": {
+        "mid": "5325558902947877",
+        "name": "#总书记引领推进高水平对外开放#",
+        "word": "#总书记引领推进高水平对外开放#",
+        "flag": 2,
+        "small_icon_desc": "热",
+        "icon_width": 24,
+        "icon_desc": "热",
+        "url": "http://weibo.com/1699432410/RaIU2cmSp",
+        "icon_desc_color": "#ff9406",
+        "pos": 1,
+        "icon": "https://simg.s.weibo.com/moter/flags/2_0… [44 chars total]",
+        "small_icon_desc_color": "#ff9406",
+        "icon_height": 24,
+        "is_hot": 1,
+        "topic_flag": 1,
+        "is_gov": 1,
+        "note": "#总书记引领推进高水平对外开放#",
+        "stime": 1785203569
+      },
+      "realtime": [
+        "… 10 field(s) truncated",
+        "… 50 more item(s) truncated"
+      ]
+    },
+    "logs": {
+      "act_code": 7948,
+      "ext": "cate:1003|words:#地震50年后突然搜到已故父亲名字#,#小米展出… [741 chars total]"
+    },
+    "topLogs": {
+      "act_code": 7948,
+      "ext": "cate:1002|words:#总书记引领推进高水平对外开放#"
+    },
+    "curTab": "hot"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:27.222220236",
+  "requestId": "9d5cf171a4a04b52a25d02dc57174989"
+}

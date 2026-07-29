@@ -1,0 +1,58 @@
+{
+  "code": 0,
+  "data": {
+    "category": "tv",
+    "type": "tv",
+    "total": 252,
+    "items": [
+      {
+        "id": "36618951",
+        "title": "野狗骨头",
+        "pic": {
+          "large": "https://img3.doubanio.com/view/photo/m_ratio_poster/public/p2933763712.jpg",
+          "normal": "https://img3.doubanio.com/view/photo/s_ratio_poster/public/p2933763712.jpg"
+        },
+        "rating": {
+          "count": 71664,
+          "max": 10,
+          "star_count": 3.5,
+          "value": 6.9
+        },
+        "uri": "douban://douban.com/tv/36618951",
+        "card_subtitle": "2026 / 中国大陆 / 剧情 爱情 / 刘俊杰 / 宋威龙 张婧仪",
+        "is_new": false,
+        "episodes_info": "32集全",
+        "type": "tv"
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "tags": [
+      {
+        "title": "最近热门剧集",
+        "category": "tv",
+        "selected": true,
+        "types": [
+          {
+            "title": "综合",
+            "type": "tv",
+            "selected": true
+          },
+          "… 6 more item(s) truncated"
+        ]
+      },
+      "… 1 more item(s) truncated"
+    ],
+    "recommend_tags": [
+      {
+        "title": "综合",
+        "category": "tv",
+        "type": "tv",
+        "selected": true
+      },
+      "… 7 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:48.077923615",
+  "requestId": "000b2606049d43f79f745c496401463a"
+}

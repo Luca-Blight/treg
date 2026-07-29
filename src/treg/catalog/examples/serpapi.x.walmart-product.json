@@ -1,0 +1,22 @@
+{
+  "search_metadata": {
+    "id": "6a6898d5d868dd92625597fb",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/FQ0t0Rl-t3CZ0Blklm7j0w/6a6898d5d868dd92625597fb.json",
+    "created_at": "2026-07-28 11:56:05 UTC",
+    "processed_at": "2026-07-28 11:56:05 UTC",
+    "walmart_product_url": "https://www.walmart.com/ip/147423982",
+    "raw_html_file": "https://serpapi.com/searches/FQ0t0Rl-t3CZ0Blklm7j0w/6a6898d5d868dd92625597fb.html",
+    "prettify_html_file": "https://serpapi.com/searches/FQ0t0Rl-t3CZ0Blklm7j0w/6a6898d5d868dd92625597fb.prettify",
+    "total_time_taken": 4.9
+  },
+  "search_parameters": {
+    "product_id": "147423982",
+    "engine": "walmart_product",
+    "device": "desktop"
+  },
+  "search_information": {
+    "product_results_state": "Fully empty"
+  },
+  "error": "The product could not be found."
+}

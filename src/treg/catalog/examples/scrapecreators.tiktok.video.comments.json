@@ -1,0 +1,45 @@
+{
+  "success": true,
+  "credits_remaining": 19857,
+  "credits_charged": 1,
+  "alias_comment_deleted": false,
+  "comments": [
+    {
+      "allow_download_photo": false,
+      "author_pin": false,
+      "aweme_id": "7251387037834595630",
+      "cid": "7272047794442912558",
+      "collect_stat": 0,
+      "comment_language": "en",
+      "comment_post_item_ids": null,
+      "create_time": 1693155594,
+      "digg_count": 818,
+      "fold_status": -1,
+      "image_list": null,
+      "is_author_digged": true,
+      "is_comment_translatable": true,
+      "is_high_purchase_intent": false,
+      "label_list": [
+        "… {2 field(s) truncated}"
+      ],
+      "…": "20 more field(s) truncated"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "cursor": 20,
+  "extra": {
+    "api_debug_info": null,
+    "fatal_item_ids": null,
+    "now": 1785239646000
+  },
+  "has_filtered_comments": 0,
+  "has_more": 1,
+  "log_pb": {
+    "impr_id": "20260728115406C14798B0EF9413058AF6"
+  },
+  "reply_style": 2,
+  "status_code": 0,
+  "status_msg": "",
+  "top_gifts": null,
+  "total": 2514
+}

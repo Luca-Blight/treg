@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "request_id": "f7c7dd2a-9ce5-40ab-8b63-0266d2dd5a1a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:00",
+  "time_stamp": 1785220380,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/WeChat-Channels-V2-API/fetch_channel_id_to_username_api_v1_wechat_channels_v2_fetch_channel_id_to_username_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f7c7dd2a-9ce5-40ab-8b63-0266d2dd5a1a?sign=42568bfa9b5b4ac1976b17c3fef8497b6a6471df66d5d8b61e98eaca693fdd7e",
+  "router": "/api/v1/wechat_channels/v2/fetch_channel_id_to_username",
+  "params": {
+    "channel_id": "sphi9BjV8GK0Zsl",
+    "raw": false
+  },
+  "data": {
+    "channel_id": "sphi9BjV8GK0Zsl",
+    "username": "v2_060000231003b20faec8c6e4811dc1d4c602ee30b0771bbcf220c67926bb76ab7702ac335a53@finder",
+    "nickname": "人民日报",
+    "desc": "参与、沟通、记录时代。",
+    "debug_id": "64698ad1",
+    "debug_info": "gAAAAABqaE0cX_LD-9hXdCdtnC92N5VimBGGNu0e96tRubEONGIZ1n4rJVDeViBCJnzTHhQeKpv5sdOmDlagdHBxF5wV4paAe7CxtT625UlUnWvGq-xhQxp0_9NYq1TZR1ai8eyTAPwbuM4ApbmYI9s5NqQRsBAAqwehUY6C_7W9koMp9QLcNPF59pfaK8E5-YzO83cW… [292 chars]"
+  }
+}

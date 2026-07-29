@@ -1,0 +1,114 @@
+# unverified — endpoints require a connected OAuth account; verify via a treg connection later.
+# EXCEPT the request shapes: searchAnalytics/query and urlInspection below are transcribed from
+# oauth_providers.GOOGLE_SEARCH_CONSOLE.examples, which were curated against live calls (including
+# the v1/ vs webmasters/v3/ prefix split, which is the thing agents get wrong).
+#
+# Search Console is the only place a site's OWN Google search performance exists — the query,
+# impression and average-position numbers here are not derivable from any SERP scraper, so nothing
+# in dataforseo.yaml or moz.yaml competes with this file. That is why every endpoint is
+# own_account: the credential doesn't just authenticate, it defines whose site you may read.
+#
+# Scopes granted: webmasters.readonly (`read`, non-sensitive, no Google verification gate) and
+# webmasters (`write`, adds sitemap submission and site management). Everything below is readable
+# with `read`.
+#
+# TWO PATH PREFIXES ON ONE HOST: the classic Webmasters API is /webmasters/v3/…, but URL
+# Inspection is /v1/…. Guessing the wrong one returns a 404, not a hint.
+provider: google-search-console
+source:
+  docs: https://developers.google.com/webmaster-tools/v1/api_reference_index
+  openapi: https://searchconsole.googleapis.com/$discovery/rest?version=v1
+  curated: 2026-07-28
+
+limits: "1,200 queries/min per site; 20 QPS per project"
+pricing_url: https://developers.google.com/webmaster-tools/limits  # Free; the constraint is quota, not money.; free tier: None free within quota
+endpoints:
+  - id: google-search-console.performance
+    capability: search-console.performance
+    platform: search-console
+    scope: own_account
+    method: POST
+    path: /webmasters/v3/sites/{siteUrl}/searchAnalytics/query
+    name: "Get search performance metrics"
+    summary: "Get your site's Google Search performance — clicks, impressions, CTR and top queries"
+    input:
+      pathParams:
+        siteUrl: {type: string, required: true, note: "URL-ENCODED property id: 'sc-domain:example.com' for a domain property, or 'https://example.com/' (with trailing slash) for a URL-prefix one. treg's connection picker lists both forms", example: "sc-domain:example.com"}
+      body:
+        startDate: {type: string, required: true, note: "YYYY-MM-DD; data lags ~2 days, so 'today' is always empty", example: "2026-06-01"}
+        endDate: {type: string, required: true, example: "2026-06-28"}
+        dimensions: {type: array, required: false, note: "any of query, page, country, device, date, searchAppearance. OMIT for a site TOTAL — summing a dimension does NOT equal the total, because rows below the privacy threshold are withheld", example: ["query"]}
+        rowLimit: {type: integer, required: false, note: "1–25000, default 1000", example: 100}
+        startRow: {type: integer, required: false, note: "pagination offset", example: 0}
+        dimensionFilterGroups: {type: array, required: false, note: "filters, e.g. [{\"filters\":[{\"dimension\":\"page\",\"operator\":\"contains\",\"expression\":\"/blog/\"}]}]"}
+        type: {type: string, required: false, note: "web (default) | image | video | news | discover | googleNews", example: "web"}
+        dataState: {type: string, required: false, note: "final (default) | all — 'all' includes fresh, still-incomplete data", example: "final"}
+      bodyType: json
+      note: "request shape previously live-verified via the registry entry's examples. Query data is retained 16 months"
+    cost: {type: free, note: "included with the connected account; Search Console quotas apply (per-site and per-project QPS/QPD limits), no per-call charge"}
+    test_request:
+      pathParams: {siteUrl: "sc-domain%3Aexample.com"}
+      body: {startDate: "2026-07-01", endDate: "2026-07-21", rowLimit: 2}
+    verified: 2026-07-28
+    example_response: examples/google-search-console.performance.json
+    docs_url: https://developers.google.com/webmaster-tools/v1/searchanalytics/query
+
+  - id: google-search-console.sites
+    capability: search-console.sites
+    platform: search-console
+    scope: own_account
+    method: GET
+    path: /webmasters/v3/sites
+    name: "List sites"
+    summary: "List the sites and domains you have access to in Search Console"
+    input:
+      note: "no parameters. Returns {siteEntry: [{siteUrl, permissionLevel}]}; permissionLevel siteUnverifiedUser means the property is listed but not readable. This is also the connection's health probe and resource picker"
+    cost: {type: free, note: "included with the connected account / platform quotas apply"}
+    test_request: {queryParams: {}}
+    verified: 2026-07-28
+    example_response: examples/google-search-console.sites.json
+    docs_url: https://developers.google.com/webmaster-tools/v1/sites/list
+
+  - id: google-search-console.url_inspection
+    capability: search-console.url_inspection
+    platform: search-console
+    scope: own_account
+    method: POST
+    path: /v1/urlInspection/index:inspect
+    name: "Inspect a URL's index status"
+    summary: "Check whether a page of your site is indexed by Google, and why it is or isn't"
+    input:
+      body:
+        inspectionUrl: {type: string, required: true, note: "the full page URL; must belong to siteUrl", example: "https://example.com/page"}
+        siteUrl: {type: string, required: true, note: "the Search Console property the URL sits under", example: "sc-domain:example.com"}
+        languageCode: {type: string, required: false, note: "BCP-47; controls the language of the human-readable verdict strings", example: "en-US"}
+      bodyType: json
+      note: "note the /v1/ prefix — NOT webmasters/v3/ (request shape previously live-verified via the registry entry's examples). Returns indexStatusResult (verdict, coverageState, robotsTxtState, canonical URLs) plus mobileUsabilityResult and richResultsResult. Hard-quotaed at 2,000 inspections per site per day"
+    cost: {type: free, note: "included with the connected account; hard quota of 2,000 URL inspections per property per day"}
+    test_request:
+      body: {inspectionUrl: "https://example.com/", siteUrl: "sc-domain:example.com"}
+    verified: 2026-07-28
+    example_response: examples/google-search-console.url_inspection.json
+    docs_url: https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect
+
+  - id: google-search-console.sitemaps
+    capability: search-console.sitemaps
+    platform: search-console
+    scope: own_account
+    method: GET
+    path: /webmasters/v3/sites/{siteUrl}/sitemaps
+    name: "List submitted sitemaps"
+    summary: "List the sitemaps submitted for your site and how many URLs Google took from each"
+    input:
+      pathParams:
+        siteUrl: {type: string, required: true, note: "URL-encoded property id", example: "sc-domain:example.com"}
+      queryParams:
+        sitemapIndex: {type: string, required: false, note: "full URL of a sitemap index — returns only the sitemaps it contains"}
+      note: "per sitemap: lastSubmitted, lastDownloaded, isPending, warnings, errors, and contents[] with submitted vs indexed counts. Submitting a new one is PUT /webmasters/v3/sites/{siteUrl}/sitemaps/{feedpath} and needs the `write` capability"
+    cost: {type: free, note: "included with the connected account / platform quotas apply"}
+    test_request:
+      pathParams: {siteUrl: "sc-domain%3Aexample.com"}
+    verified: 2026-07-28
+    example_response: examples/google-search-console.sitemaps.json
+    docs_url: https://developers.google.com/webmaster-tools/v1/sitemaps/list
+

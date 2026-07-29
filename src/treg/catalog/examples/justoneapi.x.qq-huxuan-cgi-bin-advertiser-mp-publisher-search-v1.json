@@ -1,0 +1,17 @@
+{
+  "code": 0,
+  "data": {
+    "ret": 0,
+    "msg": "",
+    "item": [
+      "… 64 field(s) truncated",
+      "… 21 more item(s) truncated"
+    ],
+    "total_num": 22,
+    "trace_id": "885fc638-83fb-4de3-83db-36a9a9… [36 chars total]",
+    "scene": 2
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:08:24.398663718",
+  "requestId": "8e9f232e15ef4217b8c9f1cf492c88… [32 chars total]"
+}

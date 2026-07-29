@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "adcf3244-7289-49f4-acb3-2d24313afb48",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:25",
+  "time_stamp": 1785220285,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V2-API/fetch_post_likes_api_v1_instagram_v2_fetch_post_likes_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/adcf3244-7289-49f4-acb3-2d24313afb48?sign=261d147b06bb4d689538c854c3cecaf5cefa43a02b56f423121d83857aa469ed",
+  "router": "/api/v1/instagram/v2/fetch_post_likes",
+  "params": {
+    "code_or_url": "DRhvwVLAHAG"
+  },
+  "data": {
+    "data": {
+      "count": 948,
+      "items": [
+        {
+          "full_name": "Kaushik",
+          "id": "62994927065",
+          "is_private": false,
+          "is_verified": false,
+          "latest_reel_media": 0,
+          "profile_pic_url": "https://instagram.ffru1-4.fna.fbcdn.net/v/t51.2885-19/573323465_1219825463302212_7278921664109726296_n.png?stp=dst-webp&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xNTAuYzIifQ&_nc_ht=instagram.… [529 chars]",
+          "username": "mrwhite2324"
+        },
+        "… 947 more item(s) truncated"
+      ],
+      "total": 1037096
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "code": 0,
+  "data": {
+    "componentList": [
+      {
+        "componentId": "h5-profile-header",
+        "componentName": "页头",
+        "state": "header",
+        "logInfo": {},
+        "type": "YW_ZPD_HEADER",
+        "id": "27026_0",
+        "dataNode": [
+          {
+            "data": "… 43 field(s) truncated",
+            "moduleType": "",
+            "id": "null",
+            "type": null,
+            "logInfo": "… 0 field(s) truncated"
+          }
+        ],
+        "moduleList": [
+          {
+            "moduleType": "",
+            "dataNode": "… 0 item(s) truncated"
+          }
+        ]
+      },
+      "… 4 more item(s) truncated"
+    ],
+    "pageData": {
+      "more": false,
+      "pageNo": "1",
+      "shareInfo": {
+        "img": "https://ykimg.alicdn.com/product/image/2021-12-23/6d210224c5425590f497c37ee3e50e… [86 chars total]",
+        "link": "https://m.youku.com/profile?uid=UMTMxODA2NjMwMzI=",
+        "describe": "快来看TA的精彩视频吧",
+        "title": "小猫咪影视_YKSTAR的优酷主页"
+      },
+      "nextSession": "<omitted: expires>",
+      "nickName": "小猫咪影视",
+      "avatar": "https://ykimg.alicdn.com/product/image/2021-12-23/6d210224c5425590f497c37ee3e50e… [86 chars total]",
+      "spmA": "a2h0j",
+      "spmB": "personalchannel",
+      "spmAB": "a2h0j.personalchannel",
+      "navState": "video",
+      "showDCloumTitle": true
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:57.863403191",
+  "requestId": "79daff88db0e43138488c9d3afb0050b"
+}

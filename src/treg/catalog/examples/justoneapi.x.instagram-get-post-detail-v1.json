@@ -1,0 +1,133 @@
+{
+  "code": 0,
+  "data": {
+    "status": true,
+    "__typename": "GraphVideo",
+    "id": "3889679286057499135",
+    "shortcode": "DX66rPHpvn_",
+    "thumbnail_src": "https://instagram.fbcn2-1.fna.… [612 chars total]",
+    "dimensions": {
+      "height": 1280,
+      "width": 720
+    },
+    "gating_info": null,
+    "fact_check_overall_rating": null,
+    "fact_check_information": null,
+    "sensitivity_friction_info": null,
+    "sharing_friction_info": {
+      "should_have_sharing_friction": false,
+      "bloks_app_url": null,
+      "sharing_friction_payload": null
+    },
+    "media_overlay_info": null,
+    "media_preview": null,
+    "display_url": "https://instagram.fbcn2-1.fna.… [603 chars total]",
+    "display_resources": [
+      "… 3 field(s) truncated",
+      "… 11 more item(s) truncated"
+    ],
+    "is_video": true,
+    "tracking_token": "<omitted: expires>",
+    "upcoming_event": null,
+    "edge_media_to_tagged_user": {
+      "edges": "… 0 item(s) truncated"
+    },
+    "owner": {
+      "id": "40054486512",
+      "username": "the.roshniverse",
+      "is_verified": false,
+      "profile_pic_url": "https://instagram.fbcn2-1.fna.… [562 chars total]",
+      "blocked_by_viewer": false,
+      "restricted_by_viewer": null,
+      "followed_by_viewer": false,
+      "full_name": "Roshni Kunder",
+      "has_blocked_viewer": false,
+      "is_embeds_disabled": false,
+      "is_private": false,
+      "is_unpublished": false,
+      "requested_by_viewer": false,
+      "pass_tiering_recommendation": true,
+      "edge_owner_to_timeline_media": "… 1 field(s) truncated",
+      "edge_followed_by": "… 1 field(s) truncated",
+      "__raw_source": "… 33 field(s) truncated"
+    },
+    "accessibility_caption": "Some reminders hit differently… [323 chars total]",
+    "edge_media_to_caption": {
+      "edges": "… 1 item(s) truncated"
+    },
+    "can_see_insights_as_brand": false,
+    "caption_is_edited": false,
+    "has_ranked_comments": false,
+    "like_and_view_counts_disabled": false,
+    "edge_media_to_parent_comment": {
+      "count": 739,
+      "page_info": "… 2 field(s) truncated",
+      "edges": "… 0 item(s) truncated"
+    },
+    "edge_media_to_hoisted_comment": {
+      "edges": "… 0 item(s) truncated"
+    },
+    "edge_media_preview_comment": {
+      "count": 739,
+      "edges": "… 0 item(s) truncated"
+    },
+    "comments_disabled": false,
+    "commenting_disabled_for_viewer": false,
+    "taken_at_timestamp": 1777906750,
+    "edge_media_preview_like": {
+      "count": 369735,
+      "edges": "… 0 item(s) truncated"
+    },
+    "edge_media_to_sponsor_user": {
+      "edges": "… 0 item(s) truncated"
+    },
+    "is_affiliate": false,
+    "is_paid_partnership": false,
+    "location": {
+      "pk": 106377336067638,
+      "facebook_places_id": 106377336067638,
+      "external_source": "facebook_places",
+      "name": "Bangalore, India",
+      "address": "",
+      "city": "",
+      "has_viewer_saved": false,
+      "short_name": "Bangalore",
+      "lng": 77.597645,
+      "lat": 12.971117
+    },
+    "nft_asset_info": null,
+    "viewer_has_liked": false,
+    "viewer_has_saved": false,
+    "viewer_has_saved_to_collection": false,
+    "viewer_in_photo_of_you": false,
+    "viewer_can_reshare": true,
+    "is_ad": false,
+    "edge_web_media_to_related_media": {
+      "edges": "… 0 item(s) truncated"
+    },
+    "coauthor_producers": [],
+    "pinned_for_users": [
+      40054486512
+    ],
+    "attempts": "8337",
+    "video_url": "https://instagram.fbcn2-1.fna.… [1123 chars total]",
+    "video_view_count": 10365251,
+    "video_play_count": 10365251,
+    "video_duration": 9.053999900817871,
+    "has_audio": true,
+    "video_dash_manifest": "<?xml version=\"1.0\" encoding=\"… [17861 chars total]",
+    "video_versions": [
+      "… 8 field(s) truncated",
+      "… 2 more item(s) truncated"
+    ],
+    "dash_info": {
+      "is_dash_eligible": true,
+      "video_dash_manifest": "<?xml version=\"1.0\" encoding=\"… [17861 chars total]",
+      "number_of_qualities": 8,
+      "video_codec": null
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:27.374800025",
+  "requestId": "9a2c31faa6254972bd8a74a6429c38… [32 chars total]"
+}

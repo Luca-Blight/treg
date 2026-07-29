@@ -1,0 +1,57 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "2.8657 sec.",
+  "cost": 0.002,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0139-0000-eaee20eadcc7",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "2.8178 sec.",
+      "cost": 0.002,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "serp",
+        "function": "live",
+        "se": "bing",
+        "se_type": "organic",
+        "language_code": "en",
+        "location_code": 2840,
+        "keyword": "flight ticket new york san francisco",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "keyword": "flight ticket new york san francisco",
+          "type": "organic",
+          "se_domain": "bing.com",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://www.bing.com/search?q=flight+ticket+new+york+san+francisco&form=QBLH&cc=us",
+          "datetime": "2026-07-28 10:34:27 +00:00",
+          "spell": null,
+          "refinement_chips": null,
+          "item_types": [
+            "organic"
+          ],
+          "se_results_count": 261000,
+          "pages_count": 1,
+          "items_count": 10,
+          "items": [
+            "… {33 field(s) truncated}",
+            "… 9 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

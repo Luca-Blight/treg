@@ -1,0 +1,39 @@
+{
+  "code": 200,
+  "request_id": "3b0c4477-e84f-4a1b-9fb8-7a3750b36dd0",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:57",
+  "time_stamp": 1785220137,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V1-API/fetch_user_info_by_… [114 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/3b0c4477-e84f-4a… [150 chars]",
+  "router": "/api/v1/instagram/v1/fetch_user_info_by_id_v2",
+  "params": {
+    "user_id": "25025320"
+  },
+  "data": {
+    "status": true,
+    "pk": "25025320",
+    "fbid_v2": "17841400039600391",
+    "is_memorialized": false,
+    "is_private": false,
+    "has_story_archive": null,
+    "is_coppa_enforced": null,
+    "supervision_info": null,
+    "is_regulated_c18": false,
+    "regulated_news_in_locations": [],
+    "bio_links": [
+      "… {9 field(s) truncated}",
+      "… 1 more item(s) truncated"
+    ],
+    "linked_fb_info": null,
+    "text_post_app_badge_label": "instagram",
+    "show_text_post_app_badge": true,
+    "username": "instagram",
+    "…": "47 more field(s) truncated"
+  }
+}

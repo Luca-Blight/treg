@@ -1,0 +1,35 @@
+{
+  "code": 200,
+  "request_id": "864def92-1b39-4d75-b451-1c77aa5a2d2a",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:18",
+  "time_stamp": 1785220398,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/get_product_reviews_api_v1_xiaohongshu_app_v2_get_product_reviews_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/864def92-1b39-4d75-b451-1c77aa5a2d2a?sign=5fa41ee262795b9782a3a14eb97448cfe27bae97f528098ced33bff33fa907ba",
+  "router": "/api/v1/xiaohongshu/app_v2/get_product_reviews",
+  "params": {
+    "sku_id": "669ddd44e05f3700011067ed",
+    "page": "0",
+    "sort_strategy_type": "0",
+    "share_pics_only": "0",
+    "from_page": "score_page"
+  },
+  "data": {
+    "success": true,
+    "code": 0,
+    "data": {
+      "expMap": "… {7 field(s) truncated}",
+      "reviews": "… [12 item(s) truncated]",
+      "hasMore": true,
+      "sortedPicResult": "… {3 field(s) truncated}"
+    },
+    "msg": "ok",
+    "debug_id": "5ae5bb0e",
+    "debug_info": "gAAAAABqaE0u8vDMEUui6LYkN0nAHFanIuMnq2qlFjb4BLAQIdIz5-6bOTFOJJaTGv766_oC_4acfGTbxCXkuwWX4bkCGBFGYH7iW6aMEMIUWmMh4xt5qkW1Ioa8wUpJhbTecXk6NyW-HvY-VWR3w39jS_Bz2ViiFBN_u7lStFE9pEtOPOT842AtLE0za7LOi-MWIoAI… [440 chars]"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "0359f500-10b1-4124-8ad3-8e758d8d07cb",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:06",
+  "time_stamp": 1785220146,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-App-API/fetch_selection_fee… [106 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/0359f500-10b1-41… [150 chars]",
+  "router": "/api/v1/kuaishou/app/fetch_selection_feed",
+  "params": {},
+  "data": {
+    "feeds": [
+      "… {106 field(s) truncated}",
+      "… 2 more item(s) truncated"
+    ],
+    "itemFeatureSwitch": false,
+    "host-name": "public-bjzey-c26-kce-node337.idchb1az3.hb1.kwaidc.com",
+    "rerankShowPageSize": 6,
+    "new_notify": 0,
+    "costInfo": {
+      "S_A_D": 639,
+      "S_A": 1542,
+      "S_A_RE": 903
+    },
+    "pcursor": "1",
+    "writeRealShowSucc": true,
+    "isNewRefluxUser": false,
+    "edgeRealtimeConfig": {
+      "edgeConfigVersion": "5075A983A98347B7E4C98DAB2D1C7A82",
+      "edgeModelArgs": "{}",
+      "edgeConfigArgs": "{\"edge_index_score_ensemble_weight\":-3.0,\"static_exp_tags\":\"… [440 chars]"
+    },
+    "result": 1,
+    "isPreload": false,
+    "llsid": "2006112558352816034",
+    "isUnfollowFeeds": false,
+    "debug_id": "ff2d902b",
+    "debug_info": "gAAAAABqaEwyXsMGbCVspgsISxPrXPq9v3ifyNwg_0yXQ_P0gzBgKMGBG3x8… [292 chars]"
+  }
+}

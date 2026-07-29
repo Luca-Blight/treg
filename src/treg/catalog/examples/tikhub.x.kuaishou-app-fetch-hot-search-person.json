@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "d9ff2f24-faea-4d1f-8d85-891e8bd5e8ea",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:02",
+  "time_stamp": 1785220142,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Kuaishou-App-API/fetch_hot_search_person_api_v1_kuaishou_app_fetch_hot_search_person_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/d9ff2f24-faea-4d1f-8d85-891e8bd5e8ea?sign=b9c1bfa488b7b234208939334ff366d80cf14b1b5ec2aa3c20daec06661ac1fa",
+  "router": "/api/v1/kuaishou/app/fetch_hot_search_person",
+  "params": {},
+  "data": {
+    "result": 1,
+    "topList": {
+      "moduleType": 13,
+      "data": [
+        {
+          "backGroundImage": [],
+          "list": [
+            "… {13 field(s) truncated}",
+            "… 49 more item(s) truncated"
+          ]
+        }
+      ],
+      "dataType": 1
+    },
+    "ussid": "MzAxXzU1MzIyMTQwNTVfMTc4NTIyMDE0MjMyOV9fMzY3Mg",
+    "host-name": "public-bjy-c26-kce-node-canary37.idchb1az2.hb1.kwaidc.com",
+    "debug_id": "23699da1",
+    "debug_info": "gAAAAABqaEwuU1bER2-2WqZdbKjxDk1dusEWznIgZwwjx5g18UD-bk37Hnj6uxo_W1mK2QzYPLU8qdoyTAt8BmafIi3a2j04QsBs-7dXN4oZCOhqXyHcTm4x3YHFOePrNnUmqXLbjm8OOTERgB-6xcyPzVBSHgB0K-i4NH3qgiPAcjH43luE2zNArvrEVPKVyEcDSrkz… [292 chars]"
+  }
+}

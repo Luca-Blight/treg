@@ -1,0 +1,39 @@
+{
+  "code": 0,
+  "data": {
+    "data": [
+      {
+        "position": 1,
+        "url": "https://mp.weixin.qq.com/s/y9x8Zvza3KFBdnxCWS5t7A",
+        "post_time": 1785215203,
+        "post_time_str": "2026-07-28 13:06:43",
+        "cover_url": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/QaRWjMxooXtNdgzxicsVREUIPS52ribMKyvU1Ak1CQ7G4HDt5FdO3UKGnH7tWzkvicvHGtl0nNcftk9gGbiaDm0FfT6MSaVtPrb6uIOdMlvo2eM/0?wx_fmt=jpeg",
+        "original": 0,
+        "item_show_type": 0,
+        "digest": "",
+        "title": "习近平对侨务工作作出重要指示",
+        "pre_post_time": 1785215201,
+        "appmsgid": 2667023842,
+        "msg_status": 2,
+        "msg_fail_reason": "",
+        "send_to_fans_num": -1,
+        "update_time": 0,
+        "is_deleted": "0",
+        "types": 9,
+        "pic_cdn_url_235_1": "https://mmbiz.qpic.cn/mmbiz_jpg/QaRWjMxooXuIuzGPVicDqyZOLI85WP6QzSqzXJLZEgh56pRL0oqLiaETvaaTEmLq7hia2hmSW1xkK6YJGFibibg62mibm0TVeICgEiatT6eJK3fWfA/0?wx_fmt=jpeg",
+        "pic_cdn_url_16_9": "",
+        "pic_cdn_url_1_1": "https://mmbiz.qpic.cn/sz_mmbiz_jpg/QaRWjMxooXtNdgzxicsVREUIPS52ribMKyvU1Ak1CQ7G4HDt5FdO3UKGnH7tWzkvicvHGtl0nNcftk9gGbiaDm0FfT6MSaVtPrb6uIOdMlvo2eM/0?wx_fmt=jpeg"
+      },
+      "… 8 more item(s) truncated"
+    ],
+    "mp_nickname": "人民日报",
+    "mp_wxid": "rmrbwx",
+    "mp_ghid": "gh_363b924965e9",
+    "head_img": "http://mmbiz.qpic.cn/mmbiz_png/xrFYciaHL08D1hiaVU0brP9YwQH1wFm9D9AG7oAVaNE8RzGiaKekViaIovvgsjOicfxXcPUPiahpdZ1U1nndyYd4pP0w/0?wx_fmt=png",
+    "now_page": 1,
+    "now_page_articles_num": 9
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:24.774561329",
+  "requestId": "f59ec2032fae48db8b02192a13c9a68c"
+}

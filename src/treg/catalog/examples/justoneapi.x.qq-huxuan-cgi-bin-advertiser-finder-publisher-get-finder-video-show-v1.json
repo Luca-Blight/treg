@@ -1,0 +1,38 @@
+{
+  "code": 0,
+  "data": {
+    "show_type": 0,
+    "video_list": [
+      {
+        "export_id": "export/UzFfBgAAxJagHFxsRn64jMzT4DCMrsyAR7o_IgncffUyQshPEA",
+        "release_time": 1784376635,
+        "description": "咸奶油桂花美式｜好喝到舔杯子！#咖啡 #家庭咖啡馆 #自制饮品 #沉浸式做咖啡 #做咖啡的过程真的很治愈 #我的咖啡日记 #在整个咖啡界也是相当炸裂的 #简单的咖啡做法 #咖啡日常 #拿铁",
+        "read_pv": "11417",
+        "read_uv": "9641",
+        "comment_pv": "6",
+        "fav_pv": "102",
+        "heart_pv": "56",
+        "share_pv": "224",
+        "video_url": "https://findera4.video.qq.com/251/20302/stodownload?encfilekey=Cvvj5Ix3eewQsFvYyicia1J8ECibQriaFOc8uqI6Jw1AjBTBnojy8ibcyNmBqWz7TI794HuV3VjvTiaZIxWJAia0rXKYlctoB5E0qqLuWfpvku8aBtm9bjN6Su22w&token=<omitted: expires> [686 chars total]",
+        "cover_url": "https://findera4.video.qq.com/251/20304/stodownload?encfilekey=2fG3V4WwQPm1Hbczj0icFziasRL6qINlWIFJMB0YrDEw2OuRcIibuAxSLjhOn4SVulfeT8Tb0zs0uGxc24eaKKvO43E7kEojUDaVXOImr8x2Ko&token=<omitted: expires> [504 chars total]",
+        "industry_name": "",
+        "industry_read_pv": "0",
+        "aid": "",
+        "ader_name": "",
+        "tid": "0",
+        "is_hide": 0,
+        "ad_component_status": 0,
+        "interaction_rate": 0,
+        "video_type": 0,
+        "event_show_type": 0,
+        "interaction_pv": "0",
+        "delete_flag": 0
+      },
+      "… 2 more item(s) truncated"
+    ],
+    "total_cnt": 3
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:13:51.885385362",
+  "requestId": "546c17ae297d4432a21bf0a87a0f5303"
+}

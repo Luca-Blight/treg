@@ -1,0 +1,58 @@
+{
+  "code": 0,
+  "data": {
+    "page": 1,
+    "pagination_token": "<omitted: expires>",
+    "data": [
+      {
+        "id": "7487189920013344768",
+        "post_type": "ugc",
+        "text": "Over the last 25 years, Rwanda has delivered one of Africa’s most remarkable hea… [202 chars total]",
+        "content": {
+          "images": null,
+          "video": null,
+          "document": null,
+          "article": {
+            "title": "Memories from an inspiring trip to Rwanda",
+            "subtitle": "Bill Gates",
+            "article_url": "https://www.linkedin.com/pulse/memories-from-inspiring-trip-rwanda-bill-gates-oj… [123 chars total]"
+          },
+          "celebration": null,
+          "poll": null,
+          "event": null
+        },
+        "activity": {
+          "num_likes": 2991,
+          "num_comments": 428,
+          "num_shares": 112,
+          "reaction_counts": [
+            "… 2 field(s) truncated",
+            "… 5 more item(s) truncated"
+          ]
+        },
+        "author": {
+          "id": "251749025",
+          "urn": "ACoAAA8BYqEBCGLg_vT_ca6mMEqkpp9nVffJ3hc",
+          "url": "https://www.linkedin.com/in/williamhgates",
+          "public_identifier": "williamhgates",
+          "avatar": [
+            "… 4 field(s) truncated",
+            "… 3 more item(s) truncated"
+          ],
+          "first_name": "Bill",
+          "last_name": "Gates",
+          "full_name": "Bill Gates",
+          "description": "Chair, Gates Foundation and Founder, Breakthrough Energy",
+          "account_type": "user"
+        },
+        "created_at": "2026-07-27T06:07:20.239Z",
+        "url": "https://www.linkedin.com/feed/update/urn:li:activity:7487189920416108544",
+        "share_urn": "urn:li:ugcPost:7487189920013344768"
+      },
+      "… 19 more item(s) truncated"
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:07:20.871577841",
+  "requestId": "deb9fd95a6744ed3bd2ae1f010ce3ab6"
+}

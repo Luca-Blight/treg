@@ -1,0 +1,67 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "__typename": "Title",
+      "id": "tt0111161",
+      "titleText": {
+        "text": "The Shawshank Redemption",
+        "isOriginalTitle": true
+      },
+      "originalTitleText": {
+        "text": "The Shawshank Redemption",
+        "isOriginalTitle": true
+      },
+      "releaseYear": {
+        "__typename": "YearRange",
+        "year": 1994,
+        "endYear": null
+      },
+      "releaseDate": {
+        "__typename": "ReleaseDate",
+        "month": 10,
+        "day": 14,
+        "year": 1994,
+        "country": {
+          "id": "US"
+        },
+        "restriction": null,
+        "attributes": [],
+        "displayableProperty": {
+          "qualifiersInMarkdownList": null
+        }
+      },
+      "titleType": {
+        "__typename": "TitleType",
+        "id": "movie",
+        "text": "Movie",
+        "categories": [
+          {
+            "id": "movie",
+            "text": "Movie",
+            "value": "movie"
+          }
+        ],
+        "canHaveEpisodes": false,
+        "isEpisode": false,
+        "isSeries": false,
+        "displayableProperty": {
+          "value": {
+            "plainText": ""
+          }
+        }
+      },
+      "primaryImage": {
+        "__typename": "Image",
+        "id": "rm1690056449",
+        "url": "https://m.media-amazon.com/images/M/MV5BMDAyY2FhYjctNDc5OS00MDNlLThiMGUtY2UxYWVkNGY2ZjljXkEyXkFqcGc@._V1_.jpg",
+        "height": 1800,
+        "width": 1200
+      },
+      "contributionQuestions": null
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:58.279187949",
+  "requestId": "eb761870b4ca4e7db13765cbcc49e8cd"
+}

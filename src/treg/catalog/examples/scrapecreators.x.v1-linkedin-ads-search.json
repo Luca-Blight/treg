@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "credits_remaining": 19804,
+  "credits_charged": 1,
+  "ads": [
+    {
+      "id": "1474633804",
+      "description": "Jetzt ist der richtige Zeitpunkt, Ihre Infrastruktur abzusichern. 🔐 Lernen Sie die architektonischen Best Practices kennen, um sichere, intelligente Agents souverän zu verwalten, zu monitoren und zu s… [611 chars]",
+      "headline": "Modernisieren Sie Ihren Stack in einer Stunde pro Tag",
+      "poster": "Microsoft",
+      "targeting": {
+        "language": "Targeting includes Deutsch",
+        "location": "Targeting includes Deutschland, Österreich"
+      },
+      "image": "https://media.licdn.com/dms/image/v2/D4E10AQEcKGnqyYiMLA/image-shrink_1280/B4EZ9_mqdiHkAc-/0/1784552270050/TDM_Post_1_1x1png?e=2147483647&v=beta&t=-KRoLslgrlQU92e45aety67SVgrG_OytZ9lFckUnDd4",
+      "video": null,
+      "preRollVideo": null,
+      "organicVideo": null,
+      "preRollAdvertiser": null,
+      "carouselImages": [],
+      "url": "https://www.linkedin.com/ad-library/detail/1474633804",
+      "adType": "Single Image Ad",
+      "creativeType": "SPONSORED_STATUS_UPDATE",
+      "advertiser": "Microsoft",
+      "…": "13 more field(s) truncated"
+    },
+    "… 23 more item(s) truncated"
+  ],
+  "paginationToken": "<omitted: expires>",
+  "isLastPage": false,
+  "totalAds": 26700
+}

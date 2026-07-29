@@ -1,0 +1,372 @@
+{
+  "search_metadata": {
+    "id": "6a68986…",
+    "status": "Success",
+    "json_endpoint": "https:/…",
+    "pixel_position_endpoint": "https:/…",
+    "created_at": "2026-07…",
+    "processed_at": "2026-07…",
+    "google_url": "https:/…",
+    "raw_html_file": "https:/…",
+    "total_time_taken": 1.49
+  },
+  "search_parameters": {
+    "engine": "google",
+    "q": "coffee",
+    "google_domain": "google.…",
+    "device": "desktop"
+  },
+  "search_information": {
+    "query_displayed": "coffee",
+    "total_results": 3010000000,
+    "time_taken_displayed": 0.6,
+    "organic_results_state": "Results…"
+  },
+  "local_map": {
+    "link": "https:/…",
+    "image": "https:/…",
+    "gps_coordinates": {
+      "latitude": 42.429285222619264,
+      "longitude": -71.09939575195312
+    }
+  },
+  "local_results": {
+    "places": [
+      {
+        "position": 1,
+        "rating": 4.5,
+        "reviews": 525,
+        "reviews_original": "(525)",
+        "price": "$10–20",
+        "description": "\"Oat mi…",
+        "thumbnail": "https:/…",
+        "thumbnail_large": "https:/…",
+        "place_id": "2424301…",
+        "place_id_search": "https:/…",
+        "provider_id": "/g/11h0…",
+        "gps_coordinates": {
+          "latitude": 42.440864,
+          "longitude": -71.068054
+        },
+        "title": "Jitters…",
+        "type": "Coffee …",
+        "address": "Melrose…"
+      },
+      {
+        "position": 2,
+        "rating": 4.8,
+        "reviews": 642,
+        "reviews_original": "(642)",
+        "price": "$10–20",
+        "description": "\"They m…",
+        "thumbnail": "https:/…",
+        "thumbnail_large": "https:/…",
+        "place_id": "3509917…",
+        "place_id_search": "https:/…",
+        "provider_id": "/g/11f1…",
+        "gps_coordinates": {
+          "latitude": 42.42895,
+          "longitude": -71.074159
+        },
+        "title": "Bikeeny…",
+        "type": "Coffee …",
+        "address": "Malden,…"
+      },
+      "… 1 mor…"
+    ],
+    "more_locations_link": "https:/…"
+  },
+  "knowledge_graph": {
+    "title": "Coffee",
+    "type": "Beverag…",
+    "entity_type": "food",
+    "kgmid": "/m/02vq…",
+    "knowledge_graph_search_link": "https:/…",
+    "serpapi_knowledge_graph_search_link": "https:/…",
+    "header_images": [
+      {
+        "image": "https:/…",
+        "source": "https:/…"
+      },
+      {
+        "image": "https:/…",
+        "source": "https:/…"
+      },
+      "… 2 mor…"
+    ],
+    "description": "Coffee …",
+    "source": {
+      "name": " Wikipe…",
+      "link": "https:/…"
+    },
+    "sources_include": "USDAUSD…",
+    "sources_include_links": [
+      {
+        "text": "USDA",
+        "link": "https:/…"
+      },
+      {
+        "text": "USDA",
+        "link": "https:/…"
+      },
+      "… 5 mor…"
+    ],
+    "people_also_search_for": [
+      {
+        "name": "Vegetab…",
+        "image": "https:/…",
+        "link": "https:/…",
+        "serpapi_link": "https:/…"
+      },
+      {
+        "name": "Pasta",
+        "image": "https:/…",
+        "link": "https:/…",
+        "serpapi_link": "https:/…"
+      },
+      "… 2 mor…"
+    ],
+    "people_also_search_for_link": "https:/…",
+    "people_also_search_for_stick": "H4sIAAA…"
+  },
+  "inline_videos": [
+    {
+      "position": 1,
+      "title": "Stop Pa…",
+      "link": "https:/…",
+      "thumbnail": "https:/…",
+      "channel": "Sidney …",
+      "duration": "6:43",
+      "platform": "YouTube",
+      "date": "1 week …",
+      "snippet": "Make de…",
+      "short_clip": "https:/…"
+    },
+    {
+      "position": 2,
+      "title": "I Went …",
+      "link": "https:/…",
+      "thumbnail": "https:/…",
+      "channel": "James H…",
+      "duration": "25:45",
+      "platform": "YouTube",
+      "date": "1 week …",
+      "short_clip": "https:/…"
+    },
+    "… 1 mor…"
+  ],
+  "related_questions": [
+    {
+      "question": "What is…",
+      "type": "ai_over…",
+      "page_token": "1hjXwni…",
+      "serpapi_ai_overview_link": "https:/…",
+      "next_page_token": "eyJvbnM…",
+      "serpapi_link": "https:/…"
+    },
+    {
+      "question": "Is it h…",
+      "type": "ai_over…",
+      "page_token": "N_9bH3i…",
+      "serpapi_ai_overview_link": "https:/…",
+      "next_page_token": "eyJvbnM…",
+      "serpapi_link": "https:/…"
+    },
+    "… 2 mor…"
+  ],
+  "organic_results": [
+    {
+      "position": 1,
+      "title": "Coffee",
+      "link": "https:/…",
+      "redirect_link": "https:/…",
+      "displayed_link": "https:/…",
+      "thumbnail": "https:/…",
+      "favicon": "https:/…",
+      "snippet": "Coffee …",
+      "snippet_highlighted_words": [
+        "a bever…"
+      ],
+      "about_this_result": {
+        "source": {
+          "description": "Coffee …",
+          "source_info_link": "https:/…",
+          "icon": "https:/…"
+        },
+        "languages": [
+          "en"
+        ],
+        "regions": [
+          "US"
+        ]
+      },
+      "about_page_link": "https:/…",
+      "about_page_serpapi_link": "https:/…",
+      "source": "Wikiped…"
+    },
+    {
+      "position": 2,
+      "title": "Coffee …",
+      "link": "https:/…",
+      "redirect_link": "https:/…",
+      "displayed_link": "https:/…",
+      "favicon": "https:/…",
+      "snippet": "A plain…",
+      "snippet_highlighted_words": [
+        "is a ve…"
+      ],
+      "about_this_result": {
+        "source": {
+          "description": "A plain…",
+          "source_info_link": "https:/…",
+          "icon": "https:/…"
+        },
+        "languages": [
+          "en"
+        ],
+        "regions": [
+          "US"
+        ]
+      },
+      "about_page_link": "https:/…",
+      "about_page_serpapi_link": "https:/…",
+      "source": "The Nut…",
+      "read_more_link": "https:/…"
+    },
+    "… 6 mor…"
+  ],
+  "perspectives": [
+    {
+      "author": "Talking…",
+      "source": "YouTube",
+      "duration": "8:18",
+      "extensions": [
+        "42.9K+ …"
+      ],
+      "thumbnails": [
+        "https:/…"
+      ],
+      "title": "Is Coff…",
+      "date": "1 day a…"
+    },
+    {
+      "author": "pulland…",
+      "source": "Instagr…",
+      "duration": "0:30",
+      "extensions": [
+        "400+ li…"
+      ],
+      "thumbnails": [
+        "https:/…"
+      ],
+      "title": "Elevate…",
+      "date": "5 hours…"
+    },
+    "… 10 mo…"
+  ],
+  "related_searches": [
+    {
+      "block_position": 1,
+      "query": "Coffee …",
+      "link": "https:/…",
+      "serpapi_link": "https:/…"
+    },
+    {
+      "block_position": 1,
+      "query": "Coffee …",
+      "link": "https:/…",
+      "serpapi_link": "https:/…"
+    },
+    "… 6 mor…"
+  ],
+  "things_to_know": {
+    "buttons": [
+      {
+        "text": "Types",
+        "search_link": "https:/…",
+        "serpapi_search_link": "https:/…",
+        "ai_overview": {
+          "text_blocks": [
+            {
+              "type": "paragra…",
+              "snippet": "Coffee …",
+              "reference_indexes": [
+                0,
+                2,
+                "… 4 mor…"
+              ]
+            },
+            {
+              "type": "paragra…",
+              "snippet": "Here is…"
+            },
+            "… 3 mor…"
+          ],
+          "references": [
+            {
+              "title": "Types o…",
+              "link": "https:/…",
+              "snippet": "Types o…",
+              "source": "Folgers…",
+              "index": 0
+            },
+            {
+              "title": "25 type…",
+              "link": "https:/…",
+              "source": "Beans C…",
+              "index": 1
+            },
+            "… 6 mor…"
+          ]
+        }
+      },
+      {
+        "text": "Health …",
+        "title": "Coffee …",
+        "link": "https:/…",
+        "displayed_link": "https:/…",
+        "date": "Jan 31,…",
+        "snippet": "Drinkin…",
+        "snippet_highlighted_words": [
+          "improve…"
+        ],
+        "favicon": "https:/…",
+        "source": "mayocli…",
+        "search_link": "https:/…",
+        "serpapi_search_link": "https:/…"
+      },
+      "… 2 mor…"
+    ]
+  },
+  "pagination": {
+    "current": 1,
+    "next": "https:/…",
+    "other_pages": {
+      "2": "https:/…",
+      "3": "https:/…",
+      "4": "https:/…",
+      "5": "https:/…",
+      "6": "https:/…",
+      "7": "https:/…",
+      "8": "https:/…",
+      "9": "https:/…",
+      "10": "https:/…"
+    }
+  },
+  "serpapi_pagination": {
+    "current": 1,
+    "next_link": "https:/…",
+    "next": "https:/…",
+    "other_pages": {
+      "2": "https:/…",
+      "3": "https:/…",
+      "4": "https:/…",
+      "5": "https:/…",
+      "6": "https:/…",
+      "7": "https:/…",
+      "8": "https:/…",
+      "9": "https:/…",
+      "10": "https:/…"
+    }
+  }
+}

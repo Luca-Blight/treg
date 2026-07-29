@@ -1,0 +1,35 @@
+{
+  "code": 200,
+  "request_id": "51483055-8830-437c-adea-e7e3bf80f145",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:50",
+  "time_stamp": 1785220370,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Search-API/fetch_school_search_api_v1_douyin_search_fetch_school_search_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/51483055-8830-437c-adea-e7e3bf80f145?sign=0f0715e9cbe85a64d7fe9c3396a825bc6f4b9fe2b072caf14b10d73874d6de99",
+  "router": "/api/v1/douyin/search/fetch_school_search",
+  "params": {
+    "keyword": "北京"
+  },
+  "data": {
+    "schools": [
+      {
+        "name": "北京四中"
+      },
+      "… 299 more item(s) truncated"
+    ],
+    "extra": {
+      "fatal_item_ids": [],
+      "logid": "2026072814325029AA7E2A3B3A4B7FC637",
+      "now": 1785220370000
+    },
+    "log_pb": {
+      "impr_id": "2026072814325029AA7E2A3B3A4B7FC637"
+    },
+    "status_code": 0
+  }
+}

@@ -1,0 +1,1826 @@
+provider: serpapi
+source:
+  method: docs
+  ingested: 2026-07-28
+  spec_urls:
+  - https://serpapi.com/search-api
+endpoints:
+- id: serpapi.x.google-maps
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Maps places
+  summary: Live Google Maps place results for a keyword and location — position, place_id, rating, address, phone, website
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_maps
+      type:
+        type: string
+        required: true
+        note: search (keyword search) or place (single place lookup)
+        example: search
+      q:
+        type: string
+        required: true
+        note: search keyword
+        example: pizza
+      ll:
+        type: string
+        required: false
+        note: '@latitude,longitude,zoom — alternative to location+z or lat/lon+z'
+        example: '@40.7455096,-74.0083012,14z'
+      start:
+        type: integer
+        required: false
+        note: pagination offset, increments of 20
+        example: 0
+    note: answers arrive in `local_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+    note: 1 search, entry-level Developer plan rate
+  test_request:
+    queryParams:
+      engine: google_maps
+      type: search
+      q: pizza
+      ll: '@40.7455096,-74.0083012,14z'
+  docs_url: https://serpapi.com/google-maps-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-maps.json
+  observed_time: 1.95
+- id: serpapi.x.google-shopping
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Shopping products
+  summary: Live Google Shopping results for a keyword — price, seller, rating, delivery
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_shopping
+      q:
+        type: string
+        required: true
+        example: Office Chair
+      gl:
+        type: string
+        required: false
+        example: us
+      hl:
+        type: string
+        required: false
+        example: en
+      location:
+        type: string
+        required: false
+        note: city-level origin
+    note: answers arrive in `shopping_results` (also `inline_shopping_results`, `categorized_shopping_results`).
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_shopping
+      q: Office Chair
+      gl: us
+      hl: en
+  docs_url: https://serpapi.com/google-shopping-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-shopping.json
+  observed_time: 1.98
+- id: serpapi.x.google-scholar
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Scholar articles
+  summary: Live Google Scholar results for a keyword — title, link, snippet, citation count
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_scholar
+      q:
+        type: string
+        required: true
+        example: biology
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_scholar
+      q: biology
+  docs_url: https://serpapi.com/google-scholar-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-scholar.json
+  observed_time: 6.55
+- id: serpapi.x.google-trends
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Get Google Trends interest data
+  summary: Interest-over-time, regional breakdown, related topics or related queries for up to 5 comma-separated terms
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_trends
+      q:
+        type: string
+        required: true
+        note: up to 5 comma-separated terms
+        example: coffee,milk
+      data_type:
+        type: string
+        required: false
+        note: TIMESERIES (default) | GEO_MAP | GEO_MAP_0 | RELATED_TOPICS | RELATED_QUERIES
+        example: TIMESERIES
+      geo:
+        type: string
+        required: false
+        note: region code; default Worldwide
+        example: US
+      date:
+        type: string
+        required: false
+        note: e.g. "today 12-m", "now 7-d"
+        example: today 12-m
+    note: 'result key depends on data_type: interest_over_time / compared_breakdown_by_region / interest_by_region / related_topics / related_queries.'
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_trends
+      q: coffee
+      data_type: TIMESERIES
+      geo: US
+  docs_url: https://serpapi.com/google-trends-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-trends.json
+  observed_time: 7.14
+- id: serpapi.x.google-news
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google News articles
+  summary: Live Google News results for a keyword, topic token or story token
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_news
+      q:
+        type: string
+        required: false
+        note: search query; alternative to topic_token/story_token
+        example: pizza
+      gl:
+        type: string
+        required: false
+        example: us
+      hl:
+        type: string
+        required: false
+        example: en
+      topic_token:
+        type: string
+        required: false
+        note: opaque token to fetch a specific news topic instead of a query
+    note: answers arrive in `news_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_news
+      q: pizza
+      gl: us
+      hl: en
+  docs_url: https://serpapi.com/google-news-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-news.json
+  observed_time: 2.11
+- id: serpapi.x.google-images
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Images
+  summary: Live Google Images results for a keyword — thumbnail, original URL, source, size
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_images
+      q:
+        type: string
+        required: true
+        example: coffee
+    note: answers arrive in `images_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_images
+      q: coffee
+  docs_url: https://serpapi.com/google-images-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-images.json
+  observed_time: 3.63
+- id: serpapi.x.google-jobs
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Jobs listings
+  summary: Live Google Jobs results for a keyword and location
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_jobs
+      q:
+        type: string
+        required: true
+        example: barista new york
+      location:
+        type: string
+        required: false
+        example: New York
+      gl:
+        type: string
+        required: false
+        example: us
+      hl:
+        type: string
+        required: false
+        example: en
+      ltype:
+        type: string
+        required: false
+        note: 1 = filter to work-from-home jobs
+    note: answers arrive in `jobs_results`, up to 10 per page; `filters` lists available refinements.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_jobs
+      q: barista new york
+      gl: us
+      hl: en
+  docs_url: https://serpapi.com/google-jobs-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-jobs.json
+  observed_time: 2.85
+- id: serpapi.x.google-finance
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Get Google Finance quote and history
+  summary: Live Google Finance data for a ticker — price, chart series, key statistics, related news
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_finance
+      q:
+        type: string
+        required: true
+        note: ticker in TICKER:EXCHANGE form, or a currency pair like EUR-USD
+        example: GOOGL:NASDAQ
+      hl:
+        type: string
+        required: false
+        example: en
+      window:
+        type: string
+        required: false
+        note: 1D (default) | 5D | 1M | 6M | YTD | 1Y | 5Y | MAX
+        example: 1Y
+    note: answers arrive in `summary` and `graph`; `knowledge_graph` and `financials` when available.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_finance
+      q: GOOGL:NASDAQ
+      window: 1Y
+  docs_url: https://serpapi.com/google-finance-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-finance.json
+  observed_time: 1.41
+- id: serpapi.x.google-patents
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Patents
+  summary: Live Google Patents results for a keyword — patent id, dates, inventor, assignee
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_patents
+      q:
+        type: string
+        required: true
+        note: boolean-capable query, e.g. "(Coffee) OR (Tea)"
+        example: (Coffee)
+      page:
+        type: integer
+        required: false
+        example: 1
+      num:
+        type: integer
+        required: false
+        note: 10-100 per page
+        example: 10
+      sort:
+        type: string
+        required: false
+        note: new | old
+      status:
+        type: string
+        required: false
+        note: GRANT | APPLICATION
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_patents
+      q: (Coffee)
+      num: 10
+  docs_url: https://serpapi.com/google-patents-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-patents.json
+  observed_time: 1.59
+- id: serpapi.x.google-flights
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Flights itineraries
+  summary: Live Google Flights results — best/other flights, price insights, for a route and date
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_flights
+      departure_id:
+        type: string
+        required: true
+        note: origin airport/location code
+        example: CDG
+      arrival_id:
+        type: string
+        required: true
+        note: destination airport/location code
+        example: AUS
+      outbound_date:
+        type: string
+        required: true
+        note: YYYY-MM-DD
+        example: '2026-09-01'
+      type:
+        type: string
+        required: false
+        note: 1 round trip (default) | 2 one way | 3 multi-city
+        example: '2'
+      return_date:
+        type: string
+        required: false
+        note: YYYY-MM-DD, required when type=1
+      currency:
+        type: string
+        required: false
+        example: USD
+    note: answers arrive in `best_flights` and `other_flights`; `price_insights` gives the typical price range.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_flights
+      departure_id: CDG
+      arrival_id: AUS
+      outbound_date: '2026-09-01'
+      type: '2'
+  docs_url: https://serpapi.com/google-flights-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-flights.json
+  observed_time: 2.45
+- id: serpapi.x.google-hotels
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Hotels properties
+  summary: Live Google Hotels results for a query, check-in/out dates and party size
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_hotels
+      q:
+        type: string
+        required: true
+        example: Bali Resorts
+      check_in_date:
+        type: string
+        required: true
+        note: YYYY-MM-DD
+        example: '2026-09-01'
+      check_out_date:
+        type: string
+        required: true
+        note: YYYY-MM-DD
+        example: '2026-09-02'
+      adults:
+        type: integer
+        required: true
+        example: 2
+    note: answers arrive in `properties`; sponsored listings in `ads`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_hotels
+      q: Bali Resorts
+      check_in_date: '2026-09-01'
+      check_out_date: '2026-09-02'
+      adults: 2
+  docs_url: https://serpapi.com/google-hotels-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-hotels.json
+  observed_time: 7.59
+- id: serpapi.x.google-local
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google local business results
+  summary: The Google 'local pack' — nearby businesses for a keyword and location
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_local
+      q:
+        type: string
+        required: true
+        example: Coffee
+      location:
+        type: string
+        required: false
+        example: New York, New York, United States
+      gl:
+        type: string
+        required: false
+        example: us
+      hl:
+        type: string
+        required: false
+        example: en
+    note: answers arrive in `local_results`; `ads_results` for paid listings.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_local
+      q: Coffee
+      location: New York, New York, United States
+  docs_url: https://serpapi.com/google-local-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-local.json
+  observed_time: 11.29
+- id: serpapi.x.google-lens
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Reverse image search with Google Lens
+  summary: Visual matches, exact matches or 'about this image' data for an image URL
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_lens
+      url:
+        type: string
+        required: true
+        note: publicly reachable URL of the image to search
+        example: https://i.imgur.com/HBrB8p0.png
+      type:
+        type: string
+        required: false
+        note: all (default) | about_this_image | products | exact_matches | visual_matches
+    note: answers arrive in `visual_matches`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_lens
+      url: https://i.imgur.com/HBrB8p0.png
+      type: visual_matches
+  docs_url: https://serpapi.com/google-lens-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-lens.json
+  observed_time: 4.1
+- id: serpapi.x.google-videos
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Videos
+  summary: Live Google Videos vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_videos
+      q:
+        type: string
+        required: true
+        example: coffee
+    note: same query grammar as engine=google, restricted to the video vertical; answers arrive in `video_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_videos
+      q: coffee
+  docs_url: https://serpapi.com/google-videos-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-videos.json
+  observed_time: 3.62
+- id: serpapi.x.google-events
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Search Google Events listings
+  summary: Live Google Events vertical results for a keyword and location
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_events
+      q:
+        type: string
+        required: true
+        example: concerts in austin
+      hl:
+        type: string
+        required: false
+        example: en
+      gl:
+        type: string
+        required: false
+        example: us
+    note: answers arrive in `events_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_events
+      q: concerts in austin
+  docs_url: https://serpapi.com/google-events-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-events.json
+  observed_time: 1.57
+- id: serpapi.x.google-ads
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Get paid ads shown on a Google SERP
+  summary: The shopping/text ad units Google shows on its own results page for a keyword (distinct from the Ads Transparency Center)
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_ads
+      q:
+        type: string
+        required: true
+        example: coffee
+      gl:
+        type: string
+        required: false
+        example: us
+      hl:
+        type: string
+        required: false
+        example: en
+      location:
+        type: string
+        required: true
+        note: city-level origin of the search — confirmed REQUIRED live (a bare gl/hl call 400s with "Missing `location` parameter")
+        example: Austin, Texas, United States
+    note: answers arrive in `ads_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_ads
+      q: coffee
+      gl: us
+      location: Austin, Texas, United States
+  docs_url: https://serpapi.com/google-ads-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-ads.json
+- id: serpapi.x.google-light
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  capability: google.serp.organic
+  name: Search Google (lightweight organic)
+  summary: A faster, trimmed-down variant of the main Google organic engine — same query grammar, smaller payload
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_light
+      q:
+        type: string
+        required: true
+        example: coffee
+      gl:
+        type: string
+        required: false
+        example: us
+      hl:
+        type: string
+        required: false
+        example: en
+    note: sibling of engine=google (see serpapi.google.serp.organic in core); answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: google_light
+      q: coffee
+  docs_url: https://serpapi.com/google-light-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.google-light.json
+  observed_time: 0.75
+- id: serpapi.x.google-ai-mode
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Get Google AI Mode response
+  summary: Google's conversational AI Mode answer for a query
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_ai_mode
+      q:
+        type: string
+        required: true
+        example: best coffee brewing method
+    note: sibling of engine=google, params not independently confirmed beyond `q`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  untestable: query param beyond `q` unconfirmed from docs at ingest time; no test_request generated to avoid a guessed param shape
+  docs_url: https://serpapi.com/google-ai-mode-api
+- id: serpapi.x.google-ai-overview
+  tier: extended
+  platform: google
+  method: GET
+  path: /search
+  name: Get a Google AI Overview panel
+  summary: The AI Overview panel Google attaches to a SERP, fetched via the page_token a prior engine=google call returned
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: google_ai_overview
+      page_token:
+        type: string
+        required: true
+        note: opaque token copied from an `ai_overview.page_token` field of a prior engine=google response — cannot be supplied standalone
+    note: 'chained endpoint: only callable after a regular Google search already returned an ai_overview.page_token.'
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  untestable: requires a page_token minted by a prior engine=google response; no standalone value exists to test with
+  docs_url: https://serpapi.com/google-ai-overview-api
+- id: serpapi.x.bing-search
+  tier: extended
+  platform: bing
+  method: GET
+  path: /search
+  name: Search Bing organic results
+  summary: Live Bing organic results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: bing
+      q:
+        type: string
+        required: true
+        example: coffee
+      mkt:
+        type: string
+        required: false
+        note: market code, e.g. en-US; mutually exclusive with cc
+        example: en-US
+      cc:
+        type: string
+        required: false
+        note: two-letter country code, mutually exclusive with mkt
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: bing
+      q: coffee
+      mkt: en-US
+  docs_url: https://serpapi.com/bing-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.bing-search.json
+  observed_time: 11.83
+  capability: bing.serp.organic
+- id: serpapi.x.bing-news
+  tier: extended
+  platform: bing
+  method: GET
+  path: /search
+  name: Search Bing News
+  summary: Live Bing News vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: bing_news
+      q:
+        type: string
+        required: true
+        example: coffee
+    note: sibling of engine=bing, reuses the same `q` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: bing_news
+      q: coffee
+  docs_url: https://serpapi.com/bing-news-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.bing-news.json
+  observed_time: 1.14
+  capability: bing.serp.news
+- id: serpapi.x.bing-images
+  tier: extended
+  platform: bing
+  method: GET
+  path: /search
+  name: Search Bing Images
+  summary: Live Bing Images vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: bing_images
+      q:
+        type: string
+        required: true
+        example: coffee
+    note: sibling of engine=bing, reuses the same `q` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: bing_images
+      q: coffee
+  docs_url: https://serpapi.com/bing-images-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.bing-images.json
+  observed_time: 1.85
+  capability: bing.serp.images
+- id: serpapi.x.bing-videos
+  tier: extended
+  platform: bing
+  method: GET
+  path: /search
+  name: Search Bing Videos
+  summary: Live Bing Videos vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: bing_videos
+      q:
+        type: string
+        required: true
+        example: coffee
+    note: sibling of engine=bing, reuses the same `q` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: bing_videos
+      q: coffee
+  docs_url: https://serpapi.com/bing-videos-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.bing-videos.json
+  observed_time: 2.36
+  capability: bing.serp.videos
+- id: serpapi.x.bing-shopping
+  tier: extended
+  platform: bing
+  method: GET
+  path: /search
+  name: Search Bing Shopping
+  summary: Live Bing Shopping vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: bing_shopping
+      q:
+        type: string
+        required: true
+        example: coffee maker
+    note: sibling of engine=bing, reuses the same `q` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: bing_shopping
+      q: coffee maker
+  docs_url: https://serpapi.com/bing-shopping-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.bing-shopping.json
+  observed_time: 3.02
+  capability: bing.serp.shopping
+- id: serpapi.x.bing-copilot
+  tier: extended
+  platform: bing
+  method: GET
+  path: /search
+  name: Get a Bing Copilot answer
+  summary: Bing's conversational Copilot answer for a prompt
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: bing_copilot
+      q:
+        type: string
+        required: true
+        note: conversational prompt; param name not independently confirmed
+    note: conversational engine — request/response shape differs from the classic SERP engines; not independently fetched.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  untestable: conversational param shape not confirmed from docs at ingest time
+  docs_url: https://serpapi.com/bing-copilot-api
+- id: serpapi.x.baidu-search
+  tier: extended
+  platform: baidu
+  method: GET
+  path: /search
+  name: Search Baidu organic results
+  summary: Live Baidu organic results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: baidu
+      q:
+        type: string
+        required: true
+        example: coffee
+      ct:
+        type: integer
+        required: false
+        note: 1 = all languages, 2 = Simplified Chinese, 3 = Traditional Chinese
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: baidu
+      q: coffee
+  docs_url: https://serpapi.com/baidu-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.baidu-search.json
+  observed_time: 19.5
+  capability: baidu.serp.organic
+- id: serpapi.x.baidu-news
+  tier: extended
+  platform: baidu
+  method: GET
+  path: /search
+  name: Search Baidu News
+  summary: Live Baidu News vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: baidu_news
+      q:
+        type: string
+        required: true
+        example: coffee
+    note: sibling of engine=baidu, reuses the same `q` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: baidu_news
+      q: coffee
+  docs_url: https://serpapi.com/baidu-news-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.baidu-news.json
+  observed_time: 2.89
+  capability: baidu.serp.news
+- id: serpapi.x.duckduckgo-search
+  tier: extended
+  platform: duckduckgo
+  method: GET
+  path: /search
+  name: Search DuckDuckGo organic results
+  summary: Live DuckDuckGo organic results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: duckduckgo
+      q:
+        type: string
+        required: true
+        note: max 500 chars
+        example: apple
+      kl:
+        type: string
+        required: false
+        note: region code, e.g. us-en
+        example: us-en
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: duckduckgo
+      q: apple
+      kl: us-en
+  docs_url: https://serpapi.com/duckduckgo-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.duckduckgo-search.json
+  observed_time: 6.88
+  capability: duckduckgo.serp.organic
+- id: serpapi.x.duckduckgo-news
+  tier: extended
+  platform: duckduckgo
+  method: GET
+  path: /search
+  name: Search DuckDuckGo News
+  summary: Live DuckDuckGo News vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: duckduckgo_news
+      q:
+        type: string
+        required: true
+        example: apple
+    note: sibling of engine=duckduckgo, reuses the same `q` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: duckduckgo_news
+      q: apple
+  docs_url: https://serpapi.com/duckduckgo-news-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.duckduckgo-news.json
+  observed_time: 5.19
+  capability: duckduckgo.serp.news
+- id: serpapi.x.duckduckgo-light
+  tier: extended
+  platform: duckduckgo
+  method: GET
+  path: /search
+  name: Search DuckDuckGo (lightweight)
+  summary: A faster, trimmed-down variant of DuckDuckGo organic search
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: duckduckgo_light
+      q:
+        type: string
+        required: true
+        example: apple
+    note: sibling of engine=duckduckgo, reuses the same `q` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: duckduckgo_light
+      q: apple
+  docs_url: https://serpapi.com/duckduckgo-light-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.duckduckgo-light.json
+  observed_time: 1.88
+  capability: duckduckgo.serp.organic
+- id: serpapi.x.duckduckgo-maps
+  tier: extended
+  platform: duckduckgo
+  method: GET
+  path: /search
+  name: Search DuckDuckGo Maps
+  summary: Live DuckDuckGo Maps vertical results for a keyword and location
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: duckduckgo_maps
+      q:
+        type: string
+        required: true
+        note: search keyword; location param name not independently confirmed
+    note: not independently fetched — maps engines usually need a location param beyond `q` (see serpapi.x.google-maps' `ll`) that was not confirmed here.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  untestable: location/coordinate param name not confirmed from docs at ingest time
+  docs_url: https://serpapi.com/duckduckgo-maps-api
+- id: serpapi.x.yahoo-search
+  tier: extended
+  platform: yahoo
+  method: GET
+  path: /search
+  name: Search Yahoo organic results
+  summary: Live Yahoo organic results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: yahoo
+      p:
+        type: string
+        required: true
+        note: THE QUERY PARAM IS `p`, NOT `q`
+        example: coffee mug
+      vc:
+        type: string
+        required: false
+        note: two-letter country code
+        example: us
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: yahoo
+      p: coffee mug
+      vc: us
+  docs_url: https://serpapi.com/yahoo-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.yahoo-search.json
+  observed_time: 3.17
+  capability: yahoo.serp.organic
+- id: serpapi.x.yahoo-images
+  tier: extended
+  platform: yahoo
+  method: GET
+  path: /search
+  name: Search Yahoo Images
+  summary: Live Yahoo Images vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: yahoo_images
+      p:
+        type: string
+        required: true
+        example: coffee
+    note: sibling of engine=yahoo, reuses the same `p` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: yahoo_images
+      p: coffee
+  docs_url: https://serpapi.com/yahoo-images-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.yahoo-images.json
+  observed_time: 1.99
+  capability: yahoo.serp.images
+- id: serpapi.x.yahoo-videos
+  tier: extended
+  platform: yahoo
+  method: GET
+  path: /search
+  name: Search Yahoo Videos
+  summary: Live Yahoo Videos vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: yahoo_videos
+      p:
+        type: string
+        required: true
+        example: coffee
+    note: sibling of engine=yahoo, reuses the same `p` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: yahoo_videos
+      p: coffee
+  docs_url: https://serpapi.com/yahoo-videos-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.yahoo-videos.json
+  observed_time: 1.99
+  capability: yahoo.serp.videos
+- id: serpapi.x.yandex-search
+  tier: extended
+  platform: yandex
+  method: GET
+  path: /search
+  name: Search Yandex organic results
+  summary: Live Yandex organic results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: yandex
+      text:
+        type: string
+        required: true
+        note: THE QUERY PARAM IS `text`, NOT `q`; max 400 chars
+        example: coffee
+      lang:
+        type: string
+        required: false
+        note: defaults to en on yandex.com
+        example: en
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: yandex
+      text: coffee
+  docs_url: https://serpapi.com/yandex-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.yandex-search.json
+  observed_time: 2.01
+  capability: yandex.serp.organic
+- id: serpapi.x.yandex-images
+  tier: extended
+  platform: yandex
+  method: GET
+  path: /search
+  name: Search Yandex Images
+  summary: Live Yandex Images vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: yandex_images
+      text:
+        type: string
+        required: true
+        example: coffee
+    note: sibling of engine=yandex, reuses the same `text` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: yandex_images
+      text: coffee
+  docs_url: https://serpapi.com/yandex-images-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.yandex-images.json
+  observed_time: 2.15
+  capability: yandex.serp.images
+- id: serpapi.x.yandex-videos
+  tier: extended
+  platform: yandex
+  method: GET
+  path: /search
+  name: Search Yandex Videos
+  summary: Live Yandex Videos vertical results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: yandex_videos
+      text:
+        type: string
+        required: true
+        example: coffee
+    note: sibling of engine=yandex, reuses the same `text` param confirmed on the parent engine.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: yandex_videos
+      text: coffee
+  docs_url: https://serpapi.com/yandex-videos-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.yandex-videos.json
+  observed_time: 2.3
+  capability: yandex.serp.videos
+- id: serpapi.x.naver-search
+  tier: extended
+  platform: naver
+  method: GET
+  path: /search
+  name: Search Naver organic results
+  summary: Live Naver organic results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: naver
+      query:
+        type: string
+        required: true
+        note: THE QUERY PARAM IS `query`, NOT `q`
+        example: paris
+      where:
+        type: string
+        required: false
+        note: nexearch | web | video | news | image
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: naver
+      query: paris
+  docs_url: https://serpapi.com/naver-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.naver-search.json
+  observed_time: 2.97
+  capability: naver.serp.organic
+- id: serpapi.x.naver-ai-overview
+  tier: extended
+  platform: naver
+  method: GET
+  path: /search
+  name: Get a Naver AI overview panel
+  summary: Naver's AI-generated overview panel for a query
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: naver_ai_overview
+      query:
+        type: string
+        required: true
+        note: param name inferred from sibling engine=naver, not independently confirmed
+    note: sibling of engine=naver; not independently fetched.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  untestable: param shape not independently confirmed from docs at ingest time
+  docs_url: https://serpapi.com/naver-ai-overview-api
+- id: serpapi.x.amazon-search
+  tier: extended
+  platform: amazon
+  method: GET
+  path: /search
+  capability: amazon.search.products
+  name: Search Amazon products
+  summary: Live Amazon search results for a keyword — ASIN, title, price, rating, reviews
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: amazon
+      k:
+        type: string
+        required: true
+        note: THE QUERY PARAM IS `k`, NOT `q`
+        example: Coffee
+      amazon_domain:
+        type: string
+        required: false
+        note: default amazon.com
+        example: amazon.com
+    note: answers arrive in `organic_results`; sponsored in `product_ads`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: amazon
+      k: Coffee
+      amazon_domain: amazon.com
+  docs_url: https://serpapi.com/amazon-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.amazon-search.json
+  observed_time: 2.39
+- id: serpapi.x.amazon-product
+  tier: extended
+  platform: amazon
+  method: GET
+  path: /search
+  capability: amazon.product.detail
+  name: Get an Amazon product's detail page
+  summary: Full Amazon product page data for a given ASIN — price, specs, reviews, related products
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: amazon_product
+      asin:
+        type: string
+        required: true
+        note: Amazon Standard Identification Number
+        example: B072MQ5BRX
+      amazon_domain:
+        type: string
+        required: false
+        example: amazon.com
+    note: answers arrive in `product_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: amazon_product
+      asin: B072MQ5BRX
+      amazon_domain: amazon.com
+  docs_url: https://serpapi.com/amazon-product-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.amazon-product.json
+  observed_time: 10.71
+- id: serpapi.x.ebay-search
+  tier: extended
+  platform: ebay
+  method: GET
+  path: /search
+  name: Search eBay listings
+  summary: Live eBay search results for a keyword or category
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: ebay
+      _nkw:
+        type: string
+        required: false
+        note: THE QUERY PARAM IS `_nkw`; optional only if `category_id` is given instead
+        example: Coffee
+      category_id:
+        type: string
+        required: false
+        note: browse by category instead of keyword
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: ebay
+      _nkw: Coffee
+  docs_url: https://serpapi.com/ebay-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.ebay-search.json
+  observed_time: 4.72
+  capability: ebay.search.products
+- id: serpapi.x.ebay-product
+  tier: extended
+  platform: ebay
+  method: GET
+  path: /search
+  name: Get an eBay listing's detail page
+  summary: Full eBay item page data for a given product id — price, seller, shipping, specifications
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: ebay_product
+      product_id:
+        type: string
+        required: true
+        example: '305576857892'
+      ebay_domain:
+        type: string
+        required: false
+        example: ebay.com
+    note: answers arrive in `product_results` and `seller_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: ebay_product
+      product_id: '305576857892'
+  docs_url: https://serpapi.com/ebay-product-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.ebay-product.json
+  observed_time: 2.52
+  capability: ebay.product.detail
+- id: serpapi.x.walmart-search
+  tier: extended
+  platform: walmart
+  method: GET
+  path: /search
+  name: Search Walmart products
+  summary: Live Walmart search results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: walmart
+      query:
+        type: string
+        required: true
+        example: coffee maker
+      walmart_domain:
+        type: string
+        required: false
+        note: default walmart.com
+        example: walmart.com
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: walmart
+      query: coffee maker
+  docs_url: https://serpapi.com/walmart-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.walmart-search.json
+  observed_time: 47.47
+  capability: walmart.search.products
+- id: serpapi.x.walmart-product
+  tier: extended
+  platform: walmart
+  method: GET
+  path: /search
+  name: Get a Walmart product's detail page
+  summary: Full Walmart product page data for a given product id — price, stock, shipping, reviews
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: walmart_product
+      product_id:
+        type: string
+        required: true
+        example: '147423982'
+    note: answers arrive in `product_result`; `reviews_results` when available.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: walmart_product
+      product_id: '147423982'
+  docs_url: https://serpapi.com/walmart-product-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.walmart-product.json
+  observed_time: 5.15
+  capability: walmart.product.detail
+- id: serpapi.x.home-depot-search
+  tier: extended
+  platform: web
+  method: GET
+  path: /search
+  name: Search Home Depot products
+  summary: Live Home Depot search results for a keyword
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: home_depot
+      q:
+        type: string
+        required: true
+        example: hammer
+      country:
+        type: string
+        required: false
+        note: us (default) | ca
+    note: no dedicated 'home_depot' platform exists in capabilities.yaml — filed under web. Answers arrive in `products`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: home_depot
+      q: hammer
+  docs_url: https://serpapi.com/home-depot-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.home-depot-search.json
+  observed_time: 13.05
+- id: serpapi.x.yelp-search
+  tier: extended
+  platform: yelp
+  method: GET
+  path: /search
+  name: Search Yelp businesses
+  summary: Live Yelp business listings for a description and location
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: yelp
+      find_loc:
+        type: string
+        required: true
+        note: location string; the only strictly required param besides engine
+        example: New York, NY, USA
+      find_desc:
+        type: string
+        required: false
+        note: search query, e.g. business type
+        example: Coffee
+    note: answers arrive in `organic_results`.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: yelp
+      find_loc: New York, NY, USA
+      find_desc: Coffee
+  docs_url: https://serpapi.com/yelp-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.yelp-search.json
+  observed_time: 2.49
+  capability: yelp.business.search
+- id: serpapi.x.tripadvisor-search
+  tier: extended
+  platform: tripadvisor
+  method: GET
+  path: /search
+  name: Search Tripadvisor listings
+  summary: Live Tripadvisor results for a destination or query — hotels, restaurants, things to do
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: tripadvisor
+      q:
+        type: string
+        required: true
+        example: Rome
+      ssrc:
+        type: string
+        required: false
+        note: a=All, r=Restaurants, A=Things to Do, h=Hotels, g=Destinations, v=Vacation Rentals, f=Forums
+        example: r
+    note: answers arrive in `places` (or `forums` when ssrc=f).
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: tripadvisor
+      q: Rome
+      ssrc: r
+  docs_url: https://serpapi.com/tripadvisor-search-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.tripadvisor-search.json
+  observed_time: 0.87
+  capability: tripadvisor.search.general
+- id: serpapi.x.facebook-profile
+  tier: extended
+  platform: facebook
+  method: GET
+  path: /search
+  name: Get a public Facebook profile or Page
+  summary: Public Facebook profile/Page data for a username or numeric id — followers, likes, about, photos
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: facebook_profile
+      profile_id:
+        type: string
+        required: true
+        note: Facebook username or numeric id
+        example: Modernatx
+    note: 'top-level fields: name, id, url, followers, likes, profile_type (PAGE|PROFILE).'
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: facebook_profile
+      profile_id: Modernatx
+  docs_url: https://serpapi.com/facebook-profile-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.facebook-profile.json
+  observed_time: 0.79
+  capability: facebook.user.profile
+- id: serpapi.x.instagram-profile
+  tier: extended
+  platform: instagram
+  method: GET
+  path: /search
+  capability: instagram.user.profile
+  name: Get a public Instagram profile
+  summary: Public Instagram profile data for a username — bio, followers, recent posts
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: instagram_profile
+      profile_id:
+        type: string
+        required: true
+        note: Instagram username
+        example: serpapicom
+      next_page_token:
+        type: string
+        required: false
+        note: pagination cursor for posts
+    note: profile fields at top level (biography, followers, posts_count); posts in an array with pagination via serpapi_pagination.next_page_token.
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  test_request:
+    queryParams:
+      engine: instagram_profile
+      profile_id: serpapicom
+  docs_url: https://serpapi.com/instagram-profile-api
+  verified: '2026-07-28'
+  example_response: examples/serpapi.x.instagram-profile.json
+  observed_time: 4.84
+- id: serpapi.x.brave-ai-mode
+  tier: extended
+  platform: ai-search
+  method: GET
+  path: /search
+  name: Get a Brave AI Mode answer
+  summary: Brave Search's conversational AI answer for a query
+  input:
+    queryParams:
+      engine:
+        type: string
+        required: true
+        example: brave_ai_mode
+      q:
+        type: string
+        required: true
+        note: param name inferred from the standard SERP convention, not independently confirmed
+    note: 'no dedicated ''brave'' platform exists in capabilities.yaml — filed under ai-search (closest existing shelf: aggregated AI-answer-engine data). Not independently fetched.'
+  cost:
+    type: per_success
+    value: 0.015
+    currency: USD
+  untestable: param shape not independently confirmed from docs at ingest time
+  docs_url: https://serpapi.com/brave-ai-mode-api
+  capability: ai-search.brave.answer

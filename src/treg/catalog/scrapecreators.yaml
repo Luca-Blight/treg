@@ -1,0 +1,316 @@
+provider: scrapecreators
+source:
+  docs: https://docs.scrapecreators.com
+  openapi: https://docs.scrapecreators.com/openapi.json
+  curated: '2026-07-28'
+limits: "billed per credit, 100 free credits on signup"
+pricing_url: https://scrapecreators.com/pricing
+
+endpoints:
+  # --- Account ------------------------------------------------------------------------------
+  - id: scrapecreators.account.usage
+    kind: account
+    capability: account.usage
+    platform: account
+    scope: any_account
+    method: GET
+    path: /v1/account/credit-balance
+    name: "Get account credit balance"
+    summary: "Returns the number of API credits remaining on your Scrape Creators account."
+    input:
+      queryParams: {}
+    test_request:
+      queryParams: {}
+    cost: {type: free}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.account.usage.json
+    docs_url: https://docs.scrapecreators.com/account/credit-balance
+
+  # --- TikTok ---------------------------------------------------------------------------------
+  - id: scrapecreators.tiktok.user.profile
+    capability: tiktok.user.profile
+    platform: tiktok
+    scope: any_account
+    method: GET
+    path: /v1/tiktok/profile
+    name: "Get TikTok profile"
+    summary: "Fetches public profile data for a TikTok user by their handle or user_id — useful for looking up a creator's identity, bio, and account stats."
+    input:
+      queryParams:
+        handle: {type: string, required: false, note: "TikTok handle. You can pass handle or user_id.", example: "stoolpresidente"}
+        user_id: {type: string, required: false, note: "TikTok user id."}
+      note: "one of handle | user_id"
+    test_request:
+      queryParams: {handle: "stoolpresidente"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.tiktok.user.profile.json
+    docs_url: https://docs.scrapecreators.com/tiktok/profile
+
+  - id: scrapecreators.tiktok.video.detail
+    capability: tiktok.video.detail
+    platform: tiktok
+    scope: any_account
+    method: GET
+    path: /v2/tiktok/video
+    name: "Get TikTok video info"
+    summary: "Fetches detailed data for a single TikTok video by URL, including its metadata, engagement stats, and optionally its transcript/captions."
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "TikTok video URL", example: "https://www.tiktok.com/@randomspamvideos25/video/7251387037834595630"}
+        get_transcript: {type: boolean, required: false, note: "Get transcript of the video"}
+    test_request:
+      queryParams: {url: "https://www.tiktok.com/@randomspamvideos25/video/7251387037834595630"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.tiktok.video.detail.json
+    docs_url: https://docs.scrapecreators.com/tiktok/video
+
+  - id: scrapecreators.tiktok.video.comments
+    capability: tiktok.video.comments
+    platform: tiktok
+    scope: any_account
+    method: GET
+    path: /v1/tiktok/video/comments
+    name: "List TikTok comments"
+    summary: "Fetches comments on a TikTok video by URL — useful for reading audience reactions, replies, and engagement."
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "TikTok video URL", example: "https://www.tiktok.com/@randomspamvideos25/video/7251387037834595630"}
+        cursor: {type: number, required: false, note: "Cursor to get more comments. Get 'cursor' from previous response.", example: 20}
+    test_request:
+      queryParams: {url: "https://www.tiktok.com/@randomspamvideos25/video/7251387037834595630"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.tiktok.video.comments.json
+    docs_url: https://docs.scrapecreators.com/tiktok/video/comments
+
+  - id: scrapecreators.tiktok.search.videos
+    capability: tiktok.search.videos
+    platform: tiktok
+    scope: any_account
+    method: GET
+    path: /v1/tiktok/search/keyword
+    name: "Search TikTok by keyword"
+    summary: "Searches for TikTok videos by keyword or phrase — the general video search across all of TikTok."
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "Keyword to search for", example: "ai"}
+        date_posted: {type: string, required: false, note: "Time frame", example: "all-time"}
+    test_request:
+      queryParams: {query: "ai", date_posted: "all-time"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.tiktok.search.videos.json
+    docs_url: https://docs.scrapecreators.com/tiktok/search/keyword
+
+  # --- Instagram --------------------------------------------------------------------------------
+  - id: scrapecreators.instagram.user.profile
+    capability: instagram.user.profile
+    platform: instagram
+    scope: any_account
+    method: GET
+    path: /v1/instagram/profile
+    name: "Get Instagram profile"
+    summary: "Retrieves comprehensive public Instagram profile information including biography, bio links, follower and following counts, verification status, and profile picture URLs."
+    input:
+      queryParams:
+        handle: {type: string, required: true, note: "Instagram handle", example: "natgeo"}
+    test_request:
+      queryParams: {handle: "natgeo"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.instagram.user.profile.json
+    docs_url: https://docs.scrapecreators.com/instagram/profile
+
+  - id: scrapecreators.instagram.user.posts
+    capability: instagram.user.posts
+    platform: instagram
+    scope: any_account
+    method: GET
+    path: /v2/instagram/user/posts
+    name: "List Instagram posts"
+    summary: "Returns a paginated feed of a user's public Instagram posts, including reels, photos, videos, and carousels."
+    input:
+      queryParams:
+        handle: {type: string, required: true, note: "Instagram handle", example: "natgeo"}
+        next_max_id: {type: string, required: false, note: "Cursor to get next page of results."}
+    test_request:
+      queryParams: {handle: "natgeo"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.instagram.user.posts.json
+    docs_url: https://docs.scrapecreators.com/instagram/user/posts
+
+  - id: scrapecreators.instagram.post.comments
+    capability: instagram.post.comments
+    platform: instagram
+    scope: any_account
+    method: GET
+    path: /v2/instagram/post/comments
+    name: "List Instagram comments"
+    summary: "Retrieves comments on a public Instagram post or reel."
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "The URL of the post or reel to get comments from", example: "https://www.instagram.com/reel/DOq6eV6iIgD"}
+        cursor: {type: string, required: false, note: "The cursor to get more comments. Get 'cursor' from previous response."}
+    test_request:
+      queryParams: {url: "https://www.instagram.com/reel/DOq6eV6iIgD"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.instagram.post.comments.json
+    docs_url: https://docs.scrapecreators.com/instagram/post/comments
+
+  # --- YouTube ----------------------------------------------------------------------------------
+  - id: scrapecreators.youtube.channel.profile
+    capability: youtube.channel.profile
+    platform: youtube
+    scope: any_account
+    method: GET
+    path: /v1/youtube/channel
+    name: "Get YouTube channel details"
+    summary: "Retrieves comprehensive YouTube channel profile data including name, avatar images, subscriber count, total video and view counts, join date, tags, and linked social accounts."
+    input:
+      queryParams:
+        channelId: {type: string, required: false, note: "YouTube channel ID. Can pass a channelId, handle or url", example: "UC-9-kyTW8ZkZNDHQJ6FgpwQ"}
+        handle: {type: string, required: false, note: "YouTube channel handle. Can pass a channelId, handle or url"}
+        url: {type: string, required: false, note: "YouTube channel URL. Can pass a channelId, handle or url"}
+      note: "one of channelId | handle | url"
+    test_request:
+      queryParams: {channelId: "UC-9-kyTW8ZkZNDHQJ6FgpwQ"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.youtube.channel.profile.json
+    docs_url: https://docs.scrapecreators.com/youtube/channel
+
+  - id: scrapecreators.youtube.video.detail
+    capability: youtube.video.detail
+    platform: youtube
+    scope: any_account
+    method: GET
+    path: /v1/youtube/video
+    name: "Get YouTube video/short details"
+    summary: "Fetches full details for a YouTube video or short, including title, description, thumbnail, view/like/comment counts, publish date, duration, chapters and caption tracks."
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "YouTube video or short URL", example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}
+    test_request:
+      queryParams: {url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.youtube.video.detail.json
+    docs_url: https://docs.scrapecreators.com/youtube/video
+
+  - id: scrapecreators.youtube.video.comments
+    capability: youtube.video.comments
+    platform: youtube
+    scope: any_account
+    method: GET
+    path: /v1/youtube/video/comments
+    name: "List YouTube comments"
+    summary: "Fetches comments and replies from a YouTube video, including each comment's text, author details, like count, reply count, and publish date."
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "YouTube video URL", example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}
+        order: {type: string, required: false, note: "Order of comments", example: "top"}
+    test_request:
+      queryParams: {url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.youtube.video.comments.json
+    docs_url: https://docs.scrapecreators.com/youtube/video/comments
+
+  # --- X (Twitter) ------------------------------------------------------------------------------
+  - id: scrapecreators.x.user.profile
+    capability: x.user.profile
+    platform: x
+    scope: any_account
+    method: GET
+    path: /v1/twitter/profile
+    name: "Get Twitter profile"
+    summary: "Retrieves a Twitter user's profile by handle, including account metadata and statistics."
+    input:
+      queryParams:
+        handle: {type: string, required: true, note: "Twitter handle", example: "levelsio"}
+    test_request:
+      queryParams: {handle: "levelsio"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.x.user.profile.json
+    docs_url: https://docs.scrapecreators.com/twitter/profile
+
+  - id: scrapecreators.x.user.posts
+    capability: x.user.posts
+    platform: x
+    scope: any_account
+    method: GET
+    path: /v1/twitter/user-tweets
+    name: "List Twitter user tweets"
+    summary: "Fetches tweets from a Twitter user's profile by handle."
+    input:
+      queryParams:
+        handle: {type: string, required: true, note: "Twitter handle", example: "levelsio"}
+    test_request:
+      queryParams: {handle: "levelsio"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.x.user.posts.json
+    docs_url: https://docs.scrapecreators.com/twitter/user-tweets
+
+  # --- LinkedIn -----------------------------------------------------------------------------------
+  - id: scrapecreators.linkedin.user.profile
+    capability: linkedin.user.profile
+    platform: linkedin
+    scope: any_account
+    method: GET
+    path: /v1/linkedin/profile
+    name: "Get LinkedIn person's profile"
+    summary: "Retrieves a person's public LinkedIn profile data, including their name, photo, location, follower count, about/bio summary, recent posts, work experience and education."
+    input:
+      queryParams:
+        url: {type: string, required: true, note: "The URL of the LinkedIn profile to get", example: "https://www.linkedin.com/in/parrsam/"}
+    test_request:
+      queryParams: {url: "https://www.linkedin.com/in/parrsam/"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.linkedin.user.profile.json
+    docs_url: https://docs.scrapecreators.com/linkedin/profile
+
+  # --- Reddit -------------------------------------------------------------------------------------
+  - id: scrapecreators.reddit.subreddit.posts
+    capability: reddit.subreddit.posts
+    platform: reddit
+    scope: any_account
+    method: GET
+    path: /v1/reddit/subreddit
+    name: "List subreddit posts"
+    summary: "Fetches posts from a subreddit with sorting and filtering options."
+    input:
+      queryParams:
+        subreddit: {type: string, required: true, note: "Subreddit name", example: "news"}
+        sort: {type: string, required: false, note: "Sort order"}
+    test_request:
+      queryParams: {subreddit: "news"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.reddit.subreddit.posts.json
+    docs_url: https://docs.scrapecreators.com/reddit/subreddit
+
+  - id: scrapecreators.reddit.search.posts
+    capability: reddit.search.posts
+    platform: reddit
+    scope: any_account
+    method: GET
+    path: /v1/reddit/search
+    name: "Search Reddit"
+    summary: "Searches across all of Reddit for posts matching a query."
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "Search query", example: "ai"}
+        sort: {type: string, required: false, note: "Sort by", example: "relevance"}
+    test_request:
+      queryParams: {query: "ai", sort: "relevance"}
+    cost: {type: per_call, value: 1, currency: credit}
+    verified: '2026-07-28'
+    example_response: examples/scrapecreators.reddit.search.posts.json
+    docs_url: https://docs.scrapecreators.com/reddit/search

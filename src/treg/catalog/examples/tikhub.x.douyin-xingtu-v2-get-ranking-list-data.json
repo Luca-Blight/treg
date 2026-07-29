@@ -1,0 +1,48 @@
+{
+  "code": 200,
+  "request_id": "e6d57fa9-5755-4cf8-b781-dabcfbcc0333",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:12",
+  "time_stamp": 1785220272,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Xingtu-V2-API/get_ranking_list_data_api_v1_douyin_xingtu_v2_get_ranking_list_data_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/e6d57fa9-5755-4cf8-b781-dabcfbcc0333?sign=264c531a5d6fcba8aa90184a33ada27cdc… [150 chars]",
+  "router": "/api/v1/douyin/xingtu_v2/get_ranking_list_data",
+  "params": {
+    "code": "1",
+    "qualifier": "1901",
+    "version": "flow_split",
+    "period": "30",
+    "date": "20260131"
+  },
+  "data": {
+    "authors": [
+      "… {7 field(s) truncated}",
+      "… 99 more item(s) truncated"
+    ],
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "info": {
+      "code": 1,
+      "description": "【榜单规则】：根据创作者在所选周期内的星图商单数、复购率计算榜单排名 【上榜达人特点】：星图商单数量多、客户复购率高",
+      "display_name": "品牌种草·品牌优选榜",
+      "entry_type": 1,
+      "modify_time": 1769932545,
+      "platform_channel": 1,
+      "ranking_list_factor": 0,
+      "version": "flow_split"
+    },
+    "pagination": {
+      "has_more": false,
+      "limit": 100,
+      "page": 1,
+      "total_count": 100
+    }
+  }
+}

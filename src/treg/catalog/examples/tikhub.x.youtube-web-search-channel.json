@@ -1,0 +1,29 @@
+{
+  "code": 200,
+  "request_id": "69321bc5-7296-433f-a9df-7935c80e9eab",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:31:05",
+  "time_stamp": 1785220265,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/YouTube-Web-API/search_channel_api_v1_youtube_web_search_channel_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/69321bc5-7296-433f-a9df-7935c80e9eab?sign=d4419edfa1b529ee1e2df55a4a5615dc30a0ae5202712f8521236f69f4fe2f80",
+  "router": "/api/v1/youtube/web/search_channel",
+  "params": {
+    "channel_id": "UCXuqSBlHAE6Xw-yeJA0Tunw",
+    "search_query": "AMD"
+  },
+  "data": {
+    "channel_id": "UCXuqSBlHAE6Xw-yeJA0Tunw",
+    "number_of_videos": 0,
+    "query": "AMD",
+    "country": "US",
+    "lang": "en",
+    "timezone": "America/New_York",
+    "continuation_token": null,
+    "videos": []
+  }
+}

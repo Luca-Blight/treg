@@ -1,0 +1,32 @@
+{
+  "request": {
+    "pageUrl": "https://www.technologyreview.com/2020/09/04/1008156/knowledge-graph-ai-reads-web-machine-learning-natural-language-processing/",
+    "api": "article",
+    "version": 3
+  },
+  "objects": [
+    {
+      "date": "Fri, 04 Sep 2020 14:13:26 GMT",
+      "sentiment": 0,
+      "images": [
+        "… {7 field(s) truncated}"
+      ],
+      "author": "Will Douglas Heaven",
+      "shareLinks": false,
+      "estimatedDate": "Fri, 04 Sep 2020 14:13:26 GMT",
+      "publisherRegion": "North America",
+      "icon": "https://www.technologyreview.com/static/media/favicon.1cfcdb44759a0f93ddf5feb5405dd4cc.ico",
+      "diffbotUri": "article|3|-618081119",
+      "siteName": "Technology Review",
+      "type": "article",
+      "title": "This know-it-all AI learns by reading the entire web nonstop",
+      "tags": [
+        "… {6 field(s) truncated}",
+        "… 2 more item(s) truncated"
+      ],
+      "publisherCountry": "United States",
+      "humanLanguage": "en",
+      "…": "5 more field(s) truncated"
+    }
+  ]
+}

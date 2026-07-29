@@ -1,0 +1,84 @@
+{
+  "code": 0,
+  "data": {
+    "base_resp": {
+      "status_code": 0,
+      "status_message": ""
+    },
+    "date_values": {
+      "collect_cnt_list": [
+        {
+          "value": "445",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ],
+      "comment_cnt_list": [
+        {
+          "value": "50",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ],
+      "finish_rate_list": [
+        {
+          "value": "2065",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ],
+      "hot_score_list": [
+        {
+          "value": "115334",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ],
+      "interact_cnt_list": [
+        {
+          "value": "3478",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ],
+      "interact_rate_list": [
+        {
+          "value": "605",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ],
+      "like_cnt_list": [
+        {
+          "value": "2882",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ],
+      "share_cnt_list": [
+        {
+          "value": "546",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ],
+      "valid_vv_list": [
+        {
+          "value": "53919",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ],
+      "vv_list": [
+        {
+          "value": "57457",
+          "visit_date": 20260411
+        },
+        "… 26 more item(s) truncated"
+      ]
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:10:30.797506501",
+  "requestId": "d97ecb5241d54fbcb68f4d7bf1b3c72a"
+}

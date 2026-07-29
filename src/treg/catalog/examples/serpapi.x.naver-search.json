@@ -1,0 +1,81 @@
+{
+  "search_metadata": {
+    "id": "6a6898d250d43e71877f3514",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/l2QfH01HINjdgnqm_PXzIA/6a6898d2… [81 chars]",
+    "created_at": "2026-07-28 11:56:02 UTC",
+    "processed_at": "2026-07-28 11:56:02 UTC",
+    "naver_url": "https://search.naver.com/search.naver?query=paris",
+    "raw_html_file": "https://serpapi.com/searches/l2QfH01HINjdgnqm_PXzIA/6a6898d2… [81 chars]",
+    "total_time_taken": 2.67
+  },
+  "search_parameters": {
+    "query": "paris",
+    "engine": "naver",
+    "device": "desktop"
+  },
+  "ads_results": [
+    {
+      "title": "엠파이어파리 부킹닷컴",
+      "sub_title": "스페셜 특가 초특가 호텔 예약",
+      "description": "선결제 부담없는 엠파이어파리, 부킹닷컴만의 특가로 수수료 없이 예약하고 떠나자!",
+      "link_list": "… [4 item(s) truncated]",
+      "site": "booking.com",
+      "link": "https://ader.naver.com/v1/f34A4L5bLOcKltNFb3NBa0lpEbgbT3meDC… [485 chars]",
+      "thumbnail": "https://searchad-phinf.pstatic.net/MjAyNDEyMDVfMTA0/MDAxNzMz… [228 chars]"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "knowledge_graph": {
+    "travel": {
+      "name": "파리",
+      "description": "파리",
+      "tips": "… [10 item(s) truncated]",
+      "places_to_visit": "… [5 item(s) truncated]",
+      "courses": "… [0 item(s) truncated]"
+    }
+  },
+  "news_results": [
+    {
+      "position": 1,
+      "title": "Park Se-eun welcomes ballet stars from Paris, New York and M… [64 chars]",
+      "link": "https://www.koreaherald.com/article/10822991?ref=naver",
+      "thumbnail": "https://search.pstatic.net/common/?src=https%3A%2F%2Fimgnews… [165 chars]",
+      "news_info": "… {3 field(s) truncated}",
+      "snippet": "the Paris Opera Ballet — its distinctive style, unique reper… [281 chars]"
+    },
+    "… 4 more item(s) truncated"
+  ],
+  "web_results": [
+    {
+      "position": 1,
+      "title": "[Paris] 파리 맛집 54｜파리 4구 에피타이저 메인14.90 유로 가성비 맛집 프랑스 전통 음식 레스토… [66 chars]",
+      "source_icon": "https://search.pstatic.net/common/?src=https%3A%2F%2Fhomebui… [260 chars]",
+      "source": "여행하는 마케터새 창 열림",
+      "link": "https://blog.naver.com/jennyrpt/224358830783",
+      "snippet": "75004 Paris L’Alsacien Marais 메뉴 L'Alsacien Marais 랄자시안 마레 의… [230 chars]",
+      "thumbnail": "https://search.pstatic.net/common/?src=http%3A%2F%2Fblogfile… [249 chars]",
+      "related_results": "… [5 item(s) truncated]"
+    },
+    "… 18 more item(s) truncated"
+  ],
+  "shopping_results": [
+    {
+      "position": 1,
+      "title": "[마쥬] Paris T-Shirt - White 흰색 MJ6340S111",
+      "link": "https://ader.naver.com/v1/9nW5GNNPwHY0IhN3vl1F5PpimR32IRAFrT… [426 chars]",
+      "thumbnail": "https://shopping-phinf.pstatic.net/main_5908147/59081471937.… [75 chars]",
+      "price": 199000,
+      "stores": "SSF샵"
+    },
+    "… 7 more item(s) truncated"
+  ],
+  "pagination": {
+    "next": "https://search.naver.com/search.naver?nso=&page=2&query=pari… [95 chars]",
+    "other_pages": {}
+  },
+  "serpapi_pagination": {
+    "next_link": "https://serpapi.com/search.json?device=desktop&engine=naver&… [86 chars]",
+    "next": "https://serpapi.com/search.json?device=desktop&engine=naver&… [86 chars]"
+  }
+}

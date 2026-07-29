@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "credits_remaining": 19850,
+  "credits_charged": 1,
+  "comments": [
+    {
+      "id": "Ugzge340dBgB75hWBm54AaABAg",
+      "content": "can confirm: he never gave us up",
+      "publishedTimeText": "1 year ago",
+      "publishedTime": "2025-07-28T11:54:31.516Z",
+      "replyLevel": 0,
+      "author": {
+        "name": "@YouTube",
+        "channelId": "UCBR8-60-B28hp2BmDPdntcQ",
+        "isVerified": true,
+        "isCreator": false,
+        "avatarUrl": "https://yt3.ggpht.com/3s6evpqAiDU9tQR4sC2siJippbH2RWVPnwHgyl4V0th2iuQz0VDQZbUhQBGmsxLYo-mjG6TqZQ=s88-c-k-c0x00ffffff-no-rj",
+        "channelUrl": "https://youtube.com/@YouTube"
+      },
+      "engagement": {
+        "likes": 273000,
+        "replies": 961
+      },
+      "repliesContinuationToken": "<omitted: expires>"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "continuationToken": "<omitted: expires>"
+}

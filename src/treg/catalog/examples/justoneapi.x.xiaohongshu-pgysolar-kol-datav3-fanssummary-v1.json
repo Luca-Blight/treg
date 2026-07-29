@@ -1,0 +1,23 @@
+{
+  "code": 0,
+  "data": {
+    "fansNum": 24731,
+    "fansIncreaseNum": 334,
+    "fansGrowthRate": "1.4",
+    "fansGrowthBeyondRate": "89.8",
+    "activeFansL28": 11550,
+    "activeFansRate": "46.7",
+    "activeFansBeyondRate": "42.8",
+    "engageFansRate": "1.6",
+    "engageFansL30": 404,
+    "engageFansBeyondRate": "88.2",
+    "readFansIn30": 2395,
+    "readFansRate": "9.7",
+    "readFansBeyondRate": "87.3",
+    "payFansUserRate30d": "10.9",
+    "payFansUserNum30d": 2701
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:04:55.86264644",
+  "requestId": "60ca1cc6760a47febc01913eb753f3c4"
+}

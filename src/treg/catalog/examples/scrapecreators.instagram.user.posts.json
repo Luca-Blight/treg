@@ -1,0 +1,64 @@
+{
+  "success": true,
+  "credits_remaining": 19854,
+  "credits_charged": 1,
+  "next_max_id": "3947900…",
+  "user": {
+    "pk": "787132",
+    "pk_id": "787132",
+    "profile_grid_display_type": "default",
+    "strong_id__": "787132",
+    "id": "787132",
+    "full_name": "Nationa…",
+    "is_active_on_text_post_app": true,
+    "is_private": false,
+    "is_verified": true,
+    "profile_pic_id": "3887353…",
+    "profile_pic_url": "https:/…",
+    "username": "natgeo"
+  },
+  "auto_load_more_enabled": false,
+  "status": "ok",
+  "profile_grid_items": null,
+  "profile_grid_items_cursor": null,
+  "pinned_profile_grid_items_ids": null,
+  "special_empty_state": null,
+  "num_results": 12,
+  "more_available": true,
+  "items": [
+    {
+      "strong_id__": "3950509…",
+      "id": "3950509…",
+      "is_meta_ai_invocation_blocked_by_author": false,
+      "fbid": "1812612…",
+      "deleted_reason": 0,
+      "client_cache_key": "Mzk1MDU…",
+      "integrity_review_decision": "pending",
+      "pk": "3950509…",
+      "has_delayed_metadata": false,
+      "mezql_token": "",
+      "should_request_ads": false,
+      "has_privately_liked": false,
+      "is_quiet_post": false,
+      "profile_grid_thumbnail_fitting_style": "UNSET",
+      "collaborator_edit_eligibility": false,
+      "share_count_disabled": false,
+      "is_reshare_of_text_post_app_media_in_ig": false,
+      "is_visual_reply_commenter_notice_enabled": true,
+      "subtype_name_for_REST__": "XDTFeed…",
+      "has_views_fetching_on_search_grid": false,
+      "image_versions2": {
+        "candidates": [
+          "… {6 field(s) truncated}",
+          "… 2 more item(s) truncated"
+        ]
+      },
+      "media_type": 1,
+      "original_width": 480,
+      "original_height": 600,
+      "organic_tracking_token": "eyJ2ZXJ…",
+      "…": "74 more field(s) truncated"
+    },
+    "… 2 more item(s) truncated"
+  ]
+}

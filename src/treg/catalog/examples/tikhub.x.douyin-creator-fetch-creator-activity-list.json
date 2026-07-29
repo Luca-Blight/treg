@@ -1,0 +1,26 @@
+{
+  "code": 200,
+  "request_id": "ec9effc1-bc25-4499-b362-cb2ffa37cda2",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:28:08",
+  "time_stamp": 1785220088,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Creator-API/fetch_creator_activity_list_api_v1_douyin_creator_fetch_creator_activity_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ec9effc1-bc25-4499-b362-cb2ffa37cda2?sign=6fa32e112ee5c0ef36b89fb324a4d46e673d0668ef505f22418c5dfe91baabe6",
+  "router": "/api/v1/douyin/creator/fetch_creator_activity_list",
+  "params": {
+    "start_time": "1756656000",
+    "end_time": "1759247999"
+  },
+  "data": {
+    "list": [
+      "… {18 field(s) truncated}",
+      "… 8 more item(s) truncated"
+    ],
+    "status_code": 0
+  }
+}

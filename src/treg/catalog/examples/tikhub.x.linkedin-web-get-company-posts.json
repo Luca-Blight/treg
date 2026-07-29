@@ -1,0 +1,26 @@
+{
+  "code": 200,
+  "request_id": "52588f5a-4c11-411c-961d-64dfe8135149",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-28 00:50:33",
+  "time_stamp": 1785225033,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/LinkedIn-Web-API/get_company_posts_api_v1_linkedin_web_get_company_posts_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/52588f5a-4c11-411c-961d-64dfe8135149?sign=f5d47fced987b2235513d6444754671eeedb17cddbc5edb5cb947abc35410114",
+  "router": "/api/v1/linkedin/web/get_company_posts",
+  "params": {
+    "company_id": "10649600",
+    "page": "1",
+    "sort_by": "top"
+  },
+  "data": {
+    "page": 1,
+    "total": 0,
+    "has_more": false,
+    "data": []
+  }
+}

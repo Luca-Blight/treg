@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "request_id": "ca8bbc91-102d-48b8-a1d9-ca4a1751aafd",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:32:26",
+  "time_stamp": 1785220346,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V3-API/get_user_brief_api_… [94 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/ca8bbc91-102d-48… [150 chars]",
+  "router": "/api/v1/instagram/v3/get_user_brief",
+  "params": {
+    "user_id": "791258468",
+    "username": "99brasil"
+  },
+  "data": {
+    "pk": "791258468",
+    "id": "791258468",
+    "username": "99brasil",
+    "full_name": "99",
+    "is_private": false,
+    "is_verified": true,
+    "profile_pic_url": "https://scontent.cdninstagram.com/v/t51.75761-19/496178823_1… [571 chars]",
+    "profile_pic_url_hd": "https://instagram.fshd1-1.fna.fbcdn.net/v/t51.2885-19/496178… [557 chars]",
+    "biography": "Corrida, comida ou entrega. Na 99 você tem todos os serviços… [127 chars]",
+    "category": "",
+    "external_url": "https://99app.com/",
+    "follower_count": 1038049,
+    "following_count": 107,
+    "media_count": 774,
+    "edge_followed_by": {
+      "count": 1038049
+    },
+    "edge_follow": {
+      "count": 107
+    },
+    "edge_owner_to_timeline_media": {
+      "count": 774
+    },
+    "_backend": "igrapi"
+  }
+}

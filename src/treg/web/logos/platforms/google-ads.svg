@@ -1,0 +1,6 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Google Ads">
+  <!-- Two leaning bars and a dot: the mark reduced to its geometry. -->
+  <rect x="1.6" y="8.4" width="18.4" height="7.2" rx="3.6" fill="#FBBC04" transform="rotate(-60 12 12)"/>
+  <rect x="4" y="8.4" width="18.4" height="7.2" rx="3.6" fill="#4285F4" transform="rotate(60 12 12)" opacity=".92"/>
+  <circle cx="6.3" cy="17.7" r="3.6" fill="#34A853"/>
+</svg>

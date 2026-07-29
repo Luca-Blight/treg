@@ -1,0 +1,179 @@
+provider: akta
+source:
+  docs: https://docs.akta.pro
+  openapi: null # Akta publishes markdown reference pages plus an llms.txt index; no OpenAPI document
+  curated: 2026-07-28
+# VERIFIED 2026-07-28 with a live credential. Company search, industry search, enrichment and news
+# all pass. The entire "alternative data" family — headcount-trends and employee-reviews here, plus
+# product-reviews, jobs, posts and website-traffic in akta.extended.yaml — answers a uniform
+# `http 403 "Your current subscription does not include access to this endpoint"` on this key,
+# including the free (no-`products`) product-reviews call. Six distinct paths, identical message:
+# this is an account-tier gap on the connected plan, not a broken route or bad test_request — a
+# plan upgrade, not a fix, would clear it. Re-run catalog_verify.py once the plan changes.
+#
+# TRAILING SLASHES ARE MANDATORY ON EVERY PATH. Live-probed: /v1/company/search?query=… answers 307
+# (redirect), /v1/company/search/?query=… answers 401 (i.e. it routed). treg does not follow
+# redirects with the key attached, so a missing slash silently loses the credential. Akta's own docs
+# and OpenAPI write the paths WITHOUT the slash — the server redirects them. Every path below
+# carries the slash deliberately; do not "tidy" them away.
+#
+# Path shape (the other trap the registry entry warns about): base_url is https://api.akta.pro/api
+# and every route carries its own /v1 prefix, so the effective URL is /api/v1/…. Akta's llms.txt
+# index also abbreviates the routes (it lists "/v1/company-search"); the real paths are nested —
+# /v1/company/search/, /v1/company/enrichment/, /v1/company/headcount-trends/.
+#
+# Billing: Akta returns a `credits_consumed` field on every response, and publishes a rate card.
+# Credits cost $0.05 each pay-as-you-go, $0.04 on subscription, so the credit counts below convert
+# to dollars directly — but the rate moves with the plan, so cost.value stays null and the credit
+# count lives in cost.note. Enrichment is the interesting one: it is priced PER SECTION requested,
+# from 0.5 to 2 credits each, which makes the `sections` parameter a real cost dial rather than a
+# convenience. Company search and industry search are free and always report 0.00.
+#
+# Akta is company-only: there are no person-enrich, people-search, email-find or email-verify
+# endpoints, so this file contributes nothing to the people.* capabilities. It also documents no
+# credits-balance route, which is why there is no account.usage entry here.
+
+
+endpoints:
+  - id: akta.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/company/enrichment/
+    name: "Enrich a company from its website"
+    summary: "Enrich a company from its website — firmographics, financials, tech stack, management"
+    input:
+      queryParams:
+        company: {type: string, required: true, note: "company website (with or without protocol) or an Akta company UUID such as 00031n-tesla", example: "https://canva.com"}
+        sections: {type: string, required: false, note: "comma-separated sections to return, so you pay for only what you need: firmographic, business_model, company_assessment, trust_signal, company_hierarchy, digital_presence, financial_estimate, location, management_profile, product_offering, strategic_signal, customer_profile, industry, technology. Enterprise tier adds funding_detail and mna_and_investment", example: "firmographic"}
+      note: "resolve an unknown company name to its website or UUID with akta.companies.search first — that step is free. Ask for only the sections you need: this endpoint bills per section"
+    test_request:
+      queryParams: {company: "canva.com", sections: "location"}
+    cost:
+      type: per_success
+      value: null
+      currency: credit
+      note: "priced PER SECTION requested, no single count applies: 2 credits each for firmographic, business_model, company_assessment, product_offering and technology; 1.5 for management_profile and strategic_signal; 1 for customer_profile and industry; 0.5 for trust_signal, company_hierarchy, digital_presence, financial_estimate and location; 5 for the Enterprise-only mna_and_investment. Credits are $0.05 pay-as-you-go, $0.04 on subscription."
+    verified: 2026-07-28
+    example_response: examples/akta.companies.enrich.json
+    docs_url: https://docs.akta.pro/api-reference/company-data
+
+  - id: akta.companies.search
+    domain: companies
+    capability: companies.search
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/company/search/
+    name: "Look up a company's Akta id"
+    summary: "Look up a company by name or domain for its Akta id (free — costs 0 credits)"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "a company name or website domain; Akta detects which you sent", example: "canva.com"}
+      note: "the trailing slash on the path is required — without it Akta 307-redirects and the key is dropped. This is the registry's health probe as well as the name→UUID resolver for every other endpoint"
+    test_request:
+      queryParams: {query: "canva.com"}
+    cost: {type: free, value: 0, currency: USD, note: "documented free — the response always reports credits_consumed 0.00"}
+    verified: 2026-07-28
+    example_response: examples/akta.companies.search.json
+    docs_url: https://docs.akta.pro/api-reference/supporting-apis/company-search
+
+  - id: akta.companies.news
+    domain: other
+    capability: companies.news
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/news/
+    name: "Get recent company or industry news"
+    summary: "Get recent news about a company or industry, scored for sentiment and significance"
+    input:
+      queryParams:
+        company: {type: string, required: false, note: "company website or UUID", example: "https://canva.com"}
+        industry: {type: string, required: false, note: "comma-separated industry codes to monitor instead of one company — resolve them with akta.companies.industry.resolve"}
+        query: {type: string, required: false, note: "free-text search across articles"}
+        start_date: {type: string, required: false, note: "YYYY-MM-DD lower bound; the lookback is capped at 6 months off Enterprise plans"}
+        end_date: {type: string, required: false, note: "YYYY-MM-DD upper bound"}
+        limit: {type: integer, required: false, note: "articles to return, default 10, max 1000 — the cost dial, keep it small", example: 10}
+        offset: {type: integer, required: false, note: "records to skip, default 0"}
+        sentiment_list: {type: string, required: false, note: "positive | negative | neutral | all"}
+        news_score_list: {type: string, required: false, note: "High | Medium | Low | all — filters by how significant Akta rates the article"}
+        countries: {type: string, required: false, note: "comma-separated ISO country codes"}
+        blacklisted: {type: string, required: false, note: "comma-separated domains to exclude"}
+        group_articles: {type: boolean, required: false, note: "collapse syndicated duplicates of the same story"}
+        title: {type: string, required: false, note: "match against the article headline only"}
+        naics_code_list: {type: string, required: false, note: "comma-separated NAICS industry codes"}
+        sic_code_list: {type: string, required: false, note: "comma-separated SIC industry codes"}
+      note: "at least one of company | industry | query in practice; without any filter you get the whole feed and pay for it"
+    test_request:
+      queryParams: {company: "canva.com", limit: 1}
+    cost:
+      type: per_call
+      value: 0.1
+      currency: credit
+      note: "0.1 credit base fee per call PLUS 0.01 credit per article returned, so `limit` is the dial: the default 10 articles costs 0.2 credits, the max 1,000 costs 10.1. value here is the base per-call fee only."
+    verified: 2026-07-28
+    example_response: examples/akta.companies.news.json
+    docs_url: https://docs.akta.pro/api-reference/news-signals
+
+  - id: akta.companies.headcount_trend
+    domain: other
+    capability: companies.headcount_trend
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/company/headcount-trends/
+    name: "Get company headcount trends by department"
+    summary: "See how a company's headcount has moved over time and how staff split across departments"
+    input:
+      queryParams:
+        company: {type: string, required: true, note: "company website or Akta UUID", example: "https://canva.com"}
+      note: "LinkedIn-derived workforce metrics: current headcount, growth across several time windows, and the functional breakdown"
+    test_request:
+      queryParams: {company: "canva.com"}
+    cost: {type: per_success, value: 2.5, currency: credit, note: "2.5 Akta credits per request"}
+    unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, not a call error — every /company/{jobs,posts,website-traffic,employee-reviews,headcount-trends,product-reviews-with-products} route on this key returned the identical 403 message)"
+    docs_url: https://docs.akta.pro/api-reference/alternative-data/headcount-trends
+
+  - id: akta.companies.reviews
+    domain: other
+    capability: companies.reviews
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/company/employee-reviews/
+    name: "Get company employee reviews"
+    summary: "Read employee reviews and ratings for a company"
+    input:
+      queryParams:
+        company: {type: string, required: true, note: "company website or Akta UUID", example: "https://canva.com"}
+        limit: {type: integer, required: false, note: "reviews to return, default 10, max 100", example: 10}
+        offset: {type: integer, required: false, note: "records to skip, default 0"}
+      note: "sibling alt-data routes share this shape (company + limit + offset): /v1/company/product-reviews/ 1.5 cr per 50, /v1/company/jobs/ 4 cr per 10, /v1/company/posts/ 1 cr per 10, /v1/company/website-traffic/ 1.5 cr"
+    test_request:
+      queryParams: {company: "canva.com", limit: 1}
+    cost: {type: per_success, value: 1.5, currency: credit, note: "1.5 Akta credits per 50 reviews returned"}
+    unverified: "http 403: current subscription does not include access to this endpoint (account-tier gap, same message as the other alternative-data routes)"
+    docs_url: https://docs.akta.pro/api-reference/alternative-data/employee-reviews
+
+  - id: akta.companies.industry.resolve
+    kind: utility
+    capability: companies.industry.resolve
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /v1/industry/search/
+    name: "Resolve industry text to Akta codes"
+    summary: "Turn a free-text industry description into Akta's standard industry codes (free)"
+    input:
+      queryParams:
+        query: {type: string, required: true, note: "free-text industry term", example: "graphic design software"}
+      note: "returns ranked industry codes with similarity scores — use it to build the `industry` filter that akta.companies.news accepts"
+    test_request:
+      queryParams: {query: "graphic design software"}
+    cost: {type: free, value: 0, currency: USD, note: "the endpoint page documents it as free (0 credits); note that Akta's rate card carries no line item for it either way, so treat free as documented-but-not-price-listed"}
+    verified: 2026-07-28
+    example_response: examples/akta.companies.industry.resolve.json
+    docs_url: https://docs.akta.pro/api-reference/supporting-apis/industry-search

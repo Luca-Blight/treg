@@ -1,0 +1,34 @@
+{
+  "code": 200,
+  "request_id": "9e60bb67-1f27-4ad9-8b98-d2f9c579efd4",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:16",
+  "time_stamp": 1785220396,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/get_creator_inspiration_feed_api_v1_xiaohongshu_app_v2_get_creator_inspiration_feed_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/9e60bb67-1f27-4ad9-8b98-d2f9c579efd4?sign=e8e38010d8255a9e82452a05c461d2f34a1db609575b6309f1a147545866341d",
+  "router": "/api/v1/xiaohongshu/app_v2/get_creator_inspiration_feed",
+  "params": {
+    "tab": "0",
+    "source": "creator_center"
+  },
+  "data": {
+    "code": 0,
+    "success": true,
+    "data": {
+      "cursor": "r_1",
+      "end_flag": false,
+      "inspirations": [
+        "… {13 field(s) truncated}",
+        "… 28 more item(s) truncated"
+      ]
+    },
+    "msg": "成功",
+    "debug_id": "57f3ccc3",
+    "debug_info": "gAAAAABqaE0sEtSluFD43CZAa_sb80jpgikMS4ogIpK4FzRu-hLIB8N5Och4Sya2voZbJQn2CIcSCKoEz99wYNvejipGbCWxvB_yLmpsR5etyVUgEfx2CP8Ny5B3-_hW1jOCuTWjP6fxyiny3xzNcFtS6cjEP_J0Fu0Wl5qqa8z9_zXFuNXM8-glO1B8rkwYimFOgz8m… [460 chars]"
+  }
+}

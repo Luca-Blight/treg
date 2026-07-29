@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "credits_remaining": 19818,
+  "credits_charged": 1,
+  "id": "highlight:18067016518767507",
+  "strong_id__": "highlight:18067016518767507",
+  "latest_reel_media": 1752681624,
+  "seen": null,
+  "can_reply": false,
+  "can_gif_quick_reply": true,
+  "can_reshare": true,
+  "reel_type": "highlight_reel",
+  "ad_expiry_timestamp_in_millis": null,
+  "is_cta_sticker_available": null,
+  "should_treat_link_sticker_as_cta": null,
+  "pool_refresh_ttl_in_sec": null,
+  "…": "19 more field(s) truncated"
+}

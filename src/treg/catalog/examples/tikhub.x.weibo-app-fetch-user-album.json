@@ -1,0 +1,51 @@
+{
+  "code": 200,
+  "request_id": "0848a3a4-5983-4a15-86c1-202010a8e9b4",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:30",
+  "time_stamp": 1785220230,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-App-API/fetch_user_album_api_v1_weibo_app_fetch_user_album_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/0848a3a4-5983-4a15-86c1-202010a8e9b4?sign=9397e4128edcf51f279aebd9f22d70ee3091289f2fa1a5c06f75727ba900b2d8",
+  "router": "/api/v1/weibo/app/fetch_user_album",
+  "params": {
+    "uid": "7648703289"
+  },
+  "data": {
+    "items": [
+      {
+        "category": "cell",
+        "type": "span",
+        "span": {
+          "style": {
+            "height": 10
+          }
+        }
+      },
+      "… 2 more item(s) truncated"
+    ],
+    "pageData": "{}",
+    "refreshInfo": "{}",
+    "loadedInfo": "{}",
+    "config": "{}",
+    "moreInfo": {
+      "pagingType": "cursor",
+      "params": {
+        "max_id": 0,
+        "count": 20,
+        "since_id": "5012154263666753_4990205358511630|1034:4990204960768042_20240328_-1"
+      },
+      "error": "网络加载失败，请稍后尝试",
+      "loading": "正在加载更多",
+      "moreType": "default"
+    },
+    "navInfo": "{}",
+    "__profile_card_server__": {
+      "from": "SHANHAI-SERVER"
+    }
+  }
+}

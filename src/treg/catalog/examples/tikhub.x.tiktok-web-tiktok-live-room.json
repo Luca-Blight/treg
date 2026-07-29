@@ -1,0 +1,24 @@
+{
+  "code": 200,
+  "request_id": "f416e9fa-eb5a-4184-84f4-1adfa52551a6",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:27:38",
+  "time_stamp": 1785220058,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/TikTok-Web-API/tiktok_live_room_api_v1_tiktok_web_tiktok_live_room_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/f416e9fa-eb5a-4184-84f4-1adfa52551a6?sign=40e3f5e6c9b69079466b5237bc5e0594e0b80ebf6b18e76e017ae2f336ea26af",
+  "router": "/api/v1/tiktok/web/tiktok_live_room",
+  "params": {
+    "live_room_url": "https://www.tiktok.com/@mpl.id.official/live",
+    "danmaku_type": "WebcastChatMessage"
+  },
+  "data": {
+    "ws_url": "No longer available",
+    "message_ZH": "该接口已不再提供线上服务，需要自行购买源代码后在本地部署使用，购买源代码请在Discord服务器联系管理员，Discord邀请链接：https://discord.gg/aMEAS8Xsvz",
+    "message_EN": "This interface is no longer available online, you need to purchase the source code and deploy it locally for use. To purchase the source code, please contact the administrator in the Discord server. D… [249 chars]"
+  }
+}

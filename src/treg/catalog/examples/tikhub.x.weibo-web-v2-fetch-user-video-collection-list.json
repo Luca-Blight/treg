@@ -1,0 +1,32 @@
+{
+  "code": 200,
+  "request_id": "3fbc7bcb-92fd-4f33-883d-63e9d277f4af",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:30:52",
+  "time_stamp": 1785220252,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Weibo-Web-V2-API/fetch_user_video_collection_list_api_v1_weibo_web_v2_fetch_user_video_collection_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/3fbc7bcb-92fd-4f33-883d-63e9d277f4af?sign=285c4c38288b855fad44d070e726e8173a8c4c79e82aa4f31d831b1b9c776742",
+  "router": "/api/v1/weibo/web_v2/fetch_user_video_collection_list",
+  "params": {
+    "uid": "7277477906"
+  },
+  "data": {
+    "playlists": [
+      {
+        "name": "剪辑",
+        "item_count": 30,
+        "id": 4883992307236954,
+        "id_str": "4883992307236954",
+        "is_pay": 0
+      }
+    ],
+    "attitude_visible": 1,
+    "attitude_msg": "",
+    "icon": "https://h5.sinaimg.cn/upload/1011/55/2023/02/08/svideo_profile_video_like.png"
+  }
+}

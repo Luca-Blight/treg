@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "request_id": "4e685d4f-0974-4e1d-9bcd-0a3db01f766d",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:01",
+  "time_stamp": 1785220141,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Instagram-V1-API/user_id_to_username_api_v1_instagram_v1_user_id_to_username_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/4e685d4f-0974-4e1d-9bcd-0a3db01f766d?sign=dc14159f8a9ed43a1c7a59ffc9ca3b7c5c069d695be87fcb2828cfe8a7c41a83",
+  "router": "/api/v1/instagram/v1/user_id_to_username",
+  "params": {
+    "user_id": "18527"
+  },
+  "data": {
+    "highlights_tray_type": "DEFAULT",
+    "pk": "18527",
+    "strong_id__": "18527",
+    "id": "18527",
+    "profile_pic_url": "https://scontent-lga3-3.cdninstagram.com/v/t51.2885-19/460170653_852233457013406_8133149038171915885_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_… [494 chars]",
+    "show_ig_app_switcher_badge": false,
+    "username": "javan"
+  }
+}

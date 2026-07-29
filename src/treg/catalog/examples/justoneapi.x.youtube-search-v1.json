@@ -1,0 +1,36 @@
+{
+  "code": 0,
+  "data": {
+    "keyword": "coffee",
+    "videos": [
+      {
+        "video_id": "MYPVQccHhAQ",
+        "title": "4K Cozy Coffee Shop with Smooth Piano Jazz Music for Relaxing, Studying and Working",
+        "duration": "3:35:23",
+        "view_count": "69,181,121 views",
+        "published_time": "4 years ago",
+        "author": "Relaxing Jazz Piano",
+        "channel_id": "UC84t1K5ri-7u9bFCaUKTXDA",
+        "thumbnails": [
+          {
+            "url": "https://i.ytimg.com/vi/MYPVQccHhAQ/hq720.jpg?sqp=-oaymwEjCOgCEMoBSFryq4qpAxUIARUAAAAAGAElAADIQj0AgKJDeAE=&rs=AOn4CLCwHf6-dYPxvjLwUdidGaqRoW9YAA",
+            "width": 360,
+            "height": 202
+          },
+          "… 1 more item(s) truncated"
+        ],
+        "description_snippet": "4K Cozy Coffee Shop with Smooth Piano Jazz Music for Relaxing, Studying and Working. This video is perfect for those who are ...",
+        "url": "https://www.youtube.com/watch?v=MYPVQccHhAQ"
+      },
+      "… 19 more item(s) truncated"
+    ],
+    "shorts": [],
+    "channels": [],
+    "playlists": [],
+    "continuation_token": "<omitted: expires>",
+    "completion_suggestions": []
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:42.523350034",
+  "requestId": "b656d7b1d7cb41068fb13427de4735b2"
+}

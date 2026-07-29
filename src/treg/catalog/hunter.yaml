@@ -1,0 +1,173 @@
+provider: hunter
+source:
+  docs: https://hunter.io/api-documentation/v2
+  openapi: null # Hunter documents v2 on its own site; no fetchable OpenAPI document is published
+  curated: 2026-07-28
+# UNVERIFIED — no credential available at curation time; every path, parameter and price below is
+# transcribed from Hunter's official v2 documentation 2026-07-28. Nothing here has been called.
+#
+# Billing: Hunter meters two SEPARATE credit pools against the plan — "searches" (Domain Search and
+# Email Finder) and "verifications" (Email Verifier) — so `cost.value` is null and the pool is named
+# in `cost.note`. Four rules worth knowing:
+#   - Domain Search charges 1 search credit per 1-10 emails RETURNED, so `limit` is the price dial.
+#   - Email Finder charges nothing when it finds nothing.
+#   - Email Verifier is 0.5 verification credits, i.e. HALF a credit — two verifications to a credit.
+#   - The three ENRICHMENT routes (/people/find, /companies/find, /combined/find) are 0.2 credits
+#     and are billed CONDITIONALLY: you are charged only if the response is complete enough to be
+#     useful (see each entry's cost.note for the exact field set). At a fifth of a credit they are
+#     still the cheapest enrichment in this catalog by a wide margin. Hunter's v2 reference page
+#     labels these "free"; its pricing material states the 0.2 rate. The conditional 0.2 is
+#     encoded here as the safer of the two readings — budget for it, and be pleasantly surprised.
+# GET /account and GET /email-count are unambiguously free; /account is the registry's probe.
+#
+# The key can ride as ?api_key=…, an X-API-KEY header or a Bearer header; treg's registry entry uses
+# the header so the key never lands in a logged URL.
+
+limits: "monthly credit pool; 429 once exhausted"
+pricing_url: https://hunter.io/pricing  # Finding an email costs 1 credit; verifying costs 0.5. Annual billing ~30% cheaper.; free tier: 50 credits/month
+endpoints:
+  - id: hunter.people.email.find
+    domain: contacts
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: GET
+    path: /email-finder
+    name: "Find a person's work email"
+    summary: "Find someone's work email address from their name and their company's domain"
+    input:
+      queryParams:
+        domain: {type: string, required: false, note: "the company's domain — preferred over company", example: "reddit.com"}
+        company: {type: string, required: false, note: "company name, when you don't know the domain"}
+        linkedin_handle: {type: string, required: false, note: "identifies EITHER the person or the company — it can stand in for the name pair or for domain/company"}
+        first_name: {type: string, required: false, note: "use with last_name", example: "Alexis"}
+        last_name: {type: string, required: false, example: "Ohanian"}
+        full_name: {type: string, required: false, note: "alternative to first_name + last_name"}
+        max_duration: {type: integer, required: false, note: "seconds Hunter may spend, 3-20, default 10"}
+      note: "one of domain | company | linkedin_handle, plus either full_name or first_name + last_name (or linkedin_handle alone). The response carries a confidence score, the sources the address was seen on, and an automatic verification of the address it found"
+    test_request:
+      queryParams: {domain: "stripe.com", full_name: "Patrick Collison"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "1 SEARCH credit, charged only when an email is found; a miss is free."
+    docs_url: https://hunter.io/api-documentation/v2#email-finder
+
+  - id: hunter.people.email.verify
+    domain: contacts
+    capability: people.email.verify
+    platform: people
+    scope: any_account
+    method: GET
+    path: /email-verifier
+    name: "Verify an email address"
+    summary: "Check an email is real, deliverable and not a catch-all or disposable inbox"
+    input:
+      queryParams:
+        email: {type: string, required: true, note: "the address to verify", example: "steli@close.io"}
+      note: "returns status (valid | invalid | accept_all | webmail | disposable | unknown), a score, and the individual SMTP/MX/gibberish checks behind it. May answer HTTP 202 while the check is still running — poll the same URL until it settles. Rate limit 10 req/s and 300 req/min, lower than the other routes"
+    test_request:
+      queryParams: {email: "steli@close.io"}
+    cost:
+      type: per_call
+      value: 0.5
+      currency: credit
+      note: "0.5 VERIFICATION credits per call — half a credit, a separate pool from search credits. Re-verifying the same address within the plan period is not re-charged."
+    docs_url: https://hunter.io/api-documentation/v2#email-verifier
+
+  - id: hunter.companies.emails
+    domain: contacts
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: GET
+    path: /domain-search
+    name: "Find email addresses at a company"
+    summary: "People and email addresses Hunter knows at a company, with roles and confidence"
+    input:
+      queryParams:
+        domain: {type: string, required: false, note: "the company's domain — preferred over company", example: "stripe.com"}
+        company: {type: string, required: false, note: "company name, when you don't know the domain"}
+        limit: {type: integer, required: false, note: "emails to return, default 10, max 100 — THIS IS THE PRICE DIAL: 1 search credit per 10 returned", example: 10}
+        offset: {type: integer, required: false, note: "records to skip, for paging"}
+        type: {type: string, required: false, note: "personal (named people) | generic (info@, contact@)", example: "personal"}
+        seniority: {type: string, required: false, note: "junior, senior, executive — comma-separate to combine"}
+        department: {type: string, required: false, note: "executive, it, finance, management, sales, legal, support, hr, marketing, communication, education, design, health, operations"}
+        required_field: {type: string, required: false, note: "comma-separated fields a result must have, e.g. full_name,position"}
+        decision_maker: {type: boolean, required: false, note: "restrict to people Hunter classifies as decision makers"}
+        verification_status: {type: string, required: false, note: "filter by deliverability status, e.g. valid"}
+        job_titles: {type: string, required: false, note: "comma-separated job titles to match"}
+        location: {type: string, required: false, note: "comma-separated locations to filter results by"}
+        aggregations: {type: boolean, required: false, note: "return aggregate breakdowns (by department, seniority) alongside the results"}
+      note: "one of domain | company is required. Mapped to people.search because what it actually returns is a filtered list of PEOPLE at that company"
+    test_request:
+      queryParams: {domain: "stripe.com", limit: 1}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      note: "1 SEARCH credit per 10 emails returned (rounded up); a domain with no results is free."
+    docs_url: https://hunter.io/api-documentation/v2#domain-search
+
+  - id: hunter.people.enrich
+    domain: contacts
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: GET
+    path: /people/find
+    name: "Enrich a person by email"
+    summary: "Enrich a person from their email — name, role, seniority, location, social profiles"
+    input:
+      queryParams:
+        email: {type: string, required: true, note: "the person's email address", example: "steli@close.io"}
+        linkedin_handle: {type: string, required: false, note: "alternative identifier when you have no email"}
+        clearbit_format: {type: boolean, required: false, note: "return the payload in Clearbit's response shape, for drop-in migration"}
+      note: "one of email | linkedin_handle. To go the other way (name → email) use hunter.people.email.find, which costs a full search credit. GET /combined/find?email=… returns the person AND their company in one call at the same 0.2 rate"
+    test_request:
+      queryParams: {email: "steli@close.io"}
+    cost:
+      type: per_success
+      value: 0.2
+      currency: credit
+      note: "0.2 credits, billed CONDITIONALLY — charged only when email, full name AND position all come back. A 404 or a partial record is free."
+    docs_url: https://hunter.io/api-documentation/v2#people-enrichment
+
+  - id: hunter.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: GET
+    path: /companies/find
+    name: "Enrich a company by domain"
+    summary: "Enrich a company from its domain — industry, headcount, revenue, location, tech stack"
+    input:
+      queryParams:
+        domain: {type: string, required: true, note: "company domain without protocol or www", example: "stripe.com"}
+        clearbit_format: {type: boolean, required: false, note: "return the payload in Clearbit's response shape, for drop-in migration"}
+      note: "the combined variant GET /combined/find?email=… returns the person AND their company in one call at the same rate"
+    test_request:
+      queryParams: {domain: "stripe.com"}
+    cost:
+      type: per_success
+      value: 0.2
+      currency: credit
+      note: "0.2 credits, billed CONDITIONALLY — charged only when company name, category/description/tags, location or country code AND company size all come back. A 404 or a partial record is free. Still the cheapest companies.enrich in this catalog."
+    docs_url: https://hunter.io/api-documentation/v2#company-enrichment
+
+  - id: hunter.account.usage
+    kind: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /account
+    name: "Get account plan and credit usage"
+    summary: "Your Hunter plan, reset date and remaining search and verification credits (free)"
+    input:
+      note: "no parameters — the key rides in the X-API-KEY header"
+    test_request: {queryParams: {}}
+    cost: {type: free, value: 0, currency: USD, note: "free — consumes no search or verification credits; this is the registry's health probe"}
+    docs_url: https://hunter.io/api-documentation/v2#account

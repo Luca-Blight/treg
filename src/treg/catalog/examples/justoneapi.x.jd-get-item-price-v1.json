@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "data": {
+    "data": [
+      {
+        "good_id": "10160545687002",
+        "price": 119800
+      }
+    ]
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:03:38.023984336",
+  "requestId": "37b67ac4ed714429b6d2f526549e1b5c"
+}

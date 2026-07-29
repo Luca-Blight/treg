@@ -1,0 +1,32 @@
+{
+  "code": 0,
+  "data": {
+    "title": {
+      "__typename": "Title",
+      "id": "tt0111161",
+      "titleText": "… 2 field(s) truncated",
+      "originalTitleText": "… 2 field(s) truncated",
+      "releaseYear": "… 3 field(s) truncated",
+      "releaseDate": "… 8 field(s) truncated",
+      "titleType": "… 8 field(s) truncated",
+      "primaryImage": "… 5 field(s) truncated",
+      "meta": "… 2 field(s) truncated",
+      "productionStatus": "… 4 field(s) truncated",
+      "canRate": "… 1 field(s) truncated",
+      "ratingsSummary": "… 2 field(s) truncated",
+      "interests": "… 1 field(s) truncated",
+      "reviews": "… 1 field(s) truncated",
+      "metacritic": "… 2 field(s) truncated",
+      "externalLinks": "… 1 field(s) truncated",
+      "series": null,
+      "plot": "… 1 field(s) truncated",
+      "certificate": "… 6 field(s) truncated",
+      "runtime": "… 1 field(s) truncated",
+      "episodes": null,
+      "engagementStatistics": "… 1 field(s) truncated"
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:02.889020474",
+  "requestId": "6220ef62b7644f8f9187f02cf699ce… [32 chars total]"
+}

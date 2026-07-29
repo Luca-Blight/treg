@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "request_id": "d0660fbe-aba2-4d57-86e1-21d288655cef",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-28 00:30:21",
+  "time_stamp": 1785223821,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-App-V3-API/fetch_multi_video_v2_api_v1_douyin_app_v3_fetch_multi_video_v2_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "…": "5 more field(s) truncated"
+}

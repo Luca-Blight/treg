@@ -1,0 +1,54 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "105.1539 sec.",
+  "cost": 0.0033,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281359-2171-0646-0000-df56c0b064f5",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "105.0939 sec.",
+      "cost": 0.0033,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 5 more item(s) truncated"
+      ],
+      "data": {
+        "api": "merchant",
+        "function": "sellers",
+        "se": "amazon",
+        "language_code": "en_US",
+        "location_code": 2840,
+        "asin": "B07D528W98",
+        "se_type": "sellers",
+        "device": "desktop",
+        "os": "windows"
+      },
+      "result": [
+        {
+          "asin": "B07D528W98",
+          "type": "sellers",
+          "se_domain": "amazon.com",
+          "location_code": 2840,
+          "language_code": "en_US",
+          "check_url": "https://www.amazon.com/dp/B07D528W98/ref=olp_aod_redir_impl1?_encoding=UTF8&aod=1",
+          "datetime": "2026-07-28 11:01:34 +00:00",
+          "title": "YOSUDA Exercise Bike, Magnetic Friction Stationary Bike with App Training | Magnetic Indoor Cycling Low Noise Bike for Home with 300 lb Weight Capacity, Tablet Holder and Fitness Course for Weight Los… [201 chars]",
+          "image": "https://m.media-amazon.com/images/I/41-fFNxo9ML.jpg",
+          "item_types": [
+            "amazon_seller_main_item"
+          ],
+          "items_count": 1,
+          "items": [
+            "… {15 field(s) truncated}"
+          ]
+        }
+      ]
+    }
+  ]
+}

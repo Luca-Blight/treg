@@ -1,0 +1,210 @@
+provider: leadmagic
+source:
+  docs: https://leadmagic.io/docs/api-reference/email-validation
+  openapi: null # LeadMagic renders per-endpoint reference pages; no fetchable OpenAPI document
+  curated: 2026-07-28
+# VERIFIED 2026-07-28 — 6 of 7 core endpoints called live and passed with a real credential
+# (TREG_CATALOG_CRED), examples captured under examples/. leadmagic.people.search (/v3/people/search)
+# 401s with invalid_api_key on this key while the sibling /v3/companies/search succeeds on the same
+# key, so it is recorded unverified (a plan/feature gate on that one route) rather than skipped.
+# Paths, parameters and price notes below were originally transcribed from LeadMagic's official v1
+# API reference 2026-07-28.
+#
+# Path shape: every route carries a version prefix AND a resource segment — /v1/people/… for contact
+# work, /v1/companies/… for firmographics, and /v3/ for the newest search. LeadMagic's OWN published
+# MCP client still calls unprefixed paths (/email-finder, /email-validate, /company-search …), and
+# because every path answers 401 before routing, live probing cannot tell whether those aliases are
+# still served. The prefixed forms are what the current reference documents and what the registry's
+# probe_path (/v1/credits) agrees with, so those are what this file carries; treat the unprefixed
+# variants as unverified legacy. `/b2b-profile` appears only in that MCP client and not in the
+# current docs, so it is deliberately not catalogued.
+#
+# Billing: LeadMagic meters CREDITS and publishes an unusually precise per-endpoint rate, so the
+# credit counts below are exact even though the dollar value depends on the plan. The pattern worth
+# knowing is that LeadMagic charges ONLY for a definitive hit: an email-finder miss, a company
+# no-match, an unresolvable mobile and an "unknown" validation are all free. GET /v1/credits is free
+# and unthrottled — it is the registry's probe.
+
+
+pricing_url: https://leadmagic.io/pricing
+endpoints:
+  - id: leadmagic.people.email.find
+    domain: contacts
+    capability: people.email.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/people/email-finder
+    name: "Find a person's work email"
+    summary: "Find someone's work email address from their name and their company's domain or name"
+    input:
+      bodyType: json
+      body:
+        first_name: {type: string, required: false, note: "use with last_name; alternatively send full_name", example: "Jane"}
+        last_name: {type: string, required: false, example: "Doe"}
+        full_name: {type: string, required: false, note: "alternative to first_name + last_name"}
+        domain: {type: string, required: false, note: "the company's domain — more accurate than company_name", example: "leadmagic.io"}
+        company_name: {type: string, required: false, note: "company name, when you don't know the domain"}
+      note: "at least one NAME field and at least one COMPANY field are both required — a name alone or a domain alone is rejected. The response also carries company enrichment and employment verification at no extra cost"
+    test_request:
+      body: {full_name: "Jane Doe", domain: "leadmagic.io"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "1 credit per email found; a null result costs nothing. Dollar value depends on plan."
+    verified: 2026-07-28
+    example_response: examples/leadmagic.people.email.find.json
+    docs_url: https://leadmagic.io/docs/api-reference/email-finder
+
+  - id: leadmagic.people.email.verify
+    domain: contacts
+    capability: people.email.verify
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/people/email-validation
+    name: "Verify an email address"
+    summary: "Check an email is real and deliverable, and whether its domain is catch-all"
+    input:
+      bodyType: json
+      body:
+        email: {type: string, required: true, note: "the address to validate", example: "jane@leadmagic.io"}
+      note: "returns email_status (valid | invalid | unknown), is_domain_catch_all, the MX provider and gateway, plus company enrichment thrown in free"
+    test_request:
+      body: {email: "test@leadmagic-nonexistent-domain-test.com"}
+    cost:
+      type: per_success
+      value: 0.25
+      currency: credit
+      note: "0.25 credits per DEFINITIVE result (valid or invalid) — four validations to a credit. 'unknown' results and RFC syntax failures are free. Rate limit 300 req/min."
+    verified: 2026-07-28
+    example_response: examples/leadmagic.people.email.verify.json
+    docs_url: https://leadmagic.io/docs/api-reference/email-validation
+
+  - id: leadmagic.people.enrich
+    domain: contacts
+    capability: people.enrich
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/people/profile-search
+    name: "Enrich a person from their profile URL"
+    summary: "Enrich a person from their profile URL — role, employer, location and work history"
+    input:
+      bodyType: json
+      body:
+        profile_url: {type: string, required: true, note: "full professional profile URL or just the username", example: "https://www.linkedin.com/in/example"}
+        extended_response: {type: boolean, required: false, note: "adds the profile image URL; default false"}
+    test_request:
+      body: {profile_url: "https://www.linkedin.com/in/satyanadella"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "1 credit per profile matched; free when the profile cannot be resolved."
+    verified: 2026-07-28
+    example_response: examples/leadmagic.people.enrich.json
+    docs_url: https://leadmagic.io/docs/reference/profile-search
+
+  - id: leadmagic.people.phone.find
+    domain: contacts
+    capability: people.phone.find
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v1/people/mobile-finder
+    name: "Find a person's mobile number"
+    summary: "Find someone's mobile number from their profile URL or email address"
+    input:
+      bodyType: json
+      body:
+        profile_url: {type: string, required: false, note: "professional profile URL", example: "https://www.linkedin.com/in/example"}
+        work_email: {type: string, required: false, note: "the person's work email"}
+        personal_email: {type: string, required: false, note: "the person's personal email"}
+      note: "at least one identifier is required. This is the most expensive endpoint in the file at 5 credits a hit — and mobile numbers are regulated contact data (TCPA / CASL), so treat the result accordingly"
+    test_request:
+      body: {profile_url: "https://www.linkedin.com/in/nonexistent-test-profile-xyz123"}
+    cost:
+      type: per_success
+      value: 5
+      currency: credit
+      note: "5 credits when a mobile number is found; free when nothing is returned."
+    verified: 2026-07-28
+    example_response: examples/leadmagic.people.phone.find.json
+    docs_url: https://leadmagic.io/docs/api-reference/mobile-finder
+
+  - id: leadmagic.companies.enrich
+    domain: companies
+    capability: companies.enrich
+    platform: companies
+    scope: any_account
+    method: POST
+    path: /v1/companies/company-search
+    name: "Enrich a company from domain or name"
+    summary: "Enrich a company from domain, name or profile URL — industry, headcount, revenue"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: false, note: "website domain — the most accurate identifier", example: "leadmagic.io"}
+        profile_url: {type: string, required: false, note: "company profile URL or slug"}
+        company_name: {type: string, required: false, note: "company name; least precise of the three"}
+      note: "at least one of company_domain | profile_url | company_name. Named 'company-search' but it resolves ONE company, so it is an enrichment call rather than a filtered search"
+    test_request:
+      body: {company_domain: "leadmagic.io"}
+    cost:
+      type: per_success
+      value: 1
+      currency: credit
+      note: "1 credit per company matched; free when no company is found."
+    verified: 2026-07-28
+    example_response: examples/leadmagic.companies.enrich.json
+    docs_url: https://leadmagic.io/docs/v1/reference/search-company
+
+  - id: leadmagic.people.search
+    domain: contacts
+    capability: people.search
+    platform: people
+    scope: any_account
+    method: POST
+    path: /v3/people/search
+    name: "Find people at a company by job title"
+    summary: "Find the people at a company by job title, optionally revealing their emails and mobiles"
+    input:
+      bodyType: json
+      body:
+        company_domain: {type: string, required: false, note: "the company to search inside — the usual entry point", example: "leadmagic.io"}
+        company_name: {type: string, required: false, note: "alternative to company_domain"}
+        company_filters: {type: object, required: false, note: "filter across many companies instead of naming one"}
+        titles: {type: "array[string]", required: false, note: "job titles to match", example: ["Head of Marketing"]}
+        required_email: {type: boolean, required: false, note: "only return people LeadMagic holds an email for"}
+        required_mobile: {type: boolean, required: false, note: "only return people it holds a mobile for"}
+        include_contact_details: {type: boolean, required: false, note: "THE EXPENSIVE SWITCH — reveals emails and mobiles inline, adding 1 credit per email and 5 per mobile on top of the per-person charge. Default false"}
+        limit: {type: integer, required: false, note: "people to return, max 100, default 25 — the base cost dial", example: 10}
+      note: "exactly one of company_domain | company_name | company_filters is required. This is the only /v3 route in the file. Rate limit 300 req/min"
+    test_request:
+      body: {company_domain: "leadmagic.io", titles: ["Head of Marketing"], limit: 1, include_contact_details: false}
+    cost:
+      type: per_result
+      value: 1
+      currency: credit
+      note: "1 credit per person returned, PLUS 1 credit per email and 5 per mobile when include_contact_details is true. No results, no charge. A limit=25 search revealing mobiles can therefore cost 150+ credits — set limit deliberately."
+    unverified: "http 401 invalid_api_key — this key's plan does not include v3 people search; the sibling /v3/companies/search route on the SAME key succeeded (200, 1 credit), so this is a plan/feature gate on this one route, not a broken key or a broken endpoint"
+    docs_url: https://leadmagic.io/docs/reference/people-search
+
+  - id: leadmagic.account.usage
+    kind: account
+    capability: account.usage
+    platform: account
+    scope: own_account
+    method: GET
+    path: /v1/credits
+    name: "Check credit balance"
+    summary: "Check the LeadMagic credit balance (free and unthrottled)"
+    input:
+      note: "no parameters — the key rides in the X-API-Key header; it returns {credits}. POST /v1/credits/refresh forces a balance refresh when the number looks stale, and GET /v1/credits/health validates the key alone"
+    test_request: {queryParams: {}}
+    cost: {type: free, value: 0, currency: USD, note: "free — consumes no credits and is not rate-limited; this is the registry's health probe"}
+    verified: 2026-07-28
+    example_response: examples/leadmagic.account.usage.json
+    docs_url: https://leadmagic.io/docs/reference/check-credits

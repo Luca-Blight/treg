@@ -1,0 +1,42 @@
+{
+  "code": 200,
+  "request_id": "98e2fb52-131b-4403-b81b-4878f4b18da7",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:33:17",
+  "time_stamp": 1785220397,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Xiaohongshu-App-V2-API/get_product_r… [132 chars]",
+  "cache_message": "This response is cached and accessible via the URL below for… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口… [79 chars]",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/98e2fb52-131b-44… [150 chars]",
+  "router": "/api/v1/xiaohongshu/app_v2/get_product_review_overview",
+  "params": {
+    "sku_id": "669ddd44e05f3700011067ed",
+    "tab": "2"
+  },
+  "data": {
+    "success": true,
+    "code": 0,
+    "data": {
+      "scoreToCnt": "… {5 field(s) truncated}",
+      "avgScore": "4.7",
+      "comment_type": "1",
+      "avgScoreDesc": "Excellent",
+      "avgScoreColorInEightDigit": "FF2442",
+      "filterStrategyList": "… [2 item(s) truncated]",
+      "scoreDesc": "评分",
+      "total": 810,
+      "expireFlagMap": "… {5 field(s) truncated}",
+      "avgScoreLevel": 0,
+      "reviews": "… [2 item(s) truncated]",
+      "purchaseHistoryCount": 777,
+      "sortStrategyList": "… [2 item(s) truncated]",
+      "review_sub_title": ""
+    },
+    "msg": "ok",
+    "debug_id": "ea6bde58",
+    "debug_info": "gAAAAABqaE0tA8DhoU7vkuG1hi6ALnwv6d88Gk1knwXuFuEHp_ezUhEyxIg9… [460 chars]"
+  }
+}

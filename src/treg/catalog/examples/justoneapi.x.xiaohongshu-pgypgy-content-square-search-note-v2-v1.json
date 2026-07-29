@@ -1,0 +1,51 @@
+{
+  "code": 0,
+  "data": {
+    "noteList": [
+      {
+        "noteInfo": {
+          "noteImages": [
+            {
+              "imageUrl": "http://ci.xiaohongshu.com/1040g2sg322r1bi6q7ke049v1ne1e0n47qmnr800?imageView2/2/w/1080/format/jpg",
+              "imageWidth": 1080,
+              "imageHeight": 1440
+            }
+          ],
+          "bizType": 0,
+          "favNum": 1231,
+          "bindType": 4,
+          "title": "瑞幸玄学好像是有点说法在的……",
+          "notePublishTime": "2026-07-20 10:40:23",
+          "noteType": 2,
+          "readNum": 1199909,
+          "noteLink": "https://www.xiaohongshu.com/explore/6a5d8a97000000000402b432?xsec_token=<omitted: expires>&xsec_source=pc_pgy",
+          "likeNum": 40631,
+          "videoUrl": "http://v.xiaohongshu.com/stream/79/110/258/01ea5d8a2d58ef2b4f0370019f7d65737c_258.mp4?sign=e220e5d7addef59a0918bade95ed0bff&t=6a6a2380",
+          "isAdNote": 0,
+          "noteId": "6a5d8a97000000000402b432",
+          "cmtNum": 937,
+          "videoDuration": 10
+        },
+        "userInfo": {
+          "nickName": "一起烤地瓜🍠",
+          "avatar": "https://sns-avatar-qc.xhscdn.com/avatar/1040g2jo31mgfbiihm80g49v1ne1e0n47lq2jprg?imageView2/2/w/120/format/jpg",
+          "userId": "59f7c2e011be103389935c87",
+          "fansNum": 24539,
+          "currentLevel": 2,
+          "userType": 2
+        }
+      },
+      "… 9 more item(s) truncated"
+    ],
+    "total": 1000,
+    "pageInfoDto": {
+      "total": 1000,
+      "totalPage": 0,
+      "pageNum": 1,
+      "pageSize": 10
+    }
+  },
+  "message": null,
+  "recordTime": "2026-07-28T14:00:34.327133166",
+  "requestId": "6a28c14b1ed04362a311138d1438ef0c"
+}

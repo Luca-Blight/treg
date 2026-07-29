@@ -1,0 +1,34 @@
+{
+  "code": 200,
+  "request_id": "7f46362d-c967-4044-8e62-40e52d9641ce",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-27 23:29:34",
+  "time_stamp": 1785220174,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/PiPiXia-App-API/fetch_hashtag_detail_api_v1_pipixia_app_fetch_hashtag_detail_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/7f46362d-c967-4044-8e62-40e52d9641ce?sign=a06f0067cf2063bf1bbaaf9b85085108ecc29a030a65b426a447ea88f87aa21f",
+  "router": "/api/v1/pipixia/app/fetch_hashtag_detail",
+  "params": {
+    "hashtag_id": "129559"
+  },
+  "data": {
+    "status_code": 0,
+    "message": "success",
+    "prompt": "",
+    "time": 1785220174556,
+    "data": {
+      "hashtag": "… {25 field(s) truncated}",
+      "host_list": "… [1 item(s) truncated]",
+      "introduce": "话题大当家与二当家是官方在众多皮友中层层选拔出来，负责话题的内容建设、发掘优质帖子以及话题内氛围管理，初期在部分话题进行试点。主持人权力包括：1）将不符合条件的帖子移除出话题，2）优质帖子加精",
+      "top_items": "… [0 item(s) truncated]",
+      "related_hashtag": null,
+      "leaderboard_info": "… {2 field(s) truncated}",
+      "signin_status": false,
+      "popup": null
+    }
+  }
+}

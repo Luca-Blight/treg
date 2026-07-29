@@ -1,0 +1,28 @@
+{
+  "code": 0,
+  "data": [
+    {
+      "id": null,
+      "tagId": null,
+      "name": "测评",
+      "createTime": null,
+      "updateTime": null,
+      "status": null,
+      "reason": null,
+      "proTag": null
+    },
+    {
+      "id": null,
+      "tagId": null,
+      "name": "教程",
+      "createTime": null,
+      "updateTime": null,
+      "status": null,
+      "reason": null,
+      "proTag": null
+    }
+  ],
+  "message": null,
+  "recordTime": "2026-07-28T14:04:55.240015146",
+  "requestId": "df96cdf766b341738f5cb2339b1122bb"
+}

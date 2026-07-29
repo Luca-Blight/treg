@@ -1,0 +1,61 @@
+{
+  "code": 0,
+  "data": {
+    "result": [],
+    "code": 200,
+    "data": {
+      "OFFER": {
+        "trackInfo": {
+          "expoArgs": {
+            "swExposeInfo": "sw_ab_info@2483728_2563966_2496120_2559225_2556195_2567889_2505606_2486561_24915… [2056 chars total]"
+          }
+        },
+        "found": 2000,
+        "code": 200,
+        "keywords": "手机壳",
+        "hasMore": true,
+        "viewType": "list_view",
+        "pcFmSwitch": true,
+        "politicalSensitive": false,
+        "items": [
+          {
+            "trackInfo": "… 5 field(s) truncated",
+            "cellType": "smart_ui_offer",
+            "data": "… 69 field(s) truncated",
+            "trackType": "smartUiOffer",
+            "viewType": "list_cell"
+          },
+          "… 59 more item(s) truncated"
+        ],
+        "isForbiddenWord": false
+      },
+      "PC_FM_SWITCH": true,
+      "ADVERTISEMENT": {
+        "data": {
+          "cpt": [
+            "… 95 field(s) truncated"
+          ],
+          "cpc": [
+            "… 105 field(s) truncated",
+            "… 1 more item(s) truncated"
+          ],
+          "requestAdvCount": 3
+        }
+      }
+    },
+    "timeUsed": 575,
+    "pvid": "503cfe13-f7c9-40c1-943b-0be46606103c",
+    "requestId": "24dec1ee7ff44b3c830e9a309dd866ec",
+    "success": true,
+    "mock": [
+      "mock"
+    ],
+    "sessionId": "<omitted: expires>",
+    "scm": "1007.42517.418654.0",
+    "version": 1.0,
+    "tpp_trace": "2150433817852183775911546e1120"
+  },
+  "message": null,
+  "recordTime": "2026-07-28T13:59:40.759051298",
+  "requestId": "901fa41195754b5c9dabc61a1e12e161"
+}

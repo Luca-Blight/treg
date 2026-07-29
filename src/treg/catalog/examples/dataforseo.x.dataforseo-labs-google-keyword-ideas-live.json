@@ -1,0 +1,55 @@
+{
+  "version": "0.1.20260717",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.4665 sec.",
+  "cost": 0.01236,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "07281334-2171-0400-0000-97cfd5683f0b",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.4604 sec.",
+      "cost": 0.01236,
+      "result_count": 1,
+      "path": [
+        "v3",
+        "… 4 more item(s) truncated"
+      ],
+      "data": {
+        "api": "dataforseo_labs",
+        "function": "keyword_ideas",
+        "se_type": "google",
+        "keywords": [
+          "phone",
+          "… 1 more item(s) truncated"
+        ],
+        "location_code": 2840,
+        "language_code": "en",
+        "include_serp_info": true,
+        "limit": 3
+      },
+      "result": [
+        {
+          "se_type": "google",
+          "seed_keywords": [
+            "phone",
+            "… 1 more item(s) truncated"
+          ],
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 421990,
+          "items_count": 3,
+          "offset": 0,
+          "offset_token": "<omitted: expires>",
+          "items": [
+            "… {12 field(s) truncated}",
+            "… 2 more item(s) truncated"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "results": [
+    {
+      "keywordIdeaMetrics": {
+        "competition": "HIGH",
+        "monthlySearchVolumes": [
+          {
+            "month": "JULY",
+            "year": "2025",
+            "monthlySearches": "201000"
+          },
+          {
+            "month": "AUGUST",
+            "year": "2025",
+            "monthlySearches": "201000"
+          },
+          "… 10 more item(s) truncated"
+        ],
+        "avgMonthlySearches": "201000",
+        "competitionIndex": "97",
+        "lowTopOfPageBidMicros": "247816",
+        "highTopOfPageBidMicros": "5265659"
+      },
+      "text": "coffee beans",
+      "keywordAnnotations": {}
+    },
+    {
+      "keywordIdeaMetrics": {
+        "competition": "HIGH",
+        "monthlySearchVolumes": [
+          {
+            "month": "JULY",
+            "year": "2025",
+            "monthlySearches": "9900"
+          },
+          {
+            "month": "AUGUST",
+            "year": "2025",
+            "monthlySearches": "9900"
+          },
+          "… 10 more item(s) truncated"
+        ],
+        "avgMonthlySearches": "12100",
+        "competitionIndex": "100",
+        "lowTopOfPageBidMicros": "482438",
+        "highTopOfPageBidMicros": "4935403"
+      },
+      "text": "best coffee beans",
+      "keywordAnnotations": {}
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "nextPageToken": "<omitted: expires>",
+  "totalSize": "1072",
+  "_scrubbed": true,
+  "_scrubbed_note": "public-figure or reference data; account-specific values masked where present"
+}

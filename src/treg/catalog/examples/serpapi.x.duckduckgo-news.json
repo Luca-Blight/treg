@@ -1,0 +1,36 @@
+{
+  "search_metadata": {
+    "id": "6a6898b86e22377d0b4f6568",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/N8-u4PLHTMbzHPHIonuqrQ/6a6898b86e22377d0b4f6568.json",
+    "created_at": "2026-07-28 11:55:36 UTC",
+    "processed_at": "2026-07-28 11:55:36 UTC",
+    "duckduckgo_news_url": "https://duckduckgo.com/?q=apple&kl=us-en&iar=news&ia=news",
+    "raw_html_file": "https://serpapi.com/searches/N8-u4PLHTMbzHPHIonuqrQ/6a6898b86e22377d0b4f6568.html",
+    "prettify_html_file": "https://serpapi.com/searches/N8-u4PLHTMbzHPHIonuqrQ/6a6898b86e22377d0b4f6568.prettify",
+    "total_time_taken": 4.67
+  },
+  "search_parameters": {
+    "engine": "duckduckgo_news",
+    "q": "apple",
+    "kl": "us-en"
+  },
+  "search_information": {
+    "news_results_state": "Results for exact spelling"
+  },
+  "news_results": [
+    {
+      "position": 1,
+      "title": "Apple's new Upgrade program launches on Tuesday with major changes",
+      "link": "https://www.digitaltrends.com/phones/apples-new-upgrade-program-for-iphones-macs-and-ipads-launches-tuesday/",
+      "snippet": "Apple's new Upgrade leasing program launches July 28, letting customers lease iPhones, Macs, iPads, and Apple Watches through Klarna.",
+      "source": "Digital Trends",
+      "date": "2 days ago",
+      "thumbnail": "https://www.digitaltrends.com/tachyon/2026/07/DT-2026-07-06T080149.502.jpg?resize=1350%2C810"
+    },
+    "… 60 more item(s) truncated"
+  ],
+  "serpapi_pagination": {
+    "next": "https://serpapi.com/search.json?engine=duckduckgo_news&kl=us-en&q=apple&start=61"
+  }
+}
