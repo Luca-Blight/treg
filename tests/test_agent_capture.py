@@ -216,3 +216,14 @@ async def test_checkin_flips_connected(env):
 
     listed = (await env.c.get(f"/orgs/{env.org_id}/agents", headers=_h(env.owner))).json()
     assert listed[0]["connected"] is True, "the poll must see the check-in synchronously"
+
+
+async def test_members_roster_carries_agent_name_and_owner(env):
+    made = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner), json={"name": "ci-bot"})
+    assert made.status_code == 200
+    members = (await env.c.get(f"/orgs/{env.org_id}/members", headers=_h(env.owner))).json()
+    agent = next(m for m in members if m["is_agent"])
+    assert agent["name"] == "ci-bot", "the UI shows the short name, never the machine address"
+    assert agent["created_by"] == "owner@x.dev"
+    human = next(m for m in members if not m["is_agent"])
+    assert human["name"] is None and "created_by" in human

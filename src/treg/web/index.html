@@ -1208,9 +1208,13 @@ th{background:rgba(0,0,0,.25)}
               <p class="sub" style="margin:-2px 0 8px;font-size:12px"><b>Tools</b> = which endpoints/CLIs a member may call or run. <b>Local run</b> = may run CLIs on their own machine (off = server only). The owner always has full access.</p>
               <table>
                 <tr><th>Email</th><th>Role</th><th style="text-align:right">Today</th><th>Daily cap</th><th>Tools</th><th>Local run</th><th></th></tr>
-                <template v-for="m in orgMembers" :key="m.user_id">
+                <template v-for="m in rosterMembers" :key="m.user_id">
                 <tr>
-                  <td>{{m.email}}</td>
+                  <td>
+                    <template v-if="m.is_agent"><span style="opacity:.45">↳</span> <b>{{m.name}}</b> <span class="chip" :title="m.email">agent</span>
+                      <div class="muted" style="font-size:11px">{{m.created_by?('owned by '+short(m.created_by)):'machine identity'}}</div></template>
+                    <template v-else>{{m.email}}</template>
+                  </td>
                   <td>
                     <select v-if="isOwner" class="msel" :value="m.role" @change="setRole(m,$event.target.value)">
                       <option v-for="r in ['viewer','member','admin','owner']" :key="r" :value="r">{{r}}</option>
@@ -1360,7 +1364,7 @@ th{background:rgba(0,0,0,.25)}
                 <select v-model="denyForm.method" class="msel"><option value="">any method</option><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select>
                 <select v-model="denyForm.user_id" class="msel" title="who it applies to">
                   <option :value="null">whole team</option>
-                  <option v-for="m in orgMembers" :key="m.user_id" :value="m.user_id">{{m.is_agent?'agent: ':''}}{{m.email}}</option>
+                  <option v-for="m in rosterMembers" :key="m.user_id" :value="m.user_id">{{m.is_agent?('agent: '+(m.name||m.email)):m.email}}</option>
                 </select>
                 <select v-if="projects.length" v-model="denyForm.project_id" class="msel" title="which project's tools it applies to">
                   <option :value="null">any project</option>
@@ -2563,6 +2567,14 @@ createApp({
         'A {"connected": true, "you": "agent-…"} reply means treg registered the connection —',
         'the dashboard shows this agent as connected from that moment.',
       ].join('\n'); },
+    rosterMembers(){  // people in listing order, each followed by the agents they minted;
+      // orphaned agents (creator left, or pre-created_by rows) trail at the end
+      const humans=(this.orgMembers||[]).filter(m=>!m.is_agent);
+      const agents=(this.orgMembers||[]).filter(m=>m.is_agent);
+      const out=[];
+      humans.forEach(h=>{ out.push(h); agents.filter(a=>a.created_by===h.email).forEach(a=>out.push(a)); });
+      agents.filter(a=>!humans.some(h=>h.email===a.created_by)).forEach(a=>out.push(a));
+      return out; },
     agentConnected(){ const n=this.newAgent; if(!n) return false;
       const row=(this.agents||[]).find(a=>a.user_id===n.user_id); return !!(row&&row.connected); },
     isOwner(){ return this.activeRole==='owner'; },

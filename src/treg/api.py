@@ -2522,8 +2522,13 @@ async def list_members(
                         "daily_call_cap": m.daily_call_cap, "used_today": used.get(user.email, 0),
                         "tool_access": m.tool_access, "project_access": m.project_access,
                         "local_run_enabled": m.local_run_enabled,
-                        # so the dashboard can separate people from machines in one roster
-                        "is_agent": _is_agent_email(user.email)})
+                        # so the dashboard can separate people from machines in one roster —
+                        # agents carry their short name + owner, so the UI never shows the raw
+                        # machine address and can group each agent under its creator
+                        "is_agent": _is_agent_email(user.email),
+                        "name": (_agent_name(caller.org, user.email)
+                                 if _is_agent_email(user.email) else None),
+                        "created_by": m.created_by})
     return out
 
 
