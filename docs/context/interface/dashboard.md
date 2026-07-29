@@ -350,6 +350,21 @@ the kind — else the path's grouping segment (`/v3/backlinks/anchors/live` → 
 modes like `/live`, versions and `/json` stripped first), else `other`. Sections run busiest-first with
 `other` pinned to the end: it is the junk drawer, and its position is the one that carries meaning.
 
+**A domain section renders only if a browse row lands in it, and all the plumbing collapses into one
+section.** The page loads `?include_hidden=1`, so `account`/`utility` endpoints arrive tagged by
+`kind`; they are the provider's own machinery (webhooks, saved lists, token exchanges, enum lookups),
+not the data anyone came to browse. Filing them per-domain conjured sections that existed only because
+a hidden endpoint carried that capability id — the People page grew CAMPAIGNS 0, LOCATION 0, PERSON 0,
+SCHOOL 0, TITLE 0, each with nothing in it but an expander. So: a domain needs at least one visible
+row to exist, and **every** management endpoint on the platform lands in a single collapsed
+**Actions** section at the foot of the ledger, its domain ignored, counted in its heading
+("Actions · 24"). Inside, they render as ordinary rows plus a `kind` chip — account vs utility is the
+only thing distinguishing one from the next. A platform with no such endpoints (telegram) grows no
+Actions section at all. Because Actions is platform-wide rather than a domain, selecting a domain chip
+**hides** it rather than filtering it, and neither the chip counts, the `All` count nor the
+`N rows · M endpoints` line ever counts it — opening Actions must not make the browse surface appear
+to grow.
+
 **Within a section, merged rows lead.** A capability **two or more providers** implement is ONE row —
 that comparison is the reason the catalog groups by capability at all, and burying it under fifty
 single endpoints is how the old page hid it. Everything else is a single row led by the endpoint's
@@ -489,7 +504,8 @@ provider/endpoint counts, the credit-priced fallback ranking ahead of "price not
 the parameters block sitting before the example
 toggle with its query/path/body order and its no-params fallback,
 the featured-shelf split and its two guards, the ledger being one table
-with `other`-last domain sections and merged-before-single rows, a row title that is a name or a clipped
+with `other`-last domain sections that need a visible row to exist, the single platform-wide Actions
+section holding every management endpoint, and merged-before-single rows, a row title that is a name or a clipped
 summary and never a paragraph, the collapsed merged row's non-wrapping three-pills-and-a-count strip, its pills being per-provider,
 sorted cheapest-first and priced only when the price is a real number,
 the two-level expansion (provider sub-rows, then one detail block shared with the single-row path), the

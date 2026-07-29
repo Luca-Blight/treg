@@ -867,12 +867,13 @@ a:hover{text-decoration-color:var(--muted)}
 .lrow:hover td{background:var(--hover)}
 /* The management-endpoints expander at the foot of a section — the same muted "show more" gesture
    as the platform-tile .pt-more, keeping account/utility plumbing one click out of the browse view. */
-.lmore td{padding:0}
-.lmore-btn{display:flex;align-items:center;gap:7px;width:100%;padding:7px 12px;border:0;background:none;
-  cursor:pointer;font:inherit;font-size:11.5px;color:var(--muted);text-align:left}
-.lmore-btn:hover{color:var(--ink);background:var(--hover)}
-.lmore-btn .lcar{transition:transform .12s}
-.lmore-btn[aria-expanded="true"] .lcar{transform:rotate(90deg)}
+/* The one collapsed section at the foot of the ledger. Its heading is a button, so it reads as a
+   section that opens rather than a row that does something. */
+.lsec-btn{display:inline-flex;align-items:center;gap:7px;padding:0;border:0;background:none;
+  font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}
+.lsec-btn:hover{color:var(--ink)}
+.lsec-btn .lcar{transition:transform .12s}
+.lsec-btn[aria-expanded="true"] .lcar{transform:rotate(90deg)}
 /* Same rule down the leading edge the capability list used: the row you can call today is the
    reason to read the table, so it is findable without reading. */
 .lrow.go td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--green) 75%,transparent)}
@@ -895,6 +896,10 @@ a:hover{text-decoration-color:var(--muted)}
 .lpath{display:block;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font-size:11px;color:var(--muted)}
 .lpath b{margin-right:7px;font-family:var(--sans);font-weight:500;color:var(--ink)}
+/* What KIND of plumbing an Actions row is — account (the provider's own records) or utility
+   (a helper). Only ever rendered inside the Actions section, where the distinction is the only
+   thing separating one row from the next. */
+.lkind{margin-left:8px;font-family:var(--sans);vertical-align:1px}
 .lprice{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .vmark{color:var(--green);font-weight:600}
@@ -1580,7 +1585,7 @@ a:hover{text-decoration-color:var(--muted)}
               <!-- The chips scroll rather than wrap: a bar that grows a second row as you filter
                    would shift the sticky section headings out from under it. -->
               <div class="lchips">
-                <button class="mk-chip" :class="{on:!platDomain}" @click="platDomain=''">All <span>{{platRowsAll.length}}</span></button>
+                <button class="mk-chip" :class="{on:!platDomain}" @click="platDomain=''">All <span>{{platBrowseCount}}</span></button>
                 <button v-for="d in platDomainTabs" :key="d.domain" class="mk-chip"
                         :class="{on:platDomain===d.domain}"
                         @click="platDomain = platDomain===d.domain ? '' : d.domain">{{d.domain}} <span>{{d.n}}</span></button>
@@ -1598,7 +1603,14 @@ a:hover{text-decoration-color:var(--muted)}
               <!-- A row, its section heading and its expanded detail are all table rows, so each
                    level rides a wrapper tag — a tbody per group would strip the row separators. -->
               <template v-for="sec in platLedger" :key="sec.domain">
-                <tr class="lsec"><td colspan="4">{{sec.domain}} <span>{{sec.rows.length}}</span></td></tr>
+                <tr class="lsec" :class="{on:sec.actions}"><td colspan="4">
+                  <!-- The one collapsed section: every account/utility endpoint on the platform,
+                       whatever domain it nominally belongs to. -->
+                  <button v-if="sec.actions" class="lsec-btn" :aria-expanded="platActionsOpen"
+                          @click="platActionsOpen=!platActionsOpen"><span class="lcar">▸</span>Actions
+                    <span>{{sec.count}}</span></button>
+                  <template v-else>{{sec.domain}} <span>{{sec.rows.length}}</span></template>
+                </td></tr>
                 <template v-for="r in sec.rows" :key="r.key">
                   <!-- EVERY row expands, merged or not: the row says what it does, the expansion
                        says how to call it, and which of the two a visitor needs is not something
@@ -1632,7 +1644,9 @@ a:hover{text-decoration-color:var(--muted)}
                         <span v-if="r.pillsMore" class="pchip more" :title="r.pillsMoreTitle">+{{r.pillsMore}}</span>
                       </div>
                       <span v-else class="lpath mono"><b>{{r.endpoints[0].provider_display||r.endpoints[0].provider}}</b>
-                        <span class="cat-m">{{r.endpoints[0].method}}</span>{{r.endpoints[0].path}}</span>
+                        <span class="cat-m">{{r.endpoints[0].method}}</span>{{r.endpoints[0].path}}<!--
+                        --><span v-if="r.mgmt" class="chip lkind"
+                              :title="r.endpoints[0].kind==='account' ? 'Manages the provider account itself — lists, campaigns, webhooks' : 'A helper route: token exchange, enum lookups, format cleanup'">{{r.endpoints[0].kind}}</span></span>
                     </td>
                     <td class="lprice" :title="r.priceTitle">{{r.price}}<span
                           v-if="r.priceNative" class="cost-nat">({{r.priceNative}})</span></td>
@@ -1760,17 +1774,6 @@ a:hover{text-decoration-color:var(--muted)}
                     </td>
                   </tr>
                 </template>
-                <!-- Foot of the section: the account/utility "management" endpoints, folded away by
-                     default because they are the provider's own plumbing (webhooks, saved lists,
-                     token helpers) rather than the data a visitor came to browse. Same show-more
-                     gesture as the platform tiles; the rows themselves are appended into sec.rows
-                     above only once the expander is open (see platLedger). -->
-                <tr v-if="sec.mgmtCount" class="lmore" :key="sec.domain+'::mgmt'">
-                  <td colspan="4">
-                    <button class="lmore-btn" @click="toggleMgmt(sec.domain)" :aria-expanded="!!platMgmtOpen[sec.domain]">
-                      <span class="lcar">▸</span>{{platMgmtOpen[sec.domain]?'Hide':'Show'}} {{sec.mgmtCount}} management endpoint{{sec.mgmtCount===1?'':'s'}}</button>
-                  </td>
-                </tr>
               </template>
             </table></div>
             <div v-else class="mk-empty" style="margin-top:14px">Nothing on this platform matches that filter — clear it, or
@@ -3137,7 +3140,7 @@ createApp({
       // surviving rows disappears rather than showing an empty heading.
       platDomain:'', platQ:'', platVerifiedOnly:false,
       platOpen:{},         // ledger row key → row expanded
-      platMgmtOpen:{},     // domain → its account/utility "management endpoints" expander is open
+      platActionsOpen:false,  // the single platform-wide account/utility ("Actions") section is open
       epOpen:{},           // endpoint id → its provider sub-row (level two, merged rows only) is open
       epTab:{},            // endpoint id → which pane of its detail is showing ('req' | 'res')
       platEx:{},           // endpoint id → {open, loading, err, text} for the lazily-fetched example
@@ -3343,15 +3346,28 @@ createApp({
       // that reshuffles as you type is unusable.
       return (this.platData&&this.platData.domains||[]).filter(s=>n[s.domain]).map(s=>({domain:s.domain, n:n[s.domain]})); },
     platLedger(){
-      // Browse rows (data/action) make the ledger; management rows (account/utility) stay folded
-      // behind a per-section expander until platMgmtOpen[domain] is set.
-      const vis={}, mgmt={};
-      for(const r of this.platRowsPreDomain){ if(this.platDomain && r.domain!==this.platDomain) continue;
-        (r.mgmt ? (mgmt[r.domain]=mgmt[r.domain]||[]) : (vis[r.domain]=vis[r.domain]||[])).push(r); }
-      return (this.platData&&this.platData.domains||[]).filter(s=>vis[s.domain]||mgmt[s.domain])
-        .map(s=>{ const m=mgmt[s.domain]||[];
-          return {domain:s.domain, rows:(vis[s.domain]||[]).concat(this.platMgmtOpen[s.domain]?m:[]),
-                  mgmtCount:m.length}; }); },
+      // Browse rows (data/action) make the domain sections; a section with no visible row does not
+      // render AT ALL. Filing management rows per-domain conjured sections that existed only
+      // because a hidden endpoint carried that capability id — CAMPAIGNS 0, SCHOOL 0, TITLE 0.
+      const vis={};
+      for(const r of this.platRowsPreDomain){
+        if(r.mgmt || (this.platDomain && r.domain!==this.platDomain)) continue;
+        (vis[r.domain]=vis[r.domain]||[]).push(r); }
+      const out=(this.platData&&this.platData.domains||[]).filter(s=>vis[s.domain])
+        .map(s=>({domain:s.domain, rows:vis[s.domain]}));
+      // ...and every management endpoint on the platform lands in ONE collapsed section at the
+      // bottom, its domain ignored: account/utility routes are the provider's own plumbing, and
+      // which capability id they happen to carry is not a fact worth a heading.
+      const acts=this.platActionRows;
+      if(acts.length) out.push({domain:'Actions', actions:true, count:acts.length,
+                                rows:this.platActionsOpen?acts:[]});
+      return out; },
+    // What "All" counts: the same population the domain chips add up to. Counting the management
+    // rows here made the All chip disagree with both the chips beside it and the stat line under it.
+    platBrowseCount(){ return this.platRowsPreDomain.filter(r=>!r.mgmt).length; },
+    // Platform-wide, so a domain chip (which is a browse axis) hides it rather than filtering it.
+    platActionRows(){
+      return this.platDomain ? [] : this.platRowsPreDomain.filter(r=>r.mgmt); },
     // Two numbers, because a merged row stands for several endpoints — the browse surface only, so
     // the header count never jumps when the management expander is opened.
     platStats(){
@@ -4431,7 +4447,7 @@ createApp({
     // is no server route to serve the SPA on a hard reload of a /app/platforms/<slug> path.
     platformFromHash(){ const m=/^#platform\/(.+)$/.exec(location.hash||''); return m?decodeURIComponent(m[1]):null; },
     openPlatform(slug, fromPop){ this.resetConfirms();
-      this.detail=null; this.platSlug=slug; this.view='platform'; this.platOpen={}; this.platMgmtOpen={}; this.epOpen={}; this.epTab={}; this.platEx={};
+      this.detail=null; this.platSlug=slug; this.view='platform'; this.platOpen={}; this.epOpen={}; this.epTab={}; this.platEx={}; this.platActionsOpen=false;
       this.platClearFilters(); this.platCopied='';
       if(!fromPop) history.pushState({platform:slug}, '', '/app#platform/'+encodeURIComponent(slug));
       this.loadPlatforms();                                   // the header's provider links need the list
@@ -4561,7 +4577,6 @@ createApp({
     toggleRow(r){ this.platOpen[r.key] = !this.platOpen[r.key]; },
     // The per-section "N management endpoints" expander: reveals the account/utility rows folded
     // out of the browse ledger (see platLedger).
-    toggleMgmt(domain){ this.platMgmtOpen[domain] = !this.platMgmtOpen[domain]; },
     // Level two: a provider sub-row under a merged row opens its own instruction. Single rows have
     // nothing to compare and skip this level entirely.
     toggleEp(e){ this.epOpen[e.id] = !this.epOpen[e.id]; },
