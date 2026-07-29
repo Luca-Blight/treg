@@ -50,21 +50,21 @@ platforms:
   # --- Developer: code hosting & developer platforms -------------------------------------------
   github: {label: "GitHub", category: "Developer", summary: "Public repos, users, contributions and trending pages from GitHub."}
 
-  # --- China Social: Chinese social, video & content -------------------------------------------
-  douyin: {label: "Douyin (TikTok China)", category: "China Social", featured: 1, summary: "Profiles, videos, comments, search, billboards and live data — the deepest platform here."}
-  xiaohongshu: {label: "Xiaohongshu (RED)", category: "China Social", featured: 2, summary: "Notes, users, comments, topics and keyword search on Xiaohongshu (RED)."}
-  weibo: {label: "Weibo", category: "China Social", featured: 3, summary: "Users, posts, comments, fans and hot-search boards on Weibo."}
-  bilibili: {label: "Bilibili", category: "China Social", featured: 4, summary: "Videos, creators, comments, captions and danmu from Bilibili."}
-  kuaishou: {label: "Kuaishou", category: "China Social", featured: 5, summary: "Users, videos, comments and search on Kuaishou."}
-  wechat-mp: {label: "WeChat Official Accounts (公众号 articles)", category: "China Social", featured: 6, summary: "Official-account articles, metrics, comments and search across WeChat 公众号."}
-  zhihu: {label: "Zhihu", category: "China Social", summary: "Questions, answers, columns, user activity and search on Zhihu."}
-  toutiao: {label: "Toutiao", category: "China Social", summary: "Articles, authors and search on Toutiao."}
-  xigua: {label: "Xigua Video", category: "China Social", summary: "Video and creator data from Xigua Video."}
-  pipixia: {label: "Pipixia", category: "China Social", summary: "Posts, hashtags and feeds from Pipixia."}
-  youku: {label: "Youku", category: "China Social", summary: "Videos, users and search from Youku."}
-  netease-music: {label: "NetEase Cloud Music", category: "China Social", summary: "Songs, artists, playlists and comments from NetEase Cloud Music."}
-  wechat-channels: {label: "WeChat Channels (视频号 video)", category: "China Social", summary: "视频号 videos, comments, metrics and account search from WeChat Channels."}
-  wechat-search: {label: "WeChat Search (搜一搜)", category: "China Social", summary: "WeChat 搜一搜 results and indexes."}
+  # --- Chinese social & video (merged into Social; non-China platforms lead by popularity) ---
+  douyin: {label: "Douyin (TikTok China)", category: "Social", summary: "Profiles, videos, comments, search, billboards and live data — the deepest platform here."}
+  xiaohongshu: {label: "Xiaohongshu (RED)", category: "Social", summary: "Notes, users, comments, topics and keyword search on Xiaohongshu (RED)."}
+  weibo: {label: "Weibo", category: "Social", summary: "Users, posts, comments, fans and hot-search boards on Weibo."}
+  bilibili: {label: "Bilibili", category: "Social", summary: "Videos, creators, comments, captions and danmu from Bilibili."}
+  kuaishou: {label: "Kuaishou", category: "Social", summary: "Users, videos, comments and search on Kuaishou."}
+  wechat-mp: {label: "WeChat Official Accounts (公众号 articles)", category: "Social", summary: "Official-account articles, metrics, comments and search across WeChat 公众号."}
+  zhihu: {label: "Zhihu", category: "Social", summary: "Questions, answers, columns, user activity and search on Zhihu."}
+  toutiao: {label: "Toutiao", category: "Social", summary: "Articles, authors and search on Toutiao."}
+  xigua: {label: "Xigua Video", category: "Social", summary: "Video and creator data from Xigua Video."}
+  pipixia: {label: "Pipixia", category: "Social", summary: "Posts, hashtags and feeds from Pipixia."}
+  youku: {label: "Youku", category: "Social", summary: "Videos, users and search from Youku."}
+  netease-music: {label: "NetEase Cloud Music", category: "Social", summary: "Songs, artists, playlists and comments from NetEase Cloud Music."}
+  wechat-channels: {label: "WeChat Channels (视频号 video)", category: "Social", summary: "视频号 videos, comments, metrics and account search from WeChat Channels."}
+  wechat-search: {label: "WeChat Search (搜一搜)", category: "Social", summary: "WeChat 搜一搜 results and indexes."}
 
   # --- E-commerce: marketplaces & product data -------------------------------------------------
   amazon: {label: "Amazon", category: "E-commerce", featured: 1, summary: "Products, best-sellers, reviews, categories and search results from Amazon."}

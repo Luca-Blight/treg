@@ -3299,7 +3299,7 @@ def cmd_catalog(args, cfg) -> None:
                 return
             # grouped under the marketplace categories, in the same order the dashboard tabs use
             order = ["SEO", "Social", "Advertising", "Enrichment", "E-commerce",
-                     "Reviews & Apps", "China Social", "Community", "Other"]
+                     "Reviews & Apps", "Community", "Other"]
             by_cat: dict[str, list] = {}
             for p in rows:
                 by_cat.setdefault(p.get("category") or "Other", []).append(p)

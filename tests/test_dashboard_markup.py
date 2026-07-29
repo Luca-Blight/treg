@@ -111,7 +111,7 @@ def test_the_tab_bar_is_all_plus_the_catalog_categories_plus_platform():
     order = INDEX[INDEX.index("platCategories(){") :][:900]
     assert (
         "['SEO','Social','Advertising','Enrichment','E-commerce','Reviews & Apps',"
-        "'China Social','Community']" in order
+        "'Community']" in order
     )
 
 
