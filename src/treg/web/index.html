@@ -2508,9 +2508,17 @@ createApp({
       if(this.agentSnip==='verify'){
         return 'curl -s '+base+'/tools \\\n  -H "X-Treg-Token: '+tok+'" \\\n  -H "X-Treg-Org: '+org+'"'; }
       return 'You have your own tools-registry identity in the team "'+org+'" (you are "'+a.name+'").\n\n'
-        +'Use THIS token for every treg call — not the machine owner\'s:\n'
-        +'  X-Treg-Token: '+tok+'\n  X-Treg-Org: '+org+'\n\n'
-        +'Call any tool the team has registered, without holding its key:\n'
+        +'FIRST, save this identity into YOUR OWN global settings — the goal is that every future\n'
+        +'session of yours, in any repo, runs as "'+a.name+'" (while other agents and the human keep\n'
+        +'their own identities). Set these three env vars wherever your runtime persists env\n'
+        +'globally — e.g. Claude Code: the "env" map in ~/.claude/settings.json; otherwise add a\n'
+        +'guarded line to the shell profile that only fires inside you (key it on an env var only\n'
+        +'your runtime sets):\n'
+        +'  TREG_TOKEN='+tok+'\n  TREG_ORG='+org+'\n  TREG_URL='+base+'\n'
+        +'Do NOT put the token in a repo file (.env, settings committed to git) — it is a secret,\n'
+        +'and a repo-level file would also hand YOUR identity to every other agent in that repo.\n\n'
+        +'From then on the treg CLI automatically acts as you (TREG_TOKEN beats the machine\n'
+        +'owner\'s ~/.treg config), and raw HTTP works anywhere:\n'
         +'  curl '+base+'/call/<tool>/<path> -H "X-Treg-Token: $TREG_TOKEN" -H "X-Treg-Org: '+org+'"\n\n'
         +'List what you may use:  GET '+base+'/tools\n'
         +'Your calls are capped and logged as "'+a.name+'", so keep them purposeful.'; },
