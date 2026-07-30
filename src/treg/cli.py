@@ -33,11 +33,14 @@ import time
 import webbrowser
 from collections import deque
 from pathlib import Path
-from urllib.parse import parse_qsl, quote
+from urllib.parse import parse_qsl, quote, urlsplit
 
 import httpx
 
 from . import agents as _agents
+# One source of truth for the proxy's default port (help text below). Importing the module is cheap —
+# it pulls only stdlib plus httpx, which the CLI already has; `cryptography` stays lazy inside it.
+from .localproxy import DEFAULT_PORT as _PROXY_DEFAULT_PORT
 
 # TREG_CONFIG points the CLI at an alternate config file (CI, agents, tests — anywhere isolating
 # by faking $HOME is the wrong tool). The default stays ~/.treg/config.json.
@@ -2616,10 +2619,46 @@ def cmd_setup_local_run(args, cfg) -> None:
 
 
 # ---- shell mode: transparent CLI interception (`treg shell`) -------------------------------
+def _start_local_proxy(args, cfg, tools: list[dict]):
+    """`treg shell start --proxy`: bring up the local proxy and return `(env, stop)` for the subshell.
+
+    Two shapes of interception now live side by side. A **shim** catches a registered CLI the member
+    types (`stripe balance`); the **proxy** catches an HTTPS call the agent makes on its own, from a
+    script that never heard of treg. Both end at the same server-side injection.
+
+    The allow-list is seeded from the tools we already fetched for the shims — every registered host,
+    not only the ones with a CLI — so starting the proxy costs no extra request."""
+    from . import localproxy as lpx
+    try:
+        ca = lpx.ensure_ca(renew=args.renew_ca)
+    except lpx.ProxyDependencyError as exc:
+        sys.exit(f"treg: {exc}")
+    hosts = frozenset(t["host"].lower() for t in tools if t.get("host"))
+    base = os.environ.get("TREG_URL") or cfg["base_url"]
+    pcfg = lpx.ProxyConfig(
+        token=lpx.mint_token(),
+        port=args.proxy_port or lpx.DEFAULT_PORT,
+        ca=ca,
+        base_url=base,
+        treg_token=os.environ.get("TREG_TOKEN") or cfg.get("token") or "",
+        org=_effective_org(cfg) or "",
+        client_name=_detect_runtime(),
+        hosts=hosts,
+    )
+    try:
+        handle = lpx.start(pcfg)
+    except OSError as exc:
+        sys.exit(f"treg: could not start the local proxy on port {pcfg.port} ({exc}). "
+                 f"Another one may already be running — try --proxy-port.")
+    # The registry itself must never come back through the proxy.
+    return handle.env(urlsplit(base).hostname or ""), handle.stop, sorted(hosts)
+
+
 def cmd_shell_start(args, cfg) -> None:
     """Open a subshell where the team's registered CLIs run with the credential injected — the member
     types `stripe …`/`gh …` normally and treg handles auth behind the scenes (docs/CLI-SHELL-MODE-PLAN.md).
-    MVP: shims call `treg run <tool>`, reusing the whole local-run path."""
+    MVP: shims call `treg run <tool>`, reusing the whole local-run path. With `--proxy`, calls the
+    AGENT makes directly to a registered API are caught too (docs/LOCAL-PROXY-PLAN.md)."""
     from . import shell as sh
     if os.environ.get(sh.ENV_ACTIVE) == "1":
         sys.exit("treg: you're already in a treg shell — type `exit` to leave first.")
@@ -2629,15 +2668,21 @@ def cmd_shell_start(args, cfg) -> None:
         r = c.get("/tools")
     if r.status_code >= 400:
         _show(r); return  # _show exits non-zero on error
+    tools = r.json()
     server_for = frozenset(x.strip() for x in (args.server_for or "").split(",") if x.strip())
-    entries, warnings = sh.plan_shims(r.json(), server_for)
-    if not entries:
+    entries, warnings = sh.plan_shims(tools, server_for)
+    proxy_on = getattr(args, "proxy", False)
+    if not entries and not proxy_on:
         sys.exit("treg: no runnable CLIs in this team yet. Register one with `treg upload clis`, or "
                  "enable local runs on a tool: `treg tool update <name> --local-run on`.")
     for w in warnings:
         print(f"  ! {w}", file=sys.stderr)
+    extra_env, stop_proxy, captured = (None, None, [])
+    if proxy_on:
+        extra_env, stop_proxy, captured = _start_local_proxy(args, cfg, tools)
     treg_bin = shutil.which("treg") or os.path.realpath(sys.argv[0])
-    sys.exit(sh.start_session(entries, treg_bin, ttl_minutes=args.ttl))
+    sys.exit(sh.start_session(entries, treg_bin, ttl_minutes=args.ttl,
+                              extra_env=extra_env, on_close=stop_proxy, captured_hosts=captured))
 
 
 def cmd_shell_stop(args, cfg) -> None:
@@ -4019,6 +4064,14 @@ def build_parser() -> argparse.ArgumentParser:
                              "this machine); only applies to server-runnable tools, others fall back to local")
         st.add_argument("--ttl", type=int, metavar="MIN",
                         help="close the shell automatically after this many minutes (default: no limit)")
+        st.add_argument("--proxy", action="store_true",
+                        help="also catch calls your AGENT makes directly to a registered API (a script "
+                             "calling api.stripe.com). treg adds the credential on the server; no key "
+                             "reaches this machine. Everything else goes out untouched")
+        st.add_argument("--proxy-port", dest="proxy_port", type=int, metavar="PORT",
+                        help=f"port for --proxy on 127.0.0.1 (default {_PROXY_DEFAULT_PORT})")
+        st.add_argument("--renew-ca", dest="renew_ca", action="store_true",
+                        help="regenerate this machine's local certificate authority before starting --proxy")
         st.set_defaults(fn=cmd_shell_start)
         mk(s2, "stop", "Leave the treg shell (same as typing `exit` or Ctrl-D).",
            f"{prefix} stop").set_defaults(fn=cmd_shell_stop)

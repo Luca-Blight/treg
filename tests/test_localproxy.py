@@ -849,3 +849,154 @@ async def test_an_unregistered_host_is_a_readable_404(clients, ca):
 
     assert resp.status_code == 404
     assert "api.nothing-here.com" in resp.text
+
+
+# ---- P3 · the allow-list and readable errors ------------------------------------------------
+async def test_the_allow_list_comes_from_the_members_own_tool_list(clients, ca):
+    """`GET /tools` is already filtered to what THIS member may use, so the allow-list inherits the
+    per-member tool list and project scope for free — a host they cannot use is never decrypted."""
+    from httpx import ASGITransport, AsyncClient
+
+    from treg import api
+
+    for name, base in (("intercom", "https://api.intercom.io"), ("stripe", "https://api.stripe.com")):
+        sid = (await clients.post("/secrets", json={"name": f"{name}-k", "value": "x"})).json()["id"]
+        await clients.post("/tools", json={"name": name, "base_url": base, "secret_id": sid})
+
+    registry = AsyncClient(transport=ASGITransport(app=api.app), base_url="http://registry")
+    try:
+        hosts = await lp.fetch_hosts(registry, "http://registry", clients.headers["X-Treg-Token"])
+    finally:
+        await registry.aclose()
+    assert hosts == frozenset({"api.intercom.io", "api.stripe.com"})
+
+
+async def test_a_failed_fetch_intercepts_nothing(clients):
+    """No answer must never mean 'intercept everything'."""
+    from httpx import ASGITransport, AsyncClient
+
+    from treg import api
+
+    registry = AsyncClient(transport=ASGITransport(app=api.app), base_url="http://registry")
+    try:
+        assert await lp.fetch_hosts(registry, "http://registry", "not-a-real-token") == frozenset()
+    finally:
+        await registry.aclose()
+
+    async def _boom(request):
+        raise httpx.ConnectError("down")
+
+    dead = httpx.AsyncClient(transport=httpx.MockTransport(_boom), trust_env=False)
+    try:
+        assert await lp.fetch_hosts(dead, "http://registry", "tok") == frozenset()
+    finally:
+        await dead.aclose()
+
+
+async def test_refresh_picks_up_a_tool_registered_mid_session(treg):
+    """A tool added ten minutes into a shell session should start working without a restart."""
+    cfg = lp.ProxyConfig(token="t", base_url="http://registry", treg_token="tok")
+    treg.replies.append(httpx.Response(200, json=[{"host": "api.stripe.com"}, {"host": "API.NEW.COM"}]))
+    client = treg.client()
+    try:
+        task = asyncio.create_task(lp.refresh_hosts_forever(cfg, client, interval=0))
+        for _ in range(50):
+            await asyncio.sleep(0.01)
+            if cfg.hosts:
+                break
+        task.cancel()
+    finally:
+        await client.aclose()
+    assert cfg.hosts == frozenset({"api.stripe.com", "api.new.com"})   # lowercased for matching
+
+
+async def test_a_transient_failure_never_empties_a_working_allow_list(treg):
+    """Applying an empty answer would silently stop injecting for five minutes, and the agent's calls
+    would go out with no credential."""
+    cfg = lp.ProxyConfig(token="t", base_url="http://registry", treg_token="tok",
+                         hosts=frozenset({"api.stripe.com"}))
+    treg.replies.append(httpx.Response(500))
+    client = treg.client()
+    try:
+        task = asyncio.create_task(lp.refresh_hosts_forever(cfg, client, interval=0))
+        await asyncio.sleep(0.05)
+        task.cancel()
+    finally:
+        await client.aclose()
+    assert cfg.hosts == frozenset({"api.stripe.com"})
+
+
+def test_treg_errors_say_who_refused_and_what_fixes_it():
+    """A raw 404 reads as 'the vendor has no such endpoint', and an agent 'fixes' it by rewriting a
+    perfectly good URL. Every message names treg and the next action."""
+    m404 = lp.treg_error_message(404, "api.stripe.com", "no registered tool")
+    assert "treg" in m404 and "api.stripe.com" in m404 and "treg tools add" in m404
+    assert "not api.stripe.com's" in m404          # says whose answer this is NOT
+    assert "ask an admin" in lp.treg_error_message(403, "api.stripe.com", "").lower()
+    assert "treg login" in lp.treg_error_message(401, "api.stripe.com", "")
+    assert "daily call limit" in lp.treg_error_message(429, "api.stripe.com", "")
+    assert "more than one" in lp.treg_error_message(409, "api.stripe.com", "")
+    assert "418" in lp.treg_error_message(418, "api.stripe.com", "teapot")
+
+
+async def test_an_unregistered_host_is_explained_not_just_404d(clients, ca):
+    """End to end: treg marks its own refusal, the proxy turns it into an instruction."""
+    from httpx import ASGITransport, AsyncClient
+
+    from treg import api
+
+    cfg = lp.ProxyConfig(
+        token=lp.mint_token(), port=0, ca=ca, base_url="http://registry",
+        treg_token=clients.headers["X-Treg-Token"], hosts=frozenset({"api.unregistered.com"}),
+    )
+    registry = AsyncClient(transport=ASGITransport(app=api.app), base_url="http://registry")
+    server = await lp.serve(cfg, client=registry)
+    port = lp.listening_port(server, 0)
+
+    def _agent_call():
+        with httpx.Client(proxy=f"http://treg:{cfg.token}@127.0.0.1:{port}",
+                          verify=_trusting(ca), timeout=10) as agent:
+            return agent.get("https://api.unregistered.com/v1/thing")
+
+    try:
+        resp = await asyncio.to_thread(_agent_call)
+    finally:
+        server.close()
+        await server.wait_closed()
+        await registry.aclose()
+
+    assert resp.status_code == 404
+    payload = resp.json()
+    assert payload["source"] == "treg"
+    assert "no tool is registered for api.unregistered.com" in payload["error"]
+    assert "treg tools add" in payload["error"]
+
+
+def test_a_vendors_own_error_is_never_rewritten(intercepting, ca, treg):
+    """The mapping fires only on treg's `X-Treg-Error` marker. A genuine 404 from the vendor, relayed
+    through treg, must reach the agent exactly as the vendor wrote it."""
+    treg.replies.append(httpx.Response(404, json={"error": {"message": "No such charge: ch_123"}}))
+    with _agent(intercepting, ca) as agent:
+        r = agent.get("https://api.stripe.com/v1/charges/ch_123")
+    assert r.status_code == 404
+    assert r.json() == {"error": {"message": "No such charge: ch_123"}}
+    assert "treg" not in r.text
+
+
+def test_an_older_registry_without_the_marker_passes_through(intercepting, ca, treg):
+    """Against a registry that predates the marker nothing fires, and the reply is untouched."""
+    treg.replies.append(httpx.Response(403, json={"detail": "tool not in your access list"}))
+    with _agent(intercepting, ca) as agent:
+        r = agent.get("https://api.stripe.com/v1/charges")
+    assert r.status_code == 403 and r.json() == {"detail": "tool not in your access list"}
+
+
+def test_the_explained_error_keeps_the_connection_usable(intercepting, ca, treg):
+    """An explained refusal is still an ordinary HTTP response — the next call on the same connection
+    has to work."""
+    treg.replies.append(httpx.Response(403, json={"detail": "nope"}, headers={"X-Treg-Error": "1"}))
+    with _agent(intercepting, ca) as agent:
+        first = agent.get("https://api.stripe.com/v1/charges")
+        second = agent.get("https://api.stripe.com/v1/customers")
+    assert first.status_code == 403 and first.json()["source"] == "treg"
+    assert second.status_code == 200

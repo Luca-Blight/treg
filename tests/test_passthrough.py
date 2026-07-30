@@ -113,3 +113,21 @@ async def test_encoded_slash_preserved_passthrough_form(clients: AsyncClient):
     r = await clients.put("/call/https://registry.npm2.test/@superdesign%2ftreg", content=b"{}")
     assert r.status_code == 200, r.text
     assert r.json()["raw_path"].endswith("/@superdesign%2ftreg")
+
+
+async def test_treg_marks_its_own_call_errors(clients: AsyncClient):
+    """A caller cannot otherwise tell treg's 404 ("no tool registered for that host") from the
+    vendor's own 404 — both are a status and some JSON. `X-Treg-Error` is the distinction the local
+    proxy needs to explain a failure without ever rewriting a real vendor response. It is only ever
+    ADDED: the status and body are unchanged."""
+    r = await clients.get("/call/https://api.nobody-registered.com/thing")
+    assert r.status_code == 404
+    assert r.headers.get("x-treg-error") == "1"
+    assert r.json()["detail"]                       # the original body is untouched
+
+    await _register(clients, "marked", "https://api.marked.com")
+    ok = await clients.get("/call/https://api.marked.com/echo")
+    assert ok.status_code == 200 and "x-treg-error" not in ok.headers   # a real relay is not tagged
+
+    other = await clients.get("/tools/by-name/ghost")                   # not a /call/ path
+    assert other.status_code == 404 and "x-treg-error" not in other.headers

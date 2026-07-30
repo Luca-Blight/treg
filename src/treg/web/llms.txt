@@ -63,6 +63,16 @@ Two tiers (`treg run <tool> --local|--server -- <args>`):
 automatically: `treg shell start`, then use `stripe`, `gh`, … normally (no `treg run`); `exit` reverts it.
 `--server-for stripe,…` routes named tools to the server; `--ttl N` auto-closes after N minutes.
 
+**`treg shell start --proxy`** — the same shell, plus HTTPS calls **you make yourself** to a registered
+API are caught and credentialed. Write an ordinary script against `api.stripe.com` with no key and no
+treg code; the call goes through the registry, which injects the credential **on the server**, and the
+answer comes back unchanged. Only registered hosts are touched — every other address (including
+`api.anthropic.com` / `api.openai.com`) goes straight out and cannot be read. It works by setting
+`HTTPS_PROXY` and a trust bundle for that shell only; the system trust store is never modified, and no
+vendor key ever reaches the machine. Needs `pip install "tools-registry[proxy]"`. `--proxy-port N` moves
+the listener off 18791, `--renew-ca` regenerates the machine's local certificate authority. A
+certificate-pinned client will refuse the interception and must use `treg run` or `treg call` instead.
+
 A recipe-only skill that's just CLI instructions (e.g. `stripe-cli`) auto-becomes runnable — `treg upload`
 recognizes the catalog CLI and wires the credential, so `treg run` works with no `treg.json`.
 
@@ -120,6 +130,8 @@ in the `X-Treg-Token` header on every call. Never share the upstream key - share
                                                     --server run on the registry server (catalog-known CLIs)
     treg runs [--limit N]                         the CLI-run audit log (local + server, tagged where)
     treg shell start [--server-for a,b] [--ttl N] a subshell where registered CLIs inject automatically
+      [--proxy] [--proxy-port N] [--renew-ca]     --proxy also catches HTTPS calls YOU make to a
+                                                  registered API (needs the [proxy] extra)
     treg shell stop                               leave it (same as `exit`)
     sudo treg setup-local-run [--run-proof V]     one-time admin setup (Linux + macOS): isolate --local
       [--no-egress] [--refresh-egress]            runs under a dedicated treg-run user + egress allow-list

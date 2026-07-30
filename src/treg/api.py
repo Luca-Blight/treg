@@ -35,8 +35,10 @@ import httpx
 from pathlib import Path
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -220,6 +222,21 @@ async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse
     # A huge all-digit path param (e.g. /secrets/999…) overflows SQLite's 64-bit INTEGER at bind
     # time; that's a non-existent id, not a server fault — surface a 404 instead of a 500.
     return JSONResponse({"detail": "identifier out of range"}, status_code=404)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
+    """Tag treg's OWN refusals on `/call/` with `X-Treg-Error`, then answer exactly as before.
+
+    A caller cannot otherwise tell a treg 404 ("no tool registered for that host") from the vendor's
+    own 404 — both are a status code and some JSON. The local proxy needs that distinction to explain
+    a failure without ever rewriting a real vendor response, and an agent reading a raw 403 needs to
+    know whether to fix its request or ask an admin. The header is only ever ADDED; the status and the
+    body are untouched, and a client that ignores it sees exactly what it saw before."""
+    resp = await http_exception_handler(request, exc)
+    if request.url.path.startswith("/call/"):
+        resp.headers["X-Treg-Error"] = "1"
+    return resp
 
 _WEB_DIR = Path(__file__).parent / "web"
 

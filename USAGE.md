@@ -178,6 +178,45 @@ sudo treg setup-local-run --run-proof "$TREG_RUN_PROOF"   # Linux admin, once
 treg runs --limit 20
 ```
 
+## Catching your own calls (`treg shell --proxy`)
+
+`treg run` covers a vendor **CLI**, and `treg call` covers an HTTP call you ask treg to make. Neither
+helps when an agent writes its own script that talks to `api.stripe.com` directly — treg is invisible to
+it and the script has no key.
+
+`treg shell start --proxy` closes that gap. Inside that shell, an HTTPS call to a **registered** host is
+routed through the registry, which adds the credential **on the server** and returns the vendor's answer
+unchanged. Your code needs no key and no treg-specific lines:
+
+```bash
+pip install "tools-registry[proxy]"      # the certificate library; not in the light CLI
+treg shell start --proxy                 # the banner lists the hosts being captured
+curl https://api.stripe.com/v1/balance   # no key anywhere — treg injected it server-side
+python my_script.py                      # same for anything the script calls
+exit                                     # the proxy stops with the shell
+```
+
+How it works: the shell sets `HTTPS_PROXY` and a trust bundle **for that shell only**, using a
+certificate authority generated on your machine (private key `0600`, valid two years, never shared).
+**The system trust store is never modified** — nothing outside that shell trusts it, not your browser
+and not the operating system.
+
+What it does **not** touch: every address that is not a registered tool, including your agent's own
+calls to `api.anthropic.com` or `api.openai.com`. Those are tunnelled without being read, and no
+certificate is ever generated for them.
+
+| Option | What it does |
+|---|---|
+| `--proxy` | turn it on (off by default) |
+| `--proxy-port N` | listen somewhere other than 127.0.0.1:18791 |
+| `--renew-ca` | regenerate this machine's certificate authority before starting |
+
+Limits worth knowing: a client that pins its certificate will refuse the interception (use `treg run` or
+`treg call` for that one); every captured call takes one extra hop through the registry, so it fails if
+the registry is down; a **hosted** MCP server makes its calls on someone else's machine, so it is not
+covered. If a call fails, treg says so in its own words — "no tool is registered for this host", "ask an
+admin" — rather than leaving you to read a bare 404 as the vendor's answer.
+
 ## Skills (bundles)
 
 | Command | Options | What it does |

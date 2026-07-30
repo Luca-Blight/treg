@@ -165,9 +165,14 @@ def _shell_argv(session_dir: str, env: dict) -> list[str]:
     return [shell_path, "-i"]
 
 
-def _print_banner(entries: list[tuple[str, str, str]], ttl_minutes: int | None) -> None:
+def _print_banner(entries: list[tuple[str, str, str]], ttl_minutes: int | None,
+                  captured_hosts: list[str] | None = None) -> None:
     """The entry banner: state the intent (what this shell does), list the injected CLIs (marking any
-    that run on the server), and give the reminders (other commands are untouched; how to leave)."""
+    that run on the server), and give the reminders (other commands are untouched; how to leave).
+
+    With `--proxy` on there is a second thing to say, and it must be said plainly: calls the agent
+    makes on its own to these hosts are captured. A member should never discover interception by
+    accident, so the hosts are listed and everything else is named as untouched."""
     def _label(bin_: str, route: str) -> str:
         return f"{_GREEN}{bin_}{_RESET}{_TEAL} (server){_RESET}" if route == "server" else f"{_GREEN}{bin_}{_RESET}"
     names = "  ".join(_label(b, route) for b, _, route in entries)
@@ -178,6 +183,13 @@ def _print_banner(entries: list[tuple[str, str, str]], ttl_minutes: int | None) 
     print(f"\n  {_BOLD}Injected here ({len(entries)}):{_RESET}  {names}", file=out)
     print(f"{_MUTED}  A CLI marked (server) runs on the registry, not your machine. Everything else{_RESET}", file=out)
     print(f"{_MUTED}  (ls, git, your own tools) behaves exactly as usual.{_RESET}", file=out)
+    if captured_hosts:
+        shown = "  ".join(f"{_GREEN}{h}{_RESET}" for h in captured_hosts[:8])
+        more = f"{_MUTED}  +{len(captured_hosts) - 8} more{_RESET}" if len(captured_hosts) > 8 else ""
+        print(f"\n  {_BOLD}Also captured ({len(captured_hosts)} hosts):{_RESET}  {shown}{more}", file=out)
+        print(f"{_MUTED}  An HTTPS call to one of these — from your agent's own script, curl, anything{_RESET}", file=out)
+        print(f"{_MUTED}  started in this shell — goes through treg, which adds the credential on the{_RESET}", file=out)
+        print(f"{_MUTED}  server. Every other address goes straight out; we can't read it.{_RESET}", file=out)
     print("", file=out)
     if ttl_minutes:
         print(f"{_MUTED}  This shell closes automatically in {ttl_minutes} min.{_RESET}", file=out)
@@ -244,10 +256,17 @@ def _run_subshell(argv: list[str], env: dict, ttl_seconds: int | None = None) ->
                 proc.kill()
 
 
-def start_session(entries: list[tuple[str, str, str]], treg_bin: str, ttl_minutes: int | None = None) -> int:
+def start_session(entries: list[tuple[str, str, str]], treg_bin: str, ttl_minutes: int | None = None,
+                  extra_env: dict | None = None, on_close=None,
+                  captured_hosts: list[str] | None = None) -> int:
     """Create a private session dir, write the shims, launch the subshell with the shim dir first on
     PATH, and tear everything down when it exits. `ttl_minutes` is an optional hard time cap. Returns
-    the subshell's exit code."""
+    the subshell's exit code.
+
+    `extra_env` is merged into the subshell's environment and `on_close` runs on the way out — the
+    seam the local proxy uses (`--proxy`) to publish `HTTPS_PROXY` + the trust bundle and to stop
+    itself. It is applied AFTER our own variables so a caller cannot accidentally overwrite
+    `PATH`/`TREG_SHELL*` and break the shims."""
     base = session_base_dir()
     session_dir = tempfile.mkdtemp(prefix="treg-shell-", dir=base)  # 0700 by mkdtemp
     os.chmod(session_dir, 0o700)
@@ -263,12 +282,21 @@ def start_session(entries: list[tuple[str, str, str]], treg_bin: str, ttl_minute
     env[ENV_DIR] = session_dir
     env[ENV_REALPATH] = real_path  # the clean PATH the shims hand to `treg run` (loop avoidance)
     env[ENV_PID] = str(os.getpid())
+    for key, value in (extra_env or {}).items():
+        if key in ("PATH", ENV_ACTIVE, ENV_DIR, ENV_REALPATH, ENV_PID):
+            continue  # never let an add-on break name resolution or the session markers
+        env[key] = value
 
     argv = _shell_argv(session_dir, env)
-    _print_banner(entries, ttl_minutes)
+    _print_banner(entries, ttl_minutes, captured_hosts)
     try:
         return _run_subshell(argv, env, ttl_seconds=ttl_minutes * 60 if ttl_minutes else None)
     finally:
+        if on_close is not None:
+            try:
+                on_close()
+            except Exception as exc:  # noqa: BLE001 — teardown must finish even if the add-on fails
+                print(f"▚ treg shell: could not stop the proxy cleanly ({exc}).", file=sys.stderr)
         _teardown(session_dir)
         print("▚ treg shell closed.", file=sys.stderr)
 

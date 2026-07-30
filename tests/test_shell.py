@@ -8,6 +8,7 @@ See docs/CLI-SHELL-MODE-PLAN.md §7.
 
 from __future__ import annotations
 
+import argparse
 import os
 import signal
 import stat
@@ -272,3 +273,125 @@ def test_parser_dispatches_shell():
     p = cli.build_parser()
     assert p.parse_args(["shell", "start"]).fn is cli.cmd_shell_start
     assert p.parse_args(["shell", "stop"]).fn is cli.cmd_shell_stop
+
+
+# ---- --proxy wiring (P4 of docs/LOCAL-PROXY-PLAN.md) ---------------------------------------
+def test_start_session_publishes_the_proxy_env_and_stops_it(tmp_path, monkeypatch):
+    """The seam `--proxy` uses: extra variables go into the subshell, and the proxy is stopped on the
+    way out — a listener left running after the shell closed would keep answering for a session that
+    no longer exists."""
+    captured: dict = {}
+    stopped: list = []
+
+    def fake_run(argv, env, ttl_seconds=None):
+        captured["env"] = dict(env)
+        return 0
+
+    monkeypatch.setattr(shell, "_run_subshell", fake_run)
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    monkeypatch.setenv("TMPDIR", str(tmp_path))
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+
+    shell.start_session(
+        [("stripe", "stripe", "local")], "/usr/local/bin/treg",
+        extra_env={"HTTPS_PROXY": "http://treg:tok@127.0.0.1:18791", "SSL_CERT_FILE": "/x/ca-bundle.pem"},
+        on_close=lambda: stopped.append(True),
+        captured_hosts=["api.stripe.com"],
+    )
+    assert captured["env"]["HTTPS_PROXY"] == "http://treg:tok@127.0.0.1:18791"
+    assert captured["env"]["SSL_CERT_FILE"] == "/x/ca-bundle.pem"
+    assert stopped == [True]
+
+
+def test_extra_env_cannot_break_the_shims(tmp_path, monkeypatch):
+    """Applied AFTER our own variables: an add-on that set PATH or a TREG_SHELL* marker would stop
+    name resolution finding the shims, or make the session look like a nested one."""
+    captured: dict = {}
+    monkeypatch.setattr(shell, "_run_subshell",
+                        lambda argv, env, ttl_seconds=None: captured.update(env=dict(env)) or 0)
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    monkeypatch.setenv("TMPDIR", str(tmp_path))
+    monkeypatch.delenv("XDG_RUNTIME_DIR", raising=False)
+
+    shell.start_session([("stripe", "stripe", "local")], "/usr/local/bin/treg",
+                        extra_env={"PATH": "/evil", shell.ENV_REALPATH: "/evil", shell.ENV_PID: "1"})
+    env = captured["env"]
+    assert env["PATH"].startswith(os.path.join(env[shell.ENV_DIR], "bin"))
+    assert env[shell.ENV_REALPATH] == "/usr/bin:/bin"
+    assert env[shell.ENV_PID] == str(os.getpid())
+
+
+def test_the_banner_names_the_captured_hosts(capsys):
+    """A member must never discover interception by accident: the hosts are listed, and everything
+    else is named as untouched."""
+    shell._print_banner([("stripe", "stripe", "local")], None, ["api.stripe.com", "api.intercom.io"])
+    err = capsys.readouterr().err
+    assert "Also captured (2 hosts)" in err
+    assert "api.stripe.com" in err and "api.intercom.io" in err
+    assert "Every other address goes straight out" in err
+
+
+def test_no_proxy_no_extra_banner(capsys):
+    shell._print_banner([("stripe", "stripe", "local")], None)
+    assert "Also captured" not in capsys.readouterr().err
+
+
+def test_cmd_shell_start_seeds_the_allow_list_from_the_tool_listing(monkeypatch, tmp_path):
+    """`--proxy` reuses the tools already fetched for the shims — every registered host, including
+    ones with no CLI, and no second request to the registry."""
+    from treg import localproxy as lpx
+
+    tools = [
+        {"name": "stripe", "host": "api.stripe.com", "cli": {"bin": "stripe", "enabled": True}},
+        {"name": "intercom", "host": "API.INTERCOM.IO"},          # no CLI: still captured by the proxy
+        {"name": "odd", "cli": {"bin": "odd", "enabled": True}},   # no host: nothing to capture
+    ]
+    seen: dict = {}
+
+    class _Handle:
+        def env(self, treg_host):
+            seen["treg_host"] = treg_host
+            return {"HTTPS_PROXY": "http://x"}
+
+        def stop(self):
+            seen["stopped"] = True
+
+    monkeypatch.setattr(lpx, "ensure_ca", lambda renew=False: seen.setdefault("ca", object()))
+    monkeypatch.setattr(lpx, "start", lambda cfg: seen.setdefault("cfg", cfg) and None or _Handle())
+
+    args = argparse.Namespace(proxy=True, proxy_port=None, renew_ca=False)
+    env, stop, hosts = cli._start_local_proxy(args, {"base_url": "https://treg.example", "token": "tok",
+                                                     "active_org": "acme"}, tools)
+    assert hosts == ["api.intercom.io", "api.stripe.com"]     # lowercased, sorted, host-less tool skipped
+    assert seen["cfg"].hosts == frozenset({"api.stripe.com", "api.intercom.io"})
+    assert seen["cfg"].treg_token == "tok" and seen["cfg"].org == "acme"
+    assert seen["cfg"].base_url == "https://treg.example"
+    assert seen["treg_host"] == "treg.example"                # the registry never comes back through us
+    assert env["HTTPS_PROXY"] == "http://x"
+    stop()
+    assert seen["stopped"]
+
+
+def test_cmd_shell_start_explains_a_missing_certificate_library(monkeypatch):
+    """The light CLI has no `cryptography`. Saying exactly what to install beats a traceback."""
+    from treg import localproxy as lpx
+
+    def _boom(renew=False):
+        raise lpx.ProxyDependencyError('install it with: pip install "tools-registry[proxy]"')
+
+    monkeypatch.setattr(lpx, "ensure_ca", _boom)
+    args = argparse.Namespace(proxy=True, proxy_port=None, renew_ca=False)
+    with pytest.raises(SystemExit) as exc:
+        cli._start_local_proxy(args, {"base_url": "https://x", "token": "t"}, [])
+    assert "tools-registry[proxy]" in str(exc.value)
+
+
+def test_a_busy_port_is_a_readable_error(monkeypatch):
+    from treg import localproxy as lpx
+
+    monkeypatch.setattr(lpx, "ensure_ca", lambda renew=False: object())
+    monkeypatch.setattr(lpx, "start", lambda cfg: (_ for _ in ()).throw(OSError("address in use")))
+    args = argparse.Namespace(proxy=True, proxy_port=18791, renew_ca=False)
+    with pytest.raises(SystemExit) as exc:
+        cli._start_local_proxy(args, {"base_url": "https://x", "token": "t"}, [])
+    assert "--proxy-port" in str(exc.value) and "18791" in str(exc.value)

@@ -42,6 +42,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import ipaddress
+import json
 import os
 import secrets
 import socket
@@ -67,6 +68,10 @@ LISTEN_HOST = "127.0.0.1"  # never 0.0.0.0 — this proxy speaks for the member'
 CA_DAYS = 730
 LEAF_DAYS = 30
 _RENEW_WITHIN_DAYS = 30  # a CA this close to expiry is regenerated on the next start
+
+# How often the allow-list is re-read from `GET /tools`, so a tool registered mid-session starts
+# working without restarting the shell.
+HOSTS_REFRESH_SECONDS = 300
 
 _HEAD_LIMIT = 64 * 1024   # cap on the request head we buffer before deciding what to do with it
 _CHUNK = 64 * 1024
@@ -383,6 +388,7 @@ class ProxyConfig:
     org: str = ""
     client_name: str = "local-proxy"
     hosts: frozenset[str] = frozenset()
+    refresh_seconds: int = HOSTS_REFRESH_SECONDS   # 0 turns the periodic re-read off
 
     def intercepts(self, host: str) -> bool:
         """Allow-list only, and only when we could actually complete the call. Missing a CA or a
@@ -661,6 +667,66 @@ def _forward_headers(cfg: ProxyConfig, pairs: list[tuple[str, str]]) -> list[tup
     return out
 
 
+# ---- P3 · the allow-list, and errors an agent can act on -------------------------------------
+async def fetch_hosts(client, base_url: str, token: str, org: str = "") -> frozenset[str]:
+    """The hosts to intercept, from `GET /tools`.
+
+    The listing is already filtered to what THIS member may use, so the allow-list inherits the
+    per-member tool list and project scope for free — a host the caller has no access to is never
+    even decrypted. A failure returns an empty set: no answer must never mean "intercept
+    everything"."""
+    headers = {"X-Treg-Token": token, "X-Treg-Client": "local-proxy", "ngrok-skip-browser-warning": "1"}
+    if org:
+        headers["X-Treg-Org"] = org
+    try:
+        r = await client.get(f"{base_url.rstrip('/')}/tools", headers=headers)
+        if r.status_code != 200:
+            return frozenset()
+        return frozenset(t["host"].lower() for t in r.json() if isinstance(t, dict) and t.get("host"))
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        return frozenset()
+
+
+async def refresh_hosts_forever(cfg: ProxyConfig, client, interval: int = HOSTS_REFRESH_SECONDS) -> None:
+    """Keep the allow-list current while the session runs. A tool registered ten minutes into a shell
+    session should start working without restarting the shell.
+
+    An empty answer is never applied over a working list: a transient failure would otherwise silently
+    turn interception off for five minutes, and the agent's calls would go out with no credential."""
+    while True:
+        await asyncio.sleep(interval)
+        hosts = await fetch_hosts(client, cfg.base_url, cfg.treg_token, cfg.org)
+        if hosts and hosts != cfg.hosts:
+            _log(cfg, f"allow-list now {len(hosts)} host(s)")
+            cfg.hosts = hosts
+
+
+def treg_error_message(status: int, host: str, detail: str) -> str:
+    """Turn treg's refusal into something the agent can act on.
+
+    The raw status is misleading here: a 404 from treg means "no tool registered for this host",
+    which an agent reads as "the vendor has no such endpoint" and works around by rewriting a
+    perfectly good URL. Saying who refused, and what would fix it, is the whole point."""
+    if status == 404:
+        return (f"treg: no tool is registered for {host} in this team, so there is no credential to "
+                f"inject. An admin can add one with `treg tools add`. (This is treg's answer, not "
+                f"{host}'s.)")
+    if status == 403:
+        return (f"treg: you do not have access to {host} through this registry — either the tool is "
+                f"not on your list or a policy rule blocks it. Ask an admin of your team. "
+                f"(treg's answer, not {host}'s.)")
+    if status == 401:
+        return ("treg: this shell's treg token is not valid any more. Run `treg login` and start a "
+                "new `treg shell`.")
+    if status == 429:
+        return (f"treg: your daily call limit for this team is used up, so the call to {host} was not "
+                f"made. An admin can raise it.")
+    if status == 409:
+        return (f"treg: more than one registered tool matches {host} and treg cannot tell which "
+                f"credential you meant. An admin should narrow one tool's base URL.")
+    return f"treg refused this call ({status}): {detail}" if detail else f"treg refused this call ({status})."
+
+
 def _is_waf_block(status: int, content_type: str) -> bool:
     """A hosting edge (Render's, Cloudflare's) 403s a request whose body looks like an injection —
     a legitimate SQL or HTML payload, for instance. treg's own 403s are JSON, so an HTML 403 did not
@@ -682,6 +748,41 @@ async def _send_to_treg(client, method: str, url: str, headers: list[tuple[str, 
     retry = client.build_request(method, url, headers=headers, content=base64.b64encode(body))
     retry.headers["x-treg-body-encoding"] = "base64"
     return await client.send(retry, stream=True)
+
+
+async def _explain_treg_error(writer: asyncio.StreamWriter, resp, host: str, keep_alive: bool) -> bool:
+    """Replace treg's own refusal with an explanation, keeping the status code.
+
+    Only ever runs when the answer carries `X-Treg-Error`, the marker the server puts on its own
+    `/call/` refusals — so a genuine 404 or 403 from the VENDOR is never rewritten. Against an older
+    registry that does not send the marker, nothing here fires and the reply passes through
+    untouched."""
+    detail = ""
+    try:
+        await resp.aread()
+        payload = resp.json()
+        detail = payload.get("detail", "") if isinstance(payload, dict) else ""
+    except (ValueError, httpx.HTTPError, TypeError):
+        pass
+    finally:
+        await resp.aclose()
+    body = json.dumps({
+        "error": treg_error_message(resp.status_code, host, str(detail)),
+        "source": "treg", "host": host, "treg_detail": detail,
+    }).encode()
+    lines = [
+        f"HTTP/1.1 {resp.status_code} {resp.reason_phrase or ''}".rstrip(),
+        "Content-Type: application/json",
+        f"Content-Length: {len(body)}",
+        "X-Treg-Error: 1",
+        "Connection: " + ("keep-alive" if keep_alive else "close"),
+    ]
+    try:
+        writer.write(("\r\n".join(lines) + "\r\n\r\n").encode("latin-1") + body)
+        await writer.drain()
+    except (ConnectionError, OSError):
+        return False
+    return keep_alive
 
 
 async def _body_chunks(resp):
@@ -784,7 +885,11 @@ async def _intercept(cfg: ProxyConfig, client_r, client_w, host: str, client) ->
                            f"({type(exc).__name__}). The call to {host} was NOT made.")
             break
         _log(cfg, f"{host} {method} → treg {resp.status_code}")
-        if not await _write_response(client_w, resp, method, wants_alive):
+        if resp.headers.get("x-treg-error"):
+            alive = await _explain_treg_error(client_w, resp, host, wants_alive)
+        else:
+            alive = await _write_response(client_w, resp, method, wants_alive)
+        if not alive:
             break
     _close(client_w)
 
@@ -957,7 +1062,18 @@ def start(cfg: ProxyConfig, client=None) -> ProxyHandle:
         try:
             # Created INSIDE the loop: an httpx.AsyncClient binds to the loop that first uses it.
             ready["client"] = client if client is not None else treg_client()
+            have_identity = bool(cfg.base_url and cfg.treg_token)
+            if have_identity and not cfg.hosts:
+                # Nobody pre-seeded the allow-list (the shell does, from the tools it already
+                # fetched for its shims), so read it once before accepting any connection —
+                # otherwise the first calls of the session would slip out uncaptured.
+                cfg.hosts = loop.run_until_complete(
+                    fetch_hosts(ready["client"], cfg.base_url, cfg.treg_token, cfg.org))
             server = loop.run_until_complete(serve(cfg, ready["client"]))
+            if have_identity and cfg.refresh_seconds:
+                loop.call_soon(
+                    lambda: loop.create_task(refresh_hosts_forever(cfg, ready["client"], cfg.refresh_seconds))
+                )
             ready["server"] = server
             ready["port"] = listening_port(server, cfg.port)
         except BaseException as exc:  # noqa: BLE001 — hand the failure to the caller's thread
