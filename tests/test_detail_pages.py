@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from httpx import AsyncClient
 
+from treg import api
+
 
 SKILL = {
     "name": "intercom",
@@ -67,6 +69,23 @@ async def test_detail_page_serves_spa_with_og_meta(clients: AsyncClient):
     r = await clients.get("/app/tools/stripe")
     assert r.status_code == 200
     assert 'og:title' in r.text and "shared tool" in r.text
+
+
+async def test_detail_page_title_is_replaced_not_duplicated(clients: AsyncClient):
+    """The meta REPLACES the page's own title. Asserting `og:title` alone missed the real bug: the
+    replacement was pinned to the literal `<title>tools-registry</title>` while the page said
+    `<title>treg</title>`, so it matched nothing and every shared link unfurled blank."""
+    r = await clients.get("/app/skills/intercom")
+    assert r.text.count("<title>") == 1
+    assert "<title>intercom · " in r.text
+
+
+async def test_og_meta_survives_a_title_rename(clients: AsyncClient, monkeypatch, tmp_path):
+    """A rename in the dashboard's title must not be able to switch link previews off again."""
+    (tmp_path / "index.html").write_text("<html><head><title>Something Else Entirely</title></head></html>")
+    monkeypatch.setattr(api, "_WEB_DIR", tmp_path)
+    r = await clients.get("/app/skills/intercom")
+    assert 'og:title' in r.text and "Something Else Entirely" not in r.text
 
 
 async def test_detail_page_escapes_name(clients: AsyncClient):

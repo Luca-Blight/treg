@@ -1257,15 +1257,21 @@ def _spa_with_og(kind: str, name: str):
         return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
     label = "skill" if kind == "skills" else "tool"
     safe = _esc_html(name)
-    html = index.read_text(encoding="utf-8").replace(
-        "<title>tools-registry</title>",
-        f"<title>{safe} · tools-registry</title>\n"
+    meta = (
+        f"<title>{safe} · Treg</title>\n"
         f'<meta property="og:title" content="{safe} — shared {label}"/>\n'
-        f'<meta property="og:description" content="A {label} shared via tools-registry. '
+        f'<meta property="og:description" content="A {label} shared via Treg. '
         f'Sign in to preview it and get the one-command install."/>\n'
-        f'<meta name="twitter:card" content="summary"/>',
-        1,
+        f'<meta name="twitter:card" content="summary"/>'
     )
+    # Match WHATEVER title the page carries, not one exact string. It was pinned to
+    # `<title>tools-registry</title>`, the page says `<title>treg</title>`, so the replacement
+    # silently did nothing and every shared link unfurled blank — a rename in the dashboard must
+    # not be able to switch this off without a word.
+    html, hits = re.subn(r"<title>.*?</title>", lambda _m: meta, index.read_text(encoding="utf-8"),
+                         count=1, flags=re.IGNORECASE | re.DOTALL)
+    if not hits:  # no title at all: still emit the meta rather than serve a bare page
+        html = html.replace("<head>", "<head>\n" + meta, 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
