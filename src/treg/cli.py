@@ -4570,6 +4570,24 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _looks_like_a_program(argv: list[str], commands: set[str]) -> bool:
+    """Is this `treg <program> …` rather than a treg command? (`treg claude`, `treg node server.js`.)
+
+    Two conditions, both needed. The word must not be a treg command — otherwise a stray `call` binary
+    on someone's PATH would shadow `treg call`. And it must actually exist on this machine — otherwise
+    a typo like `treg toool ls` would become a confusing exec attempt instead of an ordinary treg error.
+
+    `with`'s own flags may come first (`treg -q node app.js`), because putting the flag where it reads
+    naturally should not fall out of the shortcut and produce an "invalid choice" about `node`."""
+    i = 0
+    while i < len(argv) and argv[i] in ("-q", "--quiet"):
+        i += 1
+    if i >= len(argv):
+        return False
+    word = argv[i]
+    return not word.startswith("-") and word not in commands and bool(shutil.which(word))
+
+
 def _subcommands(parser) -> set[str]:
     """Every registered command name and alias, so the bare-word fallback never shadows a real one."""
     for action in parser._actions:
@@ -4584,11 +4602,7 @@ def main(argv: list[str] | None = None) -> None:
     override = _pop_org_flag(argv)
     _JSON_OVERRIDE = _pop_json_flag(argv)
     parser = build_parser()
-    # `treg claude`, `treg node server.js` — a first word that is not a treg command but IS a program
-    # on this machine means "run that with the team's credentials". Requiring it to exist is what keeps
-    # a typo (`treg toool ls`) an ordinary treg error instead of a confusing exec attempt.
-    if argv and not argv[0].startswith("-") and argv[0] not in _subcommands(parser) \
-            and shutil.which(argv[0]):
+    if _looks_like_a_program(argv, _subcommands(parser)):
         argv = ["with", *argv]
     args = parser.parse_args(argv)
     cfg = _load_config()

@@ -211,6 +211,13 @@ If a `treg serve` proxy is already running it is used and left alone; otherwise 
 one on a port the operating system picks (so two sessions never collide) and stops it when your command
 exits.
 
+**One caveat if you write Node.** Node's built-in `fetch` ignores proxy settings until **Node 24**. On
+older Node a plain `fetch()` is not captured and the call goes out with no credential. Use a client that
+reads the environment (`axios`, `got`, undici's `ProxyAgent`) or upgrade. curl, git, Python
+`requests`/`httpx` and Deno work at any version. There is a runnable example in
+[`examples/proxy-demo/`](examples/proxy-demo/) that shows both, and explains the workaround for older
+Node.
+
 ### The subshell: `treg shell --proxy`
 
 `treg run` covers a vendor **CLI**, and `treg call` covers an HTTP call you ask treg to make. Neither

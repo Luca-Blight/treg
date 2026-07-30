@@ -241,3 +241,11 @@ per-agent proxy tokens (one per session is enough) · request/response inspectio
   three config installers were deleted — do not re-add them.
 - **Next, requested but not built:** `treg claude` could also pre-load the team's skills into the
   session instead of the agent downloading and installing them.
+- **Measured, and it corrects the plan:** `NODE_USE_ENV_PROXY` only exists from **Node 24**. On the dev
+  machine (Node 23.11) `node --use-env-proxy` is a "bad option" and a plain `fetch()` through the proxy
+  arrives uncredentialed. Setting the variable is still right for Node 24+, but the plan's line about it
+  read as "Node works now", which is only true on 24. Documented in the fragment, USAGE and /llms.txt.
+- **`examples/proxy-demo/`** — a zero-dependency Node app with a small web UI: click a button, it calls
+  `api.openai.com` (registered) or `example.com` (not). `node server.js` gets a 401; `treg node
+  server.js` gets the real answer, same code. It speaks CONNECT by hand because of the Node caveat
+  above, and its README says why real apps do not need to.

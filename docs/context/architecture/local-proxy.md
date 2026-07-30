@@ -71,9 +71,15 @@ is no `add-trusted-cert` anywhere in their repo.
 ## The environment (`proxy_env`)
 `HTTPS_PROXY`/`HTTP_PROXY` (both letter cases — curl reads lowercase), `NO_PROXY` covering loopback and
 the registry host, the bundle under `NODE_EXTRA_CA_CERTS` / `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE` /
-`CURL_CA_BUNDLE` / `GIT_SSL_CAINFO` / `DENO_CERT` / `AWS_CA_BUNDLE`, and **`NODE_USE_ENV_PROXY=1`** —
-since Node 18 the built-in `fetch` silently ignores proxy variables, so without that flag every Node
-agent walks straight past the proxy and the feature looks intermittently broken.
+`CURL_CA_BUNDLE` / `GIT_SSL_CAINFO` / `DENO_CERT` / `AWS_CA_BUNDLE`, and **`NODE_USE_ENV_PROXY=1`**.
+
+**The Node caveat, measured not assumed.** Node's built-in `fetch` ignores proxy variables entirely
+until **Node 24**, where `NODE_USE_ENV_PROXY` turns it on — the flag does not exist before that
+(`node --use-env-proxy` is a "bad option" on 23.11, tested). So on Node 23 or older a plain `fetch()`
+walks straight past the proxy and the call goes out uncredentialed, looking like the feature is broken.
+Everything that reads the environment itself is fine at any version: curl, git, python-requests/httpx,
+axios, got, undici's `ProxyAgent`. `examples/proxy-demo/server.js` speaks CONNECT by hand for exactly
+this reason and says so in its README.
 
 ## The allow-list (`fetch_hosts`, `refresh_hosts_forever`)
 Hosts come from `GET /tools`, which is already filtered to what **this member** may use — so the

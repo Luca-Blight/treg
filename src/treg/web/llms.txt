@@ -69,6 +69,10 @@ with the team's credentials. treg is the parent process, so only that command an
 affected: `treg claude` uses shared team access, plain `claude` is untouched and uses your own local
 keys. Nothing is written to any config file. A registered host is credentialed by the server; every
 other address goes straight out unread. Needs `pip install "tools-registry[proxy]"`.
+**If you are writing Node:** the built-in `fetch` ignores proxy settings before **Node 24**, so a plain
+`fetch()` on older Node is NOT captured and your call goes out with no credential. Use a client that
+reads the environment (axios, got, undici `ProxyAgent`) or upgrade to Node 24+. curl, git, python
+requests/httpx and Deno are captured at any version. Worked example: `examples/proxy-demo/`.
 
 **`treg shell start --proxy`** — the same shell, plus HTTPS calls **you make yourself** to a registered
 API are caught and credentialed. Write an ordinary script against `api.stripe.com` with no key and no
