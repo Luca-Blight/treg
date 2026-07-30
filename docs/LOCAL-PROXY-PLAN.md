@@ -56,8 +56,9 @@ is no second policy engine to write — the reason oneCLI needed 24k lines of Ru
 enter the base install.
 
 **Decision: a third extra, `[proxy]` → `cryptography` only.** The proxy itself uses `asyncio` + `ssl`
-from the standard library and `httpx` (already base). `treg serve` without the extra exits with a clear
-install hint. `[server]` already includes `cryptography`, so a self-hoster gets it free.
+from the standard library and `httpx` (already base). Without the extra the proxy raises
+`ProxyDependencyError` with the exact install line. `[server]` already includes `cryptography`, so a
+self-hoster gets it free. **Shipped** — see `[project.optional-dependencies].proxy` in `pyproject.toml`.
 
 ## Components
 
@@ -65,9 +66,9 @@ install hint. `[server]` already includes `cryptography`, so a self-hoster gets 
 |---|---|---|
 | Proxy server | `src/treg/localproxy.py` (new) | named for `localrun.py`; **not** `proxy.py`, which is the server relay |
 | CA + leaf certs | same module | ECDSA P-256, leaf cached per host in memory |
-| CLI command | `cmd_serve` in `cli.py` | `treg serve [--port] [--stop] [--status] [--print-env]` |
+| CLI flags | `cmd_shell_start` in `cli.py` | `treg shell start [--proxy/--no-proxy] [--proxy-port] [--renew-ca]` (P4) |
 | Shell wiring | `shell.py` | `treg shell` starts the proxy and sets the env in the subshell |
-| State | `~/.treg/proxy/` | `ca-key.pem` 0600 · `ca-cert.pem` 0644 · `ca-bundle.pem` 0644 · `proxy.json` |
+| State | `~/.treg/proxy/` | `ca-key.pem` 0600 · `ca-cert.pem` 0644 · `ca-bundle.pem` 0644. **No `proxy.json`** — with no standalone daemon there is nothing to discover, and the session token stays in memory. Follows `TREG_CONFIG` when set |
 
 ### The environment we set
 
@@ -110,13 +111,15 @@ system roots; append to them.
 
 ## Phases — each independently testable
 
-**P0 · Skeleton (no interception).** Listen, accept `CONNECT`, blind-tunnel everything both ways.
-*Proof:* `curl -x http://127.0.0.1:PORT https://example.com` works exactly as without the proxy.
+**P0 · Skeleton (no interception). — DONE.** Listen, authenticate, blind-tunnel everything both ways.
+*Proof:* `curl -x http://treg:<token>@127.0.0.1:PORT https://example.com` works exactly as without the
+proxy (verified: 200, `ssl_verify_result=0`); without the token it is a 407.
 
-**P1 · Certificates.** Generate + persist the CA, build the bundle, generate and cache leaf certs.
-`treg serve --print-env`.
-*Proof:* a unit test signs a leaf for `example.com` and validates it against the CA; `curl
---cacert ca-bundle.pem` through the proxy trusts an intercepted host.
+**P1 · Certificates. — DONE.** Generate + persist the CA, build the bundle, sign and cache leaf certs
+(`ensure_ca`, `build_bundle`, `CertAuthority.leaf_pem` / `context_for`), plus `proxy_env()`, the exact
+environment P4 will publish.
+*Proof:* unit tests sign a leaf and complete a real TLS handshake against it; `curl --cacert
+ca-bundle.pem` accepts it, and curl with the system roots alone rejects it.
 
 **P2 · Intercept and forward.** For allow-listed hosts: terminate TLS, read the request, re-address to
 `{base}/call/https://{host}{path}`, add `X-Treg-Token` / `X-Treg-Org` / `X-Treg-Client`, stream the
@@ -127,9 +130,9 @@ response back.
 failures to something readable: a 404 from `_resolve_call` means "no tool registered for this host or
 path"; a 403 means "you do not have access"; treg unreachable must not look like the vendor being down.
 
-**P4 · Wiring UX.** `treg shell` starts the proxy and exports the env for the subshell — it already runs
-a controlled subshell, so this is the natural home. Standalone `treg serve` for people who want it in
-their own shell.
+**P4 · Wiring UX.** `treg shell start` mints a token, starts the proxy and merges `handle.env(treg_host)`
+into the subshell environment (`start_session` already builds that dict), stopping it on teardown. The
+banner says which hosts are captured. No standalone command — decision 1.
 
 **P5 · Docs.** `docs/context/architecture/local-proxy.md` fragment (new subsystem, so it needs one),
 plus `/llms.txt` and the dashboard's agent instructions.
@@ -162,12 +165,28 @@ plus `/llms.txt` and the dashboard's agent instructions.
 Local injection under `treg-run` · system trust store install · Windows · WebSocket interception ·
 per-agent proxy tokens (one per session is enough) · request/response inspection beyond routing.
 
-## Open decisions
+## Decisions (settled 2026-07-30, with Unclecode)
 
-1. **Command shape** — `treg serve` as its own daemon, or only inside `treg shell`? (I suggest both:
-   `serve` is the engine, `shell` is the convenient front door.)
-2. **CA lifetime** — oneCLI uses 10 years. Shorter is safer but expires; suggest 2 years plus
-   `treg serve --renew-ca`.
-3. **Default port.**
-4. **Ship `[proxy]` as an extra** (recommended) or fold `cryptography` into base (rejected: breaks the
-   light CLI).
+1. **Command shape — inside `treg shell` only.** There is no standalone `treg serve` daemon: the proxy
+   starts with a shell session and dies with it, which also means the session token never has to be
+   written to disk for a second process to find. `--renew-ca` therefore becomes a flag on
+   `treg shell start` (P4), not on a `serve` command. `localproxy.start()/stop()` is the whole engine,
+   so a standalone command remains a small addition if it is ever wanted.
+2. **CA lifetime — 2 years**, regenerated automatically inside its last 30 days
+   (`_RENEW_WITHIN_DAYS`), plus an explicit renew. Not oneCLI's 10 years: a key sitting on a laptop
+   for a decade is a long time for something that can impersonate any site.
+3. **Default port — 18791**, next to the dev server's 18790.
+4. **`[proxy]` extra — yes**, `cryptography` alone. Folding it into base was rejected: it is compiled,
+   and `pip install tools-registry` must stay the light CLI.
+
+## Build log
+
+- **P0 + P1 shipped** (2026-07-30) — `src/treg/localproxy.py`, `tests/test_localproxy.py` (34 tests).
+  Verified with a real `curl`: `https://example.com` and `https://api.github.com` tunnel through
+  untouched with certificate verification intact; a leaf signed by the CA is accepted by
+  curl/OpenSSL when pointed at `ca-bundle.pem` and **rejected** with system roots only — the proof
+  that non-negotiable #2 holds. Interception (P2) is not built, so today the proxy is provably
+  neutral: it never signs a leaf for a host it tunnels.
+- The `_is_self` loop guard and the plain-`http://` forward path (which strips `Proxy-Authorization`
+  before the upstream sees it) were added beyond the P0 sketch — `HTTP_PROXY` is set alongside
+  `HTTPS_PROXY`, so an http caller must not simply break.
