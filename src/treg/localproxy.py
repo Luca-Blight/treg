@@ -11,9 +11,15 @@ docs/LOCAL-PROXY-PLAN.md.
 local catcher that feeds it. They are two ends of the same call and the names are close on purpose —
 the module is named for `localrun.py`, its neighbour in "code that runs on the member's machine".
 
-Shipped here: **P0** (listen, authenticate, blind-tunnel every byte) and **P1** (the certificate
-authority, the trust bundle, leaf certificates). Interception itself is P2 — until then every
-connection is tunnelled untouched, so installing this can only be neutral.
+Shipped here: **P0** (listen, authenticate, blind-tunnel every byte), **P1** (the certificate
+authority, the trust bundle, leaf certificates) and **P2** (intercept an allow-listed host and
+re-address it to treg's `/call/` passthrough). Still to come: P3 fetches the allow-list from
+`GET /tools` and refreshes it — until then `ProxyConfig.hosts` is whatever the caller passes, and an
+empty set means the proxy decrypts nothing at all.
+
+Because an intercepted call lands on the ordinary `/call/` path, everything already built keeps
+working with no second copy: the per-member tool list, project scope, deny rules, daily caps, the
+audit record, OAuth refresh. That is the reason this module is small.
 
 The rules this file exists to keep (plan §"The non-negotiables"):
 
@@ -48,6 +54,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlsplit
+
+import httpx
 
 # The proxy listens here. 18791 sits next to the dev server's 18790 so the pair reads as one family.
 DEFAULT_PORT = 18791
@@ -358,12 +366,31 @@ def mint_token() -> str:
 @dataclass
 class ProxyConfig:
     """One session's settings. `port=0` asks the operating system for a free port (tests do this);
-    the real port is on the handle after start."""
+    the real port is on the handle after start.
+
+    `hosts` is the allow-list — **only** these are intercepted, everything else is tunnelled blind
+    (non-negotiable #3). It stays empty unless a treg identity is configured, so a proxy with no
+    credentials cannot decrypt anything at all."""
 
     token: str
     port: int = DEFAULT_PORT
-    ca: CertAuthority | None = None       # P2 uses this to intercept; P0 never touches it
+    ca: CertAuthority | None = None
     verbose: bool = False
+    # Where an intercepted call is sent, and who it is sent as. No vendor key here — just the
+    # member's own treg token, exactly what the CLI carries.
+    base_url: str = ""
+    treg_token: str = ""
+    org: str = ""
+    client_name: str = "local-proxy"
+    hosts: frozenset[str] = frozenset()
+
+    def intercepts(self, host: str) -> bool:
+        """Allow-list only, and only when we could actually complete the call. Missing a CA or a
+        treg token means we would terminate TLS and then fail — worse than not intercepting, because
+        the agent's own call would break for a reason it cannot see."""
+        if not (self.ca and self.base_url and self.treg_token):
+            return False
+        return host.lower() in self.hosts
 
 
 def _log(cfg: ProxyConfig, message: str) -> None:
@@ -530,15 +557,258 @@ async def _forward_plain(cfg: ProxyConfig, client_r, client_w, head: bytes, targ
     await _pump(client_r, client_w, up_r, up_w)
 
 
+# ---- P2 · intercept an allow-listed host and forward it to treg -----------------------------
+# Rebuilt per hop or the stream corrupts — the same list `proxy.relay()` keeps on the server side.
+_HOP_BY_HOP = frozenset({
+    "connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "proxy-connection",
+    "te", "trailer", "trailers", "transfer-encoding", "upgrade", "host", "content-length",
+})
+# A caller must not be able to name its own identity or org by setting these on the intercepted
+# request — the proxy's own treg token is the only identity in play.
+_CALLER_MUST_NOT_SET = frozenset({"x-treg-token", "x-treg-org", "x-treg-client", "x-treg-body-encoding"})
+
+# Bodies at or below this are buffered, which is what makes the WAF retry below possible. Anything
+# larger streams straight through and simply cannot be retried.
+_BUFFER_LIMIT = 1024 * 1024
+
+
+def _header_pairs(head: bytes) -> list[tuple[str, str]]:
+    """Every header in order, duplicates and original spelling kept. `_parse_head`'s dict is for
+    decisions; this is for forwarding, where collapsing repeated `Cookie` headers would change the
+    request we promised to relay faithfully."""
+    pairs: list[tuple[str, str]] = []
+    for raw in head.split(b"\r\n")[1:]:
+        if not raw:
+            continue
+        name, sep, value = raw.decode("latin-1").partition(":")
+        if sep:
+            pairs.append((name.strip(), value.strip()))
+    return pairs
+
+
+async def _read_chunked(reader: asyncio.StreamReader) -> bytes:
+    """Decode a chunked request body into bytes. httpx re-frames it for the hop to treg, so we hand
+    it the decoded content rather than passing the framing through."""
+    out = bytearray()
+    while True:
+        line = await reader.readuntil(b"\r\n")
+        size = int(line.strip().split(b";")[0] or b"0", 16)
+        if size == 0:
+            while True:                        # trailers, then the final blank line
+                trailer = await reader.readuntil(b"\r\n")
+                if trailer == b"\r\n":
+                    break
+            return bytes(out)
+        out += await reader.readexactly(size)
+        await reader.readexactly(2)            # the CRLF after each chunk
+        if len(out) > _BUFFER_LIMIT * 8:
+            raise ValueError("chunked body too large to relay")
+
+
+async def _request_body(reader: asyncio.StreamReader, headers: dict[str, str]):
+    """The request body, as bytes when it is small enough to buffer and an async stream when it is
+    not. `None` means the caller sent no body at all — which must stay distinct from an empty one,
+    or a GET picks up a bogus `Content-Length: 0`."""
+    if "chunked" in headers.get("transfer-encoding", "").lower():
+        return await _read_chunked(reader)
+    raw = headers.get("content-length")
+    if raw is None:
+        return None
+    try:
+        length = int(raw)
+    except ValueError:
+        return None
+    if length <= 0:
+        return b""
+    if length <= _BUFFER_LIMIT:
+        return await reader.readexactly(length)
+
+    async def _stream():                       # a large upload flows through without being held
+        left = length
+        while left > 0:
+            data = await reader.read(min(_CHUNK, left))
+            if not data:
+                return
+            left -= len(data)
+            yield data
+
+    return _stream()
+
+
+def _treg_url(base: str, host: str, target: str) -> str:
+    """`https://api.stripe.com/v1/charges` → `{base}/call/https://api.stripe.com/v1/charges`.
+
+    The URL-passthrough shape, the one the agent-native callers already use. The server resolves the
+    tool by host and longest base-url prefix, so the proxy never has to know a tool's NAME — which is
+    the whole point: the agent wrote `api.stripe.com` and knows nothing about treg."""
+    return f"{base.rstrip('/')}/call/https://{host}{target if target.startswith('/') else '/' + target}"
+
+
+def _forward_headers(cfg: ProxyConfig, pairs: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """The caller's headers, minus transport and minus anything that would let it speak as someone
+    else, plus treg's control headers. `Accept-Encoding: identity` is added when the caller asked for
+    nothing, because we relay the raw bytes back — httpx would otherwise request gzip on its own and
+    hand the agent compressed content it never asked for (the same rule `relay()` applies)."""
+    out = [(k, v) for k, v in pairs
+           if k.lower() not in _HOP_BY_HOP and k.lower() not in _CALLER_MUST_NOT_SET]
+    if not any(k.lower() == "accept-encoding" for k, _ in out):
+        out.append(("Accept-Encoding", "identity"))
+    out.append(("X-Treg-Token", cfg.treg_token))
+    if cfg.org:
+        out.append(("X-Treg-Org", cfg.org))
+    out.append(("X-Treg-Client", cfg.client_name))
+    out.append(("ngrok-skip-browser-warning", "1"))
+    return out
+
+
+def _is_waf_block(status: int, content_type: str) -> bool:
+    """A hosting edge (Render's, Cloudflare's) 403s a request whose body looks like an injection —
+    a legitimate SQL or HTML payload, for instance. treg's own 403s are JSON, so an HTML 403 did not
+    come from treg. Same test the CLI's `_RegistryClient` makes."""
+    return status == 403 and "html" in content_type.lower()
+
+
+async def _send_to_treg(client, method: str, url: str, headers: list[tuple[str, str]], body):
+    """One request to the registry, with the edge-WAF escape hatch. A buffered body that comes back
+    403-as-HTML is re-sent base64-encoded under `X-Treg-Body-Encoding`, which the server decodes to
+    the real bytes before the relay ever sees them."""
+    req = client.build_request(method, url, headers=headers, content=body)
+    resp = await client.send(req, stream=True)
+    if not isinstance(body, bytes) or not body:
+        return resp
+    if not _is_waf_block(resp.status_code, resp.headers.get("content-type", "")):
+        return resp
+    await resp.aclose()
+    retry = client.build_request(method, url, headers=headers, content=base64.b64encode(body))
+    retry.headers["x-treg-body-encoding"] = "base64"
+    return await client.send(retry, stream=True)
+
+
+async def _body_chunks(resp):
+    """The response body as raw bytes, whether treg's answer is still streaming or already in memory.
+
+    `aiter_raw()` raises `StreamConsumed` on a response whose content a transport already loaded, so
+    asking for the stream unconditionally would turn a perfectly good reply into a dropped body."""
+    if getattr(resp, "is_stream_consumed", False):
+        yield resp.content
+        return
+    async for chunk in resp.aiter_raw():
+        yield chunk
+
+
+async def _write_response(writer: asyncio.StreamWriter, resp, method: str, keep_alive: bool) -> bool:
+    """Stream treg's answer back to the agent inside the intercepted TLS connection.
+
+    Framing is re-derived rather than copied: we keep `Content-Length` when the upstream gave one and
+    use chunked encoding when it did not, because our hop must be self-consistent even if the hop
+    into treg was framed differently. The body bytes themselves are untouched — including a
+    `Content-Encoding` the caller asked for."""
+    bodyless = method == "HEAD" or resp.status_code in (204, 304)
+    length = resp.headers.get("content-length")
+    lines = [f"HTTP/1.1 {resp.status_code} {resp.reason_phrase or ''}".rstrip()]
+    for name, value in resp.headers.multi_items():
+        if name.lower() in _HOP_BY_HOP:
+            continue
+        lines.append(f"{name}: {value}")
+    chunked = not bodyless and length is None
+    if bodyless:
+        if length is not None:
+            lines.append(f"Content-Length: {length}")   # a HEAD keeps the length it describes
+    elif chunked:
+        lines.append("Transfer-Encoding: chunked")
+    else:
+        lines.append(f"Content-Length: {length}")
+    lines.append("Connection: " + ("keep-alive" if keep_alive else "close"))
+    writer.write(("\r\n".join(lines) + "\r\n\r\n").encode("latin-1"))
+    try:
+        if not bodyless:
+            async for chunk in _body_chunks(resp):
+                if not chunk:
+                    continue
+                writer.write(f"{len(chunk):x}\r\n".encode() + chunk + b"\r\n" if chunked else chunk)
+                await writer.drain()
+            if chunked:
+                writer.write(b"0\r\n\r\n")
+        await writer.drain()
+    except (ConnectionError, OSError):
+        return False
+    finally:
+        await resp.aclose()
+    return keep_alive
+
+
+async def _intercept(cfg: ProxyConfig, client_r, client_w, host: str, client) -> None:
+    """An allow-listed host: terminate TLS with a leaf we sign, then relay each request to treg's
+    `/call/` passthrough, which injects the credential SERVER-SIDE and streams the answer back.
+
+    This is the whole product seen from the agent's side. The agent believes it is talking to
+    `api.stripe.com`; it never learns treg exists, and no vendor key is anywhere on this machine."""
+    ca = cfg.ca
+    if ca is None:                               # unreachable via `intercepts()`; kept explicit
+        await _blind_tunnel(cfg, client_r, client_w, host, 443)
+        return
+    client_w.write(b"HTTP/1.1 200 Connection established\r\n\r\n")
+    await client_w.drain()
+    try:
+        await client_w.start_tls(ca.context_for(host))
+    except (ssl.SSLError, OSError, ValueError) as exc:
+        # A certificate-pinned client refuses a certificate it did not expect. Nothing to answer —
+        # the handshake failed, so there is no HTTP connection to write an explanation into.
+        _log(cfg, f"{host} refused our certificate ({type(exc).__name__}) — needs a never-intercept entry")
+        _close(client_w)
+        return
+
+    while True:                                  # one TLS connection may carry many requests
+        try:
+            head = await client_r.readuntil(b"\r\n\r\n")
+        except (asyncio.IncompleteReadError, asyncio.LimitOverrunError, ConnectionError, OSError):
+            break
+        try:
+            method, target, headers = _parse_head(head[:-4])
+            body = await _request_body(client_r, headers)
+        except (ValueError, UnicodeDecodeError, asyncio.IncompleteReadError, OSError):
+            await _respond(client_w, 400, "Bad Request", "treg proxy: could not read the request")
+            break
+
+        wants_alive = "close" not in headers.get("connection", "").lower()
+        url = _treg_url(cfg.base_url, host, target)
+        out_headers = _forward_headers(cfg, _header_pairs(head[:-4]))
+        try:
+            resp = await _send_to_treg(client, method, url, out_headers, body)
+        except httpx.HTTPError as exc:
+            # treg itself is unreachable. Say so plainly — an agent that reads "502 Bad Gateway" here
+            # would blame the vendor and retry forever against a service that is perfectly healthy.
+            _log(cfg, f"{host} → treg unreachable ({type(exc).__name__})")
+            await _respond(client_w, 502, "Bad Gateway",
+                           f"treg proxy: cannot reach the registry at {cfg.base_url} "
+                           f"({type(exc).__name__}). The call to {host} was NOT made.")
+            break
+        _log(cfg, f"{host} {method} → treg {resp.status_code}")
+        if not await _write_response(client_w, resp, method, wants_alive):
+            break
+    _close(client_w)
+
+
 def _is_self(host: str, port: int, listen_port: int) -> bool:
     """Guard against the proxy being asked to talk to itself — a loop that would otherwise eat a
     connection slot per attempt."""
     return port == listen_port and host in ("127.0.0.1", "::1", "localhost", LISTEN_HOST)
 
 
+def treg_client(timeout: float = 120.0):
+    """The proxy's own connection to the registry.
+
+    **`trust_env=False` is not optional.** httpx reads `HTTPS_PROXY` from its own environment, and
+    inside a `treg shell` that variable points at THIS proxy — the first intercepted call would come
+    straight back to us and loop. It also means the bundle and `NO_PROXY` are irrelevant here: we
+    talk to treg over the ordinary system trust, as any client would."""
+    return httpx.AsyncClient(trust_env=False, timeout=timeout, follow_redirects=False)
+
+
 async def handle_client(cfg: ProxyConfig, listen_port: int,
-                        reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-    """One client connection: read the head, authenticate, then tunnel or forward."""
+                        reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+                        client=None) -> None:
+    """One client connection: read the head, authenticate, then intercept, tunnel or forward."""
     try:
         try:
             head = await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), timeout=_CONNECT_TIMEOUT)
@@ -575,8 +845,13 @@ async def handle_client(cfg: ProxyConfig, listen_port: int,
                 await _respond(writer, 400, "Bad Request", "treg proxy: refusing to tunnel to myself")
                 _close(writer)
                 return
-            # P2 branches here on the allow-list. Until then everything is a blind tunnel.
-            await _blind_tunnel(cfg, reader, writer, host, port)
+            # The allow-list decision, and the only place it is made: a registered tool's host is
+            # intercepted so treg can add the credential; everything else stays a tunnel we cannot
+            # read — including the agent's own api.anthropic.com / api.openai.com traffic.
+            if client is not None and cfg.intercepts(host):
+                await _intercept(cfg, reader, writer, host, client)
+            else:
+                await _blind_tunnel(cfg, reader, writer, host, port)
             return
 
         if target.startswith("http://"):
@@ -605,6 +880,7 @@ class ProxyHandle:
     _loop: asyncio.AbstractEventLoop
     _server: asyncio.AbstractServer
     _thread: threading.Thread
+    _client: Any = None       # the httpx client the intercept path uses; owned by the loop
 
     def stop(self, timeout: float = 5.0) -> None:
         """Close the listener, end the connections still open, then stop the loop. Safe to call twice.
@@ -621,6 +897,11 @@ class ProxyHandle:
                 await self._server.wait_closed()
             except (OSError, RuntimeError):
                 pass
+            if self._client is not None:
+                try:
+                    await self._client.aclose()
+                except (httpx.HTTPError, RuntimeError, OSError):
+                    pass
             here = asyncio.current_task()
             rest = [t for t in asyncio.all_tasks() if t is not here]
             for task in rest:
@@ -641,8 +922,31 @@ class ProxyHandle:
         return proxy_env(self.port, self.token, bundle, treg_host)
 
 
-def start(cfg: ProxyConfig) -> ProxyHandle:
-    """Start the proxy in a background thread and return once it is accepting connections."""
+def listening_port(server: asyncio.AbstractServer, fallback: int) -> int:
+    """The port actually bound — the real one when `port=0` asked the operating system to choose."""
+    sockets = getattr(server, "sockets", None) or ()
+    return sockets[0].getsockname()[1] if sockets else fallback
+
+
+async def serve(cfg: ProxyConfig, client=None) -> asyncio.AbstractServer:
+    """Bind the listener on the CURRENT event loop and return the server.
+
+    `start()` wraps this in a thread for the synchronous CLI; a caller already inside a loop (the
+    integration tests, which drive the registry's own ASGI app) uses it directly."""
+    port_holder: dict = {}
+    server = await asyncio.start_server(
+        lambda r, w: handle_client(cfg, port_holder.get("port", cfg.port), r, w, client),
+        host=LISTEN_HOST, port=cfg.port, limit=_HEAD_LIMIT,
+    )
+    port_holder["port"] = listening_port(server, cfg.port)
+    return server
+
+
+def start(cfg: ProxyConfig, client=None) -> ProxyHandle:
+    """Start the proxy in a background thread and return once it is accepting connections.
+
+    `client` overrides the connection to the registry — the test suite passes one wired to the ASGI
+    app so the whole intercept path can be exercised without a server on a socket."""
     loop = asyncio.new_event_loop()
     ready: dict = {}
     error: list[BaseException] = []
@@ -651,14 +955,11 @@ def start(cfg: ProxyConfig) -> ProxyHandle:
     def _run() -> None:
         asyncio.set_event_loop(loop)
         try:
-            server = loop.run_until_complete(
-                asyncio.start_server(
-                    lambda r, w: handle_client(cfg, ready.get("port", cfg.port), r, w),
-                    host=LISTEN_HOST, port=cfg.port, limit=_HEAD_LIMIT,
-                )
-            )
+            # Created INSIDE the loop: an httpx.AsyncClient binds to the loop that first uses it.
+            ready["client"] = client if client is not None else treg_client()
+            server = loop.run_until_complete(serve(cfg, ready["client"]))
             ready["server"] = server
-            ready["port"] = server.sockets[0].getsockname()[1]
+            ready["port"] = listening_port(server, cfg.port)
         except BaseException as exc:  # noqa: BLE001 — hand the failure to the caller's thread
             error.append(exc)
             started.set()
@@ -678,4 +979,4 @@ def start(cfg: ProxyConfig) -> ProxyHandle:
         raise error[0]
     if "server" not in ready:
         raise RuntimeError("treg proxy: the listener did not start")
-    return ProxyHandle(ready["port"], cfg.token, cfg.ca, loop, ready["server"], thread)
+    return ProxyHandle(ready["port"], cfg.token, cfg.ca, loop, ready["server"], thread, ready.get("client"))

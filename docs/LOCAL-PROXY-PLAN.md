@@ -121,14 +121,19 @@ environment P4 will publish.
 *Proof:* unit tests sign a leaf and complete a real TLS handshake against it; `curl --cacert
 ca-bundle.pem` accepts it, and curl with the system roots alone rejects it.
 
-**P2 · Intercept and forward.** For allow-listed hosts: terminate TLS, read the request, re-address to
-`{base}/call/https://{host}{path}`, add `X-Treg-Token` / `X-Treg-Org` / `X-Treg-Client`, stream the
-response back.
-*Proof:* a registered tool answers correctly with **no key anywhere on the machine**.
+**P2 · Intercept and forward. — DONE.** For allow-listed hosts: terminate TLS (`_intercept`), read the
+request, re-address to `{base}/call/https://{host}{path}` (`_treg_url`), swap the caller's transport and
+`x-treg-*` headers for our own (`_forward_headers`), and stream the answer back (`_write_response`).
+Keep-alive is honoured, so several calls share one handshake.
+*Proof:* `test_the_agent_calls_the_vendor_and_treg_injects_the_key` runs a plain `httpx.Client` — no treg
+awareness, no key — through the proxy against the **real** FastAPI app; the credential arrives at the
+upstream because the server injected it.
 
-**P3 · Allow-list + errors.** Fetch hosts from `GET /tools` at start, refresh on a timer. Map treg's
-failures to something readable: a 404 from `_resolve_call` means "no tool registered for this host or
-path"; a 403 means "you do not have access"; treg unreachable must not look like the vendor being down.
+**P3 · Allow-list + errors.** Fetch hosts from `GET /tools` at start, refresh on a timer — `ProxyConfig.hosts`
+is the seam, currently filled by the caller. Map treg's failures to something readable: a 404 from
+`_resolve_call` means "no tool registered for this host or path"; a 403 means "you do not have access".
+(The treg-unreachable case is already handled — a 502 that names treg and says the vendor call was **not**
+made, so an agent does not blame a healthy vendor and retry.)
 
 **P4 · Wiring UX.** `treg shell start` mints a token, starts the proxy and merges `handle.env(treg_host)`
 into the subshell environment (`start_session` already builds that dict), stopping it on teardown. The
@@ -185,8 +190,22 @@ per-agent proxy tokens (one per session is enough) · request/response inspectio
   Verified with a real `curl`: `https://example.com` and `https://api.github.com` tunnel through
   untouched with certificate verification intact; a leaf signed by the CA is accepted by
   curl/OpenSSL when pointed at `ca-bundle.pem` and **rejected** with system roots only — the proof
-  that non-negotiable #2 holds. Interception (P2) is not built, so today the proxy is provably
-  neutral: it never signs a leaf for a host it tunnels.
+  that non-negotiable #2 holds.
 - The `_is_self` loop guard and the plain-`http://` forward path (which strips `Proxy-Authorization`
   before the upstream sees it) were added beyond the P0 sketch — `HTTP_PROXY` is set alongside
   `HTTPS_PROXY`, so an http caller must not simply break.
+- **P2 shipped** (2026-07-30) — 21 more tests, 55 in the file. Beyond the sketch:
+  - **The edge-WAF retry.** Render's edge 403s a body that looks like injection. The CLI's
+    `_RegistryClient` already re-sends such a body base64-encoded under `X-Treg-Body-Encoding`; an
+    intercepted call has to do the same, or a legitimate SQL query fails invisibly. Bodies up to 1 MiB
+    are buffered so a retry is possible at all; larger ones stream and cannot be retried.
+  - **`_CALLER_MUST_NOT_SET`.** An agent that sets its own `X-Treg-Token` must not be able to spend
+    another member's quota through our proxy. The caller's `x-treg-*` headers are dropped; the proxy's
+    identity is the only one that reaches treg.
+  - **`intercepts()` refuses without a credential.** With no CA or no treg token we would terminate TLS
+    and then have no way to finish the call — worse than not intercepting, because the agent's own
+    request breaks for a reason it cannot see.
+  - **`_body_chunks`.** `aiter_raw()` raises `StreamConsumed` on a response a transport already loaded,
+    which would silently drop the body. Both shapes are handled.
+  - **Framing is re-derived, not copied** — `Content-Length` when treg gave one, chunked when it did
+    not — because our hop must be self-consistent even when the hop into treg was framed differently.
