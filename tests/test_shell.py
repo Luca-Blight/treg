@@ -435,7 +435,7 @@ def test_serve_status_says_what_is_captured(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "127.0.0.1:18791" in out and "acme" in out
     assert "api.stripe.com" in out and "api.vercel.com" in out
-    assert "everything else goes straight out" in out
+    assert "Every other address goes straight out" in out
 
 
 def test_serve_status_and_env_when_nothing_runs(monkeypatch, capsys):

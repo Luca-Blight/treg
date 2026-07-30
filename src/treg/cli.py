@@ -2713,6 +2713,48 @@ def _serve_daemon(args, cfg) -> None:
         print("▚ treg proxy stopped.", file=sys.stderr, flush=True)
 
 
+def _hostlist(hosts: list[str], indent: str = "             ") -> str:
+    """Hosts wrapped to the real terminal width. The flat one-line version ran off the screen and split
+    a hostname across the fold ("api.machin / s.com"), which reads like a broken address."""
+    width = max(40, shutil.get_terminal_size((80, 24)).columns - len(indent) - 2)
+    lines, row = [], ""
+    for h in hosts:
+        if row and len(row) + len(h) + 2 > width:
+            lines.append(row)
+            row = ""
+        row += (("  " + h) if row else h)
+    if row:
+        lines.append(row)
+    return ("\n" + indent).join(f"{_G}{ln}{_R}" for ln in lines)
+
+
+def _row(label: str, value: str) -> str:
+    return f"  {_M}{label:<10}{_R} {value}"
+
+
+def _print_serve_banner(live: dict) -> None:
+    """What you see after `treg serve start`.
+
+    The old version dumped three sentences and two eval lines with no shape, and never said WHY an
+    eval is needed — which reads like a hoop to jump through rather than a fact about how shells work.
+    So: state what is running, then the one line to run and the reason in half a sentence, then the
+    no-eval alternative, then the way out."""
+    hosts = live.get("hosts") or []
+    print(f"\n{_A}▚ treg proxy{_R}  {_G}running{_R}")
+    print(_row("address", f"127.0.0.1:{live['port']}"))
+    reg = live.get("base_url", "")
+    print(_row("registry", reg + (f"  {_M}·{_R}  team {live['org']}" if live.get("org") else "")))
+    print(_row("captured", f"{len(hosts)} host(s)"))
+    print("             " + _hostlist(hosts))
+    print(f"\n  {_M}This terminal is not using it yet. A program cannot change the environment of the{_R}")
+    print(f"  {_M}shell that started it, so this line does it for you:{_R}")
+    print(f"\n    {_TEAL}eval \"$(treg serve env)\"{_R}\n")
+    print(f"  {_M}Rather not use eval?{_R}  {_TEAL}treg shell start --proxy{_R}"
+          f"  {_M}opens a subshell already set up.{_R}")
+    print(f"  {_M}When you are done:{_R}  {_TEAL}treg serve stop{_R}  {_M}and{_R}  "
+          f"{_TEAL}eval \"$(treg serve env --unset)\"{_R}\n")
+
+
 def cmd_serve_start(args, cfg) -> None:
     """Run the local proxy as a background service, for people who want it in their own shell rather
     than in a `treg shell` subshell. Same engine, different front door."""
@@ -2754,10 +2796,7 @@ def cmd_serve_start(args, cfg) -> None:
             why = ""
         sys.exit(f"treg: the proxy did not come up.\n  {why}\n  (full log: {log})" if why
                  else f"treg: the proxy did not come up. Its log is {log}")
-    print(f"▚ treg proxy running on 127.0.0.1:{live['port']} — {len(live['hosts'])} host(s) captured.")
-    print("\nPoint this terminal at it:\n  eval \"$(treg serve env)\"")
-    print("\nThen any HTTPS call to a captured host is credentialed by treg. "
-          "Undo with:\n  eval \"$(treg serve env --unset)\"   ·   treg serve stop")
+    _print_serve_banner(live)
 
 
 def cmd_serve_stop(args, cfg) -> None:
@@ -2773,22 +2812,32 @@ def cmd_serve_stop(args, cfg) -> None:
         time.sleep(0.1)
         if not lpx.running():
             break
-    print("▚ treg proxy stopped. If a shell still has the variables set: "
-          'eval "$(treg serve env --unset)"')
+    print(f"\n{_A}▚ treg proxy{_R}  {_M}stopped{_R}")
+    # Only worth saying to a shell that actually still points at the dead port — otherwise it is noise
+    # after every stop.
+    if os.environ.get("HTTPS_PROXY", "").startswith("http://treg:"):
+        print(f"  {_M}This terminal still points at it — clear it with:{_R}")
+        print(f"    {_TEAL}eval \"$(treg serve env --unset)\"{_R}")
+    print()
 
 
 def cmd_serve_status(args, cfg) -> None:
     from . import localproxy as lpx
     live = lpx.running()
     if not live:
-        print("treg proxy: not running.  Start it with `treg serve start`.")
+        print(f"\n{_A}▚ treg proxy{_R}  {_M}not running{_R}")
+        print(f"  {_M}Start it with{_R}  {_TEAL}treg serve start{_R}\n")
         return
-    ca = lpx.proxy_dir() / "ca-bundle.pem"
-    print(f"treg proxy: running on 127.0.0.1:{live['port']} (pid {live['pid']})")
-    print(f"  registry     {live['base_url']}" + (f"  ·  team {live['org']}" if live.get("org") else ""))
-    print(f"  trust bundle {ca}")
-    print(f"  captured ({len(live['hosts'])}): " + "  ".join(live["hosts"]))
-    print("  everything else goes straight out, unread.")
+    here = os.environ.get("HTTPS_PROXY", "").endswith(f"127.0.0.1:{live['port']}")
+    mark = f"{_G}this terminal is using it{_R}" if here else \
+        f"{_AM}this terminal is NOT using it{_R}  {_M}→{_R}  {_TEAL}eval \"$(treg serve env)\"{_R}"
+    print(f"\n{_A}▚ treg proxy{_R}  {_G}running{_R}  {_M}(pid {live['pid']}){_R}")
+    print(_row("address", f"127.0.0.1:{live['port']}   {mark}"))
+    print(_row("registry", live["base_url"] + (f"  {_M}·{_R}  team {live['org']}" if live.get("org") else "")))
+    print(_row("trust", str(lpx.proxy_dir() / "ca-bundle.pem")))
+    print(_row("captured", f"{len(live['hosts'])} host(s)"))
+    print("             " + _hostlist(live["hosts"]))
+    print(f"  {_M}Every other address goes straight out, unread.{_R}\n")
 
 
 def cmd_serve_env(args, cfg) -> None:
