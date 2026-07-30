@@ -252,7 +252,11 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
 - **`cli shell`** (`cmd_shell_start`/`cmd_shell_stop`) — **`cli shell start`** opens a subshell where the team's
   registered CLIs run with the credential injected transparently (a shim dir first on `PATH` routes each to
   `treg run`); **`cli shell stop`** (or `exit`) leaves. `--server-for a,b` routes named tools to the server
-  (key never on the machine, if `server_runnable`), `--ttl MIN` auto-closes. See [shell](shell.md).
+  (key never on the machine, if `server_runnable`), `--ttl MIN` auto-closes. **`--proxy`** (opt-in, with
+  `--proxy-port` / `--renew-ca`) additionally catches HTTPS calls the AGENT makes on its own to a
+  registered host — `_start_local_proxy` seeds the allow-list from the tool listing already fetched for
+  the shims and hands `start_session` the environment + a stop callback. See [shell](shell.md) and
+  [local-proxy](../architecture/local-proxy.md).
 - **`admin`** (super-admin, cross-tenant): `login --token`, `stats`, `orgs`, `org <id>`, `users`,
   `tools`, `calls`, `health`, `grant`/`revoke <user_id>`, `suspend-user`/`rm-user <user_id>`,
   `suspend-org`/`rm-org <org_id>`. `_admin_client` sends the saved `admin_token` (`treg admin login`)
