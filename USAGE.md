@@ -211,6 +211,28 @@ certificate is ever generated for them.
 | `--proxy-port N` | listen somewhere other than 127.0.0.1:18791 |
 | `--renew-ca` | regenerate this machine's certificate authority before starting |
 
+### As a background service (`treg serve`)
+
+If you would rather keep your own shell than enter a subshell, run the same proxy as a service:
+
+```bash
+treg serve start                  # starts in the background, prints the next line for you
+eval "$(treg serve env)"          # point THIS terminal at it (repeat in any other terminal)
+curl https://api.stripe.com/v1/balance
+treg serve status                 # port, team, and the hosts being captured
+eval "$(treg serve env --unset)"  # stop using it in this terminal
+treg serve stop                   # stop the service
+```
+
+`treg serve start --foreground` stays attached instead of detaching, which is what you want for a
+service manager or when reading its log (`~/.treg/proxy/serve.log`).
+
+One difference worth knowing. `treg shell --proxy` keeps its access token in the subshell's
+environment and both disappear together. A service has to be findable by other terminals, so it writes
+its port and token to `~/.treg/proxy/proxy.json` (owner-readable only, mode `0600`). That file holds
+the proxy's own token, never a vendor key — but it is a file on disk, which the subshell version does
+not have. Choose accordingly.
+
 Limits worth knowing: a client that pins its certificate will refuse the interception (use `treg run` or
 `treg call` for that one); every captured call takes one extra hop through the registry, so it fails if
 the registry is down; a **hosted** MCP server makes its calls on someone else's machine, so it is not

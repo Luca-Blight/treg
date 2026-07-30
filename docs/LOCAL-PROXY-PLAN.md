@@ -1,7 +1,7 @@
 # Local proxy — catch the agent's calls without the agent knowing (`treg serve`)
 
-**Status:** planned · **Depends on:** nothing new server-side · **v1 scope:** capture locally, inject on
-the server.
+**Status:** shipped (P0–P5 + `treg serve`, branch `feat/local-proxy`, 2026-07-30) · **Depends on:** one
+small server addition, the `X-Treg-Error` marker · **v1 scope:** capture locally, inject on the server.
 
 ## The problem this solves
 
@@ -66,9 +66,10 @@ self-hoster gets it free. **Shipped** — see `[project.optional-dependencies].p
 |---|---|---|
 | Proxy server | `src/treg/localproxy.py` (new) | named for `localrun.py`; **not** `proxy.py`, which is the server relay |
 | CA + leaf certs | same module | ECDSA P-256, leaf cached per host in memory |
-| CLI flags | `cmd_shell_start` in `cli.py` | `treg shell start [--proxy/--no-proxy] [--proxy-port] [--renew-ca]` (P4) |
-| Shell wiring | `shell.py` | `treg shell` starts the proxy and sets the env in the subshell |
-| State | `~/.treg/proxy/` | `ca-key.pem` 0600 · `ca-cert.pem` 0644 · `ca-bundle.pem` 0644. **No `proxy.json`** — with no standalone daemon there is nothing to discover, and the session token stays in memory. Follows `TREG_CONFIG` when set |
+| CLI flags | `cmd_shell_start` in `cli.py` | `treg shell start --proxy [--proxy-port] [--renew-ca]` |
+| Daemon | `cmd_serve_*` in `cli.py` | `treg serve start\|stop\|status\|env` — `eval "$(treg serve env)"` |
+| Shell wiring | `shell.py` | `start_session(extra_env=…, on_close=…)` publishes the env, stops the proxy |
+| State | `~/.treg/proxy/` | `ca-key.pem` 0600 · `ca-cert.pem` 0644 · `ca-bundle.pem` 0644 · `proxy.json` 0600 (**daemon only** — port + proxy token, so another terminal can find it; `--proxy` writes none of it) · `serve.log`. Follows `TREG_CONFIG` when set |
 
 ### The environment we set
 
@@ -129,17 +130,17 @@ Keep-alive is honoured, so several calls share one handshake.
 awareness, no key — through the proxy against the **real** FastAPI app; the credential arrives at the
 upstream because the server injected it.
 
-**P3 · Allow-list + errors.** Fetch hosts from `GET /tools` at start, refresh on a timer — `ProxyConfig.hosts`
+**P3 · Allow-list + errors. — DONE.** Fetch hosts from `GET /tools` at start, refresh on a timer — `ProxyConfig.hosts`
 is the seam, currently filled by the caller. Map treg's failures to something readable: a 404 from
 `_resolve_call` means "no tool registered for this host or path"; a 403 means "you do not have access".
 (The treg-unreachable case is already handled — a 502 that names treg and says the vendor call was **not**
 made, so an agent does not blame a healthy vendor and retry.)
 
-**P4 · Wiring UX.** `treg shell start` mints a token, starts the proxy and merges `handle.env(treg_host)`
+**P4 · Wiring UX. — DONE.** `treg shell start` mints a token, starts the proxy and merges `handle.env(treg_host)`
 into the subshell environment (`start_session` already builds that dict), stopping it on teardown. The
 banner says which hosts are captured. No standalone command — decision 1.
 
-**P5 · Docs.** `docs/context/architecture/local-proxy.md` fragment (new subsystem, so it needs one),
+**P5 · Docs. — DONE.** `docs/context/architecture/local-proxy.md` fragment (new subsystem, so it needs one),
 plus `/llms.txt` and the dashboard's agent instructions.
 
 ## Testing
@@ -172,11 +173,13 @@ per-agent proxy tokens (one per session is enough) · request/response inspectio
 
 ## Decisions (settled 2026-07-30, with Unclecode)
 
-1. **Command shape — inside `treg shell` only.** There is no standalone `treg serve` daemon: the proxy
-   starts with a shell session and dies with it, which also means the session token never has to be
-   written to disk for a second process to find. `--renew-ca` therefore becomes a flag on
-   `treg shell start` (P4), not on a `serve` command. `localproxy.start()/stop()` is the whole engine,
-   so a standalone command remains a small addition if it is ever wanted.
+1. **Command shape — `treg shell start --proxy` first, `treg serve` added after.** The original
+   decision was shell-only, because the proxy then starts and dies with a session and its token never
+   has to be written to disk. After testing it live, Unclecode asked for the daemon too, so both
+   shipped: `--proxy` for a subshell, `treg serve start|stop|status|env` for a background service that
+   other terminals point at with `eval "$(treg serve env)"`. The daemon's cost is exactly the thing the
+   first decision avoided — a `proxy.json` (0600) holding the port and the proxy token — and that is
+   stated in USAGE so the choice is informed. `_start_proxy_handle` is the single shared code path.
 2. **CA lifetime — 2 years**, regenerated automatically inside its last 30 days
    (`_RENEW_WITHIN_DAYS`), plus an explicit renew. Not oneCLI's 10 years: a key sitting on a laptop
    for a decade is a long time for something that can impersonate any site.
@@ -209,3 +212,16 @@ per-agent proxy tokens (one per session is enough) · request/response inspectio
     which would silently drop the body. Both shapes are handled.
   - **Framing is re-derived, not copied** — `Content-Length` when treg gave one, chunked when it did
     not — because our hop must be self-consistent even when the hop into treg was framed differently.
+
+- **`treg serve` shipped** (2026-07-30, after the live test) — `cmd_serve_start/_stop/_status/_env` +
+  the state helpers in `localproxy.py` (`write_state`, `read_state`, `running`, `pid_alive`). Two
+  findings the tests produced, both real:
+  - `pid_alive(0)` returned **True**, because `os.kill(0, …)` signals the caller's whole process
+    group. A truncated pid in the state file would have read as "running", and `treg serve stop` would
+    have signalled the user's terminal. Non-positive pids are now rejected before the call.
+  - The parent said only "see the log" when the detached child died. It now prints the child's last
+    log line — which is how the port-collision case reads as a sentence instead of a scavenger hunt.
+- Verified live end to end: `serve start` → `eval "$(treg serve env)"` → a plain `curl` to a captured
+  host arrived at the vendor with `Authorization: Bearer …` injected server-side, an uncaptured host
+  went straight out, `--unset` cleared the shell, a second `start` was refused, `stop` removed the
+  state file, and a stale file with a dead pid was cleaned up on the next call.

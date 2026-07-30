@@ -395,3 +395,64 @@ def test_a_busy_port_is_a_readable_error(monkeypatch):
     with pytest.raises(SystemExit) as exc:
         cli._start_local_proxy(args, {"base_url": "https://x", "token": "t"}, [])
     assert "--proxy-port" in str(exc.value) and "18791" in str(exc.value)
+
+
+# ---- treg serve (the daemon front door) -----------------------------------------------------
+def test_serve_env_prints_shell_lines_and_the_way_back(tmp_path):
+    """A daemon nobody can reach is useless, and typing ten exports by hand is worse. `--unset` is the
+    way out, because `treg serve stop` cannot reach into a shell that already has the variables."""
+    env = {"HTTPS_PROXY": "http://treg:a b@127.0.0.1:18791", "SSL_CERT_FILE": "/x/ca.pem"}
+    lines = cli._serve_export_lines(env)
+    assert "export SSL_CERT_FILE=/x/ca.pem" in lines
+    assert "export HTTPS_PROXY='http://treg:a b@127.0.0.1:18791'" in lines   # quoted: the token is opaque
+    assert cli._serve_export_lines(env, unset=True) == "unset HTTPS_PROXY\nunset SSL_CERT_FILE"
+
+
+def test_serve_start_refuses_a_second_one(monkeypatch, capsys):
+    from treg import localproxy as lpx
+
+    monkeypatch.setattr(lpx, "running", lambda: {"port": 18791, "pid": 4242})
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_serve_start(argparse.Namespace(port=None, renew_ca=False, foreground=False),
+                            {"token": "t", "base_url": "http://x"})
+    assert "already running" in str(exc.value) and "treg serve stop" in str(exc.value)
+
+
+def test_serve_start_needs_login(monkeypatch):
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_serve_start(argparse.Namespace(port=None, renew_ca=False, foreground=False),
+                            {"base_url": "http://x"})
+    assert "treg login" in str(exc.value)
+
+
+def test_serve_status_says_what_is_captured(monkeypatch, capsys):
+    from treg import localproxy as lpx
+
+    monkeypatch.setattr(lpx, "running", lambda: {
+        "port": 18791, "pid": 4242, "base_url": "https://treg.example", "org": "acme",
+        "hosts": ["api.stripe.com", "api.vercel.com"]})
+    cli.cmd_serve_status(argparse.Namespace(), {})
+    out = capsys.readouterr().out
+    assert "127.0.0.1:18791" in out and "acme" in out
+    assert "api.stripe.com" in out and "api.vercel.com" in out
+    assert "everything else goes straight out" in out
+
+
+def test_serve_status_and_env_when_nothing_runs(monkeypatch, capsys):
+    from treg import localproxy as lpx
+
+    monkeypatch.setattr(lpx, "running", lambda: None)
+    cli.cmd_serve_status(argparse.Namespace(), {})
+    assert "not running" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_serve_env(argparse.Namespace(unset=False), {})
+    assert "treg serve start" in str(exc.value)
+
+
+def test_serve_stop_reports_when_nothing_runs(monkeypatch):
+    from treg import localproxy as lpx
+
+    monkeypatch.setattr(lpx, "running", lambda: None)
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_serve_stop(argparse.Namespace(), {})
+    assert "no proxy is running" in str(exc.value)

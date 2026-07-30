@@ -1000,3 +1000,46 @@ def test_the_explained_error_keeps_the_connection_usable(intercepting, ca, treg)
         second = agent.get("https://api.stripe.com/v1/customers")
     assert first.status_code == 403 and first.json()["source"] == "treg"
     assert second.status_code == 200
+
+
+# ---- the daemon's state file (`treg serve`) --------------------------------------------------
+def test_state_file_is_owner_only(tmp_path, monkeypatch):
+    """`treg shell --proxy` keeps its token in the subshell's environment; a DAEMON has to write it
+    down so another terminal can find it. That file is the whole extra risk of `treg serve`."""
+    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
+    path = lp.write_state(18791, "tok", os.getpid(), "https://treg.example", "acme", ["b.com", "a.com"])
+    assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+    state = lp.read_state()
+    assert state["port"] == 18791 and state["token"] == "tok"
+    assert state["hosts"] == ["a.com", "b.com"]               # sorted, so `status` reads stably
+
+
+def test_a_dead_daemon_does_not_look_alive(tmp_path, monkeypatch):
+    """A state file left behind by a killed process would otherwise make `status` insist forever that
+    a proxy is running, and `start` refuse to replace it."""
+    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
+    lp.write_state(18791, "tok", 999_999, "https://treg.example", "", [])
+    assert lp.running() is None
+    assert not lp.state_path().exists()                        # and the stale file is cleaned up
+
+
+def test_a_live_daemon_is_reported(tmp_path, monkeypatch):
+    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
+    lp.write_state(18791, "tok", os.getpid(), "https://treg.example", "", ["a.com"])
+    assert lp.running()["port"] == 18791
+    lp.clear_state()
+    assert lp.running() is None
+
+
+def test_a_missing_or_corrupt_state_file_is_just_not_running(tmp_path, monkeypatch):
+    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
+    assert lp.read_state() is None
+    lp.state_path().parent.mkdir(parents=True, exist_ok=True)
+    lp.state_path().write_text("{ not json")
+    assert lp.read_state() is None and lp.running() is None
+
+
+def test_pid_alive_is_honest():
+    assert lp.pid_alive(os.getpid())
+    assert not lp.pid_alive(999_999)
+    assert not lp.pid_alive(0)

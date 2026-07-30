@@ -257,6 +257,12 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
   registered host — `_start_local_proxy` seeds the allow-list from the tool listing already fetched for
   the shims and hands `start_session` the environment + a stop callback. See [shell](shell.md) and
   [local-proxy](../architecture/local-proxy.md).
+- **`serve`** (`cmd_serve_start`/`_stop`/`_status`/`_env`) — the same local proxy as a **background
+  service**, for a member who wants their own shell rather than a subshell. `start` detaches a child
+  running `serve start --foreground` (via `sys.executable -c`, never the `treg` on `PATH`, which may be
+  an older build); `eval "$(treg serve env)"` points a terminal at it and `--unset` reverses it;
+  `status` reads `~/.treg/proxy/proxy.json`. `_start_proxy_handle` is the one code path both front doors
+  share. See [local-proxy](../architecture/local-proxy.md).
 - **`admin`** (super-admin, cross-tenant): `login --token`, `stats`, `orgs`, `org <id>`, `users`,
   `tools`, `calls`, `health`, `grant`/`revoke <user_id>`, `suspend-user`/`rm-user <user_id>`,
   `suspend-org`/`rm-org <org_id>`. `_admin_client` sends the saved `admin_token` (`treg admin login`)

@@ -73,6 +73,13 @@ vendor key ever reaches the machine. Needs `pip install "tools-registry[proxy]"`
 the listener off 18791, `--renew-ca` regenerates the machine's local certificate authority. A
 certificate-pinned client will refuse the interception and must use `treg run` or `treg call` instead.
 
+**`treg serve`** — the same proxy as a background service, for your own shell instead of a subshell:
+`treg serve start`, then `eval "$(treg serve env)"` in any terminal that should use it;
+`treg serve status` shows the port and captured hosts; `eval "$(treg serve env --unset)"` leaves it;
+`treg serve stop` ends it. `--foreground` for a service manager. The difference from `--proxy`: a
+service writes its port + proxy token to `~/.treg/proxy/proxy.json` (mode 0600) so other terminals can
+find it — never a vendor key, but a file on disk the subshell version does not have.
+
 A recipe-only skill that's just CLI instructions (e.g. `stripe-cli`) auto-becomes runnable — `treg upload`
 recognizes the catalog CLI and wires the credential, so `treg run` works with no `treg.json`.
 
@@ -133,6 +140,8 @@ in the `X-Treg-Token` header on every call. Never share the upstream key - share
       [--proxy] [--proxy-port N] [--renew-ca]     --proxy also catches HTTPS calls YOU make to a
                                                   registered API (needs the [proxy] extra)
     treg shell stop                               leave it (same as `exit`)
+    treg serve start|stop|status|env              the same proxy as a background service; point a
+      [--port N] [--foreground] [--renew-ca]      shell at it with: eval "$(treg serve env)"
     sudo treg setup-local-run [--run-proof V]     one-time admin setup (Linux + macOS): isolate --local
       [--no-egress] [--refresh-egress]            runs under a dedicated treg-run user + egress allow-list
 

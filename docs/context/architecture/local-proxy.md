@@ -111,6 +111,27 @@ returns a `ProxyHandle` (`.env()`, `.stop()`). `stop()` cancels the in-flight ha
 the loop — a tunnel is a long-lived task, and killing the loop under one prints an `asyncio` complaint
 the user cannot act on. Wiring lives in [shell](../interface/shell.md).
 
+## Two front doors
+Same engine, two ways in. **`treg shell start --proxy`** runs it inside a subshell: the token lives only
+in that shell's environment and both end together. **`treg serve`** runs it as a background service for
+people who want their own shell — `start` / `stop` / `status` / `env`, where `eval "$(treg serve env)"`
+points a terminal at it and `--unset` reverses that (stopping the service cannot reach into a shell that
+already has the variables).
+
+A service must be findable by other terminals, so `write_state` records port, pid, token, registry and
+captured hosts in `~/.treg/proxy/proxy.json` at mode **0600**, created before any bytes go in. That file
+is the whole extra risk of `serve` versus `--proxy`: it holds this session's proxy token — never a vendor
+key — but it is on disk. `running()` treats a state file whose pid is gone as *not running* and deletes
+it, otherwise `status` would insist forever and `start` would refuse to replace a dead daemon.
+`pid_alive` rejects a non-positive pid **before** calling `os.kill`, because `os.kill(0, …)` signals the
+caller's whole process group — a truncated pid would read as alive and `stop` would signal the terminal.
+
+The detached child is launched as `sys.executable -c "from treg.cli import main; main()" serve start
+--foreground`, not whatever `treg` is on `PATH`: a Homebrew copy one version behind would be started
+instead and would not have the command at all. Its output goes to `~/.treg/proxy/serve.log`, and the
+parent prints the log's last line when the child fails to appear rather than telling the user to go
+read a file.
+
 ## Packaging
 Certificate generation needs `cryptography`, which is compiled, so it sits in a `[proxy]` extra rather
 than the base install — `pip install tools-registry` must stay the light CLI (`httpx` + `questionary`).

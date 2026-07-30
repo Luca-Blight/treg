@@ -361,6 +361,79 @@ def proxy_env(port: int, token: str, bundle_path: Path | str, treg_host: str | N
     return env
 
 
+# ---- the daemon's state file (`treg serve`) --------------------------------------------------
+# `treg shell --proxy` needs none of this: the proxy lives and dies with one subshell, and its token
+# is passed straight into that shell's environment. A DAEMON is different — another terminal has to
+# find it — so the port and token go to disk. That file is the whole extra risk of `treg serve`, which
+# is why it is 0600 and holds nothing but this session's own proxy token (never a vendor key).
+_STATE_NAME = "proxy.json"
+
+
+def state_path() -> Path:
+    return proxy_dir() / _STATE_NAME
+
+
+def write_state(port: int, token: str, pid: int, base_url: str, org: str, hosts: list[str]) -> Path:
+    path = state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps({"port": port, "token": token, "pid": pid, "base_url": base_url,
+                          "org": org, "hosts": sorted(hosts)}, indent=2)
+    # 0600 from the moment the file exists — it carries the token that spends the member's quota.
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        fh.write(payload)
+    os.chmod(path, 0o600)
+    return path
+
+
+def read_state() -> dict | None:
+    try:
+        return json.loads(state_path().read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def clear_state() -> None:
+    try:
+        state_path().unlink()
+    except OSError:
+        pass
+
+
+def pid_alive(pid: int) -> bool:
+    """Signal 0 asks the operating system 'does this process exist and may I signal it?' without
+    sending anything.
+
+    Zero and negative values are rejected first, and not out of tidiness: `os.kill(0, …)` targets the
+    caller's whole PROCESS GROUP and a negative pid targets a group by id. A truncated or missing pid
+    in the state file would therefore read as "alive" — and `treg serve stop` would signal everything
+    in this terminal."""
+    if not isinstance(pid, int) or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True          # it exists, it just is not ours
+    except (OSError, TypeError, ValueError):
+        return False
+    return True
+
+
+def running() -> dict | None:
+    """The live daemon's state, or None. A state file left behind by a killed process is removed
+    rather than reported — otherwise `status` would insist a proxy is running forever, and `start`
+    would refuse to replace it."""
+    state = read_state()
+    if not state:
+        return None
+    if not pid_alive(int(state.get("pid", 0) or 0)):
+        clear_state()
+        return None
+    return state
+
+
 # ---- P0 · the proxy itself ---------------------------------------------------------------
 def mint_token() -> str:
     """A fresh proxy token per session. It is what stops any other process on the machine from
