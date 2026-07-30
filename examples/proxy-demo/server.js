@@ -48,6 +48,13 @@ function throughProxy(targetUrl, proxyUrl) {
     });
 
     req.on("connect", (res, socket) => {
+      if (res.statusCode === 407) {
+        socket.destroy();
+        return reject(new Error(
+          `The proxy at ${proxy.host} refused these credentials (407).\n\n` +
+          `HTTPS_PROXY is probably left over from an earlier session. Clear it with:\n` +
+          `  eval "$(treg serve env --unset)"`));
+      }
       if (res.statusCode !== 200) {
         socket.destroy();
         return reject(new Error(`the proxy answered ${res.statusCode} to CONNECT`));
@@ -74,7 +81,20 @@ function throughProxy(targetUrl, proxyUrl) {
       });
       secure.on("error", reject);
     });
-    req.on("error", reject);
+    req.on("error", (err) => {
+      // The single most likely cause, by a distance: HTTPS_PROXY is still exported from an earlier
+      // `treg serve` session and that proxy has since stopped. "ECONNREFUSED 127.0.0.1:18791" gives
+      // no hint of that, so say it.
+      if (err.code === "ECONNREFUSED") {
+        return reject(new Error(
+          `No proxy is listening at ${proxy.host}, but HTTPS_PROXY points there.\n\n` +
+          `This usually means the variables are left over from an earlier session. Clear them:\n` +
+          `  eval "$(treg serve env --unset)"\n\n` +
+          `Then run the app under treg:\n` +
+          `  treg node server.js`));
+      }
+      reject(err);
+    });
     req.end();
   });
 }
