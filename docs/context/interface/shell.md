@@ -50,6 +50,11 @@ By default every shimmed CLI runs **local** (`treg run <tool>`). `--server-for s
 `server_runnable`; a requested tool that isn't falls back to local with a warning. `--ttl` sets a hard cap.
 
 ## `--proxy`: the other half of interception
+**Note the sibling.** `treg <command>` (`cmd_with`, see [local-proxy](../architecture/local-proxy.md))
+does the same capture for ONE command without a subshell, and is the door most people should use.
+`--proxy` is for a session where the team's CLIs (via shims) and raw HTTPS calls (via the proxy) should
+both work at once.
+
 A shim catches a registered CLI the **member types** (`stripe balance`). `treg shell start --proxy` also
 catches an HTTPS call the **agent makes on its own**, from a script that never heard of treg — see
 [local-proxy](../architecture/local-proxy.md). It is **opt-in** while the feature is new: interception is

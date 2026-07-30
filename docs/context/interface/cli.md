@@ -69,7 +69,7 @@ every subparser and `treg call -h` would print the grouped front page instead of
 
 ```
 MARKETPLACE   catalog
-CORE          tool · skill · secret · connections · call · cli
+CORE          tool · skill · secret · connections · call · cli · with · serve
 BULK UPLOAD   scan · upload
 TEAM MGMT     audit · org · invites · accept · agents · admin
 CONFIG        config · login · logout · onboard · update · version
@@ -257,12 +257,19 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
   registered host — `_start_local_proxy` seeds the allow-list from the tool listing already fetched for
   the shims and hands `start_session` the environment + a stop callback. See [shell](shell.md) and
   [local-proxy](../architecture/local-proxy.md).
+- **`treg <command>`** (`cmd_with`, reachable as `treg with` or bare) — run ONE command with the team's
+  credentials: `treg claude`, `treg node app.js`, `treg with -- npm test`. treg is the parent, so only
+  that process and its children are affected and nothing is written to any config file. `main()` routes
+  a bare word here via `_looks_like_a_program()` — the word must not be a treg subcommand AND must exist
+  on `PATH`, so `treg toool ls` stays an argparse error and a stray `call` binary cannot shadow
+  `treg call`. See [local-proxy](../architecture/local-proxy.md).
 - **`serve`** (`cmd_serve_start`/`_stop`/`_status`/`_env`) — the same local proxy as a **background
   service**, for a member who wants their own shell rather than a subshell. `start` detaches a child
   running `serve start --foreground` (via `sys.executable -c`, never the `treg` on `PATH`, which may be
-  an older build); `eval "$(treg serve env)"` points a terminal at it and `--unset` reverses it;
-  `status` reads `~/.treg/proxy/proxy.json`. `_start_proxy_handle` is the one code path both front doors
-  share. See [local-proxy](../architecture/local-proxy.md).
+  an older build); `eval "$(treg serve env)"` points a terminal at it and `--unset` reverses it (and
+  works after `stop`, which is exactly when it is needed); `status` reads `~/.treg/proxy/proxy.json` and
+  says whether THIS terminal is using the proxy. `_start_proxy_handle` is the one code path all three
+  front doors share.
 - **`admin`** (super-admin, cross-tenant): `login --token`, `stats`, `orgs`, `org <id>`, `users`,
   `tools`, `calls`, `health`, `grant`/`revoke <user_id>`, `suspend-user`/`rm-user <user_id>`,
   `suspend-org`/`rm-org <org_id>`. `_admin_client` sends the saved `admin_token` (`treg admin login`)

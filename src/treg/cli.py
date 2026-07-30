@@ -3942,6 +3942,10 @@ HELP_GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("connections", "Your connected accounts: connect providers, health, expiry."),
         ("call", "Call a tool through the proxy — key injected server-side."),
         ("cli", "Run vendor CLIs with the org's credential injected (run · shell · setup)."),
+        # Listed as `with`, because that is the name argparse knows; the epilog teaches the bare
+        # form (`treg claude`), which is how anyone will actually type it.
+        ("with", "Run any command with the team's credentials: `treg claude`, `treg node app.js`."),
+        ("serve", "Run the local proxy as a background service (start · stop · status · env)."),
     ]),
     ("BULK UPLOAD", [
         ("scan", "Scan a directory / machine (read-only preview of what upload would register)."),
@@ -4027,6 +4031,7 @@ def build_parser() -> argparse.ArgumentParser:
             "treg login                                              # sign in; first login registers you",
             "treg tool add stripe --base-url https://api.stripe.com --secret 1",
             "treg call https://api.stripe.com/v1/charges             # key injected server-side",
+            "treg claude                                             # run any command with the team's keys",
             "treg scan                                               # what would upload? (read-only)",
             "treg upload                                             # register a .env + a skills folder",
         ) + "\n\n`treg <command> -h` for details.")
