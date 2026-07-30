@@ -2794,6 +2794,13 @@ def cmd_serve_status(args, cfg) -> None:
 def cmd_serve_env(args, cfg) -> None:
     """Print the shell lines that point a terminal at the running daemon: `eval "$(treg serve env)"`."""
     from . import localproxy as lpx
+    if args.unset:
+        # Deliberately does NOT require a running proxy. `--unset` is exactly what you need AFTER
+        # `treg serve stop`, and refusing then leaves the shell wedged: its variables still point at a
+        # dead port, every call fails, and the one command that fixes it has just said no. The names
+        # are fixed, so no state is needed to undo them.
+        print(_serve_export_lines(lpx.proxy_env(0, "", ""), unset=True))
+        return
     live = lpx.running()
     if not live:
         sys.exit("treg: no proxy is running — start one with `treg serve start`.")

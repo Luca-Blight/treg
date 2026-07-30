@@ -449,6 +449,19 @@ def test_serve_status_and_env_when_nothing_runs(monkeypatch, capsys):
     assert "treg serve start" in str(exc.value)
 
 
+def test_unset_works_after_the_proxy_is_gone(monkeypatch, capsys):
+    """--unset must NOT need a running proxy: it is what you reach for right after `stop`. Requiring
+    one leaves the shell wedged — its variables point at a dead port, every call fails, and the one
+    command that fixes it refuses. Found in live testing."""
+    from treg import localproxy as lpx
+
+    monkeypatch.setattr(lpx, "running", lambda: None)
+    cli.cmd_serve_env(argparse.Namespace(unset=True), {})
+    out = capsys.readouterr().out
+    assert "unset HTTPS_PROXY" in out and "unset SSL_CERT_FILE" in out
+    assert "unset NODE_USE_ENV_PROXY" in out and "export" not in out
+
+
 def test_serve_stop_reports_when_nothing_runs(monkeypatch):
     from treg import localproxy as lpx
 
