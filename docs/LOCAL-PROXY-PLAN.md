@@ -225,3 +225,10 @@ per-agent proxy tokens (one per session is enough) · request/response inspectio
   host arrived at the vendor with `Authorization: Bearer …` injected server-side, an uncaptured host
   went straight out, `--unset` cleared the shell, a second `start` was refused, `stop` removed the
   state file, and a stale file with a dead pid was cleaned up on the next call.
+
+- **Agent hook shipped** (2026-07-30) — `treg serve hook [--install] [--agent]`. Unclecode asked how
+  oneCLI avoids the eval; reading their code, it does not: `onecli run` is the parent, containers get
+  `-e HTTPS_PROXY=…`, and their Claude plugin sets **`BASH_ENV`** to a generated `env.sh`
+  (`plugins/claude/hooks/session-start.mjs:236`). We now do the third one, reusing the harness
+  registry in `agents.py`. Proven with a bare `BASH_ENV=… bash -c 'curl …'`: credentialed while the
+  proxy runs, plain after `serve stop`.

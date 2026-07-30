@@ -9,6 +9,7 @@ See docs/CLI-SHELL-MODE-PLAN.md §7.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import signal
 import stat
@@ -469,3 +470,96 @@ def test_serve_stop_reports_when_nothing_runs(monkeypatch):
     with pytest.raises(SystemExit) as exc:
         cli.cmd_serve_stop(argparse.Namespace(), {})
     assert "no proxy is running" in str(exc.value)
+
+
+# ---- the agent hook (BASH_ENV) --------------------------------------------------------------
+def test_env_script_exports_while_running_and_unsets_after(tmp_path, monkeypatch):
+    """`treg serve stop` must REWRITE the file, not delete it. A file still exporting a dead port
+    would break every agent command until someone noticed."""
+    from treg import localproxy as lpx
+
+    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
+    path = lpx.write_env_script(lpx.proxy_env(18791, "tok", "/x/ca.pem", "treg.example"))
+    body = path.read_text()
+    assert "export HTTPS_PROXY='http://treg:tok@127.0.0.1:18791'" in body
+    assert "export NODE_USE_ENV_PROXY='1'" in body
+    assert stat.S_IMODE(os.stat(path).st_mode) == 0o600      # it carries the proxy token
+
+    lpx.write_env_script(None)
+    after = path.read_text()
+    assert "unset HTTPS_PROXY" in after and "export" not in after
+
+
+def test_env_script_survives_a_hostile_value(tmp_path, monkeypatch):
+    """The token is opaque text that lands in a shell script — it must be quoted, not interpolated."""
+    from treg import localproxy as lpx
+
+    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
+    body = lpx.write_env_script({"X": "a'; rm -rf /; echo '"}).read_text()
+    assert "rm -rf" in body                                   # present, but as data
+    assert body.count("export X=") == 1
+    out = subprocess.run(["bash", "-c", f"source {lpx.env_script_path()}; printf %s \"$X\""],
+                         capture_output=True, text=True)
+    assert out.stdout == "a'; rm -rf /; echo '"               # survives a real shell verbatim
+
+
+def test_hook_install_merges_claude_settings(tmp_path, monkeypatch):
+    """It must add one key to settings.json and leave everything else exactly as it was."""
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    (home / ".claude" / "settings.json").write_text('{"model": "opus", "env": {"FOO": "bar"}}')
+    monkeypatch.setattr("treg.agents.HOME", home)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(home / ".claude"))
+
+    result = cli._hook_install_claude("/x/env.sh")
+    data = json.loads((home / ".claude" / "settings.json").read_text())
+    assert "set in" in result
+    assert data == {"model": "opus", "env": {"FOO": "bar", "BASH_ENV": "/x/env.sh"}}
+    assert "already set" in cli._hook_install_claude("/x/env.sh")     # idempotent
+
+
+def test_hook_install_does_not_touch_an_existing_codex_policy(tmp_path, monkeypatch):
+    """Hand-editing someone's existing TOML section is how config files get destroyed. If the section
+    is already there, say what to add instead of rewriting it."""
+    home = tmp_path / "home"
+    (home / ".codex").mkdir(parents=True)
+    cfgfile = home / ".codex" / "config.toml"
+    cfgfile.write_text('[shell_environment_policy]\nset = { OTHER = "1" }\n')
+    monkeypatch.setenv("CODEX_HOME", str(home / ".codex"))
+
+    result = cli._hook_install_codex("/x/env.sh")
+    assert "by hand" in result
+    assert cfgfile.read_text() == '[shell_environment_policy]\nset = { OTHER = "1" }\n'   # untouched
+
+
+def test_hook_install_appends_a_codex_policy_when_absent(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    (home / ".codex").mkdir(parents=True)
+    monkeypatch.setenv("CODEX_HOME", str(home / ".codex"))
+    cli._hook_install_codex("/x/env.sh")
+    body = (home / ".codex" / "config.toml").read_text()
+    assert '[shell_environment_policy]' in body and 'BASH_ENV = "/x/env.sh"' in body
+
+
+def test_hook_dotenv_is_idempotent_and_never_overwrites(tmp_path):
+    envfile = tmp_path / ".env"
+    assert "appended" in cli._hook_install_dotenv(envfile, "/x/env.sh")
+    assert "already set" in cli._hook_install_dotenv(envfile, "/x/env.sh")
+    assert envfile.read_text().count("BASH_ENV=") == 1
+    envfile.write_text("BASH_ENV=/someone/elses.sh\n")
+    assert "by hand" in cli._hook_install_dotenv(envfile, "/x/env.sh")   # never clobbered
+
+
+def test_hook_reports_when_no_agent_is_installed(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
+    monkeypatch.setattr("treg.agents.detect_installed", lambda: [])
+    cli.cmd_serve_hook(argparse.Namespace(install=False, agent=None), {})
+    out = capsys.readouterr().out
+    assert "No agent harness detected" in out and "BASH_ENV" in out
+
+
+def test_hook_rejects_an_unknown_agent(tmp_path, monkeypatch):
+    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_serve_hook(argparse.Namespace(install=False, agent="emacs"), {})
+    assert "unknown agent" in str(exc.value)

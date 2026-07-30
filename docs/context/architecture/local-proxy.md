@@ -126,6 +126,22 @@ it, otherwise `status` would insist forever and `start` would refuse to replace 
 `pid_alive` rejects a non-positive pid **before** calling `os.kill`, because `os.kill(0, …)` signals the
 caller's whole process group — a truncated pid would read as alive and `stop` would signal the terminal.
 
+**The agent hook (`treg serve hook`).** `BASH_ENV` names a file bash sources at the start of every
+non-interactive shell. The harness config (Claude Code's `env` map, Codex's `[shell_environment_policy]`,
+Gemini's `.env`) points at `env_script_path()`; `serve start` writes the exports there and `stop`
+rewrites the same file as `unset`s. The indirection is the whole design: the port and token change on
+every start, so putting the variables straight into a harness config would go stale immediately — the
+config names a FILE and only the file changes. Stop must REWRITE rather than delete, or a hooked agent
+would keep exporting a dead port. The file is 0600 (it carries the proxy token) and every value is
+shell-quoted (`_sh_quote`), because a token is opaque text landing in a sourced script.
+
+`_hook_install_claude` merges one key into `settings.json` (JSON, write-then-rename, everything else
+preserved). `_hook_install_codex` appends a `[shell_environment_policy]` block **only when the section
+is absent** — hand-editing someone's existing TOML is how config files get destroyed — and otherwise
+prints the line to add. `_hook_install_dotenv` never overwrites a `BASH_ENV` someone else set. Limit,
+stated in the output: `BASH_ENV` is a bash feature, so a harness running commands through zsh or sh
+needs the eval instead. oneCLI's Claude plugin uses the same mechanism.
+
 The detached child is launched as `sys.executable -c "from treg.cli import main; main()" serve start
 --foreground`, not whatever `treg` is on `PATH`: a Homebrew copy one version behind would be started
 instead and would not have the command at all. Its output goes to `~/.treg/proxy/serve.log`, and the

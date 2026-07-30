@@ -2694,6 +2694,9 @@ def _serve_daemon(args, cfg) -> None:
         cfg, _proxy_tools(cfg), port=args.port, renew_ca=args.renew_ca)
     base = os.environ.get("TREG_URL") or cfg["base_url"]
     lpx.write_state(handle.port, handle.token, os.getpid(), base, _effective_org(cfg) or "", hosts)
+    # The file an agent harness sources via BASH_ENV — rewritten on every start so a hooked agent
+    # always talks to the CURRENT proxy without any config change.
+    lpx.write_env_script(handle.env(treg_host))
     done = threading.Event()
 
     def _stop(_signum=None, _frame=None):
@@ -2710,6 +2713,7 @@ def _serve_daemon(args, cfg) -> None:
     finally:
         handle.stop()
         lpx.clear_state()
+        lpx.write_env_script(None)   # unsets, so a hooked agent stops pointing at a dead port
         print("▚ treg proxy stopped.", file=sys.stderr, flush=True)
 
 
@@ -2750,6 +2754,8 @@ def _print_serve_banner(live: dict) -> None:
     print(f"  {_M}that started it, so one of these has to happen. Pick either:{_R}\n")
     print(f"    {_TEAL}treg shell start --proxy{_R}   {_M}a subshell that is already set up{_R}  {_G}← simplest{_R}")
     print(f"    {_TEAL}eval \"$(treg serve env)\"{_R}   {_M}set up THIS terminal{_R}\n")
+    print(f"  {_M}For a coding agent, wire it once and never think about it again:{_R}  "
+          f"{_TEAL}treg serve hook --install{_R}")
     print(f"  {_M}Check any time with{_R} {_TEAL}treg serve status{_R}{_M} — it says whether your terminal "
           f"is using it.{_R}\n")
 
@@ -2796,6 +2802,125 @@ def cmd_serve_start(args, cfg) -> None:
         sys.exit(f"treg: the proxy did not come up.\n  {why}\n  (full log: {log})" if why
                  else f"treg: the proxy did not come up. Its log is {log}")
     _print_serve_banner(live)
+
+
+HOOK_VAR = "BASH_ENV"
+
+
+def _hook_env_value() -> str:
+    from . import localproxy as lpx
+    return str(lpx.env_script_path())
+
+
+def _hook_install_claude(script: str) -> str:
+    """Claude Code: the `env` map in settings.json. JSON, so it merges safely."""
+    from . import agents as ag
+    path = ag._claude_home() / "settings.json"
+    try:
+        data = json.loads(path.read_text()) if path.exists() else {}
+    except (OSError, json.JSONDecodeError) as exc:
+        return f"could not read {path} ({exc}) — add {HOOK_VAR} to its \"env\" map by hand"
+    if not isinstance(data, dict):
+        return f"{path} is not a JSON object — add {HOOK_VAR} to its \"env\" map by hand"
+    env = data.setdefault("env", {})
+    if not isinstance(env, dict):
+        return f'{path} has a non-object "env" — add {HOOK_VAR} by hand'
+    if env.get(HOOK_VAR) == script:
+        return f"already set in {path}"
+    env[HOOK_VAR] = script
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")           # write-then-rename: never a half file
+    tmp.write_text(json.dumps(data, indent=2) + "\n")
+    os.replace(tmp, path)
+    return f"set in {path}"
+
+
+def _hook_install_dotenv(path: Path, script: str) -> str:
+    """Gemini CLI: a plain KEY=value file its process reads; children inherit."""
+    line = f"{HOOK_VAR}={script}"
+    try:
+        text = path.read_text() if path.exists() else ""
+    except OSError as exc:
+        return f"could not read {path} ({exc}) — add `{line}` by hand"
+    if line in text:
+        return f"already set in {path}"
+    if f"{HOOK_VAR}=" in text:
+        return f"{path} already sets {HOOK_VAR} to something else — update it by hand to: {script}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a") as fh:
+        fh.write(("" if text.endswith("\n") or not text else "\n") + line + "\n")
+    return f"appended to {path}"
+
+
+def _hook_install_codex(script: str) -> str:
+    """Codex: TOML. Only appended when the section is absent — rewriting someone's existing
+    `[shell_environment_policy]` by hand-editing TOML is how config files get destroyed."""
+    from . import agents as ag
+    path = ag._codex_home() / "config.toml"
+    try:
+        text = path.read_text() if path.exists() else ""
+    except OSError as exc:
+        return f"could not read {path} ({exc}) — add the block by hand"
+    if HOOK_VAR in text:
+        return f"already mentions {HOOK_VAR} in {path} — check it points at {script}"
+    if "[shell_environment_policy]" in text:
+        return (f"{path} already has [shell_environment_policy] — add by hand:\n"
+                f'      set = {{ {HOOK_VAR} = "{script}" }}')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a") as fh:
+        fh.write(("\n" if text and not text.endswith("\n") else "") +
+                 f'\n[shell_environment_policy]\nset = {{ {HOOK_VAR} = "{script}" }}\n')
+    return f"appended to {path}"
+
+
+def _hook_manual(display: str, script: str) -> str:
+    return f'add to your shell profile:  export {HOOK_VAR}="{script}"   (for {display})'
+
+
+def cmd_serve_hook(args, cfg) -> None:
+    """Wire an agent harness to the proxy once, so nobody ever types an eval again.
+
+    `BASH_ENV` names a file bash sources at the start of every non-interactive shell. The harness
+    config points at our file; `treg serve start`/`stop` rewrite that file. So the agent's commands
+    always use the CURRENT proxy, and there is nothing to keep in sync."""
+    from . import agents as ag
+    from . import localproxy as lpx
+    script = _hook_env_value()
+    if not lpx.env_script_path().exists():
+        lpx.write_env_script(None)                      # a valid no-op file, before any proxy exists
+    installers = {
+        "claude-code": lambda: _hook_install_claude(script),
+        "gemini-cli": lambda: _hook_install_dotenv(ag.HOME / ".gemini" / ".env", script),
+        "codex": lambda: _hook_install_codex(script),
+    }
+    found = ag.detect_installed()
+    wanted = [args.agent] if args.agent else found
+    if args.agent and args.agent not in ag.AGENTS:
+        sys.exit(f"treg: unknown agent {args.agent!r}. Known: {', '.join(ag.AGENTS)}")
+
+    print(f"\n{_A}▚ treg proxy hook{_R}")
+    print(_row("file", script))
+    print(f"  {_M}Your agent's shells source that file automatically, and `treg serve start`/`stop`{_R}")
+    print(f"  {_M}rewrite it — so the agent always uses the current proxy, with no eval to remember.{_R}\n")
+    if not wanted:
+        print(f"  {_AM}No agent harness detected on this machine.{_R}")
+        print(f"  {_M}{_hook_manual('any shell', script)}{_R}\n")
+        return
+    for name in wanted:
+        display = ag.AGENTS[name]["display"]
+        if not args.install:
+            how = {"claude-code": 'the "env" map in ~/.claude/settings.json',
+                   "codex": "[shell_environment_policy] set = {…} in ~/.codex/config.toml",
+                   "gemini-cli": "~/.gemini/.env"}.get(name, "its shell profile")
+            print(f"  {_G}{display:<14}{_R} {_M}{HOOK_VAR} → {how}{_R}")
+        else:
+            result = installers.get(name, lambda d=display: _hook_manual(d, script))()
+            mark = _G + "✓" + _R if result.startswith(("set in", "appended", "already")) else _AM + "!" + _R
+            print(f"  {mark} {_G}{display:<14}{_R} {_M}{result}{_R}")
+    if not args.install:
+        print(f"\n  {_M}Run{_R} {_TEAL}treg serve hook --install{_R} {_M}to do it for you.{_R}")
+    print(f"\n  {_M}Restart the agent for it to pick this up. Only bash shells are covered —{_R}")
+    print(f"  {_M}a harness that runs commands through zsh or sh needs the eval instead.{_R}\n")
 
 
 def cmd_serve_stop(args, cfg) -> None:
@@ -4301,6 +4426,11 @@ def build_parser() -> argparse.ArgumentParser:
              'eval "$(treg serve env)"', 'eval "$(treg serve env --unset)"')
     sve.add_argument("--unset", action="store_true", help="print the lines that undo it instead")
     sve.set_defaults(fn=cmd_serve_env)
+    svh = mk(sv, "hook", "Wire a coding agent to the proxy once, so its commands need no eval ever.",
+             "treg serve hook", "treg serve hook --install", "treg serve hook --install --agent codex")
+    svh.add_argument("--install", action="store_true", help="write the config, instead of only showing it")
+    svh.add_argument("--agent", metavar="NAME", help="just this harness (default: every one detected here)")
+    svh.set_defaults(fn=cmd_serve_hook)
 
     cn2 = mk(sub, "cli", "Run vendor CLIs with the org's credential injected (run · shell · setup).",
              "treg cli run stripe -- get /v1/balance", "treg cli shell start", "sudo treg cli setup",

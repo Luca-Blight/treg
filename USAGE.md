@@ -227,6 +227,25 @@ treg serve stop                   # stop the service
 `treg serve start --foreground` stays attached instead of detaching, which is what you want for a
 service manager or when reading its log (`~/.treg/proxy/serve.log`).
 
+### Wiring a coding agent once (`treg serve hook`)
+
+An agent should not have to remember an `eval` either. Run this once:
+
+```bash
+treg serve hook --install     # shows what it will do without --install
+```
+
+It sets one variable, `BASH_ENV`, in your agent's own config (the `env` map in
+`~/.claude/settings.json`, `[shell_environment_policy]` in `~/.codex/config.toml`, `~/.gemini/.env`).
+`BASH_ENV` names a file that bash reads at the start of every command the agent runs — and that file
+is `~/.treg/proxy/env.sh`, which `treg serve start` and `stop` rewrite for you.
+
+So the agent's config never changes again: start the proxy and the agent's next command uses it, stop
+the proxy and the same command goes out plainly. Restart the agent once after installing.
+
+The limit: `BASH_ENV` is a bash feature. A harness that runs its commands through `zsh` or `sh` is not
+covered and needs the `eval` instead.
+
 One difference worth knowing. `treg shell --proxy` keeps its access token in the subshell's
 environment and both disappear together. A service has to be findable by other terminals, so it writes
 its port and token to `~/.treg/proxy/proxy.json` (owner-readable only, mode `0600`). That file holds
