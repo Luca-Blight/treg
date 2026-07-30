@@ -111,8 +111,24 @@ returns a `ProxyHandle` (`.env()`, `.stop()`). `stop()` cancels the in-flight ha
 the loop — a tunnel is a long-lived task, and killing the loop under one prints an `asyncio` complaint
 the user cannot act on. Wiring lives in [shell](../interface/shell.md).
 
-## Two front doors
-Same engine, two ways in. **`treg shell start --proxy`** runs it inside a subshell: the token lives only
+## Three front doors
+**`treg <command>`** (`cmd_with`) is the normal one and the only one that is per-launch: `treg claude`,
+`treg node server.js`, `treg with -- npm test`. treg is the PARENT of what it runs, so the environment
+reaches that process and its children only — `treg claude` uses team access, plain `claude` is
+untouched. Nothing is written to any config file. `main()` falls through to it when the first word is
+not a treg subcommand **and** exists on `PATH`; requiring both is what keeps `treg toool ls` an ordinary
+argparse error instead of an exec attempt, and what stops a stray `call` binary on someone's PATH
+shadowing treg's own command. It attaches to a running `serve` daemon and leaves it up, or starts a
+private proxy on **port 0** (the operating system picks, so parallel sessions never collide) and stops
+it in a `finally`. The child runs through `shell._run_subshell`, which ignores SIGINT/SIGQUIT so an
+interactive agent owns the terminal, and its exit code is treg's.
+
+A **global** variant was built and deleted the same day: `treg serve hook` wrote `BASH_ENV` into
+`~/.claude/settings.json` (as oneCLI's plugin does), which meant every session of that agent on the
+machine was captured whether or not the member wanted it that day — and no easy way to use a personal
+key instead. Per-launch gives the same "no eval ever" result with none of the reach. Do not re-add it.
+
+The other two: same engine. **`treg shell start --proxy`** runs it inside a subshell: the token lives only
 in that shell's environment and both end together. **`treg serve`** runs it as a background service for
 people who want their own shell — `start` / `stop` / `status` / `env`, where `eval "$(treg serve env)"`
 points a terminal at it and `--unset` reverses that (stopping the service cannot reach into a shell that
@@ -125,22 +141,6 @@ key — but it is on disk. `running()` treats a state file whose pid is gone as 
 it, otherwise `status` would insist forever and `start` would refuse to replace a dead daemon.
 `pid_alive` rejects a non-positive pid **before** calling `os.kill`, because `os.kill(0, …)` signals the
 caller's whole process group — a truncated pid would read as alive and `stop` would signal the terminal.
-
-**The agent hook (`treg serve hook`).** `BASH_ENV` names a file bash sources at the start of every
-non-interactive shell. The harness config (Claude Code's `env` map, Codex's `[shell_environment_policy]`,
-Gemini's `.env`) points at `env_script_path()`; `serve start` writes the exports there and `stop`
-rewrites the same file as `unset`s. The indirection is the whole design: the port and token change on
-every start, so putting the variables straight into a harness config would go stale immediately — the
-config names a FILE and only the file changes. Stop must REWRITE rather than delete, or a hooked agent
-would keep exporting a dead port. The file is 0600 (it carries the proxy token) and every value is
-shell-quoted (`_sh_quote`), because a token is opaque text landing in a sourced script.
-
-`_hook_install_claude` merges one key into `settings.json` (JSON, write-then-rename, everything else
-preserved). `_hook_install_codex` appends a `[shell_environment_policy]` block **only when the section
-is absent** — hand-editing someone's existing TOML is how config files get destroyed — and otherwise
-prints the line to add. `_hook_install_dotenv` never overwrites a `BASH_ENV` someone else set. Limit,
-stated in the output: `BASH_ENV` is a bash feature, so a harness running commands through zsh or sh
-needs the eval instead. oneCLI's Claude plugin uses the same mechanism.
 
 The detached child is launched as `sys.executable -c "from treg.cli import main; main()" serve start
 --foreground`, not whatever `treg` is on `PATH`: a Homebrew copy one version behind would be started

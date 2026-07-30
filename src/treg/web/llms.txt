@@ -63,6 +63,13 @@ Two tiers (`treg run <tool> --local|--server -- <args>`):
 automatically: `treg shell start`, then use `stripe`, `gh`, … normally (no `treg run`); `exit` reverts it.
 `--server-for stripe,…` routes named tools to the server; `--ttl N` auto-closes after N minutes.
 
+**`treg <command>`** — the simplest form, and the one to reach for: put `treg` in front of anything
+(`treg claude`, `treg codex`, `treg node server.js`, `treg with -- npm test`) and that ONE command runs
+with the team's credentials. treg is the parent process, so only that command and its children are
+affected: `treg claude` uses shared team access, plain `claude` is untouched and uses your own local
+keys. Nothing is written to any config file. A registered host is credentialed by the server; every
+other address goes straight out unread. Needs `pip install "tools-registry[proxy]"`.
+
 **`treg shell start --proxy`** — the same shell, plus HTTPS calls **you make yourself** to a registered
 API are caught and credentialed. Write an ordinary script against `api.stripe.com` with no key and no
 treg code; the call goes through the registry, which injects the credential **on the server**, and the
@@ -76,11 +83,7 @@ certificate-pinned client will refuse the interception and must use `treg run` o
 **`treg serve`** — the same proxy as a background service, for your own shell instead of a subshell:
 `treg serve start`, then `eval "$(treg serve env)"` in any terminal that should use it;
 `treg serve status` shows the port and captured hosts; `eval "$(treg serve env --unset)"` leaves it;
-`treg serve stop` ends it. `--foreground` for a service manager. **`treg serve hook --install`** wires
-a coding agent once: it sets `BASH_ENV` in the harness's own config (Claude Code's settings.json env
-map, Codex's shell_environment_policy, Gemini's .env) to point at `~/.treg/proxy/env.sh`, which
-`serve start`/`stop` rewrite — so the agent's commands always use the current proxy and no eval is
-ever typed. Bash only; a harness running commands through zsh/sh needs the eval. The difference from `--proxy`: a
+`treg serve stop` ends it. `--foreground` for a service manager. The difference from `--proxy`: a
 service writes its port + proxy token to `~/.treg/proxy/proxy.json` (mode 0600) so other terminals can
 find it — never a vendor key, but a file on disk the subshell version does not have.
 
@@ -146,7 +149,8 @@ in the `X-Treg-Token` header on every call. Never share the upstream key - share
     treg shell stop                               leave it (same as `exit`)
     treg serve start|stop|status|env              the same proxy as a background service; point a
       [--port N] [--foreground] [--renew-ca]      shell at it with: eval "$(treg serve env)"
-    treg serve hook [--install] [--agent NAME]    wire a coding agent once (BASH_ENV) — no eval ever
+    treg <command> ... | treg with -- <command>   run ONE command with the team's credentials
+                                                  (treg claude · treg node app.js); nothing global
     sudo treg setup-local-run [--run-proof V]     one-time admin setup (Linux + macOS): isolate --local
       [--no-egress] [--refresh-egress]            runs under a dedicated treg-run user + egress allow-list
 

@@ -472,109 +472,112 @@ def test_serve_stop_reports_when_nothing_runs(monkeypatch):
     assert "no proxy is running" in str(exc.value)
 
 
-# ---- the agent hook (BASH_ENV) --------------------------------------------------------------
-def test_env_script_exports_while_running_and_unsets_after(tmp_path, monkeypatch):
-    """`treg serve stop` must REWRITE the file, not delete it. A file still exporting a dead port
-    would break every agent command until someone noticed."""
-    from treg import localproxy as lpx
+# ---- `treg <command>` — per-launch opt-in, nothing global -----------------------------------
+def test_bare_word_runs_a_program_but_a_typo_stays_a_treg_error(monkeypatch):
+    """`treg claude` should launch claude. `treg toool ls` must stay an ordinary treg error, not an
+    attempt to execute `toool` — which is why the word has to exist on PATH before we fall through."""
+    seen: dict = {}
+    monkeypatch.setattr(cli, "cmd_with", lambda args, cfg: seen.update(cmd=args.command, args=args.args))
+    monkeypatch.setattr(cli, "_load_config", lambda: {"token": "t", "base_url": "http://x"})
 
-    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
-    path = lpx.write_env_script(lpx.proxy_env(18791, "tok", "/x/ca.pem", "treg.example"))
-    body = path.read_text()
-    assert "export HTTPS_PROXY='http://treg:tok@127.0.0.1:18791'" in body
-    assert "export NODE_USE_ENV_PROXY='1'" in body
-    assert stat.S_IMODE(os.stat(path).st_mode) == 0o600      # it carries the proxy token
+    cli.main(["sh", "-c", "true"])                      # sh is on every machine
+    assert seen == {"cmd": "sh", "args": ["-c", "true"]}
 
-    lpx.write_env_script(None)
-    after = path.read_text()
-    assert "unset HTTPS_PROXY" in after and "export" not in after
-
-
-def test_env_script_survives_a_hostile_value(tmp_path, monkeypatch):
-    """The token is opaque text that lands in a shell script — it must be quoted, not interpolated."""
-    from treg import localproxy as lpx
-
-    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
-    body = lpx.write_env_script({"X": "a'; rm -rf /; echo '"}).read_text()
-    assert "rm -rf" in body                                   # present, but as data
-    assert body.count("export X=") == 1
-    out = subprocess.run(["bash", "-c", f"source {lpx.env_script_path()}; printf %s \"$X\""],
-                         capture_output=True, text=True)
-    assert out.stdout == "a'; rm -rf /; echo '"               # survives a real shell verbatim
-
-
-def test_hook_install_merges_claude_settings(tmp_path, monkeypatch):
-    """It must add one key to settings.json and leave everything else exactly as it was."""
-    home = tmp_path / "home"
-    (home / ".claude").mkdir(parents=True)
-    (home / ".claude" / "settings.json").write_text('{"model": "opus", "env": {"FOO": "bar"}}')
-    monkeypatch.setattr("treg.agents.HOME", home)
-    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(home / ".claude"))
-
-    result = cli._hook_install_claude("/x/env.sh")
-    data = json.loads((home / ".claude" / "settings.json").read_text())
-    assert "set in" in result
-    assert data == {"model": "opus", "env": {"FOO": "bar", "BASH_ENV": "/x/env.sh"}}
-    assert "already set" in cli._hook_install_claude("/x/env.sh")     # idempotent
-
-
-def test_hook_never_steals_someone_elses_bash_env(tmp_path, monkeypatch):
-    """BASH_ENV may already belong to direnv, a company bootstrap, or the user's own script.
-    Overwriting it would silently disable that, in EVERY session, with nothing on screen to notice."""
-    home = tmp_path / "home"
-    (home / ".claude").mkdir(parents=True)
-    (home / ".claude" / "settings.json").write_text('{"env": {"BASH_ENV": "/theirs.sh"}}')
-    monkeypatch.setattr("treg.agents.HOME", home)
-    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(home / ".claude"))
-
-    result = cli._hook_install_claude("/x/env.sh")
-    assert "/theirs.sh" in result and "source ours from" in result
-    data = json.loads((home / ".claude" / "settings.json").read_text())
-    assert data["env"]["BASH_ENV"] == "/theirs.sh"        # untouched
-
-
-def test_hook_install_does_not_touch_an_existing_codex_policy(tmp_path, monkeypatch):
-    """Hand-editing someone's existing TOML section is how config files get destroyed. If the section
-    is already there, say what to add instead of rewriting it."""
-    home = tmp_path / "home"
-    (home / ".codex").mkdir(parents=True)
-    cfgfile = home / ".codex" / "config.toml"
-    cfgfile.write_text('[shell_environment_policy]\nset = { OTHER = "1" }\n')
-    monkeypatch.setenv("CODEX_HOME", str(home / ".codex"))
-
-    result = cli._hook_install_codex("/x/env.sh")
-    assert "by hand" in result
-    assert cfgfile.read_text() == '[shell_environment_policy]\nset = { OTHER = "1" }\n'   # untouched
-
-
-def test_hook_install_appends_a_codex_policy_when_absent(tmp_path, monkeypatch):
-    home = tmp_path / "home"
-    (home / ".codex").mkdir(parents=True)
-    monkeypatch.setenv("CODEX_HOME", str(home / ".codex"))
-    cli._hook_install_codex("/x/env.sh")
-    body = (home / ".codex" / "config.toml").read_text()
-    assert '[shell_environment_policy]' in body and 'BASH_ENV = "/x/env.sh"' in body
-
-
-def test_hook_dotenv_is_idempotent_and_never_overwrites(tmp_path):
-    envfile = tmp_path / ".env"
-    assert "appended" in cli._hook_install_dotenv(envfile, "/x/env.sh")
-    assert "already set" in cli._hook_install_dotenv(envfile, "/x/env.sh")
-    assert envfile.read_text().count("BASH_ENV=") == 1
-    envfile.write_text("BASH_ENV=/someone/elses.sh\n")
-    assert "by hand" in cli._hook_install_dotenv(envfile, "/x/env.sh")   # never clobbered
-
-
-def test_hook_reports_when_no_agent_is_installed(tmp_path, monkeypatch, capsys):
-    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
-    monkeypatch.setattr("treg.agents.detect_installed", lambda: [])
-    cli.cmd_serve_hook(argparse.Namespace(install=False, agent=None), {})
-    out = capsys.readouterr().out
-    assert "No agent harness detected" in out and "BASH_ENV" in out
-
-
-def test_hook_rejects_an_unknown_agent(tmp_path, monkeypatch):
-    monkeypatch.setenv("TREG_CONFIG", str(tmp_path / "config.json"))
     with pytest.raises(SystemExit) as exc:
-        cli.cmd_serve_hook(argparse.Namespace(install=False, agent="emacs"), {})
-    assert "unknown agent" in str(exc.value)
+        cli.main(["toool", "ls"])
+    assert exc.value.code == 2                          # argparse's "invalid choice", not an exec
+
+
+def test_a_real_treg_command_is_never_shadowed(monkeypatch, tmp_path):
+    """If someone has a program called `call` or `org` on their PATH, treg's own command still wins."""
+    fake = tmp_path / "call"
+    fake.write_text("#!/bin/sh\n")
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
+    seen: dict = {}
+    monkeypatch.setattr(cli, "cmd_call", lambda args, cfg: seen.update(ran="treg-call"))
+    monkeypatch.setattr(cli, "cmd_with", lambda args, cfg: seen.update(ran="with"))
+    monkeypatch.setattr(cli, "_load_config", lambda: {"token": "t", "base_url": "http://x"})
+    cli.main(["call", "https://api.example.com/x"])
+    assert seen == {"ran": "treg-call"}
+
+
+def test_with_refuses_a_program_that_does_not_exist():
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_with(argparse.Namespace(command="definitely-not-a-real-binary", args=[], quiet=True),
+                     {"token": "t", "base_url": "http://x"})
+    assert "not a treg command" in str(exc.value)
+
+
+def test_with_needs_login():
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_with(argparse.Namespace(command="sh", args=["-c", "true"], quiet=True), {})
+    assert "treg login" in str(exc.value)
+
+
+def test_with_starts_its_own_proxy_and_stops_it(monkeypatch):
+    """Nothing is left running: the proxy belongs to that one command. Port 0 means the operating
+    system picks, so two `treg claude` sessions can never collide."""
+    from treg import localproxy as lpx
+
+    events = []
+
+    class _Handle:
+        port = 41234
+        def env(self, treg_host):
+            return {"HTTPS_PROXY": "http://treg:tok@127.0.0.1:41234"}
+        def stop(self):
+            events.append("stopped")
+
+    monkeypatch.setattr(lpx, "running", lambda: None)
+    monkeypatch.setattr(cli, "_proxy_tools", lambda cfg: [{"host": "api.stripe.com"}])
+    monkeypatch.setattr(cli, "_start_proxy_handle",
+                        lambda cfg, tools, port=None, renew_ca=False:
+                            (events.append(f"started port={port}"), (_Handle(), ["api.stripe.com"], "x"))[1])
+    monkeypatch.setattr("treg.shell._run_subshell", lambda argv, env: events.append(("ran", argv[0], env["HTTPS_PROXY"])) or 0)
+
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_with(argparse.Namespace(command="sh", args=["-c", "true"], quiet=True),
+                     {"token": "t", "base_url": "http://x"})
+    assert exc.value.code == 0
+    assert events[0] == "started port=0"                       # an OS-chosen port, never a fixed one
+    assert events[1][0] == "ran" and events[1][2].endswith("41234")
+    assert events[-1] == "stopped"                             # and it does not outlive the command
+
+
+def test_with_attaches_to_a_running_daemon_and_leaves_it_up(monkeypatch):
+    """A `treg serve` daemon is someone's deliberate choice — borrowing it must not shut it down."""
+    from treg import localproxy as lpx
+
+    events = []
+    monkeypatch.setattr(lpx, "running", lambda: {
+        "port": 18800, "pid": 1, "token": "daemon-tok", "base_url": "https://treg.example",
+        "org": "", "hosts": ["api.stripe.com"]})
+    monkeypatch.setattr(cli, "_start_proxy_handle",
+                        lambda *a, **k: pytest.fail("must not start a second proxy"))
+    monkeypatch.setattr("treg.shell._run_subshell",
+                        lambda argv, env: events.append(env["HTTPS_PROXY"]) or 7)
+
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_with(argparse.Namespace(command="sh", args=[], quiet=True),
+                     {"token": "t", "base_url": "https://treg.example"})
+    assert exc.value.code == 7                                  # the command's own exit code
+    assert events == ["http://treg:daemon-tok@127.0.0.1:18800"]
+
+
+def test_with_runs_the_program_for_real_and_passes_args_and_exit_code(monkeypatch, tmp_path):
+    """End to end through a real process: argv verbatim, the proxy variables present, exit code kept."""
+    from treg import localproxy as lpx
+
+    out = tmp_path / "argv.txt"
+    monkeypatch.setattr(lpx, "running", lambda: {
+        "port": 18800, "pid": 1, "token": "tok", "base_url": "https://treg.example",
+        "org": "", "hosts": []})
+    script = f'printf "%s\\n" "$@" > {out}; printf "%s" "$HTTPS_PROXY" >> {out}; exit 9'
+    with pytest.raises(SystemExit) as exc:
+        cli.cmd_with(argparse.Namespace(command="sh", args=["-c", script, "_", "a b", "--flag"],
+                                        quiet=True), {"token": "t", "base_url": "https://treg.example"})
+    assert exc.value.code == 9
+    body = out.read_text()
+    assert "a b\n--flag\n" in body                    # spaces survive; no re-splitting
+    assert "127.0.0.1:18800" in body                  # the child really saw the proxy

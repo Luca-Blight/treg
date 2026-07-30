@@ -232,3 +232,12 @@ per-agent proxy tokens (one per session is enough) · request/response inspectio
   (`plugins/claude/hooks/session-start.mjs:236`). We now do the third one, reusing the harness
   registry in `agents.py`. Proven with a bare `BASH_ENV=… bash -c 'curl …'`: credentialed while the
   proxy runs, plain after `serve stop`.
+- **The hook was replaced by `treg <command>`, same day.** Unclecode rejected the global installer, and
+  he was right: writing `BASH_ENV` into `~/.claude/settings.json` captures every session of that agent
+  on the machine, forever, whether or not you wanted treg that day — and leaves no easy way to use your
+  own personal key instead. The launcher (`cmd_with`) gives the same "no eval ever" result with none of
+  the reach: treg is the parent of the one command it runs. `treg claude` uses team access; plain
+  `claude` is untouched. Nothing is written to any config file. `treg serve hook`, `env.sh` and the
+  three config installers were deleted — do not re-add them.
+- **Next, requested but not built:** `treg claude` could also pre-load the team's skills into the
+  session instead of the agent downloading and installing them.
