@@ -2827,6 +2827,12 @@ def _hook_install_claude(script: str) -> str:
         return f'{path} has a non-object "env" — add {HOOK_VAR} by hand'
     if env.get(HOOK_VAR) == script:
         return f"already set in {path}"
+    if env.get(HOOK_VAR):
+        # Someone else's BASH_ENV — direnv, a company bootstrap, their own script. Overwriting it
+        # would silently disable whatever it does, in every session, with no way to notice. The other
+        # two installers already refuse; this one must too.
+        return (f"{path} already sets {HOOK_VAR} to {env[HOOK_VAR]} — leave it, and source ours from "
+                f"that file instead:  . {script}")
     env[HOOK_VAR] = script
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")           # write-then-rename: never a half file

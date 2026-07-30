@@ -518,6 +518,21 @@ def test_hook_install_merges_claude_settings(tmp_path, monkeypatch):
     assert "already set" in cli._hook_install_claude("/x/env.sh")     # idempotent
 
 
+def test_hook_never_steals_someone_elses_bash_env(tmp_path, monkeypatch):
+    """BASH_ENV may already belong to direnv, a company bootstrap, or the user's own script.
+    Overwriting it would silently disable that, in EVERY session, with nothing on screen to notice."""
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    (home / ".claude" / "settings.json").write_text('{"env": {"BASH_ENV": "/theirs.sh"}}')
+    monkeypatch.setattr("treg.agents.HOME", home)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(home / ".claude"))
+
+    result = cli._hook_install_claude("/x/env.sh")
+    assert "/theirs.sh" in result and "source ours from" in result
+    data = json.loads((home / ".claude" / "settings.json").read_text())
+    assert data["env"]["BASH_ENV"] == "/theirs.sh"        # untouched
+
+
 def test_hook_install_does_not_touch_an_existing_codex_policy(tmp_path, monkeypatch):
     """Hand-editing someone's existing TOML section is how config files get destroyed. If the section
     is already there, say what to add instead of rewriting it."""
