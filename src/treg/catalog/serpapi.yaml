@@ -78,7 +78,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search. $0.015 at the entry-level paid Developer plan ($75 / 5,000 searches); $0.010 on Production, $0.025 on Starter. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search. $0.015 at the entry-level paid Developer plan ($75 / 5,000 searches); $0.010 on Production, $0.025 on Starter. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "google", q: "coffee"}
     verified: 2026-07-28
@@ -111,7 +117,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "google_ads_transparency_center", text: "coffee"}
     verified: 2026-07-28
@@ -138,7 +150,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "youtube", search_query: "coffee"}
     verified: 2026-07-28
@@ -173,7 +191,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "apple_app_store", term: "coffee"}
     verified: 2026-07-28
@@ -211,7 +235,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "google_play", q: "coffee"}
     verified: 2026-07-28
@@ -245,7 +275,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "google_autocomplete", q: "coffee"}
     verified: 2026-07-28
@@ -275,7 +311,8 @@ endpoints:
       type: free
       value: 0
       currency: USD
-      note: "FREE — the docs state that the Account API \"is free of charge, and using it will not be counted toward your monthly quota\". The correct liveness probe for a SerpApi key (which is what treg's registry probes) and the right call before a batch, since it reports total_searches_left."
+      unit: call
+      note: FREE — the docs state that the Account API "is free of charge, and using it will not be counted toward your monthly quota". The correct liveness probe for a SerpApi key (which is what treg's registry probes) and the right call before a batch, since it reports total_searches_left.
     test_request:
       queryParams: {}
     verified: 2026-07-28

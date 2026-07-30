@@ -62,7 +62,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1-9 credits per person, charged only when credit-consuming data is returned: 1 credit for demographics or an email, plus 8 credits if a mobile phone comes back (reveal_phone_number defaults off). No match, no charge. Waterfall vendors may bill even on a miss. No public $/credit."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://www.apollo.io/pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: '1-9 credits per person, charged only when credit-consuming data is returned: 1 credit for demographics or an email, plus 8 credits if a mobile phone comes back (reveal_phone_number defaults off). No match, no charge. Waterfall vendors may bill even on a miss. No public $/credit.'
     docs_url: https://docs.apollo.io/reference/people-enrichment
 
   - id: apollo.people.search
@@ -89,7 +95,7 @@ endpoints:
         page: {type: integer, required: false, note: "1-based; max 500 pages", example: 1}
         per_page: {type: integer, required: false, note: "max 100", example: 1}
       note: "query-string params on a POST, with arrays in field[]=value form. RETURNS NO EMAILS OR PHONE NUMBERS AT ALL — that is why it is free. Pipe the person ids into apollo.people.enrich to get contact data, which is where the credits go. Result set is capped at 50,000 records"
-    cost: {type: free, value: 0, currency: USD, note: "documented free — 0 credits, because no contact data is returned. Counts against the plan's request limits only"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'documented free — 0 credits, because no contact data is returned. Counts against the plan''s request limits only'}
     docs_url: https://docs.apollo.io/reference/people-api-search
 
   - id: apollo.companies.enrich
@@ -112,7 +118,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit per organization returned; unmatched requests are free."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://www.apollo.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per organization returned; unmatched requests are free.
     docs_url: https://docs.apollo.io/reference/organization-enrichment
 
   - id: apollo.companies.search
@@ -142,7 +154,13 @@ endpoints:
       type: per_call
       value: 1
       currency: credit
-      note: "1 credit per PAGE returned (0 when there are no results) — not per company. Fewer, fuller pages therefore cost less than many small ones, the opposite of most providers in this catalog."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://www.apollo.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per PAGE returned (0 when there are no results) — not per company. Fewer, fuller pages therefore cost less than many small ones, the opposite of most providers in this catalog.
     docs_url: https://docs.apollo.io/reference/organization-search
 
   - id: apollo.people.bulk_enrich
@@ -169,7 +187,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "priced per person MATCHED in the batch on the same 1-9 credit scale as single enrichment (1 baseline, +8 if a mobile is revealed), not per call; unmatched rows are free."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://www.apollo.io/pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: priced per person MATCHED in the batch on the same 1-9 credit scale as single enrichment (1 baseline, +8 if a mobile is revealed), not per call; unmatched rows are free.
     docs_url: https://docs.apollo.io/reference/bulk-people-enrichment
 
   - id: apollo.account.usage
@@ -190,5 +214,6 @@ endpoints:
       type: free
       value: 0
       currency: USD
-      note: "free in practice — absent from Apollo's pricing table, and Apollo states endpoints that return no credit-consuming data cost 0 credits — but the docs never say so verbatim for this route."
+      unit: call
+      note: free in practice — absent from Apollo's pricing table, and Apollo states endpoints that return no credit-consuming data cost 0 credits — but the docs never say so verbatim for this route.
     docs_url: https://docs.apollo.io/reference/authentication

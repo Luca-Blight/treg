@@ -38,7 +38,7 @@ endpoints:
         pageToken: {type: string, required: false}
         filter: {type: string, required: false, note: "e.g. type=PERSONAL or type=LOCATION_GROUP"}
       note: "host: mybusinessaccountmanagement.googleapis.com (this provider's base_url). Returns {accounts: [{name: \"accounts/123…\", accountName, type, role}]}; `name` is the account resource id every other endpoint needs. This is also the connection's health probe and resource picker"
-    cost: {type: free, note: "included with the connected account; the Business Profile API is quota-gated per project (default zero until Google approves the access request), no per-call charge"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; the Business Profile API is quota-gated per project (default zero until Google approves the access request), no per-call charge'}
     docs_url: https://developers.google.com/my-business/reference/accountmanagement/rest/v1/accounts/list
 
   - id: google-business-profile.locations
@@ -58,7 +58,7 @@ endpoints:
         pageToken: {type: string, required: false}
         filter: {type: string, required: false, note: "e.g. title=\"Main Street Cafe\""}
       note: "HOST OVERRIDE: mybusinessbusinessinformation.googleapis.com, NOT this provider's base_url. `name` comes back as locations/{location_id} — that id plus the account id is what the reviews endpoint needs. metadata.mapsUri / newReviewUri are only returned if asked for in readMask"
-    cost: {type: free, note: "included with the connected account / platform quotas apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform quotas apply}
     docs_url: https://developers.google.com/my-business/reference/businessinformation/rest/v1/accounts.locations/list
 
   - id: google-business-profile.reviews
@@ -78,7 +78,7 @@ endpoints:
         pageToken: {type: string, required: false}
         orderBy: {type: string, required: false, note: "updateTime desc | rating | rating desc", example: "updateTime desc"}
       note: "HOST OVERRIDE: mybusiness.googleapis.com — reviews are the one job never migrated off the legacy v4 API, so v4 here is correct rather than stale. Response carries averageRating and totalReviewCount alongside reviews[]; starRating is the WORD (\"FIVE\"), not a number, and a review already answered carries a reviewReply object"
-    cost: {type: free, note: "included with the connected account / platform quotas apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform quotas apply}
     docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/list
 
   - id: google-business-profile.review.reply
@@ -99,6 +99,6 @@ endpoints:
         comment: {type: string, required: true, note: "the public reply text, max 4096 characters", example: "Thanks for visiting — glad the flat white landed."}
       bodyType: json
       note: "HOST OVERRIDE: mybusiness.googleapis.com. PUT is an upsert: sending it again REPLACES an existing reply rather than adding a second one. The reply is publicly visible on Google Maps and Search the moment it succeeds, and the reviewer is emailed — confirm before calling"
-    cost: {type: free, note: "included with the connected account / platform quotas apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform quotas apply}
     docs_url: https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/updateReply
 

@@ -41,7 +41,7 @@ endpoints:
         id: {type: string, required: false, note: "UC… channel id — use INSTEAD of mine to read any public channel", example: "UCX6OQ3DkcsbYNE6H8uQQuVA"}
         forHandle: {type: string, required: false, note: "@handle — resolves a handle to a channel", example: "@MrBeast"}
       note: "exactly one of mine | id | forHandle. contentDetails.relatedPlaylists.uploads from part=contentDetails is the uploads playlist id needed by youtube.channel.videos.uploads"
-    cost: {type: free, note: "included with the connected account; 1 quota unit of the project's 10,000/day"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; 1 quota unit of the project''s 10,000/day'}
     test_request:
       queryParams: {part: "snippet,statistics", id: "UCBR8-60-B28hp2BmDPdntcQ"}
     verified: 2026-07-28
@@ -67,7 +67,7 @@ endpoints:
         order: {type: string, required: false, note: "date (default relevance) | rating | title | viewCount", example: "date"}
         maxResults: {type: integer, required: false, note: "1–50, default 5", example: 25}
         pageToken: {type: string, required: false, note: "nextPageToken from the previous response"}
-    cost: {type: free, note: "included with the connected account; 100 quota units — the daily 10,000 allows ~100 of these calls"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; 100 quota units — the daily 10,000 allows ~100 of these calls'}
     test_request:
       queryParams: {part: "snippet", channelId: "UCBR8-60-B28hp2BmDPdntcQ", type: "video", maxResults: 2}
     verified: 2026-07-28
@@ -92,7 +92,7 @@ endpoints:
         maxResults: {type: integer, required: false, note: "1–50, default 5", example: 50}
         pageToken: {type: string, required: false}
       note: "returns ids and snippets only — pass contentDetails.videoId into youtube.video.detail for view counts"
-    cost: {type: free, note: "included with the connected account; 1 quota unit"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; 1 quota unit}
     test_request:
       queryParams: {part: "snippet", playlistId: "UUBR8-60-B28hp2BmDPdntcQ", maxResults: 2}
     verified: 2026-07-28
@@ -114,7 +114,7 @@ endpoints:
         part: {type: string, required: true, note: "snippet=title/description/tags, statistics=counts, contentDetails=duration", example: "snippet,statistics,contentDetails"}
         id: {type: string, required: true, note: "video id (the v= parameter of the watch URL); up to 50 comma-separated ids in one call", example: "dQw4w9WgXcQ"}
       note: "batching 50 ids costs the same 1 unit as one id — always batch"
-    cost: {type: free, note: "included with the connected account; 1 quota unit per call regardless of how many ids"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; 1 quota unit per call regardless of how many ids}
     test_request:
       queryParams: {part: "snippet,statistics", id: "dQw4w9WgXcQ"}
     verified: 2026-07-28
@@ -138,7 +138,7 @@ endpoints:
         pageToken: {type: string, required: false}
         textFormat: {type: string, required: false, note: "html (default) | plainText", example: "plainText"}
       note: "returns top-level threads; each carries up to 5 replies — fetch the rest via comments.list with parentId. Videos with comments disabled answer 403 commentsDisabled"
-    cost: {type: free, note: "included with the connected account; 1 quota unit"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; 1 quota unit}
     test_request:
       queryParams: {part: "snippet", videoId: "dQw4w9WgXcQ", maxResults: 2}
     verified: 2026-07-28
@@ -163,7 +163,7 @@ endpoints:
         regionCode: {type: string, required: false, note: "ISO 3166-1 alpha-2", example: "US"}
         maxResults: {type: integer, required: false, note: "1–50, default 5", example: 10}
       note: "search results carry NO statistics — pass the returned video ids to youtube.video.detail for view/like counts"
-    cost: {type: free, note: "included with the connected account; 100 quota units — the most expensive Data API method, ~100 searches exhausts a day"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; 100 quota units — the most expensive Data API method, ~100 searches exhausts a day'}
     test_request:
       queryParams: {part: "snippet", q: "design tutorial", type: "video", maxResults: 2}
     verified: 2026-07-28
@@ -200,7 +200,7 @@ endpoints:
         status: {type: object, required: true, note: "{\"privacyStatus\": \"private\"|\"unlisted\"|\"public\", \"selfDeclaredMadeForKids\": false} — selfDeclaredMadeForKids is legally required and YouTube rejects the upload without it", example: {privacyStatus: "private", selfDeclaredMadeForKids: false}}
       bodyType: json
       note: "NOT on the usual host path: uploads go to /upload/youtube/v3/videos, and the metadata JSON above is only the FIRST leg. With uploadType=resumable this call returns HTTP 200 and a `Location` header — a session URL you then PUT the video bytes to (in one PUT, or in ranged chunks using Content-Range for resumability). Needs the `post` capability (youtube.upload); a `read` connection 403s. Upload the thumbnail afterwards via youtube.video.thumbnail.set — snippet.thumbnails on this call is ignored"
-    cost: {type: free, note: "no money, but 1,600 of the project's 10,000 daily quota units — roughly six uploads a day across ALL connected channels"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'no money, but 1,600 of the project''s 10,000 daily quota units — roughly six uploads a day across ALL connected channels'}
     unverified: "write action — this publishes to a real channel; requires a deliberate manual test, never an automated verify run"
     docs_url: https://developers.google.com/youtube/v3/docs/videos/insert
 
@@ -221,7 +221,7 @@ endpoints:
         image: {type: string, required: true, note: "the raw image bytes as the request body (Content-Type: image/jpeg or image/png), NOT a JSON field and NOT a URL — 2 MB cap, 1280x720 recommended", example: "<binary image body>"}
       bodyType: form
       note: "same /upload/ host path as the video upload. Custom thumbnails need the channel to be verified — an unverified channel gets HTTP 403 forbidden even though the scope is correct, which reads like a permissions bug and is not one"
-    cost: {type: free, note: "no money; 50 of the project's 10,000 daily quota units"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'no money; 50 of the project''s 10,000 daily quota units'}
     unverified: "write action — modifies a real published video; requires a deliberate manual test, never an automated verify run"
     docs_url: https://developers.google.com/youtube/v3/docs/thumbnails/set
 

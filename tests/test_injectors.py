@@ -29,6 +29,14 @@ def test_env_header():
     assert h["Authorization"] == "Bearer ABC"
 
 
+def test_pasted_newline_is_stripped_before_injection():
+    """A credential pasted with its trailing newline (echo/pbpaste) must not reach the header —
+    a newline is illegal there and httpx fails with an opaque 502 months after the paste."""
+    h: dict[str, str] = {}
+    inject(h, [], _b(), "  ABC\n")
+    assert h["Authorization"] == "Bearer ABC"
+
+
 def test_env_query_appends_pair():
     p: list = []
     inject({}, p, _b(location="query", name="api_key", format="{secret}"), "ABC")

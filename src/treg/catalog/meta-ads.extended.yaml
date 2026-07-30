@@ -40,8 +40,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account
@@ -54,8 +55,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-activities
@@ -68,8 +70,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-adcreatives
@@ -82,8 +85,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.adcreative-create
@@ -97,8 +101,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
   scope_gap: treg's OAuth app does not request this; needs ads_management
@@ -112,8 +117,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-adlabels
@@ -126,8 +132,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-adrules-library
@@ -140,8 +147,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-ads
@@ -154,8 +162,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.ad-create
@@ -169,8 +178,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
   scope_gap: treg's OAuth app does not request this; needs ads_management
@@ -184,8 +194,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.adset-create
@@ -199,8 +210,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
   scope_gap: treg's OAuth app does not request this; needs ads_management
@@ -214,8 +226,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-advideos
@@ -228,8 +241,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.campaign-create
@@ -243,8 +257,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
   scope_gap: treg's OAuth app does not request this; needs ads_management
@@ -258,8 +273,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-customconversions
@@ -272,8 +288,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-delivery-estimate
@@ -287,8 +304,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-reachestimate
@@ -302,8 +320,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-targetingbrowse
@@ -317,8 +336,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-targetingsearch
@@ -332,8 +352,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.account-targetingsuggestions
@@ -347,8 +368,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.ad
@@ -361,8 +383,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.ad-update
@@ -376,8 +399,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
   scope_gap: treg's OAuth app does not request this; needs ads_management
@@ -391,8 +415,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
   scope_gap: treg's OAuth app does not request this; needs leads_retrieval
@@ -407,8 +432,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.adset
@@ -421,8 +447,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.adset-update
@@ -436,8 +463,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
   scope_gap: treg's OAuth app does not request this; needs ads_management
@@ -451,8 +479,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.business-owned-ad-accounts
@@ -465,8 +494,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.campaign
@@ -479,8 +509,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.campaign-update
@@ -494,8 +525,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
   scope_gap: treg's OAuth app does not request this; needs ads_management
@@ -509,8 +541,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference
 - id: meta-ads.x.campaign-adsets
@@ -523,7 +556,8 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/marketing-api/reference

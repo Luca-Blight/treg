@@ -10,6 +10,12 @@ from urllib.parse import urlsplit
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def platform_setting_name(provider: str) -> str:
+    """The Settings attribute holding treg's own key for `provider` — the string a `platform_setting`
+    binding carries, and the only form of a platform credential that ever leaves this module."""
+    return "platform_key_" + (provider or "").lower().replace("-", "_")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="TREG_", extra="ignore")
 
@@ -72,6 +78,65 @@ class Settings(BaseSettings):
     run_rlimits: bool = True
     run_cpu_seconds: int = 300          # CPU time a single server run may burn (backstop to the wall timeout)
     run_fsize_mb: int = 100             # largest single file a server run may write (disk-fill guard)
+
+    # ---- prepaid balance (ledger.py) -----------------------------------------------------------
+    # Platform markup on a call served by a PLATFORM key, applied to the estimate at reserve time and
+    # to the observed cost at settle time. 0.0 = we charge exactly what the provider charges us.
+    # It lives in config (rather than being hardcoded) so turning margin on is a deploy setting, not
+    # a code change — and so the ledger records the rate that was in force for each call.
+    platform_margin: float = 0.0
+    # The signup gift, in micro-USD (1e-6 USD): $1 buys ~1,600 catalog calls, enough for an agent to
+    # get real work done before it ever sees a payment form. Granted once, at org creation only.
+    promo_grant_micro: int = 1_000_000
+    # Upstream HTTP timeout for a relayed call (the shared httpx client). Also the base of the hold
+    # reaper's cutoff: a hold older than call_timeout_s + hold_grace_s belongs to a call that can no
+    # longer be settling, so the reaper returns it (see ledger.reap_stale_holds).
+    call_timeout_s: int = 30
+    hold_grace_s: int = 60
+
+    # ---- tier-4 platform keys (api.py credential ladder) ---------------------------------------
+    # treg's OWN provider keys, spent on a caller's behalf and metered against their prepaid balance.
+    # Read by `proxy.relay` through a `platform_setting` binding (never copied into an org's secrets,
+    # never reachable from a local run). Naming is load-bearing: the binding names the ATTRIBUTE, so
+    # `platform_key_for("tikhub")` → `platform_key_tikhub` → env `TREG_PLATFORM_KEY_TIKHUB`.
+    # dataforseo's value is the base64 of "login:password" (HTTP Basic) — the same bytes a pasted
+    # secret ends up as; the other two are the raw key.
+    platform_key_tikhub: str = ""
+    platform_key_dataforseo: str = ""
+    platform_key_scrapecreators: str = ""
+    # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
+    # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
+    # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
+    # Render dashboard turns the whole feature off without a redeploy.
+    platform_providers: str = ""
+    # Per-org, per-UTC-day ceiling on tier-4 spend. Enforced FAIL-CLOSED (unlike the soft per-user call
+    # cap): a query error refuses the call rather than letting an unbounded amount of our money out.
+    platform_daily_cap_usd: float = 5.0
+
+    # ---- Stripe top-ups (billing.py) -----------------------------------------------------------
+    # OUR billing account's keys. Deliberately NOT the `demo_stripe_*` pair above: that one belongs to
+    # the landing page's sandbox feed and its webhook secret signs a different endpoint. Empty secret
+    # key = top-ups are off (the /billing/* endpoints 503); empty webhook secret = the webhook 404s,
+    # so an unconfigured deploy exposes no unauthenticated POST surface (same posture as the demo).
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    # Top-up amounts, in whole USD (the ONLY place dollars appear — billing.py converts to micro-USD
+    # for the ledger and to integer cents for Stripe at the boundaries, and nothing in between sees a
+    # float). $5 minimum is fee math, not policy: at 2.9% + $0.30 a $1 top-up loses 33% to fees.
+    topup_min_usd: int = 5
+    topup_default_usd: int = 10
+    topup_presets: list[int] = [5, 10, 25, 50]
+    # Auto-top-up defaults, applied when an org enables it without naming its own numbers. The
+    # threshold is deliberately above the $1 promo grant's tail: at agent call rates a $2 floor is one
+    # burst away from empty, and an off-session charge takes seconds to land.
+    autotopup_default_threshold_usd: int = 5
+    autotopup_default_amount_usd: int = 10
+    # Hard guardrails on the off-session charge — the difference between "convenient" and "a runaway
+    # agent bills a card all night". Cap is per calendar month, cooldown is between attempts, and
+    # max_attempts counts CONSECUTIVE failures before auto-top-up disables itself.
+    autotopup_monthly_cap_usd: int = 100
+    autotopup_cooldown_s: int = 3600
+    autotopup_max_attempts: int = 3
 
     # Call-time SSRF guard on the proxy: resolve the upstream host and refuse an internal target. On by
     # default; the test suite disables it (its upstream is an in-process ASGI transport, not real DNS).
@@ -175,6 +240,24 @@ class Settings(BaseSettings):
             return False
         host = (urlsplit(self.public_url).hostname or "").lower()
         return host in ("localhost", "127.0.0.1", "0.0.0.0", "::1", "")
+
+    @property
+    def platform_provider_set(self) -> frozenset[str]:
+        """The allow-listed tier-4 providers (comma-separated `TREG_PLATFORM_PROVIDERS`)."""
+        return frozenset(p.strip().lower() for p in self.platform_providers.split(",") if p.strip())
+
+    def platform_key_for(self, provider: str) -> str | None:
+        """treg's own key for `provider`, or None if tier 4 must not serve it. BOTH conditions have to
+        hold — the provider is allow-listed AND a key is configured — so neither half alone can start
+        spending our money. Returns the value only; callers put the SETTING NAME in the binding
+        (`platform_setting_name`) so the key itself never travels through a tool row."""
+        if (provider or "").lower() not in self.platform_provider_set:
+            return None
+        return getattr(self, platform_setting_name(provider), "") or None
+
+    @property
+    def platform_daily_cap_micro(self) -> int:
+        return int(round(self.platform_daily_cap_usd * 1_000_000))
 
     @property
     def expose_dev_code(self) -> bool:

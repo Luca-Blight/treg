@@ -203,7 +203,14 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
   the provider (via passthrough resolution, so ACLs apply unchanged), ② an org secret tagged with or
   NAMED for the provider, injected through a **virtual, never-persisted tool named after the endpoint**
   (audit records the endpoint id; `tool ls` stays clean), ③ an actionable 404 naming the
-  `connections connect` / `secret add` fix. Tier ④ (treg's own metered key) waits on billing. The server
+  `connections connect` / `secret add` fix — reached only after ④ **treg's own key**, which serves any
+  `platform_eligible` endpoint (priced + provenanced + live-verified) of an allow-listed provider
+  (`TREG_PLATFORM_PROVIDERS`, the kill switch) with **no credential at all**, metering it against the
+  team's prepaid balance: reserve before the request, settle on a billable answer (a provider-reported
+  cost wins over our estimate), release on a 5xx/network failure, per-org daily ceiling, and a 402
+  carrying `balance_micro` / `estimated_cost_micro` / `topup_url` when the balance is short. Tier ④ is
+  shadowed by ① and ② (an org that brought its own key is billed by the provider, not by us) and never
+  resolves for a demo org. `treg catalog get` prints which tier would serve you. The server
   validates method + required params BEFORE money is spent, and fills `{placeholder}` path params from
   `--query` (consumed — dropped from the relayed query via `relay(drop_params=…)`). Members restricted
   via `--tools` get no marketplace calls; a bare provider name (`call tikhub /path`) still 404s but
@@ -255,7 +262,10 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
   (key never on the machine, if `server_runnable`), `--ttl MIN` auto-closes. See [shell](shell.md).
 - **`admin`** (super-admin, cross-tenant): `login --token`, `stats`, `orgs`, `org <id>`, `users`,
   `tools`, `calls`, `health`, `grant`/`revoke <user_id>`, `suspend-user`/`rm-user <user_id>`,
-  `suspend-org`/`rm-org <org_id>`. `_admin_client` sends the saved `admin_token` (`treg admin login`)
+  `suspend-org`/`rm-org <org_id>`. Reconciliation (price drift, provider spend, repeat-query
+  rate) is deliberately NOT a CLI command — query `GET /admin/reconcile/*` directly or run
+  `scripts/provider_balances.py`; see `src/treg/reconcile.py`.
+  `_admin_client` sends the saved `admin_token` (`treg admin login`)
   or falls back to the active org token (works for an `is_superadmin` user). See
   [super-admin](../architecture/super-admin.md).
 - **`skill`** (`init --dir`, `add --dir`, `scaffold <dir> [--out]`, `push <file>`, `ls`, `rm`) — see below.

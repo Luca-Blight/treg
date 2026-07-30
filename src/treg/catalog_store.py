@@ -38,6 +38,27 @@ KINDS = ("data", "action", "account", "utility")
 DEFAULT_KIND = "data"
 HIDDEN_KINDS = frozenset({"account", "utility"})  # served, but never inflate the browse counts
 
+# How much the recorded PRICE is worth as evidence (cost.confidence). It is a claim about the
+# price, not about the endpoint: `verified: 2026-07-28` says the route answered, `confidence:
+# verified` says the money figure was confirmed against something re-checkable.
+#   verified   — observed in real billing, or read from the provider's own live rate card
+#   documented — transcribed from the provider's docs / pricing page (docs lie, and prices move)
+#   inferred   — derived from an adjacent price (a sibling route, a plan average)
+#   unknown    — no figure at all; `value` must be null and `note` must say why
+CONFIDENCES = ("verified", "documented", "inferred", "unknown")
+# Where the figure came from. `observed` is evidenced by the captured example + the provider's own
+# reported charge rather than a URL; every other source names one.
+COST_SOURCES = ("rate_card_api", "docs", "observed", "vendor_email", "inferred")
+# What `per` counts: "value currency per <per> <unit>". Under `currency: unit` the provider bills in
+# its own meter and `unit` names that meter (see `Catalog.cost_view`).
+COST_UNITS = ("call", "result", "row", "record", "keyword", "page", "character", "review",
+              "section", "employee", "GB", "ad", "month", "line", "target", "domain", "item",
+              "api_unit", "analysis_unit", "retrieval_unit", "index_item_unit", "quota_row")
+# A platform key spends OUR money on a caller's behalf, so it is allowed only where the price is
+# machine-computable and provenanced. `account`-kind routes are the provider's own bookkeeping —
+# never worth spending on — and `own_account` scope needs the caller's own credential by definition.
+PLATFORM_INELIGIBLE_KINDS = frozenset({"account"})
+
 
 @dataclass(frozen=True)
 class Catalog:
@@ -46,6 +67,11 @@ class Catalog:
     # Credits are PROVIDER-scoped, never a currency: one scrapecreators credit and one lusha credit
     # are unrelated, so this cannot live in `fx` alongside CNY.
     credit_rates: dict[str, float | None] = field(default_factory=dict)
+    # provider service -> meter name -> USD per one unit of that meter (fx.yaml `unit_rates_usd`).
+    # Providers that bill in a proprietary meter (Semrush API units, Majestic's three pools, Moz's
+    # row quota) get one rate per meter — a provider can have several, and they do not convert
+    # into each other any more than two providers' credits do.
+    unit_rates: dict[str, dict[str, float | None]] = field(default_factory=dict)
     platforms: dict[str, dict] = field(default_factory=dict)     # slug -> {label, category}
     capabilities: dict[str, str] = field(default_factory=dict)   # id -> description
     endpoints: list[dict] = field(default_factory=list)          # normalized endpoint dicts
@@ -62,19 +88,54 @@ class Catalog:
         return [e for e in self.endpoints if e["provider"] == service]
 
     def cost_view(self, cost, provider: str | None = None) -> dict | None:
-        """A cost dict with a computed `usd` field. Source of truth stays in the provider's
-        BILLING currency; USD is derived at serve time from fx.yaml so a rate refresh re-prices
-        the whole catalog at once. `usd` is None when the value or rate is unknown.
+        """A cost dict with a computed `usd` field — USD for ONE chargeable event (one call, or one
+        result, per `cost.type`). Source of truth stays in the provider's BILLING currency; USD is
+        derived at serve time from fx.yaml so a rate refresh re-prices the whole catalog at once.
+        `usd` is None when the value or the rate is unknown — never 0, because "we don't know" and
+        "it's free" are different answers and only one of them may be billed against.
 
-        Currency "credit" is not a currency but a provider-scoped unit, so it converts with the
-        PROVIDER's credit rate (fx.yaml `credit_rates_usd`) — hence `provider`. A provider with a
-        null rate keeps `usd` None and the client displays the native credit count."""
+        Three kinds of denomination convert, and they convert differently:
+          - a real currency (USD, CNY) via fx.yaml `rates_to_usd`, keyed by currency;
+          - `currency: credit` — NOT a currency but a PROVIDER-scoped unit (one scrapecreators
+            credit and one lusha credit are unrelated), via `credit_rates_usd`, keyed by service;
+          - `currency: unit` — the provider's own meter, via `unit_rates_usd[provider][unit]`.
+        Hence `provider`. A null rate keeps `usd` None and the client displays the native amount.
+
+        `per` (default 1) is the quantity the price covers, so a $2.00-per-1,000-rows endpoint
+        records `value: 2.0, per: 1000, unit: row` and prices out at $0.002 per row."""
         if not isinstance(cost, dict):
             return None
         value, cur = cost.get("value"), cost.get("currency", "USD")
-        rate = self.credit_rates.get(provider) if cur == "credit" else self.fx.get(cur)
-        usd = round(value * rate, 6) if isinstance(value, (int, float)) and rate else None
+        per = cost.get("per") or 1
+        if cur == "credit":
+            rate = self.credit_rates.get(provider)
+        elif cur == "unit":
+            rate = self.unit_rates.get(provider or "", {}).get(str(cost.get("unit") or ""))
+        else:
+            rate = self.fx.get(cur)
+        # 9 decimals, not 6: a per-row price can be a ten-thousandth of a cent and rounding it to
+        # zero would turn a real charge into "free" for anything reading `usd` as money.
+        usd = (round(value * rate / per, 9)
+               if isinstance(value, (int, float)) and rate is not None and per > 0 else None)
         return {**cost, "usd": usd}
+
+    def platform_eligible(self, endpoint: dict) -> bool:
+        """May treg serve this endpoint with a PLATFORM key, billed to the caller's balance?
+
+        One predicate, so the API, the validator and the proxy cannot drift apart. It is
+        deliberately conservative on every axis: a missing or merely-documented price must read as
+        "refuse", never as free (docs/context/architecture/catalog.md, Cost). Four things must hold:
+        the USD cost is computable, the price is `confidence: verified`, the route is not the
+        caller's own account's business (`own_account` scope / `account` kind), and the route has
+        been called for real at least once — an unverified route can fail in ways that still bill.
+        """
+        cost = self.cost_view(endpoint.get("cost"), endpoint.get("provider"))
+        return bool(cost
+                    and cost.get("usd") is not None
+                    and cost.get("confidence") == "verified"
+                    and endpoint.get("scope") != "own_account"
+                    and (endpoint.get("kind") or DEFAULT_KIND) not in PLATFORM_INELIGIBLE_KINDS
+                    and endpoint.get("verified"))
 
 
 _CACHE: Catalog | None = None
@@ -153,8 +214,16 @@ def _parse(directory: Path) -> Catalog:
         str(service): (v.get("usd") if isinstance(v, dict) else v)
         for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
     }
-    return Catalog(fx=fx, credit_rates=credit_rates, platforms=platforms, capabilities=capabilities,
-                   endpoints=endpoints, by_id=by_id, provider_meta=provider_meta)
+    # Same shape one level deeper: service -> meter -> {usd, basis, source, checked}. A provider
+    # bills in several meters at once (Majestic has three), so the meter name is part of the key.
+    unit_rates = {
+        str(service): {str(meter): (v.get("usd") if isinstance(v, dict) else v)
+                       for meter, v in (meters or {}).items()}
+        for service, meters in (fx_doc.get("unit_rates_usd") or {}).items()
+    }
+    return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates, platforms=platforms,
+                   capabilities=capabilities, endpoints=endpoints, by_id=by_id,
+                   provider_meta=provider_meta)
 
 
 # The subject an endpoint is ABOUT, within its platform — the section a platform page files it
@@ -234,16 +303,25 @@ def _effective_cost(raw: dict):
     Providers that price per API family (DataForSEO) ship no per-route cost block, which left every
     row reading "—" even after live verification had recorded the provider's own stated charge.
     An observed price is real money that was actually billed — better display data than silence.
-    Zero observed cost means the call was genuinely free (some routes bill nothing)."""
+    Zero observed cost means the call was genuinely free (some routes bill nothing).
+
+    An observed price is also the STRONGEST provenance the catalog has: the figure is what the
+    provider itself reported charging for that exact call, on the date in `verified`. So the
+    synthesized block carries `source: observed, confidence: verified` and needs no `source_url` —
+    its evidence is the captured example response, not a page that might have moved since. Without
+    a `verified` date there is no date to stand behind, and the price stays unprovenanced."""
     cost = raw.get("cost")
     if isinstance(cost, dict) and (cost.get("value") is not None or cost.get("type") == "free"):
         return cost
     oc = raw.get("observed_cost")
     if oc is None:
         return cost or None
+    when = str(raw.get("verified") or "")
+    seen = {"source": "observed", "confidence": "verified", "checked": when} if when else {}
     if oc == 0:
-        return {"type": "free", "note": "no charge observed at verification"}
-    return {"type": "per_call", "value": oc, "currency": "USD",
+        return {"type": "free", "value": 0, "currency": "USD", "per": 1, "unit": "call", **seen,
+                "note": "no charge observed at verification"}
+    return {"type": "per_call", "value": oc, "currency": "USD", "per": 1, "unit": "call", **seen,
             "note": "price observed at live verification (provider-reported charge)"}
 
 
@@ -328,6 +406,10 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # the row — not a second request away
         "call_template": call_template(ep),
         "cost": cat.cost_view(ep["cost"], ep["provider"]) if cat else ep["cost"],
+        # whether treg may serve this route with its OWN key, billed to the caller's balance —
+        # a fact about the row that decides whether the caller needs a credential at all, so it
+        # rides on the row rather than being re-derived per client (see `Catalog.platform_eligible`)
+        "platform_eligible": cat.platform_eligible(ep) if cat else None,
         "verified": ep["verified"],
         "docs_url": ep["docs_url"],
         "has_example": bool(ep["example_file"]),

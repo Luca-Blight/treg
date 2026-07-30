@@ -35,6 +35,9 @@ endpoints:
   summary: Returns the number of API credits remaining on your Scrape Creators account.
   cost:
     type: free
+    value: 0
+    currency: USD
+    unit: call
   docs_url: https://docs.scrapecreators.com/account/credit-balance
   test_request:
     queryParams: {}
@@ -125,6 +128,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/amazon/shop
   input:
     queryParams:
@@ -150,6 +159,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/apple-music/album
   input:
     queryParams:
@@ -178,6 +193,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/apple-music/artist
   input:
     queryParams:
@@ -206,6 +227,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/apple-music/search
   input:
     queryParams:
@@ -234,6 +261,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/apple-music/track
   input:
     queryParams:
@@ -262,6 +295,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/bluesky/post
   input:
     queryParams:
@@ -286,6 +325,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/bluesky/profile
   input:
     queryParams:
@@ -310,6 +355,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/bluesky/user/posts
   input:
     queryParams:
@@ -340,6 +391,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/detect-age-gender
   input:
     queryParams:
@@ -363,6 +420,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/adLibrary/ad
   input:
     queryParams:
@@ -401,6 +464,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/adLibrary/ad/transcript
   input:
     queryParams:
@@ -435,6 +504,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/adLibrary/company/ads
   input:
     queryParams:
@@ -509,6 +584,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/adLibrary/search/ads
   input:
     queryParams:
@@ -582,6 +663,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/adLibrary/search/companies
   input:
     queryParams:
@@ -605,6 +692,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/event/details
   input:
     queryParams:
@@ -636,6 +729,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/events
   input:
     queryParams:
@@ -671,6 +770,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/events/search
   input:
     queryParams:
@@ -702,6 +807,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/group
   input:
     queryParams:
@@ -733,6 +844,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/group/posts
   input:
     queryParams:
@@ -774,6 +891,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/marketplace/item
   input:
     queryParams:
@@ -805,6 +928,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/marketplace/location/search
   input:
     queryParams:
@@ -831,6 +960,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/marketplace/search
   input:
     queryParams:
@@ -919,6 +1054,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/post
   input:
     queryParams:
@@ -950,6 +1091,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/post/comment/replies
   input:
     queryParams:
@@ -986,6 +1133,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/post/comments
   input:
     queryParams:
@@ -1021,6 +1174,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/post/transcript
   input:
     queryParams:
@@ -1049,6 +1208,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/profile
   input:
     queryParams:
@@ -1090,6 +1255,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/profile/events
   input:
     queryParams:
@@ -1121,6 +1292,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/profile/photos
   input:
     queryParams:
@@ -1158,6 +1335,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/profile/posts
   input:
     queryParams:
@@ -1193,6 +1376,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/facebook/profile/reels
   input:
     queryParams:
@@ -1229,6 +1418,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/repository
   input:
     queryParams:
@@ -1253,6 +1448,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/trending/developers
   input:
     queryParams:
@@ -1282,6 +1483,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/trending/repositories
   input:
     queryParams:
@@ -1316,6 +1523,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/user
   input:
     queryParams:
@@ -1345,6 +1558,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/user/activity
   input:
     queryParams:
@@ -1384,6 +1603,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/user/contributions
   input:
     queryParams:
@@ -1418,6 +1643,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/user/followers
   input:
     queryParams:
@@ -1452,6 +1683,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/user/following
   input:
     queryParams:
@@ -1486,6 +1723,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/user/pull-requests
   input:
     queryParams:
@@ -1525,6 +1768,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/github/user/repositories
   input:
     queryParams:
@@ -1574,6 +1823,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/google/ad
   input:
     queryParams:
@@ -1604,6 +1859,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/google/adLibrary/advertisers/search
   input:
     queryParams:
@@ -1634,6 +1895,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/google/company/ads
   input:
     queryParams:
@@ -1705,6 +1972,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/google/search
   input:
     queryParams:
@@ -1746,6 +2019,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/audio/reels
   input:
     queryParams:
@@ -1777,6 +2056,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/basic-profile
   input:
     queryParams:
@@ -1808,6 +2093,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/post
   input:
     queryParams:
@@ -1849,6 +2140,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/profile
   input:
     queryParams:
@@ -1884,6 +2181,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/reels/trending
   test_request:
     queryParams: {}
@@ -1902,6 +2205,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/search/hashtag
   input:
     queryParams:
@@ -1943,6 +2252,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/search/profiles
   input:
     queryParams:
@@ -1973,6 +2288,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/user/embed
   input:
     queryParams:
@@ -1999,6 +2320,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/user/highlight/detail
   input:
     queryParams:
@@ -2025,6 +2352,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/user/highlights
   input:
     queryParams:
@@ -2056,6 +2389,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/user/reels
   input:
     queryParams:
@@ -2096,6 +2435,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/kick/clip
   input:
     queryParams:
@@ -2119,6 +2464,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/komi
   input:
     queryParams:
@@ -2148,6 +2499,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/kwai/post
   input:
     queryParams:
@@ -2174,6 +2531,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/kwai/profile
   input:
     queryParams:
@@ -2204,6 +2567,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/kwai/user/posts
   input:
     queryParams:
@@ -2244,6 +2613,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkbio
   input:
     queryParams:
@@ -2273,6 +2648,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkedin/ad
   input:
     queryParams:
@@ -2299,6 +2680,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkedin/ads/search
   input:
     queryParams:
@@ -2355,6 +2742,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkedin/company
   input:
     queryParams:
@@ -2381,6 +2774,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkedin/company/posts
   input:
     queryParams:
@@ -2412,6 +2811,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkedin/post
   input:
     queryParams:
@@ -2437,6 +2842,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkedin/post/transcript
   input:
     queryParams:
@@ -2463,6 +2874,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkedin/profile
   input:
     queryParams:
@@ -2489,6 +2906,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkedin/search/posts
   input:
     queryParams:
@@ -2524,6 +2947,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linkme
   input:
     queryParams:
@@ -2552,6 +2981,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/linktree
   input:
     queryParams:
@@ -2580,6 +3015,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/pillar
   input:
     queryParams:
@@ -2608,6 +3049,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/pinterest/board
   input:
     queryParams:
@@ -2642,6 +3089,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/pinterest/pin
   input:
     queryParams:
@@ -2676,6 +3129,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/pinterest/search
   input:
     queryParams:
@@ -2710,6 +3169,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/pinterest/user/boards
   input:
     queryParams:
@@ -2740,6 +3205,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/reddit/post/comments
   input:
     queryParams:
@@ -2773,6 +3244,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/reddit/post/transcript
   input:
     queryParams:
@@ -2807,6 +3284,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/reddit/search
   input:
     queryParams:
@@ -2850,6 +3333,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/reddit/subreddit
   input:
     queryParams:
@@ -2896,6 +3385,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/reddit/subreddit/details
   input:
     queryParams:
@@ -2929,6 +3424,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/reddit/subreddit/search
   input:
     queryParams:
@@ -2969,6 +3470,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/rumble/channel/videos
   input:
     queryParams:
@@ -3003,6 +3510,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/rumble/search
   input:
     queryParams:
@@ -3032,6 +3545,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/rumble/video
   input:
     queryParams:
@@ -3056,6 +3575,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/rumble/video/comments
   input:
     queryParams:
@@ -3080,6 +3605,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/rumble/video/transcript
   input:
     queryParams:
@@ -3104,6 +3635,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/snapchat/profile
   input:
     queryParams:
@@ -3127,6 +3664,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/snapchat/spotlight
   input:
     queryParams:
@@ -3150,6 +3693,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/snapchat/spotlight/comments
   input:
     queryParams:
@@ -3178,6 +3727,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/soundcloud/artist
   input:
     queryParams:
@@ -3206,6 +3761,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/soundcloud/artist/tracks
   input:
     queryParams:
@@ -3239,6 +3800,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/soundcloud/track
   input:
     queryParams:
@@ -3262,6 +3829,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/spotify/album
   input:
     queryParams:
@@ -3291,6 +3864,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/spotify/artist
   input:
     queryParams:
@@ -3320,6 +3899,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/spotify/podcast
   input:
     queryParams:
@@ -3349,6 +3934,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/spotify/podcast/episodes
   input:
     queryParams:
@@ -3383,6 +3974,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/spotify/search
   input:
     queryParams:
@@ -3407,6 +4004,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/spotify/track
   input:
     queryParams:
@@ -3437,6 +4040,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/threads/post
   input:
     queryParams:
@@ -3471,6 +4080,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/threads/profile
   input:
     queryParams:
@@ -3500,6 +4115,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/threads/search
   input:
     queryParams:
@@ -3539,6 +4160,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/threads/search/users
   input:
     queryParams:
@@ -3563,6 +4190,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/threads/user/posts
   input:
     queryParams:
@@ -3592,6 +4225,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/ad-library/ad
   input:
     queryParams:
@@ -3616,6 +4255,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/ad-library/search
   input:
     queryParams:
@@ -3644,6 +4289,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/creators/popular
   input:
     queryParams:
@@ -3688,6 +4339,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/get-trending-feed
   input:
     queryParams:
@@ -3717,6 +4374,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/live
   input:
     queryParams:
@@ -3747,6 +4410,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/product
   input:
     queryParams:
@@ -3776,6 +4445,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/profile
   input:
     queryParams:
@@ -3810,6 +4485,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/profile/region
   input:
     queryParams:
@@ -3834,6 +4515,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/search/hashtag
   input:
     queryParams:
@@ -3871,6 +4558,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/search/keyword
   input:
     queryParams:
@@ -3917,6 +4610,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/search/suggestions
   input:
     queryParams:
@@ -3946,6 +4645,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/search/top
   input:
     queryParams:
@@ -3988,6 +4693,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/search/users
   input:
     queryParams:
@@ -4020,6 +4731,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/shop/product/reviews
   input:
     queryParams:
@@ -4059,6 +4776,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/shop/products
   input:
     queryParams:
@@ -4097,6 +4820,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/shop/search
   input:
     queryParams:
@@ -4131,6 +4860,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/song
   input:
     queryParams:
@@ -4155,6 +4890,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/song/videos
   input:
     queryParams:
@@ -4183,6 +4924,12 @@ endpoints:
     type: per_call
     value: 26
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/user/audience
   input:
     queryParams:
@@ -4207,6 +4954,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/user/followers
   input:
     queryParams:
@@ -4245,6 +4998,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/user/following
   input:
     queryParams:
@@ -4278,6 +5037,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/user/live
   input:
     queryParams:
@@ -4301,6 +5066,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/user/showcase
   input:
     queryParams:
@@ -4335,6 +5106,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/video/comment/replies
   input:
     queryParams:
@@ -4370,6 +5147,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/video/comments
   input:
     queryParams:
@@ -4401,6 +5184,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/video/transcript
   input:
     queryParams:
@@ -4434,6 +5223,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/truthsocial/post
   input:
     queryParams:
@@ -4457,6 +5252,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/truthsocial/profile
   input:
     queryParams:
@@ -4480,6 +5281,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/truthsocial/user/posts
   input:
     queryParams:
@@ -4545,6 +5352,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/twitch/profile
   input:
     queryParams:
@@ -4574,6 +5387,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/twitch/user/schedule
   input:
     queryParams:
@@ -4598,6 +5417,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/twitch/user/videos
   input:
     queryParams:
@@ -4630,6 +5455,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/twitter/community
   input:
     queryParams:
@@ -4654,6 +5485,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/twitter/community/tweets
   input:
     queryParams:
@@ -4679,6 +5516,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/twitter/profile
   input:
     queryParams:
@@ -4708,6 +5551,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/twitter/tweet
   input:
     queryParams:
@@ -4740,6 +5589,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/twitter/tweet/transcript
   input:
     queryParams:
@@ -4770,6 +5625,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/twitter/user-tweets
   input:
     queryParams:
@@ -4799,6 +5660,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/channel
   input:
     queryParams:
@@ -4838,6 +5705,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/channel-videos
   input:
     queryParams:
@@ -4887,6 +5760,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/channel/community-posts
   input:
     queryParams:
@@ -4920,6 +5799,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/channel/lives
   input:
     queryParams:
@@ -4953,6 +5838,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/channel/playlists
   input:
     queryParams:
@@ -4987,6 +5878,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/channel/shorts
   input:
     queryParams:
@@ -5026,6 +5923,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/community-post
   input:
     queryParams:
@@ -5049,6 +5952,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/playlist
   input:
     queryParams:
@@ -5073,6 +5982,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/search
   input:
     queryParams:
@@ -5129,6 +6044,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/search/hashtag
   input:
     queryParams:
@@ -5163,6 +6084,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/shorts/trending
   test_request:
     queryParams: {}
@@ -5179,6 +6106,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/video
   input:
     queryParams:
@@ -5213,6 +6146,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/video/comment/replies
   input:
     queryParams:
@@ -5237,6 +6176,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/video/comments
   input:
     queryParams:
@@ -5270,6 +6215,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/video/sponsors
   input:
     queryParams:
@@ -5299,6 +6250,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/youtube/video/transcript
   input:
     queryParams:
@@ -5332,6 +6289,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/media/transcript
   input:
     queryParams:
@@ -5360,6 +6323,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/post/comments
   input:
     queryParams:
@@ -5391,6 +6360,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/reels/search
   input:
     queryParams:
@@ -5427,6 +6402,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/instagram/user/posts
   input:
     queryParams:
@@ -5455,6 +6436,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/video
   input:
     queryParams:
@@ -5501,6 +6488,12 @@ endpoints:
     type: per_call
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://docs.scrapecreators.com/openapi.json
+    checked: '2026-07-28'
+    confidence: verified
   docs_url: https://docs.scrapecreators.com/tiktok/profile/videos
   input:
     queryParams:

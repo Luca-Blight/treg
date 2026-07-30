@@ -36,7 +36,7 @@ endpoints:
     summary: "Get the connected LinkedIn member's identity (name, headline picture, email, member id)"
     input:
       note: "no parameters — the token identifies the member. Returns OpenID Connect claims: sub (the member id), name, given_name, family_name, picture, email, locale. The author URN every post needs is urn:li:person:{sub}"
-    cost: {type: free, note: "included with the connected account; LinkedIn applies daily per-app and per-member call limits, no per-call price"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; LinkedIn applies daily per-app and per-member call limits, no per-call price'}
     docs_url: https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2
 
   - id: linkedin.linkedin.user.post.create
@@ -58,7 +58,7 @@ endpoints:
         isReshareDisabledByAuthor: {type: boolean, required: false, example: false}
       bodyType: json
       note: "headers are mandatory and unusual: `LinkedIn-Version: 202601` (a YYYYMM version LinkedIn retires quarterly) and `X-Restli-Protocol-Version: 2.0.0`. Success is HTTP 201 with the post URN in the x-restli-id response header, not in the body. Images/video need a separate initializeUpload call first"
-    cost: {type: free, note: "included with the connected account; capped by LinkedIn's daily share throttles (per member and per app)"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; capped by LinkedIn's daily share throttles (per member and per app)}
     unverified: "write action — this publishes to a real feed; requires a deliberate manual test, never an automated verify run"
     docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api
 
@@ -89,7 +89,7 @@ endpoints:
         initializeUploadRequest: {type: object, required: true, note: "{\"owner\": \"urn:li:person:{sub}\"} — the member URN from linkedin.user.profile", example: {owner: "urn:li:person:ABC123xyz"}}
       bodyType: json
       note: "same mandatory headers as the post route (LinkedIn-Version: 202601, X-Restli-Protocol-Version: 2.0.0). The response is {value: {uploadUrl, image}} — `image` is the urn:li:image:… you put in the post's content.media.id, `uploadUrl` is where you PUT the raw bytes in a single request (see the block comment). The URL expires quickly; upload right after initializing. A PDF carousel uses the identical shape at /rest/documents?action=initializeUpload and yields a urn:li:document:…"
-    cost: {type: free, note: "included with the connected account; no per-call price, LinkedIn throttles per member and per app"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; no per-call price, LinkedIn throttles per member and per app'}
     unverified: "write action — part of the publish flow; requires a deliberate manual test, never an automated verify run"
     docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/images-api
 
@@ -107,7 +107,7 @@ endpoints:
         initializeUploadRequest: {type: object, required: true, note: "{\"owner\": \"urn:li:person:{sub}\", \"fileSizeBytes\": <exact byte count>, \"uploadCaptions\": false, \"uploadThumbnail\": false} — fileSizeBytes is mandatory and must be exact; LinkedIn sizes the part list from it", example: {owner: "urn:li:person:ABC123xyz", fileSizeBytes: 8388608, uploadCaptions: false, uploadThumbnail: false}}
       bodyType: json
       note: "returns {value: {video, uploadInstructions: [{uploadUrl, firstByte, lastByte}, …]}}. PUT each 2 MB part to its own uploadUrl and KEEP the `etag` response header of every part — finalizeUpload will not accept the video without the full ordered list. Then call linkedin.video.upload.finalize"
-    cost: {type: free, note: "included with the connected account; no per-call price, LinkedIn throttles per member and per app"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; no per-call price, LinkedIn throttles per member and per app'}
     unverified: "write action — part of the publish flow; requires a deliberate manual test, never an automated verify run"
     docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api
 
@@ -125,7 +125,7 @@ endpoints:
         finalizeUploadRequest: {type: object, required: true, note: "{\"video\": \"urn:li:video:…\", \"uploadToken\": \"\", \"uploadedPartIds\": [\"<etag of part 1>\", …]} — uploadToken is an empty string, and uploadedPartIds must be the etags IN UPLOAD ORDER", example: {video: "urn:li:video:C4E10AQ…", uploadToken: "", uploadedPartIds: ["etag-part-1", "etag-part-2"]}}
       bodyType: json
       note: "finalizing does not make the video usable — LinkedIn then transcodes it asynchronously. Poll GET /rest/videos/{url-encoded urn} until status is AVAILABLE before referencing it in content.media.id, or /rest/posts rejects the post. NOTE: a w_member_social (personal) token is write-only on /rest/documents, so a PDF carousel cannot be polled the same way — wait a fixed ~10s instead"
-    cost: {type: free, note: "included with the connected account; no per-call price, LinkedIn throttles per member and per app"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; no per-call price, LinkedIn throttles per member and per app'}
     unverified: "write action — part of the publish flow; requires a deliberate manual test, never an automated verify run"
     docs_url: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/videos-api
 

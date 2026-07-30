@@ -51,7 +51,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 SEARCH credit, charged only when an email is found; a miss is free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 SEARCH credit, charged only when an email is found; a miss is free.
     docs_url: https://hunter.io/api-documentation/v2#email-finder
 
   - id: hunter.people.email.verify
@@ -73,7 +79,13 @@ endpoints:
       type: per_call
       value: 0.5
       currency: credit
-      note: "0.5 VERIFICATION credits per call — half a credit, a separate pool from search credits. Re-verifying the same address within the plan period is not re-charged."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 0.5 VERIFICATION credits per call — half a credit, a separate pool from search credits. Re-verifying the same address within the plan period is not re-charged.
     docs_url: https://hunter.io/api-documentation/v2#email-verifier
 
   - id: hunter.companies.emails
@@ -107,7 +119,13 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 SEARCH credit per 10 emails returned (rounded up); a domain with no results is free."
+      per: 10
+      unit: record
+      source: docs
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 SEARCH credit per 10 emails returned (rounded up); a domain with no results is free.
     docs_url: https://hunter.io/api-documentation/v2#domain-search
 
   - id: hunter.people.enrich
@@ -131,7 +149,13 @@ endpoints:
       type: per_success
       value: 0.2
       currency: credit
-      note: "0.2 credits, billed CONDITIONALLY — charged only when email, full name AND position all come back. A 404 or a partial record is free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 0.2 credits, billed CONDITIONALLY — charged only when email, full name AND position all come back. A 404 or a partial record is free.
     docs_url: https://hunter.io/api-documentation/v2#people-enrichment
 
   - id: hunter.companies.enrich
@@ -154,7 +178,13 @@ endpoints:
       type: per_success
       value: 0.2
       currency: credit
-      note: "0.2 credits, billed CONDITIONALLY — charged only when company name, category/description/tags, location or country code AND company size all come back. A 404 or a partial record is free. Still the cheapest companies.enrich in this catalog."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 0.2 credits, billed CONDITIONALLY — charged only when company name, category/description/tags, location or country code AND company size all come back. A 404 or a partial record is free. Still the cheapest companies.enrich in this catalog.
     docs_url: https://hunter.io/api-documentation/v2#company-enrichment
 
   - id: hunter.account.usage
@@ -169,5 +199,5 @@ endpoints:
     input:
       note: "no parameters — the key rides in the X-API-KEY header"
     test_request: {queryParams: {}}
-    cost: {type: free, value: 0, currency: USD, note: "free — consumes no search or verification credits; this is the registry's health probe"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: free — consumes no search or verification credits; this is the registry's health probe}
     docs_url: https://hunter.io/api-documentation/v2#account

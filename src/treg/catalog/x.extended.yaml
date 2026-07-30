@@ -37,8 +37,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
 - id: x.x.validate-account-activity-subscription
@@ -52,8 +53,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read, dm.write'
@@ -73,8 +75,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read, dm.write'
@@ -99,8 +102,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -119,8 +123,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -142,8 +147,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -171,8 +177,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -191,8 +198,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.read'
@@ -216,8 +224,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -237,8 +246,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -257,8 +267,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -282,8 +293,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -304,8 +316,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -324,8 +337,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read'
@@ -355,8 +369,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
@@ -378,8 +393,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
@@ -403,8 +419,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read'
@@ -425,8 +442,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
@@ -452,8 +470,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
@@ -474,8 +493,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: broadcast.read, broadcast.write'
@@ -500,8 +520,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -525,8 +546,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -548,8 +570,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -564,8 +587,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -585,8 +609,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -614,8 +639,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -640,8 +666,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -667,8 +694,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -694,8 +722,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -721,8 +750,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -747,8 +777,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -768,8 +799,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -791,8 +823,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -818,8 +851,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -844,8 +878,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -868,8 +903,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -897,8 +933,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
@@ -919,8 +956,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -942,8 +980,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -963,8 +1002,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -983,8 +1023,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1004,8 +1045,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1033,8 +1075,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
 - id: x.x.delete-connections-by-endpoint
@@ -1048,8 +1091,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1068,8 +1112,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -1090,8 +1135,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -1117,8 +1163,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -1150,8 +1197,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -1177,8 +1225,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -1203,8 +1252,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -1235,8 +1285,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -1264,8 +1315,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read, dm.write'
@@ -1285,8 +1337,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -1307,8 +1360,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1335,8 +1389,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1387,8 +1442,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1440,8 +1496,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read, list.write'
@@ -1463,8 +1520,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
@@ -1484,8 +1542,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
@@ -1506,8 +1565,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
@@ -1532,8 +1592,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
@@ -1561,8 +1622,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
@@ -1591,8 +1653,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
@@ -1618,8 +1681,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
@@ -1642,8 +1706,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
@@ -1671,8 +1736,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1691,8 +1757,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1721,8 +1788,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -1744,8 +1812,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -1767,8 +1836,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -1790,8 +1860,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -1815,8 +1886,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -1838,8 +1910,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -1861,8 +1934,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -1888,8 +1962,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: media.write'
@@ -1909,8 +1984,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1929,8 +2005,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1955,8 +2032,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1976,8 +2054,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -1998,8 +2077,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2019,8 +2099,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2045,8 +2126,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2075,8 +2157,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2096,8 +2179,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
 - id: x.x.get-spaces-by-ids
@@ -2110,8 +2194,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
@@ -2131,8 +2216,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
@@ -2152,8 +2238,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
@@ -2179,8 +2266,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
@@ -2200,8 +2288,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
@@ -2229,8 +2318,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: space.read'
@@ -2258,8 +2348,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2282,8 +2373,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2302,8 +2394,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2332,8 +2425,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2364,8 +2458,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2410,8 +2505,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2457,8 +2553,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2513,8 +2610,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2569,8 +2667,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2625,8 +2724,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2681,8 +2781,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2738,8 +2839,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2766,8 +2868,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2810,8 +2913,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2866,8 +2970,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2912,8 +3017,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -2959,8 +3065,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3013,8 +3120,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3041,8 +3149,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3070,8 +3179,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3090,8 +3200,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
 - id: x.x.delete-webhooks-stream-link
@@ -3105,8 +3216,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3125,8 +3237,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3145,8 +3258,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3165,8 +3279,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3185,8 +3300,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.read'
@@ -3214,8 +3330,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3245,8 +3362,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3273,8 +3391,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3302,8 +3421,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: tweet.moderate.write'
@@ -3329,8 +3449,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3348,8 +3469,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3368,8 +3490,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3389,8 +3512,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3421,8 +3545,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   capability: x.trending.personalized
@@ -3437,8 +3562,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -3457,8 +3583,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: timeline.read'
@@ -3482,8 +3609,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3508,8 +3636,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3528,8 +3657,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -3556,8 +3686,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: block.read'
@@ -3584,8 +3715,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.read'
@@ -3614,8 +3746,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.write'
@@ -3640,8 +3773,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.read'
@@ -3670,8 +3804,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.write'
@@ -3696,8 +3831,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.read'
@@ -3729,8 +3865,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: bookmark.write'
@@ -3754,8 +3891,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -3776,8 +3914,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -3797,8 +3936,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
@@ -3827,8 +3967,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
@@ -3854,8 +3995,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
@@ -3878,8 +4020,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: follows.read'
@@ -3907,8 +4050,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: follows.read'
@@ -3937,8 +4081,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: follows.write'
@@ -3963,8 +4108,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.read'
@@ -3993,8 +4139,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.write'
@@ -4020,8 +4167,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: like.write'
@@ -4044,8 +4192,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
@@ -4072,8 +4221,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -4114,8 +4264,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: mute.read'
@@ -4143,8 +4294,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: mute.write'
@@ -4169,8 +4321,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
@@ -4198,8 +4351,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.read'
@@ -4220,8 +4374,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
@@ -4247,8 +4402,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: list.write'
@@ -4272,8 +4428,9 @@ endpoints:
   scope: any_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.read'
@@ -4293,8 +4450,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: dm.write'
@@ -4319,8 +4477,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -4345,8 +4504,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -4368,8 +4528,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -4414,8 +4575,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: follows.write'
@@ -4439,8 +4601,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   scope_gap: 'treg''s OAuth app does not request this; needs: mute.write'
@@ -4464,8 +4627,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
 - id: x.x.create-webhooks
@@ -4479,8 +4643,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -4500,8 +4665,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -4521,8 +4687,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:
@@ -4541,8 +4708,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; consumed from the X API plan's monthly post cap
   docs_url: https://docs.x.com/x-api
   input:

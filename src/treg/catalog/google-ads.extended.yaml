@@ -36,8 +36,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -63,8 +64,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -90,8 +92,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -117,8 +120,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -144,8 +148,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -171,8 +176,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -198,8 +204,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -225,8 +232,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -252,8 +260,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -279,8 +288,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -306,8 +316,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -333,8 +344,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -360,8 +372,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -387,8 +400,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -414,8 +428,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -441,8 +456,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -468,8 +484,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -495,8 +512,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -522,8 +540,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -549,8 +568,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -576,8 +596,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -603,8 +624,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -630,8 +652,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -657,8 +680,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -684,8 +708,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -711,8 +736,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -738,8 +764,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -765,8 +792,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -792,8 +820,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -819,8 +848,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -846,8 +876,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -873,8 +904,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -900,8 +932,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -927,8 +960,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -954,8 +988,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -981,8 +1016,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -1008,8 +1044,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -1035,8 +1072,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -1062,8 +1100,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -1089,8 +1128,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -1116,8 +1156,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:
@@ -1143,8 +1184,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: 'no per-call charge; counts against the developer token''s daily operation limit (Basic access: 15,000 operations/day)'
   input:
     pathParams:

@@ -44,7 +44,7 @@ endpoints:
         keepEmptyRows: {type: boolean, required: false}
       bodyType: json
       note: "request shape previously live-verified via the registry entry's examples. An incompatible dimension/metric pair fails the whole call — check google.analytics.metadata for what combines. Sampling and thresholding are reported back in the response metadata, not as an error"
-    cost: {type: free, note: "included with the connected account; GA4 enforces per-property token quotas (core tokens per hour/day) rather than a per-call price"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; GA4 enforces per-property token quotas (core tokens per hour/day) rather than a per-call price}
     test_request:
       pathParams: {property_id: "483566226"}
       body:
@@ -74,7 +74,7 @@ endpoints:
         limit: {type: integer, required: false, example: 20}
       bodyType: json
       note: "covers the last 30 minutes only, and takes NO dateRanges — passing one is an error. Reusing a standard-report dimension name here is the usual failure"
-    cost: {type: free, note: "included with the connected account; realtime requests draw on a separate, smaller hourly token quota"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; realtime requests draw on a separate, smaller hourly token quota'}
     test_request:
       pathParams: {property_id: "483566226"}
       body:
@@ -97,7 +97,7 @@ endpoints:
       pathParams:
         property_id: {type: string, required: true, example: "123456789"}
       note: "the cheap way to stop guessing: returns every apiName with its uiName, description and deprecation status — including the property's CUSTOM dimensions and metrics, which no static documentation can list. Free of the report token quota, so call it before composing a report"
-    cost: {type: free, note: "included with the connected account / platform quotas apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform quotas apply}
     test_request:
       pathParams: {property_id: "483566226"}
     verified: 2026-07-28

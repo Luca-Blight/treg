@@ -52,7 +52,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit per email found; a null result costs nothing. Dollar value depends on plan."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per email found; a null result costs nothing. Dollar value depends on plan.
     verified: 2026-07-28
     example_response: examples/leadmagic.people.email.find.json
     docs_url: https://leadmagic.io/docs/api-reference/email-finder
@@ -77,7 +83,13 @@ endpoints:
       type: per_success
       value: 0.25
       currency: credit
-      note: "0.25 credits per DEFINITIVE result (valid or invalid) — four validations to a credit. 'unknown' results and RFC syntax failures are free. Rate limit 300 req/min."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 0.25 credits per DEFINITIVE result (valid or invalid) — four validations to a credit. 'unknown' results and RFC syntax failures are free. Rate limit 300 req/min.
     verified: 2026-07-28
     example_response: examples/leadmagic.people.email.verify.json
     docs_url: https://leadmagic.io/docs/api-reference/email-validation
@@ -102,7 +114,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit per profile matched; free when the profile cannot be resolved."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per profile matched; free when the profile cannot be resolved.
     verified: 2026-07-28
     example_response: examples/leadmagic.people.enrich.json
     docs_url: https://leadmagic.io/docs/reference/profile-search
@@ -129,7 +147,13 @@ endpoints:
       type: per_success
       value: 5
       currency: credit
-      note: "5 credits when a mobile number is found; free when nothing is returned."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 5 credits when a mobile number is found; free when nothing is returned.
     verified: 2026-07-28
     example_response: examples/leadmagic.people.phone.find.json
     docs_url: https://leadmagic.io/docs/api-reference/mobile-finder
@@ -156,7 +180,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit per company matched; free when no company is found."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per company matched; free when no company is found.
     verified: 2026-07-28
     example_response: examples/leadmagic.companies.enrich.json
     docs_url: https://leadmagic.io/docs/v1/reference/search-company
@@ -188,7 +218,13 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 credit per person returned, PLUS 1 credit per email and 5 per mobile when include_contact_details is true. No results, no charge. A limit=25 search revealing mobiles can therefore cost 150+ credits — set limit deliberately."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 1 credit per person returned, PLUS 1 credit per email and 5 per mobile when include_contact_details is true. No results, no charge. A limit=25 search revealing mobiles can therefore cost 150+ credits — set limit deliberately.
     unverified: "http 401 invalid_api_key — this key's plan does not include v3 people search; the sibling /v3/companies/search route on the SAME key succeeded (200, 1 credit), so this is a plan/feature gate on this one route, not a broken key or a broken endpoint"
     docs_url: https://leadmagic.io/docs/reference/people-search
 
@@ -204,7 +240,7 @@ endpoints:
     input:
       note: "no parameters — the key rides in the X-API-Key header; it returns {credits}. POST /v1/credits/refresh forces a balance refresh when the number looks stale, and GET /v1/credits/health validates the key alone"
     test_request: {queryParams: {}}
-    cost: {type: free, value: 0, currency: USD, note: "free — consumes no credits and is not rate-limited; this is the registry's health probe"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: free — consumes no credits and is not rate-limited; this is the registry's health probe}
     verified: 2026-07-28
     example_response: examples/leadmagic.account.usage.json
     docs_url: https://leadmagic.io/docs/reference/check-credits

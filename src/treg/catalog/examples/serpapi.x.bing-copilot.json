@@ -1,0 +1,35 @@
+{
+  "search_metadata": {
+    "id": "6a6b429d421b0827b8072f3a",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/CSoED6ZunIuZrABCRmFGTQ/6a6b429d421b0827b8072f3a.json",
+    "created_at": "2026-07-30 12:25:01 UTC",
+    "processed_at": "2026-07-30 12:25:01 UTC",
+    "bing_copilot_url": "https://www.bing.com/copilotsearch?q=what+is+the+capital+of+france&FORM=CSSCOP",
+    "raw_html_file": "https://serpapi.com/searches/CSoED6ZunIuZrABCRmFGTQ/6a6b429d421b0827b8072f3a.html",
+    "total_time_taken": 9.05
+  },
+  "search_parameters": {
+    "q": "what is the capital of france",
+    "engine": "bing_copilot"
+  },
+  "search_information": {},
+  "header": "The capital of France is Paris.",
+  "text_blocks": [
+    {
+      "type": "paragraph",
+      "snippet": "Paris is the largest city in France and serves as the political, economic, cultural, and historical center of the country. It is located in the northern central part of France, along the Seine River. … [389 chars]"
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "references": [
+    {
+      "index": 0,
+      "title": "Paris - Wikipedia",
+      "link": "https://en.wikipedia.org/wiki/Paris",
+      "snippet": "As the capital of France, Paris is the seat of France's national government. For the executive, the two chief officers each have their own official residences, which also serve as their offices.",
+      "source": "Wikipedia"
+    },
+    "… 6 more item(s) truncated"
+  ]
+}

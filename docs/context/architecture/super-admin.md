@@ -34,6 +34,11 @@ endpoints are unaffected (they use `require_superadmin`).
   call volume + success rate, `growth` counts — computed in-process over small result sets),
   `admin_orgs` (every org + member/role/tool/secret/bundle counts), `admin_org_detail`,
   `admin_users` (+ their memberships), `admin_tools`, `admin_calls`, `admin_health` (non-`ok` secrets).
+- **Reconciliation (Phase 5):** `admin_reconcile_drift|spend|repeats` (`?since_days=30`) — cross-org
+  aggregates over platform-tier spend, so super-admin and not org-admin: price drift per endpoint,
+  settled spend per provider (the invoice comparison), and the repeat-query rate. Query-time reports
+  over existing rows; no scheduler. Logic in `src/treg/reconcile.py`;
+  `scripts/provider_balances.py` is the manual companion that reads the providers' own balances.
 - **Mutations (Phase 2):** `admin_set_superadmin`, `admin_suspend_user`, `admin_delete_user` (removes
   memberships, then `_cascade_delete_org` any org left with zero members, and **promotes a survivor to
   owner** in any org left without one), `admin_suspend_org`, `admin_delete_org` (force, cross-tenant).

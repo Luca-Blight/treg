@@ -43,6 +43,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
     note: 1 search, entry-level Developer plan rate
   test_request:
     queryParams:
@@ -88,6 +94,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_shopping
@@ -120,6 +132,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_scholar
@@ -166,6 +184,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_trends
@@ -211,6 +235,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_news
@@ -243,6 +273,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_images
@@ -289,6 +325,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_jobs
@@ -331,6 +373,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_finance
@@ -380,6 +428,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_patents
@@ -435,6 +489,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_flights
@@ -482,6 +542,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_hotels
@@ -527,6 +593,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_local
@@ -563,6 +635,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_lens
@@ -594,6 +672,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_videos
@@ -632,6 +716,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_events
@@ -675,6 +765,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_ads
@@ -715,6 +811,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: google_light
@@ -745,8 +847,19 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
-  untestable: query param beyond `q` unconfirmed from docs at ingest time; no test_request generated to avoid a guessed param shape
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
+  test_request:
+    queryParams:
+      engine: google_ai_mode
+      q: best coffee brewing method
   docs_url: https://serpapi.com/google-ai-mode-api
+  verified: '2026-07-30'
+  example_response: examples/serpapi.x.google-ai-mode.json
 - id: serpapi.x.google-ai-overview
   tier: extended
   platform: google
@@ -769,6 +882,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   untestable: requires a page_token minted by a prior engine=google response; no standalone value exists to test with
   docs_url: https://serpapi.com/google-ai-overview-api
 - id: serpapi.x.bing-search
@@ -802,6 +921,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: bing
@@ -834,6 +959,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: bing_news
@@ -865,6 +996,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: bing_images
@@ -896,6 +1033,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: bing_videos
@@ -927,6 +1070,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: bing_shopping
@@ -958,8 +1107,19 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
-  untestable: conversational param shape not confirmed from docs at ingest time
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
+  test_request:
+    queryParams:
+      engine: bing_copilot
+      q: what is the capital of france
   docs_url: https://serpapi.com/bing-copilot-api
+  verified: '2026-07-30'
+  example_response: examples/serpapi.x.bing-copilot.json
 - id: serpapi.x.baidu-search
   tier: extended
   platform: baidu
@@ -986,6 +1146,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: baidu
@@ -1017,6 +1183,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: baidu_news
@@ -1054,6 +1226,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: duckduckgo
@@ -1086,6 +1264,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: duckduckgo_news
@@ -1117,6 +1301,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: duckduckgo_light
@@ -1143,13 +1333,24 @@ endpoints:
         type: string
         required: true
         note: search keyword; location param name not independently confirmed
-    note: not independently fetched — maps engines usually need a location param beyond `q` (see serpapi.x.google-maps' `ll`) that was not confirmed here.
+    note: 'not independently fetched — maps engines usually need a location param beyond `q` (see serpapi.x.google-maps'' `ll`) that was not confirmed here. Live test confirms `q` alone is sufficient (DuckDuckGo Maps defaults to a location bias without a separate coordinate param).'
   cost:
     type: per_success
     value: 0.015
     currency: USD
-  untestable: location/coordinate param name not confirmed from docs at ingest time
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
+  test_request:
+    queryParams:
+      engine: duckduckgo_maps
+      q: pizza
   docs_url: https://serpapi.com/duckduckgo-maps-api
+  verified: '2026-07-30'
+  example_response: examples/serpapi.x.duckduckgo-maps.json
 - id: serpapi.x.yahoo-search
   tier: extended
   platform: yahoo
@@ -1178,6 +1379,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: yahoo
@@ -1210,6 +1417,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: yahoo_images
@@ -1241,6 +1454,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: yahoo_videos
@@ -1278,6 +1497,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: yandex
@@ -1309,6 +1534,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: yandex_images
@@ -1340,6 +1571,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: yandex_videos
@@ -1376,6 +1613,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: naver
@@ -1402,13 +1645,24 @@ endpoints:
         type: string
         required: true
         note: param name inferred from sibling engine=naver, not independently confirmed
-    note: sibling of engine=naver; not independently fetched.
+    note: sibling of engine=naver; not independently fetched. Live test confirms `query` (not `q`) is the correct param name.
   cost:
     type: per_success
     value: 0.015
     currency: USD
-  untestable: param shape not independently confirmed from docs at ingest time
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
+  test_request:
+    queryParams:
+      engine: naver_ai_overview
+      query: coffee
   docs_url: https://serpapi.com/naver-ai-overview-api
+  verified: '2026-07-30'
+  example_response: examples/serpapi.x.naver-ai-overview.json
 - id: serpapi.x.amazon-search
   tier: extended
   platform: amazon
@@ -1438,6 +1692,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: amazon
@@ -1475,6 +1735,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: amazon_product
@@ -1511,6 +1777,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: ebay
@@ -1546,6 +1818,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: ebay_product
@@ -1582,6 +1860,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: walmart
@@ -1613,6 +1897,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: walmart_product
@@ -1648,6 +1938,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: home_depot
@@ -1684,6 +1980,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: yelp
@@ -1721,6 +2023,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: tripadvisor
@@ -1754,6 +2062,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: facebook_profile
@@ -1791,6 +2105,12 @@ endpoints:
     type: per_success
     value: 0.015
     currency: USD
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
   test_request:
     queryParams:
       engine: instagram_profile
@@ -1816,11 +2136,22 @@ endpoints:
         type: string
         required: true
         note: param name inferred from the standard SERP convention, not independently confirmed
-    note: 'no dedicated ''brave'' platform exists in capabilities.yaml — filed under ai-search (closest existing shelf: aggregated AI-answer-engine data). Not independently fetched.'
+    note: 'no dedicated ''brave'' platform exists in capabilities.yaml — filed under ai-search (closest existing shelf: aggregated AI-answer-engine data). Not independently fetched. Live test confirms `q` is the correct param name.'
   cost:
     type: per_success
     value: 0.015
     currency: USD
-  untestable: param shape not independently confirmed from docs at ingest time
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://serpapi.com/pricing
+    checked: '2026-07-28'
+    confidence: documented
+  test_request:
+    queryParams:
+      engine: brave_ai_mode
+      q: best coffee brewing method
   docs_url: https://serpapi.com/brave-ai-mode-api
+  verified: '2026-07-30'
+  example_response: examples/serpapi.x.brave-ai-mode.json
   capability: ai-search.brave.answer

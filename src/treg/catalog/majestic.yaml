@@ -56,9 +56,15 @@ endpoints:
       note: "the item0/item1/…/itemN convention is unique to this command — `items` is the COUNT of those params, not a target. Returns Trust Flow, Citation Flow, ACRank, ExtBackLinks, RefDomains, RefDomainsEDU/GOV, LastCrawlDate, Title and Language per item."
     cost:
       type: per_result
-      value: null
-      currency: USD
-      note: "1 INDEX ITEM UNIT per item queried — this is the only command that spends the Index Item allowance, and it is a separate meter from Analysis/Retrieval Units. Batching 100 targets into one call costs the same 100 units as 100 single-target calls, but saves 99 round trips."
+      value: 1
+      currency: unit
+      per: 1
+      unit: index_item_unit
+      source: docs
+      source_url: https://majestic.com/plans-pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 INDEX ITEM UNIT per item queried — this is the only command that spends the Index Item allowance, and it is a separate meter from Analysis/Retrieval Units. Batching 100 targets into one call costs the same 100 units as 100 single-target calls, but saves 99 round trips.
     docs_url: https://developer-support.majestic.com/api/commands/get-index-item-info.shtml
 
   - id: majestic.web.backlinks.summary
@@ -83,9 +89,15 @@ endpoints:
         majestic.web.url.metrics when you only want Trust Flow / Citation Flow.
     cost:
       type: per_result
-      value: null
-      currency: USD
-      note: "1 Index Item Unit per item queried — identical charge to majestic.web.url.metrics, because it is the same command. Calling both entries for one target costs 2 units; call it once and read both sets of columns."
+      value: 1
+      currency: unit
+      per: 1
+      unit: index_item_unit
+      source: docs
+      source_url: https://majestic.com/plans-pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 Index Item Unit per item queried — identical charge to majestic.web.url.metrics, because it is the same command. Calling both entries for one target costs 2 units; call it once and read both sets of columns.
     docs_url: https://developer-support.majestic.com/api/commands/get-index-item-info.shtml
 
   - id: majestic.web.backlinks.list
@@ -116,9 +128,15 @@ endpoints:
       note: "returns the `BackLinks` DataTable: SourceURL, AnchorText, SourceCitationFlow, SourceTrustFlow, TargetCitationFlow, TargetTrustFlow, FirstIndexedDate, LastSeenDate, LinkType, FlagDeleted, FlagNoFollow."
     cost:
       type: per_call
-      value: null
-      currency: USD
-      note: "THE EXPENSIVE ONE: a flat 5,000 ANALYSIS UNITS per call — charged even if the call returns zero rows — PLUS 1 RETRIEVAL UNIT per row returned. Setting ConsumeResourcesForAdditionalProcessing=1 (needed for sorting/filtering) pushes the analysis charge higher still. Keep `Count` small and never call it speculatively."
+      value: 5000
+      currency: unit
+      per: 1
+      unit: analysis_unit
+      source: docs
+      source_url: https://majestic.com/plans-pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 'THE EXPENSIVE ONE: a flat 5,000 ANALYSIS UNITS per call — charged even if the call returns zero rows — PLUS 1 RETRIEVAL UNIT per row returned. Setting ConsumeResourcesForAdditionalProcessing=1 (needed for sorting/filtering) pushes the analysis charge higher still. Keep `Count` small and never call it speculatively.'
     docs_url: https://developer-support.majestic.com/api/commands/get-back-link-data.shtml
 
   - id: majestic.web.linking_domains.list
@@ -143,9 +161,15 @@ endpoints:
       note: "returns a `Request` DataTable (TotalRefDomains and the resolved target) plus a `Results` DataTable: Domain, RefDomains, Matches, MatchedLinks, ExtBackLinks, IndexedURLs, FirstCrawled, LastSuccessfulCrawl, IP, SubNet, CountryCode, TLD, CitationFlow, TrustFlow. Passing item0..item3 turns this into a link-intersect across up to 4 targets."
     cost:
       type: per_call
-      value: null
-      currency: USD
-      note: "1,000 ANALYSIS UNITS per call (flat, charged even on an empty result) PLUS 1 RETRIEVAL UNIT per row returned. Five times cheaper per call than GetBackLinkData."
+      value: 1000
+      currency: unit
+      per: 1
+      unit: analysis_unit
+      source: docs
+      source_url: https://majestic.com/plans-pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 1,000 ANALYSIS UNITS per call (flat, charged even on an empty result) PLUS 1 RETRIEVAL UNIT per row returned. Five times cheaper per call than GetBackLinkData.
     docs_url: https://developer-support.majestic.com/api/commands/get-ref-domains.shtml
 
   - id: majestic.web.anchors.list
@@ -172,9 +196,15 @@ endpoints:
       note: "with the default Mode=0 the `AnchorText` DataTable carries AnchorText, RefDomains, TotalLinks, EstimatedLinkCitationFlow and EstimatedLinkTrustFlow. Note the parameter casing is inconsistent across Majestic commands — `from` here is lowercase."
     cost:
       type: per_call
-      value: null
-      currency: USD
-      note: "1,000 ANALYSIS UNITS per call (flat, charged even on an empty result) PLUS 1 RETRIEVAL UNIT per row returned."
+      value: 1000
+      currency: unit
+      per: 1
+      unit: analysis_unit
+      source: docs
+      source_url: https://majestic.com/plans-pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 1,000 ANALYSIS UNITS per call (flat, charged even on an empty result) PLUS 1 RETRIEVAL UNIT per row returned.
     docs_url: https://developer-support.majestic.com/api/commands/get-anchor-text.shtml
 
   - id: majestic.web.site.top_pages
@@ -196,9 +226,15 @@ endpoints:
       note: "returns a `Matches` DataTable (ACRank, URL, Title, Date, ExtBackLinks, RefDomains, CitationFlow, TrustFlow) plus a `DomainInfo` DataTable summarising the whole site. The third command in this file that names its target differently — Query, not item/item0."
     cost:
       type: per_call
-      value: null
-      currency: USD
-      note: "5,000 ANALYSIS UNITS per call (flat, charged even on an empty result) PLUS 1 RETRIEVAL UNIT per row returned — as expensive per call as GetBackLinkData."
+      value: 5000
+      currency: unit
+      per: 1
+      unit: analysis_unit
+      source: docs
+      source_url: https://majestic.com/plans-pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 5,000 ANALYSIS UNITS per call (flat, charged even on an empty result) PLUS 1 RETRIEVAL UNIT per row returned — as expensive per call as GetBackLinkData.
     docs_url: https://developer-support.majestic.com/api/commands/get-top-pages.shtml
 
   - id: majestic.account.usage
@@ -225,5 +261,6 @@ endpoints:
       type: free
       value: 0
       currency: USD
-      note: "FREE — the docs state \"as no actual analysis is caused by calling this command, this command uses no resources\". It is the correct liveness probe for a Majestic key (and is what treg's registry probes), and the right thing to call before any GetBackLinkData or GetTopPages sweep to confirm the units are there."
+      unit: call
+      note: FREE — the docs state "as no actual analysis is caused by calling this command, this command uses no resources". It is the correct liveness probe for a Majestic key (and is what treg's registry probes), and the right thing to call before any GetBackLinkData or GetTopPages sweep to confirm the units are there.
     docs_url: https://developer-support.majestic.com/api/commands/get-subscription-info.shtml

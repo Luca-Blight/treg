@@ -1,0 +1,49 @@
+{
+  "search_metadata": {
+    "id": "6a6b42a6d10c6ab3cacc8294",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/MhWepvVP0_mjsYagicbnKg/6a6b42a6d10c6ab3cacc8294.json",
+    "created_at": "2026-07-30 12:25:10 UTC",
+    "processed_at": "2026-07-30 12:25:10 UTC",
+    "duckduckgo_maps_url": "https://duckduckgo.com/?q=pizza&iaxm=maps&strict_bbox=1",
+    "raw_html_file": "https://serpapi.com/searches/MhWepvVP0_mjsYagicbnKg/6a6b42a6d10c6ab3cacc8294.html",
+    "prettify_html_file": "https://serpapi.com/searches/MhWepvVP0_mjsYagicbnKg/6a6b42a6d10c6ab3cacc8294.prettify",
+    "total_time_taken": 2.16
+  },
+  "search_parameters": {
+    "engine": "duckduckgo_maps",
+    "q": "pizza",
+    "strict_bbox": "1"
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "title": "Adamz Pizza Stop",
+      "gps_coordinates": {
+        "latitude": 33.9963965,
+        "longitude": -117.9650995
+      },
+      "type": "Pizza",
+      "address": "15944 Halliburton Rd, Hacienda Heights, CA 91745",
+      "city": "Hacienda Heights",
+      "timezone": "America/Los_Angeles",
+      "phone": "+16266360288",
+      "website": "https://adamzpizzastop.square.site",
+      "link": "https://www.yelp.com/biz/adamz-pizza-stop-hacienda-heights?adjust_creative=duckduckgo&utm_campaign=yelp_feed&utm_medium=feed_v2&utm_source=duckduckgo",
+      "thumbnail": "https://s3-media0.fl.yelpcdn.com/bphoto/Dhxe4jeFT9eTrpAG9snrfg/o.jpg",
+      "images": [
+        "https://s3-media0.fl.yelpcdn.com/bphoto/kncNxkpVngwvErUSI6Xejw/o.jpg",
+        "… 3 more item(s) truncated"
+      ],
+      "rating": 5,
+      "reviews": 95,
+      "profiles": {
+        "facebook": "https://facebook.com/",
+        "instagram": "https://instagram.com/",
+        "twitter": "https://twitter.com/"
+      },
+      "…": "5 more field(s) truncated"
+    },
+    "… 18 more item(s) truncated"
+  ]
+}

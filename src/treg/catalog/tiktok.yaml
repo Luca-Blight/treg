@@ -32,7 +32,7 @@ endpoints:
       queryParams:
         fields: {type: string, required: true, note: "comma-separated. open_id, union_id, avatar_url, display_name, bio_description, profile_deep_link, is_verified need user.info.basic/profile; follower_count, following_count, likes_count, video_count need user.info.stats", example: "open_id,display_name,avatar_url,bio_description,follower_count,following_count,likes_count,video_count"}
       note: "trailing slash on the path is required. Requesting a field outside the granted scopes fails the entire request with scope_not_authorized"
-    cost: {type: free, note: "included with the connected account; TikTok applies per-app rate limits (600 requests/minute per access token) rather than per-call pricing"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; TikTok applies per-app rate limits (600 requests/minute per access token) rather than per-call pricing}
     docs_url: https://developers.tiktok.com/doc/display-api-get-user-info/
 
   - id: tiktok.tiktok.user.videos
@@ -51,7 +51,7 @@ endpoints:
         cursor: {type: integer, required: false, note: "UTC milliseconds; pass the `cursor` from the previous response to page backwards in time", example: 0}
       bodyType: json
       note: "fields ride in the QUERY STRING, paging in the JSON BODY — an easy thing to get backwards. Response carries has_more + cursor. Only videos of the authorized creator are ever returned; there is no way to list another user's videos on this API"
-    cost: {type: free, note: "included with the connected account; rate-limited (600 requests/minute per access token), no per-call charge"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; rate-limited (600 requests/minute per access token), no per-call charge'}
     docs_url: https://developers.tiktok.com/doc/display-api-get-video-list/
 
   # --- publishing (the `draft` and `post` capabilities) ---------------------------------------
@@ -85,7 +85,7 @@ endpoints:
     summary: "Get what the connected TikTok creator is allowed to post (privacy options, limits)"
     input:
       note: "no parameters — an empty POST with Content-Type: application/json; charset=UTF-8. Returns creator_nickname, privacy_level_options (the ONLY privacy_level values the direct-post call will accept for this creator), max_video_post_duration_sec, and the comment/duet/stitch toggles the account has disabled. TikTok's own guidelines REQUIRE calling this before a direct post and showing the creator these options — an app that hardcodes them fails audit. Needs video.publish or video.upload"
-    cost: {type: free, note: "included with the connected account; TikTok rate-limits per access token (600 requests/minute) rather than charging per call"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; TikTok rate-limits per access token (600 requests/minute) rather than charging per call}
     unverified: "part of the publish flow — requires a `draft` or `post` connection; test manually"
     docs_url: https://developers.tiktok.com/doc/content-posting-api-reference-query-creator-info/
 
@@ -104,7 +104,7 @@ endpoints:
         source_info: {type: object, required: true, note: "FILE_UPLOAD: {\"source\": \"FILE_UPLOAD\", \"video_size\": <exact bytes>, \"chunk_size\": <bytes>, \"total_chunk_count\": <n>}. PULL_FROM_URL: {\"source\": \"PULL_FROM_URL\", \"video_url\": \"…\"} — but the URL's domain must first be verified in the TikTok developer portal, so FILE_UPLOAD is the route that works without portal setup", example: {source: "FILE_UPLOAD", video_size: 8388608, chunk_size: 8388608, total_chunk_count: 1}}
       bodyType: json
       note: "needs the `post` capability (video.publish); a `draft` connection gets scope_not_authorized. Returns {data: {publish_id, upload_url}}. CHUNK RULES, which TikTok enforces strictly: a chunk is 5 MB to 64 MB, so a file <= 64 MB goes as ONE chunk of the whole size; larger files use 10 MB chunks with total_chunk_count = floor(size / chunk_size) and the LAST chunk carrying the remainder (it may exceed chunk_size). PUT each chunk to upload_url with Content-Range: bytes start-end/total — chunked PUTs answer 206, not 200. Then poll tiktok.publish.status; publishing is not done when the upload finishes"
-    cost: {type: free, note: "included with the connected account; TikTok rate-limits per token (600 req/min) and caps direct posts at 6 per minute per creator"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; TikTok rate-limits per token (600 req/min) and caps direct posts at 6 per minute per creator}
     unverified: "write action — this publishes to a real TikTok account; requires a deliberate manual test, never an automated verify run"
     docs_url: https://developers.tiktok.com/doc/content-posting-api-reference-direct-post/
 
@@ -122,7 +122,7 @@ endpoints:
         source_info: {type: object, required: true, note: "identical shape and identical chunk rules to the direct-post route", example: {source: "FILE_UPLOAD", video_size: 8388608, chunk_size: 8388608, total_chunk_count: 1}}
       bodyType: json
       note: "takes NO post_info — caption, privacy and the comment/duet/stitch toggles are the creator's to set in the app, which is the entire point of this route. Needs only video.upload (treg's `draft` capability), so a connection that must never publish autonomously can still hand a video over. TikTok DISCARDS an unfinished inbox video after 24 hours. Polling tiktok.publish.status returns SEND_TO_USER_INBOX rather than PUBLISH_COMPLETE, and there is no post id to return"
-    cost: {type: free, note: "included with the connected account; rate-limited per token, no per-call charge"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; rate-limited per token, no per-call charge'}
     unverified: "write action — pushes media to a real creator's inbox; requires a deliberate manual test, never an automated verify run"
     docs_url: https://developers.tiktok.com/doc/content-posting-api-reference-upload-video/
 
@@ -143,7 +143,7 @@ endpoints:
         source_info: {type: object, required: true, note: "{\"source\": \"PULL_FROM_URL\", \"photo_cover_index\": 0, \"photo_images\": [\"https://…jpg\", …]}", example: {source: "PULL_FROM_URL", photo_cover_index: 0, photo_images: ["https://example.com/1.jpg"]}}
       bodyType: json
       note: "photo posts are PULL_FROM_URL ONLY — there is no FILE_UPLOAD path for photos, so the images must sit on a publicly reachable URL whose domain is verified in the TikTok developer portal, and there are no chunks to upload. Unlike video, `title` and `description` are separate fields here. Poll tiktok.publish.status as usual"
-    cost: {type: free, note: "included with the connected account; rate-limited per token, no per-call charge"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; rate-limited per token, no per-call charge'}
     unverified: "write action — this publishes to a real TikTok account; requires a deliberate manual test, never an automated verify run"
     docs_url: https://developers.tiktok.com/doc/content-posting-api-reference-direct-post/
 
@@ -161,7 +161,7 @@ endpoints:
         publish_id: {type: string, required: true, note: "from the init call's data.publish_id", example: "v_pub_file~v2.123456789"}
       bodyType: json
       note: "the closing step of every publish flow, and the only place a failure surfaces — an init call and a clean upload both succeed on content TikTok later rejects. status is PROCESSING_UPLOAD | PROCESSING_DOWNLOAD | SEND_TO_USER_INBOX | PUBLISH_COMPLETE | FAILED. On PUBLISH_COMPLETE, data.publicaly_available_post_id (TikTok's spelling) is an ARRAY whose first element is the post id — the URL is https://www.tiktok.com/@{username}/video/{that id}. It can be absent even on success, when the post is SELF_ONLY. Poll at ~20s intervals; TikTok's own reference implementation gives up after ~9 minutes"
-    cost: {type: free, note: "included with the connected account; rate-limited per token, no per-call charge"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; rate-limited per token, no per-call charge'}
     unverified: "part of the publish flow — only reachable with a publish_id a write call produced"
     docs_url: https://developers.tiktok.com/doc/content-posting-api-reference-get-video-status/
 

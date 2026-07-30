@@ -57,7 +57,7 @@ endpoints:
         enrichWithEcommerceData: {type: boolean, required: false, note: "true follows landing pages for product names and prices"}
       bodyType: json
       note: "the response is the dataset items array directly — no run envelope, no polling. Result count is what you pay for, so onlyTotal:true is the cheap probe before a full pull. Unofficial: this reads the Ad Library web UI, so field availability tracks whatever Meta currently renders"
-    cost: {type: per_result, value: 0.005, currency: USD, note: "pay-per-result: one result = one ad. ~$5.00 per 1,000 ads on the Starter plan, $3.40–$5.80 across tiers. Charged on results produced even if the run is cut short — cap it with maxItems"}
+    cost: {type: per_result, value: 0.005, currency: USD, per: 1, unit: ad, source: docs, source_url: 'https://apify.com/pricing', checked: '2026-07-28', confidence: inferred, note: 'pay-per-result: one result = one ad. ~$5.00 per 1,000 ads on the Starter plan, $3.40–$5.80 across tiers. Charged on results produced even if the run is cut short — cap it with maxItems'}
     docs_url: https://apify.com/apify/facebook-ads-scraper
 
   - id: apify.tiktok-ads.library.search
@@ -85,7 +85,7 @@ endpoints:
         offset: {type: integer, required: false, example: 0}
       bodyType: json
       note: "returns creative content, advertiser, dates, audience reach and targeting as TikTok discloses them in the Commercial Content Library. Community actor, not an official TikTok surface — the only route to this capability in the catalog, and the one most likely to break upstream, so check the actor's run history before relying on it"
-    cost: {type: per_result, value: 0.003, currency: USD, note: "pay-per-event: ~$3.00 per 1,000 ads scraped, no subscription minimum"}
+    cost: {type: per_result, value: 0.003, currency: USD, per: 1, unit: ad, source: docs, source_url: 'https://apify.com/pricing', checked: '2026-07-28', confidence: inferred, note: 'pay-per-event: ~$3.00 per 1,000 ads scraped, no subscription minimum'}
     docs_url: https://apify.com/s-r/tiktok-ads-library
 
   - id: apify.web.scrape.job.start
@@ -108,7 +108,7 @@ endpoints:
         waitForFinish: {type: integer, required: false, note: "seconds to hold the HTTP response open waiting for the run, max 60 — a middle ground between async and run-sync", example: 0}
       bodyType: json
       note: "the whole request body IS the actor's input object — there is no wrapper key; use the same fields as the run-sync entries above (startUrls/resultsLimit for the Facebook actor, search/limit for the TikTok one). Returns immediately with {data: {id, status, defaultDatasetId}}. This is the route for anything that outruns run-sync's 300-second ceiling: keep `id` to poll and `defaultDatasetId` to collect results"
-    cost: {type: free, note: "starting a run costs nothing; the run itself bills per result or per compute unit according to the actor's pricing"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: starting a run costs nothing; the run itself bills per result or per compute unit according to the actor's pricing}
     docs_url: https://docs.apify.com/api/v2/act-runs-post
 
   - id: apify.web.scrape.job.status
@@ -126,7 +126,7 @@ endpoints:
       queryParams:
         waitForFinish: {type: integer, required: false, note: "seconds to block waiting for a terminal status, max 60 — cheaper than a poll loop", example: 30}
       note: "status is READY | RUNNING | SUCCEEDED | FAILED | TIMED-OUT | ABORTED. The response also carries usageTotalUsd — what the run has cost so far — and defaultDatasetId for collecting results"
-    cost: {type: free, note: "polling is free"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: polling is free}
     docs_url: https://docs.apify.com/api/v2/actor-run-get
 
   - id: apify.web.scrape.job.results
@@ -147,7 +147,7 @@ endpoints:
         format: {type: string, required: false, note: "json (default) | jsonl | csv | xlsx | xml | rss", example: "json"}
         clean: {type: boolean, required: false, note: "true drops empty and hidden (#-prefixed) items", example: true}
       note: "results are already paid for at run time — re-reading a dataset is free and repeatable, so store the dataset id rather than re-running the actor"
-    cost: {type: free, note: "reading a dataset costs nothing; you paid when the run produced the items"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: reading a dataset costs nothing; you paid when the run produced the items}
     docs_url: https://docs.apify.com/api/v2/dataset-items-get
 
   - id: apify.account.usage
@@ -161,7 +161,7 @@ endpoints:
     summary: "Check your Apify plan, credit usage and remaining monthly limits"
     input:
       note: "no parameters. Returns the account's plan, monthly usage in USD and the limits it is measured against — the pre-flight check before a large pay-per-result pull, and the cheapest way to prove a token is valid (a bad token 401s here)"
-    cost: {type: free, note: "free; this is also the registry's probe endpoint for the provider"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: free; this is also the registry's probe endpoint for the provider}
     test_request: {queryParams: {}}
     verified: 2026-07-28
     example_response: examples/apify.account.usage.json

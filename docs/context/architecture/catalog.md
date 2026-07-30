@@ -30,6 +30,7 @@ scripts/
   catalog_verify.py           # live-tests CORE endpoints with a real credential; writes examples/
   catalog_verify_extended.py  # the same for the extended tier, in bulk, under a spend cap
   catalog_ingest.py           # bulk-generates the extended tier from provider specs
+  catalog_cost_provenance.py  # backfills cost units + provenance; re-run after any re-ingest
 ```
 
 Data files are YAML (curation-friendly); nothing in the app imports them yet. Serving them
@@ -251,7 +252,33 @@ rate refresh re-prices the whole catalog without touching a provider file. Clien
 `treg catalog search`, `treg catalog get`) lead with `usd` because a column is only comparable in
 one unit, and fall back to the native amount when `usd` is null.
 
-Two kinds of unit convert, and they convert differently:
+The full block:
+
+```yaml
+cost:
+  type: per_result        # per_call | per_result | per_success | free | quota_rows
+  value: 2.00             # non-null unless confidence: unknown
+  currency: USD           # USD | CNY | credit | unit
+  per: 1000               # the quantity `value` covers (default 1)
+  unit: row               # what `per` counts — or, under `currency: unit`, the provider's meter
+  source: docs            # rate_card_api | docs | observed | vendor_email | inferred
+  source_url: https://…   # the exact rate card / pricing page (or rate-card endpoint)
+  checked: 2026-07-28     # when the PRICE was confirmed — not when the route was called
+  confidence: documented  # verified | documented | inferred | unknown
+  note: "…"               # free text: the half of the charge the schema cannot hold, caveats, traps
+```
+
+`value` + `currency` + `per` answer *how much*; `type` + `unit` answer *per what*; `source` +
+`source_url` + `checked` + `confidence` answer *says who, and how sure*. All four questions have to
+have an answer before treg will spend its OWN money on an endpoint (see "platform-eligible" below),
+which is the whole reason the provenance keys exist.
+
+**`per` and `unit`.** Read a block as "`value` `currency` per `per` `unit`". SpyFu bills a CPM, so
+`value: 2.00, per: 1000, unit: row` — and `cost_view` divides, serving `usd: 0.002` per row. Hunter
+charges 1 credit per 10 emails (`per: 10, unit: record`), Akta 1.5 credits per 50 reviews. Without
+`per`, every one of those had to be either wrong or rounded into prose.
+
+**Three kinds of denomination convert, and they convert differently:**
 
 - **A real currency** (`currency: USD`, `CNY`) uses `fx.yaml`'s `rates_to_usd`, keyed by currency.
 - **`currency: credit`** is NOT a currency. A credit is a PROVIDER-SCOPED unit — one scrapecreators
@@ -259,15 +286,68 @@ Two kinds of unit convert, and they convert differently:
   the endpoint's provider from `fx.yaml`'s `credit_rates_usd` block, keyed by service. That is why
   `cost_view(cost, provider)` takes the provider: the same `value: 1, currency: credit` is worth
   $0.00188 on scrapecreators and $0.1248 on lusha.
+- **`currency: unit`** is the provider's own METER: Semrush's "API units", Majestic's three
+  independent allowances, Moz's row quota. `unit` names which meter, and the rate comes from
+  `fx.yaml`'s `unit_rates_usd[provider][unit]`. A provider can spend several meters at once —
+  Majestic's analysis / retrieval / index-item units no more convert into each other than two
+  providers' credits do, so each gets its own row. Before this existed, Moz's `quota_rows` blocks
+  carried no `currency` at all, defaulted to USD, and served every Moz route as costing $1.00.
 
-Each `credit_rates_usd` entry carries `usd` plus the `basis`/`source`/`checked` that justify it —
+Each `credit_rates_usd` / `unit_rates_usd` entry carries `usd` plus the `basis`/`source`/`checked` that justify it —
 the cheapest PUBLICLY listed tier (plan price ÷ credits included), so the served figure is an upper
 bound on real spend, never an under-estimate. `usd: null` is a deliberate state, not a gap: the
 provider publishes no per-credit price (seat-priced like Apollo, sales-negotiated like PDL, or not
 credit-priced at all like BrightData). Those endpoints keep `cost.usd = null` and display natively
-("3 credits/success"), because a guessed dollar figure is worse than an honest credit count. The
-block is hand-maintained and must stay ABOVE `rates_to_usd:` — `catalog_fx_update.py` rewrites the
+("3 credits/success"), because a guessed dollar figure is worse than an honest credit count. Both
+blocks are hand-maintained and must stay ABOVE `rates_to_usd:` — `catalog_fx_update.py` rewrites the
 file from the text before that key and discards anything below it.
+
+#### Provenance — `confidence` is a claim about the PRICE, not about the route
+
+`verified: 2026-07-28` on an endpoint says the route answered. `cost.confidence: verified` says the
+money figure was confirmed. They are independent, and conflating them is how a guess gets spent:
+
+| `confidence` | what earns it |
+|---|---|
+| `verified` | observed being billed on a real call (`source: observed`), or read from the provider's own live rate card (`source: rate_card_api` — TikHub's `get_all_endpoints_info`, DataForSEO's `/appendix/user_data`, ScrapeCreators' `credits_charged` in its OpenAPI) |
+| `documented` | transcribed from the provider's docs or pricing page |
+| `inferred` | the figure is a floor or the top of a published range — a base fee with a per-row half on top ("1 credit base + 1 per ad"), a spread ("1–9 credits", "$0.50–$5.00 per 1,000"). The recorded number is not the whole charge, and the note says what else applies |
+| `unknown` | no figure is published anywhere citable. `value` MUST be null and `note` MUST say why |
+
+Rules the validator enforces: `value: null` and `confidence: unknown` appear together or not at all;
+a `verified`/`documented` price names its `source_url` (`source: observed` is exempt — its evidence
+is the captured example response, not a page that may have moved); every priced entry carries
+`checked`, and CI WARNS past 90 days. A file whose header says `UNVERIFIED` caps its prices at
+`documented`: nothing in it has been called, so no price in it can have been seen being charged.
+
+Free is spelled exactly one way — `type: free, value: 0, currency: USD, unit: call` — and needs no
+provenance, because 0 does not move and there is nothing to re-check. It was previously written
+three incompatible ways across 661 endpoints, which left `cost.usd` null on most of them:
+indistinguishable, downstream, from "price unknown".
+
+`scripts/catalog_cost_provenance.py` owns the mapping from what the repo knows about a provider's
+pricing to these keys, and is re-runnable — the extended tier is regenerated wholesale, so
+provenance typed by hand into a generated file would not survive the next `catalog_ingest.py`.
+
+#### Platform-eligible — when treg may spend its OWN key on a call
+
+`Catalog.platform_eligible(endpoint)` is the single predicate behind prepaid/platform-key access
+(tier 4 of the credential ladder in `api.py`). One implementation, so the API, the validator and
+the proxy cannot drift. It requires ALL of:
+
+- `cost_view(...)["usd"]` is not None — the charge is machine-computable;
+- `cost.confidence == "verified"` — documented is not enough to bill against;
+- `scope != own_account` and `kind != account` — the provider's own bookkeeping is never worth
+  spending on, and an own-account route needs the caller's own credential by definition;
+- `verified` is set — a route nobody has called can fail in ways that still bill.
+
+The doctrine is asymmetric on purpose: **a missing or unknown price reads as "refuse", never as
+free.** An endpoint with no `cost` block at all is therefore not platform-eligible without anything
+having to be written out for it, which is why the extended tier's unpriced routes need no
+annotation. Where an endpoint carries only `observed_cost` (DataForSEO prices per API family, not
+per route), `_effective_cost` synthesizes the block with `source: observed, confidence: verified`
+and `checked` = the verify date: a figure the provider itself reported charging is the strongest
+provenance the catalog has.
 
 ### Core-wins dedup compares NORMALISED paths — except on Graph
 
@@ -296,8 +376,12 @@ Do these steps in order; each has a hard success criterion.
    `proposed_capabilities:` in your provider file, don't edit the shared taxonomy in parallel work.
 4. **Describe.** Fill `input` from the spec/docs: param names, types, which are required, where
    they ride (path/query/body). Copy real constraints ("one of A|B") into `note`.
-5. **Cost.** Record the provider's price model per endpoint from their pricing page. `quota_rows`
-   is for row-quota APIs (Moz). Unknown exact value → set `value: null` and explain in `note`.
+5. **Cost.** Record the provider's price model per endpoint from their pricing page — with its
+   provenance (`source`, `source_url`, `checked`, `confidence`) and its unit (`per`, `unit`), per
+   "Cost" above. `quota_rows` is for row-quota APIs (Moz). Unknown exact value → `value: null` +
+   `confidence: unknown` + a `note` saying why. If the provider exposes its rate card as an
+   endpoint, prefer it over the pricing page and record it as `source: rate_card_api`: it is
+   re-checkable, which is what lets treg serve the route on its own key.
 6. **Test-request.** Give every endpoint a `test_request` that is CHEAP (smallest limit, one item,
    public well-known target — e.g. user "tiktok", domain "moz.com"). This is what verification and
    future health checks replay, so it must not burn meaningful credits.
@@ -483,6 +567,12 @@ itself, not the API vendor, so expect it from anyone scraping LinkedIn, and trea
 scrapers as one point of failure rather than a redundant pair. And retrying is only free under
 `per_success` billing (both social providers); on a `per_call` provider like DataForSEO each retry
 and each extra pass is a purchase, so that budget belongs in the plan rather than in a loop.
+
+One caveat on reading `per_success` as "bad input is free": the provider decides what counts as
+success. TikHub answers some invalid inputs (a bogus channel id) with HTTP **200**, the error nested
+in the body, and "this request will incur a charge" — so the platform meter bills it, faithfully to
+what TikHub charges us. When TikHub uses a real 4xx it says "You won't be charged" and the meter
+releases the hold. Verified live 2026-07-30.
 
 Then read a sample of the captured examples for PII before committing, as with core — bulk capture
 does not remove the scrub step, it just means sampling per platform family rather than reading all

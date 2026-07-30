@@ -61,9 +61,15 @@ endpoints:
         treg's registry probes; prefer this endpoint with an explicit `pastNMonths` for real work.
     cost:
       type: per_result
-      value: null
+      value: 1.0
       currency: USD
-      note: "billed per ROW, and one row = one month. Domain Stats CPM is $0.40-$1.00 per 1,000 rows, so a handful of months is a fraction of a cent — but getAllDomainStats on an old domain returns 150+ rows per call."
+      per: 1000
+      unit: row
+      source: docs
+      source_url: https://www.spyfu.com/api
+      checked: '2026-07-28'
+      confidence: inferred
+      note: billed per ROW, and one row = one month. Domain Stats CPM is $0.40-$1.00 per 1,000 rows, so a handful of months is a fraction of a cent — but getAllDomainStats on an old domain returns 150+ rows per call.
     docs_url: https://developer.spyfu.com/reference/domainstatsapi_getlatestdomainstats_get
 
   # --- Paid search (PPC) ------------------------------------------------------------------------
@@ -92,9 +98,15 @@ endpoints:
       note: "rows carry keyword, searchVolume, liveSearchVolume, rankingDifficulty, totalMonthlyClicks, broad/phrase/exactCostPerClick, broad/phrase/exactMonthlyCost, paidCompetitors, distinctCompetitors and serpFeaturesCsv. Note the path segment is `keyword_api`, unlike the other PPC endpoints which live under `serp_api`."
     cost:
       type: per_result
-      value: null
+      value: 2.0
       currency: USD
-      note: "$2.00 per 1,000 rows (PPC Research CPM), netted against the plan's monthly API credit. pageSize defaults to 5; a pageSize of 10,000 is a $20 call."
+      per: 1000
+      unit: row
+      source: docs
+      source_url: https://www.spyfu.com/api
+      checked: '2026-07-28'
+      confidence: documented
+      note: $2.00 per 1,000 rows (PPC Research CPM), netted against the plan's monthly API credit. pageSize defaults to 5; a pageSize of 10,000 is a $20 call.
     docs_url: https://developer.spyfu.com/reference/paidserpapi_getmostsuccessful_get
 
   - id: spyfu.google.domain.ad_history
@@ -121,9 +133,15 @@ endpoints:
         `/apis/serp_api/v2/ppc/getPaidSerps` (`query` required), which is on the $2.00 PPC CPM.
     cost:
       type: per_result
-      value: null
+      value: 3.0
       currency: USD
-      note: "$3.00 per 1,000 rows (Ad History CPM) — tied with Ranking History as the priciest family here. pageSize defaults to 5; a pageSize of 10,000 is a $30 call."
+      per: 1000
+      unit: row
+      source: docs
+      source_url: https://www.spyfu.com/api
+      checked: '2026-07-28'
+      confidence: documented
+      note: $3.00 per 1,000 rows (Ad History CPM) — tied with Ranking History as the priciest family here. pageSize defaults to 5; a pageSize of 10,000 is a $30 call.
     docs_url: https://developer.spyfu.com/reference/adhistoryapi_getdomainadhistory_get
 
   # --- Organic search (SEO) ---------------------------------------------------------------------
@@ -159,9 +177,15 @@ endpoints:
         REQUIRED `searchType` (MostValuable, GainedClicks, LostRanks, NewlyRanked …).
     cost:
       type: per_result
-      value: null
+      value: 5.0
       currency: USD
-      note: "SEO Research CPM is $0.50-$5.00 per 1,000 rows depending on the endpoint (the top-pages endpoints are the $5.00 end); the exact tier for this one is not called out separately in SpyFu's pricing table. pageSize defaults to 5 — set it explicitly."
+      per: 1000
+      unit: row
+      source: docs
+      source_url: https://www.spyfu.com/api
+      checked: '2026-07-28'
+      confidence: inferred
+      note: SEO Research CPM is $0.50-$5.00 per 1,000 rows depending on the endpoint (the top-pages endpoints are the $5.00 end); the exact tier for this one is not called out separately in SpyFu's pricing table. pageSize defaults to 5 — set it explicitly.
     docs_url: https://developer.spyfu.com/reference/organicserpapi_getmostvaluablekeywords_get
 
   # --- Competitors (the cheapest family at $0.20 CPM) -------------------------------------------
@@ -184,9 +208,15 @@ endpoints:
       note: "note the tighter pageSize ceiling of 550 on the competitors family. `CommonTerms` is the keyword-overlap count that makes the ranking meaningful."
     cost:
       type: per_result
-      value: null
+      value: 0.2
       currency: USD
-      note: "$0.20 per 1,000 rows — the cheapest family in the file. Even a full 550-row pull costs about $0.11."
+      per: 1000
+      unit: row
+      source: docs
+      source_url: https://www.spyfu.com/api
+      checked: '2026-07-28'
+      confidence: documented
+      note: $0.20 per 1,000 rows — the cheapest family in the file. Even a full 550-row pull costs about $0.11.
     docs_url: https://developer.spyfu.com/reference/competitorsapi_gettopseocompetitors_get
 
   - id: spyfu.google.domain.ppc_competitors
@@ -208,7 +238,13 @@ endpoints:
       note: "identical parameter shape to spyfu.google.domain.competitors — the only difference is `/ppc/` instead of `/seo/` in the path, which switches the overlap from organic keywords to paid ones. SpyFu's core competence is the paid side, so this is usually the more interesting of the two."
     cost:
       type: per_result
-      value: null
+      value: 0.2
       currency: USD
-      note: "$0.20 per 1,000 rows (Competitors CPM), same as the SEO variant."
+      per: 1000
+      unit: row
+      source: docs
+      source_url: https://www.spyfu.com/api
+      checked: '2026-07-28'
+      confidence: documented
+      note: $0.20 per 1,000 rows (Competitors CPM), same as the SEO variant.
     docs_url: https://developer.spyfu.com/reference/competitorsapi_gettopppccompetitors_get

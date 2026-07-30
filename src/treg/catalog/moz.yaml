@@ -57,7 +57,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 1
-      note: "1 row per target with no modifiers; each history list entry and `distributions: true` adds 1 row per target (weighted endpoint)"
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: '1 row per target with no modifiers; each history list entry and `distributions: true` adds 1 row per target (weighted endpoint)'
     verified: 2026-07-28
     example_response: examples/moz.web.url.metrics.json
     docs_url: https://moz.com/help/links-api/making-calls/url-metrics
@@ -81,7 +88,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 2
-      note: "1 row per target + 1 row for the distributions modifier"
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 row per target + 1 row for the distributions modifier
     verified: 2026-07-28
     example_response: examples/moz.web.backlinks.summary.json
     docs_url: https://moz.com/help/links-api/making-calls/url-metrics
@@ -113,7 +127,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 1
-      note: "1 row per returned link; `limit` (1-50) sets the ceiling"
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 row per returned link; `limit` (1-50) sets the ceiling
     verified: 2026-07-28
     example_response: examples/moz.web.backlinks.list.json
     docs_url: https://moz.com/help/links-api/making-calls/links
@@ -143,7 +164,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 1
-      note: "1 row per returned root domain; `limit` (1-50) sets the ceiling"
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 row per returned root domain; `limit` (1-50) sets the ceiling
     verified: 2026-07-28
     example_response: examples/moz.web.linking_domains.list.json
     docs_url: https://moz.com/help/links-api/making-calls/linking-root-domains
@@ -169,7 +197,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 1
-      note: "1 row per returned anchor-text phrase; `limit` (1-50) sets the ceiling"
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 row per returned anchor-text phrase; `limit` (1-50) sets the ceiling
     verified: 2026-07-28
     example_response: examples/moz.web.anchors.list.json
     docs_url: https://moz.com/help/links-api/making-calls/anchor-text
@@ -200,7 +235,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 1
-      note: "1 row per returned page; history modifiers add rows as in url_metrics"
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 row per returned page; history modifiers add rows as in url_metrics
     verified: 2026-07-28
     example_response: examples/moz.web.site.top_pages.json
     docs_url: https://moz.com/help/links-api/making-calls/top-pages
@@ -226,7 +268,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 2
-      note: "weighted endpoint: 2 rows per source (1 source = 2 rows, 50 sources = 100 rows)"
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 'weighted endpoint: 2 rows per source (1 source = 2 rows, 50 sources = 100 rows)'
     verified: 2026-07-28
     example_response: examples/moz.web.backlinks.status.json
     docs_url: https://moz.com/help/links-api/making-calls/link-status
@@ -257,7 +306,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 5
-      note: "weighted endpoint: 5 rows per RETURNED result (limit 1 = 5 rows, limit 50 = 250 rows). Fewer results than `limit` cost proportionally less."
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 'weighted endpoint: 5 rows per RETURNED result (limit 1 = 5 rows, limit 50 = 250 rows). Fewer results than `limit` cost proportionally less.'
     verified: 2026-07-28
     example_response: examples/moz.web.backlinks.intersect.json
     docs_url: https://moz.com/help/links-api/making-calls/link-intersect
@@ -279,7 +335,12 @@ endpoints:
     cost:
       type: quota_rows
       value: null
-      note: "not documented as weighted and returns a single value, so presumably 1 row; unconfirmed because the test credential's quota was exhausted — it does gate on quota (403 insufficient-quota), so it is not free"
+      per: 1
+      unit: quota_row
+      source: docs
+      checked: '2026-07-28'
+      confidence: unknown
+      note: not documented as weighted and returns a single value, so presumably 1 row; unconfirmed because the test credential's quota was exhausted — it does gate on quota (403 insufficient-quota), so it is not free
     verified: 2026-07-28
     example_response: examples/moz.web.index.metadata.json
     docs_url: https://moz.com/help/links-api/making-calls/index-metadata
@@ -303,7 +364,10 @@ endpoints:
       body: {}
     cost:
       type: free
-      note: "answers 200 even when the account's row quota is fully exhausted, so it costs nothing and is the right liveness probe for a Moz key"
+      value: 0
+      currency: USD
+      unit: call
+      note: answers 200 even when the account's row quota is fully exhausted, so it costs nothing and is the right liveness probe for a Moz key
     verified: 2026-07-28
     example_response: examples/moz.account.usage.json
     docs_url: https://moz.com/help/links-api/making-calls/usage-data
@@ -328,7 +392,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 1
-      note: "1 row per returned page; defaults to 25 rows when `limit` is omitted"
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 row per returned page; defaults to 25 rows when `limit` is omitted
     verified: 2026-07-28
     example_response: examples/moz.web.global.top_pages.json
     docs_url: https://moz.com/help/links-api/making-calls/global-top-pages
@@ -353,7 +424,14 @@ endpoints:
     cost:
       type: quota_rows
       value: 1
-      note: "1 row per returned root domain; defaults to 25 rows when `limit` is omitted"
+      currency: unit
+      per: 1
+      unit: quota_row
+      source: docs
+      source_url: https://moz.com/api/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 row per returned root domain; defaults to 25 rows when `limit` is omitted
     verified: 2026-07-28
     example_response: examples/moz.web.global.top_domains.json
     docs_url: https://moz.com/help/links-api/making-calls/global-top-root-domains

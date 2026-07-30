@@ -9,7 +9,10 @@ Checks (the success criteria from docs/context/architecture/catalog.md):
   - endpoint ids unique across the WHOLE catalog; id convention `<provider>.<capability>`
   - `capability` exists in capabilities.yaml OR the file's own proposed_capabilities
   - `platform` equals the capability's first segment and exists in capabilities.yaml platforms
-  - required fields present; enums valid (scope, method, cost.type)
+  - required fields present; enums valid (scope, method, cost.type/currency/unit/source/confidence)
+  - a `cost` block is BILLABLE, not decorative: a null `value` and `confidence: unknown` appear
+    together or not at all; a verified/documented price names its `source_url`; every priced entry
+    carries `checked` (WARN past 90 days); free is spelled exactly one way
   - a `verified` endpoint must have an existing example_response file
   - an extended endpoint a verification run has touched claims exactly one non-empty state
     (verified | unverified | untestable | skipped), and an `untestable` one carries no
@@ -32,6 +35,7 @@ never what a claim on it is worth.
 
 from __future__ import annotations
 
+import datetime as dt
 import re
 import sys
 from pathlib import Path
@@ -40,10 +44,28 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "src" / "treg" / "catalog"
+sys.path.insert(0, str(ROOT / "src"))
+# The enums the SERVER reads the same files with. Imported, never re-typed: a validator that
+# accepts a unit `cost_view` cannot price is worse than no validator.
+from treg.catalog_store import COST_SOURCES as _SOURCES  # noqa: E402
+from treg.catalog_store import COST_UNITS as _UNITS  # noqa: E402
+from treg.catalog_store import CONFIDENCES as _CONFIDENCES  # noqa: E402
 
 SCOPES = {"any_account", "own_account"}
 METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 COST_TYPES = {"per_call", "per_result", "per_success", "free", "quota_rows"}
+# What the price is denominated in. `credit` and `unit` are PROVIDER-scoped meters, not currencies,
+# and convert via fx.yaml's `credit_rates_usd` / `unit_rates_usd` (see catalog_store.cost_view).
+CURRENCIES = {"USD", "CNY", "credit", "unit"}
+COST_UNITS, CONFIDENCES, COST_SOURCES = set(_UNITS), set(_CONFIDENCES), set(_SOURCES)
+# A price is a perishable fact. Older than this and CI says so — a warning, not an error: a stale
+# price is still the best number we have, and failing the build over the calendar would only teach
+# people to bump the date without re-checking.
+STALE_DAYS = 90
+# The one spelling of free. It was written three incompatible ways across 661 endpoints (`value: 0`,
+# `value: 0.0`, and no value at all), which made "is this free?" a per-entry judgement call and left
+# `cost.usd` null on a third of them — indistinguishable, downstream, from "price unknown".
+CANONICAL_FREE = {"value": 0, "currency": "USD", "unit": "call"}
 TIERS = {"core", "extended"}
 # what an endpoint IS (marketplace browse surface vs. plumbing). Optional — absent reads as "data" —
 # but a stated one must be from this set. See docs/context/architecture/catalog.md.
@@ -83,13 +105,86 @@ def fail(errors: list[str], where: str, msg: str) -> None:
     errors.append(f"{where}: {msg}")
 
 
+def _as_date(value) -> dt.date | None:
+    """`checked: 2026-07-28` parses as a date; quoted, it stays a string. Accept both, reject prose."""
+    if isinstance(value, dt.datetime):
+        return value.date()
+    if isinstance(value, dt.date):
+        return value
+    try:
+        return dt.date.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def check_cost(cost: dict, where: str, errors: list[str], warnings: list[str]) -> None:
+    """The price block's own rules — the ones that make a figure BILLABLE rather than decorative.
+
+    A platform key spends treg's money on a caller's behalf, so every number here has to answer
+    "how much, per what, says who, checked when". The rules below are what makes each of those four
+    unskippable; `catalog_store.Catalog.platform_eligible` is what refuses the ones that fail.
+    """
+    if cost.get("type") not in COST_TYPES:
+        fail(errors, where, f"cost.type missing or not one of {sorted(COST_TYPES)}")
+    value, conf = cost.get("value"), cost.get("confidence")
+    if conf is not None and conf not in CONFIDENCES:
+        fail(errors, where, f"cost.confidence '{conf}' not one of {sorted(CONFIDENCES)}")
+    if (src := cost.get("source")) is not None and src not in COST_SOURCES:
+        fail(errors, where, f"cost.source '{src}' not one of {sorted(COST_SOURCES)}")
+    if (unit := cost.get("unit")) is not None and unit not in COST_UNITS:
+        fail(errors, where, f"cost.unit '{unit}' not one of {sorted(COST_UNITS)}")
+    if (cur := cost.get("currency")) is not None and cur not in CURRENCIES:
+        fail(errors, where, f"cost.currency '{cur}' not one of {sorted(CURRENCIES)}")
+    per = cost.get("per")
+    if per is not None and (not isinstance(per, int) or isinstance(per, bool) or per < 1):
+        fail(errors, where, f"cost.per '{per}' must be a positive integer (the quantity `value` covers)")
+    # `currency: unit` means "the provider's own meter" — which meter is the only thing that makes
+    # the number convertible, and it is `unit` that names it.
+    if cur == "unit" and unit not in COST_UNITS:
+        fail(errors, where, "cost.currency 'unit' needs cost.unit to name the provider's meter "
+                            "(fx.yaml unit_rates_usd is keyed by it)")
+
+    if cost.get("type") == "free":
+        wrong = {k: cost.get(k) for k, want in CANONICAL_FREE.items() if cost.get(k) != want}
+        if wrong or (per not in (None, 1)):
+            fail(errors, where, f"free must be spelled {CANONICAL_FREE} (got {wrong or {'per': per}})")
+        return
+
+    # An unknown price and a null figure are the SAME fact, so they must always be written together:
+    # a null value with a confident-looking block is how a guess ships, and `confidence: unknown`
+    # over a real number is how a real number gets ignored.
+    if (value is None) != (conf == "unknown"):
+        fail(errors, where, f"cost.value {value!r} vs confidence {conf!r} — a null value requires "
+                            "confidence: unknown and vice versa")
+    if value is None:
+        if not str(cost.get("note") or "").strip():
+            fail(errors, where, "unknown price needs a cost.note saying why no figure is recorded")
+        return
+
+    # Priced from here on. Provenance is not paperwork: without it there is no way to tell a figure
+    # read off a rate card from one somebody remembered.
+    if conf in ("verified", "documented") and not str(cost.get("source_url") or "").strip():
+        # `source: observed` is the exception — its evidence is the captured example response and
+        # the provider's own reported charge, not a page that may have moved since.
+        if cost.get("source") != "observed":
+            fail(errors, where, f"confidence '{conf}' requires a cost.source_url naming the rate card")
+    checked = cost.get("checked")
+    if not checked:
+        fail(errors, where, "priced entry needs cost.checked (the date the PRICE was confirmed — "
+                            "distinct from `verified`, which is the date the ROUTE was called)")
+    elif (day := _as_date(checked)) is None:
+        fail(errors, where, f"cost.checked '{checked}' is not an ISO date (YYYY-MM-DD)")
+    elif (age := (dt.date.today() - day).days) > STALE_DAYS:
+        warnings.append(f"{where}: cost.checked is {age} days old (> {STALE_DAYS}) — re-check the price")
+
+
 def main(argv: list[str]) -> int:
     errors: list[str] = []
+    warnings: list[str] = []
     tax = yaml.safe_load((CATALOG / "capabilities.yaml").read_text())
     platforms = set(tax.get("platforms") or {})
     capabilities = set(tax.get("capabilities") or {})
 
-    sys.path.insert(0, str(ROOT / "src"))
     from treg.oauth_providers import REGISTRY  # noqa: E402
 
     only = set(argv)
@@ -178,9 +273,13 @@ def main(argv: list[str]) -> int:
             cost = ep.get("cost")
             if cost is not None or tier == "core":
                 # cost is optional in the extended tier — several providers publish prices per API
-                # family rather than per route — but a stated cost must still be a real cost model
-                if not isinstance(cost, dict) or cost.get("type") not in COST_TYPES:
+                # family rather than per route — but a stated cost must still be a real cost model.
+                # An ABSENT one reads as "price unknown", never as free (catalog.md, Cost), which is
+                # why nothing here has to be written out for it to be refused a platform key.
+                if not isinstance(cost, dict):
                     fail(errors, where, f"cost.type missing or not one of {sorted(COST_TYPES)}")
+                else:
+                    check_cost(cost, where, errors, warnings)
             if ep.get("verified"):
                 ex = ep.get("example_response")
                 if not ex:
@@ -225,7 +324,10 @@ def main(argv: list[str]) -> int:
 
     for e in errors:
         print(e)
-    print(f"{'FAIL' if errors else 'OK'} — {len(files)} provider file(s), {len(seen_ids)} endpoint(s), {len(errors)} error(s)")
+    for w in warnings:
+        print(f"WARN {w}")
+    print(f"{'FAIL' if errors else 'OK'} — {len(files)} provider file(s), {len(seen_ids)} endpoint(s), "
+          f"{len(errors)} error(s), {len(warnings)} warning(s)")
     return 1 if errors else 0
 
 

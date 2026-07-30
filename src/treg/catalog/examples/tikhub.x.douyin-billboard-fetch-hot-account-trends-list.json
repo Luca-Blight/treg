@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "request_id": "09664e09-207c-4933-9bae-b97678f4e86c",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-30 05:13:26",
+  "time_stamp": 1785413606,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Billboard-API/fetch_hot_account_trends_list_api_v1_douyin_billboard_fetch_hot_account_trends_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/09664e09-207c-4933-9bae-b97678f4e86c?sign=ef2935bd07c27b61b0197382c459640e0cb892c0adec171f226f529e902ece65",
+  "router": "/api/v1/douyin/billboard/fetch_hot_account_trends_list",
+  "params": {
+    "sec_uid": "MS4wLjABAAAA8U_l6rBzmy7bcy6xOJel4v0RzoR_wfAubGPeJimN__4",
+    "date_window": "24"
+  },
+  "data": {
+    "code": 0,
+    "data": {
+      "trends": [
+        {
+          "datetime": 1777478400,
+          "value": 7604660
+        },
+        "… 88 more item(s) truncated"
+      ],
+      "avg": 8474903.786516855
+    },
+    "extra": {
+      "now": 1785413606000
+    },
+    "message": ""
+  }
+}

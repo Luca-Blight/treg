@@ -27,6 +27,27 @@ credit_rates_usd:
   apollo: {usd: null, basis: "seat-priced, not credit-priced", note: "plans are per-user per-month (~$49/user/mo Basic) and bundle three separate quotas -- email, export, and mobile credits -- so no single dollars-per-credit rate exists", source: "https://www.apollo.io/pricing", checked: "2026-07-28"}
   crunchbase: {usd: null, basis: "no published API pricing", note: "the Basic API was retired and remaining API access is quoted by sales; no credit unit is published", source: "https://data.crunchbase.com/docs/crunchbase-basic-getting-started", checked: "2026-07-28"}
   brightdata: {usd: null, basis: "not credit-priced", note: "billing is per record / per GB / per 1,000 results per product, with no cross-product credit unit, so costs stay in the provider's own units", source: "https://brightdata.com/pricing", checked: "2026-07-28"}
+  seranking: {usd: 0.000179, basis: "credits are sold annually: 12M for $2,148/yr on the entry tier = $0.000179/credit (the 120M tier is $10,200/yr = $0.000085)", source: "https://seranking.com/pricing.html", checked: "2026-07-28"}
+  serpstat: {usd: null, basis: "API credits come bundled with a plan", note: "Serpstat's pay page prices PLANS, not credits, and publishes no credits-included figure to divide by -- so a per-credit rate cannot be derived from it and is deliberately not guessed. Serpstat endpoints display their native credit count", source: "https://serpstat.com/pay/", checked: "2026-07-28"}
+
+# Proprietary METERING units -> USD, for providers that bill in something that is neither a currency
+# nor a credit. Same rule as credits, one level deeper: a meter is scoped to its provider AND to
+# itself. Majestic carries three allowances that do not convert into each other, so it gets three
+# rows; a cost block names the meter it spends in `cost.unit` and `catalog_store.cost_view` looks it
+# up here. `usd: null` is the honest state for a meter that comes bundled with a plan at no
+# published per-unit price -- those endpoints keep `cost.usd = null` and display natively
+# ("5,000 analysis units/call"), which is also what refuses them a platform key.
+# Filling one of these in requires a PUBLISHED plan price and a PUBLISHED unit allowance to divide
+# it by. None of the four providers below publish the second number.
+unit_rates_usd:
+  semrush:
+    api_unit: {usd: null, basis: "units are pre-purchased in packages (2M / 5M / 10M / 20M) whose prices Semrush does not list publicly", source: "https://www.semrush.com/api-documentation/", checked: "2026-07-28"}
+  majestic:
+    analysis_unit: {usd: null, basis: "flat per-call charge on most commands (1,000 or 5,000); the allowance comes with a plan and Majestic publishes no per-unit price", source: "https://majestic.com/plans-pricing", checked: "2026-07-28"}
+    retrieval_unit: {usd: null, basis: "1 per row returned; bundled with the plan, no published per-unit price", source: "https://majestic.com/plans-pricing", checked: "2026-07-28"}
+    index_item_unit: {usd: null, basis: "1 per item queried, spent only by GetIndexItemInfo; bundled with the plan, no published per-unit price", source: "https://majestic.com/plans-pricing", checked: "2026-07-28"}
+  moz:
+    quota_row: {usd: null, basis: "Moz meters a ROW QUOTA per billing period, not money", note: "the plan page prices tiers by rows per month, but the row counts are not published alongside the prices in any form this repo has captured, so no per-row rate is derived. Moz endpoints display rows, not dollars", source: "https://moz.com/api/pricing", checked: "2026-07-28"}
 rates_to_usd:
   USD: 1.0
   CNY: 0.1476

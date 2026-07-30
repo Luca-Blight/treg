@@ -104,6 +104,70 @@ async def send_invite(email: str, inviter: str, org_name: str, role: str, code: 
     return await _send(email, subject, html, text)
 
 
+async def send_topup_receipt(email: str, org_name: str, amount_micro: int, balance_micro: int,
+                             *, auto: bool = False) -> bool:
+    """Balance was added. Stripe emails its own payment receipt (the tax document); THIS email is the
+    one that says what the money became — how much call balance the team now has — which Stripe cannot
+    know. An automatic top-up says so plainly: an unattended charge nobody was told about is how a
+    chargeback starts."""
+    added, left = _money(amount_micro), _money(balance_micro)
+    how = "Auto top-up" if auto else "Top-up"
+    lead = (f'Your balance dropped below your auto top-up threshold, so we charged your saved card '
+            f'<b style="color:#f2efe8">{added}</b>.' if auto
+            else f'Thanks — <b style="color:#f2efe8">{added}</b> has been added to your balance.')
+    body = (
+        f'<p style="margin:0 0 6px;color:#f2efe8;font-size:16px;font-weight:600">{how} confirmed</p>'
+        f'<p style="margin:0 0 18px;color:#8e8c86;font-size:13px;line-height:1.6">{lead}</p>'
+        f'<div style="font-family:{_MONO};background:#0d0c0b;border:1px solid #2f2d2a;border-radius:12px;padding:16px">'
+        f'<div style="color:#8e8c86;font-size:12px">Team</div>'
+        f'<div style="color:#f2efe8;font-size:14px;margin-bottom:10px">{_esc(org_name)}</div>'
+        f'<div style="color:#8e8c86;font-size:12px">Balance now</div>'
+        f'<div style="color:#19D0E8;font-size:26px;font-weight:700">{left}</div></div>'
+        '<p style="margin:18px 0 0;color:#8e8c86;font-size:12px;line-height:1.6">Run <span style="color:#19D0E8">treg balance</span> to see what it\'s made of and where it goes.</p>'
+    )
+    subject = f"{added} added to your tools-registry balance"
+    text = (f"{how} confirmed: {added} added to {org_name}'s tools-registry balance.\n"
+            f"Balance now: {left}. Run `treg balance` for the detail.")
+    return await _send(email, subject, _WRAP.format(body=body), text)
+
+
+async def send_autotopup_disabled(email: str, org_name: str, reason: str,
+                                  *, recovery_pi: bool = False) -> bool:
+    """Auto top-up turned itself off. Urgent by nature: the balance will now run out and every agent
+    call starts failing with a 402, so the email names the cause and the one action that fixes it."""
+    why = {
+        "authentication_required": "your bank asked for verification (3-D Secure), which can't be done "
+                                   "while you're away from the keyboard",
+        "max_attempts": "the card was declined too many times in a row",
+    }.get(reason.split(":")[0], f"of a payment problem ({_esc(reason)})")
+    fix = ("Open the dashboard and complete the payment once — your bank will remember the "
+           "verification for future charges." if recovery_pi
+           else "Open the dashboard to update your card and switch auto top-up back on.")
+    body = (
+        '<p style="margin:0 0 6px;color:#f2efe8;font-size:16px;font-weight:600">Auto top-up is off</p>'
+        f'<p style="margin:0 0 14px;color:#8e8c86;font-size:13px;line-height:1.6">We stopped topping up '
+        f'<b style="color:#f2efe8">{_esc(org_name)}</b> because {why}.</p>'
+        f'<p style="margin:0 0 18px;color:#e4714a;font-size:13px;line-height:1.6">Once the balance runs out, '
+        'calls will start failing until it\'s funded.</p>'
+        f'<p style="margin:0;color:#8e8c86;font-size:13px;line-height:1.6">{fix}</p>'
+    )
+    text = (f"Auto top-up for {org_name} is off because {reason}. Once the balance runs out, calls "
+            f"will fail until it's funded. {fix}")
+    return await _send(email, f"Action needed: auto top-up is off for {org_name}",
+                       _WRAP.format(body=body), text)
+
+
+def _money(amount_micro: int) -> str:
+    """micro-USD → a money string. Keeps four decimals under a dollar, because sub-cent amounts are
+    normal here (a catalog call runs ~$0.0006) and two decimals would print a real charge as $0.00."""
+    try:
+        v = int(amount_micro) / 1_000_000
+    except (TypeError, ValueError):
+        return "-"
+    sign, v = ("-" if v < 0 else ""), abs(v)
+    return f"{sign}${v:,.2f}" if v >= 1 else f"{sign}${v:.4f}"
+
+
 def _esc(s: str) -> str:
     return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             .replace('"', "&quot;"))

@@ -45,7 +45,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit per company found; nothing when not found. `simplified=true` is free; `refresh=true` adds 10 credits. Dollar value depends on plan (500 free credits on signup)."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.thecompaniesapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per company found; nothing when not found. `simplified=true` is free; `refresh=true` adds 10 credits. Dollar value depends on plan (500 free credits on signup).
     docs_url: https://www.thecompaniesapi.com/api/enrich-company-from-domain
 
   - id: thecompaniesapi.companies.search
@@ -76,7 +82,13 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 credit PER COMPANY RETURNED, so `size` is the price. `simplified=true` makes the whole call free."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://www.thecompaniesapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit PER COMPANY RETURNED, so `size` is the price. `simplified=true` makes the whole call free.
     docs_url: https://www.thecompaniesapi.com/api/search-companies
 
   - id: thecompaniesapi.companies.enrich_by_email
@@ -97,7 +109,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "presumed 1 credit per company found, matching domain enrichment — this route's price is NOT explicitly published, so treat the figure as an inference and confirm against a real response's credit accounting before relying on it."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.thecompaniesapi.com/pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: presumed 1 credit per company found, matching domain enrichment — this route's price is NOT explicitly published, so treat the figure as an inference and confirm against a real response's credit accounting before relying on it.
     docs_url: https://www.thecompaniesapi.com/api/enrich-company-from-email
 
   - id: thecompaniesapi.companies.email_pattern
@@ -120,7 +138,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit per request."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://www.thecompaniesapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per request.
     docs_url: https://www.thecompaniesapi.com/api/fetch-company-email-patterns
 
   - id: thecompaniesapi.account.usage
@@ -137,5 +161,5 @@ endpoints:
         simplified: {type: boolean, required: true, note: "must be true — this is what makes the call free", example: true}
         size: {type: integer, required: true, note: "keep it at 1", example: 1}
       note: "the free simplified search doubles as the key-health check — this exact call is the registry's probe. There IS a real account route, GET /teams/{teamId}, which returns credits, creditsPack and isSubscriber, but it needs a numeric team id you must already know (there is no /teams/me) and its own cost is unpublished, so the free search is the safer health check"
-    cost: {type: free, value: 0, currency: USD, note: "free because of simplified=true; auth is still required, so a bad token is rejected"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'free because of simplified=true; auth is still required, so a bad token is rejected'}
     docs_url: https://www.thecompaniesapi.com/api/search-companies

@@ -1,0 +1,53 @@
+{
+  "search_metadata": {
+    "id": "6a6b42a866bc78d89a925f8a",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/DSjyprC4FLAeOnEuCQgWOg/6a6b42a8… [81 chars]",
+    "created_at": "2026-07-30 12:25:12 UTC",
+    "processed_at": "2026-07-30 12:25:12 UTC",
+    "naver_ai_overview_url": "https://search.naver.com/search.naver?query=coffee&where=nex… [65 chars]",
+    "raw_html_file": "https://serpapi.com/searches/DSjyprC4FLAeOnEuCQgWOg/6a6b42a8… [81 chars]",
+    "prettify_html_file": "https://serpapi.com/searches/DSjyprC4FLAeOnEuCQgWOg/6a6b42a8… [85 chars]",
+    "total_time_taken": 11.38
+  },
+  "search_parameters": {
+    "engine": "naver_ai_overview",
+    "query": "coffee"
+  },
+  "markdown": "커피는 커피나무 씨앗(원두)을 볶아 갈아 추출한 음료로, 카페인 때문에 각성 효과가 있고 전 세계적으로 널리… [1194 chars]",
+  "text_blocks": [
+    {
+      "type": "paragraph",
+      "snippet": "커피는 커피나무 씨앗(원두)을 볶아 갈아 추출한 음료로, 카페인 때문에 각성 효과가 있고 전 세계적으로 널리… [152 chars]",
+      "reference_indexes": "… [4 item(s) truncated]"
+    },
+    "… 15 more item(s) truncated"
+  ],
+  "references": [
+    {
+      "index": 1,
+      "title": "커피 - 나무위키",
+      "snippet": "개요 Coffee 커피나무의 씨앗(원두)을 볶고 갈아서 추출한 음료다. 색이 어둡고, 쓴 맛과 고소한 향, … [100 chars]",
+      "link": "https://namu.wiki/w/%EC%BB%A4%ED%94%BC",
+      "source": "나무위키",
+      "source_icon": "https://namu.wiki/favicon.ico"
+    },
+    "… 4 more item(s) truncated"
+  ],
+  "media": [
+    {
+      "title": "커피 & 바닐라 - 나무위키",
+      "link": "https://namu.wiki/w/%EC%BB%A4%ED%94%BC%20%26%20%EB%B0%94%EB%… [74 chars]",
+      "thumbnail": "https://i.namu.wiki/i/4vwKeZPTcrW-2QHjzwfF-OAltaP30Hy4sq2iuP… [113 chars]",
+      "platform": "나무위키"
+    },
+    "… 4 more item(s) truncated"
+  ],
+  "related_questions": [
+    {
+      "question": "커피의 이뇨작용과 수분 섭취 관계 알려주세요",
+      "serpapi_link": "https://serpapi.com/search.json?engine=naver_ai_overview&que… [239 chars]"
+    },
+    "… 2 more item(s) truncated"
+  ]
+}

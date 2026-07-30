@@ -41,8 +41,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.comment-delete
@@ -56,8 +57,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
   scope_gap: treg's OAuth app does not request this; needs instagram_manage_comments
@@ -71,8 +73,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.comment-replies
@@ -85,8 +88,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.comment-reply-create
@@ -100,8 +104,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
   scope_gap: treg's OAuth app does not request this; needs instagram_manage_comments
@@ -116,8 +121,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
   scope_gap: treg's OAuth app does not request this; needs instagram_manage_comments
@@ -131,8 +137,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.hashtag-recent-media
@@ -145,8 +152,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.hashtag-top-media
@@ -159,8 +167,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.media
@@ -173,8 +182,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.media-children
@@ -187,8 +197,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.media-comment-create
@@ -202,8 +213,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
   scope_gap: treg's OAuth app does not request this; needs instagram_manage_comments
@@ -217,8 +229,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
   scope_gap: treg's OAuth app does not request this; needs instagram_shopping_tag_products
@@ -233,8 +246,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.user-messages
@@ -247,8 +261,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
   scope_gap: treg's OAuth app does not request this; needs instagram_manage_messages
@@ -262,8 +277,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.user-mentioned-comment
@@ -276,8 +292,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.user-mentioned-media
@@ -290,8 +307,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.user-product-appeal
@@ -304,8 +322,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
   scope_gap: treg's OAuth app does not request this; needs instagram_shopping_tag_products
@@ -319,8 +338,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.user-stories
@@ -333,8 +353,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.user-tags
@@ -347,8 +368,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference
 - id: instagram.x.user-business-discovery
@@ -361,7 +383,8 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference

@@ -61,7 +61,7 @@ async def test_platform_detail_groups_the_same_job_across_providers(clients: Asy
     ep = next(e for e in profile["endpoints"] if e["provider"] == "tikhub")
     assert set(ep) == {"id", "provider", "provider_display", "name", "summary", "method", "path",
                        "scope", "tier", "kind", "domain", "call_template", "cost", "verified", "docs_url",
-                       "has_example", "input"}
+                       "has_example", "input", "platform_eligible"}
     assert ep["kind"] == "data", "an endpoint with no explicit kind is data (the browse surface)"
     assert ep["provider_display"] == P.get("tikhub").display_name
     assert ep["method"] == "GET" and ep["path"].startswith("/")
@@ -356,6 +356,89 @@ async def test_a_credit_price_is_served_in_usd_per_provider(clients: AsyncClient
     assert native["currency"] == "credit" and native["value"]
     assert cs.load().credit_rates["pdl"] is None
     assert native["usd"] is None, "no published rate: display credits, never a guessed dollar"
+
+
+# ---- cost: units, provenance and platform eligibility ----------------------------------------
+async def test_per_divides_so_a_cpm_price_serves_per_row():
+    """A provider that quotes dollars per 1,000 rows must not serve as dollars per row. `per` is what
+    makes "$2.00 per 1,000" and "$0.002 each" the same fact instead of a 1,000x error."""
+    cat = cs.load()
+    ep = cat.by_id["spyfu.google.domain.paid_keywords"]
+    cost = cat.cost_view(ep["cost"], ep["provider"])
+    assert (cost["value"], cost["per"], cost["unit"]) == (2.0, 1000, "row")
+    assert cost["usd"] == 0.002, "usd is the price of ONE chargeable event, whatever the quote unit"
+
+
+async def test_a_provider_meter_converts_per_meter_not_per_provider():
+    """`currency: unit` is the provider's own meter, and a provider can spend several at once.
+    Majestic's analysis units and index-item units are as unrelated as two providers' credits."""
+    cat = cs.load()
+    assert set(cat.unit_rates["majestic"]) == {"analysis_unit", "retrieval_unit", "index_item_unit"}
+    listing = cat.by_id["majestic.web.backlinks.list"]["cost"]
+    assert listing["currency"] == "unit" and listing["unit"] == "analysis_unit"
+    assert listing["value"] == 5000
+    # Majestic publishes no dollar price for any of the three, so the served price stays native.
+    assert cat.cost_view(listing, "majestic")["usd"] is None
+
+    # Moz's row quota is a meter too. It used to carry no `currency` at all, defaulted to USD, and
+    # served every Moz route at $1.00 per row — the exact failure `currency: unit` prevents.
+    moz = cat.by_id["moz.web.url.metrics"]["cost"]
+    assert moz["currency"] == "unit" and moz["unit"] == "quota_row"
+    assert cat.cost_view(moz, "moz")["usd"] is None
+
+
+async def test_free_is_spelled_one_way_and_prices_at_zero():
+    """661 endpoints wrote free three ways, which left `usd` null on most of them — downstream,
+    indistinguishable from "price unknown", which is the one thing free must never look like."""
+    cat = cs.load()
+    frees = [e for e in cat.endpoints if (e["cost"] or {}).get("type") == "free"]
+    assert len(frees) > 500
+    for ep in frees:
+        cost = cat.cost_view(ep["cost"], ep["provider"])
+        assert (cost["value"], cost["currency"], cost["unit"]) == (0, "USD", "call"), ep["id"]
+        assert cost["usd"] == 0, ep["id"]
+
+
+async def test_an_observed_price_is_provenanced_without_a_url():
+    """DataForSEO prices per API family, not per route, so its extended entries carry only the
+    charge the provider REPORTED at verification. That is the strongest provenance there is — it is
+    what was actually billed — and its evidence is the captured response, not a pricing page."""
+    cat = cs.load()
+    ep = cat.by_id["dataforseo.x.ai-optimization-llm-mentions-historical-live"]
+    cost = cat.cost_view(ep["cost"], ep["provider"])
+    assert cost["source"] == "observed" and cost["confidence"] == "verified"
+    assert cost["checked"] == ep["verified"], "the price was confirmed the day the call was made"
+    assert "source_url" not in cost and cost["usd"] == cost["value"]
+
+
+async def test_platform_eligibility_refuses_everything_it_cannot_prove():
+    """The predicate behind spending treg's own key. Asymmetric on purpose: an unknown price must
+    read as "refuse", never as free — so every axis is checked independently."""
+    cat = cs.load()
+    ok = cat.by_id["tikhub.tiktok.user.profile"]
+    assert cat.platform_eligible(ok), "priced from the provider's live rate card, and live-called"
+
+    def with_cost(**changes):
+        return {**ok, "cost": {**ok["cost"], **changes}}
+
+    assert not cat.platform_eligible(with_cost(confidence="documented")), "docs are not enough"
+    assert not cat.platform_eligible(with_cost(value=None, confidence="unknown"))
+    assert not cat.platform_eligible(with_cost(currency="credit")), "tikhub has no credit rate"
+    assert not cat.platform_eligible({**ok, "scope": "own_account"})
+    assert not cat.platform_eligible({**ok, "kind": "account"})
+    assert not cat.platform_eligible({**ok, "verified": None}), "never called ⇒ never billed for"
+    assert not cat.platform_eligible({**ok, "cost": None}), "no price block ⇒ refuse, not free"
+
+
+async def test_eligibility_rides_on_the_served_row(clients: AsyncClient):
+    """A client deciding whether a call needs a credential must not have to re-derive the rule."""
+    cat = cs.load()
+    body = (await clients.get("/catalog/endpoints/tikhub.tiktok.user.profile")).json()
+    assert body["endpoint"]["platform_eligible"] is True
+    # Every launch provider has to have a usable surface, or tier 4 ships with nothing behind it.
+    eligible = [e for e in cat.endpoints if cat.platform_eligible(e)]
+    for provider in ("tikhub", "dataforseo", "scrapecreators"):
+        assert sum(1 for e in eligible if e["provider"] == provider) > 20, provider
 
 
 async def test_unknown_endpoint_is_404(clients: AsyncClient):

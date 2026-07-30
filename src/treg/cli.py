@@ -197,6 +197,10 @@ def _show(resp: httpx.Response) -> None:
     except Exception:
         print(resp.text)
     if resp.status_code >= 400:
+        # 402 = the team balance can't cover a call on treg's key. The JSON above already carries the
+        # numbers an agent needs; a human gets the two commands that fix it.
+        if resp.status_code == 402 and isinstance(body, dict) and isinstance(body.get("detail"), dict):
+            print("(check the balance with `treg balance`, add funds with `treg topup`)", file=sys.stderr)
         # The server's org-picking 400 names its header, not the caller's mistake. Say which
         # org value was sent and where it came from (`--org` beats the saved active org).
         if isinstance(body, dict) and "choose an org" in str(body.get("detail", "")):
@@ -2088,8 +2092,11 @@ def cmd_call(args, cfg) -> None:
     if "?" in rest:
         rest, _, inline = rest.partition("?")
         params = list(parse_qsl(inline, keep_blank_values=True)) + params
+    # curl's convention: a body implies POST. Catalog endpoints reject a method mismatch, so making
+    # `treg call <id> --data …` just work beats asking the caller to repeat what the catalog knows.
+    method = args.method or ("POST" if content is not None else "GET")
     with _client(cfg) as c:
-        _show(c.request(args.method, f"/call/{rest}", params=params, content=content, headers=headers))
+        _show(c.request(method, f"/call/{rest}", params=params, content=content, headers=headers))
 
 
 def cmd_calls(args, cfg) -> None:
@@ -2866,6 +2873,165 @@ def _write_bundle_files(dest: Path, files: dict) -> int:
     return written
 
 
+def _usd(micro) -> str:
+    """micro-USD → a money string, sign OUTSIDE the dollar mark (-$0.0006, not $-0.0006).
+
+    Under a dollar it keeps four decimals: sub-cent amounts are the norm here (a catalog call runs
+    ~$0.0006), and two decimals would round a real charge to $0.00 and read as free."""
+    try:
+        v = int(micro) / 1_000_000
+    except (TypeError, ValueError):
+        return "-"
+    sign, v = ("-" if v < 0 else ""), abs(v)
+    return f"{sign}${v:,.2f}" if v >= 1 else f"{sign}${v:.4f}"
+
+
+def cmd_balance(args, cfg) -> None:
+    """The team's prepaid balance, what it's made of, and the recent ledger. Amounts are shown in USD;
+    the API's `*_micro` integers are the real values (`--json` for those)."""
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        r = c.get(f"/orgs/{org_id}/balance", params={"limit": args.limit})
+    if _JSON_OVERRIDE or r.status_code >= 400:
+        _show(r)  # exits non-zero on an error
+        return
+    b = r.json()
+    print(f"\n  {_A}Balance{_R}  {_G}{_usd(b['balance_micro'])}{_R}   {_M}({b['balance_micro']} micro-USD){_R}")
+    blocks = b.get("blocks") or []
+    if blocks:
+        print(f"\n  {_M}credit{_R}")
+        for blk in blocks:
+            print(f"    {blk['kind']:<12} {_usd(blk['remaining_micro']):>10} left  "
+                  f"{_M}of {_usd(blk['amount_micro'])} granted {(blk.get('created_at') or '')[:10]}{_R}")
+    holds = b.get("holds") or []
+    if holds:  # money withheld for calls still in flight — it is NOT spent yet
+        print(f"\n  {_M}in flight (held){_R}")
+        for h in holds:
+            print(f"    {_usd(h['amount_micro']):>10}  {h.get('endpoint_id') or '-'}")
+    # Auto top-up in one line, and only when there's something to say: silence means "you're on manual
+    # top-ups", which needs no explanation. A self-disabled policy DOES — it means calls will start
+    # failing — so it gets said even though it costs a second request.
+    auto = _billing_autotopup(cfg)
+    if auto and auto.get("enabled"):
+        print(f"  {_M}auto top-up{_R}  on — add {_usd(auto['amount_micro'])} when it drops "
+              f"below {_usd(auto['threshold_micro'])}  {_M}(cap {_usd(auto['monthly_cap_micro'])}/mo, "
+              f"{_usd(auto['month_spend_micro'])} used){_R}")
+    elif auto and auto.get("disabled_reason"):
+        print(f"  {_AM}auto top-up off — {auto['disabled_reason']}. Run `treg topup --auto on` after "
+              f"fixing your card.{_R}")
+    items = (b.get("entries") or {}).get("items") or []
+    if not items:
+        print(f"\n  {_M}no ledger activity yet — nothing has been spent.{_R}\n")
+        return
+    print(f"\n  {_M}recent ledger{_R}")
+    for e in items:
+        when = (e.get("created_at") or "")[:19].replace("T", " ")
+        amount = _usd(e["amount_micro"])
+        sign = _G if e["amount_micro"] > 0 else _M
+        what = e.get("endpoint_id") or (e.get("meta") or {}).get("reason") or ""
+        print(f"    {when}  {e['kind']:<9} {sign}{amount:>10}{_R}  {_M}{what}{_R}")
+    print()
+
+
+def _billing_autotopup(cfg: dict) -> dict | None:
+    """The org's auto-top-up block from GET /billing, or None if it isn't available (not an admin,
+    Stripe not configured on this deployment, an old server). Never raises — this decorates a balance
+    listing, so a failure here must not take the balance down with it."""
+    try:
+        with _client(cfg) as c:
+            r = c.get("/billing")
+        if r.status_code >= 400:
+            return None
+        body = r.json()
+        return body.get("autotopup") if body.get("configured") else None
+    except Exception:
+        return None
+
+
+def cmd_topup(args, cfg) -> None:
+    """Add funds (prints a Stripe Checkout URL), or configure auto top-up.
+
+    The URL is the whole output for a manual top-up: payment happens on Stripe's page, and the balance
+    moves when Stripe tells the server it succeeded — so there is nothing for this command to poll or
+    confirm. Run `treg balance` after paying.
+    """
+    if args.auto:
+        _topup_auto(args, cfg)
+        return
+    amount = args.amount
+    with _client(cfg) as c:
+        r = c.post("/billing/topup", json={} if amount is None else {"amount_usd": amount})
+    if _JSON_OVERRIDE or r.status_code >= 400:
+        _show(r)
+        return
+    out = r.json()
+    print(f"\n  {_A}Add {_usd(out['amount_micro'])} to your balance{_R}")
+    print(f"\n  Pay on Stripe's secure page:\n\n    {_TEAL}{out['url']}{_R}")
+    print(f"\n  {_M}Your balance updates as soon as Stripe confirms the payment "
+          f"(seconds). Check it with `treg balance`.{_R}\n")
+
+
+def _topup_auto(args, cfg) -> None:
+    """`treg topup --auto on|off` — the consent gate lives HERE, in front of the request.
+
+    An off-session charge needs the cardholder's agreement to a specific threshold and amount (the
+    PSD2/SCA mandate). The server refuses without `consent: true`, and this prompt is what makes that
+    flag mean something: the human sees the numbers they are authorizing before it is sent.
+    """
+    turning_on = args.auto == "on"
+    body: dict = {"enabled": turning_on, "consent": False}
+    for key, val in (("threshold_usd", args.threshold), ("amount_usd", args.auto_amount),
+                     ("monthly_cap_usd", args.auto_cap)):
+        if val is not None:
+            body[key] = val
+    if turning_on:
+        threshold = args.threshold if args.threshold is not None else "your threshold"
+        amount = args.auto_amount if args.auto_amount is not None else "the default amount"
+        t = f"${threshold}" if isinstance(threshold, (int, float)) else threshold
+        a = f"${amount}" if isinstance(amount, (int, float)) else amount
+        print(f"\n  {_AM}Auto top-up charges your saved card when nobody is at the keyboard.{_R}")
+        print(f"  {_M}Whenever your balance drops below {t}, we charge {a} to the card on file.{_R}\n")
+        if not _confirm_consent():
+            sys.exit("cancelled — auto top-up is unchanged.")
+        body["consent"] = True
+    with _client(cfg) as c:
+        r = c.post("/billing/autotopup", json=body)
+    if _JSON_OVERRIDE or r.status_code >= 400:
+        _show(r)
+        return
+    state = r.json()
+    auto = state.get("autotopup") or {}
+    if not turning_on:
+        print(f"\n  {_G}Auto top-up is off.{_R} Add funds by hand with `treg topup`.\n")
+        return
+    if state.get("setup_url"):
+        # Consent is recorded; the card isn't. Enabling in this order is deliberate — the human agreed
+        # to the numbers BEFORE any card existed, which is the record a dispute actually turns on.
+        print(f"\n  {_A}One step left: save a card.{_R}")
+        print(f"\n    {_TEAL}{state['setup_url']}{_R}")
+        print(f"\n  {_M}Auto top-up switches on by itself once the card is saved.{_R}\n")
+        return
+    print(f"\n  {_G}Auto top-up is on.{_R} Add {_usd(auto.get('amount_micro') or 0)} whenever the "
+          f"balance drops below {_usd(auto.get('threshold_micro') or 0)}.")
+    print(f"  {_M}Monthly ceiling {_usd(auto.get('monthly_cap_micro') or 0)} — we stop there, "
+          f"whatever happens.{_R}\n")
+
+
+def _confirm_consent() -> bool:
+    """An explicit yes to unattended charges. Defaults to NO, and a non-interactive shell counts as
+    no: consent that can be given by a script that wasn't asked isn't consent."""
+    try:
+        import questionary
+        answer = questionary.confirm(
+            "Authorize treg to charge your saved card automatically?",
+            default=False, style=_picker_style()).ask()
+        return bool(answer)
+    except Exception:
+        return False
+
+
 def cmd_health(args, cfg) -> None:
     with _client(cfg) as c:
         if args.run:
@@ -3283,23 +3449,31 @@ def _cost_label(cost) -> str:
         return "free"
     if value in (None, ""):
         return kind or "-"
-    unit = {"per call": "call", "per result": "result", "per success": "success"}.get(kind, kind or "call")
+    # `quota_rows` prices a CALL, in rows — so the denominator is "call" and the row count shows up
+    # as the native amount ("1 quota row/call"), not as "1 quota row/quota rows".
+    unit = {"per call": "call", "per result": "result", "per success": "success",
+            "quota rows": "call"}.get(kind, kind or "call")
     # unified USD display: the server computes `usd` from the billing currency (or, for
     # `currency: credit`, the provider's credit rate) via fx.yaml. The USD number leads so rows
     # stay comparable; the native amount trails in parentheses as the secondary fact.
     # Native ALONE only when no rate exists — a bare credit count is never a price.
     usd = cost.get("usd")
     if usd is not None:
-        native = "" if currency in ("USD", "") else f" ({_native_amount(value, currency)})"
+        native = "" if currency in ("USD", "") else f" ({_native_amount(value, currency, cost.get('unit') or '')})"
         return f"${usd:g}/{unit}{native}"
-    return f"{_native_amount(value, currency)}/{unit}"
+    return f"{_native_amount(value, currency, cost.get('unit') or '')}/{unit}"
 
 
-def _native_amount(value, currency: str) -> str:
+def _native_amount(value, currency: str, meter: str = "") -> str:
     """The provider's own number in its own unit. "credit" is a provider-scoped unit, not a
-    currency, so it reads as a noun ("3 credits") rather than a currency prefix ("credit 3")."""
+    currency, so it reads as a noun ("3 credits") rather than a currency prefix ("credit 3") — and
+    `currency: unit` is a provider METER named by `cost.unit`, so it reads the same way
+    ("5000 analysis units"), never as the literal word "unit"."""
     if currency == "credit":
         return f"{value:g} credit{'' if value == 1 else 's'}"
+    if currency == "unit":
+        noun = (meter or "unit").replace("_", " ")
+        return f"{value:g} {noun}{'' if value == 1 else 's'}"
     return f"${value:g}" if currency in ("USD", "") else f"{currency} {value:g}"
 
 
@@ -3508,14 +3682,20 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
     print(f"\n{_B}RUN IT{_R}")
     print(f"  {body['call_template']}")
     _dim("  the key is injected server-side — you never hold it")
-    # Which credential tier would serve THIS caller (registered tool / org credential / none)?
-    # Authenticated + best-effort: signed-out readers and older servers just skip the line.
+    # Which credential tier would serve THIS caller (registered tool / org credential / treg's own
+    # metered key / none)? Authenticated + best-effort: signed-out readers and older servers skip it.
     if cfg.get("token"):
         try:
             with _client(cfg) as ac:
                 a = ac.get(f"/catalog/endpoints/{quote(endpoint_id, safe='')}/access")
-            if a.status_code == 200 and (a.json() or {}).get("detail"):
-                _dim(f"  → {a.json()['detail']}")
+            access = a.json() if a.status_code == 200 else {}
+            if access.get("detail"):
+                # The platform tier is the answer to "do I need a key?" — the one line here that turns a
+                # catalog page into a call the reader can make right now, so it isn't dimmed away.
+                if access.get("tier") == "platform":
+                    print(f"  {_G}→ {access['detail']}{_R}")
+                else:
+                    _dim(f"  → {access['detail']}")
         except Exception:  # noqa: BLE001 — an access hint must never break the catalog page
             pass
 
@@ -3655,6 +3835,8 @@ HELP_GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
     ]),
     ("TEAM MANAGEMENT", [
         ("audit", "Who called/ran what, when, and the result."),
+        ("balance", "Prepaid balance: credit left, calls in flight, recent spend."),
+        ("topup", "Add funds to the balance, or set up automatic top-ups."),
         ("org", "Manage teams (orgs): create, switch, invite, members, join, leave."),
         ("invites", "List invites addressed to your email."),
         ("accept", "Accept an invite addressed to your email."),
@@ -3954,7 +4136,8 @@ def build_parser() -> argparse.ArgumentParser:
             "treg call posthog api/events --query limit=5", "treg call slack chat.postMessage --method POST --data '{\"channel\":\"C1\"}'")
     cl.add_argument("target", help="a tool name, or a full upstream URL")
     cl.add_argument("path", nargs="?", default="", help="the path when using a tool name")
-    cl.add_argument("--method", default="GET", help="HTTP method (default: GET)")
+    cl.add_argument("--method", default=None,
+                    help="HTTP method (default: GET, or POST when --data/--file/--upload is given)")
     cl.add_argument("--query", action="append", default=[], metavar="K=V", help="a query param (repeatable)")
     cl.add_argument("--data", help="request body (string)"); cl.add_argument("--file", help="request body from a file")
     cl.add_argument("--content-type", dest="content_type", metavar="TYPE",
@@ -4145,6 +4328,31 @@ def build_parser() -> argparse.ArgumentParser:
     # instructions), but it is deliberately absent from --help: we only teach scan/upload.
     im = sub.add_parser("import", description="(deprecated) old name for `treg upload`.", formatter_class=_RAWFMT)
     _upload_args(im)
+
+    # ---- balance ----
+    bal = mk(sub, "balance", "Your team's prepaid balance: credit left, calls in flight, recent spend.",
+             "treg balance", "treg balance --limit 50", "treg balance --json    # micro-USD integers")
+    bal.add_argument("--limit", type=int, default=20, help="how many recent ledger rows (default: 20)")
+    bal.set_defaults(fn=cmd_balance)
+
+    tu = mk(sub, "topup", "Add funds to your team's balance, or set up automatic top-ups.",
+            "treg topup                                     # a Checkout link for the default amount",
+            "treg topup 25                                  # …for $25",
+            "treg topup --auto on --threshold 5 --amount 10 # refill $10 whenever it drops below $5",
+            "treg topup --auto off")
+    tu.add_argument("amount", nargs="?", type=float, default=None,
+                    help="how many US dollars to add (whole dollars; default from the server)")
+    tu.add_argument("--auto", choices=("on", "off"), help="turn automatic top-ups on or off")
+    tu.add_argument("--threshold", type=float, default=None,
+                    help="with --auto on: refill when the balance drops below this many dollars")
+    # dest is auto_amount, not amount: the positional above already owns `amount` (the one-off top-up
+    # size), and the two numbers mean different things — conflating them would make
+    # `treg topup 25 --auto on` ambiguous about which $25 was meant.
+    tu.add_argument("--amount", dest="auto_amount", type=float, default=None,
+                    help="with --auto on: how many dollars to add on each automatic refill")
+    tu.add_argument("--cap", dest="auto_cap", type=float, default=None,
+                    help="with --auto on: the most auto top-up may charge in a calendar month")
+    tu.set_defaults(fn=cmd_topup)
 
     # ---- health + oauth ----
     he = mk(sub, "health", "Show tool/secret health, or run the checks now with --run.",

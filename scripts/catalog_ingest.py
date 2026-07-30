@@ -755,7 +755,9 @@ def ingest_dataforseo(refresh: bool) -> tuple[Path, dict]:
             "tier": "extended",
             "platform": platform,
             "method": method,
-            "path": path,
+            # base_url already ends in /v3 — a verbatim spec path would relay to /v3/v3/… (404 on
+            # all 216 extended routes; found live 2026-07-30). Core files store /v3-less paths too.
+            "path": path.removeprefix("/v3"),
             "summary": summary[:400],
         }
         # DataForSEO's spec has NO per-op summary/title field (checked 2026-07-28: 0 of 570 ops)

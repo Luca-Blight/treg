@@ -67,7 +67,13 @@ endpoints:
       type: per_call
       value: 25
       currency: credit
-      note: "25 credits per enhanced record, or 100 credits with refresh=true. `size` multiplies this. On the $299/mo 250k-credit plan that is roughly $0.03 per record."
+      per: 1
+      unit: page
+      source: docs
+      source_url: https://www.diffbot.com/pricing/
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 25 credits per enhanced record, or 100 credits with refresh=true. `size` multiplies this. On the $299/mo 250k-credit plan that is roughly $0.03 per record.
     verified: 2026-07-28
     example_response: examples/diffbot.companies.enrich.json
     docs_url: https://docs.diffbot.com/reference/enhanceget
@@ -104,7 +110,13 @@ endpoints:
       type: per_call
       value: 25
       currency: credit
-      note: "25 credits per enhanced record, or 100 with refresh=true — same rate as company enrichment."
+      per: 1
+      unit: page
+      source: docs
+      source_url: https://www.diffbot.com/pricing/
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 25 credits per enhanced record, or 100 with refresh=true — same rate as company enrichment.
     verified: 2026-07-28
     example_response: examples/diffbot.people.enrich.json
     docs_url: https://docs.diffbot.com/reference/enhanceget
@@ -135,7 +147,13 @@ endpoints:
       type: per_result
       value: 25
       currency: credit
-      note: "25 credits per entity record returned (100 per facet-query result), so `size` is the price. Billed per result, not per query."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://www.diffbot.com/pricing/
+      checked: '2026-07-28'
+      confidence: documented
+      note: 25 credits per entity record returned (100 per facet-query result), so `size` is the price. Billed per result, not per query.
     verified: 2026-07-28
     example_response: examples/diffbot.companies.search.json
     docs_url: https://docs.diffbot.com/docs/tutorial-quickstart-with-knowledge-graph-search
@@ -164,7 +182,13 @@ endpoints:
       type: per_result
       value: 25
       currency: credit
-      note: "25 credits per entity record returned (100 per facet-query result); `size` is the price."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://www.diffbot.com/pricing/
+      checked: '2026-07-28'
+      confidence: documented
+      note: 25 credits per entity record returned (100 per facet-query result); `size` is the price.
     verified: 2026-07-28
     example_response: examples/diffbot.people.search.json
     docs_url: https://docs.diffbot.com/docs/tutorial-quickstart-with-knowledge-graph-search
@@ -197,7 +221,13 @@ endpoints:
       type: per_result
       value: 25
       currency: credit
-      note: "25 credits per record in the batch (100 with refresh) — the same rate as a single /enhance call, so batching saves round trips, not credits."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://www.diffbot.com/pricing/
+      checked: '2026-07-28'
+      confidence: documented
+      note: 25 credits per record in the batch (100 with refresh) — the same rate as a single /enhance call, so batching saves round trips, not credits.
     verified: 2026-07-28
     example_response: examples/diffbot.companies.bulk_enrich.json
     docs_url: https://docs.diffbot.com/reference/introduction-to-enhance-api

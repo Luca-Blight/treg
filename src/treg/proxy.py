@@ -69,6 +69,7 @@ async def relay(
     secrets: dict[int, Secret],
     client: httpx.AsyncClient,
     drop_params: set[str] | None = None,
+    force_identity: bool = False,
 ) -> StreamingResponse:
     # Headers: preserve everything (incl. duplicates / cookies) except hop-by-hop + our token.
     # `.raw` is the original (bytes, bytes) pairs; httpx.Headers is a multidict, so binding
@@ -85,6 +86,12 @@ async def relay(
     # gzip to a caller who never asked for it (binary garbage to any plain HTTP client or agent).
     # Asking for identity keeps what the caller gets matching what the caller requested.
     if "accept-encoding" not in headers:
+        headers["accept-encoding"] = "identity"
+    # Metered marketplace calls OVERRIDE the caller's choice: the settle path must json-parse the
+    # buffered body for the provider's own reported charge, and a caller-requested gzip would hand
+    # it ciphertext — the charge silently falls back to the estimate (real bug: dataforseo billed
+    # $0.003 instead of its reported $0.00015 whenever the caller was httpx/a browser).
+    if force_identity:
         headers["accept-encoding"] = "identity"
     # Query: a list of pairs preserves duplicate keys verbatim (?tag=a&tag=b). A marketplace
     # endpoint-id call may have CONSUMED some params into the path (`{siteUrl}` placeholders) —

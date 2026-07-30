@@ -41,7 +41,12 @@ endpoints:
       type: per_call
       value: null
       currency: USD
-      note: "no per-call price: access is an annual Enterprise/Applications licence with a published 200 calls/min limit rather than a credit meter."
+      per: 1
+      unit: call
+      source: docs
+      checked: '2026-07-28'
+      confidence: unknown
+      note: 'no per-call price: access is an annual Enterprise/Applications licence with a published 200 calls/min limit rather than a credit meter.'
     docs_url: https://data.crunchbase.com/docs/examples-organization-api
 
   - id: crunchbase.companies.search
@@ -67,7 +72,12 @@ endpoints:
       type: per_call
       value: null
       currency: USD
-      note: "no per-call price; covered by the licence, capped by the plan's request-rate limit."
+      per: 1
+      unit: call
+      source: docs
+      checked: '2026-07-28'
+      confidence: unknown
+      note: no per-call price; covered by the licence, capped by the plan's request-rate limit.
     docs_url: https://data.crunchbase.com/docs/examples-search-api
 
   - id: crunchbase.people.enrich
@@ -89,7 +99,12 @@ endpoints:
       type: per_call
       value: null
       currency: USD
-      note: "no per-call price; covered by the licence."
+      per: 1
+      unit: call
+      source: docs
+      checked: '2026-07-28'
+      confidence: unknown
+      note: no per-call price; covered by the licence.
     docs_url: https://data.crunchbase.com/docs/examples-person-api
 
   - id: crunchbase.people.search
@@ -113,7 +128,12 @@ endpoints:
       type: per_call
       value: null
       currency: USD
-      note: "no per-call price; covered by the licence."
+      per: 1
+      unit: call
+      source: docs
+      checked: '2026-07-28'
+      confidence: unknown
+      note: no per-call price; covered by the licence.
     docs_url: https://data.crunchbase.com/docs/examples-search-api
 
   - id: crunchbase.account.usage
@@ -131,5 +151,5 @@ endpoints:
         collection_ids: {type: string, required: false, note: "comma-separated collections to search — organizations, people, funding_rounds, and finer-grained ids such as organization.companies, organization.investors, person.investors, location.cities", example: "organizations"}
         limit: {type: integer, required: false, note: "max 25; the default is not published — pass 1 explicitly for a health check", example: 1}
       note: "this is the registry's probe. It is also the practical name→permalink resolver that the entity endpoints need"
-    cost: {type: free, value: 0, currency: USD, note: "no credit cost — rate-limited only; used as the free key-health check"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: no credit cost — rate-limited only; used as the free key-health check}
     docs_url: https://data.crunchbase.com/docs/using-the-api

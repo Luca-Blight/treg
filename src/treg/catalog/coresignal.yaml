@@ -52,7 +52,13 @@ endpoints:
       type: per_success
       value: 20
       currency: credit
-      note: "20 Coresignal credits per successful (HTTP 200) company record; a no-match is free. Credits are sold per plan; no public per-credit price."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://coresignal.com/pricing/
+      checked: '2026-07-28'
+      confidence: documented
+      note: 20 Coresignal credits per successful (HTTP 200) company record; a no-match is free. Credits are sold per plan; no public per-credit price.
     docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/enrich
 
   - id: coresignal.companies.search
@@ -69,7 +75,7 @@ endpoints:
       body:
         query: {type: object, required: true, note: "an Elasticsearch DSL query over the company schema, e.g. {\"bool\": {\"must\": [{\"match\": {\"industry\": \"Software Development\"}}]}}", example: {"bool": {"must": [{"match": {"website": "coresignal.com"}}]}}}
       note: "returns an ARRAY OF IDS, not records — feed each id to coresignal.companies.collect to read it (20 credits each), so narrow the query before you page. There is NO /search/filter on a multi_source collection; es_dsl is the only search form. Query params: items_per_page (1-1000, default 1000) and `after` for cursor paging"
-    cost: {type: free, value: 0, currency: USD, note: "search returns ids only and consumes no credits; the cost lands on the collect step"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: search returns ids only and consumes no credits; the cost lands on the collect step}
     docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/elasticsearch-dsl
 
   - id: coresignal.companies.collect
@@ -89,7 +95,13 @@ endpoints:
       type: per_call
       value: 20
       currency: credit
-      note: "20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://coresignal.com/pricing/
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10.
     docs_url: https://docs.coresignal.com/company-api/multi-source-company-api/collect
 
   - id: coresignal.people.enrich
@@ -109,7 +121,13 @@ endpoints:
       type: per_call
       value: 20
       currency: credit
-      note: "20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10."
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://coresignal.com/pricing/
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 20 Coresignal credits per record collected. The cheaper company_base / employee_base collections cost 10.
     docs_url: https://docs.coresignal.com/employee-api/multi-source-employee-api/collect
 
   - id: coresignal.people.search
@@ -126,5 +144,5 @@ endpoints:
       body:
         query: {type: object, required: true, note: "an Elasticsearch DSL query over the employee schema, e.g. {\"bool\": {\"must\": [{\"match\": {\"active_experience_title\": \"Head of Marketing\"}}]}}", example: {"bool": {"must": [{"match": {"active_experience_title": "Head of Marketing"}}]}}}
       note: "returns an ARRAY OF IDS — read each with coresignal.people.enrich (20 credits each). There is NO /search/filter on a multi_source collection; es_dsl is the only search form. Query params: items_per_page (1-1000, default 1000) and `after` for cursor paging"
-    cost: {type: free, value: 0, currency: USD, note: "search returns ids only and consumes no credits"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: search returns ids only and consumes no credits}
     docs_url: https://docs.coresignal.com/employee-api/multi-source-employee-api/elasticsearch-dsl
