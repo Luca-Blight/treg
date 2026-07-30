@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>tools-registry</title>
+<title>treg</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1009,7 +1009,7 @@ a:hover{text-decoration-color:var(--muted)}
          sign-in page (no sandbox demo, no tour) — the marketing landing is for the front door. -->
     <template v-if="shareGate">
       <header class="lp-nav">
-        <div class="brand">▚ tools-registry</div>
+        <div class="brand">▚ treg</div>
         <nav class="lp-links"><a href="/tutorial">Docs</a><button class="iconbtn" @click="toggleTheme" :aria-label="theme==='dark'?'Light theme':'Dark theme'">{{theme==='dark'?'◐':'◑'}}</button></nav>
       </header>
       <section class="lp-hero" style="min-height:55vh">
@@ -1021,7 +1021,7 @@ a:hover{text-decoration-color:var(--muted)}
     </template>
     <template v-else>
     <header class="lp-nav">
-      <div class="brand">▚ tools-registry</div>
+      <div class="brand">▚ treg</div>
       <nav class="lp-links">
         <a href="/tutorial">Docs</a><a href="/llms.txt">llms.txt</a>
         <button class="iconbtn" @click="toggleTheme" :aria-label="theme==='dark'?'Light theme':'Dark theme'">{{theme==='dark'?'◐':'◑'}}</button>
@@ -1187,7 +1187,7 @@ a:hover{text-decoration-color:var(--muted)}
       </div>
     </section>
 
-    <footer class="lp-foot">tools-registry · a credential-injecting proxy · <a href="/tutorial">tutorial</a> · <a href="/llms.txt">llms.txt</a></footer>
+    <footer class="lp-foot">treg · a credential-injecting proxy · <a href="/tutorial">tutorial</a> · <a href="/llms.txt">llms.txt</a></footer>
     </template>
 
     <!-- SIGN-IN MODAL (shared by the landing and the share-link gate) -->
@@ -1223,7 +1223,7 @@ a:hover{text-decoration-color:var(--muted)}
   <template v-else>
     <a href="#maincontent" class="skip">Skip to content</a>
     <div class="top" :class="{'onb-push':onb.on}" role="banner">
-      <div class="brand">▚ tools-registry</div>
+      <div class="brand">▚ treg</div>
       <div class="search"><span class="muted">/</span><input ref="search" v-model="q" placeholder="search tools…" aria-label="Search tools"/></div>
       <div class="spacer"></div>
     </div>
@@ -2830,7 +2830,7 @@ a:hover{text-decoration-color:var(--muted)}
     <div class="scrim" role="dialog" aria-modal="true" v-if="inviteChoice && pendingInvites.length">
       <div class="modal" style="width:min(470px,94vw)">
         <div style="padding:26px 26px 22px">
-          <div style="color:var(--accent);font-size:15px;letter-spacing:.5px;margin-bottom:12px">▚ tools-registry</div>
+          <div style="color:var(--accent);font-size:15px;letter-spacing:.5px;margin-bottom:12px">▚ treg</div>
           <h2 style="margin:0 0 8px;font-size:20px">You're invited 👋</h2>
           <p class="sub" style="margin:0 0 16px">{{pendingInvites.length===1 ? 'Accept to call the team\'s tools with' : 'You have '+pendingInvites.length+' pending invites — pick the teams to join and call their tools with'}} <b>no API keys on your machine</b>.</p>
           <label v-for="inv in sortedInvites" :key="inv.id" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;cursor:pointer">
@@ -2849,7 +2849,7 @@ a:hover{text-decoration-color:var(--muted)}
     <div class="scrim" role="dialog" aria-modal="true" v-if="welcome.on">
       <div class="modal" style="width:min(470px,94vw)">
         <div style="padding:26px 26px 22px">
-          <div style="color:var(--accent);font-size:15px;letter-spacing:.5px;margin-bottom:12px">▚ tools-registry</div>
+          <div style="color:var(--accent);font-size:15px;letter-spacing:.5px;margin-bottom:12px">▚ treg</div>
           <h2 style="margin:0 0 8px;font-size:20px">Welcome{{me?', '+me.split('@')[0]:''}} 👋</h2>
           <p class="sub" style="margin:0 0 18px">Create your team — it's where you keep API keys and skills so your teammates and their agents can call them <b>without holding the keys</b>. You can invite people and add secrets right after.</p>
           <div class="field"><input v-model="welcome.name" placeholder="Team name, e.g. Superdesign" @keyup.enter="welcomeCreate"/></div>
@@ -3517,7 +3517,7 @@ createApp({
           'export TREG_URL='+base,
         ].join('\n'); }
       return [
-        'You have your own tools-registry identity in the team "'+org+'" (you are "'+a.name+'").',
+        'You have your own treg identity in the team "'+org+'" (you are "'+a.name+'").',
         '',
         'FIRST, persist this identity into YOUR OWN global config, so every future session of',
         'yours, in any repo, runs as "'+a.name+'" — while other agents and the human keep theirs:',
@@ -3603,7 +3603,7 @@ createApp({
       // recipient signs in as themselves (this text is meant to be forwarded)
       if(!this.detail) return '';
       const B=(this.proxy||location.origin).replace(/\/$/,''); const n=this.detail.name;
-      const head=[`I want to use the shared ${this.detail.kind==='skill'?'skill':'tool'} "${n}" from my team's tools-registry at ${B} .`,``,
+      const head=[`I want to use the shared ${this.detail.kind==='skill'?'skill':'tool'} "${n}" from my team's treg at ${B} .`,``,
         `1. Install the treg CLI (skip if \`treg\` already works) and sign me in:`,
         `   curl -fsSL ${B}/install.sh | sh`,`   treg login`,``];
       if(this.detail.kind==='skill'){
