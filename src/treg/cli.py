@@ -2746,13 +2746,12 @@ def _print_serve_banner(live: dict) -> None:
     print(_row("registry", reg + (f"  {_M}·{_R}  team {live['org']}" if live.get("org") else "")))
     print(_row("captured", f"{len(hosts)} host(s)"))
     print("             " + _hostlist(hosts))
-    print(f"\n  {_M}This terminal is not using it yet. A program cannot change the environment of the{_R}")
-    print(f"  {_M}shell that started it, so this line does it for you:{_R}")
-    print(f"\n    {_TEAL}eval \"$(treg serve env)\"{_R}\n")
-    print(f"  {_M}Rather not use eval?{_R}  {_TEAL}treg shell start --proxy{_R}"
-          f"  {_M}opens a subshell already set up.{_R}")
-    print(f"  {_M}When you are done:{_R}  {_TEAL}treg serve stop{_R}  {_M}and{_R}  "
-          f"{_TEAL}eval \"$(treg serve env --unset)\"{_R}\n")
+    print(f"\n  {_AM}Nothing is using it yet.{_R} {_M}A program cannot change the environment of the shell{_R}")
+    print(f"  {_M}that started it, so one of these has to happen. Pick either:{_R}\n")
+    print(f"    {_TEAL}treg shell start --proxy{_R}   {_M}a subshell that is already set up{_R}  {_G}← simplest{_R}")
+    print(f"    {_TEAL}eval \"$(treg serve env)\"{_R}   {_M}set up THIS terminal{_R}\n")
+    print(f"  {_M}Check any time with{_R} {_TEAL}treg serve status{_R}{_M} — it says whether your terminal "
+          f"is using it.{_R}\n")
 
 
 def cmd_serve_start(args, cfg) -> None:
