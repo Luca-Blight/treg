@@ -385,7 +385,10 @@ async def test_a_provider_meter_converts_per_meter_not_per_provider():
     # served every Moz route at $1.00 per row — the exact failure `currency: unit` prevents.
     moz = cat.by_id["moz.web.url.metrics"]["cost"]
     assert moz["currency"] == "unit" and moz["unit"] == "quota_row"
-    assert cat.cost_view(moz, "moz")["usd"] is None
+    assert cat.cost_view(moz, "moz")["usd"] == 0.006667  # 1 row × the researched $0.006667/row
+    # Semrush is the one that stays native: package prices are sales-gated, so no rate is derivable
+    # and its `usd` must remain None rather than a guess.
+    assert cat.unit_rates["semrush"]["api_unit"] is None
 
 
 async def test_free_is_spelled_one_way_and_prices_at_zero():
