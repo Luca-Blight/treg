@@ -22428,6 +22428,7 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-analytics-fetch-comment-keywords.json
   capability: tiktok.video.comment_keywords
 - id: tikhub.x.tiktok-analytics-fetch-creator-info-and-milestones
+  name: Creator milestones
   tier: extended
   platform: tiktok
   method: GET
@@ -24520,6 +24521,7 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-app-v3-fetch-video-comments.json
   capability: tiktok.video.comments
 - id: tikhub.x.tiktok-app-v3-fetch-webcast-user-info
+  name: LIVE (webcast) user info
   tier: extended
   platform: tiktok
   method: GET
@@ -24551,7 +24553,7 @@ endpoints:
       sec_user_id: MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-app-v3-fetch-webcast-user-info.json
-  capability: tiktok.user.profile
+  capability: tiktok.live.detail
 - id: tikhub.x.tiktok-app-v3-get-user-id-and-sec-user-id-by-username
   tier: extended
   platform: tiktok
@@ -24581,6 +24583,7 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-app-v3-get-user-id-and-sec-user-id-by-username.json
 - id: tikhub.x.tiktok-app-v3-handler-user-profile
+  name: Profile by numeric user_id (app API)
   tier: extended
   platform: tiktok
   method: GET
