@@ -5807,23 +5807,28 @@ _LIMIT_PARAMS = ("limit", "count", "depth", "page_size", "per_page", "num", "max
 
 
 def _body_limit(body: bytes) -> int | None:
-    """A row-count limit expressed in a JSON body rather than the query — dataforseo takes
-    `[{..., "limit": 3}]`, lusha `{"limit": 1}`. Reads the first object's first matching key."""
+    """A row-count signal from a JSON body: an explicit limit key first (dataforseo takes
+    `[{..., "limit": 3}]`, lusha `{"limit": 1}`), else the ARRAY LENGTH — providers that take a
+    list of inputs (brightdata's urls, dataforseo's tasks) bill one result per item, so a 1-item
+    body estimating at the 20-row default overstated 20x (seen live: $0.03 shown for a $0.0015
+    call). Under-estimating is safe either way — the settle trues up, overruns included."""
     if not body:
         return None
     try:
         doc = json.loads(body)
     except (ValueError, UnicodeDecodeError):
         return None
+    items = None
     if isinstance(doc, list) and doc:
+        items = len(doc)
         doc = doc[0]
     if not isinstance(doc, dict):
-        return None
+        return items
     for name in _LIMIT_PARAMS:
         val = doc.get(name)
         if isinstance(val, int) and not isinstance(val, bool) and val > 0:
             return val
-    return None
+    return items
 
 
 def _platform_estimate_micro(cost: dict, query, body: bytes = b"") -> int:
