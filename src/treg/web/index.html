@@ -1805,6 +1805,7 @@ a:hover{text-decoration-color:var(--muted)}
               <div class="dropdown" v-if="addToolMenu" style="left:auto;right:0;top:110%;width:280px" @click.stop>
                 <div class="row" @click="openAddTool('endpoint')"><span style="min-width:0"><b style="font-size:12.5px">⛁ Endpoint</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">an HTTP API, called through the proxy</span></span></div>
                 <div class="row" @click="openAddTool('cli')"><span style="min-width:0"><b style="font-size:12.5px">⌘ CLI</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">a command members run with the key injected</span></span></div>
+                <div class="row" @click="addToolMenu=false; go('connections')"><span style="min-width:0"><b style="font-size:12.5px">▤ From marketplace</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">browse ready-made endpoints by platform — many need no key</span></span></div>
               </div>
             </div>
           </div>
