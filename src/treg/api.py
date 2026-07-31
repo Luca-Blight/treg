@@ -5953,8 +5953,14 @@ async def _resolve_marketplace_call(
     # so the relay still streams the same bytes) only for its HASH — never stored, never logged.
     body = await request.body() if _may_have_body(request) else b""
     phash = _params_hash(ep["id"], request.query_params.multi_items(), body)
+    # The catalog's estimate travels on EVERY tier — informational on tiers 1/2 (the provider bills
+    # the org's own account; Activity shows "estimated") and the reserve amount on tier 4 only
+    # (`metered` gates the ledger, so this never charges a balance for an own-key call).
+    cv = catalog_store.load().cost_view(ep.get("cost"), service) if ep.get("cost") else None
+    info_est = _platform_estimate_micro(cv, request.query_params, body) if cv else 0
     common = dict(upstream=upstream, consumed=consumed, endpoint_id=ep["id"], provider=service,
-                  params_hash=phash)
+                  params_hash=phash, cost_type=str((ep.get("cost") or {}).get("type") or ""),
+                  estimate_micro=info_est)
     try:  # tier 1 — the org registered this provider: their tool, their bindings, their ACLs
         tool, resolved = await _resolve_call(upstream, caller, db)
         return MarketplaceCall(tool=tool, tier="tool", **{**common, "upstream": resolved})
@@ -5979,9 +5985,9 @@ async def _resolve_marketplace_call(
             base_url=provider.base_url, host=_host_of(provider.base_url),
             bindings=_platform_bindings(provider),
         )
-        return MarketplaceCall(
-            tool=virtual, tier="platform", cost_type=str(cost.get("type") or "per_call"),
-            estimate_micro=_platform_estimate_micro(cost, request.query_params, body), **common)
+        return MarketplaceCall(tool=virtual, tier="platform", **{
+            **common, "cost_type": str(cost.get("type") or "per_call"),
+            "estimate_micro": _platform_estimate_micro(cost, request.query_params, body)})
     raise _marketplace_no_credential(service, ep["id"], provider)
 
 
@@ -6289,7 +6295,7 @@ async def call_tool(
         if mk is not None:
             telemetry = {
                 "endpoint_id": mk.endpoint_id, "provider": mk.provider, "credential_tier": mk.tier,
-                "cost_estimated_micro": mk.estimate_micro if mk.metered else None,
+                "cost_estimated_micro": mk.estimate_micro or None,  # informational on tiers 1/2
                 "cost_observed_micro": observed_micro,
                 "cost_charged_micro": charged_micro,
                 "duration_ms": duration_ms, "response_bytes": response_bytes,
