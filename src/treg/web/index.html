@@ -1224,7 +1224,7 @@ a:hover{text-decoration-color:var(--muted)}
     <a href="#maincontent" class="skip">Skip to content</a>
     <div class="top" :class="{'onb-push':onb.on}" role="banner">
       <div class="brand">▚ treg</div>
-      <div class="search"><span class="muted">/</span><input ref="search" v-model="q" placeholder="search tools…" aria-label="Search tools"/></div>
+      <div class="search"><span class="muted">/</span><input ref="search" v-model="q" :placeholder="view==='connections'?'search marketplace…':'search tools…'" aria-label="Search"/></div>
       <div class="spacer"></div>
     </div>
 
@@ -1805,7 +1805,7 @@ a:hover{text-decoration-color:var(--muted)}
               <div class="dropdown" v-if="addToolMenu" style="left:auto;right:0;top:110%;width:280px" @click.stop>
                 <div class="row" @click="openAddTool('endpoint')"><span style="min-width:0"><b style="font-size:12.5px">⛁ Endpoint</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">an HTTP API, called through the proxy</span></span></div>
                 <div class="row" @click="openAddTool('cli')"><span style="min-width:0"><b style="font-size:12.5px">⌘ CLI</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">a command members run with the key injected</span></span></div>
-                <div class="row" @click="addToolMenu=false; go('connections')"><span style="min-width:0"><b style="font-size:12.5px">▤ From marketplace</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">browse ready-made endpoints by platform — many need no key</span></span></div>
+                <div class="row" @click="addToolMenu=false; mkTab='platform'; go('connections')"><span style="min-width:0"><b style="font-size:12.5px">▤ From marketplace</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">browse ready-made endpoints by platform — many need no key</span></span></div>
               </div>
             </div>
           </div>
@@ -3299,7 +3299,11 @@ createApp({
     },
     // Filter chips narrow the shelves rather than flattening them — with one category picked the
     // single remaining shelf header still says which, so the page never loses its place.
-    shownGroups(){ return this.mkCat ? this.providerGroups.filter(g=>g.category===this.mkCat) : this.providerGroups; },
+    shownGroups(){ const gs=this.mkCat ? this.providerGroups.filter(g=>g.category===this.mkCat) : this.providerGroups;
+      const q=this.q.trim().toLowerCase();
+      if(!q) return gs;
+      const hit=p=>((p.name||'')+' '+(p.service||'')+' '+(p.summary||'')).toLowerCase().includes(q);
+      return gs.map(g=>({...g, items:g.items.filter(hit)})).filter(g=>g.items.length); },
     connCount(){ const m={}; for(const c of this.connections){ if(c.provider) m[c.provider]=(m[c.provider]||0)+1; } return m; },
     mkProvider(){ return this.providers.find(p=>p.service===this.mkService)||null; },
     mkConns(){ return this.connections.filter(c=>c.provider===this.mkService); },
@@ -3351,6 +3355,15 @@ createApp({
     platCatGroups(){
       const groups = this.mkTabActive==='all' ? this.platCategories
         : this.platCategories.filter(g=>g.category===this.mkTabActive);
+      // The top-nav search reaches here too: with a query, every match shows (no featured collapse —
+      // a hit hidden behind "N more" reads as no hit) and empty shelves drop away.
+      const q=this.q.trim().toLowerCase();
+      if(q){
+        const hit=p=>((p.label||'')+' '+(p.slug||'')+' '+(p.providers||[]).join(' ')).toLowerCase().includes(q);
+        return groups.map(g=>{ const items=g.items.filter(hit)
+            .sort((a,b)=>(b.endpoints||0)-(a.endpoints||0));
+          return {...g, items, rest:[], total:items.length}; }).filter(g=>g.items.length);
+      }
       return groups.map(g=>{
         const items=[...g.items].sort((a,b)=>
           (a.featured==null?1e9:a.featured)-(b.featured==null?1e9:b.featured) || (b.endpoints||0)-(a.endpoints||0));
@@ -5107,7 +5120,7 @@ createApp({
       if(e.key==='Escape'){ this.closeOverlays(); return; }
       // "/" focuses the search box (the "/" glyph in the box advertised a shortcut that didn't exist)
       const t=e.target, typing = t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable);
-      if(e.key==='/' && !typing && this.authed && this.view==='tools'){ e.preventDefault(); this.$refs.search && this.$refs.search.focus(); }
+      if(e.key==='/' && !typing && this.authed && (this.view==='tools'||this.view==='connections')){ e.preventDefault(); this.$refs.search && this.$refs.search.focus(); }
     });
     document.addEventListener('click', e=>{  // the org dropdown didn't close on an outside click
       if(this.orgMenu && !e.target.closest('.orgblock') && !e.target.closest('.dropdown')) this.orgMenu=false;
