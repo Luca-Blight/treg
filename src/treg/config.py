@@ -91,7 +91,9 @@ class Settings(BaseSettings):
     # Upstream HTTP timeout for a relayed call (the shared httpx client). Also the base of the hold
     # reaper's cutoff: a hold older than call_timeout_s + hold_grace_s belongs to a call that can no
     # longer be settling, so the reaper returns it (see ledger.reap_stale_holds).
-    call_timeout_s: int = 30
+    # 180, not 30: real catalog upstreams routinely run long — BrightData sync scrapes ~20-35s
+    # (a 30s ceiling 502'd one live), and merchant routes have been observed at 9s→105s.
+    call_timeout_s: int = 180
     hold_grace_s: int = 60
 
     # ---- tier-4 platform keys (api.py credential ladder) ---------------------------------------

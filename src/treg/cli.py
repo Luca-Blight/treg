@@ -156,7 +156,12 @@ def _client(cfg: dict, *, auth: bool = True) -> httpx.Client:
     # TREG_URL rides with TREG_TOKEN: an agent identity names its registry too, or a per-process
     # token would be sent to whatever base_url the machine owner's config points at.
     base = os.environ.get("TREG_URL") or cfg["base_url"]
-    return _RegistryClient(base_url=base, headers=headers, timeout=30.0)
+    # Read timeout 190s: relayed upstreams legitimately run long (BrightData sync scrapes ~20-35s,
+    # merchant routes up to ~105s) and the SERVER's upstream timeout is 180 — the client must
+    # outlive it so the caller gets the server's real error, not a client-side cutoff. Connect
+    # stays snappy: a dead registry should fail in seconds.
+    return _RegistryClient(base_url=base, headers=headers,
+                           timeout=httpx.Timeout(190.0, connect=10.0))
 
 
 def _admin_client(cfg: dict) -> httpx.Client:

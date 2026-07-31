@@ -6327,7 +6327,7 @@ async def call_tool(
                     request, upstream_url, live_key, demo_sandbox.visitor_name(caller.org.slug))
             except httpx.RequestError as exc:
                 _audit(502)
-                raise HTTPException(status_code=502, detail=f"upstream request failed: {exc}")
+                raise HTTPException(status_code=502, detail=f"upstream request failed: {str(exc) or type(exc).__name__}")
             _audit(response.status_code)
             return response
         secrets = {}
@@ -6380,7 +6380,7 @@ async def call_tool(
         except ValueError as exc:  # a binding/injector mismatch (e.g. non-JSON secret on an oauth binding)
             raise HTTPException(status_code=502, detail=f"credential injection failed: {exc}")
         except httpx.RequestError as exc:  # upstream down/timeout is a gateway fault, not treg's 500
-            raise HTTPException(status_code=502, detail=f"upstream request failed: {exc}")
+            raise HTTPException(status_code=502, detail=f"upstream request failed: {str(exc) or type(exc).__name__}")
     except HTTPException as exc:
         # The provider never produced a billable answer (our own error, a failed injection, an
         # unreachable upstream) → return the hold in full, regardless of the endpoint's billing type.
