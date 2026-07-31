@@ -425,12 +425,15 @@ async def test_platform_eligibility_refuses_everything_it_cannot_prove():
     def with_cost(**changes):
         return {**ok, "cost": {**ok["cost"], **changes}}
 
-    assert not cat.platform_eligible(with_cost(confidence="documented")), "docs are not enough"
+    assert cat.platform_eligible(with_cost(confidence="documented")), \
+        "2026-07-31 policy: a provider-published rate is billable"
+    assert not cat.platform_eligible(with_cost(confidence="inferred")), "a guess is not a rate"
     assert not cat.platform_eligible(with_cost(value=None, confidence="unknown"))
     assert not cat.platform_eligible(with_cost(currency="credit")), "tikhub has no credit rate"
     assert not cat.platform_eligible({**ok, "scope": "own_account"})
     assert not cat.platform_eligible({**ok, "kind": "account"})
-    assert not cat.platform_eligible({**ok, "verified": None}), "never called ⇒ never billed for"
+    assert cat.platform_eligible({**ok, "verified": None}), \
+        "2026-07-31 policy: the live-called stamp is no longer required — a broken route fails unbilled"
     assert not cat.platform_eligible({**ok, "cost": None}), "no price block ⇒ refuse, not free"
 
 

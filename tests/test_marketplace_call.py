@@ -39,6 +39,7 @@ PLATFORM_KEYS = {  # never a real key: a test that leaked one into an assertion 
     "TIKHUB": "PLATFORM-TIKHUB-KEY",
     "SCRAPECREATORS": "PLATFORM-SC-KEY",
     "DATAFORSEO": "PLATFORM-DFS-KEY",
+    "BRIGHTDATA": "PLATFORM-BD-KEY",
 }
 
 
@@ -47,7 +48,7 @@ def platform_on(monkeypatch):
     """Turn tier 4 on the way a deploy does: keys in the environment AND the provider allow-listed."""
     for name, value in PLATFORM_KEYS.items():
         monkeypatch.setenv(f"TREG_PLATFORM_KEY_{name}", value)
-    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,brightdata")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -244,9 +245,8 @@ async def test_allow_listed_without_a_key_is_still_tier3(clients: AsyncClient, m
 @pytest.mark.parametrize("why, patch", [
     ("own_account scope", {"scope": "own_account"}),
     ("unpriced", {"cost": {"type": "per_call", "value": None, "currency": "USD", "confidence": "unknown"}}),
-    ("price only documented", {"cost": {"type": "per_call", "value": 0.001, "currency": "USD",
-                                        "per": 1, "unit": "call", "confidence": "documented"}}),
-    ("never live-verified", {"verified": None}),
+    ("price merely inferred", {"cost": {"type": "per_call", "value": 0.001, "currency": "USD",
+                                        "per": 1, "unit": "call", "confidence": "inferred"}}),
     ("account kind", {"kind": "account"}),
 ])
 async def test_ineligible_endpoints_fall_through_to_tier3(clients: AsyncClient, platform_on, monkeypatch, why, patch):
@@ -536,3 +536,36 @@ def test_platform_estimate_normalizes_per_result_pricing():
     assert A._platform_estimate_micro({"type": "per_call", "usd": None}, {}) == 0
     # rounds UP — a sub-micro fraction must never round to free
     assert A._platform_estimate_micro({"type": "per_call", "usd": 0.0000005}, {}) == 1
+
+
+def test_brightdata_platform_key_injects_as_bearer(platform_on):
+    """Tier 4's wiring for Bright Data. Nothing provider-specific had to be written: the settings
+    field is found by name (`platform_key_for`) and the header shape comes from the registry entry,
+    so this is the regression guard on the generic path staying generic."""
+    assert get_settings().platform_key_for("brightdata") == PLATFORM_KEYS["BRIGHTDATA"]
+    assert A._platform_bindings(A.oauth_providers.get("brightdata")) == [
+        {"platform_setting": "platform_key_brightdata", "injector": "env", "location": "header",
+         "name": "Authorization", "format": "Bearer {secret}"}]
+
+
+def test_brightdata_estimate_counts_the_body_array():
+    """Bright Data bills per record delivered and takes its targets as a bare JSON array, so the
+    reserve has to scale with the array's LENGTH — there is no limit param in the query to read."""
+    cost = {"type": "per_result", "usd": 0.0015}
+    assert A._platform_estimate_micro(cost, {}, json.dumps([{"url": "a"}]).encode()) == 1_500
+    five = json.dumps([{"url": u} for u in "abcde"]).encode()
+    assert A._platform_estimate_micro(cost, {}, five) == 7_500
+
+
+def test_brightdata_documented_prices_are_billable(platform_on):
+    """2026-07-31 policy flip: Bright Data reports no charge in-band and its balance endpoint 403s
+    on our token, so its prices can only ever be `documented` ($1.50/1000 records from the public
+    pricing page) — and documented is now billable. The provider that motivated the policy must
+    actually have eligible endpoints, or "enable all" silently enabled nothing."""
+    from treg import catalog_store
+
+    cat = catalog_store.load()
+    rows = cat.for_provider("brightdata")
+    assert rows, "brightdata is in the catalog"
+    eligible = [e["id"] for e in rows if cat.platform_eligible(e)]
+    assert len(eligible) >= 20, f"expected the dataset routes to be billable, got {len(eligible)}"

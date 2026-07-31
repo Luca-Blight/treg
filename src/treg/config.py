@@ -104,6 +104,18 @@ class Settings(BaseSettings):
     platform_key_tikhub: str = ""
     platform_key_dataforseo: str = ""
     platform_key_scrapecreators: str = ""
+    platform_key_brightdata: str = ""
+    platform_key_justoneapi: str = ""
+    platform_key_serpapi: str = ""
+    platform_key_moz: str = ""          # base64 of "access_id:secret_key" (HTTP Basic)
+    platform_key_seranking: str = ""
+    platform_key_hunter: str = ""
+    platform_key_leadmagic: str = ""
+    platform_key_lusha: str = ""
+    platform_key_pdl: str = ""
+    platform_key_diffbot: str = ""
+    platform_key_akta: str = ""
+    platform_key_apify: str = ""
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the

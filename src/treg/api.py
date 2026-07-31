@@ -5849,7 +5849,9 @@ def _platform_estimate_micro(cost: dict, query, body: bytes = b"") -> int:
         if asked is None:
             asked = _body_limit(body)  # POST providers put the row count in the body, not the query
         n = max(1, min(asked or _PLATFORM_PAGE_DEFAULT, _PLATFORM_PAGE_MAX))
-    raw_micro = usd * n * 1_000_000
+    # Round to 9 dp BEFORE the ceil: float artifacts (0.0015 × 3 → 4500.000000001) must not
+    # over-reserve a phantom micro-dollar.
+    raw_micro = round(usd * n * 1_000_000, 9)
     whole = int(raw_micro)
     return whole + 1 if raw_micro > whole else whole
 
@@ -5883,7 +5885,7 @@ def _platform_bindings(provider) -> list[dict]:
 def _platform_offer(ep: dict, provider, org: Org) -> dict | None:
     """May tier 4 serve `ep` for this org, and at what price? The cost view when yes, None when no.
 
-    Every clause is a refusal we WANT to be boring: an unpriced or merely-documented price
+    Every clause is a refusal we WANT to be boring: an unpriced/unknown-confidence price
     (`platform_eligible`), a provider nobody enabled (`platform_key_for` — key AND allow-list), an
     OAuth provider (a platform key is meaningless for one: the credential is a user's own account),
     or a demo org (the sandbox and the public demo must never be able to spend real money — the

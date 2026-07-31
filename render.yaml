@@ -71,5 +71,29 @@ services:
         sync: false
       - key: TREG_PLATFORM_KEY_SCRAPECREATORS  # ScrapeCreators API key (x-api-key)
         sync: false
+      - key: TREG_PLATFORM_KEY_BRIGHTDATA      # Bright Data account API token (Authorization: Bearer)
+        sync: false
+      - key: TREG_PLATFORM_KEY_JUSTONEAPI
+        sync: false
+      - key: TREG_PLATFORM_KEY_SERPAPI
+        sync: false
+      - key: TREG_PLATFORM_KEY_MOZ                # base64 of "access_id:secret_key" (HTTP Basic)
+        sync: false
+      - key: TREG_PLATFORM_KEY_SERANKING
+        sync: false
+      - key: TREG_PLATFORM_KEY_HUNTER
+        sync: false
+      - key: TREG_PLATFORM_KEY_LEADMAGIC
+        sync: false
+      - key: TREG_PLATFORM_KEY_LUSHA
+        sync: false
+      - key: TREG_PLATFORM_KEY_PDL
+        sync: false
+      - key: TREG_PLATFORM_KEY_DIFFBOT
+        sync: false
+      - key: TREG_PLATFORM_KEY_AKTA
+        sync: false
+      - key: TREG_PLATFORM_KEY_APIFY
+        sync: false
       - key: TREG_PLATFORM_PROVIDERS           # e.g. "tikhub,dataforseo,scrapecreators"; "" = tier 4 off
         value: ""

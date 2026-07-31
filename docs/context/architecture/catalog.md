@@ -336,10 +336,17 @@ provenance typed by hand into a generated file would not survive the next `catal
 the proxy cannot drift. It requires ALL of:
 
 - `cost_view(...)["usd"]` is not None — the charge is machine-computable;
-- `cost.confidence == "verified"` — documented is not enough to bill against;
+- `cost.confidence` is `verified` OR `documented` (policy widened 2026-07-31: a rate the provider
+  itself publishes is billable; `verified` stays the gold standard the drift reports police, and
+  `inferred`/`unknown` stay refused — a guess is not a rate);
 - `scope != own_account` and `kind != account` — the provider's own bookkeeping is never worth
-  spending on, and an own-account route needs the caller's own credential by definition;
-- `verified` is set — a route nobody has called can fail in ways that still bill.
+  spending on, and an own-account route needs the caller's own credential by definition.
+
+The live-called `verified:` stamp is no longer required (same 2026-07-31 change): a broken route
+fails unbilled under `per_success`/`per_result` billing, providers that report in-band settle at 0,
+and the fail-closed daily platform cap bounds whatever remains — coverage beats caution now that
+the reserve/settle machinery is proven. Eligibility alone still spends nothing: the provider must
+ALSO be keyed and allow-listed (`platform_key_for`).
 
 The doctrine is asymmetric on purpose: **a missing or unknown price reads as "refuse", never as
 free.** An endpoint with no `cost` block at all is therefore not platform-eligible without anything

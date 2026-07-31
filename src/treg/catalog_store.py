@@ -122,20 +122,22 @@ class Catalog:
     def platform_eligible(self, endpoint: dict) -> bool:
         """May treg serve this endpoint with a PLATFORM key, billed to the caller's balance?
 
-        One predicate, so the API, the validator and the proxy cannot drift apart. It is
-        deliberately conservative on every axis: a missing or merely-documented price must read as
-        "refuse", never as free (docs/context/architecture/catalog.md, Cost). Four things must hold:
-        the USD cost is computable, the price is `confidence: verified`, the route is not the
-        caller's own account's business (`own_account` scope / `account` kind), and the route has
-        been called for real at least once — an unverified route can fail in ways that still bill.
+        One predicate, so the API, the validator and the proxy cannot drift apart. A missing or
+        unknown price must read as "refuse", never as free (docs/context/architecture/catalog.md,
+        Cost). Three things must hold: the USD cost is computable, the price provenance is at least
+        `documented` (2026-07-31 policy: a provider-published rate is billable — `verified` remains
+        the gold standard the drift reports police; `inferred`/`unknown` stay refused), and the
+        route is not the caller's own account's business (`own_account` scope / `account` kind).
+        The live-verified stamp is deliberately NOT required anymore: a broken route fails
+        unbilled under per_success/per_result, and the fail-closed daily cap bounds the rest —
+        coverage beats caution now that the ladder and settle logic are proven.
         """
         cost = self.cost_view(endpoint.get("cost"), endpoint.get("provider"))
         return bool(cost
                     and cost.get("usd") is not None
-                    and cost.get("confidence") == "verified"
+                    and cost.get("confidence") in ("verified", "documented")
                     and endpoint.get("scope") != "own_account"
-                    and (endpoint.get("kind") or DEFAULT_KIND) not in PLATFORM_INELIGIBLE_KINDS
-                    and endpoint.get("verified"))
+                    and (endpoint.get("kind") or DEFAULT_KIND) not in PLATFORM_INELIGIBLE_KINDS)
 
 
 _CACHE: Catalog | None = None
