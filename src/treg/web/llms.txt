@@ -35,7 +35,38 @@ send your token. treg resolves the tool by host and injects the credential:
   `base64+gzip`); treg decodes it server-side, so the upstream still gets the real bytes. The
   `treg` CLI does this automatically on a WAF 403 - you only need it over raw HTTP.
 
-That's the whole product. Everything below is discovery, auth, and management.
+That's the core mechanic. The second thing to know: you may not need a key at all.
+
+## The marketplace: catalogued endpoints - many need NO key
+
+The registry ships a curated catalog of ~2,600 endpoints across ~40 data providers
+(TikTok, Instagram, Reddit, YouTube, LinkedIn, Google SERP & keyword data, backlinks/SEO,
+company & people enrichment, web scraping, …). Call one by its **endpoint id**:
+
+    treg catalog search "instagram profile"         # find endpoints by what they do
+    treg catalog get tikhub.tiktok.user.profile     # docs, params, PRICE, and how you'd be served
+    treg call tikhub.tiktok.user.profile --query uniqueId=tiktok
+    # raw HTTP: GET {BASE}/call/tikhub.tiktok.user.profile?uniqueId=tiktok  + X-Treg-Token
+
+How a catalogued call is served - the credential ladder, tried in order:
+1. the org registered its own tool for that provider → that tool, that key;
+2. the org stored a secret for the provider → injected via a virtual tool;
+3. neither → **treg's own key**, billed per call to the team's prepaid balance. Fractions of
+   a cent per call (a TikTok profile is ~$0.001); every new team starts with **$1.00 free**.
+   No provider signup, no subscription - coverage without commitment.
+
+Money rules for agents:
+- The price is shown BEFORE you call (`treg catalog get`, or `estimated_cost_usd` in
+  `GET {BASE}/catalog/endpoints/<id>/access`). Tell the human the price before spending
+  their balance; batch-confirm once for a series of cheap calls rather than per call.
+- Out of balance → HTTP **402** with a machine-actionable body: `balance_micro`,
+  `estimated_cost_micro`, `topup_url`. Recovery: `treg balance` (ledger), top up in the
+  dashboard (Team → Billing), or connect the org's own key for that provider - own keys
+  are never billed to the balance.
+- `treg balance` shows the prepaid balance and recent charges; the dashboard Activity page
+  shows the exact settled cost of every call.
+
+Everything below is discovery, auth, and management.
 
 ## Discover what's registered
 
@@ -204,10 +235,13 @@ skills` restrict it (`--dir` sets the location).
 1. You do NOT hunt for API keys. Take the upstream request you'd make, prefix its URL with
    `{BASE}/call/`, add `X-Treg-Token: <token>` (and `X-Treg-Org: <slug>` for an identity
    token), and send it.
-2. Discover available tools with `treg tool ls` or `GET {BASE}/tools`.
-3. Prefer a **per-org token** for an agent (scoped to one team), not a human identity token.
-4. The registry records who called what - calls are attributed to the token's user.
-5. Registering a new key/endpoint/CLI? Default to the skill path (`treg skill init` +
+2. Need data nobody has a key for? **Search the catalog first** (`treg catalog search …`) -
+   marketplace endpoints may need no key at all (billed to the team balance; see the
+   Marketplace section above, including the price-before-you-spend rule).
+3. Discover the org's own tools with `treg tool ls` or `GET {BASE}/tools`.
+4. Prefer a **per-org token** for an agent (scoped to one team), not a human identity token.
+5. The registry records who called what - calls are attributed to the token's user.
+6. Registering a new key/endpoint/CLI? Default to the skill path (`treg skill init` +
    `skill add`, or `POST {BASE}/skills`) — create a minimal SKILL.md (with frontmatter) if
    none exists. Bare `secret add` + `tool add` only when a recipe adds nothing, and never
    leave a secret unbound to a tool.
