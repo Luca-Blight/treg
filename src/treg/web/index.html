@@ -4767,8 +4767,14 @@ createApp({
     // "¥0.10" — the provider's own figure, shown next to the converted one, never instead of it.
     nativeAmount(c){
       if(!c || c.currency==='USD' || c.value==null) return '';
-      const sym={CNY:'¥'}[c.currency], n=Number(c.value);
-      // Money keeps its cents: ¥0.10, not ¥0.1. Below a cent, show what precision there is.
+      const n=Number(c.value);
+      // Counts read as counts ("5 credits", "40 API units"), money keeps its cents (¥0.10).
+      if(c.currency==='credit' || c.currency==='unit'){
+        const count=Number.isInteger(n)?String(n):n.toFixed(2);
+        let u = c.currency==='credit' ? 'credit' : (c.unit||'unit').replace(/_/g,' ').replace(/\bapi\b/,'API');
+        if(n!==1 && !/s$/.test(u)) u+='s';
+        return count+' '+u; }
+      const sym={CNY:'¥'}[c.currency];
       const num=n>=0.01 ? n.toFixed(2) : n.toFixed(6).replace(/0+$/,'').replace(/\.$/,'');
       return sym ? sym+num : num+' '+c.currency; },
     costNative(c){ return this.nativeAmount(c); },
@@ -4938,7 +4944,7 @@ createApp({
         const per={per_call:'call', per_success:'success', per_result:'result'}[c.type];
         return per ? 'per '+per+' · price in provider dashboard' : '—'; }
       if(c.type==='quota_rows'){
-        const n=Number(c.value); return n+' row'+(n===1?'':'s'); }
+        const n=Number(c.value); return n+' row'+(n===1?'':'s')+'/call'; }
       // A published number the FX table can't convert (an unknown currency) still beats silence —
       // fall back to the native figure rather than dropping the price entirely.
       if(typeof c.usd!=='number') return this.nativeAmount(c)+'/'+this.priceUnit(c.type);
