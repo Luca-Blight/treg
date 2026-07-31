@@ -1724,6 +1724,8 @@ a:hover{text-decoration-color:var(--muted)}
                           <span class="ltabs-r">
                             <a v-if="e.docs_url" class="btn sm" :href="e.docs_url" target="_blank" rel="noopener" @click.stop>Docs ↗</a>
                             <a v-else-if="provFact(e.provider,'pricing_url')" class="btn sm" :href="provFact(e.provider,'pricing_url')" target="_blank" rel="noopener" @click.stop>Pricing ↗</a>
+                            <button v-if="catConnected(e.provider)||e.platform_eligible" class="btn sm" @click.stop="openEpTry(e)"
+                                    title="Run this endpoint right here — logged in Activity like any call">▶ Try it</button>
                             <span v-if="catConnected(e.provider)" class="chip go" title="You already have a connected account that can call this"><span class="godot"></span>Connected</span>
                             <button v-else-if="mkKnown(e.provider)" class="btn sm primary" @click.stop="openProvider(e.provider)"
                                     :title="'Connect '+(e.provider_display||e.provider)+' to call this'">Connect {{e.provider_display||e.provider}}</button>
@@ -3169,6 +3171,37 @@ a:hover{text-decoration-color:var(--muted)}
         </div></div>
     </div>
 
+    <!-- Try a MARKETPLACE endpoint right here. Same relay as any call — served by the org's own
+         key when one exists, else treg's key billed to the team balance — and logged in Activity
+         exactly like a CLI call. -->
+    <div class="scrim" role="dialog" aria-modal="true" v-if="epTry" @click.self="epTry=null" style="place-items:stretch;justify-items:end">
+      <div class="drawer" :class="{'onb-shift':onb.on}"><div class="hd" style="padding:15px 18px;border-bottom:1px solid var(--line)"><b>Try “{{epTry.id}}”</b><button class="btn sm" @click="epTry=null" aria-label="Close">✕</button></div>
+        <div class="bd" style="padding:16px 18px;overflow:auto">
+          <p class="explain"><span class="mono">{{epTry.method||'GET'}} {{epTry.path}}</span><br>{{epTry.summary}}</p>
+          <p class="sub" v-if="epTryAccess" style="margin:0 0 12px">
+            <template v-if="epTryAccess.tier==='platform'">⚡ {{epTryAccess.detail||'No key needed — served on treg\'s key, billed to the team balance.'}}</template>
+            <template v-else-if="epTryAccess.tier==='tool'||epTryAccess.tier==='credential'">🔑 Served with your team's own {{epTry.provider_display||epTry.provider}} credential — billed by the provider, not the team balance.</template>
+            <template v-else>{{epTryAccess.detail||'Not callable from this team yet.'}}</template>
+          </p>
+          <div class="field" v-for="p in epTryParams" :key="p.name" style="max-width:520px">
+            <label class="mono" style="min-width:140px">{{p.name}}<span v-if="p.required" style="color:var(--accent)"> *</span></label>
+            <input v-model="p.value" :placeholder="p.required?'required':'optional'"/>
+          </div>
+          <div v-if="(epTry.method||'GET')!=='GET' && epTryBody!==''" class="field" style="max-width:520px;align-items:flex-start">
+            <label style="min-width:140px">Body (JSON)</label>
+            <textarea v-model="epTryBody" rows="6" style="width:100%;font-family:var(--mono);font-size:12px"></textarea>
+          </div>
+          <button class="btn primary" :disabled="epTryBusy || (epTryAccess && epTryAccess.tier!=='platform' && epTryAccess.tier!=='tool' && epTryAccess.tier!=='credential')" @click="runEpTry">{{epTryBusy?'Running…':'❯ Run'}}</button>
+          <div v-if="epTryResp" style="margin-top:14px">
+            <div class="muted" style="font-size:12px;margin-bottom:6px">Result
+              <span class="badge" :class="epTryStatus>=200&&epTryStatus<300?'ok':'invalid'">{{epTryStatus}}</span>
+              · {{epTryMs}}ms<span v-if="epTryCost!=null"> · charged {{money(epTryCost)}}</span>
+              · logged in Activity like any call</div>
+            <pre style="max-height:340px;overflow:auto">{{epTryResp}}</pre>
+          </div>
+        </div></div>
+    </div>
+
     <!-- access reminder toast: fired when a new tool is registered while some members have customized access -->
     <div v-if="newVersion" class="tut-notice" style="position:fixed;bottom:18px;right:18px;max-width:360px;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.25);background:var(--card)">
       A new version of the dashboard is available.
@@ -3244,6 +3277,9 @@ createApp({
       extraCred:{}, extraBusy:null,  // second credential a provider needs on top of OAuth (Google Ads' developer token)
       cfgMenu:false,  // detail-page ⚙ Configure tool-picker (skills with >1 tool)
       tryMenu:false,  // detail-page ▶ Try it tool-picker (skills with >1 tool)
+      // marketplace endpoint Try-it drawer
+      epTry:null, epTryAccess:null, epTryParams:[], epTryBody:'', epTryResp:'', epTryStatus:null,
+      epTryMs:null, epTryCost:null, epTryBusy:false,
       catalogClis:null,  // bin → catalog default deny patterns (lazy, from /providers.json)
       newSkill:false, skillJson:'', skillBusy:false, skillErr:'', skillMode:'folder',
       skillFiles:[], detected:null, skillSel:{}, skillVals:{}, skillResults:null,
@@ -5092,6 +5128,47 @@ createApp({
     },
     async copy(text){ if(!(await this.toClipboard(text))) return; this.copied=true; setTimeout(()=>this.copied=false,1500); },
     openTry(t){ this.openUse(t); this.useMode='call'; },  // legacy entry (onboarding tour) → the Use drawer, call mode
+    // ---- marketplace endpoint Try-it ----
+    openEpTry(e){
+      this.epTry=e; this.epTryResp=''; this.epTryStatus=null; this.epTryMs=null; this.epTryCost=null;
+      this.epTryAccess=null; this.epTryBusy=false;
+      const secs=this.paramSections(e);
+      const qp=[];  // query + path params, prefilled from the catalog's example values (path
+      for(const s of secs) if(s.key!=='body') for(const p of s.rows)  // placeholders are consumed
+        qp.push({name:p.name, required:!!p.required, value:p.example!=null?this.fmtExample(p.example):''});  // from query server-side)
+      this.epTryParams=qp;
+      let body='';
+      const bodySec=secs.find(s=>s.key==='body');
+      if(bodySec && (e.method||'GET')!=='GET'){
+        const o={}; for(const p of bodySec.rows) if(p.example!=null||p.required) o[p.name]=p.example!=null?p.example:null;
+        body=JSON.stringify((e.input&&/\[\]$/.test(e.input.bodyType||''))?[o]:o,null,2);
+      }
+      this.epTryBody=body;
+      // the authenticated dry-run: which ladder rung would serve this org, and at what price
+      this.api('/catalog/endpoints/'+e.id+'/access').then(a=>this.epTryAccess=a).catch(()=>{});
+    },
+    async runEpTry(){
+      const e=this.epTry; if(!e) return; this.epTryBusy=true; const t0=performance.now();
+      try{
+        const qs=this.epTryParams.filter(p=>String(p.value)!=='').map(p=>encodeURIComponent(p.name)+'='+encodeURIComponent(p.value)).join('&');
+        const opts={method:e.method||'GET', credentials:'include', headers:{...this.headers()}};
+        if(opts.method!=='GET' && this.epTryBody.trim()){ opts.body=this.epTryBody; opts.headers['content-type']='application/json'; }
+        const r=await fetch('/call/'+e.id+(qs?'?'+qs:''), opts);
+        this.epTryStatus=r.status; this.epTryMs=Math.round(performance.now()-t0);
+        const txt=await r.text();
+        if(!txt){ this.epTryResp='(empty response body - status '+r.status+')'; }
+        else{ try{ this.epTryResp=JSON.stringify(JSON.parse(txt),null,2).slice(0,20000); }catch(_){ this.epTryResp=txt.slice(0,8000); } }
+        // The charge, read back from the same telemetry Activity renders. The audit writer is
+        // fire-and-forget, so give it a beat; also refresh the balance pill.
+        setTimeout(async()=>{ try{
+          const rows=await this.api('/calls?limit=5');
+          const row=(rows||[]).find(c=>c.endpoint_id===e.id);
+          if(row && row.cost_charged_micro!=null) this.epTryCost=row.cost_charged_micro;
+          this.loadBilling();
+        }catch(_){}} , 900);
+      }catch(err){ this.epTryResp='Request failed: '+err; this.epTryStatus=0; this.epTryMs=Math.round(performance.now()-t0); }
+      finally{ this.epTryBusy=false; }
+    },
     async runTry(){ this.trying=true; const t0=performance.now();
       try{ const opts={method:this.tryMethod, credentials:'include', headers:{...this.headers()}};
         if(this.tryMethod!=='GET' && (this.tryBody||'').trim()){ opts.body=this.tryBody; opts.headers['content-type']='application/json'; }  // send the body for POST/PUT/DELETE
