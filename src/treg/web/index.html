@@ -5133,15 +5133,24 @@ createApp({
       this.epTry=e; this.epTryResp=''; this.epTryStatus=null; this.epTryMs=null; this.epTryCost=null;
       this.epTryAccess=null; this.epTryBusy=false;
       const secs=this.paramSections(e);
-      const qp=[];  // query + path params, prefilled from the catalog's example values (path
-      for(const s of secs) if(s.key!=='body') for(const p of s.rows)  // placeholders are consumed
-        qp.push({name:p.name, required:!!p.required, value:p.example!=null?this.fmtExample(p.example):''});  // from query server-side)
+      const tr=e.test_request||{};  // the live-verified request — the best possible prefill
+      const trq={...(tr.queryParams||{}), ...(tr.pathParams||{})};
+      const qp=[];  // query + path params (path placeholders are consumed from query server-side)
+      for(const s of secs) if(s.key!=='body') for(const p of s.rows)
+        qp.push({name:p.name, required:!!p.required,
+                 value: trq[p.name]!=null ? this.fmtExample(trq[p.name])
+                        : (p.example!=null ? this.fmtExample(p.example) : '')});
+      // test_request may carry params the input spec doesn't list — keep them, they made the call work
+      for(const [k,v] of Object.entries(trq)) if(!qp.some(p=>p.name===k)) qp.push({name:k, required:false, value:this.fmtExample(v)});
       this.epTryParams=qp;
       let body='';
-      const bodySec=secs.find(s=>s.key==='body');
-      if(bodySec && (e.method||'GET')!=='GET'){
-        const o={}; for(const p of bodySec.rows) if(p.example!=null||p.required) o[p.name]=p.example!=null?p.example:null;
-        body=JSON.stringify((e.input&&/\[\]$/.test(e.input.bodyType||''))?[o]:o,null,2);
+      if((e.method||'GET')!=='GET'){
+        if(tr.body!=null){ body=JSON.stringify(tr.body,null,2); }  // verbatim — array-vs-object is ground truth here
+        else{
+          const bodySec=secs.find(s=>s.key==='body');
+          if(bodySec){ const o={}; for(const p of bodySec.rows) if(p.example!=null||p.required) o[p.name]=p.example!=null?p.example:null;
+            body=JSON.stringify(o,null,2); }
+        }
       }
       this.epTryBody=body;
       // the authenticated dry-run: which ladder rung would serve this org, and at what price

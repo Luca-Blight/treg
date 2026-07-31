@@ -416,6 +416,10 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # the request schema, split by location (pathParams/queryParams/body + notes) — without it
         # the dashboard can show what comes BACK (example_response) but not what to SEND
         "input": ep.get("input") or None,
+        # the exact request that live-verified this endpoint — the Try-it drawer prefills from it
+        # verbatim (it also carries the ground truth the input spec can't express: whether the
+        # body is a bare object or an ARRAY of tasks, which dataforseo requires)
+        "test_request": ep.get("test_request") or None,
     }
 
 
