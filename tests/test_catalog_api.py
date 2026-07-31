@@ -379,7 +379,7 @@ async def test_a_provider_meter_converts_per_meter_not_per_provider():
     assert listing["value"] == 5000
     # Each pool converts at ITS OWN researched rate (fx.yaml, 2026-07-31): 5,000 analysis units at
     # $0.000004 — not at the retrieval or index-item rate, which differ by orders of magnitude.
-    assert cat.cost_view(listing, "majestic")["usd"] == pytest.approx(5000 * 0.0000040)
+    assert cat.cost_view(listing, "majestic")["usd"] == 0.02  # 5,000 × $0.000004, rounded at 9 dp
 
     # Moz's row quota is a meter too. It used to carry no `currency` at all, defaulted to USD, and
     # served every Moz route at $1.00 per row — the exact failure `currency: unit` prevents.
