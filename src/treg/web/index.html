@@ -1264,6 +1264,12 @@ a:hover{text-decoration-color:var(--muted)}
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
           <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
+          <!-- Prepaid balance at a glance (admins; /billing is admin-gated). Click-through = the Billing tab. -->
+          <div v-if="billing" @click="orgTab='billing'; go('orgs')" title="Prepaid balance — click to manage billing"
+               style="margin:8px 10px 4px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);cursor:pointer">
+            <div style="font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase">Balance</div>
+            <div style="font-family:var(--mono);font-weight:700;font-size:16px;color:var(--accent)">{{money(billing.balance_micro)}}</div>
+          </div>
           <div v-if="isAdmin"><div class="grp">Platform</div><button class="nav" :class="{active:view==='admin'}" @click="go('admin')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin</button></div>
           <div class="grp">For your agents</div>
           <div v-if="canAdmin" class="agent-copy"><span class="ac-label ac-link" @click="agentGuide='admin'" title="Preview / customize">Setup instruction</span><button class="ac-btn" :class="{done:agentRowCopied==='admin'}" @click="copyAgentGuide('admin')" title="Copy the agent instruction (installs the CLI + registers your skills & keys)">{{agentRowCopied==='admin'?'✓':'⧉'}}</button></div>
@@ -4982,7 +4988,8 @@ createApp({
         this.tools=tools; this.bundles=bundles||[]; this.health={}; (health||[]).forEach(h=>this.health[h.secret_id]=h.status);
         // isAdmin (super-admin) comes from /auth/me at boot - NOT a /admin/stats probe, which 403s on
         // every load/switch for the 99% of users who aren't super-admins (console-error noise + wasted request).
-        if(this.view==='orgs'){ this.loadOrgAdmin(); this.loadMyUsage(); this.loadBilling(); }  // refresh team panel (incl. billing) after a switch
+        this.loadBilling();  // fire-and-forget, self-guards on canAdmin — feeds the sidebar balance card on every load/switch
+        if(this.view==='orgs'){ this.loadOrgAdmin(); this.loadMyUsage(); }  // refresh team panel after a switch
         if(this.view==='usage') this.loadUsage();  // …the usage rollup (org-scoped)
         if(this.view==='activity') this.loadCalls();  // …and the org-scoped call log (was showing the previous org's)
         if(this.view==='secrets') this.loadSecrets();  // …and the Secrets view (was showing the previous org's)
