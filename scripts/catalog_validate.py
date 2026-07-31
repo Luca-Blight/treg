@@ -198,6 +198,13 @@ def main(argv: list[str]) -> int:
             fail(errors, m, "no such catalog file")
 
     seen_ids: dict[str, str] = {}
+    # (service, method, path) -> {tier: [ids]} — to catch the same operation shipping in BOTH tiers.
+    # Some providers multiplex one URL across many jobs (SerpApi's `engine`, BrightData's
+    # `dataset_id`, GAQL's query body), so a core/extended path collision is legitimate THERE and
+    # only there. Everywhere else it is the ingest-dedup failure that shipped 27 duplicate rows
+    # (dataforseo via the /v3 prefix mismatch, scrapecreators via core being curated after ingest).
+    PARAM_MULTIPLEXED = {"serpapi", "brightdata", "google-ads"}
+    route_tiers: dict[tuple, dict[str, list[str]]] = {}
     for path in files:
         name = path.name
         text = path.read_text()
@@ -233,6 +240,8 @@ def main(argv: list[str]) -> int:
                 tier = "extended" if extended_file else "core"
             if extended_file != (tier == "extended"):
                 fail(errors, where, f"tier '{tier}' does not belong in {name}")
+            route_tiers.setdefault((service, ep.get("method"), ep.get("path")), {}) \
+                .setdefault(tier, []).append(eid)
             for f in REQUIRED[tier]:
                 if not ep.get(f):
                     fail(errors, where, f"missing required field '{f}'")
@@ -321,6 +330,15 @@ def main(argv: list[str]) -> int:
         for m in LEAK.finditer(text):
             if looks_like_secret(m.group(0)):
                 fail(errors, name, f"possible credential literal in file: '{m.group(0)[:24]}…'")
+
+    # The same operation must not ship in both tiers — core wins and the extended copy is a bug,
+    # except for the param-multiplexed providers where one URL is legitimately many jobs.
+    for (svc, method, path), tiers in route_tiers.items():
+        if svc in PARAM_MULTIPLEXED or not (tiers.get("core") and tiers.get("extended")):
+            continue
+        fail(errors, f"{svc} {method} {path}",
+             f"shipped in BOTH tiers — core {tiers['core']} duplicates extended {tiers['extended']}; "
+             f"drop the extended copy (core wins) or fix the ingester's core_routes dedup")
 
     for e in errors:
         print(e)
