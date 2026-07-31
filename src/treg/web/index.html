@@ -1724,7 +1724,9 @@ a:hover{text-decoration-color:var(--muted)}
                           <span class="ltabs-r">
                             <a v-if="e.docs_url" class="btn sm" :href="e.docs_url" target="_blank" rel="noopener" @click.stop>Docs ↗</a>
                             <a v-else-if="provFact(e.provider,'pricing_url')" class="btn sm" :href="provFact(e.provider,'pricing_url')" target="_blank" rel="noopener" @click.stop>Pricing ↗</a>
-                            <button v-if="catConnected(e.provider)||e.platform_eligible" class="btn sm" @click.stop="openEpTry(e)"
+                            <!-- Always offered: the drawer's access dry-run says how (or whether) THIS
+                                 org can call it, and disables Run with the reason when it can't. -->
+                            <button class="btn sm" @click.stop="openEpTry(e)"
                                     title="Run this endpoint right here — logged in Activity like any call">▶ Try it</button>
                             <span v-if="catConnected(e.provider)" class="chip go" title="You already have a connected account that can call this"><span class="godot"></span>Connected</span>
                             <button v-else-if="mkKnown(e.provider)" class="btn sm primary" @click.stop="openProvider(e.provider)"
