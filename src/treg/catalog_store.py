@@ -457,7 +457,19 @@ def domain_rows(pairs: list[tuple[dict, dict]], capabilities: dict[str, str]) ->
                          "description": view["name"] or view["summary"],
                          "domain": view["domain"], "endpoints": [view]})
 
+    def _ep_rank(v: dict):
+        # Within one capability: cheapest first (free counts as cheapest; unpriced last — an
+        # unknown price must not lead a comparison), then the curated core route before ingested
+        # ones, then live-verified before unproven, then stable alpha. Before this existed the
+        # order was an accident of filename sorting ("tikhub.extended.yaml" < "tikhub.yaml"), which
+        # put the canonical core route at the BOTTOM of its own row.
+        usd = (v.get("cost") or {}).get("usd")
+        return (usd is None, usd if usd is not None else 0.0,
+                v.get("tier") != "core", not v.get("verified"),
+                v.get("provider") or "", v["id"])
+
     for cap, eps in by_cap.items():
+        eps.sort(key=_ep_rank)
         title = capabilities.get(cap, "") or cap
         # A capability only ONE provider implements is not a comparison, so it does not merge: it
         # becomes a row per endpoint, each led by its own summary, same as an unmapped route. Folding
