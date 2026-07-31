@@ -1258,9 +1258,8 @@ a:hover{text-decoration-color:var(--muted)}
 
         <!-- NAV (middle) -->
         <div class="side-nav">
-          <button class="nav" :class="{active:view==='tools'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Tools</button>
-          <button v-if="canRegister" class="nav" :class="{active:view==='secrets'}" @click="go('secrets')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Secrets</button>
           <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Marketplace</button>
+          <button class="nav" :class="{active:view==='tools'||view==='secrets'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Your Vault</button>
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
           <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
@@ -1793,7 +1792,12 @@ a:hover{text-decoration-color:var(--muted)}
             <span>{{orgMsg}}</span><button class="btn sm ico" @click="orgMsg=''" aria-label="Dismiss">✕</button>
           </div>
           <div class="tut-head">
-            <div><h1>Tools in {{activeName}}</h1><p class="sub" style="margin:0" v-if="filteredTools.length">Call any of these with no key on your machine. <b>Copy</b> a snippet, or <b>Try it</b> here.</p><p class="sub" style="margin:0" v-else-if="canRegister && !q">Register an upstream API here, then call it with no key on your machine.</p></div>
+            <div><h1>Skills &amp; Secrets in {{activeName}}</h1>
+              <div v-if="canRegister" class="tabs" style="margin:8px 0 4px">
+                <button class="active">Skills &amp; tools</button>
+                <button @click="go('secrets')">Secrets</button>
+              </div>
+              <p class="sub" style="margin:0" v-if="filteredTools.length">Call any of these with no key on your machine. <b>Copy</b> a snippet, or <b>Try it</b> here.</p><p class="sub" style="margin:0" v-else-if="canRegister && !q">Register an upstream API here, then call it with no key on your machine.</p></div>
             <div class="tut-actions" v-if="canRegister" style="position:relative">
               <button class="btn sm" @click="openAddSkill">＋ Skill</button>
               <button class="btn sm primary" @click.stop="addToolMenu=!addToolMenu" aria-haspopup="true" :aria-expanded="addToolMenu">＋ Add tool</button>
@@ -1982,7 +1986,12 @@ a:hover{text-decoration-color:var(--muted)}
             <span>{{secretErr}}</span><button class="btn sm ico" @click="secretErr=''" aria-label="Dismiss">✕</button>
           </div>
           <div class="tut-head">
-            <div><h1>Secrets in {{activeName}}</h1><p class="sub" style="margin:0">The credentials your tools inject. Values are encrypted server-side and never shown.</p></div>
+            <div><h1>Skills &amp; Secrets in {{activeName}}</h1>
+              <div class="tabs" style="margin:8px 0 4px">
+                <button @click="go('tools')">Skills &amp; tools</button>
+                <button class="active">Secrets</button>
+              </div>
+              <p class="sub" style="margin:0">The credentials your tools inject. Values are encrypted server-side and never shown.</p></div>
           </div>
           <div class="ttable-wrap" v-if="secrets.length" style="margin-bottom:16px"><table class="ttable">
             <tr v-for="s in secrets" :key="s.id">
