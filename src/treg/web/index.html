@@ -4945,12 +4945,13 @@ createApp({
       if(c.value==null){
         const per={per_call:'call', per_success:'success', per_result:'result'}[c.type];
         return per ? 'per '+per+' · price in provider dashboard' : '—'; }
-      if(c.type==='quota_rows'){
+      // Rows convert like any meter once fx carries a rate — dollars first, native as the fallback.
+      if(c.type==='quota_rows' && typeof c.usd!=='number'){
         const n=Number(c.value); return n+' row'+(n===1?'':'s')+'/call'; }
       // A published number the FX table can't convert (an unknown currency) still beats silence —
       // fall back to the native figure rather than dropping the price entirely.
       if(typeof c.usd!=='number') return this.nativeAmount(c)+'/'+this.priceUnit(c.type);
-      return '$'+this.usdNum(c.usd)+'/'+this.priceUnit(c.type); },
+      return '$'+this.usdNum(c.usd)+'/'+(c.type==='quota_rows'?'call':this.priceUnit(c.type)); },
     costTitle(c){ if(!c) return 'The catalog has no price for this endpoint';
       const nat=this.nativeAmount(c);
       return [c.note,
