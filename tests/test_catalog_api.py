@@ -377,8 +377,9 @@ async def test_a_provider_meter_converts_per_meter_not_per_provider():
     listing = cat.by_id["majestic.web.backlinks.list"]["cost"]
     assert listing["currency"] == "unit" and listing["unit"] == "analysis_unit"
     assert listing["value"] == 5000
-    # Majestic publishes no dollar price for any of the three, so the served price stays native.
-    assert cat.cost_view(listing, "majestic")["usd"] is None
+    # Each pool converts at ITS OWN researched rate (fx.yaml, 2026-07-31): 5,000 analysis units at
+    # $0.000004 — not at the retrieval or index-item rate, which differ by orders of magnitude.
+    assert cat.cost_view(listing, "majestic")["usd"] == pytest.approx(5000 * 0.0000040)
 
     # Moz's row quota is a meter too. It used to carry no `currency` at all, defaulted to USD, and
     # served every Moz route at $1.00 per row — the exact failure `currency: unit` prevents.

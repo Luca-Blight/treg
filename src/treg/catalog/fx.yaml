@@ -28,7 +28,7 @@ credit_rates_usd:
   crunchbase: {usd: null, basis: "no published API pricing", note: "the Basic API was retired and remaining API access is quoted by sales; no credit unit is published", source: "https://data.crunchbase.com/docs/crunchbase-basic-getting-started", checked: "2026-07-28"}
   brightdata: {usd: null, basis: "not credit-priced", note: "billing is per record / per GB / per 1,000 results per product, with no cross-product credit unit, so costs stay in the provider's own units", source: "https://brightdata.com/pricing", checked: "2026-07-28"}
   seranking: {usd: 0.000179, basis: "credits are sold annually: 12M for $2,148/yr on the entry tier = $0.000179/credit (the 120M tier is $10,200/yr = $0.000085)", source: "https://seranking.com/pricing.html", checked: "2026-07-28"}
-  serpstat: {usd: null, basis: "API credits come bundled with a plan", note: "Serpstat's pay page prices PLANS, not credits, and publishes no credits-included figure to divide by -- so a per-credit rate cannot be derived from it and is deliberately not guessed. Serpstat endpoints display their native credit count", source: "https://serpstat.com/pay/", checked: "2026-07-28"}
+  serpstat: {usd: 0.00050, basis: "Team plan $100/mo (annual billing) includes 200K API credits/mo; 100/200,000. Monthly billing is $129 -> $0.000645; the 250K/mo export-rows allowance is a SEPARATE pool", source: "https://serpstat.com/page/pricing-plans/", checked: "2026-07-31"}
 
 # Proprietary METERING units -> USD, for providers that bill in something that is neither a currency
 # nor a credit. Same rule as credits, one level deeper: a meter is scoped to its provider AND to
@@ -38,16 +38,20 @@ credit_rates_usd:
 # published per-unit price -- those endpoints keep `cost.usd = null` and display natively
 # ("5,000 analysis units/call"), which is also what refuses them a platform key.
 # Filling one of these in requires a PUBLISHED plan price and a PUBLISHED unit allowance to divide
-# it by. None of the four providers below publish the second number.
+# it by. Researched 2026-07-31: three of the four are now derivable from the provider's own plan
+# pages (rate = cheapest API-enabled plan / its included allowance -- a per-unit UPPER BOUND, since
+# bigger plans are cheaper per unit). Semrush remains null: package sizes are published, prices are
+# sales-gated. Majestic's three pools share ONE subscription price, so each pool's rate divides the
+# WHOLE subscription by that pool's allowance -- an upper bound per pool; never sum pools per call.
 unit_rates_usd:
   semrush:
-    api_unit: {usd: null, basis: "units are pre-purchased in packages (2M / 5M / 10M / 20M) whose prices Semrush does not list publicly", source: "https://www.semrush.com/api-documentation/", checked: "2026-07-28"}
+    api_unit: {usd: null, basis: "units are pre-purchased in packages (2M / 5M / 10M / 20M) whose prices Semrush does not list publicly; every route says contact sales", source: "https://developer.semrush.com/api/get-started/api-access/", checked: "2026-07-31"}
   majestic:
-    analysis_unit: {usd: null, basis: "flat per-call charge on most commands (1,000 or 5,000); the allowance comes with a plan and Majestic publishes no per-unit price", source: "https://majestic.com/plans-pricing", checked: "2026-07-28"}
-    retrieval_unit: {usd: null, basis: "1 per row returned; bundled with the plan, no published per-unit price", source: "https://majestic.com/plans-pricing", checked: "2026-07-28"}
-    index_item_unit: {usd: null, basis: "1 per item queried, spent only by GetIndexItemInfo; bundled with the plan, no published per-unit price", source: "https://majestic.com/plans-pricing", checked: "2026-07-28"}
+    analysis_unit: {usd: 0.0000040, basis: "API plan $399.99/mo includes 100M analysis units; 399.99/100,000,000 (upper bound; pool shares the one subscription)", source: "https://majestic.com/plans-pricing", checked: "2026-07-31"}
+    retrieval_unit: {usd: 0.0000200, basis: "same $399.99 plan includes 20M retrieval units; 399.99/20,000,000 (upper bound; pool shares the one subscription)", source: "https://majestic.com/plans-pricing", checked: "2026-07-31"}
+    index_item_unit: {usd: 0.00080, basis: "same $399.99 plan includes 500K index item units; 399.99/500,000 (upper bound; pool shares the one subscription)", source: "https://majestic.com/plans-pricing", checked: "2026-07-31"}
   moz:
-    quota_row: {usd: null, basis: "Moz meters a ROW QUOTA per billing period, not money", note: "the plan page prices tiers by rows per month, but the row counts are not published alongside the prices in any form this repo has captured, so no per-row rate is derived. Moz endpoints display rows, not dollars", source: "https://moz.com/api/pricing", checked: "2026-07-28"}
+    quota_row: {usd: 0.006667, basis: "Links API Starter $20/mo for 3,000 rows; 20/3,000 (upper bound -- the $75/15,000 tier and the published $5/1,000 overage both work out to $0.005/row)", source: "https://moz.com/products/api/pricing", checked: "2026-07-31"}
 rates_to_usd:
   USD: 1.0
   CNY: 0.1476
