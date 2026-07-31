@@ -3196,7 +3196,7 @@ a:hover{text-decoration-color:var(--muted)}
           <div v-if="epTryResp" style="margin-top:14px">
             <div class="muted" style="font-size:12px;margin-bottom:6px">Result
               <span class="badge" :class="epTryStatus>=200&&epTryStatus<300?'ok':'invalid'">{{epTryStatus}}</span>
-              · {{epTryMs}}ms<span v-if="epTryCost!=null"> · charged {{money(epTryCost)}}</span>
+              · {{epTryMs}}ms<span v-if="epTryCost!=null"> · charged {{money(epTryCost)}}<span v-if="epTryCost===0 && epTryStatus>=200 && epTryStatus<300" :title="'The provider reported charging nothing for this call — usually its own cache serving a repeat lookup (look for cached: true in the response). You are billed exactly what the provider billed treg.'"> (free — provider charged 0 ⓘ)</span></span>
               · logged in Activity like any call</div>
             <pre style="max-height:340px;overflow:auto">{{epTryResp}}</pre>
           </div>
