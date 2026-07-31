@@ -2523,12 +2523,14 @@ a:hover{text-decoration-color:var(--muted)}
             <p class="sub">Opens your browser - GitHub or an email code. Your first sign-in also registers you.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg login','l')">{{startCopied==='l'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> login</pre></div>
 
-            <div class="lbl" style="margin-top:22px">3 · Run onboarding — pick Setup</div>
-            <p class="sub">Guided: scans your <span class="mono">.env</span> + skill folders, you pick what to share, and it registers them in one pass.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg onboard      # then pick  1 · Setup','o')">{{startCopied==='o'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> onboard      <span class="hl-comment"># then pick  1 · Setup</span></pre></div>
+            <div class="lbl" style="margin-top:22px">3 · Try the catalog — no key needed</div>
+            <p class="sub">~2,600 catalogued data endpoints (TikTok, Reddit, SEO/SERP, enrichment, …). Many run on treg's own key, billed per call — fractions of a cent — from your team's <b>$1.00 free balance</b>.</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search \"tiktok profile\"\ntreg call tikhub.tiktok.user.profile --query uniqueId=tiktok\ntreg balance','cat1')">{{startCopied==='cat1'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"tiktok profile"</span>
+<span class="hl-cmd">treg</span> call tikhub.tiktok.user.profile <span class="hl-flag">--query</span> uniqueId=tiktok
+<span class="hl-cmd">treg</span> balance      <span class="hl-comment"># see exactly what it cost</span></pre></div>
 
-            <div class="lbl" style="margin-top:22px">4 · Or import directly</div>
-            <p class="sub">Register your <span class="mono">.env</span> keys and skill folders without the guided flow. Idempotent — re-run freely.</p>
+            <div class="lbl" style="margin-top:22px">4 · Upload your keys &amp; skills</div>
+            <p class="sub">Register your <span class="mono">.env</span> keys and skill folders as shared tools. Preview with <span class="mono">treg scan</span> first. Idempotent — re-run freely.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg upload                 # both .env + skills in this dir\ntreg upload env --select openai,stripe\ntreg upload skills --dir ~/.claude/skills --all      # register skill from a specific path','im')">{{startCopied==='im'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> upload                 <span class="hl-comment"># both .env + skills in this dir</span>
 <span class="hl-cmd">treg</span> upload env <span class="hl-flag">--select</span> openai,stripe
 <span class="hl-cmd">treg</span> upload skills <span class="hl-flag">--dir</span> <span class="hl-str">~/.claude/skills</span> <span class="hl-flag">--all</span>      <span class="hl-comment"># register skill from a specific path</span></pre></div>
@@ -2537,7 +2539,7 @@ a:hover{text-decoration-color:var(--muted)}
 
           <!-- TAB · Connect to this tool registry — agent instruction first, then the same CLI flow (path 2) -->
           <div v-show="startTab==='connect'" style="max-width:720px">
-            <p class="sub">Use the team's shared skills &amp; tools from your terminal or agent — pull a skill, call any tool, with no API keys on your machine.</p>
+            <p class="sub">Use the team's shared skills &amp; tools from your terminal or agent — pull a skill, call any tool, with no API keys on your machine. Plus the catalog: ~2,600 data endpoints, many needing no key at all.</p>
 
             <div class="lbl" style="margin-top:16px">▸ Connect with your agent <span class="muted" style="font-weight:400">— paste &amp; go</span></div>
             <p class="sub">Paste into Claude Code / Codex / Gemini. It pulls the team's shared skills and makes a test call — no API keys land on your machine.</p>
@@ -2552,15 +2554,17 @@ a:hover{text-decoration-color:var(--muted)}
             <p class="sub">Opens your browser — GitHub, Google, or an email code.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg login','cl2')">{{startCopied==='cl2'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> login</pre></div>
 
-            <div class="lbl" style="margin-top:22px">3 · Run onboarding — pick Connect</div>
-            <p class="sub">Lists the team's tools + skills, installs the ones you pick, and makes a no-key test call.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg onboard      # then pick  2 · Connect existing tool-registry','co')">{{startCopied==='co'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> onboard      <span class="hl-comment"># then pick  2 · Connect existing tool-registry</span></pre></div>
-
-            <div class="lbl" style="margin-top:22px">4 · Or use the core commands</div>
+            <div class="lbl" style="margin-top:22px">3 · Use the team's shared tools</div>
             <p class="sub">Browse the shared library, pull a skill, and call a tool — the key stays in the vault, never on your machine.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg skill ls\ntreg skill install seo-blog-writer                    # a teammate pulls one (or --all)\ntreg call https://api.stripe.com/v1/charges','cc')">{{startCopied==='cc'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> skill ls
 <span class="hl-cmd">treg</span> skill install seo-blog-writer
 <span class="hl-cmd">treg</span> call <span class="hl-str">https://api.stripe.com/v1/charges</span></pre></div>
+
+            <div class="lbl" style="margin-top:22px">4 · Try the catalog — no key needed</div>
+            <p class="sub">Beyond the team's own tools: ~2,600 catalogued data endpoints, many served on treg's key and billed per call — fractions of a cent — from the team's prepaid balance.</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search \"subreddit posts\"\ntreg call scrapecreators.reddit.subreddit.posts --query subreddit=news\ntreg balance','cat2')">{{startCopied==='cat2'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"subreddit posts"</span>
+<span class="hl-cmd">treg</span> call scrapecreators.reddit.subreddit.posts <span class="hl-flag">--query</span> subreddit=news
+<span class="hl-cmd">treg</span> balance</pre></div>
           </div>
         </template>
 
