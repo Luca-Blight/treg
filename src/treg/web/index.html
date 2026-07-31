@@ -1273,6 +1273,13 @@ a:hover{text-decoration-color:var(--muted)}
           <button class="nav" :class="{active:view==='help'}" @click="helpMode=null; go('help')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>Tutorial</button>
         </div>
 
+        <!-- Prepaid balance (admins; /billing is admin-gated) — pinned above the account block.
+             Click-through = Team → Billing. -->
+        <div v-if="billing" @click="orgTab='billing'; go('orgs')" title="Prepaid balance — click to manage billing"
+             style="margin:8px 10px 6px;padding:7px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);cursor:pointer">
+          <span style="font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase">Balance</span>
+          <span style="font-family:var(--mono);font-weight:700;color:var(--accent)">{{money(billing.balance_micro)}}</span>
+        </div>
         <!-- ACCOUNT (bottom) -->
         <div class="side-acct">
           <div class="ava" :title="me">{{initials}}</div>
@@ -1296,15 +1303,7 @@ a:hover{text-decoration-color:var(--muted)}
         <template v-if="view==='connections'">
           <div class="tut-head">
             <div><h1>Catalog in {{activeName}}</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
-            <!-- Balance tag (replaces the old Refresh button — the list already reloads on entry).
-                 The marketplace is where balance gets spent, so this is where it's shown. -->
-            <div class="tut-actions">
-              <div v-if="billing" @click="orgTab='billing'; go('orgs')" title="Prepaid balance — click to manage billing"
-                   style="display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);cursor:pointer">
-                <span style="font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase">Balance</span>
-                <span style="font-family:var(--mono);font-weight:700;color:var(--accent)">{{money(billing.balance_micro)}}</span>
-              </div>
-            </div>
+            <!-- (The balance pill lives in the side nav, above the account block.) -->
           </div>
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
           <div v-for="c in needSecondCred" :key="'n'+c.id" class="banner" style="margin-top:12px">
