@@ -677,7 +677,13 @@ endpoints:
     currency: USD
     unit: call
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
-  unverified: 'http 404: <!DOCTYPE html> <html> <head> <title>404 Not Found • Hunter</title> <meta conten'
+  unverified: 'http 404 — WITHDRAWN, not broken. Re-probed 2026-07-31 and still 404, and the tell is
+    the response BODY — Hunter answers every real API route with its JSON error envelope
+    ({errors:[{id,code,details}]}), and this path returns the site''s HTML 404 page instead, meaning
+    the router has no such API route at all. /leads/custom_attributes is not the relocation either
+    (it parses as /leads/{id} and answers "This lead does not exist"). The whole custom-attributes
+    family below is kept only because Hunter''s help article still documents it; treat all four as
+    retired until Hunter republishes a working path.'
 - id: hunter.x.custom-attributes-create
   kind: account
   tier: extended
@@ -693,7 +699,7 @@ endpoints:
         required: true
     bodyType: json
     note: writes real account state, deliberately no test_request
-  untestable: writes real account state (creates a custom attribute); deliberately not probed blind
+  untestable: writes real account state (creates a custom attribute); deliberately not probed blind. NOTE 2026-07-31 — the family's read route GET /custom_attributes 404s with an HTML page rather than Hunter's JSON error envelope, so this write route is very likely retired too; it was not called because a write needs a real lead.
   cost:
     type: free
     value: 0
@@ -718,7 +724,7 @@ endpoints:
         type: string
         required: false
     bodyType: json
-  untestable: requires a real custom-attribute id; mutating
+  untestable: requires a real custom-attribute id; mutating. NOTE 2026-07-31 — the family's read route GET /custom_attributes 404s with an HTML page rather than Hunter's JSON error envelope, so this write route is very likely retired too; it was not called because a write needs a real lead.
   cost:
     type: free
     value: 0
@@ -738,7 +744,7 @@ endpoints:
       id:
         type: string
         required: true
-  untestable: destructive; requires a real custom-attribute id
+  untestable: destructive; requires a real custom-attribute id. NOTE 2026-07-31 — the family's read route GET /custom_attributes 404s with an HTML page rather than Hunter's JSON error envelope, so this write route is very likely retired too; it was not called because a write needs a real lead.
   cost:
     type: free
     value: 0

@@ -314,6 +314,12 @@ endpoints:
     name: "List active subscriptions"
     summary: "List subscriptions on the account"
     scope_gap: "requires an account already holding subscriptions; nothing to list on a fresh key"
+    unverified: "http 404 — {\"status\": 404, \"error\": {\"type\": [\"not_found\"], \"message\": \"This
+      endpoint is currently turned off via 'subscription' and is not available.\"}}. Probed live
+      2026-07-31 and free (a 404 spends no credits). This is a FEATURE FLAG on the account, not an
+      empty list and not a retired route: PDL turns the whole Subscriptions API off unless the plan
+      includes it, so every /subscription route here — list, create, get, update, delete — is gated
+      the same way. It clears with a plan that enables subscriptions, not with a fix."
     docs_url: https://docs.peopledatalabs.com/docs/reference-subscriptions-api
 
   - id: pdl.x.subscription-create

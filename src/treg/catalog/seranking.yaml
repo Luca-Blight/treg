@@ -4,8 +4,22 @@ source:
   openapi: null # SE Ranking publishes a Postman collection and HTML reference, no fetchable spec
   curated: 2026-07-28
 
-# UNVERIFIED — no credential available at curation time; every path, parameter and price below is
-# transcribed from SE Ranking's official Data API docs 2026-07-28. Nothing here has been called.
+# VERIFIED 2026-07-31 — all 11 endpoints below were live-called against a real Data API key and
+# returned 2xx with real data. Paths and parameters were transcribed from SE Ranking's official
+# Data API docs 2026-07-28 and are now confirmed; the two prices marked `source: observed` were
+# measured, and one of them was WRONG in the docs (see seranking.web.url.metrics).
+#
+# THE METER IS LAGGED — read this before trying to price an endpoint here. `units_left` on
+# /v1/account/subscription does NOT move when the call returns; it settles 20-60s later, in
+# batches. A serial verification run therefore attributes charges to the WRONG endpoint: the
+# 11-call sweep above read a delta of 0 for nine of its calls and 5 for one, and only reported the
+# real 625 total two minutes after the last call. Pricing one endpoint here costs one call in
+# ISOLATION followed by a poll until the balance stops moving — there is no faster way, and a
+# same-run delta is worse than no measurement because it looks like an answer.
+#
+# The sweep's arithmetic, for reference: 625 credits observed against 540 predicted from the
+# per-endpoint values below. 5 of the gap is url.metrics (corrected below); the remaining ~85 is
+# unattributed and is why the nine endpoints that were not isolated stay `confidence: documented`.
 #
 # House rules for this provider (they apply to EVERY endpoint below, so they are stated once):
 #
@@ -61,12 +75,15 @@ endpoints:
       queryParams:
         output: {type: string, required: false, note: "json (default) | xml"}
       note: "returns subscription_info: status (active|inactive|expired|disabled), start_date, expiration_date, units_limit, units_left. Any captured example should have the account's real balances masked before commit."
+    test_request: {queryParams: {}}
     cost:
       type: free
       value: 0
       currency: USD
       unit: call
       note: 0 credits per request and 0 per record — the docs list it explicitly as free. Correct liveness probe for an SE Ranking Data API key, and what treg's registry already probes.
+    verified: 2026-07-31
+    example_response: examples/seranking.account.usage.json
     docs_url: https://seranking.com/api/data/account-system/#subscription
 
   # --- Keyword research -------------------------------------------------------------------------
@@ -89,6 +106,9 @@ endpoints:
         history_from: {type: string, required: false, note: "first month of volume history, YYYY-MM-DD"}
         history_to: {type: string, required: false, note: "last month of volume history, YYYY-MM-DD"}
       note: "note the split: `source` rides in the QUERY STRING while the keyword list rides in the JSON body. Returns volume, cpc, difficulty, competition, intents and history_trend per keyword."
+    test_request:
+      queryParams: {source: us}
+      body: {keywords: ["seo platform"]}
     cost:
       type: per_result
       value: 10
@@ -100,6 +120,8 @@ endpoints:
       checked: '2026-07-28'
       confidence: documented
       note: 10 credits per keyword RETURNED, 0 per request. Batching 5,000 keywords into one call costs the same as 5,000 single-keyword calls (50,000 credits) but saves the round trips — batch for latency, not for price.
+    verified: 2026-07-31
+    example_response: examples/seranking.google.keywords.volume.json
     docs_url: https://seranking.com/api/data/keyword-research/#export
 
   - id: seranking.google.keywords.ideas
@@ -126,6 +148,8 @@ endpoints:
         /v1/keywords/similar (same-SERP overlap) and /v1/keywords/questions (question phrasings).
         /v1/keywords/longtail is the cheap one at 1 credit per keyword, but returns bare strings
         with no metrics.
+    test_request:
+      queryParams: {source: us, keyword: avocado, limit: 10}
     cost:
       type: per_result
       value: 10
@@ -137,6 +161,8 @@ endpoints:
       checked: '2026-07-28'
       confidence: documented
       note: 10 credits per keyword RETURNED, 0 per request — so `limit` is the entire cost. The default limit of 100 spends 1,000 credits; always set it explicitly.
+    verified: 2026-07-31
+    example_response: examples/seranking.google.keywords.ideas.json
     docs_url: https://seranking.com/api/data/keyword-research/#related
 
   # --- Domain analysis (flat per-request pricing — a large `limit` is free at the margin) --------
@@ -155,17 +181,21 @@ endpoints:
         with_subdomains: {type: integer, required: false, note: "1 (default) includes subdomains, 0 restricts to the exact host"}
         url: {type: string, required: false, note: "narrow the overview to a single URL on the domain"}
       note: "returns an `organic` and an `adv` block. /v1/domain/overview/worldwide is the same job aggregated across every country at the same price, and /v1/domain/overview/history returns the traffic/keyword trend."
+    test_request:
+      queryParams: {source: us, domain: seranking.com}
     cost:
       type: per_call
       value: 100
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://seranking.com/pricing.html
-      checked: '2026-07-28'
-      confidence: documented
-      note: 100 credits per REQUEST, 0 per record — the charge does not scale with the response, so there is no cost reason to narrow this call.
+      checked: '2026-07-31'
+      confidence: verified
+      note: 100 credits per REQUEST, 0 per record — the charge does not scale with the response, so there is no cost reason to narrow this call. OBSERVED 2026-07-31 — one isolated call on a fresh domain moved units_left by exactly 100, confirming the flat model; the response carried 115,761 ranked keywords and cost the same as one carrying none.
+    verified: 2026-07-31
+    example_response: examples/seranking.google.domain.overview.json
     docs_url: https://seranking.com/api/data/domain-analysis/#regional-database
 
   - id: seranking.google.domain.ranked_keywords
@@ -191,6 +221,8 @@ endpoints:
         year: {type: integer, required: false, note: "with `month`, returns a historical snapshot"}
         month: {type: integer, required: false, note: "1-12"}
       note: "one of `domain` or `url` is required. Set `type=adv` to get the domain's paid keywords from the same endpoint."
+    test_request:
+      queryParams: {source: us, domain: seranking.com, limit: 10}
     cost:
       type: per_call
       value: 100
@@ -202,6 +234,8 @@ endpoints:
       checked: '2026-07-28'
       confidence: documented
       note: '100 credits per REQUEST, 0 per record. Because rows are free, pull `limit: 1000` per page rather than paging in small chunks — small pages multiply the per-request charge.'
+    verified: 2026-07-31
+    example_response: examples/seranking.google.domain.ranked_keywords.json
     docs_url: https://seranking.com/api/data/domain-analysis/#domain-keywords
 
   - id: seranking.google.domain.competitors
@@ -221,6 +255,8 @@ endpoints:
         order_field: {type: string, required: false}
         order_type: {type: string, required: false, note: "asc | desc"}
       note: "the competitor set is derived from keyword overlap in the chosen `source` database, so a domain's competitors differ per country."
+    test_request:
+      queryParams: {source: us, domain: seranking.com, limit: 10}
     cost:
       type: per_call
       value: 100
@@ -232,6 +268,8 @@ endpoints:
       checked: '2026-07-28'
       confidence: documented
       note: 100 credits per REQUEST, 0 per record.
+    verified: 2026-07-31
+    example_response: examples/seranking.google.domain.competitors.json
     docs_url: https://seranking.com/api/data/domain-analysis/#competitors
 
   # --- Backlinks (per-ROW pricing — `limit` is the entire cost) ----------------------------------
@@ -248,6 +286,8 @@ endpoints:
         target: {type: string, required: true, note: "domain, host or URL — must match `mode`", example: "seranking.com"}
         mode: {type: string, required: false, note: "domain | host | url — what the target is interpreted as", example: "domain"}
       note: "returns a `summary` object. This is the most expensive per-target backlinks call in the file, so read it once per domain rather than per page."
+    test_request:
+      queryParams: {target: seranking.com, mode: domain}
     cost:
       type: per_result
       value: 100
@@ -259,6 +299,8 @@ endpoints:
       checked: '2026-07-28'
       confidence: documented
       note: 100 credits per TARGET, 0 per request. Ten times the price of /v1/backlinks/metrics (10 credits), which returns the headline counts without the full breakdown — use metrics when you only need totals.
+    verified: 2026-07-31
+    example_response: examples/seranking.web.backlinks.summary.json
     docs_url: https://seranking.com/api/data/backlinks/#summary
 
   - id: seranking.web.backlinks.list
@@ -276,6 +318,8 @@ endpoints:
         limit: {type: integer, required: false, note: "COST DIAL — 1 to 10,000, and every returned row costs a credit", example: 10}
         order_by: {type: string, required: false, note: "column to sort the backlinks by"}
       note: "returns a `backlinks` array. For bulk extraction use /v1/backlinks/raw instead — same 1-credit-per-row price but a cursor (`next`) and a 100,000 ceiling per page."
+    test_request:
+      queryParams: {target: seranking.com, mode: domain, limit: 5}
     cost:
       type: per_result
       value: 1
@@ -287,6 +331,8 @@ endpoints:
       checked: '2026-07-28'
       confidence: documented
       note: 1 credit per BACKLINK returned, 0 per request — `limit` is the entire cost. Pulling a 10,000-link profile costs 10,000 credits.
+    verified: 2026-07-31
+    example_response: examples/seranking.web.backlinks.list.json
     docs_url: https://seranking.com/api/data/backlinks/#all
 
   - id: seranking.web.linking_domains.list
@@ -304,6 +350,8 @@ endpoints:
         limit: {type: integer, required: false, note: "COST DIAL — 1 to 10,000, one credit per returned domain", example: 10}
         order_by: {type: string, required: false}
       note: "returns a `refdomains` array. /v1/backlinks/refdomains/count is the 2-credit way to get just the total when you do not need the list."
+    test_request:
+      queryParams: {target: seranking.com, mode: domain, limit: 5}
     cost:
       type: per_result
       value: 1
@@ -315,6 +363,8 @@ endpoints:
       checked: '2026-07-28'
       confidence: documented
       note: 1 credit per REFERRING DOMAIN returned, 0 per request — `limit` is the entire cost.
+    verified: 2026-07-31
+    example_response: examples/seranking.web.linking_domains.list.json
     docs_url: https://seranking.com/api/data/backlinks/#refdomains
 
   - id: seranking.web.anchors.list
@@ -332,6 +382,8 @@ endpoints:
         limit: {type: integer, required: false, note: "COST DIAL — 1 to 10,000, one credit per returned anchor", example: 10}
         order_by: {type: string, required: false}
       note: "returns an `anchors` array."
+    test_request:
+      queryParams: {target: seranking.com, mode: domain, limit: 5}
     cost:
       type: per_result
       value: 1
@@ -343,6 +395,8 @@ endpoints:
       checked: '2026-07-28'
       confidence: documented
       note: 1 credit per ANCHOR returned, 0 per request — `limit` is the entire cost.
+    verified: 2026-07-31
+    example_response: examples/seranking.web.anchors.list.json
     docs_url: https://seranking.com/api/data/backlinks/#anchors
 
   - id: seranking.web.url.metrics
@@ -357,15 +411,23 @@ endpoints:
       queryParams:
         target: {type: string, required: true, note: "domain, host or URL", example: "seranking.com"}
       note: "returns a `pages` array carrying the authority scores — SE Ranking's answer to Moz's Domain Authority and Majestic's Trust Flow, and the join point for cross-provider authority comparison. /v1/backlinks/authority/page and /v1/backlinks/authority/domain are the cheaper 5-credit variants when you only need one side."
+    test_request:
+      queryParams: {target: seranking.com}
     cost:
       type: per_result
-      value: 10
+      value: 15
       currency: credit
       per: 1
       unit: target
-      source: docs
+      source: observed
       source_url: https://seranking.com/pricing.html
-      checked: '2026-07-28'
-      confidence: documented
-      note: 10 credits per TARGET, 0 per request.
+      checked: '2026-07-31'
+      confidence: verified
+      note: '15 credits per TARGET, 0 per request. OBSERVED 2026-07-31 — one isolated call on a
+        fresh target moved units_left by exactly 15, twice-settled. The docs list 10, and the 10 is
+        the DOMAIN half alone: /v1/backlinks/authority/domain is 10 and /v1/backlinks/authority/page
+        is 5, and this combined route returns both and charges their sum. Ask for the half you need
+        if you only need one side — the combined call is 50% more than the domain score by itself.'
+    verified: 2026-07-31
+    example_response: examples/seranking.web.url.metrics.json
     docs_url: https://seranking.com/api/data/backlinks/#authority

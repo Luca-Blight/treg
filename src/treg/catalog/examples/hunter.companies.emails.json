@@ -16,20 +16,20 @@
         "sources": [
           {
             "domain": "linkedin.com",
-            "uri": "https://www.google.com/search?q=site:linkedin.com%20aylin%20orakcal%20stripe",
+            "uri": "https://www.google.com/search?q=site:linkedin.com%20[redacted]",
             "extracted_on": "2026-05-18",
             "last_seen_on": "2026-06-25",
             "still_on_page": true
           }
         ],
-        "first_name": "Aylin",
-        "last_name": "Orakcal",
+        "first_name": "[redacted]",
+        "last_name": "[redacted]",
         "position": "Head of Engineering",
         "position_raw": "Head of Engineering | Financial Connections",
         "seniority": "executive",
         "department": "management",
         "decision_maker": true,
-        "linkedin": "https://www.linkedin.com/in/aylinturhan",
+        "linkedin": "https://www.linkedin.com/in/[redacted]",
         "twitter": null,
         "phone_number": null,
         "verification": {

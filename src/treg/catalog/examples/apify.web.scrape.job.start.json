@@ -1,0 +1,78 @@
+{
+  "data": {
+    "id": "TaY2vTcBgV7f52bXS",
+    "actId": "E2jjCZBezvAZnX8Rb",
+    "userId": "2WfRSS5Wbbo3DnJbR",
+    "startedAt": "2026-07-31T01:58:55.717Z",
+    "finishedAt": null,
+    "status": "READY",
+    "meta": {
+      "origin": "API",
+      "userAgent": "python-httpx/0.28.1"
+    },
+    "stats": {
+      "inputBodyLen": 2,
+      "migrationCount": 0,
+      "rebootCount": 0,
+      "restartCount": 0,
+      "resurrectCount": 0,
+      "computeUnits": 0
+    },
+    "options": {
+      "build": "latest",
+      "timeoutSecs": 60,
+      "memoryMbytes": 256,
+      "maxTotalChargeUsd": 0.05,
+      "isMaxTotalChargeUsdSetByUser": true,
+      "diskMbytes": 512
+    },
+    "buildId": "FJcN16ufvqeFJC1pc",
+    "defaultKeyValueStoreId": "jFXc9blkL0bgoQTRz",
+    "defaultDatasetId": "k5bSaeOLqoa326NwE",
+    "defaultRequestQueueId": "a0vNc3G4I78nwqc4G",
+    "storageIds": {
+      "keyValueStores": {
+        "default": "jFXc9blkL0bgoQTRz"
+      },
+      "datasets": {
+        "default": "k5bSaeOLqoa326NwE"
+      },
+      "requestQueues": {
+        "default": "a0vNc3G4I78nwqc4G"
+      }
+    },
+    "platformUsageBillingModel": "USER",
+    "generalAccess": "FOLLOW_USER_SETTING",
+    "buildNumber": "0.0.12",
+    "containerUrl": "https://daxbme1ma2wj.runs.apify.net",
+    "usage": {
+      "ACTOR_COMPUTE_UNITS": 0,
+      "DATASET_READS": 0,
+      "DATASET_WRITES": 0,
+      "KEY_VALUE_STORE_READS": 0,
+      "KEY_VALUE_STORE_WRITES": 1,
+      "KEY_VALUE_STORE_LISTS": 0,
+      "REQUEST_QUEUE_READS": 0,
+      "REQUEST_QUEUE_WRITES": 0,
+      "DATA_TRANSFER_INTERNAL_GBYTES": 0,
+      "DATA_TRANSFER_EXTERNAL_GBYTES": 0,
+      "PROXY_RESIDENTIAL_TRANSFER_GBYTES": 0,
+      "PROXY_SERPS": 0
+    },
+    "usageTotalUsd": 5e-05,
+    "usageUsd": {
+      "ACTOR_COMPUTE_UNITS": 0,
+      "DATASET_READS": 0,
+      "DATASET_WRITES": 0,
+      "KEY_VALUE_STORE_READS": 0,
+      "KEY_VALUE_STORE_WRITES": 5e-05,
+      "KEY_VALUE_STORE_LISTS": 0,
+      "REQUEST_QUEUE_READS": 0,
+      "REQUEST_QUEUE_WRITES": 0,
+      "DATA_TRANSFER_INTERNAL_GBYTES": 0,
+      "DATA_TRANSFER_EXTERNAL_GBYTES": 0,
+      "PROXY_RESIDENTIAL_TRANSFER_GBYTES": 0,
+      "PROXY_SERPS": 0
+    }
+  }
+}

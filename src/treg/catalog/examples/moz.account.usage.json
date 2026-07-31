@@ -1,5 +1,3 @@
 {
-  "rows_consumed": 1234,
-  "_scrubbed": true,
-  "_scrubbed_note": "account-specific values (email, balances, quotas) replaced with placeholders"
+  "rows_consumed": 101
 }

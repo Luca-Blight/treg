@@ -1,0 +1,228 @@
+[
+  {
+    "inputUrl": "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&q=project%20management",
+    "pageInfo": {
+      "adLibrarySystemStatus": {
+        "systemStatus": {
+          "status": "NO_KNOWN_ISSUES",
+          "activeIssues": [
+            {
+              "product": "Ad Library",
+              "status": "NO_KNOWN_ISSUES"
+            },
+            {
+              "product": "Ad Library Report",
+              "status": "NO_KNOWN_ISSUES"
+            },
+            "… 2 more item(s) truncated"
+          ]
+        }
+      },
+      "xfbAdLibraryIsCaptchaRequired": false,
+      "page": null,
+      "adLibraryUser": null
+    },
+    "isResultComplete": false,
+    "results": [
+      {
+        "totalCount": 7523,
+        "pageID": "866655706540346",
+        "adArchiveID": "2006807903279406",
+        "startDateFormatted": "2026-05-26T07:00:00.000Z",
+        "endDateFormatted": "2026-07-30T07:00:00.000Z",
+        "adArchiveId": "2006807903279406",
+        "collationCount": 1,
+        "collationId": "1537692291702770",
+        "isActive": true,
+        "pageId": "866655706540346",
+        "pageIsDeleted": false,
+        "snapshot": {
+          "brandedContent": null,
+          "pageId": "866655706540346",
+          "pageIsDeleted": false,
+          "pageProfileUri": "https://www.facebook.com/61585235895092/",
+          "rootResharedPost": null,
+          "byline": null,
+          "disclaimerLabel": null,
+          "pageName": "Cholesterol Relief Community",
+          "pageProfilePictureUrl": "https://scontent-atl3-3.xx.fbcdn.net/v/t39.35426-6/705745221_3051884241688142_5897237959372273076_n.jpg?stp=dst-jpg_s60x60_tt…",
+          "event": null,
+          "caption": "shop.pipitea.com",
+          "ctaText": "Learn more",
+          "cards": [],
+          "body": {
+            "text": "I found a wallet in a shopping cart at Walmart last Tuesday. Brown leather. Worn soft at the edges. Tucked under one of those…"
+          },
+          "ctaType": "LEARN_MORE",
+          "displayFormat": "IMAGE",
+          "linkDescription": "\"My LDL went from 189 to 142 in three months. My doctor asked what medication I started. I told him it was tea - he didn't be…",
+          "linkUrl": "https://shop.pipitea.com/ppch/sp",
+          "images": [
+            {
+              "imageCrops": [],
+              "originalImageUrl": "https://scontent-atl3-1.xx.fbcdn.net/v/t39.35426-6/707617892_1948406532467794_9155177261002994342_n.jpg?_nc_cat=103&ccb=1-7&_…",
+              "resizedImageUrl": "https://scontent-atl3-1.xx.fbcdn.net/v/t39.35426-6/705808378_1515388033458333_4745399378237277479_n.jpg?stp=dst-jpg_s600x600_…",
+              "watermarkedResizedImageUrl": ""
+            }
+          ],
+          "pageCategories": [
+            "Community Center"
+          ],
+          "pageLikeCount": 2487,
+          "title": "Natural Relief in Weeks",
+          "videos": [],
+          "isReshared": false,
+          "extraLinks": [],
+          "extraTexts": [],
+          "extraImages": [],
+          "extraVideos": [],
+          "countryIsoCode": null,
+          "brazilTaxId": null,
+          "additionalInfo": null,
+          "ecCertificates": []
+        },
+        "hasUserReported": false,
+        "reportCount": null,
+        "menuItems": [],
+        "stateMediaRunLabel": null,
+        "pageName": "Cholesterol Relief Community",
+        "impressionsWithIndex": {
+          "impressionsText": null,
+          "impressionsIndex": -1
+        },
+        "gatedType": "ELIGIBLE",
+        "categories": [
+          "UNKNOWN"
+        ],
+        "isAaaEligible": true,
+        "containsDigitalCreatedMedia": false,
+        "reachEstimate": null,
+        "currency": "",
+        "spend": null,
+        "endDate": 1785394800,
+        "publisherPlatform": [
+          "FACEBOOK",
+          "INSTAGRAM",
+          "… 3 more item(s) truncated"
+        ],
+        "startDate": 1779778800,
+        "containsSensitiveContent": false,
+        "totalActiveTime": null,
+        "regionalRegulationData": {
+          "finserv": {
+            "isDeemedFinserv": false,
+            "isLimitedDelivery": false
+          },
+          "twAntiScam": {
+            "isLimitedDelivery": false
+          }
+        },
+        "hideDataStatus": "NONE",
+        "fevInfo": null,
+        "adId": null,
+        "targetedOrReachedCountries": []
+      },
+      {
+        "totalCount": 7523,
+        "pageID": "105964635528739",
+        "adArchiveID": "1395373631967521",
+        "startDateFormatted": "2025-08-18T07:00:00.000Z",
+        "endDateFormatted": "2026-07-30T07:00:00.000Z",
+        "adArchiveId": "1395373631967521",
+        "collationCount": 2,
+        "collationId": "865084488934774",
+        "isActive": true,
+        "pageId": "105964635528739",
+        "pageIsDeleted": false,
+        "snapshot": {
+          "brandedContent": null,
+          "pageId": "105964635528739",
+          "pageIsDeleted": false,
+          "pageProfileUri": "https://www.facebook.com/letsexplainbusiness/",
+          "rootResharedPost": null,
+          "byline": "",
+          "disclaimerLabel": null,
+          "pageName": "Business Explained",
+          "pageProfilePictureUrl": "https://scontent-atl3-2.xx.fbcdn.net/v/t39.35426-6/534423321_794412089769207_953560894162427765_n.jpg?stp=dst-jpg_s60x60_tt6&…",
+          "event": null,
+          "caption": "business-explained.com",
+          "ctaText": "Shop now",
+          "cards": [],
+          "body": {
+            "text": "The Most Comprehensive E-book on Organizational Management ⬇️\n\nTable of Contents:\n\n1. Organizational Foundations\n2. Centraliz…"
+          },
+          "ctaType": "SHOP_NOW",
+          "displayFormat": "VIDEO",
+          "linkDescription": null,
+          "linkUrl": "https://business-explained.com/shop/organizational-management-explained/",
+          "images": [],
+          "pageCategories": [
+            "Веб локација"
+          ],
+          "pageLikeCount": 44619,
+          "title": "Instant PDF Download.",
+          "videos": [
+            {
+              "videoHdUrl": "https://video-atl3-3.xx.fbcdn.net/o1/v/t2/f2/m366/AQN1pGBhUYafHLdbRRZGjtRH2rsP2aKxFFpaRp-Z9iMfZs02ye1iHjXG69i7BCLjxSguMT-ttwN…",
+              "videoPreviewImageUrl": "https://scontent-atl3-1.xx.fbcdn.net/v/t39.35426-6/536130891_24566464562970309_6175567617944118764_n.jpg?_nc_cat=100&ccb=1-7&…",
+              "videoSdUrl": "https://video-atl3-2.xx.fbcdn.net/o1/v/t2/f2/m412/AQMroWaJ1owKGijGJsIrg0y7wTseE_oxDdsCVHrkLv9eM77bpvUrmN8LpR0ko3DlqNlM8RJMaOg…",
+              "watermarkedVideoHdUrl": "",
+              "watermarkedVideoSdUrl": ""
+            }
+          ],
+          "isReshared": false,
+          "extraLinks": [],
+          "extraTexts": [],
+          "extraImages": [],
+          "extraVideos": [],
+          "countryIsoCode": null,
+          "brazilTaxId": null,
+          "additionalInfo": null,
+          "ecCertificates": []
+        },
+        "hasUserReported": false,
+        "reportCount": null,
+        "menuItems": [],
+        "stateMediaRunLabel": null,
+        "pageName": "Business Explained",
+        "impressionsWithIndex": {
+          "impressionsText": null,
+          "impressionsIndex": -1
+        },
+        "gatedType": "ELIGIBLE",
+        "categories": [
+          "UNKNOWN"
+        ],
+        "isAaaEligible": true,
+        "containsDigitalCreatedMedia": false,
+        "reachEstimate": null,
+        "currency": "",
+        "spend": null,
+        "endDate": 1785394800,
+        "publisherPlatform": [
+          "FACEBOOK",
+          "INSTAGRAM",
+          "… 3 more item(s) truncated"
+        ],
+        "startDate": 1755500400,
+        "containsSensitiveContent": false,
+        "totalActiveTime": null,
+        "regionalRegulationData": {
+          "finserv": {
+            "isDeemedFinserv": false,
+            "isLimitedDelivery": false
+          },
+          "twAntiScam": {
+            "isLimitedDelivery": false
+          }
+        },
+        "hideDataStatus": "NONE",
+        "fevInfo": null,
+        "adId": null,
+        "targetedOrReachedCountries": []
+      },
+      "… 28 more item(s) truncated"
+    ],
+    "totalCount": 7523
+  }
+]

@@ -1,5 +1,5 @@
 {
-  "requestId": "9017f0fa-95e2-4eb1-a280-94397090cd38",
+  "requestId": "7042a06a-67d4-4423-88ab-05f07337596f",
   "results": [
     {
       "id": "v1.A1gXjPYd63SSPjSvxO4uwqXqE5ilJV9S",
@@ -22,6 +22,16 @@
       },
       "industry": "Technology, Information & Media",
       "subIndustry": "Information Services",
+      "additionalIndustries": [
+        {
+          "industry": "Technology, Information & Media",
+          "subIndustry": "Digital Information & Data Solutions"
+        },
+        {
+          "industry": "Business Services",
+          "subIndustry": "Advertising, Public Relations & Marketing Services"
+        }
+      ],
       "specialities": [
         "data accuracy",
         "data enrichment",
