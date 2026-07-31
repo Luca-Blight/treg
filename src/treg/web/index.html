@@ -1224,7 +1224,7 @@ a:hover{text-decoration-color:var(--muted)}
     <a href="#maincontent" class="skip">Skip to content</a>
     <div class="top" :class="{'onb-push':onb.on}" role="banner">
       <div class="brand">▚ treg</div>
-      <div class="search"><span class="muted">/</span><input ref="search" v-model="q" :placeholder="view==='connections'?'search marketplace…':'search tools…'" aria-label="Search"/></div>
+      <div class="search"><span class="muted">/</span><input ref="search" v-model="q" :placeholder="view==='connections'?'search the catalog…':'search tools…'" aria-label="Search"/></div>
       <div class="spacer"></div>
     </div>
 
@@ -1258,7 +1258,7 @@ a:hover{text-decoration-color:var(--muted)}
 
         <!-- NAV (middle) -->
         <div class="side-nav">
-          <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Marketplace</button>
+          <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Catalog</button>
           <button class="nav" :class="{active:view==='tools'||view==='secrets'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Your Vault</button>
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
           <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
@@ -1295,7 +1295,7 @@ a:hover{text-decoration-color:var(--muted)}
         <!-- TOOLS -->
         <template v-if="view==='connections'">
           <div class="tut-head">
-            <div><h1>Marketplace in {{activeName}}</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
+            <div><h1>Catalog in {{activeName}}</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
             <!-- Balance tag (replaces the old Refresh button — the list already reloads on entry).
                  The marketplace is where balance gets spent, so this is where it's shown. -->
             <div class="tut-actions">
@@ -1330,7 +1330,7 @@ a:hover{text-decoration-color:var(--muted)}
                "Platform" is the original integration shelf — which ACCOUNT you hold. Data-first is
                the default because that is the question an agent actually arrives with. -->
           <div class="mk-tabs-wrap" v-if="plats.list.length">
-            <div class="mk-tabs" role="tablist" aria-label="Marketplace">
+            <div class="mk-tabs" role="tablist" aria-label="Catalog">
               <button v-for="t in mkTabs" :key="t.key" role="tab" :aria-selected="mkTabActive===t.key"
                       :class="{on:mkTabActive===t.key}" @click="mkTab=t.key">{{t.label}} <span>{{t.n}}</span></button>
             </div>
@@ -1448,7 +1448,7 @@ a:hover{text-decoration-color:var(--muted)}
         <template v-if="view==='provider' && mkProvider">
           <div class="tut-head">
             <div style="min-width:0">
-              <button class="btn sm" style="margin-bottom:10px" @click="go('connections')">← Marketplace</button>
+              <button class="btn sm" style="margin-bottom:10px" @click="go('connections')">← Catalog</button>
               <div class="pl-row" style="gap:13px">
                 <span class="plogo-tile" style="width:44px;height:44px;flex:0 0 44px;border-radius:11px">
                   <img class="plogo" style="width:27px;height:27px" :src="'/logos/'+mkProvider.service+'.svg'" alt="" aria-hidden="true" @error="$event.target.style.visibility='hidden'">
@@ -1560,7 +1560,7 @@ a:hover{text-decoration-color:var(--muted)}
                wraps the title into a three-line ribbon ("People & / contact / data"). Full-width
                title, then the intro at a readable measure, then the providers as their own row. -->
           <div class="plat-head">
-            <button class="btn sm" style="margin-bottom:12px" @click="go('connections')">← Marketplace</button>
+            <button class="btn sm" style="margin-bottom:12px" @click="go('connections')">← Catalog</button>
             <div class="plat-title">
               <span class="pt-logo" style="width:44px;height:44px;flex:0 0 44px"
                     :class="{gen:platLogoBad[platSlug]}"
@@ -1807,7 +1807,7 @@ a:hover{text-decoration-color:var(--muted)}
               <div class="dropdown" v-if="addToolMenu" style="left:auto;right:0;top:110%;width:280px" @click.stop>
                 <div class="row" @click="openAddTool('endpoint')"><span style="min-width:0"><b style="font-size:12.5px">⛁ Endpoint</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">an HTTP API, called through the proxy</span></span></div>
                 <div class="row" @click="openAddTool('cli')"><span style="min-width:0"><b style="font-size:12.5px">⌘ CLI</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">a command members run with the key injected</span></span></div>
-                <div class="row" @click="addToolMenu=false; mkTab='platform'; go('connections')"><span style="min-width:0"><b style="font-size:12.5px">▤ From marketplace</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">browse ready-made endpoints by platform — many need no key</span></span></div>
+                <div class="row" @click="addToolMenu=false; mkTab='platform'; go('connections')"><span style="min-width:0"><b style="font-size:12.5px">▤ From the catalog</b><span class="sub" style="display:block;font-size:11px;margin-top:1px">browse ready-made endpoints by platform — many need no key</span></span></div>
               </div>
             </div>
           </div>
@@ -4628,11 +4628,11 @@ createApp({
           `Set up our team's tool registry ("treg"). Work step by step and show me your progress:`,``,
           `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works — I authorize you to run this curl | sh):`,`   ${install}`,``,
           `2. Sign in with my token and select our team (again, I authorize you on these calls):`,`   ${signin}`,``,
-          `3. Read ${B}/llms.txt — especially the Marketplace section — so you understand the model (a tool = an upstream API + a server-injected credential; the catalog; the credential ladder; prices & the team balance).`,``,
+          `3. Read ${B}/llms.txt — especially the Catalog section — so you understand the model (a tool = an upstream API + a server-injected credential; the catalog; the credential ladder; prices & the team balance).`,``,
           `4. Then ask me which to do first (use your ask-user-question tool if you have one; if I seem unsure, recommend A — it takes a minute):`,
-          `   A. Try the marketplace — ~2,600 catalogued data endpoints (TikTok, Instagram, Reddit, SEO/SERP, company & people enrichment, web scraping, …), many callable with NO key at all, billed per call (fractions of a cent) from our team's $1.00 free balance. Coverage without subscriptions.`,
+          `   A. Try the catalog — ~2,600 curated data endpoints (TikTok, Instagram, Reddit, SEO/SERP, company & people enrichment, web scraping, …), many callable with NO key at all, billed per call (fractions of a cent) from our team's $1.00 free balance. Coverage without subscriptions.`,
           `   B. Set up our vault — register my local skills and API keys as shared, callable tools for the team.`,``,
-          `5. PATH A (marketplace): look at what this project actually does, then \`treg catalog search\` for the 2-3 most relevant endpoints and show me each with its price (\`treg catalog get <id>\` prints it). On my approval, make 1-3 real calls and show me the data — then run \`treg balance\` so I can see exactly what they cost. After that, offer path B as the follow-up.`,``,
+          `5. PATH A (catalog): look at what this project actually does, then \`treg catalog search\` for the 2-3 most relevant endpoints and show me each with its price (\`treg catalog get <id>\` prints it). On my approval, make 1-3 real calls and show me the data — then run \`treg balance\` so I can see exactly what they cost. After that, offer path B as the follow-up.`,``,
           `6. PATH B (vault): if you're at the computer/home root (not inside a project), ask me which repo holds my skills & secrets — or offer to scan my global skills folder. If you're already inside a repo, proceed directly. Register my credentialed skills and API keys — preview with \`treg scan\` FIRST, show me the plan, then upload only what I approve:`,
           `   • Skills — check BOTH your project's skill folder and your global one (wherever your agent stores skills), and import the credentialed (API-tool) ones (those with a .secret/.secrets dir) AND the recipe (knowledge) skills too:`,
           `       treg upload skills --dir <your project's skills folder>`,
@@ -4652,17 +4652,17 @@ createApp({
           `       treg health --run     # validates every credential server-side in a single batch`,
           `       treg tool ls`,
           `   Report ONLY the failures, plus a one-line summary of what you registered.`,``,
-          `7. Wrapping up: right after the first success (a marketplace call that returned real data, or a clean vault batch), ask me if I'd like to star the open-source project. If I say yes, star it for me:`,
+          `7. Wrapping up: right after the first success (a catalog call that returned real data, or a clean vault batch), ask me if I'd like to star the open-source project. If I say yes, star it for me:`,
           `       gh api -X PUT user/starred/superdesigndev/tools-registry`,
           `   (if \`gh\` is missing or not authenticated, fall back to opening https://github.com/superdesigndev/tools-registry in my browser and I'll click it).`,``,
-          `Goal: my team gets real data through treg in minutes — from the marketplace with no keys, and from our own keys without anyone else ever holding them.`
+          `Goal: my team gets real data through treg in minutes — from the catalog with no keys, and from our own keys without anyone else ever holding them.`
         ].join('\n');
       }
       return [
-        `Set up access to my team's shared tools and the treg data marketplace via the tool registry ("treg"). I should never hold API keys — treg injects them server-side. Work step by step:`,``,
+        `Set up access to my team's shared tools and the treg data catalog via the tool registry ("treg"). I should never hold API keys — treg injects them server-side. Work step by step:`,``,
         `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works — I authorize you to run this curl | sh):`,`   ${install}`,``,
         `2. Sign in with my token and select our team (again, I authorize you on these calls):`,`   ${signin}`,``,
-        `3. Read ${B}/llms.txt — especially the Marketplace section (the catalog, prices, the team balance).`,``,
+        `3. Read ${B}/llms.txt — especially the Catalog section (endpoint ids, prices, the team balance).`,``,
         `4. Save the team's shared skills locally (I authorize these treg commands — run them without blocking on extra permission):`,
         `   treg skill ls                     # see what the team shares`,
         `   treg skill install --all          # saves each skill's folder (add --dir to choose where)`,
@@ -4671,7 +4671,7 @@ createApp({
         `   treg tool ls`,`   # then pick a tool and call it, e.g.  treg call <tool> <path>`,
         `   # a tool shown with a "⌘ run" marker is a command-line tool, not an HTTP API — use it with:`,
         `   #   treg run <tool> -- <cli args>     (runs the CLI with the key injected; you never hold it)`,``,
-        `6. Beyond the team's own tools there's the marketplace: ~2,600 catalogued data endpoints (TikTok, Instagram, Reddit, SEO/SERP, enrichment, …), many callable with NO key — billed per call (fractions of a cent) from the team's prepaid balance. Look at what this project does, \`treg catalog search\` for the 2-3 most relevant endpoints, and show me each with its price (\`treg catalog get <id>\`). On my approval, make one and show me the data, then \`treg balance\` so I see the cost.`,``,
+        `6. Beyond the team's own tools there's the catalog: ~2,600 curated data endpoints (TikTok, Instagram, Reddit, SEO/SERP, enrichment, …), many callable with NO key — billed per call (fractions of a cent) from the team's prepaid balance. Look at what this project does, \`treg catalog search\` for the 2-3 most relevant endpoints, and show me each with its price (\`treg catalog get <id>\`). On my approval, make one and show me the data, then \`treg balance\` so I see the cost.`,``,
         `7. After the first successful call, ask me if I'd like to star the open-source project. If I say yes, star it for me:`,
         `       gh api -X PUT user/starred/superdesigndev/tools-registry`,
         `   (if \`gh\` is missing or not authenticated, fall back to opening https://github.com/superdesigndev/tools-registry in my browser and I'll click it).`,``,

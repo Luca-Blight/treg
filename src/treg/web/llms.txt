@@ -1,25 +1,33 @@
-# tools-registry (treg)
+# treg — one endpoint between your agent and every tool
 
-> A remote registry + credential-injecting proxy. Call your team's upstream APIs
-> (Stripe, PostHog, Google Search Console, Intercom, Render, …) through ONE endpoint
-> with **no API keys on your machine** - the registry injects the real secret
-> server-side. Built for humans (CLI + web dashboard) and for AI agents (Claude Code,
-> Codex, Gemini).
+> Think OpenRouter, but for agent tools instead of models: point an agent at ONE base URL
+> with ONE token and it can call **any tool** - a catalog of ~2,600 external data endpoints
+> (TikTok, Instagram, Reddit, SEO/SERP, enrichment, scraping, …, many with **no key at
+> all**, billed per call from a prepaid balance) AND your team's own internal & external
+> APIs, keys and CLIs. Every credential is injected **server-side**; nothing sensitive
+> lands on the agent's machine, and every call is audited. Built for AI agents (Claude
+> Code, Codex, Gemini) and the humans running them.
 
-tools-registry ("treg") turns a team's credentialed skills into shareable, callable
-tools. Any member's agent or a human calls an upstream API **without owning its
-credentials or rebuilding it**. The core mechanic is a proxy: the consumer makes the
-real upstream call through treg; treg swaps the tool reference for the real secret and
-injects it server-side, so the key never lands on the caller's machine. Every call is
-audited. Multi-tenant: a token = a (user, org) membership; resources are org-scoped.
+Two sources of callable tools live behind the same `/call/`:
+
+- **The CATALOG** - curated external data endpoints, callable by id. If nobody on the
+  team holds a key, treg serves eligible endpoints on its own key, metered per call
+  against the team's prepaid balance ($1.00 free on every new team). Coverage without
+  provider signups or subscriptions.
+- **The VAULT** - the team's own tools: any API key or credentialed skill a member
+  registers becomes callable by every teammate (and their agents) without the key ever
+  leaving the server. Internal services, paid accounts, OAuth connections, vendor CLIs.
+
+Multi-tenant: a token = a (user, org) membership; resources are org-scoped.
 
 Base URL: {BASE}
 Repo: https://github.com/superdesigndev/tools-registry
 
-## The one thing an agent needs: call a tool
+## The one mechanic: /call/
 
-Take the **real upstream URL** you'd normally call, prefix it with `{BASE}/call/`, and
-send your token. treg resolves the tool by host and injects the credential:
+For a VAULT tool, take the **real upstream URL** you'd normally call, prefix it with
+`{BASE}/call/`, and send your token. treg resolves the tool by host and injects the
+credential (a CATALOG endpoint is the same call with the endpoint id in place of the URL):
 
     curl "{BASE}/call/https://api.stripe.com/v1/charges" \
       -H "X-Treg-Token: $TREG_TOKEN"
@@ -35,13 +43,11 @@ send your token. treg resolves the tool by host and injects the credential:
   `base64+gzip`); treg decodes it server-side, so the upstream still gets the real bytes. The
   `treg` CLI does this automatically on a WAF 403 - you only need it over raw HTTP.
 
-That's the core mechanic. The second thing to know: you may not need a key at all.
+## Source 1 — the CATALOG: external data endpoints, many with NO key
 
-## The marketplace: catalogued endpoints - many need NO key
-
-The registry ships a curated catalog of ~2,600 endpoints across ~40 data providers
-(TikTok, Instagram, Reddit, YouTube, LinkedIn, Google SERP & keyword data, backlinks/SEO,
-company & people enrichment, web scraping, …). Call one by its **endpoint id**:
+~2,600 curated endpoints across ~40 data providers (TikTok, Instagram, Reddit, YouTube,
+LinkedIn, Google SERP & keyword data, backlinks/SEO, company & people enrichment, web
+scraping, …). Call one by its **endpoint id**:
 
     treg catalog search "instagram profile"         # find endpoints by what they do
     treg catalog get tikhub.tiktok.user.profile     # docs, params, PRICE, and how you'd be served
@@ -66,18 +72,19 @@ Money rules for agents:
 - `treg balance` shows the prepaid balance and recent charges; the dashboard Activity page
   shows the exact settled cost of every call.
 
-Everything below is discovery, auth, and management.
+## Source 2 — the VAULT: your team's own tools, keys & skills
 
-## Discover what's registered
+Anything a teammate registered - an internal service, a paid API account, an OAuth
+connection, a vendor CLI - is callable by the whole team with the credential held
+server-side. Discover what's there:
 
 - CLI: `treg tool ls` - names, hosts, bindings (which credential is injected where).
 - API: `GET {BASE}/tools` with your token → JSON list of `{name, base_url, host, bindings}`.
 - `GET {BASE}/meta` → `{public_url, github}` (unauthenticated; handy to confirm the base URL).
 
-## Two ways to use a tool: call an HTTP API, or run a CLI
-`treg call` is for **HTTP APIs** (the secret is injected server-side; nothing lands on your machine).
-`treg run` is for **command-line tools** (stripe, gh, vercel, gcloud, …): treg supplies the credential
-and runs the CLI, so you use it without owning or logging into it.
+Vault tools come in two shapes: HTTP APIs (`treg call`, or the URL-prefix form above) and
+**command-line tools** (stripe, gh, vercel, gcloud, …) via `treg run` - treg supplies the
+credential and runs the CLI, so you use it without owning or logging into it.
 
     treg run stripe -- balance retrieve        # runs the `stripe` CLI with the org's key injected
 
@@ -236,8 +243,8 @@ skills` restrict it (`--dir` sets the location).
    `{BASE}/call/`, add `X-Treg-Token: <token>` (and `X-Treg-Org: <slug>` for an identity
    token), and send it.
 2. Need data nobody has a key for? **Search the catalog first** (`treg catalog search …`) -
-   marketplace endpoints may need no key at all (billed to the team balance; see the
-   Marketplace section above, including the price-before-you-spend rule).
+   catalog endpoints may need no key at all (billed to the team balance; see the
+   Catalog section above, including the price-before-you-spend rule).
 3. Discover the org's own tools with `treg tool ls` or `GET {BASE}/tools`.
 4. Prefer a **per-org token** for an agent (scoped to one team), not a human identity token.
 5. The registry records who called what - calls are attributed to the token's user.

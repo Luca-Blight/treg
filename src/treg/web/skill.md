@@ -1,9 +1,9 @@
 ---
 name: tools-registry
-description: How to use the treg CLI (tools-registry) — two jobs in one skill. (1) The team VAULT — call shared team tools without holding their credentials, and turn your local skills & API keys into shareable tools. (2) The MARKETPLACE — call ~2,600 catalogued data endpoints (TikTok, Instagram, Reddit, SEO/SERP, enrichment, …), many with NO key at all, billed per call from the team's prepaid balance. Use when working with the `treg` command, when you need an upstream API but don't have the key locally, or when you need third-party data with no key at all.
+description: How to use the treg CLI (tools-registry) — two jobs in one skill. (1) The team VAULT — call shared team tools without holding their credentials, and turn your local skills & API keys into shareable tools. (2) The CATALOG — call ~2,600 catalogued data endpoints (TikTok, Instagram, Reddit, SEO/SERP, enrichment, …), many with NO key at all, billed per call from the team's prepaid balance. Use when working with the `treg` command, when you need an upstream API but don't have the key locally, or when you need third-party data with no key at all.
 ---
 
-# tools-registry — the team vault + the data marketplace
+# tools-registry — the team vault + the data catalog
 
 A remote registry + **credential-injecting proxy**. You make the *real* upstream API call; it is
 routed through the proxy, which injects the auth **server-side**. You never hold the secret.
@@ -24,7 +24,7 @@ Everything runs in your **active org** (first login creates a personal one). Tea
 email — see them with `treg invites`, accept with `treg accept` (or `treg org join <code>`). Switch
 teams: `treg org switch <slug>`.
 
-## Task — MARKETPLACE (catalogued data endpoints, many with no key)
+## Task — CATALOG (external data endpoints, many with no key)
 
 ~2,600 catalogued endpoints across ~40 providers: TikTok, Instagram, Reddit, YouTube, LinkedIn,
 Google SERP & keyword data, backlinks/SEO, company & people enrichment, web scraping, …
@@ -44,7 +44,7 @@ Rules for spending someone's balance:
   `estimated_cost_micro`, `topup_url`). Recovery: `treg balance` → top up in the dashboard
   (Team → Billing) → or store the org's own key for that provider (own keys are never billed
   to the balance — they take priority automatically).
-- An org tool or secret for the provider always wins over treg's key; the marketplace is the
+- An org tool or secret for the provider always wins over treg's key; the catalog is the
   fallback, not a replacement for keys the team already has.
 
 ## Task — VAULT: call a shared tool (use the team's keys without holding them)
