@@ -33,7 +33,7 @@ EP_MICRO = 1_000                             # $0.001/call, cost.type per_succes
 EP_CALL = "scrapecreators.x.v1-facebook-group"   # GET, cost.type PER_CALL ($0.00188) — a 4xx is billable
 EP_CALL_MICRO = 1_880
 EP_DFS = "dataforseo.web.page.audit"         # POST; priced per crawled PAGE, and dataforseo reports
-EP_DFS_MICRO = 150 * A._PLATFORM_PAGE_DEFAULT   # its own charge — $0.00015/page × the default page estimate
+EP_DFS_MICRO = 150   # $0.00015/page × the ONE task in the test body (array length drives the estimate)
 
 PLATFORM_KEYS = {  # never a real key: a test that leaked one into an assertion would print it
     "TIKHUB": "PLATFORM-TIKHUB-KEY",
