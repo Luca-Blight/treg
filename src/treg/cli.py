@@ -23,6 +23,7 @@ import json
 import os
 import re
 import select
+import shlex
 import shutil
 import signal
 import subprocess
@@ -33,11 +34,14 @@ import time
 import webbrowser
 from collections import deque
 from pathlib import Path
-from urllib.parse import parse_qsl, quote
+from urllib.parse import parse_qsl, quote, urlsplit
 
 import httpx
 
 from . import agents as _agents
+# One source of truth for the proxy's default port (help text below). Importing the module is cheap —
+# it pulls only stdlib plus httpx, which the CLI already has; `cryptography` stays lazy inside it.
+from .localproxy import DEFAULT_PORT as _PROXY_DEFAULT_PORT
 
 # TREG_CONFIG points the CLI at an alternate config file (CI, agents, tests — anywhere isolating
 # by faking $HOME is the wrong tool). The default stays ~/.treg/config.json.
@@ -2616,10 +2620,294 @@ def cmd_setup_local_run(args, cfg) -> None:
 
 
 # ---- shell mode: transparent CLI interception (`treg shell`) -------------------------------
+def _start_proxy_handle(cfg, tools: list[dict], *, port: int | None = None, renew_ca: bool = False):
+    """Bring up the local proxy and return `(handle, hosts, treg_host)`. Shared by both front doors:
+    `treg shell start --proxy` (dies with the subshell) and `treg serve` (a daemon other terminals
+    point at). The allow-list is seeded from the tool listing the caller already fetched, so turning
+    the proxy on costs no extra request."""
+    from . import localproxy as lpx
+    try:
+        ca = lpx.ensure_ca(renew=renew_ca)
+    except lpx.ProxyDependencyError as exc:
+        sys.exit(f"treg: {exc}")
+    hosts = frozenset(t["host"].lower() for t in tools if t.get("host"))
+    base = os.environ.get("TREG_URL") or cfg["base_url"]
+    pcfg = lpx.ProxyConfig(
+        token=lpx.mint_token(),
+        port=port or lpx.DEFAULT_PORT,
+        ca=ca,
+        base_url=base,
+        treg_token=os.environ.get("TREG_TOKEN") or cfg.get("token") or "",
+        org=_effective_org(cfg) or "",
+        client_name=_detect_runtime(),
+        hosts=hosts,
+    )
+    try:
+        handle = lpx.start(pcfg)
+    except OSError as exc:
+        sys.exit(f"treg: could not start the local proxy on port {pcfg.port} ({exc}). Another one may "
+                 f"already be running — check `treg serve status`, or pick another port "
+                 f"(`--proxy-port` for a shell, `--port` for serve).")
+    # The registry itself must never come back through the proxy.
+    return handle, sorted(hosts), urlsplit(base).hostname or ""
+
+
+def _start_local_proxy(args, cfg, tools: list[dict]):
+    """`treg shell start --proxy`: bring up the local proxy and return `(env, stop, hosts)` for the
+    subshell.
+
+    Two shapes of interception now live side by side. A **shim** catches a registered CLI the member
+    types (`stripe balance`); the **proxy** catches an HTTPS call the agent makes on its own, from a
+    script that never heard of treg. Both end at the same server-side injection."""
+    handle, hosts, treg_host = _start_proxy_handle(
+        cfg, tools, port=args.proxy_port, renew_ca=args.renew_ca)
+    return handle.env(treg_host), handle.stop, hosts
+
+
+def _proxy_tools(cfg) -> list[dict]:
+    with _client(cfg) as c:
+        r = c.get("/tools")
+    if r.status_code >= 400:
+        _show(r)  # exits non-zero
+    return r.json()
+
+
+def _serve_export_lines(env: dict, unset: bool = False) -> str:
+    """The shell lines that point a terminal at a running daemon (or undo it).
+
+    A daemon nobody can reach is useless, and typing ten `export`s by hand is worse — so this is what
+    `eval "$(treg serve env)"` prints. `--unset` is the way back out: `treg serve stop` cannot reach
+    into a shell that already has the variables."""
+    if unset:
+        return "\n".join(f"unset {k}" for k in sorted(env))
+    return "\n".join(f"export {k}={shlex.quote(v)}" for k, v in sorted(env.items()))
+
+
+def _serve_daemon(args, cfg) -> None:
+    """The daemon body (`treg serve start --foreground`, and what the detached child runs).
+
+    Writes the state file so other terminals can find the port and token, then blocks until it is
+    told to stop. On the way out the state file goes with it, so `status` can never claim a proxy
+    that is not there."""
+    from . import localproxy as lpx
+    handle, hosts, treg_host = _start_proxy_handle(
+        cfg, _proxy_tools(cfg), port=args.port, renew_ca=args.renew_ca)
+    base = os.environ.get("TREG_URL") or cfg["base_url"]
+    lpx.write_state(handle.port, handle.token, os.getpid(), base, _effective_org(cfg) or "", hosts)
+    done = threading.Event()
+
+    def _stop(_signum=None, _frame=None):
+        done.set()
+
+    for name in ("SIGTERM", "SIGINT", "SIGHUP"):
+        sig = getattr(signal, name, None)
+        if sig is not None:
+            signal.signal(sig, _stop)
+    print(f"▚ treg proxy listening on 127.0.0.1:{handle.port} — {len(hosts)} host(s) captured, "
+          f"registry {treg_host}", file=sys.stderr, flush=True)
+    try:
+        done.wait()
+    finally:
+        handle.stop()
+        lpx.clear_state()
+        print("▚ treg proxy stopped.", file=sys.stderr, flush=True)
+
+
+def _hostlist(hosts: list[str], indent: str = "             ") -> str:
+    """Hosts wrapped to the real terminal width. The flat one-line version ran off the screen and split
+    a hostname across the fold ("api.machin / s.com"), which reads like a broken address."""
+    width = max(40, shutil.get_terminal_size((80, 24)).columns - len(indent) - 2)
+    lines, row = [], ""
+    for h in hosts:
+        if row and len(row) + len(h) + 2 > width:
+            lines.append(row)
+            row = ""
+        row += (("  " + h) if row else h)
+    if row:
+        lines.append(row)
+    return ("\n" + indent).join(f"{_G}{ln}{_R}" for ln in lines)
+
+
+def _row(label: str, value: str) -> str:
+    return f"  {_M}{label:<10}{_R} {value}"
+
+
+def _print_serve_banner(live: dict) -> None:
+    """What you see after `treg serve start`.
+
+    The old version dumped three sentences and two eval lines with no shape, and never said WHY an
+    eval is needed — which reads like a hoop to jump through rather than a fact about how shells work.
+    So: state what is running, then the one line to run and the reason in half a sentence, then the
+    no-eval alternative, then the way out."""
+    hosts = live.get("hosts") or []
+    print(f"\n{_A}▚ treg proxy{_R}  {_G}running{_R}")
+    print(_row("address", f"127.0.0.1:{live['port']}"))
+    reg = live.get("base_url", "")
+    print(_row("registry", reg + (f"  {_M}·{_R}  team {live['org']}" if live.get("org") else "")))
+    print(_row("captured", f"{len(hosts)} host(s)"))
+    print("             " + _hostlist(hosts))
+    print(f"\n  {_AM}Nothing is using it yet.{_R} {_M}A program cannot change the environment of the shell{_R}")
+    print(f"  {_M}that started it, so one of these has to happen. Pick either:{_R}\n")
+    print(f"    {_TEAL}treg shell start --proxy{_R}   {_M}a subshell that is already set up{_R}  {_G}← simplest{_R}")
+    print(f"    {_TEAL}eval \"$(treg serve env)\"{_R}   {_M}set up THIS terminal{_R}\n")
+    print(f"  {_M}Check any time with{_R} {_TEAL}treg serve status{_R}{_M} — it says whether your terminal "
+          f"is using it.{_R}\n")
+
+
+def cmd_serve_start(args, cfg) -> None:
+    """Run the local proxy as a background service, for people who want it in their own shell rather
+    than in a `treg shell` subshell. Same engine, different front door."""
+    from . import localproxy as lpx
+    if not cfg.get("token"):
+        sys.exit("treg: sign in first — `treg login`.")
+    live = lpx.running()
+    if live:
+        sys.exit(f"treg: a proxy is already running on 127.0.0.1:{live['port']} (pid {live['pid']}). "
+                 f"Stop it with `treg serve stop`, or see `treg serve status`.")
+    if args.foreground:
+        _serve_daemon(args, cfg)
+        return
+    # Detach a child that runs the same code in the foreground. start_new_session=True gives it its
+    # own process group, so closing this terminal does not take the proxy with it.
+    log = lpx.proxy_dir() / "serve.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    # Re-invoke THIS interpreter and THIS code, not whatever `treg` is on PATH — a Homebrew copy one
+    # version behind would be launched instead and would not even have this command.
+    argv = [sys.executable, "-c", "from treg.cli import main; main()", "serve", "start", "--foreground"]
+    if args.port:
+        argv += ["--port", str(args.port)]
+    if args.renew_ca:
+        argv += ["--renew-ca"]
+    with open(log, "ab") as fh:
+        subprocess.Popen(argv, stdout=fh, stderr=fh, stdin=subprocess.DEVNULL,  # noqa: S603 — argv list
+                         start_new_session=True, env=dict(os.environ))
+    for _ in range(60):                       # wait for the child to publish its state
+        time.sleep(0.1)
+        live = lpx.running()
+        if live:
+            break
+    if not live:
+        # The child died. Its reason is in the log and nowhere else — printing "see the log" and
+        # making the user go read it is one step too many when we can just say what happened.
+        try:
+            why = [ln for ln in log.read_text().splitlines() if ln.strip()][-1]
+        except (OSError, IndexError):
+            why = ""
+        sys.exit(f"treg: the proxy did not come up.\n  {why}\n  (full log: {log})" if why
+                 else f"treg: the proxy did not come up. Its log is {log}")
+    _print_serve_banner(live)
+
+
+def cmd_with(args, cfg) -> None:
+    """`treg <command> …` — run one command with the team's credentials, and nothing else changed.
+
+    This is the opt-in shape of the whole feature. treg is the PARENT of what it launches, so the
+    proxy environment applies to that process and its children only: `treg claude` gets the team's
+    shared access, plain `claude` is untouched and uses your own local keys. Nothing is written to any
+    config file, so there is nothing to undo and no session is ever hijacked by accident.
+
+    If a `treg serve` daemon is already up we attach to it and leave it running. Otherwise we start a
+    private proxy on an operating-system-chosen port — so two `treg claude` sessions never collide —
+    and stop it when the command exits."""
+    from . import localproxy as lpx
+    from . import shell as sh
+
+    cmd = [args.command, *args.args]
+    exe = shutil.which(cmd[0])
+    if not exe:
+        sys.exit(f"treg: {cmd[0]!r} is not a treg command and is not an executable on your PATH.")
+    if not cfg.get("token"):
+        sys.exit("treg: sign in first — `treg login`.")
+
+    live = lpx.running()
+    handle = None
+    if live:                                   # a daemon is already serving; borrow it, leave it up
+        env = lpx.proxy_env(live["port"], live["token"], lpx.proxy_dir() / "ca-bundle.pem",
+                            urlsplit(live["base_url"]).hostname or "")
+        hosts, source = live["hosts"], f"the running proxy on 127.0.0.1:{live['port']}"
+    else:
+        handle, hosts, treg_host = _start_proxy_handle(cfg, _proxy_tools(cfg), port=0)
+        env = handle.env(treg_host)
+        source = "a private proxy, stopped when this exits"
+
+    if not args.quiet:
+        print(f"\n{_A}▚ treg{_R} {_G}{cmd[0]}{_R}  {_M}— {len(hosts)} host(s) credentialed by your team; "
+              f"everything else untouched.{_R}")
+        print(f"  {_M}{source}{_R}\n", flush=True)
+    try:
+        # _run_subshell ignores SIGINT/SIGQUIT so the child owns the terminal — right for an
+        # interactive agent, where Ctrl-C belongs to whatever the agent is running.
+        code = sh._run_subshell(cmd if exe == cmd[0] else [exe, *cmd[1:]], {**os.environ, **env})
+    finally:
+        if handle is not None:
+            handle.stop()
+    sys.exit(code)
+
+
+def cmd_serve_stop(args, cfg) -> None:
+    from . import localproxy as lpx
+    live = lpx.running()
+    if not live:
+        sys.exit("treg: no proxy is running.")
+    try:
+        os.kill(int(live["pid"]), signal.SIGTERM)
+    except (OSError, ValueError) as exc:
+        sys.exit(f"treg: could not stop the proxy (pid {live.get('pid')}): {exc}")
+    for _ in range(50):
+        time.sleep(0.1)
+        if not lpx.running():
+            break
+    print(f"\n{_A}▚ treg proxy{_R}  {_M}stopped{_R}")
+    # Only worth saying to a shell that actually still points at the dead port — otherwise it is noise
+    # after every stop.
+    if os.environ.get("HTTPS_PROXY", "").startswith("http://treg:"):
+        print(f"  {_M}This terminal still points at it — clear it with:{_R}")
+        print(f"    {_TEAL}eval \"$(treg serve env --unset)\"{_R}")
+    print()
+
+
+def cmd_serve_status(args, cfg) -> None:
+    from . import localproxy as lpx
+    live = lpx.running()
+    if not live:
+        print(f"\n{_A}▚ treg proxy{_R}  {_M}not running{_R}")
+        print(f"  {_M}Start it with{_R}  {_TEAL}treg serve start{_R}\n")
+        return
+    here = os.environ.get("HTTPS_PROXY", "").endswith(f"127.0.0.1:{live['port']}")
+    mark = f"{_G}this terminal is using it{_R}" if here else \
+        f"{_AM}this terminal is NOT using it{_R}  {_M}→{_R}  {_TEAL}eval \"$(treg serve env)\"{_R}"
+    print(f"\n{_A}▚ treg proxy{_R}  {_G}running{_R}  {_M}(pid {live['pid']}){_R}")
+    print(_row("address", f"127.0.0.1:{live['port']}   {mark}"))
+    print(_row("registry", live["base_url"] + (f"  {_M}·{_R}  team {live['org']}" if live.get("org") else "")))
+    print(_row("trust", str(lpx.proxy_dir() / "ca-bundle.pem")))
+    print(_row("captured", f"{len(live['hosts'])} host(s)"))
+    print("             " + _hostlist(live["hosts"]))
+    print(f"  {_M}Every other address goes straight out, unread.{_R}\n")
+
+
+def cmd_serve_env(args, cfg) -> None:
+    """Print the shell lines that point a terminal at the running daemon: `eval "$(treg serve env)"`."""
+    from . import localproxy as lpx
+    if args.unset:
+        # Deliberately does NOT require a running proxy. `--unset` is exactly what you need AFTER
+        # `treg serve stop`, and refusing then leaves the shell wedged: its variables still point at a
+        # dead port, every call fails, and the one command that fixes it has just said no. The names
+        # are fixed, so no state is needed to undo them.
+        print(_serve_export_lines(lpx.proxy_env(0, "", ""), unset=True))
+        return
+    live = lpx.running()
+    if not live:
+        sys.exit("treg: no proxy is running — start one with `treg serve start`.")
+    env = lpx.proxy_env(live["port"], live["token"], lpx.proxy_dir() / "ca-bundle.pem",
+                        urlsplit(live["base_url"]).hostname or "")
+    print(_serve_export_lines(env, unset=args.unset))
+
+
 def cmd_shell_start(args, cfg) -> None:
     """Open a subshell where the team's registered CLIs run with the credential injected — the member
     types `stripe …`/`gh …` normally and treg handles auth behind the scenes (docs/CLI-SHELL-MODE-PLAN.md).
-    MVP: shims call `treg run <tool>`, reusing the whole local-run path."""
+    MVP: shims call `treg run <tool>`, reusing the whole local-run path. With `--proxy`, calls the
+    AGENT makes directly to a registered API are caught too (docs/LOCAL-PROXY-PLAN.md)."""
     from . import shell as sh
     if os.environ.get(sh.ENV_ACTIVE) == "1":
         sys.exit("treg: you're already in a treg shell — type `exit` to leave first.")
@@ -2629,15 +2917,21 @@ def cmd_shell_start(args, cfg) -> None:
         r = c.get("/tools")
     if r.status_code >= 400:
         _show(r); return  # _show exits non-zero on error
+    tools = r.json()
     server_for = frozenset(x.strip() for x in (args.server_for or "").split(",") if x.strip())
-    entries, warnings = sh.plan_shims(r.json(), server_for)
-    if not entries:
+    entries, warnings = sh.plan_shims(tools, server_for)
+    proxy_on = getattr(args, "proxy", False)
+    if not entries and not proxy_on:
         sys.exit("treg: no runnable CLIs in this team yet. Register one with `treg upload clis`, or "
                  "enable local runs on a tool: `treg tool update <name> --local-run on`.")
     for w in warnings:
         print(f"  ! {w}", file=sys.stderr)
+    extra_env, stop_proxy, captured = (None, None, [])
+    if proxy_on:
+        extra_env, stop_proxy, captured = _start_local_proxy(args, cfg, tools)
     treg_bin = shutil.which("treg") or os.path.realpath(sys.argv[0])
-    sys.exit(sh.start_session(entries, treg_bin, ttl_minutes=args.ttl))
+    sys.exit(sh.start_session(entries, treg_bin, ttl_minutes=args.ttl,
+                              extra_env=extra_env, on_close=stop_proxy, captured_hosts=captured))
 
 
 def cmd_shell_stop(args, cfg) -> None:
@@ -3648,6 +3942,10 @@ HELP_GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("connections", "Your connected accounts: connect providers, health, expiry."),
         ("call", "Call a tool through the proxy — key injected server-side."),
         ("cli", "Run vendor CLIs with the org's credential injected (run · shell · setup)."),
+        # Listed as `with`, because that is the name argparse knows; the epilog teaches the bare
+        # form (`treg claude`), which is how anyone will actually type it.
+        ("with", "Run any command with the team's credentials: `treg claude`, `treg node app.js`."),
+        ("serve", "Run the local proxy as a background service (start · stop · status · env)."),
     ]),
     ("BULK UPLOAD", [
         ("scan", "Scan a directory / machine (read-only preview of what upload would register)."),
@@ -3733,6 +4031,7 @@ def build_parser() -> argparse.ArgumentParser:
             "treg login                                              # sign in; first login registers you",
             "treg tool add stripe --base-url https://api.stripe.com --secret 1",
             "treg call https://api.stripe.com/v1/charges             # key injected server-side",
+            "treg claude                                             # run any command with the team's keys",
             "treg scan                                               # what would upload? (read-only)",
             "treg upload                                             # register a .env + a skills folder",
         ) + "\n\n`treg <command> -h` for details.")
@@ -4019,9 +4318,50 @@ def build_parser() -> argparse.ArgumentParser:
                              "this machine); only applies to server-runnable tools, others fall back to local")
         st.add_argument("--ttl", type=int, metavar="MIN",
                         help="close the shell automatically after this many minutes (default: no limit)")
+        st.add_argument("--proxy", action="store_true",
+                        help="also catch calls your AGENT makes directly to a registered API (a script "
+                             "calling api.stripe.com). treg adds the credential on the server; no key "
+                             "reaches this machine. Everything else goes out untouched")
+        st.add_argument("--proxy-port", dest="proxy_port", type=int, metavar="PORT",
+                        help=f"port for --proxy on 127.0.0.1 (default {_PROXY_DEFAULT_PORT})")
+        st.add_argument("--renew-ca", dest="renew_ca", action="store_true",
+                        help="regenerate this machine's local certificate authority before starting --proxy")
         st.set_defaults(fn=cmd_shell_start)
         mk(s2, "stop", "Leave the treg shell (same as typing `exit` or Ctrl-D).",
            f"{prefix} stop").set_defaults(fn=cmd_shell_stop)
+
+    wi = mk(sub, "with",
+            "Run any command with your team's credentials injected — treg is the parent, so ONLY that "
+            "command is affected. Usually written without the word `with`: `treg claude`.",
+            "treg claude", "treg codex", "treg node server.js", "treg with -- python train.py")
+    wi.add_argument("command", help="the command to run (claude, codex, node, curl, …)")
+    wi.add_argument("args", nargs=argparse.REMAINDER, metavar="<args>",
+                    help="everything after it goes to that command verbatim")
+    wi.add_argument("--quiet", "-q", action="store_true", help="skip the one-line banner")
+    wi.set_defaults(fn=cmd_with)
+
+    sv = mk(sub, "serve",
+            "Run the local proxy as a background service, so HTTPS calls to your team's registered "
+            "APIs are credentialed in YOUR OWN shell (the same thing `treg shell start --proxy` does "
+            "for a subshell).",
+            "treg serve start", 'eval "$(treg serve env)"', "treg serve status", "treg serve stop",
+            ).add_subparsers(dest="sub", required=True, metavar="<subcommand>")
+    svs = mk(sv, "start", "Start the proxy in the background (prints how to point a shell at it).",
+             "treg serve start", "treg serve start --port 18800", "treg serve start --foreground")
+    svs.add_argument("--port", type=int, metavar="PORT",
+                     help=f"listen on this port of 127.0.0.1 (default {_PROXY_DEFAULT_PORT})")
+    svs.add_argument("--renew-ca", dest="renew_ca", action="store_true",
+                     help="regenerate this machine's local certificate authority first")
+    svs.add_argument("--foreground", action="store_true",
+                     help="stay in the foreground instead of detaching (for logs, or a service manager)")
+    svs.set_defaults(fn=cmd_serve_start)
+    mk(sv, "stop", "Stop the background proxy.", "treg serve stop").set_defaults(fn=cmd_serve_stop)
+    mk(sv, "status", "Is it running, on which port, and which hosts does it capture?",
+       "treg serve status").set_defaults(fn=cmd_serve_status)
+    sve = mk(sv, "env", "Print the shell lines that point this terminal at the running proxy.",
+             'eval "$(treg serve env)"', 'eval "$(treg serve env --unset)"')
+    sve.add_argument("--unset", action="store_true", help="print the lines that undo it instead")
+    sve.set_defaults(fn=cmd_serve_env)
 
     cn2 = mk(sub, "cli", "Run vendor CLIs with the org's credential injected (run · shell · setup).",
              "treg cli run stripe -- get /v1/balance", "treg cli shell start", "sudo treg cli setup",
@@ -4235,12 +4575,41 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _looks_like_a_program(argv: list[str], commands: set[str]) -> bool:
+    """Is this `treg <program> …` rather than a treg command? (`treg claude`, `treg node server.js`.)
+
+    Two conditions, both needed. The word must not be a treg command — otherwise a stray `call` binary
+    on someone's PATH would shadow `treg call`. And it must actually exist on this machine — otherwise
+    a typo like `treg toool ls` would become a confusing exec attempt instead of an ordinary treg error.
+
+    `with`'s own flags may come first (`treg -q node app.js`), because putting the flag where it reads
+    naturally should not fall out of the shortcut and produce an "invalid choice" about `node`."""
+    i = 0
+    while i < len(argv) and argv[i] in ("-q", "--quiet"):
+        i += 1
+    if i >= len(argv):
+        return False
+    word = argv[i]
+    return not word.startswith("-") and word not in commands and bool(shutil.which(word))
+
+
+def _subcommands(parser) -> set[str]:
+    """Every registered command name and alias, so the bare-word fallback never shadows a real one."""
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return set(action.choices)
+    return set()
+
+
 def main(argv: list[str] | None = None) -> None:
     global _ORG_OVERRIDE, _JSON_OVERRIDE
     argv = list(sys.argv[1:] if argv is None else argv)
     override = _pop_org_flag(argv)
     _JSON_OVERRIDE = _pop_json_flag(argv)
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    if _looks_like_a_program(argv, _subcommands(parser)):
+        argv = ["with", *argv]
+    args = parser.parse_args(argv)
     cfg = _load_config()
     if override:
         _ORG_OVERRIDE = override

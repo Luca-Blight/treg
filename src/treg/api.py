@@ -35,8 +35,10 @@ import httpx
 from pathlib import Path
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -220,6 +222,21 @@ async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse
     # A huge all-digit path param (e.g. /secrets/999…) overflows SQLite's 64-bit INTEGER at bind
     # time; that's a non-existent id, not a server fault — surface a 404 instead of a 500.
     return JSONResponse({"detail": "identifier out of range"}, status_code=404)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
+    """Tag treg's OWN refusals on `/call/` with `X-Treg-Error`, then answer exactly as before.
+
+    A caller cannot otherwise tell a treg 404 ("no tool registered for that host") from the vendor's
+    own 404 — both are a status code and some JSON. The local proxy needs that distinction to explain
+    a failure without ever rewriting a real vendor response, and an agent reading a raw 403 needs to
+    know whether to fix its request or ask an admin. The header is only ever ADDED; the status and the
+    body are untouched, and a client that ignores it sees exactly what it saw before."""
+    resp = await http_exception_handler(request, exc)
+    if request.url.path.startswith("/call/"):
+        resp.headers["X-Treg-Error"] = "1"
+    return resp
 
 _WEB_DIR = Path(__file__).parent / "web"
 
@@ -1240,15 +1257,21 @@ def _spa_with_og(kind: str, name: str):
         return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
     label = "skill" if kind == "skills" else "tool"
     safe = _esc_html(name)
-    html = index.read_text(encoding="utf-8").replace(
-        "<title>tools-registry</title>",
-        f"<title>{safe} · tools-registry</title>\n"
+    meta = (
+        f"<title>{safe} · Treg</title>\n"
         f'<meta property="og:title" content="{safe} — shared {label}"/>\n'
-        f'<meta property="og:description" content="A {label} shared via tools-registry. '
+        f'<meta property="og:description" content="A {label} shared via Treg. '
         f'Sign in to preview it and get the one-command install."/>\n'
-        f'<meta name="twitter:card" content="summary"/>',
-        1,
+        f'<meta name="twitter:card" content="summary"/>'
     )
+    # Match WHATEVER title the page carries, not one exact string. It was pinned to
+    # `<title>tools-registry</title>`, the page says `<title>treg</title>`, so the replacement
+    # silently did nothing and every shared link unfurled blank — a rename in the dashboard must
+    # not be able to switch this off without a word.
+    html, hits = re.subn(r"<title>.*?</title>", lambda _m: meta, index.read_text(encoding="utf-8"),
+                         count=1, flags=re.IGNORECASE | re.DOTALL)
+    if not hits:  # no title at all: still emit the meta rather than serve a bare page
+        html = html.replace("<head>", "<head>\n" + meta, 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 

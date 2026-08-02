@@ -6,6 +6,7 @@ sources:
   - src/treg/cli.py
 related:
   - architecture/local-run.md
+  - architecture/local-proxy.md
   - interface/cli.md
 ---
 
@@ -47,6 +48,26 @@ closes the session after N minutes. `cmd_shell_start` / `cmd_shell_stop` (in `cl
 By default every shimmed CLI runs **local** (`treg run <tool>`). `--server-for stripe,render` routes those to
 `treg run --server` — the key never touches the machine, output is streamed back — but only for a tool that is
 `server_runnable`; a requested tool that isn't falls back to local with a warning. `--ttl` sets a hard cap.
+
+## `--proxy`: the other half of interception
+**Note the sibling.** `treg <command>` (`cmd_with`, see [local-proxy](../architecture/local-proxy.md))
+does the same capture for ONE command without a subshell, and is the door most people should use.
+`--proxy` is for a session where the team's CLIs (via shims) and raw HTTPS calls (via the proxy) should
+both work at once.
+
+A shim catches a registered CLI the **member types** (`stripe balance`). `treg shell start --proxy` also
+catches an HTTPS call the **agent makes on its own**, from a script that never heard of treg — see
+[local-proxy](../architecture/local-proxy.md). It is **opt-in** while the feature is new: interception is
+the first thing here that can break an agent's own calls (a certificate-pinned client), and a surprise is
+worse than a flag.
+
+`cmd_shell_start` → `_start_local_proxy` (in `cli.py`) generates/loads the CA, seeds the allow-list from
+the tool listing **already fetched for the shims** (every registered host, including tools with no CLI, so
+no second request), starts the proxy and hands `start_session` two things: `extra_env` (the proxy URL +
+trust bundle) and `on_close` (stop the proxy). `extra_env` is applied AFTER our own variables and skips
+`PATH`/`TREG_SHELL*`, so an add-on cannot break name resolution or fake a nested session. The banner lists
+the captured hosts and says everything else goes out untouched — a member must never discover
+interception by accident. `--proxy-port` moves it off 18791; `--renew-ca` regenerates the authority.
 
 ## Phasing (why no in-memory agent)
 This is Phase 1 — the shims call `treg run`, reusing the whole local-run path (grant, deny, runner-proof,
