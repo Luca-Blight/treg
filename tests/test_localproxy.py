@@ -935,7 +935,7 @@ def test_treg_errors_say_who_refused_and_what_fixes_it():
     perfectly good URL. Every message names treg and the next action."""
     m404 = lp.treg_error_message(404, "api.stripe.com", "no registered tool")
     assert "treg" in m404 and "treg tools add" in m404
-    assert "api.stripe.com" in m404.split()        # the whole host, not a substring of a longer one
+    assert {"api.stripe.com"} <= set(m404.split())  # the whole host, not a substring of a longer one
     assert "not api.stripe.com's" in m404          # says whose answer this is NOT
     assert "ask an admin" in lp.treg_error_message(403, "api.stripe.com", "").lower()
     assert "treg login" in lp.treg_error_message(401, "api.stripe.com", "")
