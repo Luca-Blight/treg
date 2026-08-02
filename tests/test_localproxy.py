@@ -355,7 +355,7 @@ def test_a_real_client_trusts_a_leaf_signed_by_our_ca(ca):
     """The proof that P1 works end to end: a TLS client that trusts only our bundle completes a
     handshake with a server presenting a leaf we signed for that hostname."""
     server_ctx = ca.context_for("api.stripe.com")
-    client_ctx = ssl.create_default_context(cafile=str(ca.bundle_path))
+    client_ctx = _trusting(ca)
 
     listener = socket.socket()
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -389,6 +389,7 @@ def test_a_client_trusting_only_the_system_roots_rejects_our_leaf(ca):
     the bundle. Rule 2 — the system trust store is never touched."""
     server_ctx = ca.context_for("api.stripe.com")
     client_ctx = ssl.create_default_context()             # system roots only
+    client_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
 
     listener = socket.socket()
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -554,8 +555,11 @@ def intercepting(ca, treg):
 
 
 def _trusting(ca) -> ssl.SSLContext:
-    """What `SSL_CERT_FILE=<bundle>` gives a process: the system roots plus ours."""
-    return ssl.create_default_context(cafile=str(ca.bundle_path))
+    """What `SSL_CERT_FILE=<bundle>` gives a process: the system roots plus ours. The TLS floor is
+    pinned rather than left to the default, so nothing here can quietly accept TLS 1.0/1.1."""
+    ctx = ssl.create_default_context(cafile=str(ca.bundle_path))
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    return ctx
 
 
 def _agent(handle, ca) -> httpx.Client:
@@ -848,7 +852,7 @@ async def test_an_unregistered_host_is_a_readable_404(clients, ca):
         await registry.aclose()
 
     assert resp.status_code == 404
-    assert "api.nothing-here.com" in resp.text
+    assert resp.json()["host"] == "api.nothing-here.com"
 
 
 # ---- P3 · the allow-list and readable errors ------------------------------------------------
@@ -930,7 +934,8 @@ def test_treg_errors_say_who_refused_and_what_fixes_it():
     """A raw 404 reads as 'the vendor has no such endpoint', and an agent 'fixes' it by rewriting a
     perfectly good URL. Every message names treg and the next action."""
     m404 = lp.treg_error_message(404, "api.stripe.com", "no registered tool")
-    assert "treg" in m404 and "api.stripe.com" in m404 and "treg tools add" in m404
+    assert "treg" in m404 and "treg tools add" in m404
+    assert "api.stripe.com" in m404.split()        # the whole host, not a substring of a longer one
     assert "not api.stripe.com's" in m404          # says whose answer this is NOT
     assert "ask an admin" in lp.treg_error_message(403, "api.stripe.com", "").lower()
     assert "treg login" in lp.treg_error_message(401, "api.stripe.com", "")

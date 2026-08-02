@@ -328,7 +328,7 @@ def test_the_banner_names_the_captured_hosts(capsys):
     shell._print_banner([("stripe", "stripe", "local")], None, ["api.stripe.com", "api.intercom.io"])
     err = capsys.readouterr().err
     assert "Also captured (2 hosts)" in err
-    assert "api.stripe.com" in err and "api.intercom.io" in err
+    assert {"api.stripe.com", "api.intercom.io"} <= set(err.split())   # whole hosts, not substrings
     assert "Every other address goes straight out" in err
 
 
@@ -435,7 +435,7 @@ def test_serve_status_says_what_is_captured(monkeypatch, capsys):
     cli.cmd_serve_status(argparse.Namespace(), {})
     out = capsys.readouterr().out
     assert "127.0.0.1:18791" in out and "acme" in out
-    assert "api.stripe.com" in out and "api.vercel.com" in out
+    assert {"api.stripe.com", "api.vercel.com"} <= set(out.split())
     assert "Every other address goes straight out" in out
 
 
