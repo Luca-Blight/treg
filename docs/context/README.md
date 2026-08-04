@@ -17,7 +17,9 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
+| [catalog](architecture/catalog.md) | ? | — |
 | [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | models.py, db.py, audit.py, ratestore.py |
+| [Local proxy — catch a program's own outgoing calls (`treg <command>`)](architecture/local-proxy.md) | shipped | localproxy.py, server.js |
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
 | [Multi-tenancy — orgs, memberships, invites, per-org scoping](architecture/multi-tenancy.md) | shipped | models.py, api.py, db.py |
 | [The proxy — faithful credential-injecting relay + tool resolution](architecture/proxy-model.md) | shipped | proxy.py, api.py |
@@ -27,7 +29,8 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [The API — the only brain (FastAPI)](interface/api.md) | shipped | api.py, email.py, runner.py, ratestore.py |
+| [The API — the only brain (FastAPI)](interface/api.md) | shipped | api.py, catalog_store.py, email.py, runner.py, … |
+| [catalog-review-proposal](interface/catalog-review-proposal.md) | ? | — |
 | [The CLI (treg) + skill scaffolding](interface/cli.md) | shipped | cli.py, convert.py |
 | [The web dashboard (Ledger, served from FastAPI)](interface/dashboard.md) | shipped | index.html, tutorial.js, tutorial.html, tour.js, … |
 | [Import — scan a .env AND/OR a skills dir, auto-register as tools + bundles](interface/env-import.md) | in-progress | providers.py, skills.py |

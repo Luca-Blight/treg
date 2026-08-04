@@ -178,6 +178,107 @@ sudo treg setup-local-run --run-proof "$TREG_RUN_PROOF"   # Linux admin, once
 treg runs --limit 20
 ```
 
+## Catching your own calls
+
+`treg run` covers a vendor **CLI**, and `treg call` covers an HTTP call you ask treg to make. Neither
+helps when a program makes its own request to `api.stripe.com` — treg is invisible to it and it has no
+key.
+
+### The normal way: `treg <command>`
+
+Put `treg` in front of any command:
+
+```bash
+pip install "tools-registry[proxy]"   # the certificate library; not in the light CLI
+
+treg claude                  # a Claude Code session using the team's shared credentials
+treg codex                   # same for Codex
+treg node server.js          # your app, with the team's keys, without holding any
+treg python train.py
+treg with -- npm test        # the explicit form, for anything that confuses the parser
+```
+
+**This is opt-in per command, and that is the point.** treg is the parent process, so the setting
+applies to that command and its children only. `treg claude` uses the team's shared access; plain
+`claude` is completely untouched and uses your own local keys. Nothing is written to any config file,
+so there is nothing to undo and no session is ever changed behind your back.
+
+While it runs, an HTTPS call to a **registered** host goes through the registry, which adds the
+credential **on the server**. Every other address — including your agent's own calls to
+`api.anthropic.com` or `api.openai.com` — goes straight out and cannot be read by us.
+
+If a `treg serve` proxy is already running it is used and left alone; otherwise treg starts a private
+one on a port the operating system picks (so two sessions never collide) and stops it when your command
+exits.
+
+**One caveat if you write Node.** Node's built-in `fetch` ignores proxy settings until **Node 24**. On
+older Node a plain `fetch()` is not captured and the call goes out with no credential. Use a client that
+reads the environment (`axios`, `got`, undici's `ProxyAgent`) or upgrade. curl, git, Python
+`requests`/`httpx` and Deno work at any version. There is a runnable example in
+[`examples/proxy-demo/`](examples/proxy-demo/) that shows both, and explains the workaround for older
+Node.
+
+### The subshell: `treg shell --proxy`
+
+`treg run` covers a vendor **CLI**, and `treg call` covers an HTTP call you ask treg to make. Neither
+helps when an agent writes its own script that talks to `api.stripe.com` directly — treg is invisible to
+it and the script has no key.
+
+`treg shell start --proxy` closes that gap. Inside that shell, an HTTPS call to a **registered** host is
+routed through the registry, which adds the credential **on the server** and returns the vendor's answer
+unchanged. Your code needs no key and no treg-specific lines:
+
+```bash
+pip install "tools-registry[proxy]"      # the certificate library; not in the light CLI
+treg shell start --proxy                 # the banner lists the hosts being captured
+curl https://api.stripe.com/v1/balance   # no key anywhere — treg injected it server-side
+python my_script.py                      # same for anything the script calls
+exit                                     # the proxy stops with the shell
+```
+
+How it works: the shell sets `HTTPS_PROXY` and a trust bundle **for that shell only**, using a
+certificate authority generated on your machine (private key `0600`, valid two years, never shared).
+**The system trust store is never modified** — nothing outside that shell trusts it, not your browser
+and not the operating system.
+
+What it does **not** touch: every address that is not a registered tool, including your agent's own
+calls to `api.anthropic.com` or `api.openai.com`. Those are tunnelled without being read, and no
+certificate is ever generated for them.
+
+| Option | What it does |
+|---|---|
+| `--proxy` | turn it on (off by default) |
+| `--proxy-port N` | listen somewhere other than 127.0.0.1:18791 |
+| `--renew-ca` | regenerate this machine's certificate authority before starting |
+
+### As a background service (`treg serve`)
+
+If you would rather keep your own shell than enter a subshell, run the same proxy as a service:
+
+```bash
+treg serve start                  # starts in the background, prints the next line for you
+eval "$(treg serve env)"          # point THIS terminal at it (repeat in any other terminal)
+curl https://api.stripe.com/v1/balance
+treg serve status                 # port, team, and the hosts being captured
+eval "$(treg serve env --unset)"  # stop using it in this terminal
+treg serve stop                   # stop the service
+```
+
+`treg serve start --foreground` stays attached instead of detaching, which is what you want for a
+service manager or when reading its log (`~/.treg/proxy/serve.log`).
+
+One difference worth knowing. `treg shell --proxy` keeps its access token in the subshell's
+environment and both disappear together. A service has to be findable by other terminals, so it writes
+its port and token to `~/.treg/proxy/proxy.json` (owner-readable only, mode `0600`). That file holds
+the proxy's own token, never a vendor key — but it is a file on disk, which the subshell version does
+not have. Choose accordingly.
+
+Limits worth knowing: a client that pins its certificate will refuse the interception (use `treg run` or
+`treg call` for that one); every captured call takes one extra hop through the registry, so it fails if
+the registry is down; a **hosted** MCP server makes its calls on someone else's machine, so it is not
+covered. If a call fails, treg says so in its own words — "no tool is registered for this host", "ask an
+admin" — rather than leaving you to read a bare 404 as the vendor's answer.
+
 ## Skills (bundles)
 
 | Command | Options | What it does |

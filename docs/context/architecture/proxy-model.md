@@ -104,6 +104,12 @@ resolved Tool by then, so `_enforce_deny` takes `tool.project_id`); an org-wide-
 caught by a project rule. The three scope axes — host/path/method, member, project — are ANDed and
 each is NULL-means-any.
 
+**Whose refusal is this?** Every treg-side error on a `/call/` path carries `X-Treg-Error: 1`
+(`_mark_treg_own_errors`, see [api](../interface/api.md)) — status and body unchanged. A caller cannot
+otherwise tell treg's 404 ("no tool registered for that host") from the vendor's own; the
+[local proxy](local-proxy.md) uses the marker to explain a failure without ever rewriting a real vendor
+response.
+
 `call_tool()` loads every bound secret (running `oauth.ensure_fresh` on oauth secrets first — see
 [auth-secrets](auth-secrets.md)), calls `relay()`, then fires `audit.record_call(...)` off the response
 path. Methods allowed: GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS.

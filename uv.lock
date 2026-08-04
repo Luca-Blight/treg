@@ -621,6 +621,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+proxy = [
+    { name = "cryptography" },
+]
 server = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
@@ -645,6 +648,7 @@ dev = [
 requires-dist = [
     { name = "aiosqlite", marker = "extra == 'server'", specifier = ">=0.20" },
     { name = "asyncpg", marker = "extra == 'server'", specifier = ">=0.30" },
+    { name = "cryptography", marker = "extra == 'proxy'", specifier = ">=43" },
     { name = "cryptography", marker = "extra == 'server'", specifier = ">=43" },
     { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.27" },

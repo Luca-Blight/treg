@@ -101,6 +101,34 @@ Two tiers (`treg run <tool> --local|--server -- <args>`):
 automatically: `treg shell start`, then use `stripe`, `gh`, … normally (no `treg run`); `exit` reverts it.
 `--server-for stripe,…` routes named tools to the server; `--ttl N` auto-closes after N minutes.
 
+**`treg <command>`** — the simplest form, and the one to reach for: put `treg` in front of anything
+(`treg claude`, `treg codex`, `treg node server.js`, `treg with -- npm test`) and that ONE command runs
+with the team's credentials. treg is the parent process, so only that command and its children are
+affected: `treg claude` uses shared team access, plain `claude` is untouched and uses your own local
+keys. Nothing is written to any config file. A registered host is credentialed by the server; every
+other address goes straight out unread. Needs `pip install "tools-registry[proxy]"`.
+**If you are writing Node:** the built-in `fetch` ignores proxy settings before **Node 24**, so a plain
+`fetch()` on older Node is NOT captured and your call goes out with no credential. Use a client that
+reads the environment (axios, got, undici `ProxyAgent`) or upgrade to Node 24+. curl, git, python
+requests/httpx and Deno are captured at any version. Worked example: `examples/proxy-demo/`.
+
+**`treg shell start --proxy`** — the same shell, plus HTTPS calls **you make yourself** to a registered
+API are caught and credentialed. Write an ordinary script against `api.stripe.com` with no key and no
+treg code; the call goes through the registry, which injects the credential **on the server**, and the
+answer comes back unchanged. Only registered hosts are touched — every other address (including
+`api.anthropic.com` / `api.openai.com`) goes straight out and cannot be read. It works by setting
+`HTTPS_PROXY` and a trust bundle for that shell only; the system trust store is never modified, and no
+vendor key ever reaches the machine. Needs `pip install "tools-registry[proxy]"`. `--proxy-port N` moves
+the listener off 18791, `--renew-ca` regenerates the machine's local certificate authority. A
+certificate-pinned client will refuse the interception and must use `treg run` or `treg call` instead.
+
+**`treg serve`** — the same proxy as a background service, for your own shell instead of a subshell:
+`treg serve start`, then `eval "$(treg serve env)"` in any terminal that should use it;
+`treg serve status` shows the port and captured hosts; `eval "$(treg serve env --unset)"` leaves it;
+`treg serve stop` ends it. `--foreground` for a service manager. The difference from `--proxy`: a
+service writes its port + proxy token to `~/.treg/proxy/proxy.json` (mode 0600) so other terminals can
+find it — never a vendor key, but a file on disk the subshell version does not have.
+
 A recipe-only skill that's just CLI instructions (e.g. `stripe-cli`) auto-becomes runnable — `treg upload`
 recognizes the catalog CLI and wires the credential, so `treg run` works with no `treg.json`.
 
@@ -158,7 +186,13 @@ in the `X-Treg-Token` header on every call. Never share the upstream key - share
                                                     --server run on the registry server (catalog-known CLIs)
     treg runs [--limit N]                         the CLI-run audit log (local + server, tagged where)
     treg shell start [--server-for a,b] [--ttl N] a subshell where registered CLIs inject automatically
+      [--proxy] [--proxy-port N] [--renew-ca]     --proxy also catches HTTPS calls YOU make to a
+                                                  registered API (needs the [proxy] extra)
     treg shell stop                               leave it (same as `exit`)
+    treg serve start|stop|status|env              the same proxy as a background service; point a
+      [--port N] [--foreground] [--renew-ca]      shell at it with: eval "$(treg serve env)"
+    treg <command> ... | treg with -- <command>   run ONE command with the team's credentials
+                                                  (treg claude · treg node app.js); nothing global
     sudo treg setup-local-run [--run-proof V]     one-time admin setup (Linux + macOS): isolate --local
       [--no-egress] [--refresh-egress]            runs under a dedicated treg-run user + egress allow-list
 
