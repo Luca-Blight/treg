@@ -35,7 +35,7 @@ endpoints:
         fields: {type: string, required: true, example: "id,name,account_id,account_status,currency,timezone_name,amount_spent,balance"}
         limit: {type: integer, required: false, example: 100}
       note: "`id` comes back prefixed — act_1234567890 — and that PREFIXED form is what the other endpoints' path takes; account_id is the bare number. Money fields (amount_spent, balance) are strings in the account currency's MINOR unit (cents). This is also treg's connection resource picker"
-    cost: {type: free, note: "included with the connected account; Meta throttles per app and per ad account (rate-limit headroom is reported in the x-business-use-case-usage response header) rather than charging per call"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; Meta throttles per app and per ad account (rate-limit headroom is reported in the x-business-use-case-usage response header) rather than charging per call}
     test_request:
       queryParams: {limit: 2}
     verified: 2026-07-28
@@ -59,7 +59,7 @@ endpoints:
         limit: {type: integer, required: false, example: 50}
         after: {type: string, required: false, note: "paging.cursors.after from the previous response"}
       note: "budgets are strings in the account currency's MINOR unit — daily_budget \"5000\" is $50.00. Budget can live on the campaign (CBO) or on each ad set, so a null daily_budget here is normal, not missing data. Ad sets and ads are the same pattern on /{ad_account_id}/adsets and /ads"
-    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform rate limits apply}
     test_request:
       pathParams: {ad_account_id: "act_1203093248302225"}
       queryParams: {limit: 2}
@@ -87,7 +87,7 @@ endpoints:
         breakdowns: {type: string, required: false, note: "e.g. age,gender or publisher_platform — not every breakdown combines with every metric", example: "publisher_platform"}
         limit: {type: integer, required: false, example: 100}
       note: "conversions are NOT top-level fields: they arrive inside `actions` as [{action_type, value}] and you pick the action_type that matches the campaign's objective (purchase, lead, link_click). Attribution defaults to the ad account's setting unless action_attribution_windows is passed. A large request answers with a report_run_id for async polling instead of data"
-    cost: {type: free, note: "included with the connected account / platform rate limits apply; wide breakdowns consume the ad account's rate-limit budget fast"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform rate limits apply; wide breakdowns consume the ad account's rate-limit budget fast}
     test_request:
       pathParams: {object_id: "act_1203093248302225"}
       queryParams: {date_preset: "last_7d", limit: 2}

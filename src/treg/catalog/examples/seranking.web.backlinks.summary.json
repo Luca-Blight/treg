@@ -1,0 +1,93 @@
+{
+  "summary": [
+    {
+      "target": "seranking.com",
+      "backlinks": 259613,
+      "refdomains": 22523,
+      "subnets": 7829,
+      "ips": 16237,
+      "nofollow_backlinks": 63769,
+      "dofollow_backlinks": 195844,
+      "edu_backlinks": 684,
+      "gov_backlinks": 102,
+      "inlink_rank": 20,
+      "domain_inlink_rank": 90,
+      "from_home_page_backlinks": 2152,
+      "dofollow_from_home_page_backlinks": 1902,
+      "text_backlinks": 187046,
+      "dofollow_refdomains": 16692,
+      "from_home_page_refdomains": 853,
+      "edu_refdomains": 80,
+      "gov_refdomains": 16,
+      "anchors": 23010,
+      "dofollow_anchors": 17736,
+      "pages_with_backlinks": 10017,
+      "top_anchors_by_backlinks": [
+        {
+          "anchor": "",
+          "backlinks": 41101
+        },
+        {
+          "anchor": "SE Ranking",
+          "backlinks": 20783
+        },
+        "… 8 more item(s) truncated"
+      ],
+      "top_anchors_by_refdomains": [
+        {
+          "anchor": "SE Ranking",
+          "refdomains": 6510
+        },
+        {
+          "anchor": "",
+          "refdomains": 741
+        },
+        "… 8 more item(s) truncated"
+      ],
+      "top_pages_by_backlinks": [
+        {
+          "url": "https://seranking.com/",
+          "backlinks": 37536
+        },
+        {
+          "url": "https://seranking.com/?ga=2619740",
+          "backlinks": 19436
+        },
+        "… 3 more item(s) truncated"
+      ],
+      "top_pages_by_refdomains": [
+        {
+          "url": "https://seranking.com/",
+          "refdomains": 6864
+        },
+        {
+          "url": "https://seranking.com/keyword-suggestion-tool.html",
+          "refdomains": 644
+        },
+        "… 3 more item(s) truncated"
+      ],
+      "top_tlds": [
+        {
+          "tld": "com",
+          "count": 11064
+        },
+        {
+          "tld": "info",
+          "count": 640
+        },
+        "… 3 more item(s) truncated"
+      ],
+      "top_countries": [
+        {
+          "country": "us",
+          "count": 10828
+        },
+        {
+          "country": "de",
+          "count": 1684
+        },
+        "… 3 more item(s) truncated"
+      ]
+    }
+  ]
+}

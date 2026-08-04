@@ -3,8 +3,17 @@ source:
   docs: https://docs.lusha.com/tutorials/v3-migration-guide
   openapi: null # Lusha renders an OpenAPI-style reference client-side; no fetchable spec document
   curated: 2026-07-28
-# UNVERIFIED — no credential available at curation time; every path and price below is transcribed
-# from Lusha's official API documentation 2026-07-28. Nothing here has been called.
+# VERIFIED — all six endpoints have been called live with a real credential and every one passed:
+# people.search, people.contacts.enrich and companies.search on 2026-07-28 (their captured examples
+# and the two path/field corrections below are that run's output), account.usage, companies.enrich
+# and people.enrich re-called 2026-07-31. Paths and prices were originally transcribed from Lusha's
+# official API documentation 2026-07-28; what stands now is what the API answered.
+#
+# EVERY RESPONSE CARRIES ITS OWN BILL. A `billing: {creditsCharged, resultsReturned}` block comes
+# back on every v3 call, so no price in this file is a guess any more — the counts below are what
+# Lusha reported charging, and they did not always match the docs (see people.search) or the rate
+# card (see companies.enrich). The test account is the FREE plan: 50 credits a month, 28 remaining
+# on 2026-07-31, which is why verification was rationed to the cheapest useful call per endpoint.
 #
 # THIS IS THE V3 API, AND V2 IS ON A CLOCK. Most Lusha material still circulating on the web shows
 # the older flat routes (GET /v2/person, GET /v2/company, POST /prospecting/contact/search). Those
@@ -17,23 +26,29 @@ source:
 # Auth quirk carried over from the registry: the key rides in a header literally named `api_key`,
 # with no scheme prefix — not Authorization, not Bearer.
 #
-# THE COST MODEL, which is the point of the two-step shape: SEARCH is free and ENRICH is charged.
-# The search/prospecting endpoints return non-PII previews plus record ids for nothing; you spend
-# credits only when you pass those ids to an enrich endpoint to reveal emails and phones, and v3
-# bills PER REVEALED DATAPOINT (an email and a phone on the same contact are two charges). The
-# `reveal` array is therefore the real price dial — ask for emails only when you only need emails.
-# `search-and-enrich` collapses both steps into one call and is billed like the enrich step.
-# Credits are sold per plan (API access is generally Pro/Scale and up) and Lusha does not publish
-# the numeric V3 credit costs in its docs — so cost.value is null. It does something better: the
-# FREE GET /v3/account/usage returns a `pricing` object with the authoritative per-action credit
-# costs for the calling plan. Read that endpoint first and you know exactly what every call below
-# will cost you, which no other provider in this catalog offers.
+# THE COST MODEL, which is the point of the two-step shape — and where the docs are WRONG twice.
+# The documented story is that SEARCH is free and only ENRICH is charged: prospecting returns
+# non-PII previews plus record ids for nothing, and you spend credits when you pass those ids to an
+# enrich endpoint, billed PER REVEALED DATAPOINT (an email and a phone on the same contact are two
+# charges). The `reveal` array is the real price dial — ask for emails only when you only need
+# emails. What the live `billing` blocks show instead:
+#   * PROSPECTING IS NOT FREE. Both prospecting routes charge 1 credit per up to 25 results
+#     (pricing.contactSearch / companySearch), despite their own docs pages calling the step free.
+#   * SEARCH-AND-ENRICH IS NOT PRICED LIKE THE ENRICH STEP. companies/search-and-enrich charged 2
+#     credits for one company — a search charge plus a reveal charge — while the rate card lists
+#     revealCompany at 1. Prospecting once and then enriching by id is the cheaper path when you
+#     will reuse the ids.
+# Credits are sold per plan (API access is generally Pro/Scale and up) and Lusha publishes no
+# numeric V3 credit costs in its docs. It offers something better: the FREE GET /v3/account/usage
+# returns a `pricing` object with the per-action credit costs for the calling plan — a live rate
+# card no other provider in this catalog exposes. Read it first, but treat it as a FLOOR: it prices
+# single actions, and a composite route can spend two of them (above).
 #
 # Request-body shapes below come from the migration guide and endpoint summaries; Lusha's reference
 # pages render client-side and could not be read in full at curation time, so field lists are the
 # documented essentials rather than an exhaustive schema. Treat `note` as the contract.
 
-pricing_url: https://www.lusha.com/pricing/  # A credit is spent only when contact data is returned.
+pricing_url: https://www.lusha.com/pricing/  # A no-match is free; a search that returns rows is not.
 endpoints:
   - id: lusha.people.enrich
     domain: contacts
@@ -57,7 +72,21 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "billed per revealed datapoint (email and phone are separate charges), not per call; a contact Lusha cannot match is free. Lusha does not publish the numeric V3 credit cost for this action in its docs — read GET /v3/account/usage.pricing for the calling plan's actual number."
+      per: 1
+      unit: result
+      source: rate_card_api
+      source_url: https://www.lusha.com/pricing/
+      checked: '2026-07-31'
+      confidence: inferred
+      note: 'billed per revealed datapoint (email and phone are separate charges), not per call; a
+        contact Lusha cannot match is free — OBSERVED 2026-07-31, an unmatched contact reported
+        billing.creditsCharged 0. `value` is the REVEAL half only, from the live rate card
+        (GET /v3/account/usage.pricing: revealEmail 1 per 1, revealPhone 5 per 1), which is why this
+        is inferred rather than verified: the companies sibling of this same search-and-enrich shape
+        was observed charging 2 for one result (a search charge PLUS a reveal charge), so budget
+        1 search + 1 per email + 5 per phone per matched contact until a live match confirms it.'
+    verified: 2026-07-31
+    example_response: examples/lusha.people.enrich.json
     docs_url: https://docs.lusha.com/apis/openapi/enrichment
 
   - id: lusha.people.search
@@ -77,7 +106,9 @@ endpoints:
       note: "returns a requestId plus contact ids and NON-PII previews — this step is free. Feed the ids to lusha.people.contacts.enrich to spend credits only on the ones worth revealing. CORRECTED at verify time: the pagination field is `pagination` (min size 10), not `pages`, and it DOES consume 1 credit (contactSearch, per 25 results) despite the docs prose calling it a 'free preview' — see cost block below."
     test_request:
       body: {pagination: {page: 0, size: 10}, filters: {contacts: {include: {jobTitles: ["Head of Marketing"]}}}}
-    cost: {type: per_result, value: 1, currency: credit, note: "OBSERVED live 2026-07-28: charged 1 credit per up to 25 results (pricing.contactSearch), NOT free as the prose on this endpoint's docs page claims — verify against GET /v3/account/usage.pricing before trusting the docs text on any Lusha endpoint"}
+    cost: {type: per_result, value: 1, currency: credit, per: 25, unit: result, source: observed, checked: '2026-07-31', confidence: verified, note: 'OBSERVED live 2026-07-28: billing.creditsCharged 1 for 10 results — 1 credit per up to 25 results (pricing.contactSearch), NOT free as the prose on this endpoint''s docs page claims. Re-confirmed 2026-07-31 against the live rate card (contactSearch: {credits: 1, perQuantity: 25}). Verify against GET /v3/account/usage.pricing before trusting the docs text on any Lusha endpoint'}
+    verified: 2026-07-28
+    example_response: examples/lusha.people.search.json
     docs_url: https://docs.lusha.com/apis/openapi/prospecting-search-and-enrich
 
   - id: lusha.people.contacts.enrich
@@ -103,7 +134,20 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "billed per revealed datapoint across the batch (email and phone charged separately); Lusha does not publish the numeric V3 credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."
+      per: 1
+      unit: result
+      source: observed
+      source_url: https://www.lusha.com/pricing/
+      checked: '2026-07-31'
+      confidence: verified
+      note: 'billed per revealed datapoint across the batch, email and phone charged separately.
+        OBSERVED live 2026-07-28: revealing the email of one id reported billing.creditsCharged 1.
+        A PHONE COSTS FIVE TIMES THAT — the live rate card (GET /v3/account/usage.pricing) gives
+        revealEmail 1 per 1 and revealPhone 5 per 1, re-read 2026-07-31, so `reveal: ["phones"]` on
+        a 100-id batch is a 500-credit call. Unlike the search-and-enrich routes this one charges
+        the reveal only, because the search was already paid for by the prospecting call.'
+    verified: 2026-07-28
+    example_response: examples/lusha.people.contacts.enrich.json
     docs_url: https://docs.lusha.com/apis/openapi/enrichment
 
   - id: lusha.companies.enrich
@@ -124,9 +168,22 @@ endpoints:
       body: {companies: [{domain: "lusha.com"}]}
     cost:
       type: per_success
-      value: 1
+      value: 2
       currency: credit
-      note: "billed per company record returned; a no-match is free. Lusha does not publish the numeric V3 credit cost — read GET /v3/account/usage.pricing for the calling plan's actual number."
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://www.lusha.com/pricing/
+      checked: '2026-07-31'
+      confidence: verified
+      note: 'TWO credits per company record returned, not one. OBSERVED live 2026-07-31: one domain
+        in, one result out, billing.creditsCharged 2. The rate card lists revealCompany at 1 per 1,
+        so search-and-enrich evidently bills the search (companySearch) AND the reveal — which means
+        the rate card UNDER-STATES this route by half, and the two-step path (prospecting, then
+        POST /v3/companies/enrich on the ids you keep) is the cheaper one when you already hold ids.
+        A no-match is free, as on the contact side.'
+    verified: 2026-07-31
+    example_response: examples/lusha.companies.enrich.json
     docs_url: https://docs.lusha.com/apis/openapi/company-search-and-enrich
 
   - id: lusha.companies.search
@@ -146,7 +203,9 @@ endpoints:
       note: "same two-step shape as the contact side: free ids and previews here, credits spent by POST /v3/companies/enrich on the ids you keep. CORRECTED at verify time: pagination field is `pagination` (min size 10) not `pages`; filters.companies.include has no `industries` key (real fields per the OpenAPI schema: domains, names, ids, sizes, revenues, mainIndustriesIds, technologies, locations, sicCodes, naicsCodes, signals). It ALSO consumes 1 credit like the contact side (companySearch) despite being called free preview in the prose."
     test_request:
       body: {pagination: {page: 0, size: 10}, filters: {companies: {include: {domains: ["lusha.com"]}}}}
-    cost: {type: per_result, value: 1, currency: credit, note: "OBSERVED live 2026-07-28: charged 1 credit per up to 25 results (pricing.companySearch), not free as the docs prose claims"}
+    cost: {type: per_result, value: 1, currency: credit, per: 25, unit: result, source: observed, checked: '2026-07-31', confidence: verified, note: 'OBSERVED live 2026-07-28: billing.creditsCharged 1 for 1 result — 1 credit per up to 25 results (pricing.companySearch), not free as the docs prose claims. Re-confirmed 2026-07-31 against the live rate card (companySearch: {credits: 1, perQuantity: 25}), so a size=10 page and a size=25 page cost the same: page in 25s'}
+    verified: 2026-07-28
+    example_response: examples/lusha.companies.search.json
     docs_url: https://docs.lusha.com/apis/openapi/prospecting-search-and-enrich/searchprospectingcompanies
 
   - id: lusha.account.usage
@@ -161,5 +220,7 @@ endpoints:
     input:
       note: "no parameters — the key rides in the api_key header. Returns credits {total, used, remaining}, rateLimits (daily/hourly/minute), the plan, AND a `pricing` object giving the per-action credit cost for this plan — the authoritative source for what the other five endpoints cost. Call it before budgeting a batch. Rate-limited to 5 req/min; Lusha's migration guide also writes the route unversioned as /account/usage"
     test_request: {queryParams: {}}
-    cost: {type: free, value: 0, currency: USD, note: "explicitly free — consumes no credits. Rate limit 5 req/min"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'explicitly free — consumes no credits (observed: the balance was unchanged across calls on 2026-07-31). Rate limit 5 req/min'}
+    verified: 2026-07-31
+    example_response: examples/lusha.account.usage.json
     docs_url: https://docs.lusha.com/apis/openapi/account-usage-api/get-account-usage

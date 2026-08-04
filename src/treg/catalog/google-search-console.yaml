@@ -45,7 +45,7 @@ endpoints:
         dataState: {type: string, required: false, note: "final (default) | all — 'all' includes fresh, still-incomplete data", example: "final"}
       bodyType: json
       note: "request shape previously live-verified via the registry entry's examples. Query data is retained 16 months"
-    cost: {type: free, note: "included with the connected account; Search Console quotas apply (per-site and per-project QPS/QPD limits), no per-call charge"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; Search Console quotas apply (per-site and per-project QPS/QPD limits), no per-call charge'}
     test_request:
       pathParams: {siteUrl: "sc-domain%3Aexample.com"}
       body: {startDate: "2026-07-01", endDate: "2026-07-21", rowLimit: 2}
@@ -63,7 +63,7 @@ endpoints:
     summary: "List the sites and domains you have access to in Search Console"
     input:
       note: "no parameters. Returns {siteEntry: [{siteUrl, permissionLevel}]}; permissionLevel siteUnverifiedUser means the property is listed but not readable. This is also the connection's health probe and resource picker"
-    cost: {type: free, note: "included with the connected account / platform quotas apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform quotas apply}
     test_request: {queryParams: {}}
     verified: 2026-07-28
     example_response: examples/google-search-console.sites.json
@@ -84,7 +84,7 @@ endpoints:
         languageCode: {type: string, required: false, note: "BCP-47; controls the language of the human-readable verdict strings", example: "en-US"}
       bodyType: json
       note: "note the /v1/ prefix — NOT webmasters/v3/ (request shape previously live-verified via the registry entry's examples). Returns indexStatusResult (verdict, coverageState, robotsTxtState, canonical URLs) plus mobileUsabilityResult and richResultsResult. Hard-quotaed at 2,000 inspections per site per day"
-    cost: {type: free, note: "included with the connected account; hard quota of 2,000 URL inspections per property per day"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; hard quota of 2,000 URL inspections per property per day'}
     test_request:
       body: {inspectionUrl: "https://example.com/", siteUrl: "sc-domain:example.com"}
     verified: 2026-07-28
@@ -105,7 +105,7 @@ endpoints:
       queryParams:
         sitemapIndex: {type: string, required: false, note: "full URL of a sitemap index — returns only the sitemaps it contains"}
       note: "per sitemap: lastSubmitted, lastDownloaded, isPending, warnings, errors, and contents[] with submitted vs indexed counts. Submitting a new one is PUT /webmasters/v3/sites/{siteUrl}/sitemaps/{feedpath} and needs the `write` capability"
-    cost: {type: free, note: "included with the connected account / platform quotas apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform quotas apply}
     test_request:
       pathParams: {siteUrl: "sc-domain%3Aexample.com"}
     verified: 2026-07-28

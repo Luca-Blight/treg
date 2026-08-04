@@ -165,3 +165,42 @@ def test_scope_label_falls_back_rather_than_raising():
     whole connection page over unfamiliar copy."""
     from treg import oauth_providers as P
     assert P.scope_label("some:unknown:scope") == "some:unknown:scope"
+
+
+# ---- consent-time disclosure -----------------------------------------------------------------
+# The Meta app all three Meta providers share is registered as "Crewlet", a sibling product, and
+# Facebook's consent screen shows only that bare app name. Without a notice on the treg side, the
+# popup asks the user to authorize a product they have never heard of.
+
+META_SERVICES = ["facebook", "instagram", "meta-ads"]
+
+
+def test_meta_providers_disclose_the_crewlet_app_name():
+    from treg import oauth_providers as P
+
+    rows = {row["service"]: row for row in P.listing()}
+    for service in META_SERVICES:
+        notice = rows[service]["consent_notice"]
+        assert "Crewlet" in notice, service
+        assert "Superdesign Dev Inc" in notice, service
+
+
+def test_only_the_meta_family_carries_a_consent_notice():
+    """Driven by provider data, so the check is "who shares the Meta app", not a hand-kept list."""
+    from treg import oauth_providers as P
+
+    meta_auth = {p.service for p in P.REGISTRY.values() if p.auth_uri == P._META_AUTH}
+    assert meta_auth == set(META_SERVICES)
+    with_notice = {row["service"] for row in P.listing() if row["consent_notice"]}
+    assert with_notice == meta_auth
+
+
+def test_a_notice_provider_always_reaches_the_capability_modal():
+    """The dashboard renders `consent_notice` ONLY in the capability modal, and `startConnect`
+    skips that modal for a single-capability provider. So a provider carrying a notice must have
+    at least two capabilities, or its disclosure silently never renders."""
+    from treg import oauth_providers as P
+
+    for p in P.REGISTRY.values():
+        if p.consent_notice:
+            assert len(p.capabilities) >= 2, p.service

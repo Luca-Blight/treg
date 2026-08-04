@@ -49,7 +49,7 @@ endpoints:
         team_id: {type: string, required: false, note: "required only when the token belongs to an org-wide app"}
       note: "the bot only sees private channels it has been /invite-d to, regardless of scopes"
     expect: {json_path: ok, equals: true}
-    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 2, ~20 requests/minute)"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with your workspace; Slack rate-tiers apply (Tier 2, ~20 requests/minute)'}
     docs_url: https://docs.slack.dev/reference/methods/conversations.list
 
   - id: slack.slack.message.send
@@ -73,7 +73,7 @@ endpoints:
       bodyType: json
       note: "chat:write posts to channels the bot is in; chat:write.public covers any public channel without joining. Private channels always require an /invite. Response returns the new message's `ts`, which is what thread_ts and reactions.add take"
     expect: {json_path: ok, equals: true}
-    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (~1 message/second per channel)"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with your workspace; Slack rate-tiers apply (~1 message/second per channel)}
     docs_url: https://docs.slack.dev/reference/methods/chat.postMessage
 
   - id: slack.slack.messages.history
@@ -94,7 +94,7 @@ endpoints:
         cursor: {type: string, required: false, note: "response_metadata.next_cursor from the previous page"}
       note: "returns top-level messages only — thread replies come from conversations.replies. Message authors arrive as user IDs (U…); resolve them with users.info or users.list"
     expect: {json_path: ok, equals: true}
-    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply — 1 request/minute for non-Marketplace apps created after 2025-05-29"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with your workspace; Slack rate-tiers apply — 1 request/minute for non-Marketplace apps created after 2025-05-29}
     docs_url: https://docs.slack.dev/reference/methods/conversations.history
 
   - id: slack.slack.thread.replies
@@ -116,7 +116,7 @@ endpoints:
         cursor: {type: string, required: false}
       note: "the parent message is returned as the first item, so a thread with N replies comes back as N+1 messages"
     expect: {json_path: ok, equals: true}
-    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply — 1 request/minute for non-Marketplace apps created after 2025-05-29"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with your workspace; Slack rate-tiers apply — 1 request/minute for non-Marketplace apps created after 2025-05-29}
     docs_url: https://docs.slack.dev/reference/methods/conversations.replies
 
   - id: slack.slack.channel.info
@@ -134,7 +134,7 @@ endpoints:
         include_locale: {type: boolean, required: false}
       note: "answers channel_not_found for a private channel the bot has not been invited to — the same error as a genuinely missing channel"
     expect: {json_path: ok, equals: true}
-    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 3, ~50 requests/minute)"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with your workspace; Slack rate-tiers apply (Tier 3, ~50 requests/minute)'}
     docs_url: https://docs.slack.dev/reference/methods/conversations.info
 
   - id: slack.slack.users.list
@@ -153,7 +153,7 @@ endpoints:
         team_id: {type: string, required: false, note: "required only when the token belongs to an org-wide app"}
       note: "includes deactivated members (`deleted: true`) and bots (`is_bot: true`) — filter client-side. Email addresses are omitted: users:read.email is not in treg's manifest"
     expect: {json_path: ok, equals: true}
-    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 2, ~20 requests/minute)"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with your workspace; Slack rate-tiers apply (Tier 2, ~20 requests/minute)'}
     docs_url: https://docs.slack.dev/reference/methods/users.list
 
   - id: slack.slack.user.profile
@@ -170,7 +170,7 @@ endpoints:
         include_locale: {type: boolean, required: false}
       note: "the one-shot way to turn the user IDs in conversations.history output into names, without paging all of users.list"
     expect: {json_path: ok, equals: true}
-    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 4, ~100 requests/minute)"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with your workspace; Slack rate-tiers apply (Tier 4, ~100 requests/minute)'}
     docs_url: https://docs.slack.dev/reference/methods/users.info
 
   - id: slack.slack.reaction.add
@@ -190,7 +190,7 @@ endpoints:
       bodyType: json
       note: "reacting twice with the same emoji fails with already_reacted rather than being a no-op"
     expect: {json_path: ok, equals: true}
-    cost: {type: free, note: "included with your workspace; Slack rate-tiers apply (Tier 3, ~50 requests/minute)"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with your workspace; Slack rate-tiers apply (Tier 3, ~50 requests/minute)'}
     docs_url: https://docs.slack.dev/reference/methods/reactions.add
 
   - id: slack.account.identity
@@ -205,5 +205,5 @@ endpoints:
     input:
       note: "takes no parameters. Returns team, team_id, user, user_id and url — this is what treg's connection label is built from, and the cheapest way to tell a live token from a revoked one"
     expect: {json_path: ok, equals: true}
-    cost: {type: free, note: "included with your workspace; requires no scopes and is not rate-tiered like the data methods"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with your workspace; requires no scopes and is not rate-tiered like the data methods}
     docs_url: https://docs.slack.dev/reference/methods/auth.test

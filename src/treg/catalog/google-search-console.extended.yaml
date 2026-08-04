@@ -31,8 +31,9 @@ endpoints:
   scope: any_account
   cost: &id001
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; billed against the API's daily quota
   docs_url: https://developers.google.com/webmaster-tools/v1/api_reference_index
   input:

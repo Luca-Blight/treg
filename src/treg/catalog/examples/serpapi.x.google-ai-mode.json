@@ -1,0 +1,54 @@
+{
+  "search_metadata": {
+    "id": "6a6b429731a6018c92128f36",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/3dy4BxCaFlOEBk5D7y_ECg/6a6b4297… [81 chars]",
+    "created_at": "2026-07-30 12:24:55 UTC",
+    "processed_at": "2026-07-30 12:24:55 UTC",
+    "google_ai_mode_url": "https://www.google.com/search?q=best+coffee+brewing+method&u… [65 chars]",
+    "raw_html_file": "https://serpapi.com/searches/3dy4BxCaFlOEBk5D7y_ECg/6a6b4297… [81 chars]",
+    "prettify_html_file": "https://serpapi.com/searches/3dy4BxCaFlOEBk5D7y_ECg/6a6b4297… [85 chars]",
+    "total_time_taken": 4.88
+  },
+  "search_parameters": {
+    "engine": "google_ai_mode",
+    "q": "best coffee brewing method",
+    "device": "desktop"
+  },
+  "shopping_results": [
+    {
+      "title": "The AeroPress",
+      "product_link": "https://www.google.com/search?ibp=oshop&prds=pvt:hg,pvo:29,m… [365 chars]",
+      "immersive_product_page_token": "Cub9Y3icbY5BTsMwEEUPlI3H47GdNd234gJVGjuOpaQOTlJA4g7cIWmRyrLs… [323 chars]",
+      "serpapi_immersive_product_api": "https://serpapi.com/search.json?engine=google_immersive_prod… [398 chars]",
+      "thumbnail": "https://serpapi.com/searches/6a6b429731a6018c92128f36/images… [109 chars]",
+      "price": "$39.95",
+      "extracted_price": 39.95,
+      "source": "AeroPress& more",
+      "rating": 4.8,
+      "reviews": 5000,
+      "…": "1 more field(s) truncated"
+    },
+    "… 1 more item(s) truncated"
+  ],
+  "text_blocks": [
+    {
+      "type": "paragraph",
+      "snippet": "There is no single \"absolute best\" coffee brewing method, as… [139 chars]"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "references": [
+    {
+      "title": "We Tested 7 Methods for Making Coffee and the Winner Was ...",
+      "link": "https://www.thekitchn.com/best-coffee-brewing-method-2297775… [61 chars]",
+      "snippet": "* For Me, Great Coffee Tastes Like Italy. * What Makes Great… [166 chars]",
+      "source": "The Kitchn",
+      "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcQOvsBP… [128 chars]",
+      "source_icon": "https://encrypted-tbn3.gstatic.com/faviconV2?url=https://www… [135 chars]",
+      "index": 0
+    },
+    "… 17 more item(s) truncated"
+  ],
+  "reconstructed_markdown": "There is no single \"absolute best\" coffee brewing method, as… [9018 chars]"
+}

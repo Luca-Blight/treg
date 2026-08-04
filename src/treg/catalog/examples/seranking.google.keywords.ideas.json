@@ -1,0 +1,40 @@
+{
+  "total": 3372,
+  "keywords": [
+    {
+      "keyword": "avocado nutrition facts",
+      "cpc": 0.03,
+      "difficulty": 90,
+      "volume": 60500,
+      "competition": 0.14,
+      "serp_features": [
+        "reviews",
+        "video",
+        "… 4 more item(s) truncated"
+      ],
+      "relevance": 11,
+      "intents": [
+        "I"
+      ],
+      "history_trend": null
+    },
+    {
+      "keyword": "avocado calories",
+      "cpc": 0.04,
+      "difficulty": 88,
+      "volume": 47500,
+      "competition": 0.05,
+      "serp_features": [
+        "reviews",
+        "video",
+        "… 5 more item(s) truncated"
+      ],
+      "relevance": 7,
+      "intents": [
+        "I"
+      ],
+      "history_trend": null
+    },
+    "… 8 more item(s) truncated"
+  ]
+}

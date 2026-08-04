@@ -224,6 +224,59 @@ def _migrate_to_orgs(conn) -> None:
     if "membership" in tables and "promoted_from" not in {c["name"] for c in insp.get_columns("membership")}:
         conn.execute(text("ALTER TABLE membership ADD COLUMN promoted_from VARCHAR NOT NULL DEFAULT ''"))
 
+    # (A25) additive: org.balance_micro — the materialized prepaid balance in micro-USD (see
+    # models.Org / ledger.py). The three ledger TABLES (creditblock/ledgerentry/hold) are brand new,
+    # so create_all makes them and they need no ALTER; only this column hangs off an existing table.
+    # INTEGER NOT NULL DEFAULT 0 — an existing org starts at zero balance, which is exactly right
+    # (promo credit is granted at org creation, never backfilled). Not a BOOLEAN, so the Postgres
+    # integer-default trap (PR #22, see _ensure_bool_col) doesn't apply.
+    if "org" in tables and "balance_micro" not in {c["name"] for c in insp.get_columns("org")}:
+        conn.execute(text("ALTER TABLE org ADD COLUMN balance_micro INTEGER NOT NULL DEFAULT 0"))
+
+    # (A26) additive: STRIPE BILLING on org — the customer/payment-method references and the
+    # auto-top-up policy (see models.Org / billing.py). Every column is defaulted to the OFF state, so
+    # an existing org keeps behaving exactly as it did: no customer, no card, auto-top-up disabled.
+    # `autotopup_enabled` goes through _ensure_bool_col for the Postgres trap it documents (DEFAULT
+    # false, never 0); the rest are INTEGER/VARCHAR/TIMESTAMP where that trap doesn't apply.
+    if "org" in tables:
+        _ensure_bool_col(conn, insp, tables, "org", "autotopup_enabled")
+        cols = {c["name"] for c in insp.get_columns("org")}
+        for col, ddl in (
+            ("stripe_customer_id", "VARCHAR"),
+            ("stripe_default_pm", "VARCHAR"),
+            ("autotopup_threshold_micro", "INTEGER NOT NULL DEFAULT 0"),  # 0 = use the settings default
+            ("autotopup_amount_micro", "INTEGER NOT NULL DEFAULT 0"),
+            ("autotopup_monthly_cap_micro", "INTEGER NOT NULL DEFAULT 0"),
+            ("autotopup_consented_at", "TIMESTAMP"),      # null = no mandate = no off-session charge
+            ("autotopup_disabled_reason", "VARCHAR"),
+            ("autotopup_last_attempt_at", "TIMESTAMP"),
+            ("autotopup_failures", "INTEGER NOT NULL DEFAULT 0"),
+            ("autotopup_recovery_pi", "VARCHAR"),
+        ):
+            if col not in cols:
+                conn.execute(text(f"ALTER TABLE org ADD COLUMN {col} {ddl}"))
+
+    # (A27) additive: MARKETPLACE TELEMETRY on callrecord — which catalog endpoint a /call resolved to,
+    # which credential tier paid for it, the estimated/observed cost, and the shape of the answer (see
+    # models.CallRecord). Every column is NULLABLE with no default: an existing row genuinely has no
+    # endpoint id, and "unknown" must not read as 0 cost. Nullable also keeps the Postgres
+    # boolean-default trap (PR #22) out of the picture entirely.
+    if "callrecord" in tables:
+        cols = {c["name"] for c in insp.get_columns("callrecord")}
+        for col, ddl in (
+            ("endpoint_id", "VARCHAR"),
+            ("provider", "VARCHAR"),
+            ("credential_tier", "VARCHAR"),
+            ("cost_estimated_micro", "INTEGER"),
+            ("cost_observed_micro", "INTEGER"),
+            ("cost_charged_micro", "INTEGER"),  # added later (same per-column guard; idempotent)
+            ("duration_ms", "INTEGER"),
+            ("response_bytes", "INTEGER"),
+            ("params_hash", "VARCHAR"),
+        ):
+            if col not in cols:
+                conn.execute(text(f"ALTER TABLE callrecord ADD COLUMN {col} {ddl}"))
+
     # (B) legacy backfill — guarded
     if "org" not in tables:
         return  # defensive: create_all should have made it
@@ -240,7 +293,13 @@ def _migrate_to_orgs(conn) -> None:
 
     if legacy_users:
         conn.execute(
-            text("INSERT INTO org (name, slug, suspended, demo, public_demo, created_at) VALUES ('superdesign', 'superdesign', false, false, false, :t)"),
+            # balance_micro and the autotopup_* columns are explicit for the same reason
+            # daily_call_cap is below: create_all builds them NOT NULL with no SERVER default, so a raw
+            # INSERT must supply the model's default (zero balance, auto-top-up off, no failures).
+            text("INSERT INTO org (name, slug, suspended, demo, public_demo, balance_micro, "
+                 "autotopup_enabled, autotopup_threshold_micro, autotopup_amount_micro, "
+                 "autotopup_monthly_cap_micro, autotopup_failures, created_at) "
+                 "VALUES ('superdesign', 'superdesign', false, false, false, 0, false, 0, 0, 0, 0, :t)"),
             {"t": now},
         )
         org_id = conn.execute(text("SELECT id FROM org WHERE slug = 'superdesign'")).scalar()

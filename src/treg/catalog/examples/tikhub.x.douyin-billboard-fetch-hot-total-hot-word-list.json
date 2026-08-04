@@ -1,0 +1,46 @@
+{
+  "code": 200,
+  "request_id": "67f18920-3b8a-43ce-9a3e-98e89a8a477e",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-30 05:13:34",
+  "time_stamp": 1785413614,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Billboard-API/fetch_hot_total_hot_word_list_api_v1_douyin_billboard_fetch_hot_total_hot_word_list_post",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/67f18920-3b8a-43ce-9a3e-98e89a8a477e?sign=5afa48aa5058ab11491bfa0c439b6d4568c0fbb56236188fab1960a35ad5f6ba",
+  "router": "/api/v1/douyin/billboard/fetch_hot_total_hot_word_list",
+  "params": {},
+  "data": {
+    "code": 0,
+    "data": {
+      "word_list": [
+        {
+          "title": "在抖音",
+          "is_favorite": false,
+          "favorite_id": 0,
+          "score": 1405,
+          "rising_ratio": 0,
+          "rising_speed": "",
+          "id": "ZtIFnJ8BxEalG7VTDefH",
+          "query_day": "20260725",
+          "trends": [
+            {
+              "date": "20260620",
+              "value": 361004.34465267224
+            },
+            "… 34 more item(s) truncated"
+          ]
+        },
+        "… 9 more item(s) truncated"
+      ],
+      "total_count": 1497
+    },
+    "extra": {
+      "now": 1785413611000
+    },
+    "message": ""
+  }
+}

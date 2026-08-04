@@ -1,0 +1,33 @@
+{
+  "code": 200,
+  "request_id": "a557cff1-6c12-4dd6-9315-eaa8dbdcfb76",
+  "message": "Request successful. This request will incur a charge.",
+  "message_zh": "请求成功，本次请求将被计费。",
+  "support": "Discord: https://discord.gg/aMEAS8Xsvz",
+  "time": "2026-07-30 05:13:28",
+  "time_stamp": 1785413608,
+  "time_zone": "America/Los_Angeles",
+  "docs": "https://api.tikhub.io/#/Douyin-Billboard-API/fetch_hot_comment_word_list_api_v1_douyin_billboard_fetch_hot_comment_word_list_get",
+  "cache_message": "This response is cached and accessible via the URL below for 24 hours at no extra cost. The cache is for request tracing only — it doesn't affect the API's data freshness and won't be returned through… [215 chars]",
+  "cache_message_zh": "本次响应已缓存，可通过下方 URL 直接查看，有效期 24 小时，访问缓存链接无额外费用。缓存仅用于请求溯源，不影响接口数据的时效性，也不会再次通过接口返回。",
+  "cache_url": "https://cache.tikhub.io/api/v1/cache/public/a557cff1-6c12-4dd6-9315-eaa8dbdcfb76?sign=c9a4198c1883a1b917228f535c87131d289d07a5a99b9b9082c0e416bbd77c0e",
+  "router": "/api/v1/douyin/billboard/fetch_hot_comment_word_list",
+  "params": {
+    "aweme_id": "7456035425539329340"
+  },
+  "data": {
+    "code": 0,
+    "data": [
+      {
+        "word_seg": "小猫",
+        "value": 14,
+        "related_comment": null
+      },
+      "… 79 more item(s) truncated"
+    ],
+    "extra": {
+      "now": 1785413608000
+    },
+    "message": ""
+  }
+}

@@ -32,7 +32,10 @@ def _place(headers, params: list, binding: dict, value: str) -> None:
     (dict or httpx.Headers); `params` is a list of (k, v) pairs (preserves duplicate caller
     params). For a query binding we drop any caller param of the same name so the injected
     credential wins, then append it."""
-    rendered = binding.get("format", "{secret}").format(secret=value)
+    # A pasted credential often carries the paste's trailing newline (echo/pbpaste both add one).
+    # A newline is ILLEGAL in a header value, so httpx dies with an opaque 502 at call time —
+    # sometimes months after the paste. Surrounding whitespace is never part of a real credential.
+    rendered = binding.get("format", "{secret}").format(secret=value.strip())
     name = binding.get("name", "Authorization")
     if binding.get("location", "header") == "query":
         params[:] = [(k, v) for (k, v) in params if k != name]

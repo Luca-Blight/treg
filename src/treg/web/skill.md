@@ -1,9 +1,9 @@
 ---
 name: tools-registry
-description: How to use the treg CLI (tools-registry) — call shared team tools without holding their credentials, and turn your local skills into shareable tools. Use when working with the `treg` command, or when you need to hit an upstream API (PostHog, GSC, Google Ads, Intercom, Stripe, …) but don't have the key locally, or when you want to register/share a skill so teammates' agents can call it. Three personas in one skill — consumer (call), creator (register/share), admin (manage).
+description: How to use the treg CLI (tools-registry) — two jobs in one skill. (1) The team VAULT — call shared team tools without holding their credentials, and turn your local skills & API keys into shareable tools. (2) The CATALOG — call ~2,600 catalogued data endpoints (TikTok, Instagram, Reddit, SEO/SERP, enrichment, …), many with NO key at all, billed per call from the team's prepaid balance. Use when working with the `treg` command, when you need an upstream API but don't have the key locally, or when you need third-party data with no key at all.
 ---
 
-# tools-registry — call shared tools, share your own
+# tools-registry — the team vault + the data catalog
 
 A remote registry + **credential-injecting proxy**. You make the *real* upstream API call; it is
 routed through the proxy, which injects the auth **server-side**. You never hold the secret.
@@ -24,7 +24,30 @@ Everything runs in your **active org** (first login creates a personal one). Tea
 email — see them with `treg invites`, accept with `treg accept` (or `treg org join <code>`). Switch
 teams: `treg org switch <slug>`.
 
-## Persona 1 — CONSUMER (call a tool you don't own the key for)
+## Task — CATALOG (external data endpoints, many with no key)
+
+~2,600 catalogued endpoints across ~40 providers: TikTok, Instagram, Reddit, YouTube, LinkedIn,
+Google SERP & keyword data, backlinks/SEO, company & people enrichment, web scraping, …
+If nobody on the team holds a key, treg can serve eligible endpoints on **its own key**, billed per
+call to the team's prepaid balance (fractions of a cent; a new team starts with **$1.00 free**).
+No provider signup, no subscription.
+```bash
+treg catalog search "subreddit posts"            # find endpoints by what they do
+treg catalog get scrapecreators.reddit.subreddit.posts   # params, PRICE, how you'd be served
+treg call scrapecreators.reddit.subreddit.posts --query subreddit=news
+treg balance                                     # the prepaid balance + recent charges
+```
+Rules for spending someone's balance:
+- The price shows BEFORE you call (`treg catalog get`). **Tell the human the price first**; for a
+  series of cheap calls, confirm the batch once, not per call.
+- HTTP **402** = out of balance, with a machine-actionable body (`balance_micro`,
+  `estimated_cost_micro`, `topup_url`). Recovery: `treg balance` → top up in the dashboard
+  (Team → Billing) → or store the org's own key for that provider (own keys are never billed
+  to the balance — they take priority automatically).
+- An org tool or secret for the provider always wins over treg's key; the catalog is the
+  fallback, not a replacement for keys the team already has.
+
+## Task — VAULT: call a shared tool (use the team's keys without holding them)
 **You already know the upstream API. Just build the real request and prefix it.** No treg
 vocabulary, no special params — use the API exactly as its own docs say:
 ```
@@ -48,7 +71,7 @@ treg run stripe -- get /v1/balance          # local
 treg run --server agentmail-cli inboxes list # server-side
 ```
 
-## Persona 2 — CREATOR (turn keys + local skills into shared tools)
+## Task — VAULT: share your keys & skills (turn them into shared tools)
 **Bulk (the fast path):** point treg at a directory — it detects provider keys in the `.env` AND
 scans skill subdirs, then registers what you pick:
 ```bash
@@ -106,7 +129,7 @@ expires. Same storage; a credential can graduate from manual to auto with no mig
   → prints a consent URL; you approve in the browser; treg captures the token directly.
   One-time setup: add `{BASE}/oauth/callback` to your OAuth app's redirect URIs.
 
-## Persona 3 — ADMIN (manage teams + monitor)
+## Task — VAULT: manage the team + monitor
 ```bash
 treg tool ls / secret ls / skill ls / calls          # inventory + audit log — scoped to the active org
 treg tool rm <id> / secret rm <id> / skill rm <id>   # secret rm is blocked while a tool binds it

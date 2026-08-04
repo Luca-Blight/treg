@@ -67,7 +67,13 @@ endpoints:
       type: per_success
       value: 10
       currency: credit
-      note: "10 credits if a profile is found; free if not found"
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 10 credits if a profile is found; free if not found
     verified: 2026-07-28
     example_response: examples/leadmagic.x.b2b-profile.json
     docs_url: https://leadmagic.io/docs/api-reference/email-to-profile
@@ -93,7 +99,13 @@ endpoints:
       type: per_success
       value: 5
       currency: credit
-      note: "5 credits if an email is found; free if not found"
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 5 credits if an email is found; free if not found
     verified: 2026-07-28
     example_response: examples/leadmagic.x.b2b-profile-email.json
     docs_url: https://leadmagic.io/docs/api-reference/profile-to-email
@@ -117,7 +129,13 @@ endpoints:
       type: per_success
       value: 2
       currency: credit
-      note: "2 credits if found; free if not found"
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 2 credits if found; free if not found
     verified: 2026-07-28
     example_response: examples/leadmagic.x.personal-email-finder.json
     docs_url: https://leadmagic.io/docs/api-reference/personal-email-finder
@@ -146,7 +164,13 @@ endpoints:
       type: per_success
       value: 2
       currency: credit
-      note: "2 credits when found; free on no match"
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 2 credits when found; free on no match
     verified: 2026-07-28
     example_response: examples/leadmagic.x.role-finder.json
     docs_url: https://leadmagic.io/docs/reference/role-finder
@@ -174,7 +198,13 @@ endpoints:
       type: per_result
       value: 0.05
       currency: credit
-      note: "0.05 credits per employee returned (20 employees = 1 credit); free if no results"
+      per: 1
+      unit: employee
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 0.05 credits per employee returned (20 employees = 1 credit); free if no results
     verified: 2026-07-28
     example_response: examples/leadmagic.x.employee-finder.json
     docs_url: https://leadmagic.io/docs/api-reference/employee-finder
@@ -201,7 +231,13 @@ endpoints:
       type: per_call
       value: 3
       currency: credit
-      note: "3 credits per call, regardless of outcome"
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 3 credits per call, regardless of outcome
     verified: 2026-07-28
     example_response: examples/leadmagic.x.job-change-detector.json
     docs_url: https://leadmagic.io/docs/api-reference/job-change-detector
@@ -229,7 +265,13 @@ endpoints:
       type: per_success
       value: 5
       currency: credit
-      note: "5 credits if competitors are found; free if none found"
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 5 credits if competitors are found; free if none found
     unverified: "http 401 invalid_api_key — plan-gated on this key (same 401 shape as core's /v3/people/search); no credits were consumed"
     docs_url: https://leadmagic.io/docs/api-reference/competitors-search
 
@@ -254,7 +296,13 @@ endpoints:
       type: per_success
       value: 4
       currency: credit
-      note: "4 credits if funding data is found; free if none found"
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 4 credits if funding data is found; free if none found
     verified: 2026-07-28
     example_response: examples/leadmagic.x.company-funding.json
     docs_url: https://leadmagic.io/docs/api-reference/company-funding
@@ -278,7 +326,13 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit if technologies are detected; free if none found"
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit if technologies are detected; free if none found
     verified: 2026-07-28
     example_response: examples/leadmagic.x.technographics.json
     docs_url: https://leadmagic.io/docs/api-reference/technographics
@@ -314,7 +368,13 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 credit per company returned; free if zero matches. Rate limit 100 req/min, ~2 req/s burst"
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per company returned; free if zero matches. Rate limit 100 req/min, ~2 req/s burst
     verified: 2026-07-28
     example_response: examples/leadmagic.x.companies-search-v3.json
     docs_url: https://leadmagic.io/docs/api-reference/company-search-v3
@@ -347,7 +407,13 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 credit per returned job/signal; free when no jobs are returned. Rate limit 300 req/min, ~5 req/s burst"
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per returned job/signal; free when no jobs are returned. Rate limit 300 req/min, ~5 req/s burst
     verified: 2026-07-28
     example_response: examples/leadmagic.x.jobs-search-v3.json
     docs_url: https://leadmagic.io/docs/api-reference/job-search
@@ -381,7 +447,13 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 credit per job returned; free if no jobs found"
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per job returned; free if no jobs found
     verified: 2026-07-28
     example_response: examples/leadmagic.x.jobs-finder.json
     docs_url: https://leadmagic.io/docs/api-reference/jobs-finder
@@ -406,7 +478,13 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 credit per ad returned; free if none found. No per-call ceiling documented — check X-Credits-Max-Cost before running on a heavy advertiser"
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per ad returned; free if none found. No per-call ceiling documented — check X-Credits-Max-Cost before running on a heavy advertiser
     skipped: "unbounded per-result cost with no limit param documented; this verify pass ran under a hard 30-credit budget and the other 11 callable extended entries already used it responsibly — clears with a topped-up budget and X-Credits-Max-Cost checked first, not investigation"
     docs_url: https://leadmagic.io/docs/api-reference/google-ads-search
 
@@ -430,7 +508,13 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 credit per ad returned; free if none found. Rate limit 300 req/min, ~5 req/s burst"
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per ad returned; free if none found. Rate limit 300 req/min, ~5 req/s burst
     skipped: "unbounded per-result cost with no limit param documented; ran the rest of this verify pass under a hard 30-credit budget — clears with a topped-up budget, not investigation"
     docs_url: https://leadmagic.io/docs/api-reference/meta-ads-search
 
@@ -455,6 +539,12 @@ endpoints:
       type: per_call
       value: 1
       currency: credit
-      note: "1 credit base + 1 credit per ad returned; range 1-51 credits per call (0-50 ads max) — a 24-ad response costs 25 credits total"
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 1 credit base + 1 credit per ad returned; range 1-51 credits per call (0-50 ads max) — a 24-ad response costs 25 credits total
     skipped: "unbounded per-call cost (1-51 credits, no limit param) — a single call could alone exhaust the entire 30-credit test budget; clears with a topped-up budget and X-Credits-Max-Cost checked first, not investigation"
     docs_url: https://leadmagic.io/docs/api-reference/b2b-ads-search

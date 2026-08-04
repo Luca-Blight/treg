@@ -33,6 +33,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -61,6 +67,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -89,6 +101,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -153,6 +171,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -222,6 +246,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -280,6 +310,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -335,6 +371,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -521,6 +563,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -549,6 +597,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -577,6 +631,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -609,6 +669,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -647,6 +713,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -680,6 +752,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -718,6 +796,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -746,6 +830,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -791,6 +881,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -839,6 +935,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -882,6 +984,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -910,6 +1018,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -953,6 +1067,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -982,6 +1102,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1011,6 +1137,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1057,6 +1189,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1081,6 +1219,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1124,6 +1268,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1158,6 +1308,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1192,6 +1348,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1220,6 +1382,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1254,6 +1422,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1391,6 +1565,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1433,6 +1613,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1503,6 +1689,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1527,6 +1719,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1560,6 +1758,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1588,6 +1792,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1616,6 +1826,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1649,6 +1865,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1687,6 +1909,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1724,6 +1952,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1752,6 +1986,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1789,6 +2029,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1854,6 +2100,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1917,6 +2169,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -1965,6 +2223,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2002,6 +2266,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2030,6 +2300,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2058,6 +2334,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2097,6 +2379,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2136,6 +2424,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2175,6 +2469,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2229,6 +2529,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2257,6 +2563,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2308,6 +2620,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2347,6 +2665,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2386,6 +2710,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2425,6 +2755,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2464,6 +2800,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2502,6 +2844,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2541,6 +2889,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2589,6 +2943,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2697,6 +3057,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2735,6 +3101,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2772,6 +3144,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2856,6 +3234,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2928,6 +3312,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2956,6 +3346,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -2984,6 +3380,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3012,6 +3414,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3040,6 +3448,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3068,6 +3482,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3274,6 +3694,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3308,6 +3734,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3338,6 +3770,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3372,6 +3810,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3414,6 +3858,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3464,6 +3914,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3504,6 +3960,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3549,6 +4011,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3594,6 +4062,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3639,6 +4113,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3686,6 +4166,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3730,6 +4216,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3775,6 +4267,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3820,6 +4318,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3865,6 +4369,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3910,6 +4420,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -3955,6 +4471,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4000,6 +4522,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4045,6 +4573,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4090,6 +4624,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4135,6 +4675,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4180,6 +4726,12 @@ endpoints:
     type: per_success
     value: 0.05
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4225,6 +4777,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4263,6 +4821,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4305,6 +4869,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4333,6 +4903,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4361,6 +4937,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4395,6 +4977,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4428,6 +5016,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4461,6 +5055,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4494,6 +5094,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4544,6 +5150,12 @@ endpoints:
     type: per_success
     value: 0.25
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4568,6 +5180,12 @@ endpoints:
     type: per_success
     value: 0.12
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4595,6 +5213,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4624,6 +5248,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4657,6 +5287,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4690,6 +5326,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4717,6 +5359,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4744,6 +5392,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4771,6 +5425,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4795,6 +5455,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4829,6 +5495,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4862,6 +5534,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4896,6 +5574,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4920,6 +5604,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -4954,6 +5644,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5006,6 +5702,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5053,6 +5755,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5081,6 +5789,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5119,6 +5833,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5202,6 +5922,12 @@ endpoints:
     type: per_success
     value: 0.3
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5230,6 +5956,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5285,6 +6017,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5321,6 +6059,12 @@ endpoints:
     type: per_success
     value: 0.3
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5349,6 +6093,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5408,6 +6158,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5444,6 +6200,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5479,6 +6241,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5507,6 +6275,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5539,6 +6313,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5591,6 +6371,12 @@ endpoints:
     type: per_success
     value: 0.25
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5620,6 +6406,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5648,6 +6440,12 @@ endpoints:
     type: per_success
     value: 0.55
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5676,6 +6474,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5704,6 +6508,12 @@ endpoints:
     type: per_success
     value: 0.25
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5750,6 +6560,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5793,6 +6609,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5843,6 +6665,12 @@ endpoints:
     type: per_success
     value: 0.25
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5873,6 +6701,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5907,6 +6741,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -5966,6 +6806,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6005,6 +6851,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6044,6 +6896,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6088,6 +6946,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6141,6 +7005,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6161,6 +7031,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6182,6 +7058,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6203,6 +7085,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6230,6 +7118,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6282,6 +7176,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6310,6 +7210,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -6344,6 +7250,12 @@ endpoints:
     type: per_success
     value: 1.0
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6370,6 +7282,12 @@ endpoints:
     type: per_success
     value: 0.3
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6391,6 +7309,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -6431,6 +7355,12 @@ endpoints:
     type: per_success
     value: 0.3
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6464,6 +7394,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -6504,6 +7440,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -6545,6 +7487,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6577,6 +7525,12 @@ endpoints:
     type: per_success
     value: 1.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -6614,6 +7568,12 @@ endpoints:
     type: per_success
     value: 1.0
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6643,6 +7603,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6671,6 +7637,12 @@ endpoints:
     type: per_success
     value: 0.8
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -6738,6 +7710,12 @@ endpoints:
     type: per_success
     value: 1.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -6776,6 +7754,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6804,6 +7788,12 @@ endpoints:
     type: per_success
     value: 1.0
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6832,6 +7822,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6877,6 +7873,12 @@ endpoints:
     type: per_success
     value: 0.4
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -6919,6 +7921,12 @@ endpoints:
     type: per_success
     value: 1.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6945,6 +7953,12 @@ endpoints:
     type: per_success
     value: 1.0
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -6977,6 +7991,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7016,6 +8036,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -7051,6 +8077,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7088,6 +8120,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7116,6 +8154,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7153,6 +8197,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7181,6 +8231,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7209,6 +8265,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7237,6 +8299,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7266,6 +8334,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7299,6 +8373,12 @@ endpoints:
     type: per_success
     value: 0.4
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7332,6 +8412,12 @@ endpoints:
     type: per_success
     value: 1.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -7369,6 +8455,12 @@ endpoints:
     type: per_success
     value: 0.6
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7465,6 +8557,12 @@ endpoints:
     type: per_success
     value: 0.8
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -7533,6 +8631,12 @@ endpoints:
     type: per_success
     value: 0.8
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -7592,6 +8696,12 @@ endpoints:
     type: per_success
     value: 0.8
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     body:
@@ -7639,6 +8749,12 @@ endpoints:
     type: per_success
     value: 0.8
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7687,6 +8803,12 @@ endpoints:
     type: per_success
     value: 0.8
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7715,6 +8837,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7749,6 +8877,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7783,6 +8917,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7824,6 +8964,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7862,6 +9008,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7895,6 +9047,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -7923,6 +9081,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   test_request:
     queryParams: {}
@@ -7944,6 +9108,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8016,6 +9186,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8064,6 +9240,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8088,6 +9270,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8122,6 +9310,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8150,6 +9344,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8184,6 +9384,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8230,6 +9436,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8258,6 +9470,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8305,6 +9523,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8347,6 +9571,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8376,6 +9606,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8413,6 +9649,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8455,6 +9697,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8483,6 +9731,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   test_request:
     queryParams: {}
@@ -8504,6 +9758,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8565,6 +9825,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8629,6 +9895,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8657,6 +9929,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8691,6 +9969,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8715,6 +9999,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8791,6 +10081,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -8856,6 +10152,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9184,6 +10486,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9212,6 +10520,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9258,6 +10572,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9286,6 +10606,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9314,6 +10640,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9342,6 +10674,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9370,6 +10708,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9443,6 +10787,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9480,6 +10830,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9508,6 +10864,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9573,6 +10935,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9607,6 +10975,12 @@ endpoints:
     type: per_success
     value: 0.15
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9635,6 +11009,12 @@ endpoints:
     type: per_success
     value: 0.5
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9697,6 +11077,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9725,6 +11111,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9753,6 +11145,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9788,6 +11186,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9820,6 +11224,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9861,6 +11271,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9917,6 +11333,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -9957,6 +11379,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10041,6 +11469,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10084,6 +11518,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10138,6 +11578,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10166,6 +11612,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10200,6 +11652,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10243,6 +11701,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10286,6 +11750,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10320,6 +11790,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10354,6 +11830,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10388,6 +11870,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10422,6 +11910,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10456,6 +11950,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10489,6 +11989,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10523,6 +12029,12 @@ endpoints:
     type: per_success
     value: 0.1
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:
@@ -10551,6 +12063,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: CNY
+    per: 1
+    unit: call
+    source: rate_card_api
+    source_url: https://www.justoneapi.com/
+    checked: '2026-07-28'
+    confidence: documented
     note: billed only on success (code 0); errors free
   input:
     queryParams:

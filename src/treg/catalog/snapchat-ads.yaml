@@ -35,7 +35,7 @@ endpoints:
       queryParams:
         with_ad_accounts: {type: boolean, required: false, note: "true nests each organization's ad accounts into the same response, saving the second call below", example: true}
       note: "the mandatory first call: an organization id is the only way into the ad accounts. GET /me alone returns just the member's own id and email"
-    cost: {type: free, note: "included with the connected account; Snapchat rate-limits per app and per organization rather than charging per call"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; Snapchat rate-limits per app and per organization rather than charging per call}
     docs_url: https://developers.snap.com/api/marketing-api/Ads-API/organizations
 
   - id: snapchat-ads.accounts
@@ -53,7 +53,7 @@ endpoints:
         limit: {type: integer, required: false, example: 50}
         cursor: {type: string, required: false, note: "paging.next_link carries the cursor for the next page"}
       note: "returns each ad account's id, name, currency, timezone and funding sources. This is treg's connection resource picker. All ids across this API are UUIDs, not numbers"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://developers.snap.com/api/marketing-api/Ads-API/adaccounts
 
   - id: snapchat-ads.query
@@ -76,7 +76,7 @@ endpoints:
         swipe_up_attribution_window: {type: string, required: false, note: "1_DAY | 7_DAY (default) | 28_DAY", example: "28_DAY"}
         view_attribution_window: {type: string, required: false, note: "1_HOUR | 3_HOUR | 6_HOUR | 1_DAY (default) | 7_DAY | 28_DAY"}
       note: "spend is in MICRO-CURRENCY: 1000000 = 1 unit of the account currency. `swipes` is Snapchat's click. Hourly granularity is capped at a short window (about 7 days) and TOTAL/DAY at roughly 31 days per request — a longer range is an error, not a truncated result"
-    cost: {type: free, note: "included with the connected account; stats endpoints carry the tightest rate limits, and wide breakdowns count heavily against them"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; stats endpoints carry the tightest rate limits, and wide breakdowns count heavily against them'}
     docs_url: https://developers.snap.com/api/marketing-api/Ads-API/measurement
 
   - id: snapchat-ads.campaigns
@@ -95,7 +95,7 @@ endpoints:
         cursor: {type: string, required: false}
         read_deleted_entities: {type: boolean, required: false, note: "false by default — deleted campaigns are hidden unless asked for"}
       note: "daily_budget_micro and lifetime_spend_cap_micro are in micro-currency. `status` is what you set (ACTIVE | PAUSED); the delivery reality shows up in the separate ad-squad level and in stats"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://developers.snap.com/api/marketing-api/Ads-API/campaigns
 
   - id: snapchat-ads.campaign.stats
@@ -117,7 +117,7 @@ endpoints:
         breakdown: {type: string, required: false, note: "adsquad | ad — one row per child of this campaign", example: "adsquad"}
         swipe_up_attribution_window: {type: string, required: false, example: "7_DAY"}
       note: "identical shape to the account-level report, scoped to one campaign; /adsquads/{id}/stats and /ads/{id}/stats are the same again further down. LIFETIME granularity ignores start_time/end_time and returns the campaign's all-time totals"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://developers.snap.com/api/marketing-api/Ads-API/measurement
 
   - id: snapchat-ads.ads
@@ -136,6 +136,6 @@ endpoints:
         cursor: {type: string, required: false}
         read_deleted_entities: {type: boolean, required: false}
       note: "each ad carries a creative_id and a `type` (SNAP_AD | STORY | COLLECTION | DYNAMIC_SNAP_AD). The media itself is two hops away: GET /creatives/{id} gives the media id, GET /media/{id} the asset — the ad object holds no playable URL"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://developers.snap.com/api/marketing-api/Ads-API/ads
 

@@ -61,3 +61,39 @@ services:
         sync: false
       - key: TREG_DEMO_STRIPE_WEBHOOK_SECRET # whsec_… from the DEMO Stripe sandbox's webhook endpoint
         sync: false
+      # Tier-4 platform keys: treg's OWN provider credentials, spent on a caller's behalf and metered
+      # against their prepaid balance (docs/PLATFORM-BALANCE-PLAN.md §Phase 3). A key alone does
+      # nothing — TREG_PLATFORM_PROVIDERS is the allow-list AND the kill switch: set it to "" to turn
+      # tier 4 off instantly, without a redeploy. Fund each provider account upstream first.
+      - key: TREG_PLATFORM_KEY_TIKHUB          # TikHub API key (Authorization: Bearer)
+        sync: false
+      - key: TREG_PLATFORM_KEY_DATAFORSEO      # base64 of "login:password" (HTTP Basic)
+        sync: false
+      - key: TREG_PLATFORM_KEY_SCRAPECREATORS  # ScrapeCreators API key (x-api-key)
+        sync: false
+      - key: TREG_PLATFORM_KEY_BRIGHTDATA      # Bright Data account API token (Authorization: Bearer)
+        sync: false
+      - key: TREG_PLATFORM_KEY_JUSTONEAPI
+        sync: false
+      - key: TREG_PLATFORM_KEY_SERPAPI
+        sync: false
+      - key: TREG_PLATFORM_KEY_MOZ                # base64 of "access_id:secret_key" (HTTP Basic)
+        sync: false
+      - key: TREG_PLATFORM_KEY_SERANKING
+        sync: false
+      - key: TREG_PLATFORM_KEY_HUNTER
+        sync: false
+      - key: TREG_PLATFORM_KEY_LEADMAGIC
+        sync: false
+      - key: TREG_PLATFORM_KEY_LUSHA
+        sync: false
+      - key: TREG_PLATFORM_KEY_PDL
+        sync: false
+      - key: TREG_PLATFORM_KEY_DIFFBOT
+        sync: false
+      - key: TREG_PLATFORM_KEY_AKTA
+        sync: false
+      - key: TREG_PLATFORM_KEY_APIFY
+        sync: false
+      - key: TREG_PLATFORM_PROVIDERS           # e.g. "tikhub,dataforseo,scrapecreators"; "" = tier 4 off
+        value: ""

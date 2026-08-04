@@ -4,8 +4,18 @@ source:
   openapi: null # SerpApi documents each engine on its own HTML page; no machine-readable spec
   curated: 2026-07-28
 
-# UNVERIFIED — no credential available at curation time; every parameter and price below is
-# transcribed from SerpApi's official per-engine docs 2026-07-28. Nothing here has been called.
+# VERIFIED 2026-07-28 — all 7 endpoints below were live-called against a real key and returned 2xx
+# with real data; each carries a `verified:` date and a captured example. Parameters were
+# transcribed from SerpApi's official per-engine docs 2026-07-28 and are confirmed by those calls.
+#
+# THE PRICES, HOWEVER, CANNOT BE VERIFIED FROM THIS ACCOUNT, and they stay `confidence: documented`
+# deliberately. The key is on the FREE plan (250 searches/month, plan_monthly_price 0.0), so the
+# only thing a before/after read of GET /account.json can observe is the search COUNTER moving by
+# one — which confirms the per_success unit, not the dollar figure. The $0.015 on each entry is the
+# Developer-tier rate transcribed from the pricing page; nobody has watched this account be charged
+# it, because this account is never charged anything. Upgrading these to `verified` therefore needs
+# a paid key, not another verification run — and until that happens SerpApi is NOT platform-eligible
+# (Catalog.platform_eligible requires confidence: verified), regardless of how green the file looks.
 #
 # House rules for this provider (they apply to EVERY endpoint below, so they are stated once):
 #
@@ -78,7 +88,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search. $0.015 at the entry-level paid Developer plan ($75 / 5,000 searches); $0.010 on Production, $0.025 on Starter. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search. $0.015 at the entry-level paid Developer plan ($75 / 5,000 searches); $0.010 on Production, $0.025 on Starter. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "google", q: "coffee"}
     verified: 2026-07-28
@@ -111,7 +127,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "google_ads_transparency_center", text: "coffee"}
     verified: 2026-07-28
@@ -138,7 +160,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "youtube", search_query: "coffee"}
     verified: 2026-07-28
@@ -173,7 +201,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "apple_app_store", term: "coffee"}
     verified: 2026-07-28
@@ -211,7 +245,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "google_play", q: "coffee"}
     verified: 2026-07-28
@@ -245,7 +285,13 @@ endpoints:
       type: per_success
       value: 0.015
       currency: USD
-      note: "1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://serpapi.com/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 search, same flat rate as every other engine. $0.015 at the entry-level paid Developer plan. Failed and cached searches are free.
     test_request:
       queryParams: {engine: "google_autocomplete", q: "coffee"}
     verified: 2026-07-28
@@ -275,7 +321,8 @@ endpoints:
       type: free
       value: 0
       currency: USD
-      note: "FREE — the docs state that the Account API \"is free of charge, and using it will not be counted toward your monthly quota\". The correct liveness probe for a SerpApi key (which is what treg's registry probes) and the right call before a batch, since it reports total_searches_left."
+      unit: call
+      note: FREE — the docs state that the Account API "is free of charge, and using it will not be counted toward your monthly quota". The correct liveness probe for a SerpApi key (which is what treg's registry probes) and the right call before a batch, since it reports total_searches_left.
     test_request:
       queryParams: {}
     verified: 2026-07-28

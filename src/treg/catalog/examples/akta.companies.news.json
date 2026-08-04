@@ -1,90 +1,97 @@
 {
-  "total": 259,
+  "total": 245,
   "limit": 1,
   "offset": 0,
   "count": 1,
   "data": [
     {
-      "id": 29561638,
-      "title": "Canva Code 2.0 is now available in the Philippines",
-      "url": "https://mb.com.ph/2026/07/27/canva-code-20-is-now-available-in-the-philippines",
-      "publisher": "Manila Bulletin",
-      "published_date": "2026-07-27T11:21:00",
-      "sentiment": "Positive",
-      "sentiment_score": 1.0,
-      "ai_summary": "Canva has launched Canva Code 2.0 in the Philippines, making AI-powered coding accessible to users with zero to minimal coding experience to build websites directly within Canva's editor. The platform reports significant performance improvements, with average code generation time reduced by 75% to 45 seconds and active users jumping 25% since its recent update, having powered the creation of more than six million websites globally in one year. Filipino educators and entrepreneurs are using the t… [615 chars total]",
-      "word_count": 781,
+      "id": 30612386,
+      "title": "Cimpress Missed EPS by 20%-Why the Canva Upside Still Matters",
+      "url": "https://www.ainvest.com/news/cimpress-missed-eps-20-canva-upside-matters-2607/",
+      "publisher": "AInvest",
+      "published_date": "2026-07-30T00:00:00",
+      "sentiment": "Negative",
+      "sentiment_score": 0.0348,
+      "ai_summary": "Cimpress (CMPR) reported an adjusted EPS of $0.97 for the quarter, missing analyst estimates of $1.21 by approximately 20%, causing the stock to drop to $95.93 in after-hours trading while revenue came in roughly in line at $944.96 million. Management attributed the profitability shortfall to non-core costs including North American manufacturing startup expenses and Canadian duty drawback receivables, rather than demand weakness, and maintained its fiscal 2027 and 2028 EBITDA guidance corridors … [827 chars total]",
+      "word_count": 1157,
       "original_language": "EN",
-      "author": "Manila Bulletin Newsroom",
+      "author": "Rhys Northwoodfollow",
       "countries": [
-        "PHL"
+        "CAN"
       ],
       "industries": [
         {
-          "name": "Low-Code/No-Code Application Development & Modernization",
-          "code": "BPAEAFAF",
+          "name": "Large-Cap Equity Long/Short",
+          "code": "FSAHAAAH",
           "is_primary": true
         },
         {
-          "name": "Low-Code/No-Code Application Platforms",
-          "code": "HDAEAKAA",
+          "name": "Quant Equity Long/Short (Equity Stat Arb / Factor / ML)",
+          "code": "FSAHAAAB",
           "is_primary": false
         }
       ],
       "tags": [
         {
-          "name": "Product Launches & Enhancements",
-          "code": "SD01",
+          "name": "Earnings Releases",
+          "code": "FR01",
           "is_primary": true
-        }
+        },
+        {
+          "name": "Guidance & Forecast Revisions",
+          "code": "FR05",
+          "is_primary": false
+        },
+        "… 1 more item(s) truncated"
       ],
       "company_mentions": [
         {
           "uuid": "00000l1",
           "name": "Canva",
           "website": "http://www.canva.com"
+        },
+        {
+          "uuid": "00037pl",
+          "name": "Cimpress",
+          "website": "http://www.cimpress.com"
         }
       ],
-      "article_type": "Explainer",
+      "article_type": "News analysis",
       "is_press_release": true,
       "is_opinion": false,
       "is_breaking": true,
       "iptc_codes": [
-        "20001298",
-        "20000231"
+        "20000178",
+        "20000173",
+        "… 1 more item(s) truncated"
       ],
       "iab_categories": [
-        "621",
-        "614",
-        "… 1 more item(s) truncated"
+        "414",
+        "114"
       ],
       "naics_codes": [
-        "541511",
-        "541512",
-        "… 1 more item(s) truncated"
+        "523150"
       ],
       "sic_codes": [
-        "7370",
-        "7371"
+        "5961"
       ],
       "entities": {
-        "person": [],
+        "person": [
+          "rhys northwood"
+        ],
         "location": [
-          "spain",
-          "philippines"
+          "north american",
+          "canadian",
+          "… 1 more item(s) truncated"
         ],
         "product": [
-          "canva code 2.0",
-          "canva code",
-          "… 3 more item(s) truncated"
+          "canva"
         ],
-        "event": [
-          "world book day"
-        ]
+        "event": []
       },
-      "newsworthiness_score": 0.965399980545044,
+      "newsworthiness_score": 1.0,
       "group_id": null,
-      "full_text": "Technews Canva Code 2.0 is now available in the Philippines By Manila Bulletin Newsroom\n\nWith the rollout of Canva Code 2.0 in the Philippines, Canva is making AI-powered coding more accessible, allowing Filipinos to build websites with zero to minimal coding experience. A decade ago, Canva transformed design with its intuitive drag-and-drop editor, making creativity accessible to everyone. Today, Canva is doing the same for coding. One of AI's most exciting capabilities is vibe coding—the pract… [5170 chars total]"
+      "full_text": "News/ Industrials/ CMPR/ Articles Details Cimpress Missed EPS by 20%-Why the Canva Upside Still Matters Generated by AI Agent Rhys Northwood Reviewed by The Newsroom Thursday, Jul 30, 2026 2:14 pm ET 2min read CMPR -- AI Podcast: Your News, Now Playing Loading Aime Summary Overview The 5 Ws Opposite Sides Infobox - CimpressCMPR-- missed adjusted EPS by 20% ($0.97 vs $1.21), triggering a post-earnings stock drop to $95.93 despite revenue matching forecasts at $945M. - Management attributed the sh… [7568 chars total]"
     }
   ],
   "credits_consumed": 0.11

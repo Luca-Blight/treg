@@ -1,0 +1,52 @@
+[
+  {
+    "block_type": null,
+    "block_position": 3,
+    "keyword": "ranking",
+    "position": 3,
+    "prev_pos": 3,
+    "volume": 47500,
+    "cpc": 0,
+    "competition": 0,
+    "url": "https://seranking.com/",
+    "difficulty": 94,
+    "total_sites": null,
+    "traffic": 1034,
+    "traffic_percent": 1.15,
+    "price": 0,
+    "serp_features": [
+      "reviews",
+      "video",
+      "… 5 more item(s) truncated"
+    ],
+    "intents": [
+      "I"
+    ]
+  },
+  {
+    "block_type": "sitelinks",
+    "block_position": 3,
+    "keyword": "se ranking",
+    "position": 1,
+    "prev_pos": null,
+    "volume": 6600,
+    "cpc": 0.66,
+    "competition": 0.44,
+    "url": "https://seranking.com/",
+    "difficulty": 78,
+    "total_sites": null,
+    "traffic": 729,
+    "traffic_percent": 0.81,
+    "price": 481.14,
+    "serp_features": [
+      "reviews",
+      "sitelinks",
+      "… 4 more item(s) truncated"
+    ],
+    "intents": [
+      "I",
+      "N"
+    ]
+  },
+  "… 8 more item(s) truncated"
+]

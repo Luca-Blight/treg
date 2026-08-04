@@ -1,0 +1,57 @@
+{
+  "search_metadata": {
+    "id": "6a6b43410d0b29dcb44d403d",
+    "status": "Success",
+    "json_endpoint": "https://serpapi.com/searches/iCXj4GHGZYSsiniAbMQucQ/6a6b4341… [81 chars]",
+    "created_at": "2026-07-30 12:27:45 UTC",
+    "processed_at": "2026-07-30 12:27:45 UTC",
+    "brave_ai_mode_url": "https://search.brave.com/ask?q=best+coffee+brewing+method&so… [75 chars]",
+    "raw_html_file": "https://serpapi.com/searches/iCXj4GHGZYSsiniAbMQucQ/6a6b4341… [81 chars]",
+    "prettify_html_file": "https://serpapi.com/searches/iCXj4GHGZYSsiniAbMQucQ/6a6b4341… [85 chars]",
+    "total_time_taken": 40.04
+  },
+  "search_parameters": {
+    "engine": "brave_ai_mode",
+    "q": "best coffee brewing method",
+    "country": "us",
+    "language": "en"
+  },
+  "markdown": "The **best coffee brewing method** depends entirely on your … [4479 chars]",
+  "text_blocks": [
+    {
+      "type": "paragraph",
+      "segments": "… [2 item(s) truncated]"
+    },
+    "… 15 more item(s) truncated"
+  ],
+  "references": [
+    {
+      "title": "Strongest Coffee Method: Espresso, Moka Pot or Cold Brew",
+      "link": "https://outin.com/blogs/news/brewing-strong-coffee-perfect-m… [65 chars]",
+      "source_icon": "https://imgs.search.brave.com/GzJCgqxmrXyjD_0DixiThiL3kHbw94… [257 chars]",
+      "index": 0
+    },
+    "… 4 more item(s) truncated"
+  ],
+  "web_results": [
+    {
+      "title": "The Best Way to Make Coffee at Home (2026) Tested by Barista… [61 chars]",
+      "link": "https://coffeechronicler.com/best-way-to-make-coffee-at-home… [61 chars]",
+      "snippet": "Read this before you decide on a brewing method . Avoid some… [122 chars]",
+      "family_friendly": true,
+      "source": "coffeechronicler.com",
+      "source_icon": "https://imgs.search.brave.com/0FjI3634vkjoIL3S1T_grleX-oOVrT… [273 chars]",
+      "path": "  › home  › blog  › my opinion: the ideal way to make coffee… [68 chars]",
+      "date": "February 11, 2026"
+    },
+    "… 9 more item(s) truncated"
+  ],
+  "related_questions": [
+    {
+      "question": "What is the ideal grind size for each method?",
+      "serpapi_link": "https://serpapi.com/search.json?country=us&engine=brave_ai_m… [301 chars]"
+    },
+    "… 2 more item(s) truncated"
+  ],
+  "subsequent_request_token": "CAwTlnica1qUmXJTxcDSzCjVwsjA2CwlzdI42cjSyDDF0CjJzMI0KSnZ0iLR… [150 chars]"
+}

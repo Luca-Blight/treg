@@ -41,8 +41,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   scope_gap: treg's OAuth app does not request this; needs pages_manage_engagement
@@ -58,8 +59,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   scope_gap: treg's OAuth app does not request this; needs pages_manage_engagement
@@ -75,8 +77,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   scope_gap: treg's OAuth app does not request this; needs pages_manage_engagement
@@ -91,8 +94,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.profile
@@ -106,8 +110,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.albums
@@ -121,8 +126,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   scope_gap: treg's OAuth app does not request this; needs pages_messaging and pages_read_user_content
@@ -137,8 +143,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.events
@@ -152,8 +159,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.feed
@@ -167,8 +175,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   scope_gap: treg's OAuth app does not request this; needs leads_retrieval
@@ -183,8 +192,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.live.videos
@@ -198,8 +208,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.photos
@@ -213,8 +224,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.posts
@@ -228,8 +240,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.ratings
@@ -243,8 +256,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   scope_gap: treg's OAuth app does not request this; needs pages_manage_metadata
@@ -259,8 +273,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.settings
@@ -274,8 +289,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.tagged
@@ -289,8 +305,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.videos
@@ -304,8 +321,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.page.instagram.account
@@ -320,8 +338,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.post.delete
@@ -335,8 +354,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.post.detail
@@ -351,8 +371,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.post.update
@@ -366,8 +387,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.post.comments
@@ -381,8 +403,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.post.insights
@@ -396,8 +419,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.post.likes
@@ -411,8 +435,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.post.reactions
@@ -426,8 +451,9 @@ endpoints:
   scope: own_account
   cost:
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; counted against the app's Graph API rate limit
   docs_url: https://developers.facebook.com/docs/graph-api/reference/page/
   capability: facebook.post.shares

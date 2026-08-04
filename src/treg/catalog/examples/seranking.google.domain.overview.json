@@ -1,0 +1,37 @@
+{
+  "organic": {
+    "base_domain": "seranking.com",
+    "price_sum": 194508.03,
+    "traffic_sum": 89979,
+    "keywords_new_count": 14740,
+    "keywords_down_count": 20026,
+    "keywords_up_count": 20035,
+    "keywords_equal_count": 84171,
+    "keywords_lost_count": 19828,
+    "keywords_count": 107037,
+    "top1_5": 18073,
+    "top6_10": 12597,
+    "top11_20": 22069,
+    "top21_50": 45018,
+    "top51_100": 41146,
+    "year": 2026,
+    "month": 7
+  },
+  "adv": {
+    "base_domain": "seranking.com",
+    "price_sum": 252.62,
+    "traffic_sum": 258,
+    "keywords_new_count": 70,
+    "keywords_down_count": 6,
+    "keywords_up_count": 2,
+    "keywords_equal_count": 364,
+    "keywords_lost_count": 881,
+    "keywords_count": 438,
+    "top1_2": 426,
+    "top3_5": 15,
+    "top6_8": 0,
+    "top9_11": 1,
+    "year": 2026,
+    "month": 7
+  }
+}

@@ -37,7 +37,7 @@ endpoints:
         fields: {type: string, required: true, note: "include access_token — that PAGE token is what the other Page endpoints authenticate with", example: "id,name,category,fan_count,access_token"}
         limit: {type: integer, required: false, example: 50}
       note: "Meta returns {data: [...], paging: {...}}. treg's connection picker is built from this same call (discover_path)"
-    cost: {type: free, note: "included with the connected account; Meta rate-limits per app and per Page rather than charging per call"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; Meta rate-limits per app and per Page rather than charging per call}
     # access_token is deliberately NOT in the test_request fields: it is a live Page credential and
     # would be written verbatim into the captured example. Real callers must add it back.
     test_request:
@@ -63,7 +63,7 @@ endpoints:
         since: {type: string, required: false, note: "Unix timestamp or YYYY-MM-DD", example: "2026-07-01"}
         until: {type: string, required: false}
       note: "must be called with the PAGE access token from facebook.pages.list — the user token treg injects is REJECTED outright (code 190 / subcode 2069032, 'A Page access token is required for this call for the new Pages experience'), not silently emptied as older Graph versions did. /feed is the wider edge (it also includes posts by visitors); /posts is the Page's own"
-    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform rate limits apply}
     # unverified: http 400 code 190 subcode 2069032 — "A Page access token is required for this call
     # for the new Pages experience". Live-attempted through the treg /call proxy on 2026-07-28. The
     # proxy injects the connection's USER token; Meta's new Pages experience needs the per-Page token
@@ -89,7 +89,7 @@ endpoints:
         since: {type: string, required: false, note: "Unix timestamp or YYYY-MM-DD; Meta caps a single call at 93 days", example: "2026-07-01"}
         until: {type: string, required: false, example: "2026-07-28"}
       note: "needs read_insights AND the PAGE access token. Meta deprecates individual metric names on a fixed schedule, so an unknown-metric error means the metric was retired, not that the call is malformed"
-    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform rate limits apply}
     # unverified: http 400 code 190 — "This method must be called with a Page Access Token".
     # Live-attempted through the treg /call proxy on 2026-07-28; same page-token blocker as
     # facebook.page.posts above. Metric validation runs BEFORE the token check, so a retired metric
@@ -116,7 +116,7 @@ endpoints:
         scheduled_publish_time: {type: integer, required: false, note: "Unix timestamp, 10 minutes to 6 months out; requires published=false"}
       bodyType: form
       note: "needs pages_manage_posts (treg's `post` capability — a connection made with `read` will 403) and the PAGE access token. Photos and video go to /{page_id}/photos and /{page_id}/videos instead"
-    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform rate limits apply}
     unverified: "write action — this publishes to a real Page; requires a deliberate manual test, never an automated verify run"
     docs_url: https://developers.facebook.com/docs/pages-api/posts
 
@@ -144,7 +144,7 @@ endpoints:
         temporary: {type: boolean, required: false, note: "pair with published=false so the staged photo is garbage-collected if the feed post never happens"}
       bodyType: json
       note: "needs pages_manage_posts and the PAGE access token from facebook.pages.list. For a multi-photo post: call this once per photo with published=false, collect the ids, then call facebook.page.post.create with attached_media=[{\"media_fbid\": \"<id>\"}, …]. Meta caps a feed post at 10 attached photos"
-    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform rate limits apply}
     unverified: "write action — this publishes to a real Page; requires a deliberate manual test, never an automated verify run"
     docs_url: https://developers.facebook.com/docs/graph-api/reference/page/photos/
 
@@ -168,7 +168,7 @@ endpoints:
         scheduled_publish_time: {type: integer, required: false, note: "Unix timestamp; requires published=false"}
       bodyType: json
       note: "ask for fields=id,permalink_url in the query string — the response otherwise carries only an id, and there is no other way to get the post's URL. The call returns as soon as Meta accepts the URL: the video is still TRANSCODING, and GET /{video_id}?fields=status reports when it is ready. A short vertical video is auto-classified as a Reel and appears at facebook.com/reel/{id}"
-    cost: {type: free, note: "included with the connected account / platform rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account / platform rate limits apply}
     unverified: "write action — this publishes to a real Page; requires a deliberate manual test, never an automated verify run"
     docs_url: https://developers.facebook.com/docs/graph-api/reference/page/videos/
 

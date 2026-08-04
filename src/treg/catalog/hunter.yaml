@@ -3,8 +3,20 @@ source:
   docs: https://hunter.io/api-documentation/v2
   openapi: null # Hunter documents v2 on its own site; no fetchable OpenAPI document is published
   curated: 2026-07-28
-# UNVERIFIED — no credential available at curation time; every path, parameter and price below is
-# transcribed from Hunter's official v2 documentation 2026-07-28. Nothing here has been called.
+# VERIFIED 2026-07-31 — all 6 endpoints below were live-called against a real free-plan key and
+# returned 2xx with real data; params and prices were originally transcribed from Hunter's official
+# v2 documentation 2026-07-28 and the two marked `source: observed` are now confirmed by a measured
+# charge (see their cost.note).
+#
+# TWO THINGS LEARNED FROM THE LIVE RUN, both about the meter rather than the routes:
+#   - GET /account's `requests.credits.used` IS the money meter. Its sibling counters
+#     `requests.searches` / `requests.verifications` do NOT track spend — one /companies/find call
+#     moved credits by 0.2 while bumping BOTH siblings by 1, so reading them as the charge
+#     over-counts by 5x. Budget against `credits`.
+#   - REPEATS ARE FREE, and that will fool a verification run. Re-calling all five paid routes on
+#     targets a previous sweep had already queried cost exactly 0.0 credits. Hunter caches a
+#     result against the plan period, so an observed delta of 0 is evidence about the CACHE, not
+#     about the price — a cost can only be observed on a target never queried on this key before.
 #
 # Billing: Hunter meters two SEPARATE credit pools against the plan — "searches" (Domain Search and
 # Email Finder) and "verifications" (Email Verifier) — so `cost.value` is null and the pool is named
@@ -51,7 +63,15 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 SEARCH credit, charged only when an email is found; a miss is free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 SEARCH credit, charged only when an email is found; a miss is free.
+    verified: 2026-07-31
+    example_response: examples/hunter.people.email.find.json
     docs_url: https://hunter.io/api-documentation/v2#email-finder
 
   - id: hunter.people.email.verify
@@ -73,7 +93,15 @@ endpoints:
       type: per_call
       value: 0.5
       currency: credit
-      note: "0.5 VERIFICATION credits per call — half a credit, a separate pool from search credits. Re-verifying the same address within the plan period is not re-charged."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 0.5 VERIFICATION credits per call — half a credit, a separate pool from search credits. Re-verifying the same address within the plan period is not re-charged.
+    verified: 2026-07-31
+    example_response: examples/hunter.people.email.verify.json
     docs_url: https://hunter.io/api-documentation/v2#email-verifier
 
   - id: hunter.companies.emails
@@ -107,7 +135,15 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 SEARCH credit per 10 emails returned (rounded up); a domain with no results is free."
+      per: 10
+      unit: record
+      source: observed
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-31'
+      confidence: verified
+      note: '1 SEARCH credit per 10 emails returned (rounded up); a domain with no results is free. OBSERVED 2026-07-31 — a `limit` of 1 on a domain never queried on this key returned 1 email and moved requests.credits.used by exactly 1.000, confirming the per-10 rounding — one email costs the same whole credit as ten, so a limit below 10 buys nothing.'
+    verified: 2026-07-31
+    example_response: examples/hunter.companies.emails.json
     docs_url: https://hunter.io/api-documentation/v2#domain-search
 
   - id: hunter.people.enrich
@@ -131,7 +167,15 @@ endpoints:
       type: per_success
       value: 0.2
       currency: credit
-      note: "0.2 credits, billed CONDITIONALLY — charged only when email, full name AND position all come back. A 404 or a partial record is free."
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 0.2 credits, billed CONDITIONALLY — charged only when email, full name AND position all come back. A 404 or a partial record is free.
+    verified: 2026-07-31
+    example_response: examples/hunter.people.enrich.json
     docs_url: https://hunter.io/api-documentation/v2#people-enrichment
 
   - id: hunter.companies.enrich
@@ -154,7 +198,15 @@ endpoints:
       type: per_success
       value: 0.2
       currency: credit
-      note: "0.2 credits, billed CONDITIONALLY — charged only when company name, category/description/tags, location or country code AND company size all come back. A 404 or a partial record is free. Still the cheapest companies.enrich in this catalog."
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://hunter.io/pricing
+      checked: '2026-07-31'
+      confidence: verified
+      note: 0.2 credits, billed CONDITIONALLY — charged only when company name, category/description/tags, location or country code AND company size all come back. A 404 or a partial record is free. Still the cheapest companies.enrich in this catalog. OBSERVED 2026-07-31 — a call on a domain never queried on this key moved GET /account's requests.credits.used by exactly 0.200; the same call repeated on an already-queried domain moved it by 0.000 (cached, not free).
+    verified: 2026-07-31
+    example_response: examples/hunter.companies.enrich.json
     docs_url: https://hunter.io/api-documentation/v2#company-enrichment
 
   - id: hunter.account.usage
@@ -169,5 +221,7 @@ endpoints:
     input:
       note: "no parameters — the key rides in the X-API-KEY header"
     test_request: {queryParams: {}}
-    cost: {type: free, value: 0, currency: USD, note: "free — consumes no search or verification credits; this is the registry's health probe"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: free — consumes no search or verification credits; this is the registry's health probe}
+    verified: 2026-07-31
+    example_response: examples/hunter.account.usage.json
     docs_url: https://hunter.io/api-documentation/v2#account

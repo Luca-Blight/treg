@@ -3,8 +3,12 @@ source:
   docs: https://leadmagic.io/docs/api-reference/email-validation
   openapi: null # LeadMagic renders per-endpoint reference pages; no fetchable OpenAPI document
   curated: 2026-07-28
-# VERIFIED 2026-07-28 — 6 of 7 core endpoints called live and passed with a real credential
-# (TREG_CATALOG_CRED), examples captured under examples/. leadmagic.people.search (/v3/people/search)
+# VERIFIED 2026-07-28, RE-VERIFIED 2026-07-31 — 6 of 7 core endpoints called live and passed with a
+# real credential (TREG_CATALOG_CRED) on both dates, examples captured under examples/. The three
+# endpoints whose test target produces a definitive HIT now carry OBSERVED prices: every response
+# reports `credits_consumed`, and the figures billed on 2026-07-31 matched the published rate
+# exactly (profile-search 1, company-search 1, email-validation 0.25).
+# leadmagic.people.search (/v3/people/search)
 # 401s with invalid_api_key on this key while the sibling /v3/companies/search succeeds on the same
 # key, so it is recorded unverified (a plan/feature gate on that one route) rather than skipped.
 # Paths, parameters and price notes below were originally transcribed from LeadMagic's official v1
@@ -52,8 +56,14 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit per email found; a null result costs nothing. Dollar value depends on plan."
-    verified: 2026-07-28
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 1 credit per email found; a null result costs nothing. The FREE-MISS half is observed (the test_request is a deliberate no-match and reported credits_consumed 0 on 2026-07-28 and 2026-07-31); the 1-credit hit price is still only documented, because verifying it would mean buying a real person's email address. Dollar value depends on plan.
+    verified: 2026-07-31
     example_response: examples/leadmagic.people.email.find.json
     docs_url: https://leadmagic.io/docs/api-reference/email-finder
 
@@ -77,8 +87,14 @@ endpoints:
       type: per_success
       value: 0.25
       currency: credit
-      note: "0.25 credits per DEFINITIVE result (valid or invalid) — four validations to a credit. 'unknown' results and RFC syntax failures are free. Rate limit 300 req/min."
-    verified: 2026-07-28
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-31'
+      confidence: verified
+      note: 0.25 credits per DEFINITIVE result (valid or invalid) — four validations to a credit. 'unknown' results and RFC syntax failures are free. OBSERVED live 2026-07-31 - the response reported credits_consumed 0.25. Rate limit 300 req/min.
+    verified: 2026-07-31
     example_response: examples/leadmagic.people.email.verify.json
     docs_url: https://leadmagic.io/docs/api-reference/email-validation
 
@@ -102,8 +118,14 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit per profile matched; free when the profile cannot be resolved."
-    verified: 2026-07-28
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-31'
+      confidence: verified
+      note: 1 credit per profile matched; free when the profile cannot be resolved. OBSERVED live 2026-07-31 - a matched profile reported credits_consumed 1.
+    verified: 2026-07-31
     example_response: examples/leadmagic.people.enrich.json
     docs_url: https://leadmagic.io/docs/reference/profile-search
 
@@ -129,8 +151,14 @@ endpoints:
       type: per_success
       value: 5
       currency: credit
-      note: "5 credits when a mobile number is found; free when nothing is returned."
-    verified: 2026-07-28
+      per: 1
+      unit: call
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: documented
+      note: 5 credits when a mobile number is found; free when nothing is returned. Only the free-miss half is observed (the test_request points at a nonexistent profile and reported credits_consumed 0 on 2026-07-28 and 2026-07-31); the 5-credit hit price stays documented, because confirming it would mean buying a real person's mobile number - which rule 1 of the catalog's PII policy forbids capturing anyway.
+    verified: 2026-07-31
     example_response: examples/leadmagic.people.phone.find.json
     docs_url: https://leadmagic.io/docs/api-reference/mobile-finder
 
@@ -156,8 +184,14 @@ endpoints:
       type: per_success
       value: 1
       currency: credit
-      note: "1 credit per company matched; free when no company is found."
-    verified: 2026-07-28
+      per: 1
+      unit: call
+      source: observed
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-31'
+      confidence: verified
+      note: 1 credit per company matched; free when no company is found. OBSERVED live 2026-07-31 - a matched company reported credits_consumed 1.
+    verified: 2026-07-31
     example_response: examples/leadmagic.companies.enrich.json
     docs_url: https://leadmagic.io/docs/v1/reference/search-company
 
@@ -188,8 +222,14 @@ endpoints:
       type: per_result
       value: 1
       currency: credit
-      note: "1 credit per person returned, PLUS 1 credit per email and 5 per mobile when include_contact_details is true. No results, no charge. A limit=25 search revealing mobiles can therefore cost 150+ credits — set limit deliberately."
-    unverified: "http 401 invalid_api_key — this key's plan does not include v3 people search; the sibling /v3/companies/search route on the SAME key succeeded (200, 1 credit), so this is a plan/feature gate on this one route, not a broken key or a broken endpoint"
+      per: 1
+      unit: record
+      source: docs
+      source_url: https://leadmagic.io/pricing
+      checked: '2026-07-28'
+      confidence: inferred
+      note: 1 credit per person returned, PLUS 1 credit per email and 5 per mobile when include_contact_details is true. No results, no charge. A limit=25 search revealing mobiles can therefore cost 150+ credits — set limit deliberately.
+    unverified: "http 401 invalid_api_key, re-confirmed 2026-07-31 (identical response, and a 401 consumes no credits) — this key's plan does not include v3 people search; the sibling /v3/companies/search route on the SAME key succeeded (200, 1 credit), so this is a plan/feature gate on this one route, not a broken key or a broken endpoint"
     docs_url: https://leadmagic.io/docs/reference/people-search
 
   - id: leadmagic.account.usage
@@ -204,7 +244,7 @@ endpoints:
     input:
       note: "no parameters — the key rides in the X-API-Key header; it returns {credits}. POST /v1/credits/refresh forces a balance refresh when the number looks stale, and GET /v1/credits/health validates the key alone"
     test_request: {queryParams: {}}
-    cost: {type: free, value: 0, currency: USD, note: "free — consumes no credits and is not rate-limited; this is the registry's health probe"}
-    verified: 2026-07-28
+    cost: {type: free, value: 0, currency: USD, unit: call, note: free — consumes no credits and is not rate-limited; this is the registry's health probe}
+    verified: 2026-07-31
     example_response: examples/leadmagic.account.usage.json
     docs_url: https://leadmagic.io/docs/reference/check-credits

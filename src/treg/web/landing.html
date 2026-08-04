@@ -2,545 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>treg — share your team's keys and skills, without handing out a key</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>treg — one key for every tool your agents ever need</title>
+<meta name="description" content="One key connects your agents to premium data, account actions, and your own keys &amp; skills. Pay as you go; credentials never leave the gateway."/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
-/* ============================================================
-   PROTO 1 — measured from makeitsparkle.co (style) + cora.computer (layout)
-   Style tokens (extracted via taste-skill pipeline, real browser):
-     bg #121212 · panels #181818 · deep #090909 · hairline rgba(255,255,255,.08)
-     display: Faculty Glyphic 400 — 60/72 -1.8px, 48/56 -0.96px, 32/40 -0.64px
-     body: Geist 18px · labels: Geist Mono uppercase
-     accent #005EFF (+ rgba(0,94,255,.14) tints) · success #81FF7D · link #6BC4FF
-     CTA: candy yellow, inset stack: rgb(61,45,2) 0 -2px 6px inset,
-          rgb(241,241,142) 0 3px 3px inset, rgb(241,241,142) 0 3px 6px inset
-     radii: 24 (cards) / 12 (inner) / 900 (pills) · grid 3×376 gap 16
-   Layout DNA (cora): continuous story beats, 80-265px gaps, sticky visual
-   that advances with the copy, tiny pill CTA per beat, watermark footer.
-   ============================================================ */
-:root{
-  --bg:#121212; --deep:#090909; --panel:#181818; --panel2:#1f1f1f;
-  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
-  --ink:#ffffff; --ink70:rgba(255,255,255,.7); --ink55:rgba(255,255,255,.55);
-  --blue:#005EFF; --blue-tint:rgba(0,94,255,.14); --link:#6BC4FF; --green:#81FF7D;
-  --candy:#FFD43B;
-  --display:"Faculty Glyphic",Georgia,serif;
-  --body:"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,monospace;
-}
-*{box-sizing:border-box}
-html,body{overflow-x:clip}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
-  font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
-a{color:var(--link);text-decoration:none}
-.wrap{max-width:1160px;margin:0 auto;padding:0 28px}
-.narrow{max-width:640px;margin:0 auto;padding:0 28px;text-align:center}
-
-/* ---------- reveal on scroll ---------- */
-.rv{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
-.rv.in{opacity:1;transform:none}
-@media (prefers-reduced-motion: reduce){.rv{opacity:1;transform:none;transition:none}}
-
-/* ---------- type ---------- */
-h1,h2,h3{font-family:var(--display);font-weight:400;margin:0}
-h1{font-size:clamp(38px,4.6vw,62px);line-height:1.16;letter-spacing:-.03em;text-wrap:balance}
-h2{font-size:clamp(32px,3.4vw,48px);line-height:1.17;letter-spacing:-.02em;text-wrap:balance}
-h3{font-size:clamp(24px,2.3vw,32px);line-height:1.25;letter-spacing:-.02em}
-.eyebrow{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink55);margin-bottom:18px}
-.eyebrow.blue{color:var(--link)}
-p.lead{font-size:19px;color:var(--ink70);line-height:1.55;margin:18px auto 0;max-width:560px}
-p.sub{font-size:16.5px;color:var(--ink70);line-height:1.6;margin:14px auto 0;max-width:520px}
-
-/* ---------- candy CTA (measured inset stack) ---------- */
-.candy{display:inline-flex;align-items:center;justify-content:center;gap:10px;
-  font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
-  color:#161000;background:linear-gradient(180deg,#FFE066 0%,#FFD43B 55%,#F5C518 100%);
-  border:0;border-radius:12px;padding:17px 30px;cursor:pointer;white-space:nowrap;
-  box-shadow:rgb(61,45,2) 0 -2px 6px 0 inset, rgb(241,241,142) 0 3px 3px 0 inset,
-             rgb(241,241,142) 0 3px 6px 0 inset, rgba(0,0,0,.45) 0 14px 30px -8px;
-  transition:transform .15s,box-shadow .15s}
-.candy:hover{transform:translateY(-1px);
-  box-shadow:rgb(61,45,2) 0 -2px 6px 0 inset, rgb(241,241,142) 0 3px 3px 0 inset,
-             rgb(241,241,142) 0 3px 6px 0 inset, rgba(0,0,0,.55) 0 20px 40px -8px}
-.candy:active{transform:translateY(1px)}
-.candy.sm{padding:12px 22px;font-size:12px}
-.ghostbtn{display:inline-flex;align-items:center;gap:8px;font-family:var(--body);font-size:15px;
-  font-weight:500;color:var(--ink70);background:var(--panel);border:1px solid var(--line2);
-  border-radius:900px;padding:13px 24px;cursor:pointer;transition:border-color .15s,color .15s}
-.ghostbtn:hover{border-color:rgba(255,255,255,.3);color:var(--ink)}
-
-/* hero headline: fixed two-line break + gradient second line */
-.hero-h1{font-size:clamp(30px,4.3vw,52px);text-wrap:unset}
-.grad{background:linear-gradient(92deg,#B1A7FF 0%,#7A9DFF 42%,#4D8DFF 75%,#3941FF 105%);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
-/* provider logo marquee (the catalog strip behind the terminal) */
-.logos{max-width:920px;margin:50px auto -14px;position:relative}
-.logos .lcap{text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink55);margin-bottom:20px}
-.lviewport{overflow:hidden;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);
-  mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}
-.lrow{display:flex;gap:46px;width:max-content;animation:lscroll 44s linear infinite}
-.lviewport:hover .lrow{animation-play-state:paused}
-.litem{display:inline-flex;align-items:center;gap:9px;color:var(--ink55);
-  font-family:var(--body);font-size:13.5px;font-weight:600;white-space:nowrap;opacity:.8}
-.litem img{width:17px;height:17px;display:block;opacity:.85}
-@keyframes lscroll{to{transform:translateX(-50%)}}
-@media (prefers-reduced-motion: reduce){.lrow{animation:none}}
-
-/* ---------- hero tabs — quiet, centered IN the terminal bar ---------- */
-.herobar{position:relative;padding:10px 16px}
-.htabs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  display:flex;align-items:center;gap:7px;white-space:nowrap}
-.htab{display:inline-flex;align-items:center;gap:8px;border-radius:900px;padding:4px 12px 4px 5px;
-  background:none;border:1px solid transparent;color:var(--ink55);
-  font-family:var(--body);font-size:12.5px;font-weight:600;cursor:pointer;transition:color .15s,background .15s,border-color .15s}
-.htab:hover{color:var(--ink)}
-.htab.on{background:var(--panel2);border-color:var(--line2);color:var(--ink)}
-.htab img.hava{width:20px;height:20px;border-radius:99px;object-fit:cover;display:block}
-.harr{color:var(--ink55);display:flex;align-items:center}
-.harr svg{display:block}
-.hstack{display:inline-flex;align-items:center;padding-left:5px}
-.hstack img,.hstack .agent{width:20px;height:20px;border-radius:99px;display:block;object-fit:cover;
-  margin-left:-5px;border:1.5px solid #1f1f1f;box-sizing:content-box}
-.htab.on .hstack img,.htab.on .hstack .agent{border-color:#262626}
-.hstack .agent{display:flex;align-items:center;justify-content:center}
-.agent.claude{background:#faf5f2}
-.agent.claude svg{width:12px;height:12px;display:block}
-.agent.codex svg{width:20px;height:20px;display:block;border-radius:99px}
-@media(max-width:820px){.htabs{position:static;transform:none;margin-left:10px}.htab span:last-child{display:none}}
-
-/* ---------- floating pill nav ---------- */
-.navwrap{position:fixed;top:14px;left:0;right:0;z-index:50;padding:0 20px}
-.nav{max-width:1160px;margin:0 auto;display:flex;align-items:center;gap:22px;
-  background:rgba(24,24,24,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  border:1px solid var(--line);border-radius:900px;padding:10px 12px 10px 22px;
-  box-shadow:rgba(0,0,0,.4) 0 10px 34px -10px, rgba(255,255,255,.06) 0 1px 0 0 inset}
-.brand{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-weight:600;font-size:15px;color:var(--ink)}
-.brand .glyph{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;
-  background:var(--blue-tint);color:var(--link);font-size:14px}
-.nav .links{margin-left:auto;display:flex;align-items:center;gap:22px}
-.nav .links a{font-size:14.5px;color:var(--ink70);font-family:var(--body)} .nav .links a:hover{color:var(--ink)}
-@media(max-width:640px){.nav .links a.hidem{display:none}}
-
-/* ---------- hero ---------- */
-.hero{padding:170px 0 90px;text-align:center;position:relative}
-.hero-glow{position:absolute;top:-260px;left:50%;transform:translateX(-50%);width:1100px;height:680px;
-  background:radial-gradient(ellipse at center,rgba(0,94,255,.16) 0%,rgba(0,94,255,.05) 45%,transparent 70%);
-  pointer-events:none}
-.hero .stars{margin-top:26px;font-size:14px;color:var(--ink70)}
-.hero .stars b{color:#FFD43B;letter-spacing:2px;font-weight:400}
-.hero-cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px}
-
-/* hero terminal — the product IS a terminal; give it the glassy sparkle treatment */
-.heroterm{max-width:780px;margin:64px auto 0;text-align:left;border-radius:24px;
-  background:linear-gradient(180deg,#1a1a1a 0%,#141414 100%);
-  border:1px solid var(--line2);
-  box-shadow:rgba(255,255,255,.25) 0 1px 2px 0 inset, rgba(0,0,0,.6) 0 40px 80px -20px,
-             rgba(0,94,255,.10) 0 0 120px 0;
-  overflow:hidden}
-.heroterm .bar{display:flex;align-items:center;gap:8px;padding:15px 20px;border-bottom:1px solid var(--line)}
-.heroterm .bar > i{width:11px;height:11px;border-radius:99px;background:#2e2e2e;display:block}
-.heroterm .bar span{margin-left:8px;font-family:var(--mono);font-size:12px;color:var(--ink55)}
-.heroterm pre{margin:0;padding:24px 26px;font-family:var(--mono);font-size:13.5px;line-height:1.85;
-  color:var(--ink70);overflow-x:auto;white-space:pre}
-.c-cmd{color:#fff;font-weight:500} .c-dim{color:var(--ink55)} .c-blue{color:var(--link)}
-.c-green{color:var(--green)} .c-yellow{color:#FFD43B}
-
-/* testimonial strip (cora places this right after the hero) */
-.quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:96px}
-@media(max-width:860px){.quotes{grid-template-columns:1fr}}
-.quote{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px 24px;text-align:left}
-.quote p{margin:0;font-size:14.5px;color:var(--ink70);line-height:1.6}
-.quote .who{display:flex;align-items:center;gap:10px;margin-top:16px}
-.quote .ava{width:30px;height:30px;border-radius:99px;background:var(--blue-tint);color:var(--link);
-  display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600}
-.quote .who div b{display:block;font-size:13px;font-weight:600;color:var(--ink)}
-.quote .who div span{font-size:12px;color:var(--ink55)}
-
-/* ---------- story (cora DNA): sticky visual + scrolling beats ---------- */
-.story{padding:190px 0 60px}
-.story-head{text-align:center;max-width:620px;margin:0 auto 110px}
-/* cora-style story: the copy is ordinary scrolling content — it travels up and
-   off the screen naturally. Only the right panel is pinned; scroll position
-   through each beat drives that beat's animation. */
-.story-track{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:70px;align-items:start}
-.story-pin{display:contents}
-.beats-pin{}
-/* cora rhythm: each beat is a tall block; its text scrolls in, PINS (sticky)
-   while the block's extra height scrolls past — that scroll budget plays the
-   right-side animation — then releases and travels up and out. */
-.beat{height:225vh}
-.beat-inner{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;justify-content:center}
-@media(max-width:900px){
-  .story-track{grid-template-columns:1fr}
-  .beat{height:auto;padding:64px 0}
-  .beat-inner{position:static;height:auto}
-}
-.beat .n{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--link);
-  text-transform:uppercase;margin-bottom:14px}
-.beat h3{margin-bottom:14px}
-.beat p{margin:0;color:var(--ink70);font-size:16.5px;max-width:400px}
-.beat p code{font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--panel2);
-  border:1px solid var(--line);border-radius:6px;padding:1px 7px}
-.beat .cta{margin-top:24px}
-
-/* sticky panel — four real screens, crossfaded per beat */
-.stagewrap{position:sticky;top:0;height:100vh;display:flex;align-items:center;min-width:0}
-@media(max-width:900px){.stagewrap{display:none}}
-.stage{width:100%;border-radius:24px;background:linear-gradient(180deg,#191919 0%,#111 100%);
-  border:1px solid var(--line2);position:relative;overflow:hidden;
-  box-shadow:rgba(255,255,255,.25) 0 1px 2px 0 inset, rgba(0,0,0,.55) 0 40px 90px -24px}
-.stage .bar{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line)}
-.stage .bar i{width:10px;height:10px;border-radius:99px;background:#2e2e2e;display:block}
-.stage .bar span{margin-left:8px;font-family:var(--mono);font-size:12px;color:var(--ink55);transition:opacity .3s}
-.screens{position:relative;min-height:400px}
-.screen{position:absolute;inset:0;padding:22px 24px;opacity:0;transform:translateY(10px);
-  transition:opacity .5s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.22,1,.36,1);pointer-events:none}
-.screen.on{opacity:1;transform:none;pointer-events:auto}
-.screen pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.8;color:var(--ink70);
-  white-space:pre-wrap;word-break:break-word}
-/* animated terminal lines (scroll-scrubbed) */
-.screen pre .ln,.heroterm pre .ln{display:block;opacity:0;transform:translateY(5px);
-  transition:opacity .25s cubic-bezier(.22,1,.36,1),transform .25s cubic-bezier(.22,1,.36,1)}
-.screen pre .ln.show,.heroterm pre .ln.show{opacity:1;transform:none}
-.screen pre .ln.gap,.heroterm pre .ln.gap{height:.9em}
-.heroterm pre .ln{white-space:pre-wrap}
-.typed.typing::after{content:'▋';color:var(--ink70);animation:blink 1.1s steps(1) infinite;margin-left:1px}
-/* focus handoff: dim everything except the command the x-ray will expand */
-pre.dimothers .ln:not(.fcs){opacity:.1}
-.ln.fcs{border:1px solid transparent;border-radius:8px;padding:3px 8px;margin:0 -8px;
-  transition:opacity .25s,transform .25s,background .35s,border-color .35s}
-pre.dimothers .ln.fcs{background:var(--blue-tint);border-color:rgba(0,94,255,.45)}
-/* whose computer is this? — persona chips */
-.bar .who{display:inline-flex;align-items:center;gap:8px;margin-left:auto}
-.bar .who img{width:22px;height:22px;border-radius:99px;object-fit:cover;border:1px solid var(--line2);display:block}
-.bar .who .srv{width:22px;height:22px;border-radius:99px;display:grid;place-items:center;
-  background:var(--blue-tint);color:var(--link);font-size:11px}
-.bar .who b{font-family:var(--mono);font-size:11.5px;font-weight:500;color:var(--ink70)}
-.onwho{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--mono);
-  font-size:12px;color:var(--ink70);border:1px solid var(--line);border-radius:900px;
-  padding:5px 13px 5px 6px;background:var(--panel)}
-.onwho img{width:22px;height:22px;border-radius:99px;object-fit:cover;display:block}
-.onwho .glyph2{width:22px;height:22px;border-radius:99px;display:grid;place-items:center;
-  background:var(--blue-tint);color:var(--link);font-size:11px}
-.avastack{display:inline-flex;padding-left:7px}
-.avastack img{width:22px;height:22px;border-radius:99px;object-fit:cover;border:2px solid #151515;margin-left:-7px;display:block}
-.lava{width:18px;height:18px;border-radius:99px;object-fit:cover;vertical-align:-4px;margin-right:7px;border:1px solid var(--line2)}
-/* header-diff / x-ray screen */
-.xr-echo{padding-bottom:12px;border-bottom:1px dashed var(--line);margin-bottom:14px !important}
-.hdiff{display:flex;flex-direction:column;gap:12px}
-.hbox{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:rgba(0,94,255,.03);
-  opacity:0;transform:translateY(16px) scale(.985);
-  transition:opacity .55s cubic-bezier(.22,1,.36,1),transform .55s cubic-bezier(.22,1,.36,1)}
-.hbox.show{opacity:1;transform:none}
-.hbox .hbt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--ink55);padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
-.hbox pre{padding:12px 14px}
-.hbox.inj{border-color:rgba(0,94,255,.45);box-shadow:rgba(0,94,255,.18) 0 0 30px -6px}
-.hbox.inj .hbt{color:var(--link)}
-.tok-old{transition:opacity .4s,text-decoration-color .4s;text-decoration:line-through transparent}
-.tok-old.swap{opacity:.3;text-decoration:line-through rgba(255,122,112,.9)}
-.hl-add{color:#161000;background:linear-gradient(180deg,#FFE066,#F5C518);border-radius:5px;padding:1px 6px;
-  box-shadow:rgb(61,45,2) 0 -1px 3px inset;display:inline-block;
-  opacity:0;transform:scale(.5);transition:opacity .4s,transform .45s cubic-bezier(.34,1.56,.64,1)}
-.hl-add.show{opacity:1;transform:scale(1)}
-.inj-note{opacity:0;transition:opacity .4s} .inj-note.show{opacity:1}
-.harrow{text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--link);
-  opacity:0;transform:scaleY(.4);transition:opacity .45s,transform .45s}
-.harrow.show{opacity:1;transform:none}
-/* audit-log screen */
-.logtable{border:1px solid var(--line);border-radius:14px;overflow:hidden;font-family:var(--mono);font-size:12px}
-.logtable .lr{display:grid;grid-template-columns:74px 1fr auto;gap:12px;padding:10px 14px;
-  border-bottom:1px solid var(--line);align-items:center;
-  opacity:0;transform:translateY(9px);
-  transition:opacity .4s cubic-bezier(.22,1,.36,1),transform .4s cubic-bezier(.22,1,.36,1),background .8s}
-.logtable .lr.show{opacity:1;transform:none}
-.logtable .lr.flash{background:var(--blue-tint)}
-.logtable .lr:last-child{border-bottom:0}
-.logtable .lh{background:var(--panel);color:var(--ink55);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase}
-.logtable .who{color:var(--link)} .logtable .tool{color:var(--ink)}
-.logtable .st{font-size:11px} .logtable .st.ok{color:var(--green)} .logtable .st.warn{color:#FFD43B} .logtable .st.err{color:#ff7a70}
-.logtable .sub2{color:var(--ink55);font-size:11px;margin-top:1px}
-.stage .cap{margin:0;padding:14px 18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;
-  color:var(--ink55);text-align:center;transition:color .4s}
-.stage.s3 .cap{color:var(--green)}
-/* typing caret for the active CLI screen */
-.tcaret{display:inline-block;width:8px;height:14px;background:var(--ink70);vertical-align:-2px;
-  animation:blink 1.1s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
-
-/* ---------- leak triptych cards ---------- */
-.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-@media(max-width:760px){.tri{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:26px;
-  box-shadow:rgba(255,255,255,.12) 0 1px 0 inset}
-.card .ct{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--link)}
-.card .cbody{font-family:var(--body);margin:12px 0 0;font-size:14.5px;line-height:1.55;color:var(--ink)}
-.card .cf{font-family:var(--body);margin-top:14px;padding-top:14px;border-top:1px solid var(--line);
-  color:var(--ink70);font-size:13.5px;line-height:1.5}
-.card .cf b{color:var(--green);font-weight:600}
-
-/* ---------- live wire: vault window + call panel (view mode of the sandbox) ---------- */
-@keyframes livepulse{50%{opacity:.35}}
-.steplbl{display:flex;align-items:center;gap:10px;margin:30px 2px 12px;font-family:var(--mono);
-  font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink55)}
-.steplbl b{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
-  border-radius:999px;background:rgba(129,255,125,.12);color:var(--green);font-size:10px}
-.steplbl .ln{flex:1;height:1px;background:var(--line)}
-/* same card treatment as the studio's vault bar (.vbar): panel bg + inset top highlight */
-.vw{background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;
-  box-shadow:rgba(255,255,255,.12) 0 1px 0 inset}
-.vw-bar{display:flex;align-items:center;gap:8px;padding:11px 15px;border-bottom:1px solid var(--line);
-  font-family:var(--mono);font-size:12px;color:var(--ink70)}
-.vw-bar i{width:9px;height:9px;border-radius:99px;background:#2e2e2e;display:block}
-.vw-bar b{color:var(--link);font-weight:700}
-.vw-edit{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink55);
-  border:1px solid var(--line);border-radius:6px;padding:3px 9px;background:none;cursor:pointer}
-.vw-edit:hover{color:var(--ink)}
-.vw-row{display:flex;align-items:center;gap:9px;padding:7px 15px;font-family:var(--mono);font-size:13px;color:var(--ink)}
-.vw-row.head{padding-top:12px;font-size:15px;font-weight:700}
-.vw-row.sub{padding:4px 15px 4px 34px;color:var(--ink70);font-size:12.5px}
-.vw-row.last{padding-bottom:12px}
-.vw-row .rt{margin-left:auto;display:flex;align-items:baseline;gap:8px;white-space:nowrap;text-align:right}
-.vw-row .t{font-size:10px;letter-spacing:.1em;color:var(--ink55);text-transform:uppercase;font-weight:400}
-.vw-row .ok{color:var(--green);font-size:11.5px;font-weight:400}
-.vw-row .dots{color:var(--ink55);letter-spacing:2px;font-weight:400}
-.vwchip{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;border-radius:5px;padding:1.5px 7px;font-weight:400}
-.vwchip.skill{color:var(--link);background:var(--blue-tint)}
-.vwchip.keyc{color:var(--ink70);border:1px solid var(--line)}
-.vwchip.ep{color:var(--link);background:rgba(107,196,255,.10)}
-.vwdim{color:var(--ink55);font-weight:400}
-.vw-slogo{width:17px;height:17px;flex:none;border-radius:4px;display:block}
-/* the title truncates (never wraps) so the edit button stays put; statuses may drop to their
-   own right-aligned line on narrow screens instead of colliding with the row content */
-.vw-bar .vw-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vw-edit{flex:none;white-space:nowrap}
-.vw-row{flex-wrap:wrap}
-@media (max-width:640px){
-  .vw-sub{display:none}
-  .vw-row{font-size:12px;gap:7px;padding:6px 12px}
-  .vw-row.head{font-size:13.5px;padding-top:11px}
-  .vw-row.sub{padding-left:26px;font-size:11.5px}
-  .vw-row .ok{font-size:10.5px}
-  .vw-feedbar{padding:9px 12px}
-  .vw-feedbar .you{width:100%;margin:2px 0 0}
-  .frow,.live-row{font-size:12px;gap:9px;padding:7px 12px}
-}
-.vw-feedbar{display:flex;align-items:center;gap:8px;padding:10px 15px;border-top:1px solid var(--line);
-  border-bottom:1px solid var(--line);font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--ink55)}
-.vw-feedbar .you{margin-left:auto;letter-spacing:0;text-transform:none}
-.vw-feedbar .you b{color:var(--green);font-family:var(--mono);font-weight:600}
-.vw-feedbar .dot,.dot{width:8px;height:8px;border-radius:99px;background:var(--green);
-  box-shadow:0 0 8px var(--green);animation:livepulse 2s infinite}
-.live-rows{min-height:120px;max-height:240px;overflow-y:auto;padding:6px 0}
-.live-row{display:flex;align-items:baseline;gap:12px;padding:8px 18px;font-family:var(--mono);font-size:13px}
-.live-row .amt{color:var(--green);font-weight:600;min-width:72px}
-.live-row .cur{color:var(--ink55);font-size:11px;text-transform:uppercase}
-.live-row .idsfx{color:var(--ink55);margin-left:auto;font-size:11px}
-.live-row.fresh{animation:liverow .8s ease-out}
-@keyframes liverow{from{background:rgba(63,185,80,.18);transform:translateY(-4px)}to{background:transparent;transform:none}}
-.live-empty{padding:26px 18px;font-family:var(--mono);font-size:12.5px;color:var(--ink55);text-align:center}
-.live-row .who{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.live-row .when{color:var(--ink55);font-size:11px}
-.live-row .rcpt{margin-left:auto;font-size:11px;color:var(--link);text-decoration:none;white-space:nowrap;opacity:.85}
-.live-row .rcpt:hover{text-decoration:underline;opacity:1}
-/* tabbed command box */
-.live-tabs{display:flex;gap:2px;width:max-content;background:rgba(0,0,0,.3);border:1px solid var(--line);
-  border-bottom:0;border-radius:12px 12px 0 0;padding:6px 6px 0}
-.live-tab{font-family:var(--mono);font-size:11.5px;color:var(--ink55);background:transparent;border:0;
-  padding:7px 14px;border-radius:8px 8px 0 0;cursor:pointer}
-.live-tab.on{color:var(--ink);background:var(--panel2)}
-.live-pane{display:none}
-.live-pane.on{display:block}
-.live-pane .codewrap{border-top-left-radius:0}
-/* syntax roles inside the command */
-.lw-dim{color:var(--ink35, rgba(255,255,255,.35))}
-.lw-api{color:var(--green);font-weight:600;border-bottom:1px dashed rgba(129,255,125,.45)}
-.lw-tok{color:var(--link)}
-.lw-amt{color:#FFD43B}
-.lw-cmt{color:rgba(255,255,255,.35);font-style:italic}
-.vlive{font-family:var(--mono);font-size:9px;letter-spacing:.14em;font-weight:700;color:var(--page);
-  background:var(--green);border-radius:4px;padding:2px 6px;box-shadow:0 0 10px rgba(129,255,125,.35);
-  animation:livepulse 2s infinite}
-
-/* ---------- try-it sandbox (ported "test section", sparkle skin) ---------- */
-.sbx-sec{padding:170px 0 0}
-.guide{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
-  margin:0 0 26px;font-family:var(--mono);font-size:12.5px;color:var(--ink55)}
-.guide b{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
-  border-radius:999px;background:var(--blue-tint);color:var(--link);font-size:11px;margin-right:7px}
-.guide .ga{color:var(--link);opacity:.6}
-.vbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);
-  border:1px solid var(--line);border-radius:20px;padding:14px 18px;
-  box-shadow:rgba(255,255,255,.12) 0 1px 0 inset}
-.vbar .vl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink55);white-space:nowrap}
-.vchip{display:inline-flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line2);
-  border-radius:900px;padding:7px 8px 7px 14px;font-family:var(--mono);font-size:12.5px;line-height:1}
-.vchip .kn{color:#FFD43B;font-weight:500} .vchip .kv{color:var(--ink55)}
-.vchip .x{border:0;background:none;color:var(--ink55);cursor:pointer;font-size:12px;padding:0 3px;line-height:1}
-.vchip .x:hover{color:#ff7a70}
-.vadd{display:flex;gap:7px;margin-left:auto;align-items:center;flex-wrap:wrap}
-.vadd input{font-family:var(--mono);font-size:12.5px;background:var(--deep);border:1px solid var(--line2);
-  color:var(--ink);border-radius:900px;padding:9px 14px;min-width:0;outline:none}
-.vadd input:focus{border-color:rgba(0,94,255,.55)}
-.vadd .kn{width:110px} .vadd .kv{width:120px}
-.minibtn{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;
-  color:var(--ink);background:var(--panel2);border:1px solid var(--line2);border-radius:900px;
-  padding:9px 16px;cursor:pointer;white-space:nowrap}
-.minibtn:hover{border-color:rgba(255,255,255,.3)}
-.minibtn.blue{color:#fff;background:linear-gradient(180deg,#2f7bff,#005EFF);border-color:rgba(0,94,255,.6);
-  box-shadow:rgba(0,94,255,.4) 0 6px 18px -6px, rgba(255,255,255,.25) 0 1px 0 inset}
-.vhint{font-family:var(--mono);font-size:11.5px;color:var(--ink55);text-align:center;margin-top:10px}
-.ws{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:24px;overflow:hidden;
-  box-shadow:rgba(255,255,255,.12) 0 1px 0 inset, rgba(0,0,0,.45) 0 30px 60px -24px}
-.wsh{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.wstabs{display:inline-flex;gap:3px;background:var(--deep);border:1px solid var(--line);border-radius:900px;padding:4px}
-.wstab{border:0;background:none;color:var(--ink55);border-radius:900px;padding:8px 20px;font-family:var(--body);
-  font-size:13.5px;font-weight:600;cursor:pointer}
-.wstab.on{background:linear-gradient(180deg,#FFE066,#F5C518);color:#161000;
-  box-shadow:rgb(61,45,2) 0 -1px 4px inset, rgb(241,241,142) 0 2px 3px inset}
-.wssub{margin-left:auto;font-size:12.5px;color:var(--ink55)}
-.wsbody{padding:16px 18px}
-.trow{display:flex;align-items:center;gap:11px;padding:12px 13px;border-radius:14px;font-size:13.5px;cursor:pointer}
-.trow:hover{background:var(--panel2)}
-.trow.on{background:var(--panel2);box-shadow:inset 2px 0 0 var(--blue)}
-.trow .meth{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--green);
-  border:1px solid var(--line2);border-radius:6px;padding:2px 7px}
-.trow .host{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
-.trow .host .path{color:var(--ink55)}
-.trow .key{font-family:var(--mono);font-size:10.5px;color:#FFD43B;border:1px solid var(--line2);
-  border-radius:900px;padding:2px 9px;white-space:nowrap}
-.trow .key.warn{color:#ff7a70;border-color:rgba(255,122,112,.5)}
-.trow .sp{flex:1}
-.trow .x{border:0;background:none;color:var(--ink55);cursor:pointer;font-size:13px;visibility:hidden}
-.trow:hover .x{visibility:visible} .trow .x:hover{color:#ff7a70}
-.addwrap{margin-top:10px;border:1.5px dashed var(--line2);border-radius:14px;padding:14px}
-.addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.addrow input,.addrow select{font-family:var(--mono);font-size:12.5px;background:var(--deep);
-  border:1px solid var(--line2);color:var(--ink);border-radius:10px;padding:9px 11px;outline:none}
-.addrow input:focus{border-color:rgba(0,94,255,.55)}
-.addrow .grow{flex:1;min-width:200px}
-.addhint{font-size:12px;color:var(--ink55);margin:10px 0 0}
-.addhint b{color:var(--ink70)} .addhint code{font-family:var(--mono);color:#FFD43B;font-size:11.5px}
-.result{margin-top:14px;border:1px solid rgba(0,94,255,.4);border-radius:16px;overflow:hidden;
-  box-shadow:rgba(0,94,255,.15) 0 0 40px -8px}
-.resulth{display:flex;align-items:center;gap:10px;padding:10px 15px;background:var(--blue-tint);
-  border-bottom:1px solid var(--line)}
-.resulth .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--link)}
-.resulth .bdg{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
-  color:#FFD43B;border:1px solid rgba(255,212,59,.5);border-radius:900px;padding:3px 10px}
-.resultb{padding:14px 15px}
-.injline{font-size:13.5px;color:var(--ink55)}
-.injline b{color:#FFD43B;font-family:var(--mono);font-size:12.5px;word-break:break-all}
-.injline .nk{color:var(--ink)}
-.result pre{margin:12px 0 0;background:var(--deep);border:1px solid var(--line);border-radius:12px;
-  padding:12px 14px;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--ink70);
-  overflow-x:auto;white-space:pre;max-height:240px}
-#resultwrap{margin-top:16px}
-.curlbox .result,#resultwrap .result{margin-top:12px}
-.curlbox .cap{font-size:13px;color:var(--ink70);margin-bottom:8px} .curlbox .cap b{color:var(--ink)}
-.codewrap{position:relative;background:var(--deep);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.codewrap pre{margin:0;padding:14px 90px 14px 16px;font-family:var(--mono);font-size:12px;line-height:1.7;
-  color:var(--ink70);white-space:pre-wrap;word-break:break-all}
-.cp{position:absolute;top:10px;right:10px;font-family:var(--mono);font-size:11px;background:var(--panel2);
-  color:var(--ink70);border:1px solid var(--line2);border-radius:8px;padding:4px 11px;cursor:pointer}
-.cp:hover{color:var(--ink);border-color:rgba(255,255,255,.3)}
-/* skill card inside sandbox */
-.skcard{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel2)}
-.skh{display:flex;align-items:center;gap:10px;padding:13px 15px;font-size:14px}
-.skh b{font-weight:600}
-.skbadge{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
-  color:#161000;background:linear-gradient(180deg,#FFE066,#F5C518);border-radius:900px;padding:2px 9px}
-.skmeta{font-size:12.5px;color:var(--ink55);padding:0 15px 12px}
-.sktabs{display:flex;gap:3px;padding:0 12px}
-.sktab{font-family:var(--mono);font-size:11.5px;color:var(--ink55);background:var(--deep);
-  border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;padding:6px 12px;cursor:pointer}
-.sktab.on{color:var(--link);background:var(--panel)}
-.skbody{margin:0 12px 12px;background:var(--panel);border:1px solid var(--line);border-radius:0 10px 10px 10px;
-  padding:13px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.7;color:var(--ink70);
-  white-space:pre-wrap;min-height:110px}
-
-/* ---------- bento (sparkle "everything you need") ---------- */
-.bento-sec{padding:170px 0 0}
-.bento{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:64px}
-@media(max-width:860px){.bento{grid-template-columns:1fr}}
-.cell{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:26px;
-  min-height:210px;display:flex;flex-direction:column;position:relative;overflow:hidden}
-.cell.big{grid-column:span 2}
-@media(max-width:860px){.cell.big{grid-column:span 1}}
-.cell .ct{font-size:18px;font-weight:600;font-family:var(--body);letter-spacing:-.01em}
-.cell .cd{font-size:14.5px;color:var(--ink70);margin-top:8px;max-width:420px;line-height:1.55}
-.cell .art{margin-top:auto;padding-top:18px}
-.pillrow{display:flex;gap:8px;flex-wrap:wrap}
-.pillrow span{font-family:var(--mono);font-size:11.5px;color:var(--ink70);
-  border:1px solid var(--line2);border-radius:900px;padding:5px 12px}
-.pillrow span.b{color:var(--link);border-color:rgba(0,94,255,.4);background:var(--blue-tint)}
-.statn{font-family:var(--display);font-size:56px;line-height:1;color:var(--ink);letter-spacing:-.02em}
-.statl{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink55);margin-top:8px}
-.minitable{font-family:var(--mono);font-size:12px;color:var(--ink70);border:1px solid var(--line);
-  border-radius:12px;overflow:hidden}
-.minitable div{display:flex;justify-content:space-between;gap:12px;padding:8px 13px;border-bottom:1px solid var(--line)}
-.minitable div:last-child{border-bottom:0}
-.minitable .ok{color:var(--green)}
-
-/* ---------- comparison (manual vs treg — straight from sparkle) ---------- */
-.compare-sec{padding:170px 0 0}
-.compare{max-width:960px;margin:60px auto 0;border:1px solid var(--line);border-radius:24px;overflow:hidden;
-  background:var(--panel)}
-.compare .row{display:grid;grid-template-columns:1fr 1fr 1.15fr 1.35fr;border-bottom:1px solid var(--line)}
-.compare .row:last-child{border-bottom:0}
-.compare .row>div{padding:16px 20px;font-size:14px;display:flex;align-items:center;gap:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.compare .hd{background:var(--panel2);font-family:var(--mono);font-size:12px;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink55)}
-.compare .hd .treg{color:var(--link)}
-.compare .bad{color:var(--ink55)} .compare .mid{color:var(--ink55)} .compare .goodc{color:var(--ink)}
-.o{color:#FFD43B;font-size:15px;flex:none;line-height:1}
-.x{color:#ff7a70;font-size:13px;flex:none} .v{color:var(--green);font-size:13px;flex:none}
-@media(max-width:640px){.compare .row{grid-template-columns:1fr}.compare .row>div{border-bottom:1px dashed var(--line)}}
-
-/* ---------- big CTA panel ---------- */
-.ctapanel-sec{padding:190px 0 0}
-.ctapanel{border-radius:28px;background:linear-gradient(180deg,#101623 0%,#0b0e14 100%);
-  border:1px solid rgba(0,94,255,.28);padding:90px 30px;text-align:center;position:relative;overflow:hidden;
-  box-shadow:rgba(0,94,255,.15) 0 0 120px -20px inset, rgba(255,255,255,.12) 0 1px 0 0 inset}
-.ctapanel .bloom{position:absolute;top:-180px;left:50%;transform:translateX(-50%);width:900px;height:420px;
-  background:radial-gradient(ellipse,rgba(0,94,255,.28),transparent 70%);pointer-events:none}
-.ctapanel h2,.ctapanel p,.ctapanel .candy,.ctapanel .fine{position:relative;z-index:1}
-.ctapanel .fine{margin-top:18px;font-family:var(--mono);font-size:12px;color:var(--ink55)}
-
-/* ---------- security ---------- */
-.sec-sec{padding:170px 0 0}
-.seccards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:56px}
-@media(max-width:760px){.seccards{grid-template-columns:1fr}}
-.seccard{border-radius:24px;border:1px solid var(--line);padding:30px;background:
-  radial-gradient(120% 140% at 20% 0%,rgba(0,94,255,.10),transparent 55%),var(--panel)}
-.seccard h3{font-size:22px;margin-bottom:10px}
-.seccard p{margin:0;font-size:14.5px;color:var(--ink70);line-height:1.6}
-.seccard .mono-line{margin-top:18px;font-family:var(--mono);font-size:12px;color:var(--ink55)}
-
-/* ---------- footer w/ watermark (sparkle signature) ---------- */
-footer{margin-top:190px;border-top:1px solid var(--line);position:relative;overflow:hidden;background:var(--deep)}
-.foot-in{display:flex;align-items:center;gap:26px;flex-wrap:wrap;padding:44px 28px 150px;position:relative;z-index:1;
-  max-width:1160px;margin:0 auto}
-.foot-in a{color:var(--ink55);font-size:14px} .foot-in a:hover{color:var(--ink)}
-.foot-in .sp{flex:1}
-.watermark{position:absolute;bottom:-.28em;left:50%;transform:translateX(-50%);
-  font-family:var(--display);font-size:clamp(120px,22vw,300px);line-height:1;color:rgba(255,255,255,.045);
-  white-space:nowrap;pointer-events:none;user-select:none;letter-spacing:-.02em}
-
 /* ================================================================
-   PROTO 2 — MONOLOGUE SKIN (measured from monologue.to via taste pipeline)
-   Instrument Serif 400 display · DM Mono body · charcoal + grain + light rays
-   accents: cyan #19D0E8 (screens) · mint #A6EE98 (success) · paper buttons
-   hardware cards: big radii + multi-layer shadows + inset screens
+   treg landing v2 — HERO + CATEGORY SPOTLIGHT + IDENTITY
+   Monologue skin: charcoal + grain, Geist Pixel / Instrument Serif
+   display, DM Mono body, cyan screens, mint success, paper buttons.
+   Categories: Premium data · Account actions · Internal keys & skills.
+   One category focused at a time (sticky scroll spotlight; pills nav).
+   v1 vault-story page preserved at landing-vault-v1.html
    ================================================================ */
 :root{
   --bg:#151412; --deep:#0d0c0b; --panel:#1c1b19; --panel2:#252422;
@@ -548,497 +24,438 @@ footer{margin-top:190px;border-top:1px solid var(--line);position:relative;overf
   --ink:#f2efe8; --ink70:rgba(242,239,232,.72); --ink55:rgba(242,239,232,.55);
   --blue:#19D0E8; --blue-tint:rgba(25,208,232,.13); --link:#19D0E8; --green:#A6EE98;
   --display:"Geist Pixel","Instrument Serif",Georgia,serif;
+  --serif:"Instrument Serif",Georgia,serif;
   --body:"DM Mono",ui-monospace,monospace;
   --mono:"DM Mono",ui-monospace,monospace;
 }
-body{font-size:15px;line-height:1.55}
-/* film grain + scanlines + top light rays */
+*{box-sizing:border-box;min-width:0}
+html,body{overflow-x:clip}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:none}
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+
+/* film grain + scanlines */
 body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   background:repeating-linear-gradient(180deg,transparent 0 3px,rgba(255,255,255,.012) 3px 4px)}
-.hero{position:relative}
+
+/* ---------- floating pill nav ---------- */
+.navwrap{position:fixed;top:14px;left:0;right:0;z-index:50;padding:0 20px}
+.nav{max-width:1160px;margin:0 auto;display:flex;align-items:center;gap:22px;
+  background:rgba(21,20,18,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--line);border-radius:14px;padding:10px 12px 10px 22px;
+  box-shadow:rgba(0,0,0,.4) 0 10px 34px -10px, rgba(255,255,255,.06) 0 1px 0 0 inset}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-weight:600;font-size:15px;color:var(--ink)}
+.brand .glyph{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;
+  background:var(--blue-tint);color:var(--link);font-size:14px}
+.nav .links{margin-left:auto;display:flex;align-items:center;gap:22px}
+.nav .links a{font-family:var(--mono);font-size:13px;color:var(--ink70)} .nav .links a:hover{color:var(--ink)}
+@media(max-width:640px){.nav .links a.hidem{display:none}}
+
+/* paper button */
+.candy{display:inline-block;font-family:var(--mono);font-weight:500;letter-spacing:.04em;
+  color:#1c1b19;background:linear-gradient(180deg,#fdfcf7 0%,#eae7de 100%);
+  border:0;border-radius:999px;padding:13px 26px;font-size:14px;cursor:pointer;
+  box-shadow:rgba(178,168,165,.2) -1.3px -1.3px 2.5px 0, rgba(0,0,0,.4) 2px 2px 1.5px 0,
+    rgba(0,0,0,.5) 0 14px 30px -12px}
+.candy:hover{box-shadow:rgba(178,168,165,.2) -1.3px -1.3px 2.5px 0,
+    rgba(0,0,0,.45) 2.5px 2.5px 2px 0, rgba(0,0,0,.6) 0 18px 38px -12px}
+.candy.sm{padding:9px 18px;font-size:12px}
+
+/* ---------- hero ---------- */
+.hero{padding:138px 0 0;text-align:center;position:relative}
 .hero::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:
     linear-gradient(100deg,transparent 42%,rgba(255,255,255,.028) 47%,transparent 53%),
     linear-gradient(80deg,transparent 60%,rgba(255,255,255,.02) 66%,transparent 71%),
     radial-gradient(90% 60% at 50% -10%,rgba(255,255,255,.05),transparent 60%)}
-.hero-glow{background:radial-gradient(ellipse at center,rgba(25,208,232,.07) 0%,rgba(25,208,232,.02) 45%,transparent 70%)}
-/* type: serif display, weight 400, tight but calm */
-h1,h2,h3{font-weight:400;letter-spacing:0}
-.hero-h1{font-size:clamp(36px,5.4vw,72px);line-height:1.1}
-.grad i{font-style:normal}
-h2{font-size:clamp(30px,3.2vw,46px);line-height:1.12;letter-spacing:0}
+.hero-glow{position:absolute;top:-260px;left:50%;transform:translateX(-50%);width:1100px;height:680px;
+  background:radial-gradient(ellipse at center,rgba(25,208,232,.07) 0%,rgba(25,208,232,.02) 45%,transparent 70%);pointer-events:none}
+.kicker a{color:var(--blue);border-bottom:1px solid rgba(25,208,232,.4)}
+.kicker{display:inline-block;font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+  color:var(--blue);border:1px solid rgba(25,208,232,.35);border-radius:999px;padding:5px 15px}
+.hero-h1{font-family:var(--display);font-weight:400;letter-spacing:0;margin:26px 0 0;
+  font-size:clamp(32px,4.8vw,62px);line-height:1.14}
 .grad{background:linear-gradient(180deg,#f5f2ea 10%,#c9c3b4 55%,#8f897b 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent}
-.eyebrow,.eyebrow.blue{color:var(--ink55)}
-.kicker{color:var(--blue);border-color:rgba(25,208,232,.35)}
-p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
-/* paper button (replaces candy) */
-.candy{font-family:var(--mono);font-weight:500;letter-spacing:.04em;text-transform:none;
-  color:#1c1b19;background:linear-gradient(180deg,#fdfcf7 0%,#eae7de 100%);
-  border-radius:999px;box-shadow:rgba(178,168,165,.2) -1.3px -1.3px 2.5px 0,
-    rgba(0,0,0,.4) 2px 2px 1.5px 0, rgba(0,0,0,.5) 0 14px 30px -12px}
-.candy:hover{box-shadow:rgba(178,168,165,.2) -1.3px -1.3px 2.5px 0,
-    rgba(0,0,0,.45) 2.5px 2.5px 2px 0, rgba(0,0,0,.6) 0 18px 38px -12px}
-.ghostbtn{font-family:var(--mono)}
-/* hero watermark — giant silver serif behind the hardware */
-.hero-stage{position:relative}
-.hero-wm{position:absolute;left:50%;bottom:-.52em;transform:translateX(-50%);z-index:0;
-  font-family:var(--display);font-size:clamp(200px,30vw,430px);line-height:1;
-  background:linear-gradient(180deg,#b9b3a6 0%,#6e695f 55%,#3a372f 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  opacity:.5;pointer-events:none;user-select:none;white-space:nowrap}
-.hero-stage .heroterm{position:relative;z-index:1}
-.hero-stage{padding-bottom:150px}
-.hero .stars b{color:#d8d2c2;letter-spacing:3px}
-/* hardware terminal: big radius, layered stage shadows, inset screen */
-.heroterm,.stage{border-radius:26px;border:1px solid rgba(255,255,255,.1);
+.grad2{background:linear-gradient(180deg,#b8f0f8 0%,#19D0E8 55%,#0a7f92 115%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+p.sub{font-family:var(--mono);font-size:14.5px;line-height:1.65;color:var(--ink70);
+  max-width:600px;margin:20px auto 0}
+p.sub b{color:var(--ink);font-weight:500}
+
+/* ---------- give-this-to-your-agent box ---------- */
+.givebox{max-width:560px;margin:36px auto 0;border-radius:18px;position:relative;z-index:2;
   background:linear-gradient(180deg,#232220 0%,#171614 100%);
-  box-shadow:rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0,
-    rgba(0,0,0,.35) 18px 12px 38px 6px, rgba(0,0,0,.16) 40px 26px 70px 10px}
-.heroterm pre,.screens{background:rgba(0,0,0,.28);
-  box-shadow:rgba(0,0,0,.5) 0 2px 10px 0 inset}
-.heroterm .bar>i{background:#333130}
-/* syntax remap: cyan tools · mint success · silver keys */
-.c-cmd{color:#fff} .c-blue{color:#19D0E8} .c-green{color:#A6EE98} .c-yellow{color:#d8d2c2}
-/* tabs */
-.htab.on{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.16)}
-.hstack img,.hstack .agent{border-color:#232220}
-.htab.on .hstack img,.htab.on .hstack .agent{border-color:#2c2b29}
-/* marquee: silver */
-.logos .lcap{color:var(--ink55)}
-/* sandbox */
-.vbar,.ws{border-radius:22px;background:linear-gradient(180deg,#201f1d 0%,#181715 100%);
-  box-shadow:rgba(255,255,255,.08) 0 1px 0 inset, rgba(0,0,0,.5) 0 24px 50px -24px}
-.vchip .kn{color:#d8d2c2}
-.wstab{font-family:var(--mono)}
-.wstab.on{background:linear-gradient(180deg,#fdfcf7,#eae7de);color:#1c1b19;
-  box-shadow:rgba(0,0,0,.35) 1.5px 1.5px 1px 0, rgba(178,168,165,.2) -1px -1px 2px 0}
-.trow .key{color:#d8d2c2}
-.trow.on{box-shadow:inset 2px 0 0 var(--blue)}
-.minibtn{font-family:var(--mono)}
-.minibtn.blue{background:linear-gradient(180deg,#2adcf2,#12b6cc);border-color:transparent;color:#062a30;
-  box-shadow:rgba(25,208,232,.3) 0 6px 18px -6px, rgba(255,255,255,.35) 0 1px 0 inset}
-.result{border-color:rgba(25,208,232,.35);box-shadow:rgba(25,208,232,.12) 0 0 40px -8px}
-.resulth{background:var(--blue-tint)} .resulth .lbl{color:var(--blue)}
-.resulth .bdg{color:#d8d2c2;border-color:rgba(216,210,194,.4)}
-.injline b{color:#d8d2c2}
-.skbadge{background:linear-gradient(180deg,#fdfcf7,#eae7de);color:#1c1b19}
-.skcard{border-radius:18px}
-/* story stage */
-.stage .bar span{font-family:var(--mono)}
-.beat .n{color:var(--blue)}
-.beat h3{font-size:clamp(26px,2.6vw,38px)}
-.hbox{background:rgba(0,0,0,.22)}
-.hbox.inj{border-color:rgba(25,208,232,.45);box-shadow:rgba(25,208,232,.15) 0 0 30px -6px}
-.hbox.inj .hbt{color:var(--blue)}
-.hl-add{color:#062a30;background:linear-gradient(180deg,#2adcf2,#12b6cc);
-  box-shadow:rgba(6,42,48,.6) 0 -1px 3px inset}
-.harrow{color:var(--blue)}
-.logtable .who{color:var(--blue)}
-.logtable .st.warn{color:#d8d2c2}
-.onwho .glyph2{background:var(--blue-tint);color:var(--blue)}
-.brand .glyph{background:var(--blue-tint);color:var(--blue)}
-/* comparison */
-.compare{border-radius:20px}
-.compare .hd .treg{color:var(--blue)}
-.o{color:#d8d2c2}
-/* leak cards */
-.card{border-radius:20px;background:linear-gradient(180deg,#1e1d1b 0%,#171614 100%);
-  box-shadow:rgba(255,255,255,.07) 0 1px 0 inset, rgba(0,0,0,.4) 0 18px 40px -20px}
-.card .ct{color:var(--blue)}
-.card .cf b{color:var(--green)}
-/* final CTA: the teal glass screen */
-.ctapanel{background:linear-gradient(180deg,#0E5D66 0%,#083840 100%);
-  border:1px solid rgba(25,208,232,.3);border-radius:26px;
-  box-shadow:rgb(10,72,80) 6px 6px 10px 0 inset, rgba(255,255,255,.2) 4px 4px 4px 0,
-    rgba(255,255,255,.18) 1px 1px 2px 0, rgba(0,0,0,.5) 0 30px 70px -20px}
-.ctapanel .bloom{background:radial-gradient(ellipse,rgba(25,208,232,.25),transparent 70%)}
-.ctapanel .eyebrow{color:rgba(214,244,248,.75)}
-.ctapanel p.sub{color:rgba(224,246,249,.8)}
-.ctapanel a{color:#bdf0f7}
-.ctapanel .fine{color:rgba(214,244,248,.6)}
-/* nav + footer */
-.nav{background:rgba(21,20,18,.85);border-radius:14px}
-.nav .links a{font-family:var(--mono);font-size:13px}
-.watermark{background:linear-gradient(180deg,#8f897b 0%,#4a463d 60%,#26241f 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;opacity:.75}
-.codewrap,.lc-pre{border-radius:12px}
-.cp{font-family:var(--mono)}
-.trustline span{border-radius:8px}
-
-/* ================================================================
-   MOBILE HARDENING — audited at 375×812
-   ================================================================ */
-@media(max-width:820px){
-  /* hero tabs: drop below the bar, keep labels, wrap */
-  .herobar{flex-wrap:wrap}
-  .htabs{position:static;transform:none;flex-basis:100%;justify-content:center;
-    flex-wrap:wrap;gap:8px;margin-top:10px}
-  .htab span:last-child{display:inline}
-  .htab{font-size:12px;padding:5px 12px 5px 7px}
-}
-@media(max-width:760px){
-  /* nav: one tight row, nothing wraps */
-  .navwrap{top:8px;padding:0 10px}
-  .nav{gap:10px;padding:7px 7px 7px 13px;border-radius:12px}
-  .brand{font-size:13px;white-space:nowrap}
-  .brand .glyph{width:24px;height:24px;font-size:12px}
-  .nav .links{gap:11px} .nav .links a{font-size:12px;white-space:nowrap}
-  .candy.sm{padding:9px 14px;font-size:11px}
-  /* hero rhythm */
-  .hero{padding:128px 0 56px}
-  .hero-cta{gap:10px}
-  .heroterm pre{min-height:0;font-size:12px;padding:16px 14px}
-  #hero-pre{min-height:210px !important}
-  .logos{margin-top:36px}
-  .hero-stage{padding-bottom:80px}
-  /* try-it guide: stacked, no trailing arrows */
-  .guide{flex-direction:column;align-items:flex-start;gap:9px;max-width:320px;
-    margin-left:auto;margin-right:auto}
-  .guide .ga{display:none}
-  /* sandbox tabs + form */
-  .wstabs{width:100%;justify-content:center}
-  .wstab{font-size:12px;padding:7px 12px;white-space:nowrap}
-  .wssub{margin:8px 0 0;flex-basis:100%;text-align:center}
-  .addrow .grow{flex-basis:100%}
-  .wsbody{padding:12px}
-  .trow{flex-wrap:wrap}
-  /* comparison: real columns, swipe sideways (beats meaningless stacking) */
-  .compare{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .compare .row{grid-template-columns:120px 145px 165px 210px;min-width:640px;
-    border-bottom:1px solid var(--line)}
-  .compare .row>div{padding:12px 13px;font-size:12.5px;border-bottom:0}
-  /* sections breathe less on small screens */
-  .sbx-sec,.compare-sec,.sec-sec{padding-top:100px}
-  .ctapanel-sec{padding-top:110px}
-  .ctapanel{padding:56px 20px}
-  .story{padding-top:110px}
-  .story-head{margin-bottom:40px}
-  .beat{padding:44px 0}
-  .beat h3{font-size:24px}
-  footer{margin-top:110px}
-  .foot-in{padding:32px 20px 104px;gap:16px}
-}
-
-@media(max-width:760px){
-  .compare .row>div:first-child{white-space:normal;font-size:12px;line-height:1.35}
-}
-@media(max-width:480px){
-  .htabs{gap:6px}
-  .htab{font-size:11.5px;gap:8px;padding:4px 10px 4px 6px}
-  .htab img.hava{width:19px;height:19px}
-  .hstack img,.hstack .agent{width:18px;height:18px}
-  .agent.claude svg{width:10px;height:10px}
-  .agent.codex svg{width:18px;height:18px}
-}
-
-/* ===== mobile round 2 (final file) ===== */
-.tl .tl-s{display:none}
-@media(max-width:480px){
-  /* hero tabs: one row, short labels */
-  .tl .tl-l{display:none} .tl .tl-s{display:inline}
-  .htabs{flex-wrap:nowrap;gap:5px;margin-top:8px}
-  .htab{font-size:11px;gap:7px;padding:4px 9px 4px 5px}
-  .htab img.hava{width:18px;height:18px}
-  .hstack{padding-left:4px}
-  .hstack img,.hstack .agent{width:17px;height:17px;margin-left:-4px}
-  .agent.claude svg{width:9px;height:9px}
-  .agent.codex svg{width:17px;height:17px}
-  .harr svg{width:7px;height:13px}
-}
-@media(max-width:760px){
-  /* try-it: centered guide rows, full-width vault form, equal-width tabs */
-  .guide{align-items:center;max-width:none}
-  .vbar{gap:10px}
-  .vbar .vl{flex-basis:100%;text-align:left}
-  .vadd{margin-left:0;flex-basis:100%}
-  .vadd input{flex:1;width:auto;min-width:0}
-  .wstabs{display:flex;padding:4px}
-  .wstab{flex:1;text-align:center;padding:8px 6px}
-}
-@media(max-width:900px){
-  /* how-it-works on mobile: text pins on top, the LIVE animation rides fixed
-     at the bottom — same scroll-driven engine as desktop */
-  .story-track{display:block}
-  .beat{height:175vh;padding:0}
-  .beat-inner{position:sticky;top:84px;height:auto;min-height:0;justify-content:flex-start}
-  .beat h3{font-size:22px}
-  .beat p{font-size:13.5px}
-  .stagewrap{display:flex;position:fixed;left:10px;right:10px;bottom:10px;top:auto;
-    height:42vh;z-index:35;opacity:0;pointer-events:none;transition:opacity .35s;min-width:0}
-  .stagewrap.mob-on{opacity:1;pointer-events:auto}
-  .stage{width:100%;display:flex;flex-direction:column}
-  .screens{min-height:0;flex:1}
-  .screen{padding:12px 14px}
-  .screen pre{font-size:10.5px;line-height:1.65}
-  .stage .bar{padding:9px 14px}
-  .stage .cap{padding:8px 12px;font-size:10px}
-  .logtable{font-size:10px}
-  .logtable .lr{grid-template-columns:56px 1fr auto;gap:8px;padding:7px 10px}
-  .hdiff{gap:7px}
-  .hbox pre{padding:8px 10px;font-size:10px}
-  .hbox .hbt{padding:6px 10px;font-size:9.5px}
-  .harrow{font-size:10px}
-  .xr-echo{margin-bottom:8px !important;padding-bottom:8px;font-size:10.5px}
-}
-
-/* ===== mobile round 3 ===== */
-@media(max-width:760px){
-  .wrap{padding:0 16px}
-}
-@media(max-width:480px){
-  .htab{font-size:10.5px;gap:6px;padding:4px 8px 4px 5px}
-  .htab img.hava{width:16px;height:16px}
-  .hstack img,.hstack .agent{width:15px;height:15px;margin-left:-4px}
-  .agent.claude svg{width:8px;height:8px}
-  .agent.codex svg{width:15px;height:15px}
-  .htab .hstack img{display:none}   /* label already says Team — keep the agent chips only */
-}
-@media(max-width:900px){
-  .stage{height:100%}
-  .stage .bar{flex-wrap:nowrap}
-  .stage .bar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-  .stage .bar .who b{display:none}
-}
-
-/* ===== sign-in modal ===== */
-.scrim{position:fixed;inset:0;background:rgba(8,7,6,.72);display:none;place-items:center;z-index:120;padding:20px;
-  backdrop-filter:blur(6px)}
-.scrim.open{display:grid}
-.smodal{width:min(400px,94vw);background:linear-gradient(180deg,#201f1d,#171614);border:1px solid var(--line2);
-  border-radius:20px;padding:30px 28px;text-align:center;position:relative;
-  box-shadow:rgba(255,255,255,.08) 0 1px 0 inset, rgba(0,0,0,.7) 0 40px 90px -20px}
-.smodal .cls{position:absolute;top:12px;right:15px;background:none;border:0;color:var(--ink55);font-size:16px;cursor:pointer}
-.smodal .cls:hover{color:var(--ink)}
-.smodal h3{font-family:var(--display);font-weight:400;font-size:24px;margin:4px 0 6px;letter-spacing:0}
-.smodal p{font-family:var(--mono);font-size:12px;color:var(--ink55);margin:0 0 18px}
-.smodal .candy,.smodal .ghostbtn{width:100%;justify-content:center;margin-top:9px}
-.smodal .div{display:flex;align-items:center;gap:10px;margin:16px 0 6px;color:var(--ink55);font-size:10.5px;
-  letter-spacing:.12em;text-transform:uppercase}
-.smodal .div::before,.smodal .div::after{content:"";flex:1;height:1px;background:var(--line)}
-.smodal input{width:100%;margin-top:9px;background:var(--deep);border:1px solid var(--line2);color:var(--ink);
-  border-radius:9px;padding:11px 13px;font-family:var(--mono);font-size:13px;outline:none;
-  box-shadow:rgba(0,0,0,.4) 0 2px 8px 0 inset}
-.smodal input:focus{border-color:rgba(25,208,232,.5)}
-.smodal .err{color:var(--red,#f08a7a);font-size:11.5px;margin-top:10px;min-height:14px}
-</style>
-<style>
-/* ===== hero scroll story (hx-*) — ported from prototypes/hero-v2.html ===== */
-/* ================================================================
-   SCROLL SHELL — the stage pins; scroll scrubs the story
-   ================================================================ */
-.hx-scrolly{height:430vh;position:relative}
-.hx-sticky{position:sticky;top:0;height:100vh;overflow:hidden;display:flex;align-items:flex-start;justify-content:center}
-.hx-stage{max-width:1100px;width:100%;padding:6vh 28px 60px;position:relative;z-index:2;will-change:transform}
-.hx-scrollhint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:5;
-  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink55);
-  opacity:1;transition:opacity .4s;pointer-events:none}
-.hx-scrollhint.hx-off{opacity:0}
-
-/* ================================================================
-   ACT 1 — the DM chaos (neat staggered cluster, mild tilts)
-   ================================================================ */
-.hx-dms{display:flex;flex-direction:column;gap:16px;align-items:center}
-.hx-dmrow{display:flex;gap:18px;justify-content:center}
-.hx-dmrow.hx-r2{transform:translateX(46px)}
-.hx-dm{display:flex;gap:11px;align-items:flex-start;text-align:left;
-  
-  background:linear-gradient(180deg,#232220 0%,#1c1b19 100%);
-  border:1px solid var(--line);border-radius:14px;padding:12px 16px;
-  box-shadow:rgba(255,255,255,.06) 0 1px 0 inset, rgba(0,0,0,.5) 0 10px 24px -10px;
-  opacity:0;transform:translateY(14px) scale(.92);
-  transition:opacity .35s cubic-bezier(.22,1,.36,1),transform .35s cubic-bezier(.22,1,.36,1),filter .5s}
-.hx-dm.hx-show{opacity:1;transform:var(--tilt,none)}
-.hx-dm .hx-av{width:30px;height:30px;border-radius:8px;flex:none;object-fit:cover;display:block}
-.hx-dm .hx-av.hx-agent{display:flex;align-items:center;justify-content:center;background:#faf5f2}
-.hx-dm .hx-av.hx-agent svg{width:16px;height:16px}
-.hx-dm .hx-av.hx-codex{background:#fff}
-.hx-dm .hx-av.hx-codex svg{width:26px;height:26px;border-radius:7px}
-.hx-dm .hx-who{font-size:12px;font-weight:500;color:var(--ink)}
-.hx-dm .hx-who i{font-style:normal;font-size:9.5px;letter-spacing:.08em;color:var(--ink55);
-  background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1px}
-.hx-dm .hx-who span{font-weight:400;color:var(--ink55);font-size:10.5px;margin-left:7px}
-.hx-dm .hx-msg{font-size:12.5px;color:var(--ink70);margin-top:3px;white-space:nowrap}
-.hx-dm .hx-msg code{color:var(--blue);background:var(--blue-tint);border-radius:4px;padding:1px 5px;font-size:11.5px}
-
-/* ---- the beam ---- */
-.hx-beam{position:relative;height:170px;margin:10px 0 6px}
-.hx-beam .hx-line{position:absolute;left:50%;top:0;width:1px;height:calc(50% - 38px);
-  background:linear-gradient(180deg,transparent,rgba(25,208,232,.7));
-  opacity:0;transition:opacity .6s}
-.hx-beam .hx-line.hx-lo{top:auto;bottom:0;
-  background:linear-gradient(180deg,rgba(25,208,232,.7),rgba(25,208,232,.85))}
-.hx-beam.hx-on .hx-line{opacity:1}
-.hx-beam .hx-cap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  font-family:var(--display);font-size:28px;letter-spacing:.02em;color:var(--ink);white-space:nowrap;
-  opacity:0;transition:opacity .6s}
-.hx-beam .hx-cap b{color:var(--blue);font-weight:400}
-.hx-beam.hx-on .hx-cap{opacity:1}
-
-/* ================================================================
-   ACT 2 — vault as the ROOT of a tree → distributed to the team
-   ================================================================ */
-.hx-vault{width:min(560px,92%);margin:0 auto;text-align:left;opacity:0;transition:opacity .5s,box-shadow .5s;border-radius:26px;border:1px solid rgba(255,255,255,.1);
-  background:linear-gradient(180deg,#232220 0%,#171614 100%);
-  box-shadow:rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0,
-    rgba(0,0,0,.35) 18px 12px 38px 6px, rgba(0,0,0,.16) 40px 26px 70px 10px;
-  position:relative;z-index:4;transition:box-shadow .5s}
-.hx-vault.hx-pulse{box-shadow:rgba(25,208,232,.28) 0 0 0 1px, rgba(25,208,232,.12) 0 0 44px 4px,
-    rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0}
-.hx-vault .hx-bar{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line)}
-.hx-vault .hx-bar i{width:11px;height:11px;border-radius:99px;background:#333130;display:block}
-.hx-vault .hx-bar span{margin-left:8px;font-size:12px;color:var(--ink55)}
-.hx-vault .hx-bar b{color:var(--blue);font-weight:500}
-.hx-vrows{padding:12px 20px 16px;background:rgba(0,0,0,.28);border-radius:0 0 25px 25px;
-  box-shadow:rgba(0,0,0,.5) 0 2px 10px 0 inset;min-height:100px}
-.hx-vrow{display:flex;align-items:center;gap:10px;padding:8.5px 6px;font-size:13px;
-  border-bottom:1px solid var(--line);
-  opacity:0;transform:translateY(8px);transition:opacity .4s cubic-bezier(.22,1,.36,1),transform .4s cubic-bezier(.22,1,.36,1)}
-.hx-vrow.hx-show{opacity:1;transform:none}
-.hx-vrow:last-child{border-bottom:0}
-.hx-vrow .hx-t{margin-left:auto;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink55)}
-.hx-vrow .hx-chip{font-size:10px;letter-spacing:.06em;border-radius:5px;padding:2px 8px}
-.hx-vrow .hx-chip.hx-skill{color:var(--blue);background:var(--blue-tint)}
-.hx-vrow .hx-chip.hx-key{color:var(--ink55);border:1px solid var(--line2)}
-.hx-vrow.hx-sub{padding-left:32px;color:var(--ink55);font-size:12px}
-.hx-vrow.hx-sub .ok{color:var(--green);margin-left:auto;font-size:11px}
-.hx-vrow .hx-dots{color:var(--ink55);letter-spacing:2px}
-
-/* ---- the tree stage: paths fan out from the vault to the team ---- */
-.hx-tree{position:relative;height:412px;margin-top:-8px}
-.hx-tree svg.hx-paths{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
-.hx-tree svg.hx-paths path{fill:none;stroke:rgba(25,208,232,.5);stroke-width:1.2}
-.hx-tree.hx-on svg.hx-paths path{stroke-dashoffset:0}
-.hx-tree svg.hx-paths circle{fill:var(--blue);opacity:0;transition:opacity .3s}
-.hx-tree.hx-on svg.hx-paths circle{opacity:.9}
-
-/* featured member: the terminal, front and center */
-.hx-term{position:absolute;left:50%;top:118px;transform:translateX(-50%);width:min(520px,90%);z-index:4;
-  text-align:left;border-radius:22px;border:1px solid rgba(255,255,255,.1);z-index:4;
-  background:linear-gradient(180deg,#232220 0%,#171614 100%);
+  border:1px solid rgba(255,255,255,.12);
   box-shadow:rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0,
     rgba(0,0,0,.35) 18px 12px 38px 6px;
-  opacity:0;transform:translateX(-50%) translateY(18px);
-  transition:opacity .5s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.22,1,.36,1)}
-.hx-term.hx-show{opacity:1;transform:translateX(-50%)}
-.hx-term .hx-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
-.hx-term .hx-bar i{width:10px;height:10px;border-radius:99px;background:#333130;display:block}
-.hx-term .hx-bar img{width:20px;height:20px;border-radius:99px;object-fit:cover;margin-left:6px}
-.hx-term .hx-bar span{margin-left:4px;font-size:11.5px;color:var(--ink55)}
-.hx-term pre{margin:0;padding:18px 22px;font-family:var(--mono);font-size:13px;line-height:1.9;
-  background:rgba(0,0,0,.28);border-radius:0 0 21px 21px;box-shadow:rgba(0,0,0,.5) 0 2px 10px 0 inset;color:var(--ink)}
-.hx-term .hx-ln{display:block;opacity:0;transform:translateY(5px);transition:opacity .35s,transform .35s}
-.hx-term .hx-ln.hx-show{opacity:1;transform:none}
-.hx-term .hx-c-mut{color:var(--ink55)} .hx-term .c-blue{color:var(--blue)} .hx-term .c-green{color:var(--green)}
+  padding:14px 14px 12px}
+.givebox .gb-h{display:flex;align-items:center;justify-content:center;gap:10px;
+  font-family:var(--mono);font-size:13px;font-weight:500;color:var(--ink);padding:2px 4px 12px}
+.givebox .gb-h .agicons{display:flex;gap:5px}
+.givebox .gb-h img{width:19px;height:19px;display:block}
+.givebox .gb-cmd{display:flex;align-items:center;gap:10px;background:#0b1a1d;border-radius:11px;
+  border:1px solid rgba(25,208,232,.4);padding:13px 14px;
+  box-shadow:rgba(0,0,0,.55) 0 2px 8px 0 inset, rgba(25,208,232,.12) 0 0 24px 0;text-align:left}
+.givebox .gb-cmd .ps{color:var(--green);flex:none;font-size:13px}
+.givebox .gb-cmd code{font-family:var(--mono);font-size:12.5px;color:#d6f4f8;
+  white-space:nowrap;overflow-x:auto;scrollbar-width:none;flex:1}
+.givebox .gb-cmd code::-webkit-scrollbar{display:none}
+.givebox .gb-cmd button{flex:none;border:1px solid rgba(255,255,255,.18);background:transparent;
+  color:rgba(242,239,232,.65);font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+  border-radius:7px;padding:5px 10px;cursor:pointer}
+.givebox .gb-cmd button:hover{color:#fff;border-color:rgba(255,255,255,.35)}
+.givebox .gb-cmd button.done{color:var(--green);border-color:rgba(166,238,152,.4)}
+.underlinks{margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--ink55)}
+.underlinks a{color:var(--ink55);border-bottom:1px solid var(--line2);padding-bottom:1px}
+.underlinks a:hover{color:var(--ink)}
 
-/* the rest of the team: little profile cards floating BEHIND, blurred */
-.hx-member{position:absolute;display:flex;align-items:center;gap:9px;z-index:2;
-  background:linear-gradient(180deg,#1b1a18 0%,#161513 100%);border:1px solid var(--line);
-  border-radius:12px;padding:9px 13px;text-align:left;opacity:0;
-  transition:opacity .7s cubic-bezier(.22,1,.36,1)}
-.hx-member.hx-show{opacity:1}
-.hx-member .hx-n{color:var(--ink70)}
-.hx-member.hx-near.hx-show{opacity:1}
-.hx-member img,.hx-member .hx-agent{width:24px;height:24px;border-radius:99px;object-fit:cover;display:block;flex:none}
-.hx-member .hx-agent{display:flex;align-items:center;justify-content:center;background:#faf5f2}
-.hx-member .hx-agent svg{width:13px;height:13px}
-.hx-member .hx-agent.hx-codex{background:#fff}
-.hx-member .hx-agent.hx-codex svg{width:21px;height:21px;border-radius:99px}
-.hx-member .hx-n{font-size:11.5px;color:var(--ink)}
-.hx-member .hx-k{font-size:9.5px;color:var(--ink55)}
-.hx-member .hx-tok{margin-left:6px;font-size:9px;color:var(--green);border:1px solid rgba(166,238,152,.35);
-  border-radius:999px;padding:1px 7px;white-space:nowrap}
-
-.hx-logsec{margin:0 auto;max-width:760px;text-align:center}
-.hx-logsec h2{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.02em;line-height:1.15;
-  color:var(--ink);opacity:0;transform:translateY(16px);
-  transition:opacity .5s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.22,1,.36,1)}
-.hx-logsec h2 b{font-weight:400;color:var(--blue)}
-.hx-logsec h2.hx-show{opacity:1;transform:none}
-.hx-logsec .hx-sub{font-size:12.5px;color:var(--ink55);margin-top:10px;opacity:0;transition:opacity .5s}
-.hx-logsec .hx-sub.hx-show{opacity:1}
-.hx-logcard{margin:22px auto 0;text-align:left;opacity:0;transition:opacity .5s;border-radius:22px;border:1px solid rgba(255,255,255,.1);
+/* ================================================================
+   CATEGORY SPOTLIGHT — agents pinned, one category at a time
+   ================================================================ */
+.cats{position:relative;margin-top:-52px}
+.cats-track{position:relative;height:420vh}
+.cats-sticky .givebox{margin:0 auto;width:100%;max-height:220px;
+  transition:max-height .45s cubic-bezier(.22,1,.36,1),opacity .35s,margin .45s,padding .45s,border-width .45s}
+.cats-sticky.scrolled .givebox{max-height:0;opacity:0;margin:0 auto;padding-top:0;padding-bottom:0;
+  border-width:0;overflow:hidden;pointer-events:none}
+.cats-sticky{position:sticky;top:0;min-height:100vh;display:flex;flex-direction:column;
+  justify-content:center;gap:16px;padding:72px 0 16px}
+/* agent icon row */
+.agents{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;position:relative;z-index:2}
+.acard{width:52px;height:52px;border-radius:15px;border:1px solid rgba(255,255,255,.1);
+  display:grid;place-items:center;
   background:linear-gradient(180deg,#232220 0%,#171614 100%);
-  box-shadow:rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0,
-    rgba(0,0,0,.35) 18px 12px 38px 6px}
-.hx-logcard .hx-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
-.hx-logcard .hx-bar i{width:10px;height:10px;border-radius:99px;background:#333130;display:block}
-.hx-logcard .hx-bar span{margin-left:6px;font-size:11.5px;color:var(--ink55)}
-.hx-logrows{padding:10px 18px 14px;background:rgba(0,0,0,.28);border-radius:0 0 21px 21px;
-  box-shadow:rgba(0,0,0,.5) 0 2px 10px 0 inset}
-.hx-lrow2{display:flex;align-items:center;gap:18px;padding:9px 8px;font-size:12.5px;
-  border-bottom:1px solid var(--line);color:var(--ink70);
-  opacity:0;transform:translateY(8px);transition:opacity .4s cubic-bezier(.22,1,.36,1),transform .4s cubic-bezier(.22,1,.36,1)}
-.hx-lrow2.hx-show{opacity:1;transform:none}
-.hx-lrow2:last-child{border-bottom:0}
-.hx-lrow2 .hx-ts{color:var(--ink55);width:72px;flex:none}
-.hx-lrow2 .hx-who{color:var(--ink);width:190px;flex:none}
-.hx-lrow2 .hx-what{color:var(--ink55);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hx-lrow2 .hx-res{color:var(--green);flex:none}
-.hx-lrow2.hx-hot{background:var(--blue-tint);border-radius:8px;border-bottom-color:transparent}
-.hx-lrow2.hx-hot .hx-who,.hx-lrow2.hx-hot .hx-what{color:var(--ink)}
-.hx-treecap{position:absolute;left:50%;top:100%;margin-top:20px;transform:translateX(-50%);z-index:4;
-  font-family:var(--display);font-size:28px;letter-spacing:.02em;color:var(--ink);white-space:nowrap;
-  opacity:0;transition:opacity .6s;transition-delay:.1s}
-.hx-treecap b{color:var(--blue);font-weight:400}
-.hx-treecap.hx-show{opacity:1}
-/* connector: extends from under the terminal caption down to the log */
-.hx-beam2{position:relative;height:150px;margin-top:-6px}
-.hx-beam2 .hx-line{position:absolute;left:50%;top:0;height:100%;width:1px;
-  background:linear-gradient(180deg,rgba(25,208,232,.85),rgba(25,208,232,.3));
-  transform:scaleY(0);transform-origin:top}
+  box-shadow:rgba(255,255,255,.09) 0 1px 0 inset, rgba(0,0,0,.55) 3px 3px 12px 0,
+    rgba(0,0,0,.3) 10px 8px 24px 4px}
+.acard img{width:26px;height:26px;border-radius:7px;object-fit:contain}
+.acard .aglyph{font-size:18px;color:var(--ink70);font-family:var(--mono)}
+.keynode{position:relative;display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12.5px;color:var(--ink);
+  border:1px solid rgba(25,208,232,.4);border-radius:13px;padding:10px 18px;
+  background:linear-gradient(180deg,#10282c 0%,#0b1a1d 100%);
+  box-shadow:rgba(25,208,232,.12) 0 1px 0 inset, rgba(0,0,0,.55) 3px 3px 12px 0, rgba(25,208,232,.08) 0 0 40px 0}
+.keynode::before{content:"";position:absolute;left:50%;top:-17px;height:16px;width:1px;background:rgba(25,208,232,.35)}
+.keynode .kglyph{display:grid;place-items:center;width:22px;height:22px;border-radius:7px;
+  background:var(--blue-tint);color:var(--blue);font-size:11px}
+.keynode i{font-style:normal;font-size:10px;color:var(--ink55)}
+/* wires */
+.wirebox{position:relative;height:46px;margin:-10px 0}
+.wirebox svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* category pills */
+/* tabs ARE the section titles — big serif, no chrome */
+.pills{display:flex;justify-content:center;gap:40px;flex-wrap:wrap;position:relative;z-index:2}
+.pill{background:transparent;border:0;cursor:pointer;padding:4px 8px;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+.pill em{font-family:var(--mono);font-style:normal;font-size:10px;letter-spacing:.22em;color:var(--ink55);transition:color .3s}
+.pill b{font-family:var(--serif);font-weight:400;font-size:clamp(21px,2.4vw,29px);line-height:1.1;
+  color:var(--ink55);letter-spacing:.01em;transition:color .3s}
+.pill b i{font-style:italic}
+.pill:hover b{color:var(--ink70)}
+.pill::after{content:"";height:2px;width:0;border-radius:2px;background:var(--blue);
+  transition:width .4s cubic-bezier(.22,1,.36,1);margin-top:3px}
+.pill.on em{color:var(--blue)}
+.pill.on b{color:var(--ink)}
+.pill.on b i{color:var(--green)}
+.pill.on::after{width:58px}
+/* panel viewport */
+.pviewport{display:grid;max-width:1000px;margin:0 auto;width:100%;padding:0 28px}
+.panel{grid-area:1/1;opacity:0;transform:translateY(18px);pointer-events:none;
+  transition:opacity .5s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.22,1,.36,1)}
+.panel.on{opacity:1;transform:none;pointer-events:auto}
+.p-head{text-align:center;margin-bottom:16px}
+.p-title{font-family:var(--serif);font-size:clamp(24px,2.6vw,32px);color:var(--ink)}
+.p-title i{font-style:italic;color:var(--green)}
+.p-point{font-family:var(--mono);font-size:12px;color:var(--ink55);margin-top:6px}
+.p-point b{color:var(--green);font-weight:400}
 
-@media(max-width:760px){
-  .hx-dmrow{flex-direction:column;align-items:center}
-  .hx-dmrow.hx-r2{transform:none}
-  /* text fits: wrap messages, scale terminal/vault/log type */
-  .hx-dm{max-width:94vw}
-  .hx-dm .hx-msg{white-space:normal}
-  .hx-term pre{font-size:11px}
-  .hx-term .hx-ln{white-space:pre-wrap;word-break:break-word}
-  .hx-vault .hx-bar span{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .hx-vrow{font-size:10.5px;gap:8px;white-space:nowrap}
-  .hx-vrow .hx-chip{font-size:9px;padding:2px 6px}
-  .hx-vrow.hx-sub{padding-left:12px;font-size:10px}
-  .hx-vrow .hx-t,.hx-vrow .hx-dots{display:none}
-  .hx-beam .hx-cap{font-size:18px}
-  .hx-treecap{font-size:19px}
-  .hx-logsec h2{font-size:22px}
-  .hx-logsec .hx-sub{padding:0 16px}
-  .hx-lrow2{font-size:11px;gap:10px}
-  .hx-lrow2 .hx-ts{width:52px}
-  .hx-lrow2 .hx-who{width:auto;max-width:52%}
-  .hx-lrow2 .hx-what{display:none}
-  /* fewer reveal targets on phones — shorten the scrub so no dead scroll stretch */
-  .hx-scrolly{height:280vh}
-}
-/* tablet: side member cards would collide with the terminal — compact row below it */
-@media(max-width:1100px) and (min-width:641px){
-  .hx-tree{height:560px}
-  .hx-member{width:22% !important;min-width:150px;padding:9px 12px;gap:9px}
-  .hx-member .hx-k{display:none}
-  .hx-member .hx-tok{font-size:10px;padding:2px 8px}
-  .hx-member img,.hx-member .hx-agent{width:22px;height:22px}
-  .hx-member .hx-agent svg{width:12px;height:12px}
-  .hx-member .hx-agent.hx-codex svg{width:19px;height:19px}
-  .hx-member .hx-n{font-size:11px}
-  .hx-tree .hx-member:nth-of-type(1){left:3% !important;right:auto !important;top:462px !important}
-  .hx-tree .hx-member:nth-of-type(2){left:28% !important;right:auto !important;top:462px !important}
-  .hx-tree .hx-member:nth-of-type(3){left:53% !important;right:auto !important;top:462px !important}
-  .hx-tree .hx-member:nth-of-type(4){left:78% !important;right:auto !important;top:462px !important}
-}
-/* phones: hide the side cast entirely; the tree routes to the terminal only */
-@media(max-width:640px){
-  .hx-tree{height:380px}
-  .hx-member{display:none}
-  .hx-beam2{height:100px}
-}
+/* — panel 1 · premium data: provider cards under category labels — */
+.pcat{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink55);display:flex;align-items:center;gap:12px;margin:12px 0 7px}
+.pcat::after{content:"";height:1px;background:var(--line);flex:1}
+.pcat:first-child{margin-top:0}
+.pgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.pcard{border:1px solid var(--line);border-radius:13px;padding:11px 13px;
+  background:linear-gradient(180deg,#1e1d1b 0%,#171614 100%);
+  box-shadow:rgba(255,255,255,.06) 0 1px 0 inset;
+  display:flex;flex-direction:column;gap:8px}
+.pcard .ph{display:flex;align-items:center;gap:8px}
+.pcard .ph img{width:20px;height:20px;border-radius:5px;background:#fff;object-fit:contain;flex:none}
+.pcard .ph span{font-size:12.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard s{font-family:var(--mono);font-size:11px;color:var(--ink55);
+  text-decoration-color:rgba(242,239,232,.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard .pk{font-family:var(--mono);font-size:10.5px;color:var(--ink55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard .gph{width:20px;height:20px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);
+  display:grid;place-items:center;font-size:11px;flex:none}
+.pcard.ghosted2{border-style:dashed;opacity:.65}
+.pcard .plogos{display:flex;gap:5px;margin-top:auto}
+.pcard .plogos img{width:16px;height:16px;border-radius:4px;background:#fff;object-fit:contain}
+.morerow{margin-top:10px;pointer-events:none;
+  -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.55) 0%,transparent 92%);
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.55) 0%,transparent 92%)}
+.dtotal{margin-top:10px;margin-bottom:2px;text-align:center;font-family:var(--mono);font-size:14.5px;color:var(--ink70)}
+.dtotal .was{color:var(--ink55);text-decoration:line-through;text-decoration-color:rgba(242,239,232,.45)}
+.dtotal .now{color:var(--green)}
+.dtotal .arr{color:var(--ink55);margin:0 8px}
+
+/* — panel 2 · account actions: real scenarios, agent → treg → result — */
+.scen{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.3fr) minmax(0,.95fr);gap:26px;align-items:stretch}
+.scen+.scen{margin-top:12px}
+.scell{border:1px solid var(--line);border-radius:14px;padding:11px 13px;position:relative;
+  background:linear-gradient(180deg,#1e1d1b 0%,#171614 100%);
+  box-shadow:rgba(255,255,255,.06) 0 1px 0 inset;
+  display:flex;flex-direction:column;gap:8px}
+.scell:not(:last-child)::after{content:"→";position:absolute;right:-20px;top:50%;
+  transform:translateY(-50%);color:var(--ink55);font-family:var(--mono);font-size:13px;z-index:2}
+.scell .sl{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink55)}
+.scell:last-child .sl{color:var(--green)}
+.aghead{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--ink)}
+.aghead .cclogo{width:26px;height:26px;flex:none}
+.aghead b{font-weight:500;display:block;line-height:1.25}
+.aghead i{font-style:normal;display:block;font-family:var(--mono);font-size:10px;color:var(--ink55);line-height:1.4}
+.phonevid{position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.1);
+  background:#000;flex:1;min-height:210px}
+.phonevid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.phonevid .fn{position:absolute;left:9px;bottom:7px;font-family:var(--mono);font-size:9px;
+  color:rgba(255,255,255,.85);background:rgba(0,0,0,.55);padding:2px 7px;border-radius:5px}
+.screen{background:rgba(0,0,0,.3);border-radius:12px;padding:12px 14px;
+  box-shadow:rgba(0,0,0,.5) 0 2px 10px 0 inset;border:1px solid rgba(255,255,255,.05);
+  font-size:11.5px;display:flex;flex-direction:column;gap:7px;flex:1;justify-content:center}
+.screen .srow{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.screen .act{color:var(--ink70);display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.screen .act img{width:15px;height:15px;border-radius:4px;background:#fff;flex:none}
+.screen .ok{color:var(--green);flex:none}
+.screen .ps{color:var(--green)} .screen .cy{color:var(--blue)}
+/* ---- faithful instagram post (dark ui) ---- */
+.igpost{background:#000;border:1px solid #262626;border-radius:12px;overflow:hidden;flex:1;
+  display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.igh{display:flex;align-items:center;gap:9px;padding:9px 11px}
+.igavatar{width:28px;height:28px;border-radius:99px;background:#fff;object-fit:cover;
+  outline:2px solid transparent;border:2px solid #000;box-shadow:0 0 0 2px #e1306c}
+.igu b{display:block;font-size:12px;font-weight:600;color:#fafafa;line-height:1.2}
+.igu i{font-style:normal;display:block;font-size:10.5px;color:#a8a8a8;line-height:1.3}
+.igdots{margin-left:auto;color:#fafafa;font-size:14px;letter-spacing:1px}
+.igmedia{position:relative;aspect-ratio:4/5;background:#111}
+.igmedia video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.igact{display:flex;gap:14px;padding:9px 11px 4px;align-items:center}
+.igact svg{width:22px;height:22px;fill:none;stroke:#fafafa;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.igact .igsave{margin-left:auto}
+.iglikes{padding:0 11px;font-size:12px;font-weight:600;color:#fafafa}
+.igcap{padding:2px 11px 0;font-size:11.5px;color:#fafafa;line-height:1.45}
+.igcap b{font-weight:600}
+.igtime{padding:3px 11px 10px;font-size:9.5px;color:#a8a8a8;text-transform:uppercase;letter-spacing:.03em}
+/* left: agent timeline */
+.steps{display:flex;flex-direction:column}
+.steps.big{gap:2px;margin-top:2px}
+.st{font-family:var(--mono);font-size:11.5px;color:var(--ink70);display:flex;align-items:center;gap:9px;padding:4px 0}
+.st i{font-style:normal;color:var(--green);font-size:10px;margin-left:auto;flex:none}
+.st .tg{width:19px;height:19px;border-radius:6px;background:var(--blue-tint);color:var(--blue);
+  display:grid;place-items:center;font-size:10px;flex:none}
+.st .ag2{width:19px;height:19px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);
+  color:var(--ink70);display:grid;place-items:center;font-size:9.5px;flex:none}
+.minivid{display:inline-block;width:38px;height:23px;border-radius:5px;overflow:hidden;position:relative;flex:none}
+.minivid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.clibox{margin-top:0;background:rgba(0,0,0,.35);border:1px solid rgba(25,208,232,.3);border-radius:10px;
+  padding:10px 13px;font-family:var(--mono);font-size:10.5px;color:var(--ink70);line-height:1.7;
+  box-shadow:rgba(0,0,0,.5) 0 2px 8px 0 inset}
+.clibox .ps{color:var(--green)} .clibox .cy{color:var(--blue)} .clibox .okc{color:var(--green);float:right}
+.aghead{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--ink)}
+.aghead .cclogo{width:26px;height:26px;flex:none}
+.aghead b{font-weight:500;display:block;line-height:1.25}
+.aghead i{font-style:normal;display:block;font-family:var(--mono);font-size:10px;color:var(--ink55);line-height:1.4}
+.scell.bare{background:none;border:0;box-shadow:none;padding:6px 4px;justify-content:center;gap:10px}
+.scell.bare.acts{justify-content:center}
+/* middle: treg centerpiece + big action logos */
+.scell.mid{align-self:center;justify-content:center;gap:18px;padding:26px 22px;background:linear-gradient(180deg,#20282a 0%,#171614 55%);
+  border-color:rgba(25,208,232,.25)}
+.tregcore{display:flex;align-items:center;justify-content:center;gap:11px;padding:4px 0 8px}
+.tregcore .glyph{width:42px;height:42px;border-radius:12px;background:var(--blue-tint);color:var(--blue);
+  display:grid;place-items:center;font-size:20px;box-shadow:0 0 34px rgba(25,208,232,.22)}
+.tregcore b{font-family:var(--display);font-size:27px;color:var(--ink);font-weight:400}
+.midlede{text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;color:var(--ink);margin-top:-2px}
+.bat{font-family:var(--serif);font-size:18px;color:var(--ink70);text-align:center;margin-top:16px}
+.bal{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:11px}
+.bal img{width:46px;height:46px;border-radius:13px;background:#fff;object-fit:contain;padding:7px;
+  border:1px solid var(--line);box-shadow:rgba(0,0,0,.45) 0 6px 16px -5px}
+/* finale: tabs converge into the key */
+.fin2{position:relative;min-height:100%;display:flex;flex-direction:column;align-items:center}
+#finsvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.fin2key{margin-top:96px;position:relative;z-index:2}
+.fin2key::before{display:none}
+.fin2-line{margin-top:22px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:17px;color:var(--ink);position:relative;z-index:2}
+.fin2-id{margin-top:88px;text-align:center;position:relative;z-index:2}
+.fin-h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,3.4vw,44px);line-height:1.15;margin:14px 0 0}
+.fin-sub{font-family:var(--mono);font-size:14px;line-height:1.65;color:var(--ink70);max-width:560px;margin:16px auto 0}
+.fin-sub b{color:var(--ink);font-weight:500}
+/* internal vault window */
+.vaultwin{max-width:660px;margin:0 auto;border-radius:20px;border:1px solid rgba(25,208,232,.32);
+  background:linear-gradient(180deg,#20282a 0%,#141a1b 100%);
+  box-shadow:rgba(25,208,232,.1) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0,
+    rgba(0,0,0,.35) 18px 12px 38px 6px, rgba(25,208,232,.06) 0 0 60px 0;overflow:hidden}
+.vw-bar{display:flex;align-items:center;gap:7px;padding:13px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.vw-bar i{width:10px;height:10px;border-radius:99px;background:#333130}
+.vw-t{margin-left:8px;font-family:var(--mono);font-size:12px;color:var(--ink70)}
+.vw-t b{color:var(--blue);font-weight:500}
+.vw-rows{padding:6px 20px 10px}
+.vrow2{display:flex;align-items:center;gap:10px;padding:12px 2px;font-family:var(--mono);font-size:13px;color:var(--ink)}
+.vrow2+.vrow2{border-top:1px solid rgba(255,255,255,.07)}
+.vrow2.sub{padding-left:24px;color:var(--ink70);font-size:12px}
+.vsub{color:var(--ink55)}
+.vic{flex:none}
+.vtag{font-size:10px;letter-spacing:.08em;border-radius:6px;padding:2px 9px;
+  border:1px solid var(--line2);color:var(--ink55)}
+.vtag.skill{color:var(--blue);border-color:rgba(25,208,232,.4);background:rgba(25,208,232,.08)}
+.vdots{color:var(--ink55);letter-spacing:2px;font-size:10px}
+.vr{margin-left:auto;font-size:10.5px;letter-spacing:.06em;color:var(--ink55);text-transform:uppercase;white-space:nowrap}
+.vr.ok{color:var(--green);text-transform:none}
+/* internal vault card */
+.vaultcard{padding:14px 16px}
+.vlab{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink55);
+  display:flex;align-items:center;gap:10px;margin-top:10px}
+.vlab::after{content:"";height:1px;background:var(--line);flex:1}
+.vkeys{display:flex;flex-direction:column;gap:4px;margin-top:7px}
+.vk{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--ink)}
+.vk img{width:16px;height:16px;border-radius:4px;background:#fff;object-fit:contain;flex:none}
+.vk i{font-style:normal;margin-left:auto;font-size:9.5px;color:var(--green)}
+.vskills{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.vs{font-family:var(--mono);font-size:10.5px;color:var(--ink70);background:rgba(0,0,0,.28);
+  border:1px solid var(--line);border-radius:8px;padding:4px 9px}
+.vfoot{margin-top:auto;padding-top:10px;font-family:var(--mono);font-size:9.5px;color:var(--ink55);text-align:center}
+/* insight cards */
+.insight{background:linear-gradient(180deg,#1e1d1b 0%,#171614 100%);border:1px solid var(--line);
+  border-radius:13px;padding:12px 14px;box-shadow:rgba(255,255,255,.06) 0 1px 0 inset}
+.insight+.insight{margin-top:8px}
+.insight p{margin:0;font-family:var(--serif);font-style:italic;font-size:14.5px;line-height:1.45;color:var(--ink)}
+.insight p b{color:var(--green);font-weight:400}
+.isrc{display:flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--mono);font-size:9.5px;color:var(--ink55)}
+.isrc img{width:14px;height:14px;border-radius:4px;background:#fff;object-fit:contain}
+.isrc em{font-style:normal}
+.isrc span{margin-left:auto;color:var(--green)}
+/* right: swappable outcomes */
+.rout{display:flex;flex-direction:column;gap:8px;flex:1}
+.rout.hide{display:none}
+/* google ads outcome (light, faithful-ish) */
+.gadsout{background:#fff;border-radius:12px;padding:12px 14px;flex:1;
+  display:flex;flex-direction:column;gap:8px;justify-content:center;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+.ga-h{display:flex;align-items:center;gap:8px;font-size:13px;color:#202124}
+.ga-h b{font-weight:600}
+.ga-h img{width:18px;height:18px}
+.ga-chip{margin-left:auto;font-size:10.5px;color:#188038;background:#e6f4ea;border-radius:99px;padding:2px 9px}
+.ga-camp{font-size:11.5px;color:#5f6368;border-bottom:1px solid #dadce0;padding-bottom:7px}
+.ga-r{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:#5f6368}
+.ga-r em{font-style:normal;color:#202124}
+.ga-r em s{color:#9aa0a6;margin-right:3px}
+.ga-r em b{color:#188038;font-weight:600}
+.ga-f{margin-top:2px;border-top:1px solid #dadce0;padding-top:7px;font-size:10px;color:#5f6368}
+.ga-f b{color:#1a73e8;font-weight:500}
+.pfoot2{margin-top:14px;text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--ink55)}
+.pfoot2 b{color:var(--green);font-weight:400}
+
+/* — panel 3 · internal keys & skills: scan → private shelf — */
+.scanline{max-width:520px;margin:0 auto 16px}
+.shelfgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tent{border:1px solid var(--line);border-radius:14px;padding:13px 15px;
+  background:linear-gradient(180deg,#1e1d1b 0%,#171614 100%);
+  box-shadow:rgba(255,255,255,.06) 0 1px 0 inset;
+  display:flex;flex-direction:column;gap:4px}
+.tent .tn{font-family:var(--mono);font-size:13px;color:var(--ink);display:flex;gap:8px;align-items:center}
+.tent .tn b{font-weight:400;color:var(--blue)}
+.tent .tk{font-family:var(--mono);font-size:10px;color:var(--ink55)}
+.tent .tb{font-family:var(--mono);font-size:10px;color:var(--green)}
+.tent.ghosted{border-style:dashed;opacity:.65;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;color:var(--ink55);min-height:74px}
+.pfoot{margin-top:16px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--ink55)}
+.pfoot b{color:var(--green);font-weight:400}
+
+/* ================================================================
+   IDENTITY — the second beat
+   ================================================================ */
+.identity{padding:0 0 40px;text-align:center;position:relative}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink55)}
+.identity h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,3.4vw,44px);
+  line-height:1.15;margin:14px 0 0}
+.identity p.sub{margin-top:16px}
+.ticker{max-width:660px;margin:40px auto 0;border-radius:14px;border:1px solid var(--line);
+  background:rgba(0,0,0,.28);box-shadow:rgba(0,0,0,.5) 0 2px 10px 0 inset;
+  padding:10px 18px;font-family:var(--mono);font-size:12px;color:var(--ink70);
+  display:flex;align-items:center;gap:12px;text-align:left;overflow:hidden}
+.ticker .dot{width:7px;height:7px;border-radius:99px;background:var(--green);flex:none;
+  box-shadow:0 0 8px rgba(166,238,152,.8);animation:tpulse 2.2s ease infinite}
+@keyframes tpulse{50%{opacity:.45}}
+.ticker .row{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .35s}
+.ticker .row .ag{color:var(--blue)} .ticker .row .ok{color:var(--green)} .ticker .row .pr{color:var(--ink55)}
+.ticker .lbl{margin-left:auto;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink55);flex:none}
+.idpoints{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;max-width:860px;margin:28px auto 0}
+.idp{border-radius:16px;border:1px solid var(--line);padding:16px 18px;text-align:left;
+  background:linear-gradient(180deg,#1c1b19 0%,#161513 100%);
+  box-shadow:rgba(255,255,255,.06) 0 1px 0 inset}
+.idp b{display:block;font-family:var(--serif);font-style:italic;font-size:17px;color:var(--ink);font-weight:400;margin-bottom:5px}
+.idp span{font-size:12px;color:var(--ink55);line-height:1.55}
+
+/* dashboard — activity window */
+.dashwin{max-width:760px;margin:0 auto;border-radius:20px;border:1px solid var(--line2);
+  background:linear-gradient(180deg,#211f1d 0%,#151413 100%);
+  box-shadow:rgba(255,255,255,.07) 0 1px 0 inset, rgba(0,0,0,.6) 5px 4px 16px 0, rgba(0,0,0,.35) 18px 12px 38px 6px;
+  overflow:hidden;text-align:left}
+.dw-bar{display:flex;align-items:center;gap:7px;padding:13px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.dw-bar i{width:10px;height:10px;border-radius:99px;background:#333130}
+.dw-t{margin-left:8px;font-family:var(--mono);font-size:12px;color:var(--ink70)}
+.dw-av{width:20px;height:20px;border-radius:99px;margin-left:auto}
+.dw-team{font-family:var(--mono);font-size:12px;color:var(--ink)}
+.dw-head{display:grid;grid-template-columns:86px minmax(0,1fr) auto;gap:14px;padding:12px 20px 9px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink55)}
+.dw-row{display:grid;grid-template-columns:86px minmax(0,1fr) auto;gap:14px;align-items:center;
+  padding:11px 20px;border-top:1px solid rgba(255,255,255,.07)}
+.dw-row .t{font-family:var(--mono);font-size:11.5px;color:var(--ink55)}
+.dw-row .w{display:flex;align-items:center;gap:10px;min-width:0}
+.dw-row .w img{width:24px;height:24px;border-radius:99px;flex:none}
+.agav{width:24px;height:24px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);
+  display:grid;place-items:center;font-size:12px;flex:none}
+.agav.sm{width:20px;height:20px;font-size:10px;margin-left:auto}
+.dw-row .w img.agimg{border-radius:7px;background:transparent}
+.dw-row .w b{display:block;font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dw-row .w em{font-style:normal;color:var(--blue)}
+.dw-row .w i{font-style:normal;display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink55);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dw-row .r{font-family:var(--mono);font-size:11px;color:var(--ink55);white-space:nowrap}
+.dw-row .r.ok,.okc2{color:var(--green)}
+.warn{color:var(--candy,#FFD43B)}
+.dw-f{padding:13px 20px;border-top:1px solid rgba(255,255,255,.08);text-align:center;
+  font-family:var(--mono);font-size:11.5px;color:var(--green)}
+/* trust line */
+.trustline{margin-top:64px;padding-bottom:88px;font-family:var(--mono);font-size:12.5px;color:var(--ink55);
+  display:flex;gap:10px 26px;justify-content:center;flex-wrap:wrap}
+.trustline b{color:var(--ink70);font-weight:400}
+
+/* reveal on load */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+.rv.show{opacity:1;transform:none}
+
 @media (prefers-reduced-motion: reduce){
-  .hx-dm,.hx-vrow,.hx-term,.hx-term .hx-ln,.hx-member,.hx-treecap,.hx-beam .hx-line,.hx-beam .hx-cap{opacity:1 !important;transform:none !important;transition:none}
-  .hx-term{transform:translateX(-50%) !important}
-  
-  .hx-tree svg.hx-paths path{stroke-dashoffset:0}
-  .hx-tree svg.hx-paths circle{opacity:.9}
+  *{animation:none!important;transition:none!important}
+  .rv{opacity:1;transform:none}
+}
+/* mobile: no sticky theater — pills hidden, panels stack with their titles */
+@media(max-height:940px){
+  .morerow{display:none}
+}
+@media(max-width:900px){
+  .cats-track{height:auto}
+  .cats-sticky{position:static;min-height:0;padding:40px 0 10px}
+  .wirebox,.pills{display:none}
+  .pviewport{display:flex;flex-direction:column;gap:44px}
+  .panel{opacity:1;transform:none;pointer-events:auto}
+  .scen,.shelfgrid,.idpoints{grid-template-columns:1fr}
+  .scell:not(:last-child)::after{content:"↓";right:auto;left:50%;top:auto;bottom:-22px;transform:translateX(-50%)}
+  .scen{gap:26px}
+  .drow{grid-template-columns:1fr;gap:8px;text-align:left}
+  .drow .flip{text-align:left}
+  .hero{padding:124px 0 40px}
+  .identity{padding:64px 0 24px}
 }
 </style>
 </head>
@@ -1049,1242 +466,342 @@ p.lead,p.sub{font-family:var(--mono);font-size:15px;line-height:1.65}
   <nav class="nav">
     <div class="brand"><span class="glyph">▚</span> treg</div>
     <div class="links">
-      <a href="#story" class="hidem">How it works</a>
-      <a href="#security" class="hidem">Security</a>
-      <a onclick="openSignin()" style="cursor:pointer">Sign in</a>
-      <button class="candy sm" onclick="openSignin()">Start free</button>
+      <a href="#catalog" class="hidem">Catalog</a>
+      <a href="#identity" class="hidem">Identity</a>
+      <a href="/app" style="cursor:pointer">Sign in</a>
+      <button class="candy sm">Start free</button>
     </div>
   </nav>
 </div>
 
-<!-- hero -->
-<header class="hero">
+<!-- ================= HERO ================= -->
+<section class="hero">
   <div class="hero-glow"></div>
-  <div class="narrow" style="max-width:960px">
-    <div class="eyebrow blue rv">one registry · every key · every skill</div>
-    <h1 class="rv hero-h1">Share skills & secrets<br/><span class="grad"><i>without leaking keys</i></span></h1>
-    <p class="lead rv">Stop pasting keys into Slack. treg turns your team's skills and secrets
-      into one central vault — humans and agents call them by name, the credential never leaves.</p>
-    <div class="hero-cta rv">
-      <button class="candy" onclick="openSignin()">Get started</button>
-      <a class="ghostbtn" href="https://github.com/superdesigndev/tools-registry" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a>
-    </div>
-    <div class="stars rv"><b>★★★★★</b>&nbsp; 100% open source · built for agent-first teams</div>
+  <div class="wrap">
+    <span class="kicker rv">2,617 tools · 42 providers · <a href="https://github.com/superdesigndev/tools-registry" target="_blank" rel="noopener">github ↗</a></span>
+    <h1 class="hero-h1 rv"><span class="grad">Connect agents to</span><br><span class="grad2">every tool they need.</span></h1>
   </div>
+</section>
 
-<div class="hx-scrolly" id="hx-scrolly">
-  <div class="hx-sticky">
-  <div class="hx-stage" id="hx-stage">
-    <!-- ACT 1 · the DM chaos — staggered rows, mild tilts -->
-    <div class="hx-dms" id="hx-dms">
-      <div class="hx-dmrow">
-        <div class="hx-dm" style="--tilt:rotate(-1.6deg)">
-          <img class="hx-av" src="https://randomuser.me/api/portraits/women/44.jpg" alt=""/>
-          <div><div class="hx-who">Sam <span>9:14 AM</span></div>
-            <div class="hx-msg">can you send me the <code>stripe key</code>? 🙏</div></div>
-        </div>
-        <div class="hx-dm" style="--tilt:rotate(1.2deg) translateY(10px)">
-          <div class="hx-av hx-agent"><svg viewBox="0 0 24 24"><path clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757" fill-rule="evenodd"/></svg></div>
-          <div><div class="hx-who">Claude Code<i>APP</i><span>10:58 AM</span></div>
-            <div class="hx-msg">blocked: <code>POSTHOG_KEY</code> not set in .env</div></div>
-        </div>
-        <div class="hx-dm" style="--tilt:rotate(1.8deg)">
-          <img class="hx-av" src="https://randomuser.me/api/portraits/men/32.jpg" alt=""/>
-          <div><div class="hx-who">Devon <span>10:02 AM</span></div>
-            <div class="hx-msg">can I get the google-ads skill?</div></div>
-        </div>
+<!-- ================= CATEGORY SPOTLIGHT ================= -->
+<section class="cats" id="catalog">
+  <div class="cats-track" id="track">
+    <div class="cats-sticky">
+
+      <!-- the CTA is a command, not a button -->
+    <div class="givebox rv">
+      <div class="gb-h">Give this to your agent
+        <span class="agicons"><img src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/claudecode-color.png" alt="Claude Code" title="Claude Code" loading="lazy"/><img src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/codex-color.png" alt="Codex" title="Codex" loading="lazy"/><img src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/openclaw-color.png" alt="OpenClaw" title="OpenClaw" loading="lazy"/><img src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/hermesagent.png" alt="Hermes" title="Hermes" loading="lazy"/><img src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/opencode.png" alt="opencode" title="opencode" loading="lazy"/><img src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/pi.png" alt="pi" title="pi" loading="lazy"/></span>
       </div>
-      <div class="hx-dmrow hx-r2">
-        <div class="hx-dm" style="--tilt:rotate(1deg) translateY(4px)">
-          <img class="hx-av" src="https://randomuser.me/api/portraits/men/75.jpg" alt=""/>
-          <div><div class="hx-who">Mika <span>10:44 AM</span></div>
-            <div class="hx-msg">what's the <code>OPENAI_API_KEY</code> again?</div></div>
-        </div>
-        <div class="hx-dm" style="--tilt:rotate(-1.4deg)">
-          <div class="hx-av hx-codex"><svg viewBox="0 0 24 24"><path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"/><path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#cxg2)"/><defs><linearGradient gradientUnits="userSpaceOnUse" id="cxg2" x1="12" x2="12" y1="3" y2="21"><stop stop-color="#B1A7FF"/><stop offset=".5" stop-color="#7A9DFF"/><stop offset="1" stop-color="#3941FF"/></linearGradient></defs></svg></div>
-          <div><div class="hx-who">Codex<i>APP</i><span>11:45 AM</span></div>
-            <div class="hx-msg">missing the google-ads skill + its key</div></div>
-        </div>
-        <div class="hx-dm" style="--tilt:rotate(-2deg) translateY(8px)">
-          <img class="hx-av" src="https://randomuser.me/api/portraits/women/68.jpg" alt=""/>
-          <div><div class="hx-who">Priya <span>11:38 AM</span></div>
-            <div class="hx-msg">posthog key again? new laptop 😅</div></div>
-        </div>
+      <div class="gb-cmd">
+        <span class="ps">$</span>
+        <code id="cmd">set up treg — https://treg.superdesign.dev/llms.txt</code>
+        <button id="copybtn" aria-label="Copy command">copy</button>
       </div>
     </div>
 
-    <!-- the beam -->
-    <div class="hx-beam" id="hx-beam">
-      <span class="hx-line"></span>
-      <span class="hx-line hx-lo"></span>
-      <span class="hx-cap">shared <b>skill &amp; secret</b> vault</span>
-    </div>
-
-    <!-- ACT 2 · the vault, root of the tree -->
-    <div class="hx-vault" id="hx-vault">
-      <div class="hx-bar"><i></i><i></i><i></i><span>🔒 <b>treg</b> · tool-vault — skills &amp; secrets, sealed</span></div>
-      <div class="hx-vrows" id="hx-vrows">
-        <div class="hx-vrow">📦 google-ads-report <span class="hx-chip hx-skill">skill</span><span class="hx-t">SKILL.md</span></div>
-        <div class="hx-vrow hx-sub">└ 🔑 GOOGLE_ADS_TOKEN <span class="hx-chip hx-key">key</span><span class="ok">bound ✓</span></div>
-        <div class="hx-vrow">📦 stripe-cli <span class="hx-chip hx-skill">skill</span><span class="hx-t">SKILL.md</span></div>
-        <div class="hx-vrow hx-sub">└ 🔑 STRIPE_KEY <span class="hx-chip hx-key">key</span><span class="ok">bound ✓</span></div>
-        <div class="hx-vrow">🔑 OPENAI_API_KEY <span class="hx-chip hx-key">key</span><span class="hx-dots">••••••</span><span class="hx-t">standalone</span></div>
-      </div>
-    </div>
-
-    <!-- the tree: vault → team -->
-    <div class="hx-tree" id="hx-tree">
-      <svg class="hx-paths" aria-hidden="true"></svg>
-
-      <!-- blurred team floating behind -->
-      <div class="hx-member hx-near" style="left:4%;top:106px" data-depth="0.35">
-        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt=""/>
-        <div><div class="hx-n">Sam</div><div class="hx-k">stripe-cli</div></div><span class="hx-tok">token ✓</span>
-      </div>
-      <div class="hx-member hx-near" style="right:3%;top:98px" data-depth="0.5">
-        <span class="hx-agent"><svg viewBox="0 0 24 24"><path clip-rule="evenodd" d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z" fill="#D97757" fill-rule="evenodd"/></svg></span>
-        <div><div class="hx-n">Claude Code</div><div class="hx-k">posthog skill</div></div><span class="hx-tok">token ✓</span>
-      </div>
-      <div class="hx-member" style="left:2.5%;top:312px" data-depth="0.7">
-        <img src="https://randomuser.me/api/portraits/women/68.jpg" alt=""/>
-        <div><div class="hx-n">Priya</div><div class="hx-k">google-ads-report</div></div><span class="hx-tok">token ✓</span>
-      </div>
-      <div class="hx-member" style="right:2%;top:322px" data-depth="0.85">
-        <span class="hx-agent hx-codex"><svg viewBox="0 0 24 24"><path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"/><path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#cxg2)"/></svg></span>
-        <div><div class="hx-n">Codex</div><div class="hx-k">stripe-cli</div></div><span class="hx-tok">token ✓</span>
+      <!-- the key, handed down from the givebox above -->
+      <div class="agents" id="agents">
+        <div class="keynode" data-wire><span class="kglyph">▚</span> treg key <i>tok_7f3a…</i></div>
       </div>
 
-      <!-- featured member: Devon's terminal, using a shared tool -->
-      <div class="hx-term" id="hx-term">
-        <div class="hx-bar"><i></i><i></i><i></i>
-          <img src="https://randomuser.me/api/portraits/men/32.jpg" alt=""/>
-          <span>devon@laptop — no keys installed</span>
-        </div>
-        <pre><span class="hx-ln">$ <span class="c-blue">treg</span> call stripe /v1/refunds --method POST</span><span class="hx-ln hx-c-mut">→ key auto-injected server-side · never on this machine</span><span class="hx-ln c-green">✓ 200 OK · refund re_9f2… created · 412ms</span></pre>
-        <div class="hx-treecap" id="hx-treecap">access <b>without keys</b></div>
+      <!-- wires -->
+      <div class="wirebox"><svg id="wires" aria-hidden="true"></svg></div>
+
+      <!-- category pills -->
+      <div class="pills" id="pills">
+        <button class="pill on" data-seg="0"><em>01</em><b>External <i>data</i></b></button>
+        <button class="pill" data-seg="1"><em>02</em><b>Internal <i>vault</i></b></button>
+        <button class="pill" data-seg="2"><em>03</em><b>OAuth <i>actions</i></b></button>
       </div>
 
-    </div>
+      <!-- panels -->
+      <div class="pviewport" id="pviewport">
 
-    <!-- connector into act 3 -->
-    <div class="hx-beam2" id="hx-beam2"><span class="hx-line"></span></div>
+        <!-- ····· 01 · PREMIUM DATA ····· -->
+        <div class="panel on" data-panel="0">
+          <div class="p-head">
+<div class="dtotal"><span class="was">$500+/mo in subscriptions</span><span class="arr">→</span><span class="now">2,617 endpoints · one balance · cents per call</span></div>
+          </div>
 
-    <!-- ACT 3 · the audit log -->
-    <div class="hx-logsec" id="hx-logsec">
-      <h2 id="hx-logh2">Every call lands in <b>the log.</b></h2>
-      <div class="hx-sub" id="hx-logsub">who · which tool · when — attributed to the person or agent, never a shared key</div>
-      <div class="hx-logcard">
-        <div class="hx-bar"><i></i><i></i><i></i><span>treg · audit — live</span></div>
-        <div class="hx-logrows">
-          <div class="hx-lrow2 hx-hot"><span class="hx-ts">14:32:07</span><span class="hx-who">devon@ → stripe</span><span class="hx-what">POST /v1/refunds · re_9f2…</span><span class="hx-res">200 · 412ms</span></div>
-          <div class="hx-lrow2"><span class="hx-ts">14:31:44</span><span class="hx-who">sam@ → stripe-cli</span><span class="hx-what">charges list · 48 rows</span><span class="hx-res">200 · 96ms</span></div>
-          <div class="hx-lrow2"><span class="hx-ts">14:29:03</span><span class="hx-who">priya@ → google-ads-report</span><span class="hx-what">GET /v16/…/report</span><span class="hx-res">200 · 1.2s</span></div>
-          <div class="hx-lrow2"><span class="hx-ts">14:18:20</span><span class="hx-who">agent:claude-code → posthog</span><span class="hx-what">POST /api/query · daily cap 82%</span><span class="hx-res">200 · 104ms</span></div>
-          <div class="hx-lrow2"><span class="hx-ts">14:12:51</span><span class="hx-who">agent:codex → stripe-cli</span><span class="hx-what">key rotated by sam@ 14:10</span><span class="hx-res">401 → retried · 200</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="hx-scrollhint" id="hx-scrollhint">scroll ↓</div>
-  </div>
+          <div class="pcat">trending social data</div>
+<div class="pgrid">
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64" alt="" loading="lazy"/><span>TikTok trends</span></div><s>API: invite-only</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=instagram.com&sz=64" alt="" loading="lazy"/><span>Instagram posts</span></div><s>API: app review</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=x.com&sz=64" alt="" loading="lazy"/><span>X posts &amp; profiles</span></div><s>X API · $200/mo</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=youtube.com&sz=64" alt="" loading="lazy"/><span>YouTube videos</span></div><s>quota-capped</s></div>
+</div>
+<div class="pcat">seo keywords &amp; backlinks</div>
+<div class="pgrid">
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=semrush.com&sz=64" alt="" loading="lazy"/><span>Keyword volume &amp; ideas</span></div><s>Semrush · $139/mo</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=moz.com&sz=64" alt="" loading="lazy"/><span>Backlinks &amp; anchors</span></div><s>Moz · $99/mo</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=seranking.com&sz=64" alt="" loading="lazy"/><span>SERP &amp; rank tracking</span></div><s>SE Ranking · $65/mo</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=spyfu.com&sz=64" alt="" loading="lazy"/><span>Domain &amp; competitors</span></div><s>SpyFu · $39/mo</s></div>
+</div>
+<div class="pcat">ai visibility</div>
+<div class="pgrid">
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" alt="" loading="lazy"/><span>AI Overview citations</span></div><s>SerpApi · $75/mo</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=openai.com&sz=64" alt="" loading="lazy"/><span>AI brand mentions</span></div><s>no official API</s></div>
+</div>
+<div class="pcat">people &amp; company enrichment</div>
+<div class="pgrid">
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=hunter.io&sz=64" alt="" loading="lazy"/><span>Find work email</span></div><s>Hunter · $34/mo</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=lusha.com&sz=64" alt="" loading="lazy"/><span>Person enrichment</span></div><s>Lusha · $49/mo</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=crunchbase.com&sz=64" alt="" loading="lazy"/><span>Company data</span></div><s>Crunchbase · $99/mo</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=coresignal.com&sz=64" alt="" loading="lazy"/><span>Company news &amp; signals</span></div><s>enterprise-only</s></div>
 </div>
 
-  <div class="wrap">
-    <div class="logos rv">
-      <div class="lcap">works with your whole stack — 89 providers auto-detected from your .env</div>
-      <div class="lviewport"><div class="lrow" id="logorow"></div></div>
-    </div>
-  </div>
-
-</header>
-
-<!-- ===== try it live (the test section, sparkle skin) ===== -->
-<section class="sbx-sec" id="try">
-  <div class="narrow">
-    <h2 class="rv">Try it live</h2>
-    <div class="eyebrow rv" style="margin-top:14px">hack it if you can</div>
-  </div>
-  <div class="wrap" style="max-width:900px">
-    <div class="guide rv" id="sbx-guide" style="margin-top:26px">
-      <span><b>1</b> keys stay in the vault</span><span class="ga">→</span>
-      <span><b>2</b> point at an API or a skill</span><span class="ga">→</span>
-      <span><b>3</b> call it with just a token</span>
-    </div>
-
-    <div id="sbx-studio">
-    <!-- vault bar -->
-    <div class="vbar rv">
-      <span class="vl">🔒 vault</span>
-      <span id="vchips" style="display:flex;gap:8px;flex-wrap:wrap"></span>
-      <span class="vadd" id="vadd">
-        <input class="kn" id="ns-name" placeholder="NEW_KEY" onkeyup="if(event.key==='Enter')sbxAddSecret()"/>
-        <input class="kv" id="ns-value" placeholder="value" onkeyup="if(event.key==='Enter')sbxAddSecret()"/>
-        <button class="minibtn" onclick="sbxAddSecret()">＋ add key</button>
-      </span>
-      <button class="minibtn" id="vault-edit" style="display:none" onclick="toggleVaultEdit()">✎ edit vault</button>
-    </div>
-    <div class="vhint">treg holds these · referenced by name · never downloaded to a machine</div>
-
-    <!-- workspace -->
-    <div class="ws rv">
-      <div class="wsh">
-        <div class="wstabs">
-          <button class="wstab on" id="tab-endpoints" onclick="sbxTab('endpoints')">Add Endpoints &amp; CLIs</button>
-          <button class="wstab" id="tab-skills" onclick="sbxTab('skills')">Add Skills</button>
+<div class="morerow"><div class="pgrid">
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=apify.com&sz=64" alt="" loading="lazy"/><span>Web scraping at scale</span></div><s>per-seat plans</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64" alt="" loading="lazy"/><span>Competitor ad libraries</span></div><s>manual research</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" alt="" loading="lazy"/><span>Local business data</span></div><s>rate-limited</s></div>
+<div class="pcard"><div class="ph"><img src="https://www.google.com/s2/favicons?domain=linkedin.com&sz=64" alt="" loading="lazy"/><span>Hiring &amp; headcount signals</span></div><s>enterprise-only</s></div>
+</div></div>
+          
         </div>
-        <span class="wssub" id="wssub"></span>
-      </div>
-      <div class="wsbody">
-        <div id="sbx-err" style="display:none;color:#f08a7a;font-size:12px;border:1px solid rgba(240,138,122,.4);border-radius:10px;padding:8px 12px;margin-bottom:10px"></div>
 
-        <div id="pane-endpoints">
-          <div id="trows"></div>
-          <div class="addwrap" id="addwrap">
-            <div class="addrow">
-              <input id="nt-name" placeholder="name" style="max-width:100px" value="stripe"/>
-              <input id="nt-url" class="grow" placeholder="https://api.service.com/path" value="https://api.stripe.com/v1/charges"/>
-              <span style="font-size:13px">🔑</span>
-              <select id="nt-key"></select>
-              <button class="minibtn blue" onclick="sbxAddTool()">＋ Add</button>
+        <!-- ····· 02 · INTERNAL VAULT ····· -->
+        <div class="panel" data-panel="1">
+          <div class="p-head">
+            <div class="p-point">your <b>keys &amp; skills</b> — private context only your org's agents get</div>
+          </div>
+
+          <div class="vaultwin">
+            <div class="vw-bar"><i></i><i></i><i></i><span class="vw-t">🔒 <b>treg</b> · internal-vault — keys &amp; skills, sealed</span></div>
+            <div class="vw-rows">
+              <div class="vrow2"><span class="vic">📦</span>google-ads-report<span class="vtag skill">skill</span><span class="vr">SKILL.MD</span></div>
+              <div class="vrow2 sub"><span class="vsub">└</span><span class="vic">🔑</span>GOOGLE_ADS_TOKEN<span class="vtag">key</span><span class="vr ok">bound ✓</span></div>
+              <div class="vrow2"><span class="vic">⌨</span>stripe-cli<span class="vtag skill">skill</span><span class="vr">SKILL.MD</span></div>
+              <div class="vrow2 sub"><span class="vsub">└</span><span class="vic">🔑</span>STRIPE_KEY<span class="vtag">key</span><span class="vr ok">bound ✓</span></div>
+              <div class="vrow2"><span class="vic">🎙</span>brand-voice<span class="vtag skill">skill</span><span class="vr">SKILL.MD · knowledge, no key</span></div>
+              <div class="vrow2"><span class="vic">🔑</span>SUPABASE_KEY<span class="vtag">key</span><span class="vdots">••••••</span><span class="vr">standalone</span></div>
+              <div class="vrow2"><span class="vic">🔑</span>POSTHOG_KEY<span class="vtag">key</span><span class="vdots">••••••</span><span class="vr">standalone</span></div>
             </div>
-            <p class="addhint" id="addhint">Prefilled with the real <b>Stripe</b> API and your vault's
-              <code>STRIPE_KEY</code> — just hit <b>Add</b> (or type any URL).</p>
-          </div>
-          <div style="margin-top:12px;text-align:center">
-            <button class="minibtn" id="addmore" style="display:none" onclick="sbxOpenAdd()">＋ Add another endpoint</button>
           </div>
 
-          <div id="resultwrap" style="display:none">
-            <div class="curlbox">
-              <div class="cap">Call it from any terminal — <b>no key, just your token:</b></div>
-              <div class="codewrap">
-                <button class="cp" onclick="copyEl('res-curl',this)">copy</button>
-                <pre id="res-curl"></pre>
+          <div class="pfoot2"><b>private to your org</b> · teammates' agents call these with tokens — keys never travel</div>
+        </div>
+
+        <!-- ····· 03 · ACCOUNT ACTIONS ····· -->
+        <div class="panel" data-panel="2">
+          <div class="p-head">
+            <div class="p-point">actions that need <b>OAuth</b>, not an API key — treg holds the grant, agents just call</div>
+          </div>
+
+          <div class="scen scen1">
+            <div class="scell bare">
+              <div class="sl">agent</div>
+              <div class="aghead"><img class="cclogo" src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/claudecode-color.png" alt="Claude Code" loading="lazy"/><div><b>Claude Code</b><i>agent:social</i></div></div>
+              <div class="steps big">
+                <div class="st done"><span class="tg">▚</span> get trending posts <i>✓</i></div>
+                <div class="st done"><span class="tg">▚</span> pull competitor ads <i>✓</i></div>
+                <div class="st done"><span class="tg">▚</span> query internal data lake <i>✓</i></div>
+                <div class="st done"><span class="ag2">✎</span> drafted post <i>✓</i></div>
+                <div class="st done"><span class="ag2">▶</span> generated video <span class="minivid"><video src="https://andreatuysuzian.com/arcards/videos/header/1.webm" autoplay muted loop playsinline></video></span> <i>✓</i></div>
+              </div>
+            </div>
+            <div class="scell mid">
+              <div class="tregcore"><span class="glyph">▚</span><b>treg</b></div>
+              <div class="clibox"><span class="ps">$</span> treg call <span class="cy">instagram.post.publish</span><br>&nbsp;&nbsp;--media ugc-ad-01.mp4 <span class="okc">✓ 200</span></div>
+            </div>
+            <div class="scell bare acts">
+              <div class="bat">Publish on socials</div>
+              <div class="bal">
+                <img src="https://www.google.com/s2/favicons?domain=x.com&sz=64" alt="X" title="X" loading="lazy"/>
+                <img src="https://www.google.com/s2/favicons?domain=instagram.com&sz=64" alt="Instagram" title="Instagram" loading="lazy"/>
+                <img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=64" alt="Facebook Pages" title="Facebook Pages" loading="lazy"/>
+                <img src="https://www.google.com/s2/favicons?domain=linkedin.com&sz=64" alt="LinkedIn" title="LinkedIn" loading="lazy"/>
+                <img src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64" alt="TikTok" title="TikTok" loading="lazy"/>
+                <img src="https://www.google.com/s2/favicons?domain=youtube.com&sz=64" alt="YouTube" title="YouTube" loading="lazy"/>
+              </div>
+              <div class="bat">Manage ads campaigns</div>
+              <div class="bal">
+                <img src="https://www.google.com/s2/favicons?domain=ads.google.com&sz=64" alt="Google Ads" title="Google Ads" loading="lazy"/>
+                <img src="https://www.google.com/s2/favicons?domain=meta.com&sz=64" alt="Meta Ads" title="Meta Ads" loading="lazy"/>
+                <img src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64" alt="TikTok Ads" title="TikTok Ads" loading="lazy"/>
+                <img src="https://www.gstatic.com/images/branding/product/2x/google_my_business_64dp.png" alt="Google Business Profile" title="Google Business Profile" loading="lazy"/>
               </div>
             </div>
           </div>
+          <div class="pfoot2"><b>connected once</b> · your OAuth grant lives in the gateway — agents act, never hold it</div>
         </div>
 
-        <div id="pane-skills" style="display:none">
-          <div id="skcards"></div>
-          <div class="addwrap" id="skadd">
-            <div class="addrow">
-              <select id="sk-pick" class="grow" onchange="renderSkillAdd()"></select>
+
+        <!-- ····· 04 · FINALE — tabs converge back into the one key ····· -->
+        <div class="panel" data-panel="3">
+          <div class="fin2" id="fin2">
+            <svg id="finsvg" aria-hidden="true"></svg>
+            <div class="keynode fin2key" id="fin2key"><span class="kglyph">▚</span> treg key <i>tok_7f3a…</i></div>
+            <div class="fin2-line">Access it all with one treg key</div>
+            <div class="fin2-id" id="fin2id">
+              <div class="eyebrow">one key · many identities</div>
+              <h2 class="fin-h2"><span class="grad">Every agent gets</span> <span class="grad2">its own identity.</span></h2>
+              <p class="fin-sub">Every call any agent makes is <b>attributed</b>, <b>priced</b>, and <b>revocable</b> — so you can finally say yes to writes.</p>
             </div>
-            <div class="addrow" id="skneed" style="align-items:center;font-size:13px;color:var(--ink70)"></div>
-            <p class="addhint">A skill declares the key it needs — you don't pick one. <b>treg injects it.</b></p>
-          </div>
-          <div style="margin-top:12px;text-align:center">
-            <button class="minibtn" id="skaddmore" style="display:none" onclick="skOpenAdd()">＋ Add another skill</button>
           </div>
         </div>
 
       </div>
     </div>
-    </div><!-- /sbx-studio -->
-
-<!-- live wire (view mode): step 1 vault window · step 2 call panel. Hidden while editing
-     or when the wire is off (then the classic studio above is the whole section). -->
-    <div id="sbx-view" style="display:none">
-      <div id="vw-wrap">
-        <div class="steplbl"><b>1</b> the live vault with our stripe key <span class="ln"></span></div>
-        <div class="vw rv">
-          <div class="vw-bar"><i></i><i></i><i></i>
-            <span class="vw-t">🔒 <b>Live vault</b><span class="vw-sub"> · a real Stripe account's key, sealed</span></span>
-            <button class="vw-edit" onclick="enterEdit()">✎ edit</button></div>
-          <div id="vw-rows"></div>
-        </div>
-      </div>
-
-      <div class="steplbl"><b>2</b> call it — your token, our key <span class="ln"></span></div>
-      <div class="vw rv">
-        <div class="live-tabs" role="tablist" style="border:0;background:none;padding:8px 8px 0">
-          <button class="live-tab on" data-pane="curl" onclick="liveTab('curl')">curl</button>
-          <button class="live-tab" data-pane="cli" onclick="liveTab('cli')">treg CLI</button>
-        </div>
-        <div class="live-pane on" id="lw-pane-curl">
-          <div class="codewrap" style="border-radius:0;border-left:0;border-right:0"><button class="cp" onclick="copyEl('lw-curl',this)">copy</button><pre id="lw-curl"></pre></div>
-        </div>
-        <div class="live-pane" id="lw-pane-cli">
-          <div class="codewrap" style="border-radius:0;border-left:0;border-right:0"><button class="cp" onclick="copyEl('lw-cli',this)">copy</button><pre id="lw-cli"></pre></div>
-        </div>
-        <div class="vw-feedbar"><span class="dot"></span> live · our stripe sandbox
-          <span class="you">you are <b id="lw-you">…</b></span></div>
-        <div class="live-rows" id="live-rows"><div class="live-empty">waiting for the first charge…</div></div>
-      </div>
-      <p class="vhint" style="text-align:left">the green URL is Stripe's real API · the key is injected in our proxy, your sandbox never holds it · every row links to a receipt hosted by Stripe</p>
-    </div>
-
   </div>
 </section>
 
-<!-- ===== story: cora-style scroll narrative w/ sticky stage ===== -->
-<section class="story" id="story">
-  <div class="story-head">
-    <div class="eyebrow blue rv">how it works</div>
-    <h2 class="rv">The key stays home.<br/>The tool travels.</h2>
-    <p class="sub rv">Four moments, one journey — scroll through what happens when a teammate's agent uses a tool it doesn't own.</p>
-  </div>
-
+<!-- ================= IDENTITY ================= -->
+<section class="identity" id="identity">
   <div class="wrap">
-    <div class="story-track" id="storytrack">
-    <div class="story-pin">
-      <div class="beats-pin">
-        <div class="beat on" data-step="0">
-          <div class="beat-inner">
-          <div class="n">01 · scan &amp; upload</div>
-          <div class="onwho"><img src="https://randomuser.me/api/portraits/women/44.jpg" alt=""/><span>Alice's laptop</span></div>
-          <h3>Scan your skills and keys. Upload them safely.</h3>
-          <p><code>treg scan</code> reads your project — every skill and every
-            <code>.env</code> key, listed before anything moves. Then <code>treg upload</code>
-            registers and encrypts the lot. The plaintext never leaves the scan.</p>
-          <div class="cta"><button class="candy sm" onclick="openSignin()">Scan my project</button></div>
-          </div>
-        </div>
-        <div class="beat" data-step="1">
-          <div class="beat-inner">
-          <div class="n">02 · call</div>
-          <div class="onwho"><img src="https://randomuser.me/api/portraits/men/32.jpg" alt=""/><span>Bob's laptop</span></div>
-          <h3>Now the whole team can call it.</h3>
-          <p>Alice imported it — Bob just calls it. <code>treg call</code> from any machine, any agent:
-            the key is injected automatically. Nothing to configure, no key on Bob's laptop, ever.</p>
-          </div>
-        </div>
-        <div class="beat" data-step="2">
-          <div class="beat-inner">
-          <div class="n">03 · inject</div>
-          <div class="onwho"><span class="glyph2">▚</span><span>the treg server — nobody's laptop</span></div>
-          <h3>Here's the hop where the key appears.</h3>
-          <p>What leaves Bob's machine carries only his personal treg token. Inside the proxy,
-            that token is swapped for the org credential — and <code>api.stripe.com</code> receives
-            a normal, fully-authed request.</p>
-          </div>
-        </div>
-        <div class="beat" data-step="3">
-          <div class="beat-inner">
-          <div class="n">04 · audit</div>
-          <div class="onwho"><span class="avastack"><img src="https://randomuser.me/api/portraits/women/44.jpg" alt=""/><img src="https://randomuser.me/api/portraits/men/32.jpg" alt=""/><img src="https://randomuser.me/api/portraits/men/75.jpg" alt=""/></span><span>the whole team</span></div>
-          <h3>Every call lands in the log.</h3>
-          <p>Who called, which tool, when, status and latency — attributed to the person,
-            not a shared key. Rotation is one edit; usage caps are per-user.</p>
-          <div class="cta"><button class="ghostbtn" onclick="openSignin()">See a live audit trail →</button></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="stagewrap" style="min-width:0">
-        <div class="stage" id="stage">
-          <div class="bar"><i></i><i></i><i></i><span id="stagetitle">alice@laptop — treg cli</span>
-            <span class="who" id="stagewho"><img id="stagewho-img" src="https://randomuser.me/api/portraits/women/44.jpg" alt=""/><span class="srv" id="stagewho-srv" style="display:none">▚</span><b id="stagewho-name">Alice</b></span></div>
-          <div class="screens">
-
-            <!-- screen 0: scan & upload (animated terminal) -->
-            <div class="screen" data-screen="0"><pre id="term0"></pre></div>
-
-            <!-- screen 1: real CLI call (animated terminal) -->
-            <div class="screen" data-screen="1"><pre id="term1"></pre></div>
-
-            <!-- screen 2: x-ray — the treg run expands into the proxy hop -->
-            <div class="screen" data-screen="2">
-              <pre class="xr-echo"><span class="c-cmd">$ treg call</span> <span class="c-blue">stripe</span> /v1/refunds --method POST <span class="c-dim">· x-ray</span></pre>
-              <div class="hdiff">
-                <div class="hbox" id="xr-a">
-                  <div class="hbt">what leaves bob's machine</div>
-<pre>POST /call/stripe/v1/refunds HTTP/1.1
-Host: <span class="c-blue">treg.superdesign.dev</span>
-Authorization: Bearer <span class="c-dim">treg_tok_bob_7f3a…</span></pre>
-                </div>
-                <div class="harrow" id="xr-arrow">▼ &nbsp;proxy swaps identity → org credential&nbsp; ▼</div>
-                <div class="hbox inj" id="xr-b">
-                  <div class="hbt">what api.stripe.com receives</div>
-<pre>POST /v1/refunds HTTP/1.1
-Host: <span class="c-blue">api.stripe.com</span>
-Authorization: Bearer <span class="tok-old" id="xr-old">treg_tok_bob_7f3a…</span> <span class="hl-add" id="xr-key">sk_live_••••••••</span> <span class="c-dim inj-note" id="xr-note">← injected</span></pre>
-                </div>
-              </div>
-            </div>
-
-            <!-- screen 3: real audit log -->
-            <div class="screen" data-screen="3">
-              <div class="logtable">
-                <div class="lr lh"><span>time</span><span>who → tool</span><span>result</span></div>
-                <div class="lr"><span class="sub2">14:32:07</span>
-                  <span><img class="lava" src="https://randomuser.me/api/portraits/men/32.jpg" alt=""/><span class="who">bob@</span> → <span class="tool">stripe</span><div class="sub2">POST /v1/refunds · re_9f2…</div></span>
-                  <span class="st ok">200 · 412ms</span></div>
-                <div class="lr"><span class="sub2">14:31:44</span>
-                  <span><img class="lava" src="https://randomuser.me/api/portraits/men/75.jpg" alt=""/><span class="who">tim@</span> → <span class="tool">posthog</span><div class="sub2">POST /api/query · 3.2k rows</div></span>
-                  <span class="st ok">200 · 96ms</span></div>
-                <div class="lr"><span class="sub2">14:29:03</span>
-                  <span><img class="lava" src="https://randomuser.me/api/portraits/women/44.jpg" alt=""/><span class="who">alice@</span> → <span class="tool">google-ads-report</span><div class="sub2">GET /v16/customers/…/report</div></span>
-                  <span class="st ok">200 · 1.2s</span></div>
-                <div class="lr"><span class="sub2">14:22:51</span>
-                  <span><img class="lava" src="https://randomuser.me/api/portraits/men/32.jpg" alt=""/><span class="who">bob@</span> → <span class="tool">resend</span><div class="sub2">key rotated by alice@ 14:20</div></span>
-                  <span class="st warn">401 → retried · 200</span></div>
-                <div class="lr"><span class="sub2">14:18:20</span>
-                  <span><span class="lava" style="display:inline-grid;place-items:center;background:var(--blue-tint);color:var(--link);font-size:10px">🤖</span><span class="who">agent:crm-loop</span> → <span class="tool">posthog</span><div class="sub2">daily cap 82% used</div></span>
-                  <span class="st ok">200 · 104ms</span></div>
-              </div>
-            </div>
-
-          </div>
-          <div class="cap" id="stagecap">plaintext never leaves the scan</div>
-        </div>
-      </div>
+    <div class="dashwin rv">
+      <div class="dw-bar"><i></i><i></i><i></i><span class="dw-t">dashboard — activity</span><span class="agav sm">🤖</span><span class="dw-team">all agents</span></div>
+      <div class="dw-head"><span>time</span><span>agent → tool</span><span class="r">result</span></div>
+      <div class="dw-row"><span class="t">14:32:07</span><span class="w"><img class="agimg" src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/claudecode-color.png" alt="Claude Code"/><div><b><em>agent:crm-loop</em> → stripe</b><i>POST /v1/refunds · re_9f2…</i></div></span><span class="r ok">200 · 412ms</span></div>
+      <div class="dw-row"><span class="t">14:31:44</span><span class="w"><img class="agimg" src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/codex-color.png" alt="Codex"/><div><b><em>agent:support</em> → posthog</b><i>POST /api/query · 3.2k rows</i></div></span><span class="r ok">200 · 96ms</span></div>
+      <div class="dw-row"><span class="t">14:29:03</span><span class="w"><img class="agimg" src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/openclaw-color.png" alt="OpenClaw"/><div><b><em>agent:seo-weekly</em> → google-ads-report</b><i>GET /v16/customers/…/report</i></div></span><span class="r ok">200 · 1.2s</span></div>
+      <div class="dw-row"><span class="t">14:22:51</span><span class="w"><img class="agimg" src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/claudecode-color.png" alt="Claude Code"/><div><b><em>agent:crm-loop</em> → resend</b><i>key rotated by alice@ 14:20</i></div></span><span class="r"><span class="warn">401 → retried</span> · <span class="okc2">200</span></span></div>
+      <div class="dw-row"><span class="t">14:18:20</span><span class="w"><img class="agimg" src="https://unpkg.com/@lobehub/icons-static-png@latest/dark/hermesagent.png" alt="Hermes"/><div><b><em>agent:leadgen</em> → posthog</b><i>daily cap 82% used</i></div></span><span class="r ok">200 · 104ms</span></div>
+      <div class="dw-f">✓ every call attributed to an agent — never a shared key</div>
     </div>
+
+            <div class="trustline rv">
+      <span><b>100% open source</b> · AGPL</span>
+      <span><b>2,617 endpoints</b> priced up front</span>
+      <span>credentials injected server-side, <b>never on a machine</b></span>
     </div>
   </div>
 </section>
 
-<!-- ===== comparison ===== -->
-<section class="compare-sec">
-  <div class="narrow">
-    <div class="eyebrow rv">why not just a password manager?</div>
-    <h2 class="rv">Secret managers store keys.<br/>treg makes them callable.</h2>
-    <p class="sub rv">A tool-vault holds more than secrets — the key, the endpoint or CLI it unlocks,
-      and the skill that knows how to use it. For humans and agents alike.</p>
-  </div>
-  <div class="wrap">
-    <div class="compare rv">
-      <div class="row hd"><div></div><div>keys in dms</div><div>1password</div><div class="treg">▚ treg</div></div>
-      <div class="row"><div>What's shared</div>
-        <div class="bad"><span class="x">✕</span> pasted keys</div>
-        <div class="mid"><span class="x">✕</span> secrets only</div>
-        <div class="goodc"><span class="v">✓</span> keys + endpoints/CLIs + skills</div></div>
-      <div class="row"><div>Who can use it</div>
-        <div class="bad"><span class="x">✕</span> whoever has a copy</div>
-        <div class="mid"><span class="x">✕</span> humans only</div>
-        <div class="goodc"><span class="v">✓</span> humans &amp; agents, natively</div></div>
-      <div class="row"><div>How keys are used</div>
-        <div class="bad"><span class="x">✕</span> lives in six .env files</div>
-        <div class="mid"><span class="x">✕</span> copied out in plaintext</div>
-        <div class="goodc"><span class="v">✓</span> injected server-side</div></div>
-      <div class="row"><div>Rotating keys</div>
-        <div class="bad"><span class="x">✕</span> hunt every copy</div>
-        <div class="mid"><span class="x">✕</span> update + re-paste everywhere</div>
-        <div class="goodc"><span class="v">✓</span> one edit, zero downtime</div></div>
-      <div class="row"><div>Audit history</div>
-        <div class="bad"><span class="x">✕</span> nobody knows</div>
-        <div class="mid"><span class="x">✕</span> vault-access log only</div>
-        <div class="goodc"><span class="v">✓</span> every call logged, per person &amp; agent</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== security ===== -->
-<section class="sec-sec" id="security">
-  <div class="narrow">
-    <div class="eyebrow rv">where keys go wrong</div>
-    <h2 class="rv">Three ways a key leaks.<br/>treg closes all three.</h2>
-    <p class="sub rv">The same secret, needed in more and more places — and every place is a copy that can leak.</p>
-  </div>
-  <div class="wrap">
-    <div class="tri" style="margin-top:56px">
-      <div class="card rv">
-        <div class="ct">Key sprawl</div>
-        <p class="cbody">The same key pasted into every project, <span class="mono">.env</span>, and machine.
-          One leak exposes them all.</p>
-        <div class="cf"><b>treg →</b> one vault. The key is injected at call time and lives nowhere else.</div>
-      </div>
-      <div class="card rv">
-        <div class="ct">Team access</div>
-        <p class="cbody">Give a teammate access and they hold your key — forever, everywhere they go.</p>
-        <div class="cf"><b>treg →</b> they get a token, not the key. Revoke it and they're out.</div>
-      </div>
-      <div class="card rv">
-        <div class="ct">Agent skills</div>
-        <p class="cbody">A skill needs credentials to run. Sharing the skill shouldn't mean shipping the secret.</p>
-        <div class="cf"><b>treg →</b> the skill calls through the vault. Your agent runs it and never sees the key.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== big CTA ===== -->
-<section class="ctapanel-sec">
-  <div class="wrap">
-    <div class="ctapanel rv">
-      <div class="bloom"></div>
-      <h2>Share skills & keys<br/>Without sharing real keys</h2>
-      <p class="sub" style="max-width:480px">Your vault, your team's tools, your agents' skills, all one revocable token away, and no key ever on a machine.</p>
-      <div style="margin-top:30px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap"><button class="candy" onclick="openSignin()">Get started</button><a class="ghostbtn" href="https://github.com/superdesigndev/tools-registry" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a></div>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <div class="foot-in">
-    <div class="brand"><span class="glyph">▚</span> treg</div>
-    <span style="font-family:var(--mono);font-size:12px;color:var(--ink55)">— 100% open source</span>
-    <span class="sp"></span>
-    <a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a><a href="https://github.com/superdesigndev/tools-registry" target="_blank" rel="noopener">github ↗</a><a href="/docs">api</a><a href="/terms">terms</a><a href="/privacy">privacy</a>
-  </div>
-  <div class="watermark">treg</div>
-</footer>
+<!-- ================================================================
+     SECTIONS BELOW — rebuild per plan (credential ladder → catalog
+     showcase → x-ray → comparison → CTA). v1 vault page preserved
+     at landing-vault-v1.html.
+     ================================================================ -->
 
 <script>
-// reveal on scroll
-const io = new IntersectionObserver(es => es.forEach(e => {
-  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-}), { threshold: .12 });
-document.querySelectorAll('.rv').forEach(el => io.observe(el));
+/* ---------- reveal on load, staggered ---------- */
+const rvs=[...document.querySelectorAll('.rv')];
+rvs.forEach((el,i)=>setTimeout(()=>el.classList.add('show'),120+i*60));
 
-// sticky stage — SCROLL-SCRUBBED. Progress is a pure function of scroll position:
-// fast scrolling can never orphan an animation, and scrolling up rewinds it.
-const stage = document.getElementById('stage');
-const cap = document.getElementById('stagecap');
-const stitle = document.getElementById('stagetitle');
-const screens = [...document.querySelectorAll('.screen')];
-const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const AVA = { alice:'https://randomuser.me/api/portraits/women/44.jpg',
-              bob:'https://randomuser.me/api/portraits/men/32.jpg' };
-const STATES = [
-  { cls:'s0', title:'alice@laptop — treg cli',             cap:'plaintext never leaves the scan',
-    ava:AVA.alice, name:'Alice' },
-  { cls:'s1', title:'bob@laptop — any agent, any machine', cap:'key auto-injected — nothing to configure',
-    ava:AVA.bob, name:'Bob' },
-  { cls:'s2', title:'x-ray — inside the treg proxy',       cap:'the key exists only inside this hop',
-    ava:null, name:'treg server' },
-  { cls:'s3', title:'dashboard — activity',                cap:'✓ every call attributed to a person, not a key',
-    ava:AVA.bob, name:'whole team', stack:true },
-];
+/* ---------- copy the agent command ---------- */
+document.getElementById('copybtn').addEventListener('click',async e=>{
+  const btn=e.currentTarget;
+  try{await navigator.clipboard.writeText(document.getElementById('cmd').textContent.trim());}catch(_){}
+  btn.textContent='copied';btn.classList.add('done');
+  setTimeout(()=>{btn.textContent='copy';btn.classList.remove('done');},1800);
+});
 
-/* --- terminal scripts; {cmd} lines scrub char-by-char, {out} lines fade in.
-   focus:true marks the command the x-ray screen expands (2→3 handoff). --- */
-const SCRIPTS = {
-  term0: [
-    { cmd:'treg scan' },
-    { out:'<span class="c-dim">Scanned ~/work/growth-tools/.env: 2 key(s) to register, 0 OAuth.</span>' },
-    { out:'<span class="c-dim">Found — <span class="c-yellow">treg upload</span> registers these:</span>' },
-    { out:'<span class="c-green">✓</span> <span class="c-blue">stripe</span>    <span class="c-dim">https://api.stripe.com/v1</span>  <span class="c-yellow">(secret STRIPE_KEY)</span>' },
-    { out:'<span class="c-green">✓</span> <span class="c-blue">posthog</span>   <span class="c-dim">https://app.posthog.com</span>    <span class="c-yellow">(secret POSTHOG_KEY)</span>' },
-    { out:'<span class="c-dim">Found skills — <span class="c-yellow">treg upload</span> imports these:</span>' },
-    { out:'<span class="c-green">✓</span> <span class="c-blue">google-ads-report</span>   <span class="c-dim">SKILL.md · treg.json</span>' },
-    { out:'<span class="c-green">✓</span> <span class="c-blue">search-console</span>      <span class="c-dim">SKILL.md</span>' },
-    { gap:true },
-    { cmd:'treg upload --all' },
-    { out:'<span class="c-dim">registering 2 tools · importing 2 skills …</span>' },
-    { out:'<span class="c-green">✓ registered to org superdesign</span> <span class="c-dim">· secrets encrypted at rest</span>' },
-    { out:'<span class="c-dim">plaintext never left this machine\'s scan</span>' },
-  ],
-  term1: [
-    { out:'<span class="c-dim"># alice uploaded these — bob\'s machine, no keys installed</span>' },
-    { cmd:'treg skill ls' },
-    { out:'<span class="c-dim">[ { "id": 180, "name":</span> <span class="c-blue">"stripe"</span><span class="c-dim">,  "owner": "alice@superdesign.dev" },</span>' },
-    { out:'<span class="c-dim">&nbsp;&nbsp;{ "id": 181, "name":</span> <span class="c-blue">"google-ads-report"</span><span class="c-dim">, "owner": "alice@superdesign.dev" },</span>' },
-    { out:'<span class="c-dim">&nbsp;&nbsp;{ "id": 182, "name":</span> <span class="c-blue">"posthog"</span><span class="c-dim">, "owner": "tim@superdesign.dev" } ]</span>' },
-    { gap:true },
-    { cmd:'treg call stripe /v1/refunds --method POST --data charge=ch_3NqxT2…', focus:true },
-    { out:'<span class="c-dim">→ key auto-injected server-side</span>' },
-    { out:'<span class="c-green">✓ 200 OK</span>  <span class="c-dim">refund re_9f2… created · 412ms</span>' },
-  ],
-};
+/* ================================================================
+   spotlight: scroll drives which category is focused; pills jump
+   ================================================================ */
+const track=document.getElementById('track');
+const panels=[...document.querySelectorAll('.panel')];
+const pills=[...document.querySelectorAll('.pill')];
+const svg=document.getElementById('wires');
+const wirebox=document.querySelector('.wirebox');
+let active=0;
 
-/* --- build terminals once; scrub visibility from a 0..1 progress --- */
-const TERMS = {};
-function buildTerm(preId){
-  const pre = document.getElementById(preId), units = [];
-  pre.innerHTML = '';
-  SCRIPTS[preId].forEach(step => {
-    const ln = document.createElement('span');
-    if (step.gap){ ln.className = 'ln gap'; pre.appendChild(ln); units.push({ el:ln, w:.4 }); }
-    else if (step.cmd){
-      ln.className = 'ln' + (step.focus ? ' fcs' : '');
-      ln.innerHTML = '<span class="c-cmd">$ </span><span class="typed c-cmd"></span>';
-      pre.appendChild(ln);
-      units.push({ el:ln, w:1.8, cmd:step.cmd, typed:ln.querySelector('.typed') });
-    } else {
-      ln.className = 'ln'; ln.innerHTML = step.out; pre.appendChild(ln);
-      units.push({ el:ln, w:1 });
-    }
+function setSeg(s){
+  if(s===active && svg.dataset.drawn) return;
+  active=s;
+  panels.forEach(p=>p.classList.toggle('on',+p.dataset.panel===s));
+  pills.forEach(p=>p.classList.toggle('on',s===3||+p.dataset.seg===s));
+  drawWires();
+}
+
+function drawWires(){
+  if(innerWidth<900){svg.innerHTML='';return}
+  const br=wirebox.getBoundingClientRect();
+  svg.setAttribute('viewBox',`0 0 ${br.width} ${br.height}`);
+  const agents=[...document.querySelectorAll('[data-wire]')];
+  if(!agents.length||!pills.length) return;
+  const H=br.height;
+  const waist={x:0,y:H*.55};
+  const f=agents[0].getBoundingClientRect(), l=agents[agents.length-1].getBoundingClientRect();
+  waist.x=(f.left+l.right)/2-br.left;
+  let base='',flow='';
+  agents.forEach(a=>{
+    const r=a.getBoundingClientRect();
+    const x=r.left-br.left+r.width/2;
+    const p=`<path d="M${x},0 C${x},${H*.3} ${waist.x},${waist.y-H*.25} ${waist.x},${waist.y}"/>`;
+    base+=p;flow+=p;
   });
-  TERMS[preId] = { units, total: units.reduce((s,u) => s + u.w, 0), pre };
-}
-function termAt(preId, t){
-  const T = TERMS[preId]; let acc = 0;
-  T.units.forEach(u => {
-    const start = acc / T.total, end = (acc + u.w) / T.total; acc += u.w;
-    const lt = (t - start) / (end - start);
-    if (lt <= 0){
-      u.el.classList.remove('show');
-      if (u.typed){ u.typed.textContent = ''; u.typed.classList.remove('typing'); }
-    } else {
-      u.el.classList.add('show');
-      if (u.typed){
-        const done = lt >= 1, n = Math.ceil(Math.min(1, lt) * u.cmd.length);
-        u.typed.textContent = u.cmd.slice(0, n);
-        u.typed.classList.toggle('typing', !done);
-      }
-    }
+  pills.forEach((pl,i)=>{
+    const r=pl.getBoundingClientRect();
+    const x=r.left-br.left+r.width/2;
+    const p=`<path d="M${waist.x},${waist.y} C${waist.x},${H*.85} ${x},${H*.7} ${x},${H}"/>`;
+    base+=p;
+    if(active===3||i===active) flow+=p;
   });
+  if(active===3) flow+=`<path d="M${waist.x},${waist.y} L${waist.x},${H}"/>`;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  svg.innerHTML=`<g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.3">${base}</g>`+
+    (reduce?'':`<g class="flow" fill="none" stroke="rgba(25,208,232,.55)" stroke-width="1.4" stroke-dasharray="5 97">${flow}</g>`)+
+    `<circle cx="${waist.x}" cy="${waist.y}" r="4" fill="#0b1a1d" stroke="rgba(25,208,232,.7)" stroke-width="1.2"/>`;
+  svg.dataset.drawn='1';
 }
 
-/* --- x-ray scrub: thresholds on 0..1 --- */
-const XR = () => ({ a:document.getElementById('xr-a'), ar:document.getElementById('xr-arrow'),
-  b:document.getElementById('xr-b'), old:document.getElementById('xr-old'),
-  key:document.getElementById('xr-key'), note:document.getElementById('xr-note') });
-function xrayAt(t){
-  const x = XR();
-  x.a.classList.toggle('show', t > .12);
-  x.ar.classList.toggle('show', t > .38);
-  x.b.classList.toggle('show', t > .52);
-  x.old.classList.toggle('swap', t > .74);      // token struck through…
-  x.key.classList.toggle('show', t > .84);      // …key pops in
-  x.note.classList.toggle('show', t > .93);
-}
-
-/* --- audit log scrub --- */
-const LOGROWS = [...document.querySelectorAll('.logtable .lr')];
-function logAt(t){
-  LOGROWS.forEach((r, i) => r.classList.toggle('show', t > (i + .5) / LOGROWS.length * .9));
-}
-
-const SCRUB = [t => termAt('term0', t), t => termAt('term1', t), xrayAt, logAt];
-
-let activeStep = -1;
-function applyState(i){
-  const s = STATES[i];
-  stage.className = 'stage ' + s.cls;
-  stitle.textContent = s.title; cap.textContent = s.cap;
-  const img = document.getElementById('stagewho-img'), srv = document.getElementById('stagewho-srv');
-  document.getElementById('stagewho-name').textContent = s.name;
-  if (s.ava){ img.src = s.ava; img.style.display = 'block'; srv.style.display = 'none'; }
-  else { img.style.display = 'none'; srv.style.display = 'grid'; }
-  screens.forEach(sc => sc.classList.toggle('on', +sc.dataset.screen === i));
-  activeStep = i;
-}
-
-/* --- cora-style playback: the copy scrolls naturally past a pinned panel.
-   Each beat's crossing through the viewport drives its screen's animation.
-   Pure function of scroll — fast scroll and rewind both safe. --- */
-const beatEls = [...document.querySelectorAll('.beat')];
-const N = 4;
-function drive(){
-  const vh = innerHeight;
-  let S = 0;
-  beatEls.forEach(b => {
-    const r = b.getBoundingClientRect();
-    const span = r.height - vh;               // how long this beat stays pinned
-    S += Math.min(1, Math.max(0, -r.top / span));
+let wasScrolled=false;
+function drawFinale(){
+  const fin=document.getElementById('fin2');
+  const fsvg=document.getElementById('finsvg');
+  if(!fin||!fsvg||innerWidth<900) return;
+  const fr=fin.getBoundingClientRect();
+  if(fr.height<10) return;
+  fsvg.setAttribute('viewBox',`0 0 ${fr.width} ${fr.height}`);
+  const key=document.getElementById('fin2key').getBoundingClientRect();
+  const kTop={x:key.left-fr.left+key.width/2,y:key.top-fr.top};
+  const kBot={x:key.left-fr.left+key.width/2,y:key.bottom-fr.top};
+  let paths='';
+  pills.forEach(pl=>{
+    const r=pl.getBoundingClientRect();
+    const x=r.left-fr.left+r.width/2;
+    const my=kTop.y*.55;
+    paths+=`<path d="M${x},0 C${x},${my} ${kTop.x},${my} ${kTop.x},${kTop.y}"/>`;
   });
-  S = Math.min(N - .001, S);
-  const a = Math.floor(S), frac = S - a;
-  // during the travel gap (previous pin done, next text not yet pinned) keep
-  // the previous FINISHED screen on stage — the panel never sits empty.
-  const show = (frac < .02 && a > 0) ? a - 1 : a;
-  if (show !== activeStep) applyState(show);
-  // frac is PIN progress: text is already stuck when it grows. Play the
-  // animation over the first 3/4 of the pin, hold the finished state after.
-  const t = (REDUCED || show !== a) ? 1 : Math.min(1, Math.max(0, (frac - .04) / .71));
-  SCRUB[show](t);
-  // 2→3 handoff: as the call screen finishes, dim all but the treg call line —
-  // the x-ray screen then expands that same command.
-  document.getElementById('term1').classList.toggle('dimothers', (show === 1 && t >= 1) || show === 2);
-  // mobile: the stage rides fixed at the bottom while the story plays
-  const sw = document.querySelector('.stagewrap');
-  if (matchMedia('(max-width:900px)').matches){
-    sw.classList.toggle('mob-on', S > .03 && S < 3.96);
-  } else sw.classList.remove('mob-on');
-}
-let ticking = false;
-addEventListener('scroll', () => {
-  if (ticking) return; ticking = true;
-  requestAnimationFrame(() => { drive(); ticking = false; });
-}, { passive:true });
-addEventListener('resize', drive, { passive:true });
-
-buildTerm('term0'); buildTerm('term1');
-applyState(0); drive();
-
-/* ===== hero scroll story — DM chaos → vault → team tree → keyless call → audit log ===== */
-(function(){
-const dms=[...document.querySelectorAll('.hx-dm')];
-const rows=[...document.querySelectorAll('.hx-vrow')];
-const lns=[...document.querySelectorAll('.hx-term .hx-ln')];
-const members=[...document.querySelectorAll('.hx-member')];
-const beamEl=document.getElementById('hx-beam');
-const vaultEl=document.getElementById('hx-vault');
-const treeEl=document.getElementById('hx-tree');
-const termEl=document.getElementById('hx-term');
-const treecap=document.getElementById('hx-treecap');
-const logh2=document.getElementById('hx-logh2');
-const logsub=document.getElementById('hx-logsub');
-const lrows=[...document.querySelectorAll('.hx-lrow2')];
-const beam2line=document.querySelector('.hx-beam2 .hx-line');
-const scrollyEl=document.getElementById('hx-scrolly');
-const stageEl=document.getElementById('hx-stage');
-const stickyEl=document.querySelector('.hx-sticky');
-const hint=document.getElementById('hx-scrollhint');
-const svg=document.querySelector('.hx-tree svg.hx-paths');
-const NS='http://www.w3.org/2000/svg';
-let pathData=[];
-
-function buildPaths(){
-  svg.innerHTML=''; pathData=[];
-  const tr=treeEl.getBoundingClientRect();
-  svg.setAttribute('viewBox',`0 0 ${tr.width} ${tr.height}`);
-  svg.setAttribute('width',tr.width); svg.setAttribute('height',tr.height);
-  const rootX=tr.width/2, rootY=0;
-  const rootDot=document.createElementNS(NS,'circle');
-  rootDot.setAttribute('cx',rootX); rootDot.setAttribute('cy',rootY); rootDot.setAttribute('r','3.5');
-  svg.appendChild(rootDot);
-  [...members, termEl].filter(el=>el.offsetWidth>0).forEach(el=>{
-    const r=el.getBoundingClientRect();
-    const cx=r.left-tr.left+r.width/2;
-    let ex,ey;
-    if(el===termEl){ ex=cx; ey=r.top-tr.top+14; }
-    else{
-      ex = cx;
-      ey = r.top-tr.top + r.height/2;
-    }
-    const midY=Math.max(rootY,ey)*0.45;
-    const d=`M ${rootX},${rootY} C ${rootX},${midY+40} ${ex},${Math.max(ey-90,20)} ${ex},${ey}`;
-    const path=document.createElementNS(NS,'path');
-    path.setAttribute('d',d);
-    svg.appendChild(path);
-    const len=path.getTotalLength();
-    path.style.strokeDasharray=len;
-    path.style.strokeDashoffset=len;
-    const dot=document.createElementNS(NS,'circle');
-    dot.setAttribute('cx',ex); dot.setAttribute('cy',ey); dot.setAttribute('r','3'); dot.style.opacity=0;
-    svg.appendChild(dot);
-    pathData.push({path,len,dot});
-  });
+  const line=document.querySelector('.fin2-line').getBoundingClientRect();
+  const idb=document.getElementById('fin2id').getBoundingClientRect();
+  const tail=`<path d="M${kBot.x},${line.bottom-fr.top+12} L${kBot.x},${idb.top-fr.top-12}"/>`;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  fsvg.innerHTML=`<g fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1.3">${paths}${tail}</g>`+
+    (reduce?'':`<g class="flow" fill="none" stroke="rgba(25,208,232,.55)" stroke-width="1.4" stroke-dasharray="5 97">${paths}${tail}</g>`);
 }
 
-const clampv=(v,a,b)=>Math.max(a,Math.min(b,v));
-const step=(p,at)=>p>=at;
-function apply(pIn,pPin){
-  const ghosted=step(pIn,0.10);
-  beamEl.classList.toggle('hx-on',ghosted);
-  vaultEl.style.opacity=step(pIn,0.16)?1:0;
-  vaultEl.classList.toggle('hx-pulse',pIn>=0.20);
-  rows.forEach((r,i)=>r.classList.toggle('hx-show',step(pIn,0.30+i*0.09)));
-  const t=clampv((pPin-0.05)/0.21,0,1);
-  const eased=1-Math.pow(1-t,3);
-  pathData.forEach(({path,len,dot})=>{
-    path.style.strokeDashoffset=len*(1-eased);
-    dot.style.opacity=eased>=0.97?0.9:0;
-  });
-  treeEl.classList.toggle('hx-on',t>0.02);
-  members.forEach((m,i)=>m.classList.toggle('hx-show',step(pPin,0.24+i*0.018)));
-  termEl.classList.toggle('hx-show',step(pPin,0.30));
-  treecap.classList.toggle('hx-show',step(pPin,0.30));
-  lns.forEach((l,i)=>l.classList.toggle('hx-show',step(pPin,0.36+i*0.06)));
-  const b2=clampv((pPin-0.61)/0.08,0,1);
-  beam2line.style.transform=`scaleY(${b2})`;
-  logh2.classList.toggle('hx-show',step(pPin,0.70));
-  document.querySelector('.hx-logcard').style.opacity=step(pPin,0.72)?1:0;
-  logsub.classList.toggle('hx-show',step(pPin,0.73));
-  lrows.forEach((r,i)=>r.classList.toggle('hx-show',step(pPin,0.735+i*0.03)));
-  const maxPan=Math.max(0,stageEl.scrollHeight-stickyEl.clientHeight+40);
-  const yTerm=(termEl.getBoundingClientRect().top-stageEl.getBoundingClientRect().top)+termEl.offsetHeight/2+40;
-  const pan1=clampv(yTerm-stickyEl.clientHeight*0.46,0,maxPan);
-  let pan;
-  if(pPin<0.30){ const q=clampv((pPin-0.02)/0.28,0,1); pan=pan1*(1-Math.pow(1-q,2)); }
-  else if(pPin<0.62){ pan=pan1; }
-  else { const q=clampv((pPin-0.62)/0.24,0,1); pan=pan1+(maxPan-pan1)*(1-Math.pow(1-q,2)); }
-  stageEl.style.transform=`translateY(${(-pan).toFixed(1)}px)`;
-  hint.classList.toggle('hx-off',pIn>0.05);
-}
-
-function onHxScroll(){
-  const rTop=scrollyEl.getBoundingClientRect().top;
-  const lead=Math.max(1,scrollyEl.offsetTop);
-  const total=scrollyEl.offsetHeight-innerHeight;
-  apply(clampv(1-rTop/lead,0,1), clampv(-rTop/total,0,1));
-}
-
-if(REDUCED){
-  document.querySelectorAll('.hx-dm,.hx-vrow,.hx-term,.hx-term .hx-ln,.hx-member,.hx-treecap,.hx-logsec h2,.hx-logsec .hx-sub,.hx-lrow2').forEach(e=>e.classList.add('hx-show'));
-  beamEl.classList.add('hx-on'); treeEl.classList.add('hx-on');
-  beam2line.style.transform='scaleY(1)';
-  document.querySelector('.hx-logcard').style.opacity=1;
-  vaultEl.style.opacity=1; vaultEl.classList.add('hx-pulse');
-  buildPaths();
-  pathData.forEach(({path,dot})=>{path.style.strokeDashoffset=0;dot.style.opacity=.9;});
-  scrollyEl.style.height='auto'; stickyEl.style.position='static'; stickyEl.style.height='auto';
-  hint.style.display='none';
-}else{
-  buildPaths();
-  const gaps=[350,700,1000,1250,1450,1600];
-  dms.forEach((d,i)=>setTimeout(()=>d.classList.add('hx-show'),gaps[i]||1700));
-  addEventListener('scroll',()=>requestAnimationFrame(onHxScroll),{passive:true});
-  addEventListener('resize',()=>{stageEl.style.transform='';buildPaths();onHxScroll();});
-  onHxScroll();
-}
-})();
-
-/* ===== provider logo marquee — the catalog strip ===== */
-const PROVIDERS = [
-  ['Stripe','stripe'], ['OpenAI','openai'], ['Anthropic','anthropic'], ['GitHub','github'],
-  ['Google Cloud','googlecloud'], ['PostHog','posthog'], ['Vercel','vercel'], ['Resend','resend'],
-  ['Notion','notion'], ['Slack','slack'], ['Supabase','supabase'], ['Cloudflare','cloudflare'],
-  ['Linear','linear'], ['Replicate','replicate'], ['Hugging Face','huggingface'], ['Perplexity','perplexity'],
-  ['ElevenLabs','elevenlabs'], ['Sentry','sentry'], ['Twilio','twilio'], ['Discord','discord'],
-  ['Airtable','airtable'], ['Datadog','datadog'], ['Netlify','netlify'], ['Mistral','mistralai'],
-  ['Pinecone','pinecone'], ['Groq','groq'], ['Fly.io','flydotio'], ['HubSpot','hubspot'],
-];
-const logorow = document.getElementById('logorow');
-logorow.innerHTML = [...PROVIDERS, ...PROVIDERS].map(([name, slug]) =>
-  `<span class="litem"><img src="https://cdn.simpleicons.org/${slug}/b8b3a6" alt="" loading="lazy"
-     onerror="this.style.display='none'"/><span>${name}</span></span>`).join('');
-
-/* ===== try-it sandbox — LIVE against the real registry (port of the original
-   landing studio): mints a throwaway sandbox team, stores real secrets, registers
-   real tools, calls them through the proxy, and exports runnable skills. ===== */
-const $ = id => document.getElementById(id);
-function esc(x){ return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
-const SBX = { token:null, org_slug:'', secrets:[], tools:[], samples:[], skills:[],
-              ran:null, addOpen:false, skAddOpen:false, live:false, visitor:'', editing:false };
-// With the live wire ON the section has two modes: a VIEW (vault window + call panel, #sbx-view)
-// and an EDIT mode (the original studio, #sbx-studio). With the wire off, only the studio exists
-// and everything edits freely — the original behavior, untouched.
-function editingOn(){ return SBX.editing || !SBX.live; }
-function enterEdit(){ SBX.editing = true; applyMode(); renderVault(); }
-function toggleVaultEdit(){ SBX.editing = !SBX.editing; applyMode(); renderVault(); }
-function applyMode(){
-  const live = SBX.live && !!SBX.token;
-  // live: the call panel (step 2) is ALWAYS on screen; editing only swaps the vault window
-  // for the studio. wire off: the original studio is the whole section, untouched.
-  $('sbx-view').style.display = live ? '' : 'none';
-  $('vw-wrap').style.display = (live && !SBX.editing) ? '' : 'none';
-  $('sbx-studio').style.display = (live && !SBX.editing) ? 'none' : '';
-  $('sbx-guide').style.display = live ? 'none' : '';  // the step labels tell the story when live
-  $('vadd').style.display = editingOn() ? '' : 'none';
-  const b = $('vault-edit');
-  b.style.display = SBX.live ? '' : 'none';
-  b.textContent = '✓ done';
-  if (live && !SBX.editing) renderVaultView();
-}
-// Stripe's S mark (brand badge) for the live bundle row — inline so nothing is fetched.
-const STRIPE_BADGE =
-  '<svg class="vw-slogo" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#635BFF"/>' +
-  '<path fill="#fff" transform="translate(4.56,4.56) scale(0.62)" d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 ' +
-  '0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 ' +
-  '6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 ' +
-  '0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 ' +
-  '4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z"/></svg>';
-function renderVaultView(){
-  const rows = [];
-  const liveT = SBX.tools.find(isLiveTool);
-  if (liveT){
-    rows.push(`<div class="vw-row head">${STRIPE_BADGE} stripe-billing-skill <span class="vlive">LIVE</span>` +
-              `<span class="rt"><span class="t">SKILL.MD</span></span></div>`);
-    rows.push(`<div class="vw-row sub">└ ⚡ api.stripe.com<span class="vwdim">/v1/charges</span> <span class="vwchip ep">endpoint</span>` +
-              `<span class="rt"><span class="ok">wired ✓</span></span></div>`);
-    rows.push(`<div class="vw-row sub last">└ 🔑 STRIPE_KEY <span class="vwchip keyc">key</span>` +
-              `<span class="rt"><span class="ok">bound ✓ · never leaves</span></span></div>`);
+function onScroll(){
+  if(innerWidth<900) return;
+  const r=track.getBoundingClientRect();
+  const total=track.offsetHeight-innerHeight;
+  if(total<=0) return;
+  const sc=-r.top>60;
+  if(sc!==wasScrolled){
+    wasScrolled=sc;
+    document.querySelector('.cats-sticky').classList.toggle('scrolled',sc);
+    setTimeout(()=>{svg.dataset.drawn='';drawWires();},480);
   }
-  // seeded POSTHOG_KEY stays out of the exhibit (it exists for the edit-mode "add your own" flow);
-  // keys the VISITOR added do show.
-  for (const k of SBX.secrets.filter(x => x.name !== 'STRIPE_KEY' && x.name !== 'POSTHOG_KEY'))
-    rows.push(`<div class="vw-row">🔑 ${esc(k.name)} <span class="vwchip keyc">key</span><span class="dots">••••••</span>` +
-              `<span class="rt"><span class="t">standalone</span></span></div>`);
-  for (const t of SBX.tools.filter(x => !isLiveTool(x)))
-    rows.push(`<div class="vw-row">⚡ ${esc(t.base_url.replace(/^https?:\/\//, ''))} <span class="vwchip ep">endpoint</span>` +
-              `<span class="rt"><span class="ok">wired ✓</span></span></div>`);
-  $('vw-rows').innerHTML = rows.join('');
+  const p=Math.min(.999,Math.max(0,-r.top/total));
+  const seg=Math.min(3,Math.floor(p*4));
+  const wasSeg=active;
+  setSeg(seg);
+  if(seg===3&&wasSeg!==3) setTimeout(drawFinale,60);
 }
-const REAL_APIS = [
-  { name:'posthog', url:'https://app.posthog.com/api/projects/@current/events', key:'POSTHOG_KEY' },
-  { name:'openai',  url:'https://api.openai.com/v1/models',                     key:'OPENAI_KEY' },
-  { name:'github',  url:'https://api.github.com/user/repos',                    key:'GITHUB_KEY' },
-  { name:'notion',  url:'https://api.notion.com/v1/users',                      key:'NOTION_KEY' },
-];
-async function sbxFetch(path, opts = {}){
-  const h = { 'ngrok-skip-browser-warning':'1', ...(opts.headers || {}) };
-  if (SBX.token) h['X-Treg-Token'] = SBX.token;
-  if (opts.body) h['content-type'] = 'application/json';
-  const r = await fetch(path, { ...opts, headers: h });
-  if (!r.ok){ let d = ''; try { d = (await r.json()).detail; } catch(e){}
-    const e = new Error(d || ('HTTP ' + r.status)); e.status = r.status; e.detail = d; throw e; }
-  return r.status === 204 ? null : r.json();
-}
-function sbxErr(e, fallback){
-  const el = $('sbx-err');
-  el.textContent = e && e.status === 429
-    ? 'Too many sandboxes from your network — try again in a bit.' : (e && e.detail) || fallback;
-  el.style.display = 'block';
-  setTimeout(() => { el.style.display = 'none'; }, 6000);
-}
-async function sbxInit(){
-  const saved = localStorage.getItem('treg-sbx');
-  if (saved){
-    SBX.token = saved;
-    try {
-      // live-wire facts FIRST — sbxFreshStart needs SBX.live to know to spare the live tool
-      try { const lw = await sbxFetch('/demo/sandbox/live'); SBX.live = lw.live; SBX.visitor = lw.visitor; } catch(e){}
-      await sbxFreshStart();
-      liveInit();
-      return;
-    }
-    catch(e){ SBX.token = null; localStorage.removeItem('treg-sbx'); }
-  }
-  try {
-    const m = await sbxFetch('/demo/sandbox', { method:'POST' });
-    SBX.token = m.token; SBX.org_slug = m.org_slug;
-    SBX.live = !!m.live; SBX.visitor = m.visitor || '';
-    localStorage.setItem('treg-sbx', m.token);
-    await sbxFreshStart();
-    liveInit();
-  } catch(e){ sbxErr(e, 'Could not start the sandbox — please retry.'); }
-}
-async function sbxFreshStart(){
-  // every visit tells the story from the top: the ADD state. Wipe the sandbox's
-  // tools (keys stay in the vault) so the visitor's first action is hitting Add,
-  // and the "call it from any terminal" payoff appears as a result of THEIR click.
-  // EXCEPT the live wire: its terminal commands must work the moment the page shows
-  // them, so the seeded live stripe tool survives the reset and starts selected.
-  await sbxRefresh();
-  const gone = SBX.tools.filter(t => !isLiveTool(t));
-  for (const t of gone) await sbxFetch('/tools/' + t.id, { method:'DELETE' }).catch(() => {});
-  if (gone.length) await sbxRefresh();
-  await ensureLiveTool();
-  if (SBX.live && !SBX.skills.length){
-    // the exhibit opens stocked: the stripe skill card sits in the Skills tab from the start
-    const sm = SBX.samples.find(x => x.name === 'stripe-billing');
-    if (sm && haveKey(sm.key)) SBX.skills.push({ ...sm, tab: 0, runOpen: false });
-  }
-  applyMode();
-  prefillAdd();
-  const live = SBX.tools.find(isLiveTool);
-  if (live) selectTool(live.id);
-}
-async function ensureLiveTool(){
-  // sandboxes minted before the live wire shipped lack the pinned tool — recreate it silently
-  if (!SBX.live || SBX.tools.some(isLiveTool)) return;
-  const k = SBX.secrets.find(s => s.name === 'STRIPE_KEY');
-  if (!k) return;
-  await sbxFetch('/tools', { method:'POST', body: JSON.stringify({ name:'stripe', base_url: LIVE_API,
-    bindings: [{ secret_id: k.id, injector:'env', location:'header', name:'Authorization', format:'Bearer {secret}' }] }) }).catch(() => {});
-  await sbxRefresh();
-}
-async function sbxRefresh(){
-  const [secrets, tools, samples] = await Promise.all([
-    sbxFetch('/secrets'), sbxFetch('/tools'), sbxFetch('/skills/samples').catch(() => [])]);
-  SBX.secrets = secrets; SBX.tools = tools; SBX.samples = samples;
-  renderVault();
-}
-function bindKeyName(t){
-  const b = (t.bindings || [])[0] || {};
-  const k = SBX.secrets.find(x => x.id === b.secret_id);
-  return k ? k.name : '—';
-}
-function callPath(t){
-  const ex = (t.examples && t.examples[0]) ? t.examples[0].path : '';
-  if (ex) return '/' + ex;
-  const parts = t.base_url.replace(/^https?:\/\//,'').split('/');
-  return parts.length > 1 ? '/' + parts.slice(1).join('/') : '';
-}
-function haveKey(name){ return !!name && SBX.secrets.some(k => k.name === name); }
-function renderVault(){
-  $('vchips').innerHTML = SBX.secrets.map(k => {
-    const isLiveKey = SBX.live && k.name === 'STRIPE_KEY';
-    const live = isLiveKey ? '<span class="vlive">LIVE</span>' : '';
-    const x = (editingOn() && !isLiveKey)  // the live key is never removable, even in edit mode
-      ? `<button class="x" onclick="sbxRmSecret(${k.id})" aria-label="remove">✕</button>` : '';
-    return `<span class="vchip"><span class="kn">${esc(k.name)}</span><span class="kv">••••••</span>${live}${x}</span>`;
-  }).join('');
-  renderTools(); renderSkills();
-}
-function isLiveTool(t){  // mirror of sandbox.is_live_tool — the exact seeded fingerprint
-  return SBX.live && (t.base_url || '').replace(/\/$/, '') === LIVE_API;
-}
-function renderTools(){
-  $('trows').innerHTML = SBX.tools.map(t => {
-    const key = bindKeyName(t), host = t.base_url.replace(/^https?:\/\//,'').split('/')[0];
-    const x = (editingOn() && !isLiveTool(t))  // the live endpoint is never removable
-      ? `<button class="x" onclick="event.stopPropagation();sbxRmTool(${t.id})">✕</button>` : '';
-    return `<div class="trow ${SBX.ran === t.id ? 'on' : ''}" onclick="selectTool(${t.id})">` +
-      `<span class="meth">GET</span><span class="host">${esc(host)}<span class="path">${esc(callPath(t))}</span></span>` +
-      (isLiveTool(t) ? '<span class="vlive">LIVE</span>' : '') +
-      `<span class="key ${key === '—' ? 'warn' : ''}">🔑 ${esc(key)}</span><span class="sp"></span>` + x + `</div>`;
-  }).join('');
-  const showAdd = editingOn() && (SBX.tools.length === 0 || SBX.addOpen);
-  $('addwrap').style.display = showAdd ? 'block' : 'none';
-  $('addmore').style.display = (editingOn() && !showAdd) ? 'inline-flex' : 'none';
-  const prev = $('nt-key').value;
-  $('nt-key').innerHTML = SBX.secrets.map(k => `<option value="${k.id}">${esc(k.name)}</option>`).join('');
-  if ([...$('nt-key').options].some(o => o.value === prev)) $('nt-key').value = prev;
-}
-const STRIPE_PREFILL = { name:'stripe', url:'https://api.stripe.com/v1/charges', key:'STRIPE_KEY' };
-function prefillAdd(){
-  const a = !SBX.tools.some(t => t.name === 'stripe') ? STRIPE_PREFILL
-    : (REAL_APIS.find(x => !SBX.tools.some(t => t.name === x.name)) || REAL_APIS[0]);
-  $('nt-name').value = a.name; $('nt-url').value = a.url;
-  renderTools();
-  const k = SBX.secrets.find(x => x.name === a.key) || SBX.secrets[0];
-  if (k) $('nt-key').value = String(k.id);
-}
-function sbxOpenAdd(){ SBX.addOpen = true; prefillAdd(); }
-async function sbxAddSecret(){
-  const name = $('ns-name').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');
-  const value = $('ns-value').value;
-  if (!name || !value){ sbxErr(null, 'Give the key a name and a value.'); return; }
-  try {
-    await sbxFetch('/secrets', { method:'POST', body: JSON.stringify({ name, value, kind:'env' }) });
-    $('ns-name').value = ''; $('ns-value').value = '';
-    await sbxRefresh();
-  } catch(e){ sbxErr(e, 'Could not add the key.'); }
-}
-async function sbxRmSecret(id){
-  try { await sbxFetch('/secrets/' + id, { method:'DELETE' }); await sbxRefresh(); }
-  catch(e){ sbxErr(e, 'Could not remove that key.'); }
-}
-async function sbxRmTool(id){
-  try {
-    await sbxFetch('/tools/' + id, { method:'DELETE' });
-    if (SBX.ran === id){ SBX.ran = null; $('resultwrap').style.display = 'none'; }
-    await sbxRefresh();
-    if (SBX.tools.length === 0) prefillAdd();
-  } catch(e){ sbxErr(e, 'Could not remove that endpoint.'); }
-}
-async function sbxAddTool(){
-  const name = $('nt-name').value.trim(), base_url = $('nt-url').value.trim();
-  const secret_id = +$('nt-key').value;
-  if (!name || !base_url){ sbxErr(null, 'Give the endpoint a name and a base URL.'); return; }
-  if (!secret_id){ sbxErr(null, 'Pick a secret to inject.'); return; }
-  try {
-    await sbxFetch('/tools', { method:'POST', body: JSON.stringify({ name, base_url,
-      bindings: [{ secret_id, injector:'env', location:'header', name:'Authorization', format:'Bearer {secret}' }] }) });
-    SBX.addOpen = false;
-    await sbxRefresh();
-    const added = SBX.tools.find(t => t.name === name);
-    if (added) selectTool(added.id);          // adding auto-selects the new endpoint
-  } catch(e){ sbxErr(e, 'Could not add the endpoint.'); }
-}
-function toolUrl(t){
-  const ex = (t.examples && t.examples[0]) ? t.examples[0].path : '';
-  return ex ? t.base_url.replace(/\/$/,'') + '/' + ex : t.base_url.replace(/\/$/,'');
-}
-function selectTool(id){
-  const t = SBX.tools.find(x => x.id === id); if (!t) return;
-  SBX.ran = id; renderTools();
-  $('res-curl').textContent =
-    'curl ' + location.origin + '/call/' + toolUrl(t) + ' \\\n  -H "X-Treg-Token: ' + (SBX.token || '<token>') + '"';
-  $('resultwrap').style.display = 'block';
-}
-/* ---- skills: real samples + the runnable Claude Code flow ---- */
-function installCmd(name){
-  return 'curl -fsSL ' + location.origin + '/skills/' + name + '/install.sh?token=' + (SBX.token || '<token>') + ' | sh';
-}
-function renderSkills(){
-  $('skcards').innerHTML = SBX.skills.map((sk, n) => {
-    const have = haveKey(sk.key);
-    const files = Object.keys(sk.files || {});
-    const tabs = files.map((f, fi) =>
-      `<button class="sktab ${fi === (sk.tab || 0) ? 'on' : ''}" onclick="skTab(${n},${fi},this)">${esc(f)}</button>`).join('');
-    const run = sk.runOpen ? `
-      <div style="padding:0 15px 14px">
-        <div style="font-size:11.5px;color:var(--ink55);margin:6px 0 5px">1 · in your project directory (creates <code style="color:var(--ink70)">./.claude/skills/${esc(sk.name)}/</code>):</div>
-        <div class="codewrap"><button class="cp" onclick="copyEl('inst-${n}',this)">copy</button><pre id="inst-${n}">${esc(installCmd(sk.name))}</pre></div>
-        <div style="font-size:11.5px;color:var(--ink55);margin:10px 0 5px">2 · open Claude Code there, then just ask:</div>
-        <div class="codewrap"><button class="cp" onclick="copyEl('prompt-${n}',this)">copy</button><pre id="prompt-${n}">${esc(sk.prompt || '')}</pre></div>
-        <p class="addhint" style="margin-top:9px">Claude Code loads the skill and calls the API <b>through treg with your sandbox token</b> — no key on your machine.</p>
-      </div>` : '';
-    return `<div class="skcard" style="margin-bottom:10px">
-      <div class="skh"><span>📦</span><b>${esc(sk.name)}</b><span class="skbadge">skill</span>
-        <span class="sp" style="flex:1"></span>
-        <span style="font-family:var(--mono);font-size:10.5px;color:${have ? 'var(--silver,#d8d2c2)' : '#f08a7a'};border:1px solid var(--line2);border-radius:900px;padding:2px 9px">needs 🔑 ${esc(sk.key)} ${have ? '✓' : '— missing'}</span>
-        ${editingOn() ? `<button class="x" style="border:0;background:none;color:var(--ink55);cursor:pointer;font-size:13px" onclick="skRm(${n})">✕</button>` : ''}</div>
-      <div class="skmeta">A folder your agent loads. It calls its API through treg with <b>your</b> token — the key stays in the vault.</div>
-      <div class="sktabs">${tabs}</div>
-      <div class="skbody" id="skbody-${n}">${esc((sk.files || {})[files[sk.tab || 0]] || '')}</div>
-      <div style="display:flex;align-items:center;gap:10px;padding:12px 15px;font-size:12.5px;color:var(--ink55);flex-wrap:wrap">
-        <button class="candy sm" onclick="skRun(${n})">${sk.runOpen ? '▾' : '▶'} Run in Claude Code</button>
-        <span>installs into <code style="font-family:var(--mono);color:var(--ink70)">./.claude/skills</code> · key stays in the vault</span>
-      </div>${run}
-    </div>`;
-  }).join('');
-  const remaining = SBX.samples.filter(sm => !SBX.skills.some(sk => sk.name === sm.name));
-  const showAdd = editingOn() && (SBX.skills.length === 0 || SBX.skAddOpen) && remaining.length > 0;
-  $('skadd').style.display = showAdd ? 'block' : 'none';
-  $('skaddmore').style.display = (editingOn() && !showAdd && remaining.length > 0) ? 'inline-flex' : 'none';
-  if (showAdd){
-    const prev = $('sk-pick').value;
-    $('sk-pick').innerHTML = remaining.map(sm => `<option value="${esc(sm.name)}">${esc(sm.label || sm.name)}</option>`).join('');
-    if ([...$('sk-pick').options].some(o => o.value === prev)) $('sk-pick').value = prev;
-    renderSkillAdd();
-  }
-}
-function renderSkillAdd(){
-  const sm = SBX.samples.find(x => x.name === $('sk-pick').value);
-  if (!sm){ $('skneed').innerHTML = ''; return; }
-  const have = haveKey(sm.key);
-  $('skneed').innerHTML = `<span>This skill needs</span>` +
-    `<span style="font-family:var(--mono);font-size:11px;color:${have ? 'var(--silver,#d8d2c2)' : '#f08a7a'};border:1px solid var(--line2);border-radius:900px;padding:3px 10px">🔑 ${esc(sm.key)}</span>` +
-    (have ? `<span style="color:var(--green,#A6EE98);font-size:12.5px">✓ in your vault</span>`
-          : `<button class="minibtn" onclick="sbxAddNeeded('${esc(sm.key)}')">＋ add ${esc(sm.key)} to vault</button>`) +
-    `<span style="flex:1"></span>` +
-    `<button class="minibtn blue" onclick="sbxAddSkill()" ${have ? '' : 'disabled style="opacity:.5"'}>＋ Add skill</button>`;
-}
-async function sbxAddNeeded(name){
-  try {
-    await sbxFetch('/secrets', { method:'POST',
-      body: JSON.stringify({ name, value: 'sk_demo_' + Math.random().toString(36).slice(2, 8), kind:'env' }) });
-    await sbxRefresh();
-  } catch(e){ sbxErr(e, 'Could not add the key.'); }
-}
-function sbxAddSkill(){
-  const sm = SBX.samples.find(x => x.name === $('sk-pick').value);
-  if (!sm || !haveKey(sm.key) || SBX.skills.some(x => x.name === sm.name)) return;
-  SBX.skills.push({ ...sm, tab: 0, runOpen: false });
-  SBX.skAddOpen = false;
-  renderSkills();
-}
-function skOpenAdd(){ SBX.skAddOpen = true; renderSkills(); }
-function skRm(n){ SBX.skills.splice(n, 1); renderSkills(); }
-function skRun(n){ SBX.skills[n].runOpen = !SBX.skills[n].runOpen; renderSkills(); }
-function skTab(n, fi, btn){
-  SBX.skills[n].tab = fi;
-  const files = Object.keys(SBX.skills[n].files || {});
-  btn.parentElement.querySelectorAll('.sktab').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  $('skbody-' + n).textContent = (SBX.skills[n].files || {})[files[fi]] || '';
-}
-function sbxTab(v){
-  $('tab-endpoints').classList.toggle('on', v === 'endpoints');
-  $('tab-skills').classList.toggle('on', v === 'skills');
-  $('pane-endpoints').style.display = v === 'endpoints' ? 'block' : 'none';
-  $('pane-skills').style.display = v === 'skills' ? 'block' : 'none';
-  $('wssub').textContent = v === 'endpoints'
-    ? 'One API URL or CLI, called with a token. treg injects the key.'
-    : 'Plain skill OR bundle with CLI/Endpoint + Secrets.';
-}
-function copyEl(id, btn){
-  navigator.clipboard.writeText($(id).textContent).then(() => {
-    const old = btn.textContent; btn.textContent = '✓ copied';
-    setTimeout(() => btn.textContent = old, 1400);
-  });
-}
-sbxTab('endpoints');
-sbxInit();
+addEventListener('scroll',onScroll,{passive:true});
+addEventListener('resize',()=>{svg.dataset.drawn='';drawWires();onScroll();if(active===3)drawFinale();});
+addEventListener('load',()=>{drawWires();onScroll();});
+drawWires();
 
-/* ===== live wire: the sandbox's ONE real endpoint =====
-   Uses the visitor's OWN sandbox token (SBX.token) — everyone gets a unique credential, which IS
-   the product story. The server decides whether the wire is live (TREG_DEMO_STRIPE_KEY set) and
-   who you are in the feed (`visitor`, injected into every charge as metadata server-side). When
-   the wire is off, the grid stays hidden and the sandbox behaves exactly as before. */
-const LIVE_MAX_ROWS = 8;
-const LIVE_API = 'https://api.stripe.com/v1/charges';
-function liveTab(name){
-  document.querySelectorAll('.live-tab').forEach(t => t.classList.toggle('on', t.dataset.pane === name));
-  ['curl','cli'].forEach(p => $(`lw-pane-${p}`).classList.toggle('on', p === name));
-}
-function liveSnippets(token, visitor){
-  const amount = Math.floor(Math.random() * 9900) + 100;  // $1.00–$99.99 (Stripe minimum is 50¢)
-  $('lw-you').textContent = visitor;
-  const E = esc, dim = s => `<span class="lw-dim">${E(s)}</span>`, api = `<span class="lw-api">${LIVE_API}</span>`,
-        tok = `<span class="lw-tok">${E(token)}</span>`, amt = s => `<span class="lw-amt">${E(s)}</span>`,
-        cmt = s => `<span class="lw-cmt">${E(s)}</span>`;
-  const dataHtml = `"${amt('amount=' + amount)}&amp;currency=usd&amp;source=tok_visa"`;
-  $('lw-curl').innerHTML =
-    `curl -X POST ${dim(location.origin + '/call/')}${api} \\\n` +
-    `  -H "X-Treg-Token: ${tok}" \\\n` +
-    `  -d ${amt('amount=' + amount)} -d currency=usd -d source=tok_visa`;
-  $('lw-cli').innerHTML =
-    cmt('# 1 · install the treg CLI (once — it points here automatically)') + `\n` +
-    `curl -fsSL ${dim(location.origin)}/install.sh | sh\n\n` +
-    cmt('# 2 · sign in with YOUR token') + `\n` +
-    `treg login --token ${tok}\n\n` +
-    cmt('# 3 · call Stripe — the key is injected server-side, never downloaded') + `\n` +
-    `treg call ${api} --method POST \\\n` +
-    `  --data ${dataHtml}`;
-}
-function liveRow(e, fresh){
-  const row = document.createElement('div');
-  row.className = 'live-row' + (fresh ? ' fresh' : '');
-  const when = e.created ? new Date(e.created * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
-  row.innerHTML = `<span class="amt"></span><span class="who"></span><span class="when"></span>`;
-  row.children[0].textContent = `$${(e.amount / 100).toFixed(2)}`;
-  row.children[1].textContent = e.name || `…${e.id_suffix || ''}`;
-  row.children[2].textContent = when;
-  if (e.receipt_url && e.receipt_url.indexOf('https://pay.stripe.com/') === 0){
-    const a = document.createElement('a');
-    a.className = 'rcpt'; a.href = e.receipt_url; a.target = '_blank'; a.rel = 'noopener';
-    a.textContent = 'receipt on stripe.com ↗';
-    row.appendChild(a);
-  }
-  return row;
-}
-function liveInit(){
-  if (!SBX.live || !SBX.token || !SBX.visitor || SBX._es) return;  // wire off / already wired
-  liveSnippets(SBX.token, SBX.visitor);
-  renderVault();  // repaint so the STRIPE_KEY chip picks up its LIVE badge
-  applyMode();
-  const rows = $('live-rows');
-  const t0 = Date.now();
-  let any = false;
-  const es = SBX._es = new EventSource('/landing/stripe-feed');
-  es.onmessage = m => {
-    const e = JSON.parse(m.data);
-    if (!any){ rows.textContent = ''; any = true; }
-    // the ring-buffer replay lands in the first moments of the stream — render it quietly;
-    // anything after that is a live charge and gets the flash.
-    rows.prepend(liveRow(e, Date.now() - t0 > 1500));
-    while (rows.children.length > LIVE_MAX_ROWS) rows.lastChild.remove();
-  };
-}
+pills.forEach(pl=>pl.addEventListener('click',()=>{
+  const s=+pl.dataset.seg;
+  const total=track.offsetHeight-innerHeight;
+  const top=track.getBoundingClientRect().top+scrollY;
+  scrollTo({top:top+total*((2*s+1)/8),behavior:'smooth'});
+}));
 
-/* ===== sign-in ===== */
-function openSignin(){ document.getElementById('signin-scrim').classList.add('open');
-  document.getElementById('em-input').focus(); }
-function closeSignin(){ document.getElementById('signin-scrim').classList.remove('open'); }
-addEventListener('keydown', e => { if (e.key === 'Escape') closeSignin(); });
-async function emailStart(){
-  const em = document.getElementById('em-input').value.trim();
-  const err = document.getElementById('em-err');
-  if (!em){ err.textContent = 'Enter your email address.'; return; }
-  document.getElementById('em-btn1').textContent = 'Sending…'; err.textContent = '';
-  try {
-    const r = await fetch('/auth/email/start', { method:'POST',
-      headers:{'content-type':'application/json'}, body: JSON.stringify({ email: em }) });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || 'could not send the code');
-    const d = await r.json().catch(() => ({}));
-    document.getElementById('em-step1').style.display = 'none';
-    document.getElementById('em-step2').style.display = 'block';
-    if (d.dev_code){   // local dev mode: the server hands the code straight back — show + prefill it
-      document.getElementById('em-code').value = d.dev_code;
-      err.style.color = 'var(--green,#A6EE98)';
-      err.textContent = 'dev mode — your code: ' + d.dev_code;
-    } else { err.style.color = ''; }
-    document.getElementById('em-code').focus();
-  } catch(e){ err.textContent = e.message; document.getElementById('em-btn1').textContent = 'Email me a sign-in code'; }
-}
-async function emailVerify(){
-  const em = document.getElementById('em-input').value.trim();
-  const code = document.getElementById('em-code').value.trim();
-  const err = document.getElementById('em-err');
-  if (!code) return;
-  document.getElementById('em-btn2').textContent = 'Verifying…'; err.textContent = '';
-  try {
-    const r = await fetch('/auth/email/verify', { method:'POST',
-      headers:{'content-type':'application/json'}, body: JSON.stringify({ email: em, code }) });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || 'that code didn\'t work');
-    location.href = '/app';
-  } catch(e){ err.textContent = e.message; document.getElementById('em-btn2').textContent = 'Sign in'; }
-}
+const st=document.createElement('style');
+st.textContent='@keyframes wflow{to{stroke-dashoffset:-102}} #wires .flow path, #finsvg .flow path{animation:wflow 3.4s linear infinite}';
+document.head.appendChild(st);
+
+/* ---------- account-actions: card click swaps outcome ---------- */
+document.querySelectorAll('.lcard').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.lcard').forEach(x=>x.classList.toggle('on',x===c));
+  document.querySelectorAll('.rout').forEach(r=>r.classList.toggle('hide',r.dataset.ro!==c.dataset.out));
+}));
+
 </script>
-
-<!-- sign-in modal -->
-<div class="scrim" id="signin-scrim" onclick="if(event.target===this)closeSignin()">
-  <div class="smodal" role="dialog" aria-label="Sign in">
-    <button class="cls" onclick="closeSignin()" aria-label="Close">✕</button>
-    <h3>Sign in to treg</h3>
-    <p>first sign-in creates your account</p>
-    <a class="candy" href="/auth/github" style="text-decoration:none">Continue with GitHub</a>
-    <a class="ghostbtn" href="/auth/google" style="text-decoration:none">Continue with Google</a>
-    <div class="div">or email a code</div>
-    <div id="em-step1">
-      <input id="em-input" type="email" placeholder="you@work.com" onkeyup="if(event.key==='Enter')emailStart()"/>
-      <button class="ghostbtn" onclick="emailStart()" id="em-btn1">Email me a sign-in code</button>
-    </div>
-    <div id="em-step2" style="display:none">
-      <input id="em-code" inputmode="numeric" placeholder="6-digit code" onkeyup="if(event.key==='Enter')emailVerify()"/>
-      <button class="candy" onclick="emailVerify()" id="em-btn2">Sign in</button>
-    </div>
-    <div class="err" id="em-err"></div>
-  </div>
-</div>
 </body>
 </html>

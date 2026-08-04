@@ -53,6 +53,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
     note: Discover does not consume search or verification credits
   docs_url: https://hunter.io/api-documentation/v2#discover
   verified: '2026-07-28'
@@ -89,6 +90,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api-documentation/v2#discover
   verified: '2026-07-28'
   example_response: examples/hunter.x.discover-people.json
@@ -109,6 +111,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api-documentation/v2#discover
   verified: '2026-07-28'
   example_response: examples/hunter.x.discover-views-list.json
@@ -132,6 +135,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api-documentation/v2#discover
 - id: hunter.x.discover-views-create
   kind: account
@@ -156,6 +160,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api-documentation/v2#discover
 - id: hunter.x.discover-views-delete
   kind: account
@@ -175,6 +180,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api-documentation/v2#discover
 - id: hunter.x.domain-finder
   tier: extended
@@ -207,6 +213,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
     note: does not consume credits
   docs_url: https://hunter.io/api-documentation/v2#domain-finder
   verified: '2026-07-28'
@@ -241,6 +248,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api-documentation/v2#email-count
   verified: '2026-07-28'
   example_response: examples/hunter.x.email-count.json
@@ -280,6 +288,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
     note: searching is free; credits are charged only on reveal
   docs_url: https://hunter.io/api-documentation/v2#multi-domain-search
   verified: '2026-07-28'
@@ -305,6 +314,12 @@ endpoints:
     type: per_success
     value: 1
     currency: credit
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://hunter.io/pricing
+    checked: '2026-07-28'
+    confidence: documented
     note: 1 SEARCH credit per personal email revealed; 1 credit per domain for generic emails
   docs_url: https://hunter.io/api-documentation/v2#multi-domain-search
   capability: people.enrich
@@ -332,6 +347,12 @@ endpoints:
     type: per_success
     value: 0.2
     currency: credit
+    per: 1
+    unit: call
+    source: docs
+    source_url: https://hunter.io/pricing
+    checked: '2026-07-28'
+    confidence: documented
     note: 0.2 credits, billed conditionally (only when the combined record comes back complete); a 404 or partial record is free — same rate as the /people/find and /companies/find enrichment routes
   docs_url: https://hunter.io/api-documentation/v2#email-enrichment
   verified: '2026-07-28'
@@ -375,6 +396,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
   verified: '2026-07-28'
   example_response: examples/hunter.x.leads-list.json
@@ -397,6 +419,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-create
   kind: account
@@ -457,6 +480,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-update
   kind: account
@@ -490,6 +514,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-delete
   kind: account
@@ -509,6 +534,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-lists-list
   kind: account
@@ -535,6 +561,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
   verified: '2026-07-28'
   example_response: examples/hunter.x.leads-lists-list.json
@@ -557,6 +584,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-lists-create
   kind: account
@@ -581,6 +609,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-lists-update
   kind: account
@@ -608,6 +637,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.leads-lists-delete
   kind: account
@@ -627,6 +657,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://hunter.io/api/leads
 - id: hunter.x.custom-attributes-list
   kind: account
@@ -644,8 +675,15 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
-  unverified: 'http 404: <!DOCTYPE html> <html> <head> <title>404 Not Found • Hunter</title> <meta conten'
+  unverified: 'http 404 — WITHDRAWN, not broken. Re-probed 2026-07-31 and still 404, and the tell is
+    the response BODY — Hunter answers every real API route with its JSON error envelope
+    ({errors:[{id,code,details}]}), and this path returns the site''s HTML 404 page instead, meaning
+    the router has no such API route at all. /leads/custom_attributes is not the relocation either
+    (it parses as /leads/{id} and answers "This lead does not exist"). The whole custom-attributes
+    family below is kept only because Hunter''s help article still documents it; treat all four as
+    retired until Hunter republishes a working path.'
 - id: hunter.x.custom-attributes-create
   kind: account
   tier: extended
@@ -661,11 +699,12 @@ endpoints:
         required: true
     bodyType: json
     note: writes real account state, deliberately no test_request
-  untestable: writes real account state (creates a custom attribute); deliberately not probed blind
+  untestable: writes real account state (creates a custom attribute); deliberately not probed blind. NOTE 2026-07-31 — the family's read route GET /custom_attributes 404s with an HTML page rather than Hunter's JSON error envelope, so this write route is very likely retired too; it was not called because a write needs a real lead.
   cost:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.custom-attributes-update
   kind: account
@@ -685,11 +724,12 @@ endpoints:
         type: string
         required: false
     bodyType: json
-  untestable: requires a real custom-attribute id; mutating
+  untestable: requires a real custom-attribute id; mutating. NOTE 2026-07-31 — the family's read route GET /custom_attributes 404s with an HTML page rather than Hunter's JSON error envelope, so this write route is very likely retired too; it was not called because a write needs a real lead.
   cost:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.custom-attributes-delete
   kind: account
@@ -704,11 +744,12 @@ endpoints:
       id:
         type: string
         required: true
-  untestable: destructive; requires a real custom-attribute id
+  untestable: destructive; requires a real custom-attribute id. NOTE 2026-07-31 — the family's read route GET /custom_attributes 404s with an HTML page rather than Hunter's JSON error envelope, so this write route is very likely retired too; it was not called because a write needs a real lead.
   cost:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.campaigns-list
   kind: account
@@ -735,6 +776,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
   verified: '2026-07-28'
   example_response: examples/hunter.x.campaigns-list.json
@@ -757,6 +799,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.campaigns-recipients-add
   kind: account
@@ -786,6 +829,7 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
     note: no search/verification credit charged; consumes the account's sending quota instead
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api
 - id: hunter.x.campaigns-recipients-remove
@@ -811,4 +855,5 @@ endpoints:
     type: free
     value: 0
     currency: USD
+    unit: call
   docs_url: https://help.hunter.io/en/articles/1970956-hunter-api

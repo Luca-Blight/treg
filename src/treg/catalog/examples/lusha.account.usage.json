@@ -1,22 +1,22 @@
 {
   "credits": {
     "total": 50,
-    "used": 8,
-    "remaining": 42
+    "used": 22,
+    "remaining": 28
   },
   "rateLimits": {
     "daily": {
       "limit": 100,
-      "used": 24,
-      "remaining": 76,
-      "resetsAt": "2026-07-29T11:33:42.472Z"
+      "used": 15,
+      "remaining": 85,
+      "resetsAt": "2026-07-31T12:26:56.553Z"
     },
     "hourly": null,
     "minute": {
       "limit": 40,
-      "used": 3,
-      "remaining": 37,
-      "resetsAt": "2026-07-28T11:58:40.162Z"
+      "used": 1,
+      "remaining": 39,
+      "resetsAt": "2026-07-31T01:56:10.085Z"
     }
   },
   "plan": {

@@ -45,7 +45,7 @@ endpoints:
         ReturnAdditionalFields: {type: string, required: false, note: "space-delimited opt-ins for newer properties, e.g. \"AdScheduleUseSearcherTimeZone BidStrategyId\"", example: "BidStrategyId"}
       bodyType: json
       note: "returns Campaigns[] with Id, Name, Status, DailyBudget, BudgetType, BiddingScheme, StartDate/EndDate, Languages and CampaignType. DailyBudget is a plain decimal in the ACCOUNT CURRENCY — not micros, not cents, unlike Google and Meta. No performance metrics: pair with the Reporting service for spend and clicks"
-    cost: {type: free, note: "the Microsoft Advertising API is free with the account; usage is bounded per developer token and per account by service-level rate limits, and abusive callers get 117/118 throttling errors rather than a bill"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'the Microsoft Advertising API is free with the account; usage is bounded per developer token and per account by service-level rate limits, and abusive callers get 117/118 throttling errors rather than a bill'}
     docs_url: https://learn.microsoft.com/en-us/advertising/campaign-management-service/getcampaignsbyaccountid?view=bingads-13
 
   - id: microsoft-ads.adgroups
@@ -62,7 +62,7 @@ endpoints:
         ReturnAdditionalFields: {type: string, required: false, note: "space-delimited, e.g. \"AdGroupType FrequencyCapSettings\""}
       bodyType: json
       note: "returns AdGroups[] with Id, Name, Status, CpcBid/CpmBid/CpvBid (each wrapped as {\"Amount\": 1.5}), Network, Language, StartDate/EndDate and AdGroupType. Bid amounts are decimals in the account currency"
-    cost: {type: free, note: "included with the account; service rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the account; service rate limits apply}
     docs_url: https://learn.microsoft.com/en-us/advertising/campaign-management-service/getadgroupsbycampaignid?view=bingads-13
 
   - id: microsoft-ads.ads
@@ -80,7 +80,7 @@ endpoints:
         ReturnAdditionalFields: {type: string, required: false}
       bodyType: json
       note: "responsive search ads return Headlines[] and Descriptions[] as asset-link arrays rather than flat strings, so the creative text is nested a level deeper than in older ad types"
-    cost: {type: free, note: "included with the account; service rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the account; service rate limits apply}
     docs_url: https://learn.microsoft.com/en-us/advertising/campaign-management-service/getadsbyadgroupid?view=bingads-13
 
   - id: microsoft-ads.keywords
@@ -97,6 +97,6 @@ endpoints:
         ReturnAdditionalFields: {type: string, required: false, note: "space-delimited, e.g. \"FinalUrlSuffix\""}
       bodyType: json
       note: "returns Keywords[] with Id, Text, MatchType (Exact | Phrase | Broad), Bid {Amount}, Status and destination URLs. Negative keywords are NOT here — they are a separate NegativeKeywords entity on the campaign or ad group"
-    cost: {type: free, note: "included with the account; service rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the account; service rate limits apply}
     docs_url: https://learn.microsoft.com/en-us/advertising/campaign-management-service/getkeywordsbyadgroupid?view=bingads-13
 

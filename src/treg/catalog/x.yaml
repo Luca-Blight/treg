@@ -33,7 +33,7 @@ endpoints:
       queryParams:
         user.fields: {type: string, required: false, note: "comma-separated extras; public_metrics carries followers_count / following_count / tweet_count", example: "id,name,username,description,public_metrics,verified,created_at"}
       note: "the only X read route guaranteed on every access tier. Its data.id is the {id} the timeline endpoints need"
-    cost: {type: free, note: "included with the connected account; X applies per-app request caps by access tier, not per-call pricing"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; X applies per-app request caps by access tier, not per-call pricing'}
     test_request:
       queryParams: {"user.fields": "id,name,username,description,public_metrics,verified,created_at"}
     verified: 2026-07-28
@@ -56,7 +56,7 @@ endpoints:
       queryParams:
         user.fields: {type: string, required: false, example: "id,name,username,description,public_metrics,verified,created_at"}
       note: "for several handles at once use GET /2/users/by?usernames=a,b,c (up to 100) — one request against the cap instead of 100"
-    cost: {type: free, note: "included with the connected account; counts against the app's monthly post-read cap"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; counts against the app's monthly post-read cap}
     test_request:
       pathParams: {username: "elonmusk"}
       queryParams: {"user.fields": "id,name,username,description,public_metrics,verified,created_at"}
@@ -82,7 +82,7 @@ endpoints:
         tweet.fields: {type: string, required: false, note: "public_metrics carries likes/reposts/replies/impressions", example: "id,text,created_at,public_metrics,referenced_tweets"}
         start_time: {type: string, required: false, note: "RFC 3339; the timeline reaches back at most 3,200 posts regardless", example: "2026-07-01T00:00:00Z"}
       note: "posts read here count against the app's monthly cap; on the Free access tier this route answers 429 UsageCapExceeded"
-    cost: {type: free, note: "included with the connected account; consumes the app's monthly post-read allowance (tier-dependent)"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; consumes the app's monthly post-read allowance (tier-dependent)}
     test_request:
       pathParams: {id: "44196397"}
       queryParams: {max_results: 5, "tweet.fields": "id,text,created_at,public_metrics"}
@@ -117,7 +117,7 @@ endpoints:
         geo: {type: object, required: false, note: "{\"place_id\": \"…\"}"}
       bodyType: json
       note: "needs the `write` capability (tweet.write); a connection made with `read` answers 403. Success is HTTP 201 with {data: {id, text}} — the public URL is https://x.com/<handle>/status/<data.id>, which the API does not return. Images/video are out of reach, see the block comment above"
-    cost: {type: free, note: "included with the connected account; X caps posts by app access tier (Free = 500 posts/month, 17/day) rather than charging per call"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'included with the connected account; X caps posts by app access tier (Free = 500 posts/month, 17/day) rather than charging per call'}
     unverified: "write action — this publishes to a real account; requires a deliberate manual test, never an automated verify run"
     docs_url: https://docs.x.com/x-api/posts/creation-of-a-post
 
@@ -138,7 +138,7 @@ endpoints:
         quote_tweet_id: {type: string, required: false, note: "quote-posts the given id instead of replying to it — use INSTEAD of `reply`, not alongside"}
       bodyType: json
       note: "to build a thread, feed each response's data.id into the next call's reply.in_reply_to_tweet_id. Replying to a post whose author restricted replies, or that was deleted, answers 403/404 — each call is all-or-nothing, so a half-posted thread stays half-posted"
-    cost: {type: free, note: "included with the connected account; a reply counts against the same per-tier monthly post cap as an original post"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; a reply counts against the same per-tier monthly post cap as an original post}
     unverified: "write action — this publishes to a real account; requires a deliberate manual test, never an automated verify run"
     docs_url: https://docs.x.com/x-api/posts/creation-of-a-post
 

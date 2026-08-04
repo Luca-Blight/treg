@@ -57,7 +57,7 @@ endpoints:
         limit: {type: integer, required: false, note: "page size; 25 by default, a few hundred is the practical ceiling before Meta starts timing out", example: 25}
         after: {type: string, required: false, note: "paging.cursors.after from the previous response"}
       note: "give it either search_terms or search_page_ids — a call with neither returns an error, not the whole library. ad_snapshot_url is the human-viewable render of the creative and needs the access token appended to load. Results are ads Meta has KEPT: commercial ads leave the library some time after they stop running, so this is a live-ish view, not an archive"
-    cost: {type: free, note: "no per-call charge; access is gated on a one-time Meta identity verification, and the app is subject to Graph API rate limits (per-app hourly quota, reported in x-app-usage)"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: 'no per-call charge; access is gated on a one-time Meta identity verification, and the app is subject to Graph API rate limits (per-app hourly quota, reported in x-app-usage)'}
     docs_url: https://developers.facebook.com/docs/graph-api/reference/ads_archive/
 
   - id: meta-ad-library.meta-ads.library.advertiser
@@ -78,7 +78,7 @@ endpoints:
         limit: {type: integer, required: false, example: 50}
         after: {type: string, required: false}
       note: "the competitor-monitoring shape: pin the advertiser, page through everything they run. One Page can run hundreds of near-identical creative variants, so count DISTINCT ad_creative_bodies rather than rows when sizing a competitor's output"
-    cost: {type: free, note: "no per-call charge; Graph API app-level rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: no per-call charge; Graph API app-level rate limits apply}
     docs_url: https://developers.facebook.com/docs/graph-api/reference/ads_archive/
 
   - id: meta-ad-library.meta-ads.library.political
@@ -100,7 +100,7 @@ endpoints:
         ad_delivery_date_min: {type: string, required: false, note: "YYYY-MM-DD"}
         limit: {type: integer, required: false, example: 25}
       note: "spend and impressions are RANGES — {\"lower_bound\":\"100\",\"upper_bound\":\"499\"} — never point values, so totals across ads can only be reported as a range. demographic_distribution and delivery_by_region come back as percentage breakdowns that sum to ~1. Political ads stay in the library for seven years, unlike commercial ones"
-    cost: {type: free, note: "no per-call charge; Graph API app-level rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: no per-call charge; Graph API app-level rate limits apply}
     docs_url: https://www.facebook.com/ads/library/api/
 
   - id: meta-ad-library.meta-ads.library.eu_reach
@@ -120,6 +120,6 @@ endpoints:
         ad_active_status: {type: string, required: false, example: "ALL"}
         limit: {type: integer, required: false, example: 25}
       note: "Meta publishes these under the EU Digital Services Act: eu_total_reach is an actual number of accounts reached (not a range), age_country_gender_reach_breakdown splits it by country/age/gender, beneficiary_payers names who paid and who benefits, and target_ages / target_gender / target_locations expose the advertiser's declared targeting — the only place any Meta ad targeting is public. All of it is missing for non-EU delivery, which reads as an empty response field rather than an error"
-    cost: {type: free, note: "no per-call charge; Graph API app-level rate limits apply"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: no per-call charge; Graph API app-level rate limits apply}
     docs_url: https://developers.facebook.com/docs/graph-api/reference/archived-ad/
 

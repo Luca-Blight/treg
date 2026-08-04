@@ -25,7 +25,7 @@ endpoints:
       note: "one of uniqueId | secUid; uniqueId preferred. secUid in the response is the key needed by tiktok.user.videos."
     test_request:
       queryParams: {uniqueId: "tiktok"}
-    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.1, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.tiktok.user.profile.json
@@ -46,7 +46,7 @@ endpoints:
         sort: {type: string, required: false, note: "LATEST (default) | MOST_POPULAR", example: "LATEST"}
     test_request:
       queryParams: {secUid: "MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM", cursor: "0"}
-    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.1, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.tiktok.user.videos.json
@@ -65,7 +65,7 @@ endpoints:
         postId: {type: string, required: true, note: "numeric id from the video URL (/video/<postId>)", example: "7666214645006421278"}
     test_request:
       queryParams: {postId: "7666214645006421278"}
-    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.1, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.tiktok.video.detail.json
@@ -86,7 +86,7 @@ endpoints:
       note: "page size is fixed by the provider; only the cursor advances"
     test_request:
       queryParams: {awemeId: "7666214645006421278", cursor: "0"}
-    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.1, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.tiktok.video.comments.json
@@ -109,7 +109,7 @@ endpoints:
         region: {type: string, required: false, note: "ISO 3166-1 alpha-2, default US", example: "US"}
     test_request:
       queryParams: {keyword: "coffee", offset: 0, region: "US"}
-    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.1, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.tiktok.search.videos.json
@@ -134,7 +134,7 @@ endpoints:
         timeFilter: {type: string, required: false, note: "ALL (default) | ONE_DAY | ONE_WEEK | HALF_YEAR"}
     test_request:
       queryParams: {keyword: "咖啡", page: 1}
-    cost: {type: per_success, value: 0.2, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.2, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.xiaohongshu.search.notes.json
@@ -154,7 +154,7 @@ endpoints:
       note: "v1 handles image and video notes; the separate /get-note-detail/v6 covers video notes only"
     test_request:
       queryParams: {noteId: "6a66f1df000000001101bf73"}
-    cost: {type: per_success, value: 0.15, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.15, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.xiaohongshu.note.detail.json
@@ -174,7 +174,7 @@ endpoints:
         lastCursor: {type: string, required: false, note: "cursor of the last note on the previous page"}
     test_request:
       queryParams: {userId: "60ab2a7c000000000100934a"}
-    cost: {type: per_success, value: 0.15, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.15, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.xiaohongshu.user.notes.json
@@ -193,7 +193,7 @@ endpoints:
         username: {type: string, required: true, example: "instagram"}
     test_request:
       queryParams: {username: "instagram"}
-    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.1, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.instagram.user.profile.json
@@ -213,7 +213,7 @@ endpoints:
         paginationToken: {type: string, required: false, note: "token returned by the previous page"}
     test_request:
       queryParams: {username: "instagram"}
-    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.1, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.instagram.user.posts.json
@@ -232,7 +232,7 @@ endpoints:
         videoId: {type: string, required: true, note: "the v= id from the watch URL", example: "jNQXAC9IVRw"}
     test_request:
       queryParams: {videoId: "jNQXAC9IVRw"}
-    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.1, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.youtube.video.detail.json
@@ -251,7 +251,7 @@ endpoints:
         uid: {type: string, required: true, note: "numeric Weibo user id (from weibo.com/u/<uid>)", example: "2803301701"}
     test_request:
       queryParams: {uid: "2803301701"}
-    cost: {type: per_success, value: 0.1, currency: CNY, note: "billed only on success (code 0); errors free — dashboard price export 2026-07-28"}
+    cost: {type: per_success, value: 0.1, currency: CNY, per: 1, unit: call, source: rate_card_api, source_url: 'https://www.justoneapi.com/', checked: '2026-07-28', confidence: documented, note: billed only on success (code 0); errors free — dashboard price export 2026-07-28}
     expect: {json_path: code, equals: 0}
     verified: 2026-07-28
     example_response: examples/justoneapi.weibo.user.profile.json

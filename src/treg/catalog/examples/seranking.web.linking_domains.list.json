@@ -1,0 +1,19 @@
+{
+  "refdomains": [
+    {
+      "refdomain": "fricking.website",
+      "backlinks": 2,
+      "dofollow_backlinks": 2,
+      "domain_inlink_rank": 4,
+      "first_seen": "2026-07-31"
+    },
+    {
+      "refdomain": "aivisibilityplanner.com",
+      "backlinks": 1,
+      "dofollow_backlinks": 1,
+      "domain_inlink_rank": 0,
+      "first_seen": "2026-07-31"
+    },
+    "… 3 more item(s) truncated"
+  ]
+}

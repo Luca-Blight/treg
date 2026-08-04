@@ -39,6 +39,42 @@ class Org(SQLModel, table=True):
     # A team whose token is published (e.g. on the landing page): non-admin members are locked to
     # /call + reads, and may never act as a user (see api.require_member / require_identity).
     public_demo: bool = Field(default=False)
+    # Prepaid balance in micro-USD (1e-6 USD), MATERIALIZED as sum(CreditBlock.remaining) minus the
+    # open Holds. It exists as a column, not a query, because it is the hot-path spend gate: one
+    # conditional UPDATE against this integer is what stops concurrent agent calls racing past zero
+    # (see ledger.reserve). Only `ledger.py` may write it.
+    balance_micro: int = Field(default=0)
+
+    # ---- Stripe billing (see billing.py; NO card data ever lands here) ----------------------------
+    # The org's Stripe Customer. Created lazily on the first top-up and reused forever after, because
+    # it is what carries the saved payment method — a second customer would silently orphan the card.
+    stripe_customer_id: str | None = Field(default=None, index=True)
+    # The saved card to charge off-session, as a Stripe PaymentMethod id (`pm_…`). An OPAQUE REFERENCE,
+    # not card data: treg never sees a PAN, so there is nothing here to leak beyond a token that only
+    # works with our own secret key. Null = no card on file → auto-top-up cannot be armed.
+    stripe_default_pm: str | None = Field(default=None)
+    # Auto-top-up: refill the balance without a human when it dips below the threshold. Off unless the
+    # org explicitly turned it on AND recorded consent — an off-session charge with no mandate is an
+    # unauthorized charge under PSD2/SCA, so `autotopup_consented_at` gates the charge, not the UI.
+    autotopup_enabled: bool = Field(default=False)
+    autotopup_threshold_micro: int = Field(default=0)   # 0 = "use the configured default"
+    autotopup_amount_micro: int = Field(default=0)      # 0 = "use the configured default"
+    autotopup_monthly_cap_micro: int = Field(default=0)  # 0 = "use the configured default"
+    # WHEN the org agreed to the threshold/amount it is being charged on. The MIT mandate: a compliance
+    # record, which is why it is a timestamp and not a boolean — "they ticked a box at some point" is
+    # not defensible in a dispute, "they agreed on 2026-07-30T11:02Z" is.
+    autotopup_consented_at: datetime | None = Field(default=None)
+    # Why auto-top-up turned itself OFF (e.g. "authentication_required", "max_attempts"). Non-null is
+    # the banner the dashboard shows: a silent disable is how an org discovers its agents are broken.
+    autotopup_disabled_reason: str | None = Field(default=None)
+    # Cross-instance cooldown: the DB, not a process-local lock, is what stops two web workers (or a
+    # burst of concurrent calls) from firing two charges as the balance crosses the threshold.
+    autotopup_last_attempt_at: datetime | None = Field(default=None)
+    autotopup_failures: int = Field(default=0)  # CONSECUTIVE failures; a success resets it to 0
+    # A PaymentIntent that needs the cardholder present (3DS). Kept so the dashboard can offer an
+    # on-session "finish this payment" link instead of starting a fresh charge the bank will re-decline.
+    autotopup_recovery_pi: str | None = Field(default=None)
+
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -147,6 +183,26 @@ class CallRecord(SQLModel, table=True):
     # treg CLI via X-Treg-Client (attribution, NOT authentication: anything holding the token can
     # claim any name). "" = unreported. What makes the observed-agents roster possible.
     client: str = Field(default="", index=True)
+    # ---- marketplace telemetry (NULL on a plain tool call) -------------------------------------
+    # What a direct catalog call actually did: which endpoint, whose credential paid for it, what we
+    # expected it to cost vs what the provider said it cost, and how big/slow the answer was. The
+    # money itself is NOT here — it landed synchronously in the ledger (see ledger.py); this table is
+    # analytics and is allowed to lose rows.
+    endpoint_id: str | None = Field(default=None, index=True)
+    provider: str | None = Field(default=None, index=True)
+    # tool | credential | platform — which rung of the credential ladder served it. "platform" is the
+    # only one that spends treg's own money, so this is what a spend audit groups by.
+    credential_tier: str | None = Field(default=None)
+    cost_estimated_micro: int | None = Field(default=None)  # what reserve withheld (platform tier only)
+    cost_observed_micro: int | None = Field(default=None)   # the provider's own reported charge, when it reports one
+    # What actually hit the org's balance: the settle amount, or 0 on a release/402/429. The estimate
+    # alone over-reports a released call as spend, so displays must prefer this when present.
+    cost_charged_micro: int | None = Field(default=None)
+    duration_ms: int | None = Field(default=None)
+    response_bytes: int | None = Field(default=None)
+    # sha256 of endpoint_id + the canonicalized query + body — an identity for "the same call again".
+    # Bodies are NEVER stored; this is the future cache key and the repeat-rate signal (plan phase 5).
+    params_hash: str | None = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -356,6 +412,70 @@ class DenyRule(SQLModel, table=True):
     note: str = Field(default="")  # why this exists — shown in the refusal so it names its source
     created_by: str = Field(default="")  # admin email (audit)
     created_at: datetime = Field(default_factory=_now)
+
+
+class CreditBlock(SQLModel, table=True):
+    """One funding event's worth of credit — a promo grant or a purchase — and what's left of it.
+
+    Blocks rather than a single scalar balance because the FUNDING SOURCE has to survive: purchased
+    credit is a deferred-revenue liability and refundable, promotional credit is a marketing expense
+    and never refundable. Spend therefore burns promotional-first, then oldest-purchased-first
+    (ledger.settle), which also keeps the refundable pool as small as possible.
+
+    `remaining_micro` is decremented only by settles. `expires_at` is unused today (promo credit has
+    no expiry yet) — it exists so adding one is a policy change, not a migration.
+    """
+
+    id: str = Field(primary_key=True)  # uuid4 hex
+    org_id: int = Field(foreign_key="org.id", index=True)
+    kind: str = Field(default="promotional", index=True)  # promotional | purchased
+    amount_micro: int  # granted amount, micro-USD (1e-6 USD) — never mutated
+    remaining_micro: int  # what's left to spend from this block
+    currency: str = Field(default="USD")
+    expires_at: datetime | None = Field(default=None)
+    # The already-authorized payment this block was funded by (phase 4). Doubles as the idempotency
+    # key for ledger.topup — a redelivered webhook must not credit twice.
+    stripe_payment_intent: str | None = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=_now)
+
+
+class LedgerEntry(SQLModel, table=True):
+    """APPEND-ONLY money journal: every balance/block movement writes exactly one row, in the same
+    transaction as the movement itself. Nothing edits or deletes a row — a correction is a new
+    compensating entry. This is the audit trail we reconcile against the provider's own bill, so it
+    is written SYNCHRONOUSLY in-request and never through `audit.py` (which drops rows past its
+    queue bound and swallows exceptions — right for analytics, fatal for money).
+
+    `amount_micro` is SIGNED from the org's point of view: a grant/topup/release is positive, a
+    reserve/settle is negative. `call_id` correlates the reserve→settle / reserve→release pair.
+    """
+
+    id: str = Field(primary_key=True)  # uuid4 hex
+    org_id: int = Field(foreign_key="org.id", index=True)
+    block_id: str | None = Field(default=None, index=True)
+    # grant | topup | reserve | settle | release | refund | adjustment | expiry
+    kind: str = Field(index=True)
+    amount_micro: int  # signed (see docstring)
+    call_id: str | None = Field(default=None, index=True)
+    endpoint_id: str | None = Field(default=None)
+    # Free-form provenance: estimated vs observed cost, the margin applied, payment ref, shortfalls.
+    meta: dict = Field(default_factory=dict, sa_column=Column("meta", JSON))
+    created_at: datetime = Field(default_factory=_now, index=True)
+
+
+class Hold(SQLModel, table=True):
+    """An OPEN reservation: money taken out of `Org.balance_micro` for a call that hasn't finished.
+
+    `id` IS the call_id, so the settle/release that closes it needs no second lookup. Rows are
+    deleted on settle/release, which makes the table a live list of in-flight spend — and lets the
+    reaper (ledger.reap_stale_holds) find the ones a crash between relay and settle stranded.
+    """
+
+    id: str = Field(primary_key=True)  # == call_id
+    org_id: int = Field(foreign_key="org.id", index=True)
+    endpoint_id: str = Field(default="")
+    amount_micro: int  # what was withheld from the balance (margin already applied)
+    created_at: datetime = Field(default_factory=_now, index=True)
 
 
 class Project(SQLModel, table=True):

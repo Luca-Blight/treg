@@ -35,7 +35,7 @@ endpoints:
         page_size: {type: integer, required: false, note: "max 250, default 25", example: 25}
         bookmark: {type: string, required: false, note: "the previous response's bookmark"}
       note: "returns items[] of {id, name, owner, country, currency, permissions}. The `id` is what every other path's ad_account_id takes. This is treg's connection resource picker"
-    cost: {type: free, note: "included with the connected account; Pinterest enforces per-app and per-endpoint rate limits (analytics endpoints are the tightest) rather than charging per call"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; Pinterest enforces per-app and per-endpoint rate limits (analytics endpoints are the tightest) rather than charging per call}
     docs_url: https://developers.pinterest.com/docs/api/v5/ad_accounts-list/
 
   - id: pinterest-ads.query
@@ -59,7 +59,7 @@ endpoints:
         view_window_days: {type: integer, required: false, note: "0 | 1 | 7 | 14 | 30 (default 1)"}
         conversion_report_time: {type: string, required: false, note: "TIME_OF_AD_ACTION | TIME_OF_CONVERSION (default TIME_OF_AD_ACTION) — which date a conversion is booked against, and the usual reason two reports of the same period disagree", example: "TIME_OF_AD_ACTION"}
       note: "metric names carry their unit: *_IN_DOLLAR fields are already in dollars (in the account currency), IMPRESSION_1 / CLICKTHROUGH_1 are the paid variants while IMPRESSION_2 / CLICKTHROUGH_2 are the earned/organic ones from the same promoted Pin — mixing them up double-counts"
-    cost: {type: free, note: "included with the connected account; analytics endpoints have the tightest rate limits in v5"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; analytics endpoints have the tightest rate limits in v5}
     docs_url: https://developers.pinterest.com/docs/api/v5/ad_account-analytics/
 
   - id: pinterest-ads.campaigns
@@ -80,7 +80,7 @@ endpoints:
         order: {type: string, required: false, note: "ASCENDING | DESCENDING by id"}
         bookmark: {type: string, required: false}
       note: "budgets are in MICRO-CURRENCY: daily_spend_cap 5000000 is $5.00. objective_type is AWARENESS | CONSIDERATION | VIDEO_VIEW | WEB_CONVERSION | CATALOG_SALES | WEB_SESSIONS"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://developers.pinterest.com/docs/api/v5/campaigns-list/
 
   - id: pinterest-ads.campaign.analytics
@@ -103,7 +103,7 @@ endpoints:
         click_window_days: {type: integer, required: false, example: 30}
         conversion_report_time: {type: string, required: false, example: "TIME_OF_AD_ACTION"}
       note: "same column vocabulary as the account-level report, one row per campaign (per period when granularity is not TOTAL). /ad_groups/analytics and /ads/analytics are the identical shape one and two levels down"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://developers.pinterest.com/docs/api/v5/campaigns-analytics/
 
   - id: pinterest-ads.adgroups
@@ -124,7 +124,7 @@ endpoints:
         page_size: {type: integer, required: false, example: 25}
         bookmark: {type: string, required: false}
       note: "targeting_spec (interests, keywords, geo, devices, audiences) lives on the ad group, as do bid_in_micro_currency and the daily/lifetime budget when the campaign does not own it"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://developers.pinterest.com/docs/api/v5/ad_groups-list/
 
   - id: pinterest-ads.ads
@@ -146,6 +146,6 @@ endpoints:
         page_size: {type: integer, required: false, example: 25}
         bookmark: {type: string, required: false}
       note: "a Pinterest ad is a promoted Pin: the creative itself is `pin_id`, which you resolve through GET /pins/{pin_id} for the image and description. destination_url and creative_type (REGULAR | VIDEO | CAROUSEL | IDEA | COLLECTION) are on the ad"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://developers.pinterest.com/docs/api/v5/ads-list/
 

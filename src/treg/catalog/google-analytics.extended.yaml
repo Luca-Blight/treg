@@ -38,8 +38,9 @@ endpoints:
   host: analyticsadmin.googleapis.com
   cost: &id001
     type: free
-    value: 0.0
+    value: 0
     currency: USD
+    unit: call
     note: no per-call charge; billed against the API's daily quota
   docs_url: https://developers.google.com/analytics/devguides/config/admin/v1
   input:

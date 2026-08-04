@@ -43,7 +43,7 @@ endpoints:
         app_id: {type: string, required: true, note: "the developer app id — this endpoint authenticates with app_id + secret ALONGSIDE the Access-Token header, unlike every other endpoint here", example: "7000000000000000000"}
         secret: {type: string, required: true, note: "the app secret. Because it is a request parameter rather than a header, treg must bind it as a secret param on the provisioned tool; it must never be handed to an agent"}
       note: "the connection resource picker: returns data.list[] of {advertiser_id, advertiser_name}. Every other endpoint needs one of these advertiser_ids. Ids are strings — long enough to lose precision if parsed as a JSON number"
-    cost: {type: free, note: "included with the connected account; TikTok rate-limits per app and per advertiser (roughly 10 requests/second per advertiser on reporting) rather than charging per call"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; TikTok rate-limits per app and per advertiser (roughly 10 requests/second per advertiser on reporting) rather than charging per call}
     docs_url: https://business-api.tiktok.com/portal/docs?id=1738455508553729
 
   - id: tiktok-ads.query
@@ -70,7 +70,7 @@ endpoints:
         page: {type: integer, required: false, example: 1}
         page_size: {type: integer, required: false, note: "max 1000, default 200", example: 100}
       note: "spend is a decimal STRING in the advertiser's currency (not micros). Dimensions and metrics are validated as a pair: asking for a metric the chosen data_level does not support fails the whole request with code 40002 instead of dropping the column. Attribution follows the ad account's window, so today's conversions keep changing for days"
-    cost: {type: free, note: "included with the connected account; heavy reporting is bounded by TikTok's per-advertiser QPS limits"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account; heavy reporting is bounded by TikTok's per-advertiser QPS limits}
     docs_url: https://business-api.tiktok.com/portal/docs?id=1740302848100353
 
   - id: tiktok-ads.campaigns
@@ -89,7 +89,7 @@ endpoints:
         page: {type: integer, required: false, example: 1}
         page_size: {type: integer, required: false, note: "max 1000, default 10 — the small default is the usual reason a campaign looks missing", example: 100}
       note: "budget is a number in the account currency and budget_mode says whether it is daily (BUDGET_MODE_DAY) or lifetime. Two status fields disagree on purpose: operation_status is what you set (ENABLE/DISABLE), primary_status is what TikTok is actually doing (delivering, budget exceeded, in review)"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://business-api.tiktok.com/portal/docs?id=1739315828649986
 
   - id: tiktok-ads.adgroups
@@ -108,7 +108,7 @@ endpoints:
         page: {type: integer, required: false, example: 1}
         page_size: {type: integer, required: false, example: 100}
       note: "the ad group is where TikTok keeps targeting, placements, bidding and schedule — the audience definition an agent usually wants is here, not on the campaign"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://business-api.tiktok.com/portal/docs?id=1739314558673922
 
   - id: tiktok-ads.ads
@@ -127,6 +127,6 @@ endpoints:
         page: {type: integer, required: false, example: 1}
         page_size: {type: integer, required: false, example: 100}
       note: "creatives come back as ids (video_id, image_ids), not playable URLs — resolve them through the file/video/ad/get/ endpoint to get preview links, which expire"
-    cost: {type: free, note: "included with the connected account"}
+    cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://business-api.tiktok.com/portal/docs?id=1735735588640770
 
