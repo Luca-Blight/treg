@@ -70,7 +70,7 @@
   .mk-empty{border:1px dashed var(--line);border-radius:var(--r);padding:16px;color:var(--muted);font-size:13px}
   /* A disclosure the user has to read before consenting, not a failure — so it borrows the panel
      surface rather than .banner, which is red and would read as "something went wrong". */
-  .mk-notice{margin:12px 0 0;max-width:64ch;background:var(--panel2);border:1px solid var(--line2);
+  .mk-notice{margin:12px 0 0;background:var(--panel2);border:1px solid var(--line2);
     border-radius:8px;padding:9px 12px;color:var(--muted);font-size:12.5px;line-height:1.5}
   .mk-perms{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
   .mk-perm{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:13px}
@@ -1462,9 +1462,6 @@ a:hover{text-decoration-color:var(--muted)}
                 </div>
               </div>
               <p class="sub" style="margin:12px 0 0;max-width:64ch">{{mkProvider.summary}}</p>
-              <!-- Sits next to Connect, not in a tooltip or a docs link: it only does its job if
-                   it is read BEFORE the consent popup names an app the user doesn't recognise. -->
-              <p v-if="mkProvider.consent_notice" class="mk-notice">{{mkProvider.consent_notice}}</p>
             </div>
             <div class="tut-actions">
               <a v-if="mkProvider.docs_url" class="btn sm" :href="mkProvider.docs_url" target="_blank" rel="noopener">API docs ↗</a>
@@ -2526,7 +2523,7 @@ a:hover{text-decoration-color:var(--muted)}
 
             <div class="lbl" style="margin-top:22px">3 · Try the catalog — no key needed</div>
             <p class="sub">~2,600 catalogued data endpoints (TikTok, Reddit, SEO/SERP, enrichment, …). Many run on treg's own key, billed per call — fractions of a cent — from your team's <b>$1.00 free balance</b>.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search \"tiktok profile\"\ntreg call tikhub.tiktok.user.profile --query uniqueId=tiktok\ntreg balance','cat1')">{{startCopied==='cat1'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"tiktok profile"</span>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search &quot;tiktok profile&quot;\ntreg call tikhub.tiktok.user.profile --query uniqueId=tiktok\ntreg balance','cat1')">{{startCopied==='cat1'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"tiktok profile"</span>
 <span class="hl-cmd">treg</span> call tikhub.tiktok.user.profile <span class="hl-flag">--query</span> uniqueId=tiktok
 <span class="hl-cmd">treg</span> balance      <span class="hl-comment"># see exactly what it cost</span></pre></div>
 
@@ -2563,7 +2560,7 @@ a:hover{text-decoration-color:var(--muted)}
 
             <div class="lbl" style="margin-top:22px">4 · Try the catalog — no key needed</div>
             <p class="sub">Beyond the team's own tools: ~2,600 catalogued data endpoints, many served on treg's key and billed per call — fractions of a cent — from the team's prepaid balance.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search \"subreddit posts\"\ntreg call scrapecreators.reddit.subreddit.posts --query subreddit=news\ntreg balance','cat2')">{{startCopied==='cat2'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"subreddit posts"</span>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search &quot;subreddit posts&quot;\ntreg call scrapecreators.reddit.subreddit.posts --query subreddit=news\ntreg balance','cat2')">{{startCopied==='cat2'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"subreddit posts"</span>
 <span class="hl-cmd">treg</span> call scrapecreators.reddit.subreddit.posts <span class="hl-flag">--query</span> subreddit=news
 <span class="hl-cmd">treg</span> balance</pre></div>
           </div>
@@ -2735,7 +2732,7 @@ a:hover{text-decoration-color:var(--muted)}
       <div class="modal" style="padding:16px">
         <h3 style="margin:0 0 6px">Connect {{capAsk.provider.display_name}}</h3>
         <p class="sub" style="margin:0 0 14px">What should your agent be allowed to do with this account?
-          Widening it later means going through Google's consent screen again.</p>
+          Widening it later means going through the provider's consent screen again.</p>
         <p v-if="capAsk.provider.consent_notice" class="mk-notice" style="margin:0 0 14px">{{capAsk.provider.consent_notice}}</p>
         <div class="ttable-wrap"><table class="ttable">
           <tr v-for="cap in capAsk.provider.capabilities" :key="cap">

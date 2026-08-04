@@ -641,8 +641,7 @@ _META_BASE = "https://graph.facebook.com/v25.0"
 # business. Someone who came here for treg would be asked to authorize a product they have never
 # heard of. Say so before they click Connect, not after.
 _META_CONSENT_NOTICE = (
-    "You'll be taken to Facebook and see Crewlet, our Meta app by Superdesign Dev Inc. "
-    "treg and Crewlet share one Meta integration."
+    "You'll see Crewlet on Facebook: our Meta app by Superdesign Dev Inc, shared with treg."
 )
 
 # pages_show_list is the floor for BOTH providers: it is what returns the Page list, and an

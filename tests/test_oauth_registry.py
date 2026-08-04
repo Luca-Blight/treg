@@ -193,3 +193,14 @@ def test_only_the_meta_family_carries_a_consent_notice():
     assert meta_auth == set(META_SERVICES)
     with_notice = {row["service"] for row in P.listing() if row["consent_notice"]}
     assert with_notice == meta_auth
+
+
+def test_a_notice_provider_always_reaches_the_capability_modal():
+    """The dashboard renders `consent_notice` ONLY in the capability modal, and `startConnect`
+    skips that modal for a single-capability provider. So a provider carrying a notice must have
+    at least two capabilities, or its disclosure silently never renders."""
+    from treg import oauth_providers as P
+
+    for p in P.REGISTRY.values():
+        if p.consent_notice:
+            assert len(p.capabilities) >= 2, p.service
