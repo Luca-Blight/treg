@@ -7,6 +7,7 @@ per-user token becomes an owner Membership. It is a no-op on a fresh or already-
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 
@@ -277,6 +278,13 @@ def _migrate_to_orgs(conn) -> None:
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE callrecord ADD COLUMN {col} {ddl}"))
 
+    # (A28) corrective: creditblock.stripe_payment_intent must be UNIQUE (the top-up idempotency
+    # key). It sits HERE, above the (B) block, because (B) returns early on a fresh/new-schema DB —
+    # and a fresh DB created between the ledger landing and this fix is precisely the one that has
+    # the table with only a plain index.
+    if "creditblock" in tables:
+        _ensure_payment_ref_unique(conn, insp)
+
     # (B) legacy backfill — guarded
     if "org" not in tables:
         return  # defensive: create_all should have made it
@@ -373,6 +381,36 @@ def _ensure_bool_col(conn, insp, tables, table: str, col: str) -> None:
     if table in tables and col not in {c["name"] for c in insp.get_columns(table)}:
         # DEFAULT false, not 0 — Postgres rejects an integer default on a BOOLEAN column (sqlite accepts both).
         conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} BOOLEAN NOT NULL DEFAULT false"))
+
+
+def _ensure_payment_ref_unique(conn, insp) -> None:
+    """`creditblock.stripe_payment_intent` must be UNIQUE — it is the idempotency key for a Stripe
+    top-up, and `ledger.topup` checks it with a SELECT before the INSERT. Without the constraint two
+    concurrent deliveries of one PaymentIntent both credit the org.
+
+    `create_all` gives a NEW database the unique index for free; this is for one created between the
+    ledger landing and this fix. If duplicate refs already exist the index cannot be built — say so
+    loudly and leave the data alone, because deciding which of two credits to void is a money
+    decision, not a migration's call.
+    """
+    idx = insp.get_indexes("creditblock")
+    if any(i.get("unique") and i.get("column_names") == ["stripe_payment_intent"] for i in idx):
+        return
+    dupes = conn.execute(text(
+        "SELECT stripe_payment_intent, COUNT(*) c FROM creditblock "
+        "WHERE stripe_payment_intent IS NOT NULL GROUP BY stripe_payment_intent HAVING COUNT(*) > 1"
+    )).fetchall()
+    if dupes:
+        logging.getLogger("treg.db").error(
+            "creditblock has %d payment reference(s) credited more than once (%s); the UNIQUE index "
+            "was NOT created. Resolve the duplicates by hand — voiding a credit is a money decision.",
+            len(dupes), ", ".join(str(d[0]) for d in dupes[:5]))
+        return
+    for name in ("ix_creditblock_stripe_payment_intent",):   # drop the plain index it replaces
+        if any(i.get("name") == name for i in idx):
+            conn.execute(text(f"DROP INDEX {name}"))
+    conn.execute(text("CREATE UNIQUE INDEX ix_creditblock_stripe_payment_intent "
+                      "ON creditblock (stripe_payment_intent)"))
 
 
 def _fix_tool_uniqueness(conn) -> None:
