@@ -46,6 +46,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -159,19 +160,36 @@ async def topup(
         raise ValueError("topup amount must be positive")
     if not payment_ref:
         raise ValueError("topup requires a payment reference (the idempotency key)")
-    existing = (await db.execute(
-        select(CreditBlock).where(CreditBlock.stripe_payment_intent == payment_ref)
-    )).scalars().first()
+    existing = await _block_for_payment(db, payment_ref)
     if existing is not None:
         return existing  # already credited — a redelivered webhook, not a second purchase
     block = CreditBlock(id=_id(), org_id=org_id, kind="purchased", amount_micro=int(amount_micro),
                         remaining_micro=int(amount_micro), stripe_payment_intent=payment_ref)
     db.add(block)
+    try:
+        # FLUSH before anything else moves. The check above is a SELECT and this is the INSERT, so a
+        # concurrent delivery of the same PaymentIntent can land between them; the UNIQUE index is
+        # what actually stops the second credit. Flushing here means the loser finds out BEFORE the
+        # balance is touched — and losing the race then gives the same answer as the sequential path
+        # instead of a 500 that makes Stripe retry forever.
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        winner = await _block_for_payment(db, payment_ref)
+        if winner is None:  # pragma: no cover — the constraint fired, so a row exists
+            raise
+        return winner
     await _add_balance(db, org_id, int(amount_micro))
     await _entry(db, org_id=org_id, kind="topup", amount_micro=int(amount_micro), block_id=block.id,
                  meta={"payment_ref": payment_ref, **(meta or {})})
     await db.commit()
     return block
+
+
+async def _block_for_payment(db: AsyncSession, payment_ref: str) -> CreditBlock | None:
+    return (await db.execute(
+        select(CreditBlock).where(CreditBlock.stripe_payment_intent == payment_ref)
+    )).scalars().first()
 
 
 # ---- the call path -----------------------------------------------------------------------------

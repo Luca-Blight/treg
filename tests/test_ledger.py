@@ -93,6 +93,30 @@ async def test_topup_credits_purchased_and_is_idempotent_on_payment_ref(c: Async
     assert len(topups) == 1  # append-only journal, but only ONE entry for one payment
 
 
+async def test_two_deliveries_of_one_payment_credit_once(c: AsyncClient):
+    """The sequential test above passes even WITHOUT the unique index, because the second call sees
+    the first one's committed row. The dangerous case is two deliveries in flight at the same time —
+    Stripe delivers at least once, retries after the 500 the webhook deliberately returns, and prod
+    runs more than one instance. Both would SELECT nothing and both would credit.
+
+    Each task needs its OWN session: two coroutines sharing one AsyncSession is a different bug.
+    """
+    org_id, _ = await _org(c)
+    promo = get_settings().promo_grant_micro
+
+    async def _deliver():
+        async with session_maker() as db:
+            return await ledger.topup(db, org_id, 5_000_000, "pi_concurrent")
+
+    blocks = await asyncio.gather(_deliver(), _deliver(), _deliver(), return_exceptions=True)
+    assert not [b for b in blocks if isinstance(b, Exception)], blocks   # none may error out
+    assert len({b.id for b in blocks}) == 1                              # all three: the same block
+
+    assert await _assert_invariant(org_id) == promo + 5_000_000          # credited ONCE
+    async with session_maker() as db:
+        assert len([e for e in await ledger.entries_of(db, org_id) if e.kind == "topup"]) == 1
+
+
 @pytest.mark.parametrize("amount,ref", [(0, "pi_x"), (-1, "pi_x"), (1_000, "")])
 async def test_topup_rejects_nonsense(c: AsyncClient, amount, ref):
     org_id, _ = await _org(c)

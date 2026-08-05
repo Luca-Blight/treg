@@ -434,8 +434,13 @@ class CreditBlock(SQLModel, table=True):
     currency: str = Field(default="USD")
     expires_at: datetime | None = Field(default=None)
     # The already-authorized payment this block was funded by (phase 4). Doubles as the idempotency
-    # key for ledger.topup — a redelivered webhook must not credit twice.
-    stripe_payment_intent: str | None = Field(default=None, index=True)
+    # key for ledger.topup — a redelivered webhook must not credit twice. **UNIQUE**, because the
+    # check in `topup` is a SELECT then an INSERT: two concurrent deliveries of the same PaymentIntent
+    # both find nothing and both credit. Stripe delivers at least once, retries after the 500 the
+    # handler deliberately returns, and prod can run more than one instance — so the database has to
+    # be the one that says no. NULL is exempt from a unique index, so promo blocks are unaffected.
+    stripe_payment_intent: str | None = Field(
+        default=None, index=True, sa_column_kwargs={"unique": True})
     created_at: datetime = Field(default_factory=_now)
 
 
