@@ -17,6 +17,18 @@ uv tool install --editable . --python 3.13     # puts `treg` on your PATH, track
 
 ## Core idea
 
+**Two sources of callable tools sit behind the same `/call/`.**
+
+- **The catalogue** — ~2,600 curated external endpoints across ~40 data providers (TikTok, Instagram,
+  Reddit, SEO and SERP data, enrichment, scraping…). Call one by its **endpoint id**. If nobody on the
+  team holds a key for that provider, treg can serve it on **its own key**, billed per call from the
+  team's prepaid balance. No provider signup.
+- **The vault** — your team's own tools. Any API key, OAuth connection or vendor CLI a member
+  registers becomes callable by every teammate and their agents, without the key ever leaving the
+  server.
+
+The vocabulary for the vault half:
+
 - A **tool** = an upstream `base_url` + a list of credential **bindings** (each binding injects one
   secret into the request). A request can carry several (e.g. google-ads: OAuth bearer + a
   `developer-token` header).
@@ -116,6 +128,50 @@ treg tool add google-ads --base-url https://googleads.googleapis.com \
   --bind "secret=4,injector=oauth" \
   --bind "secret=5,name=developer-token,format={secret}"
 ```
+
+## The catalogue (call an API you have no key for)
+
+| Command | Options | What it does |
+|---|---|---|
+| `treg catalog search` | `"what you want to do"` | find endpoints by capability |
+| `treg catalog get` | `ENDPOINT_ID` | docs, parameters, **the price**, and how you would be served |
+| `treg call ENDPOINT_ID` | `--query K=V`, `--data STR` | call it |
+
+```bash
+treg catalog search "instagram profile"
+treg catalog get tikhub.tiktok.user.profile          # shows the price BEFORE you spend
+treg call tikhub.tiktok.user.profile --query uniqueId=tiktok
+```
+
+**How a catalogued call is served — the credential ladder, in order:**
+
+1. the team registered its own tool for that provider → that tool, that key;
+2. the team stored a secret for the provider → injected through a virtual tool;
+3. neither → **treg's own key**, metered against the team's prepaid balance.
+
+Rung 3 only applies where treg has both a key and a published price for that endpoint; anything
+unpriced is refused rather than served, and you are told to connect your own key. Your own key is
+never billed to the balance.
+
+## Balance & top-up
+
+Only calls on **treg's key** (rung 3 above) cost balance. Everything else — your own keys, your own
+tools, vendor CLIs — is free of it.
+
+| Command | Options | What it does |
+|---|---|---|
+| `treg balance` | `--limit N`, `--json` | credit left, calls in flight, recent spend |
+| `treg topup` | | add funds, or set up automatic top-ups |
+
+```bash
+treg balance                 # every new team starts with $1.00 of free credit
+treg balance --json          # integer micro-USD (1e-6 USD) — the unit the ledger uses
+treg topup
+```
+
+Out of balance is an HTTP **402** carrying `balance_micro`, `estimated_cost_micro` and a `topup_url`,
+so an agent can act on it without reading prose. There is also a per-day ceiling on spend against
+treg's keys, so a runaway agent has a bounded blast radius.
 
 ## Calling
 

@@ -4,6 +4,7 @@ status: shipped
 sources:
   - src/treg/cli.py
   - src/treg/convert.py
+  - src/treg/agents.py
 related:
   - interface/api.md
   - interface/skill.md
