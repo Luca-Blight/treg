@@ -557,7 +557,7 @@ def _splash() -> None:
         import tty
     except ImportError:
         return
-    title, sub = "tools-registry", " — Skill & secret vault for your team & agents"
+    title, sub = "tools-registry", " — the tool catalog for your agent"
     chars = ([("▚", f"{_A}{_B}"), (" ", "")] + [(c, _B) for c in title] + [(c, _M) for c in sub])
     frames = _dither_frames(chars)
 
@@ -620,7 +620,7 @@ def _onboard_active_org(cfg: dict) -> dict | None:
     return org
 
 
-_PATHS = {"1": "setup", "2": "access", "3": "demo"}
+_PATHS = {"1": "catalog", "2": "setup", "3": "access", "4": "demo"}
 
 
 def _is_rootish(d: Path) -> bool:
@@ -643,17 +643,18 @@ def _pick_path(cfg: dict) -> str:
         has_tools = bool(org and org.get("tool_count"))
         is_admin = bool(org and org.get("role") in ("admin", "owner"))
         if has_tools:
-            key = "2"
+            key = "3"      # a team with tools → show the member how to use them
         elif is_admin:
-            key = "1"
+            key = "2"      # an empty team you run → set it up
         else:
-            key = "3"
+            key = "1"      # nothing of your own yet → the catalog needs none
         return _PATHS[key]
     picked = _menu("What do you want to do?", [
-        ("setup", "Setup", "upload your skills & env, share them safely (admins)"),
-        ("access", "Connect existing tool-registry", "pull your team's shared skills + make a call"),
-        ("demo", "Demo", "see how treg works with a throwaway team"),
-    ], default="setup")
+        ("catalog", "Call something now", "find a tool in the catalog and call it — no key, no setup"),
+        ("setup", "Share your own keys & skills", "upload this project's .env + skills (admins)"),
+        ("access", "Use your team's tools", "pull your team's shared skills + make a call"),
+        ("demo", "See how it works", "a walkthrough with a throwaway team"),
+    ], default="catalog")
     if picked is None:  # Ctrl-C / Esc / EOF
         raise SystemExit(0)
     return picked
@@ -747,8 +748,121 @@ def _show_calls(cfg: dict) -> None:
     _arrow("full log:  treg audit")
 
 
+# ---- onboarding path 1: the catalog ---------------------------------------------------------
+_ONBOARD_SUGGESTIONS = [
+    ("a TikTok profile", "tiktok profile"),
+    ("backlinks for a domain", "backlinks for a domain"),
+    ("posts in a subreddit", "subreddit posts"),
+    ("someone's work email", "find work email"),
+]
+
+
+def _catalog_pick(cfg: dict, args) -> dict | None:
+    """Let the user land on ONE endpoint: a suggested job, or their own words. Returns the catalog
+    row (id/name/cost/…) or None if they backed out or nothing matched."""
+    if not sys.stdin.isatty() or getattr(args, "yes", False):
+        query = _ONBOARD_SUGGESTIONS[0][1]
+    else:
+        rows = [(q, label, "search the catalog for this") for label, q in _ONBOARD_SUGGESTIONS]
+        picked = _menu("What do you want your agent to be able to do?",
+                       rows + [("", "Something else — type it", "your own words", True)],
+                       default=_ONBOARD_SUGGESTIONS[0][1])
+        if picked is None:
+            return None
+        query = picked[1].strip() if isinstance(picked, tuple) else picked
+        if not query:
+            return None
+    with _spinner(f"searching the catalog for “{query}”"):
+        with _client(cfg) as c:
+            r = c.get("/catalog/search", params={"q": query, "limit": 5})
+    if r.status_code >= 400:
+        _show(r)
+        return None
+    hits = r.json() if isinstance(r.json(), list) else r.json().get("results") or []
+    if not hits:
+        _dim(f"  Nothing matched “{query}”. Try `treg catalog search <words>` with different words.")
+        return None
+    return hits[0]
+
+
+def _run_catalog(cfg: dict, args) -> None:
+    """Path 1 — the catalog: find a tool for a job and CALL it, with nothing registered and no key.
+
+    This is the shortest route to the product's actual promise, so it is the default. It never
+    pretends: `/access` is asked how this very call would be served, and the answer decides what
+    happens next — treg's key (price shown, confirmed first), the team's own credential (free), or
+    an honest dead-end with the one command that fixes it."""
+    _brand("the catalog — call a tool you don't have a key for")
+    ep = _catalog_pick(cfg, args)
+    if ep is None:
+        return
+
+    ep_id = ep.get("id") or ep.get("endpoint")
+    _section("① The tool")
+    _kv("id", ep_id)
+    if ep.get("summary"):
+        print(f"  {_M}{ep['summary'][:100]}{_R}")
+    _cmd(f"treg catalog get {ep_id}")
+
+    _section("② How you'd be served, and what it costs")
+    with _client(cfg) as c:
+        acc = c.get(f"/catalog/endpoints/{ep_id}/access")
+    if acc.status_code >= 400:
+        _show(acc)
+        return
+    a = acc.json()
+    tier, detail = a.get("tier"), a.get("detail") or ""
+    if tier == "platform":
+        _kv("served", "on treg's key — you need no account with this provider")
+        _kv("price", f"~${a.get('estimated_cost_usd', 0):g} per call, from your team balance")
+    elif tier in ("tool", "credential"):
+        _kv("served", "with your team's OWN credential — not metered")
+    else:
+        _kv("served", "not yet")
+        _dim(f"  {detail}")
+        _tip("Nobody on your team has a key for this provider, and treg is not serving it on its "
+             "own key. Connect one and this same call works:")
+        _cmd(f"treg connections connect --provider {ep.get('provider') or '<provider>'}")
+        return
+
+    _section("③ Make the call")
+    if not getattr(args, "yes", False) and sys.stdin.isatty():
+        if tier == "platform":
+            answer = input(f"  Call it now for ~${a.get('estimated_cost_usd', 0):g}? [Y/n] ").strip().lower()
+        else:
+            answer = input("  Call it now? [Y/n] ").strip().lower()
+        if answer not in ("", "y", "yes"):
+            _dim("  Fine — nothing was called and nothing was spent.")
+            return
+    _cmd(f"treg call {ep_id}")
+    with _spinner("calling"):
+        with _client(cfg) as c:
+            r = c.request("GET", f"/call/{ep_id}")
+    body = r.text[:400] + ("…" if len(r.text) > 400 else "")
+    if r.status_code < 400:
+        _ok(f"{r.status_code} — the provider answered, and you never held a key.")
+        print(f"  {_M}{body}{_R}")
+    else:
+        _dim(f"  {r.status_code} — {body}")
+        _tip("Most catalog endpoints need a parameter (a username, a domain). "
+             f"`treg catalog get {ep_id}` lists them, then add `--query name=value`.")
+
+    if tier == "platform":
+        _section("④ What it cost")
+        _cmd("treg balance")
+        with _client(cfg) as c:
+            org_id = _active_org_id(cfg, c)
+            b = c.get(f"/orgs/{org_id}/balance", params={"limit": 1}) if org_id else None
+        if b is not None and b.status_code < 400:
+            print(f"  {_M}left{_R}   {_usd(b.json()['balance_micro'])}   "
+                  f"{_M}(every new team starts with $1.00 free){_R}")
+    _dim("\n  Next:  treg catalog search \"<what you want to do>\"   ·   treg claude   ·   treg upload")
+
+
 def _dispatch_onboard(cfg: dict, path: str, args) -> None:
-    if path == "setup":
+    if path == "catalog":
+        _run_catalog(cfg, args)
+    elif path == "setup":
         _run_setup(cfg, args)
     elif path == "access":
         _run_access(cfg, args)
@@ -4273,7 +4387,8 @@ def build_parser() -> argparse.ArgumentParser:
             "treg onboard --path access                     # pull your team's shared skills + a test call",
             "treg onboard --path setup --source global      # share skills from ~/.claude/skills etc., not this repo",
             "treg onboard --path demo --yes                 # non-interactive demo")
-    ob.add_argument("--path", choices=["setup", "access", "demo"], help="which onboarding path (else you're asked)")
+    ob.add_argument("--path", choices=["catalog", "setup", "access", "demo"],
+                    help="which onboarding path (else you're asked)")
     ob.add_argument("--source", choices=["local", "global", "both"],
                     help="setup path: import from this project, your global agent skill folders (~/.claude/skills, ~/.codex/skills, …), or both (else you're asked)")
     ob.add_argument("--mode", choices=["guided", "quick"], help=argparse.SUPPRESS)  # back-compat: quick→demo
