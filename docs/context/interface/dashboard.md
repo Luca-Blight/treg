@@ -174,9 +174,12 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   confirmation spelling out that an admin agent can register/delete tools and secrets and manage members.
 - **Tool form** — Add/Edit now carries a **Project** dropdown (default "team-wide"); `loadProjectsIfNeeded`
   fetches the list on demand so it works even if the Team page was never opened.
-- **Getting started** (`view==='start'`, under Help) — the CLI path: install (`{BASE}/install.sh`),
-  `treg login`, `treg onboard`, register-a-tool + no-key call, and links to the interactive tutorial +
-  `/llms.txt`. Per-block copy via `copyStart`.
+- **Getting started** (`view==='start'`, under Help) — two tabs (`startTab`, default `access`), each
+  leading with the agent instruction (`buildAgentPrompt('agent')`) then a manual CLI walkthrough:
+  **"Access 2000+ treg tools"** (install `{BASE}/install.sh` → `treg login` → catalog search/call/
+  `treg balance`) and **"Setup your team's skills & env vault"**, which stacks two sections — set up
+  the vault (install → login → `treg scan`/`treg upload`) then *let the team use it* (`treg skill ls`
+  / `skill install` / URL-passthrough call). Per-block copy via `copyStart`.
 - **Activity** — one time-sorted feed (`activityRows`) merging `GET /calls` (proxy calls) + `GET /runs`
   (CLI executions). Local runs now arrive via `/runs` (tagged `where`), so the calls feed **excludes**
   `local_run` rows to avoid double-counting, and each run row shows a **local/server** chip.
