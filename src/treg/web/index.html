@@ -432,13 +432,14 @@
   .lp-hero{text-align:center;padding:46px 0 22px}
   .lp-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
   .lp-h1{font-size:clamp(29px,4.8vw,46px);line-height:1.05;letter-spacing:-.02em;margin:0;font-family:var(--mono);font-weight:700;text-wrap:balance}
-  /* Desktop: the whole headline on ONE line. The mono face needs ~39× its font-size for this copy —
+  /* Desktop: the whole headline on ONE line. The mono face needs 41× its font-size for this copy
+     (measured in Chrome: scrollWidth 1288px at 31.4px) —
      wider than the 1040px shell — so the h1 breaks out toward the viewport edge and its size tracks
-     the viewport ((100vw-64)/40 leaves slack for the scrollbar; 32px is shaved off the box for the
+     the viewport ((100vw-64)/42 leaves slack for the scrollbar; 32px is shaved off the box for the
      same reason) until the 46px cap fits. Below 1140px it re-wraps (balanced) inside the shell.
      The divisor is tuned to the COPY LENGTH (64 chars today): change the headline, re-tune it, or
      the nowrap line runs past the viewport edge. */
-  @media(min-width:1140px){.lp-h1{white-space:nowrap;width:calc(100vw - 32px);margin-left:calc(50% - 50vw + 16px);font-size:min(46px,calc((100vw - 64px)/40))}}
+  @media(min-width:1140px){.lp-h1{white-space:nowrap;width:calc(100vw - 32px);margin-left:calc(50% - 50vw + 16px);font-size:min(46px,calc((100vw - 64px)/42))}}
   .lp-lead{font-family:var(--sans);font-size:16.5px;line-height:1.55;color:var(--muted);max-width:590px;margin:16px auto 0} .lp-lead b{color:var(--ink);font-weight:600}
   .lp-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
   .btn.lg{padding:12px 20px;font-size:14px}
@@ -2501,12 +2502,31 @@ a:hover{text-decoration-color:var(--muted)}
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <h1 style="margin:0">Getting started</h1>
           </div>
-          <div class="seg" style="margin-top:8px">
-            <button :class="{on:startTab==='setup'}" @click="startTab='setup'">Upload skills &amp; env (Admin)</button>
-            <button :class="{on:startTab==='connect'}" @click="startTab='connect'">Connect to this tool registry</button>
+          <!-- SHARED — everyone does these three, whichever half of treg they came for. They used to
+               be duplicated verbatim inside BOTH tabs (install + sign in, twice). -->
+          <div style="max-width:720px">
+            <div class="lbl" style="margin-top:20px">1 · Install the CLI</div>
+            <p class="sub">Installs the <span class="mono">treg</span> command and points it at this server. Upgrade later with <span class="mono">treg update</span>.</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('curl -fsSL '+proxy+'/install.sh | sh','i')">{{startCopied==='i'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">curl</span> -fsSL <span class="hl-str">{{proxy}}/install.sh</span> | sh</pre></div>
+
+            <div class="lbl" style="margin-top:22px">2 · Sign in</div>
+            <p class="sub">Opens your browser — GitHub, Google, or an email code. Your first sign-in also registers you.</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg login','l')">{{startCopied==='l'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> login</pre></div>
+
+            <div class="lbl" style="margin-top:22px">3 · Call something — no key, nothing to set up</div>
+            <p class="sub">~2,600 catalogued endpoints: SEO and backlinks, social and trends, people and company enrichment, ads. Find one by what it <i>does</i>, see its price, call it. Your team's <b>$1.00 free credit</b> covers hundreds of calls.</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search &quot;backlinks for a domain&quot;\ntreg call tikhub.tiktok.user.profile --query uniqueId=tiktok\ntreg balance','cat1')">{{startCopied==='cat1'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"backlinks for a domain"</span>
+<span class="hl-cmd">treg</span> call tikhub.tiktok.user.profile <span class="hl-flag">--query</span> uniqueId=tiktok
+<span class="hl-cmd">treg</span> balance      <span class="hl-comment"># see exactly what it cost</span></pre></div>
           </div>
 
-          <!-- TAB · Setup — agent instruction first, then the manual CLI walkthrough -->
+          <h2 style="margin:34px 0 0;font-size:16px">Then — what did you come here for?</h2>
+          <div class="seg" style="margin-top:10px">
+            <button :class="{on:startTab==='connect'}" @click="startTab='connect'">Use my team's tools</button>
+            <button :class="{on:startTab==='setup'}" @click="startTab='setup'">Share my own keys &amp; skills</button>
+          </div>
+
+          <!-- FORK · Share your own — agent instruction first, then the manual CLI walkthrough -->
           <div v-show="startTab==='setup'">
           <div v-if="canAdmin" style="max-width:720px">
             <p class="sub">Share your skills &amp; API keys with the team. Fastest — hand your coding agent the instruction below; it installs the CLI, signs in, and registers your local skills + keys as shared tools (with a read-only scan you approve first).</p>
@@ -2516,21 +2536,7 @@ a:hover{text-decoration-color:var(--muted)}
           </div>
           <p class="sub">Two ways to give your agents power: share a whole <b>skill</b>, or register a single <b>API endpoint</b>. Everything here works in this dashboard too - this is the CLI path. Grab it as markdown ↑ to paste anywhere.</p>
           <div style="max-width:720px">
-            <div class="lbl" style="margin-top:20px">1 · Install the CLI</div>
-            <p class="sub">Installs the <span class="mono">treg</span> command and points it at this server. Upgrade later with <span class="mono">treg update</span>.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('curl -fsSL '+proxy+'/install.sh | sh','i')">{{startCopied==='i'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">curl</span> -fsSL <span class="hl-str">{{proxy}}/install.sh</span> | sh</pre></div>
-
-            <div class="lbl" style="margin-top:22px">2 · Sign in</div>
-            <p class="sub">Opens your browser - GitHub or an email code. Your first sign-in also registers you.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg login','l')">{{startCopied==='l'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> login</pre></div>
-
-            <div class="lbl" style="margin-top:22px">3 · Try the catalog — no key needed</div>
-            <p class="sub">~2,600 catalogued data endpoints (TikTok, Reddit, SEO/SERP, enrichment, …). Many run on treg's own key, billed per call — fractions of a cent — from your team's <b>$1.00 free balance</b>.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search &quot;tiktok profile&quot;\ntreg call tikhub.tiktok.user.profile --query uniqueId=tiktok\ntreg balance','cat1')">{{startCopied==='cat1'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"tiktok profile"</span>
-<span class="hl-cmd">treg</span> call tikhub.tiktok.user.profile <span class="hl-flag">--query</span> uniqueId=tiktok
-<span class="hl-cmd">treg</span> balance      <span class="hl-comment"># see exactly what it cost</span></pre></div>
-
-            <div class="lbl" style="margin-top:22px">4 · Upload your keys &amp; skills</div>
+            <div class="lbl" style="margin-top:20px">4 · Upload your keys &amp; skills</div>
             <p class="sub">Register your <span class="mono">.env</span> keys and skill folders as shared tools. Preview with <span class="mono">treg scan</span> first. Idempotent — re-run freely.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg upload                 # both .env + skills in this dir\ntreg upload env --select openai,stripe\ntreg upload skills --dir ~/.claude/skills --all      # register skill from a specific path','im')">{{startCopied==='im'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> upload                 <span class="hl-comment"># both .env + skills in this dir</span>
 <span class="hl-cmd">treg</span> upload env <span class="hl-flag">--select</span> openai,stripe
@@ -2540,32 +2546,19 @@ a:hover{text-decoration-color:var(--muted)}
 
           <!-- TAB · Connect to this tool registry — agent instruction first, then the same CLI flow (path 2) -->
           <div v-show="startTab==='connect'" style="max-width:720px">
-            <p class="sub">Use the team's shared skills &amp; tools from your terminal or agent — pull a skill, call any tool, with no API keys on your machine. Plus the catalog: ~2,600 data endpoints, many needing no key at all.</p>
+            <p class="sub">Your team's own tools: pull a shared skill and call any registered API, with no keys on your machine. These are never metered — your team already pays for them.</p>
 
             <div class="lbl" style="margin-top:16px">▸ Connect with your agent <span class="muted" style="font-weight:400">— paste &amp; go</span></div>
             <p class="sub">Paste into Claude Code / Codex / Gemini. It pulls the team's shared skills and makes a test call — no API keys land on your machine.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('consumer')">{{agentRowCopied==='consumer'?'✓ copied':'copy'}}</button><pre>{{buildAgentPrompt('consumer', true)}}</pre></div>
 
             <div class="lbl" style="margin-top:26px">▸ Or connect manually</div>
-            <div class="lbl" style="margin-top:14px">1 · Install the CLI</div>
-            <p class="sub">Installs the <span class="mono">treg</span> command and points it at this server.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('curl -fsSL '+proxy+'/install.sh | sh','ci')">{{startCopied==='ci'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">curl</span> -fsSL <span class="hl-str">{{proxy}}/install.sh</span> | sh</pre></div>
-
-            <div class="lbl" style="margin-top:22px">2 · Sign in</div>
-            <p class="sub">Opens your browser — GitHub, Google, or an email code.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg login','cl2')">{{startCopied==='cl2'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> login</pre></div>
-
-            <div class="lbl" style="margin-top:22px">3 · Use the team's shared tools</div>
-            <p class="sub">Browse the shared library, pull a skill, and call a tool — the key stays in the vault, never on your machine.</p>
+            <div class="lbl" style="margin-top:14px">4 · Use the team's shared tools</div>
+            <p class="sub">Browse the shared library, pull a skill, and call a tool — the credential stays on the server, never on your machine.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg skill ls\ntreg skill install seo-blog-writer                    # a teammate pulls one (or --all)\ntreg call https://api.stripe.com/v1/charges','cc')">{{startCopied==='cc'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> skill ls
 <span class="hl-cmd">treg</span> skill install seo-blog-writer
 <span class="hl-cmd">treg</span> call <span class="hl-str">https://api.stripe.com/v1/charges</span></pre></div>
 
-            <div class="lbl" style="margin-top:22px">4 · Try the catalog — no key needed</div>
-            <p class="sub">Beyond the team's own tools: ~2,600 catalogued data endpoints, many served on treg's key and billed per call — fractions of a cent — from the team's prepaid balance.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search &quot;subreddit posts&quot;\ntreg call scrapecreators.reddit.subreddit.posts --query subreddit=news\ntreg balance','cat2')">{{startCopied==='cat2'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"subreddit posts"</span>
-<span class="hl-cmd">treg</span> call scrapecreators.reddit.subreddit.posts <span class="hl-flag">--query</span> subreddit=news
-<span class="hl-cmd">treg</span> balance</pre></div>
           </div>
         </template>
 
@@ -3305,7 +3298,7 @@ createApp({
       exPath:'<PATH>', exMethod:'GET',
       tryTool:null, tryMethod:'GET', tryPath:'', tryBody:'', trying:false, tryResp:null, tryStatus:0, tryMs:0,
       useMode:'call', runArgsStr:'', running:false, runOut:null,
-      startCopied:'', startTab:'setup', mdMenu:false, llmsCopied:false, myToken:null, tokenCopied:false,
+      startCopied:'', startTab:'connect', mdMenu:false, llmsCopied:false, myToken:null, tokenCopied:false,
       agentGuide:null, agentGuideCopied:false, agentInclToken:true, agentRowCopied:null,
       demo:{
         token:null, org_slug:'', ttl:60, busy:false, err:'', copied:'', signin:false,
