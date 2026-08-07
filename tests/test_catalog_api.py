@@ -581,3 +581,38 @@ async def test_stamping_keeps_the_registrys_own_examples_first(clients: AsyncCli
 def test_a_provider_with_no_catalog_entry_stamps_nothing():
     assert cs.tool_examples("slack") == []
     assert json.dumps(cs.tool_examples("tikhub")), "the shape must be JSON-serializable for the Tool column"
+
+
+# ---- "free" is a price, not a missing one ----------------------------------------------------
+def test_a_free_route_needs_no_price_provenance():
+    """`confidence` says how much we trust a NUMBER we are about to charge. A free route has no
+    number, so demanding provenance refused 61 endpoints across 8 providers — 28 of Hunter's 35 —
+    treating "costs nothing" as if it meant "we don't know", which is the one distinction the cost
+    model is otherwise careful to keep apart."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    free = {"type": "free", "value": 0, "currency": "USD", "unit": "call"}
+    ep = {"cost": free, "provider": "hunter", "scope": "any_account", "kind": "data"}
+    assert cat.platform_eligible(ep)
+
+
+def test_a_PAID_route_still_needs_provenance():
+    """The relaxation must not leak: a route with a real price and no provenance stays refused, or
+    we would bill a team using a number nobody checked."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    unchecked = {"type": "per_call", "value": 0.05, "currency": "USD", "unit": "call"}
+    ep = {"cost": unchecked, "provider": "hunter", "scope": "any_account", "kind": "data"}
+    assert not cat.platform_eligible(ep)
+
+    documented = dict(unchecked, confidence="documented")
+    assert cat.platform_eligible({**ep, "cost": documented})
+
+
+def test_an_unpriced_route_is_still_refused():
+    """The original rule, unchanged: no usd → refuse, so treg never pays a provider and charges $0."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    ep = {"cost": {"type": "per_call", "currency": "credit", "unit": "credit"},
+          "provider": "pdl", "scope": "any_account", "kind": "data"}
+    assert not cat.platform_eligible(ep)
