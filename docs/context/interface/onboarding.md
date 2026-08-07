@@ -138,5 +138,6 @@ teammate** (`onbInviteTeammate` prefills + invites Alex, then `/onboard/accept-t
 shifted left via `.drawer.onb-shift` so it doesn't overlap the panel). A step tracker shows
 numbered/checked progress; **↺ Restart** (`onbRestart`) and `onbFinish`/**✕** skip (posting
 `/onboard/skip`). Each step's **"Read more"** deep-links to the matching tutorial panel via
-`readMore(onbSection)` → `/tutorial#<concepts|skills|roles|auth>`. **Help → "Guided setup"** replays
-(`replayOnboard`); **"Remove demo"** calls `resetDemo`. A clay **`demo` chip** marks a demo org.
+`readMore(onbSection)` → `/tutorial#<concepts|skills|roles|auth>`. The stepper fires only on first run —
+the Help chooser's "Guided setup" replay card (and its `replayOnboard` method) was removed; **"Remove
+demo"** (`resetDemo`) remains in Help. A clay **`demo` chip** marks a demo org.
