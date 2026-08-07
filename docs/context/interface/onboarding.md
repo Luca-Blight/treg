@@ -30,14 +30,27 @@ seeded with teammates, a working tool, and a real audit trail — one backend br
   returns 200 with the injected `Authorization: Bearer sk-demo-…`** — the aha.
 - **Sample activity** (`SAMPLE_CALLS`): a few `CallRecord`s attributed to teammates so Activity is alive.
 
-**CLI onboarding is 3 paths** (`cmd_onboard` → `_dispatch_onboard`, one of `_run_setup`/`_run_access`/
-`_run_demo`; `_PATHS = {1:setup, 2:access, 3:demo}`). A TTY run opens with a one-second `_splash` decrypt
+**CLI onboarding is 4 paths** (`cmd_onboard` → `_dispatch_onboard`, one of `_run_catalog`/`_run_setup`/
+`_run_access`/`_run_demo`; `_PATHS = {1:catalog, 2:setup, 3:access, 4:demo}`).
+
+**Path 1, the catalog, is the default** and the only one that needs nothing at all — no team, no
+secret, no registered tool. `_catalog_pick` offers four jobs (a TikTok profile, backlinks, subreddit
+posts, a work email) or free text, searches `/catalog/search`, and takes the top hit. `_run_catalog`
+then asks `/catalog/endpoints/<id>/access` **how that exact call would be served** and branches on
+the answer rather than assuming: `platform` → state the price, confirm, call, show the balance;
+`credential`/`tool` → call it and say plainly that your own key is not metered; anything else → an
+honest dead-end naming the one command that fixes it, and **nothing is called**.
+
+That last branch is not hypothetical: with `TREG_PLATFORM_PROVIDERS` unset (as in production today)
+every user lands there. Asking the server instead of hardcoding a demo endpoint is what lets the same
+path become the price-and-call flow the moment the switch is flipped — and stops the walkthrough
+rotting when the catalog moves. A TTY run opens with a one-second `_splash` decrypt
 animation (the wordmark reveals behind a ░▒▓ wavefront; any key skips; off-TTY / `NO_COLOR` / dumb
 terminals never see it), then `_pick_path` presents an **arrow-key menu** (`_menu` — ↑↓/jk move, ↵ confirm,
 1-9 jump-pick; where raw-key mode is unavailable it falls back to questionary). The **interactive default is
-Setup**; the smart org-based default (a team with tools → **Connect**, an empty team you admin → **Setup**,
-else **Demo**) applies **only non-interactively** (scripted/agent runs stay unchanged). Menu labels:
-**Setup** · **Connect existing tool-registry** · **Demo**:
+the catalog**; the smart org-based default (a team with tools → **Use your team's tools**, an empty team
+you admin → **Share your own**, else **the catalog**) applies **only non-interactively**. Menu labels:
+**Call something now** · **Share your own keys & skills** · **Use your team's tools** · **See how it works**:
 - **Setup** (`_run_setup`, path `setup`) — first asks **"Import skill/secret from where?"** via `_menu`:
   this project / global agent folders / both / an **other project repo** typed inline (a `_menu` type-in row
   with fish-style folder autosuggestion — → / tab accept the ghost completion). "This project" is hidden

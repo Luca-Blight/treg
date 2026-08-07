@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import json
+
 import pytest
 
 from treg import cli
@@ -455,11 +457,16 @@ def test_alias_flags_match_their_canonical_command():
 
 def test_help_is_grouped_and_hides_aliases():
     help_ = cli.build_parser().format_help()
-    for header in ("MARKETPLACE", "CORE", "BULK UPLOAD", "TEAM MANAGEMENT", "CONFIG"):
-        assert f"\n{header}\n" in help_, header
-    # order is the approved IA, not argparse's registration order
-    positions = [help_.index(h) for h in ("MARKETPLACE", "CORE", "BULK UPLOAD", "TEAM MANAGEMENT", "CONFIG")]
+    # The order IS the pitch: what you can do with no setup (the catalog) comes before what you
+    # have to register yourself. It is the approved IA, not argparse's registration order.
+    headers = ("THE CATALOG", "YOUR OWN TOOLS", "ON YOUR MACHINE", "BULK UPLOAD",
+               "TEAM MANAGEMENT", "CONFIG")
+    for header in headers:
+        assert f"\n{header}" in help_, header
+    positions = [help_.index(h) for h in headers]
     assert positions == sorted(positions)
+    # and `catalog` is the first command a reader meets
+    assert help_.index("    catalog") < help_.index("    tool")
     listed = {ln.split()[0] for ln in help_.splitlines() if ln.startswith("    ") and ln.strip()}
     for gone in ("add", "oauth", "setup-local-run", "run", "runs", "calls", "shell", "import"):
         assert gone not in listed, gone
@@ -658,3 +665,77 @@ def test_catalog_get_needs_an_id_and_404s_helpfully(monkeypatch, capsys):
     with pytest.raises(SystemExit):
         cli.cmd_catalog(p.parse_args(["catalog", "get", "nope.x"]), {"base_url": "http://x"})
     assert "find one with: treg catalog search" in capsys.readouterr().out
+
+
+# ---- onboarding path 1: the catalog ---------------------------------------------------------
+class _CatResp:
+    def __init__(self, payload, status=200, text=None):
+        self._payload, self.status_code = payload, status
+        self.text = text if text is not None else json.dumps(payload)
+
+    def json(self):
+        return self._payload
+
+
+class _CatClient:
+    """Stands in for `_client(cfg)`: answers the three endpoints the catalog path uses."""
+
+    def __init__(self, access: dict, call_status: int = 200):
+        self.access, self.call_status = access, call_status
+        self.seen: list[str] = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def get(self, path, **kw):
+        self.seen.append(path)
+        if path.startswith("/catalog/search"):
+            return _CatResp({"results": [{"id": "tikhub.tiktok.user.profile", "provider": "tikhub",
+                                           "summary": "Public TikTok profile"}]})
+        if path.endswith("/access"):
+            return _CatResp(self.access)
+        if path.endswith("/balance"):
+            return _CatResp({"balance_micro": 999_000, "blocks": [], "entries": []})
+        return _CatResp({}, 404)
+
+    def request(self, method, path, **kw):
+        self.seen.append(f"{method} {path}")
+        return _CatResp({"ok": True}, self.call_status, text='{"ok": true}')
+
+
+def _onboard_catalog(monkeypatch, access, call_status=200):
+    client = _CatClient(access, call_status)
+    monkeypatch.setattr(cli, "_client", lambda cfg: client)
+    monkeypatch.setattr(cli, "_active_org_id", lambda cfg, c: 1)
+    args = cli.build_parser().parse_args(["onboard", "--path", "catalog", "--yes"])
+    cli._run_catalog({"base_url": "http://x", "token": "t"}, args)
+    return client
+
+
+def test_onboard_catalog_calls_when_treg_serves_it(monkeypatch, capsys):
+    """The happy path: treg's own key covers it, so the price is stated and the call is made."""
+    c = _onboard_catalog(monkeypatch, {"tier": "platform", "estimated_cost_usd": 0.001})
+    out = capsys.readouterr().out
+    assert "on treg's key" in out and "$0.001" in out
+    assert "GET /call/tikhub.tiktok.user.profile" in c.seen      # it really called
+    assert "treg balance" in out                                  # and showed what it cost
+
+
+def test_onboard_catalog_says_not_metered_for_your_own_key(monkeypatch, capsys):
+    c = _onboard_catalog(monkeypatch, {"tier": "credential"})
+    out = capsys.readouterr().out
+    assert "OWN credential" in out and "not metered" in out
+    assert any(s.startswith("GET /call/") for s in c.seen)
+    assert "treg balance" not in out          # nothing was spent, so don't show a balance
+
+
+def test_onboard_catalog_dead_end_names_the_one_command_that_fixes_it(monkeypatch, capsys):
+    """Before platform providers are switched on (TREG_PLATFORM_PROVIDERS empty) this is what every
+    new user sees — so it must not read like a failure, and must never pretend to call."""
+    c = _onboard_catalog(monkeypatch, {"tier": "none", "detail": "no tikhub credential in this org yet"})
+    out = capsys.readouterr().out
+    assert "treg connections connect --provider tikhub" in out
+    assert not any(s.startswith("GET /call/") for s in c.seen)   # nothing was called

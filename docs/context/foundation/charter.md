@@ -12,10 +12,37 @@ related:
 
 # Tools Registry — charter
 
-> **Status:** the MVP described below is **shipped and live** (API + CLI + skill, proxy, 4 auth shapes,
-> OAuth refresh/connect, health, 5 tools on `treg.superdesign.dev`). This fragment records the vision + the
-> "why"; the shipped detail lives in the architecture/interface fragments. Not yet: Render deploy, org
-> isolation.
+## What changed (2026-08) — the catalog became the front door
+
+The charter below describes a **vault**: your team's own keys and skills, made callable without
+handing the credential around. That shipped, and it still works exactly as written. But it answers
+"share what we already have", and the product now leads with a different question: **"get what you
+don't have."**
+
+treg carries ~2,600 catalogued endpoints across ~40 providers (SEO, backlinks, social, enrichment,
+ads, scraping) and serves eligible ones **on its own key**, metered per call from a prepaid balance.
+The pitch is *"OpenRouter, but for agent tools instead of models"* and *"ask for the task, not the
+tool"* — because the tools an agent needs sit behind subscriptions nobody buys for one run.
+
+What this means for anyone reading this fragment:
+
+| | |
+|---|---|
+| The two halves | **the catalog** (public, metered) and **your own tools** (yours, never metered) |
+| Which wins | your own credential always beats treg's, automatically |
+| The words we use | `tool` · `the catalog` · `your own tools`. **Not** "vault", "marketplace", or "registry" for either half — `registry` now means only the server/deployment |
+| Not built yet | automatic routing or failover between providers of one capability. `treg catalog search` compares them; **choosing is the caller's** |
+
+Money and metering: [money](../architecture/money.md). The endpoint data and its pricing rules:
+[catalog](../architecture/catalog.md).
+
+> **Status:** shipped and live on `treg.superdesign.dev` (Render, multi-tenant). This fragment records
+> the ORIGINAL vision from the 2026-06-30 kickoff and the "why" behind the proxy; the shipped detail
+> lives in the architecture/interface fragments.
+>
+> **⚠ Read the next section first.** The product's centre of gravity moved in August 2026. Everything
+> below this line is still true and still shipped — but it is no longer the whole product, and it is
+> not how treg is presented to anyone.
 
 A remote **registry that turns the team's skills into shareable, callable tools.** Any team member's
 **agent** (Claude Code / Codex / Gemini) — or a human via CLI/API — can call a tool **without owning its

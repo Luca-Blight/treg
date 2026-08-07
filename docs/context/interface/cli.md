@@ -69,12 +69,18 @@ by the `alias()` helper, which just omits `help=` (argparse only lists a subpars
 every subparser and `treg call -h` would print the grouped front page instead of its own help.
 
 ```
-MARKETPLACE   catalog
-CORE          tool · skill · secret · connections · call · cli · with · serve
-BULK UPLOAD   scan · upload
-TEAM MGMT     audit · org · invites · accept · agents · admin
-CONFIG        config · login · logout · onboard · update · version
+THE CATALOG — tools you don't have a key for     catalog · call · balance · topup
+YOUR OWN TOOLS — what your team already has      tool · skill · secret · connections
+ON YOUR MACHINE — team credentials, locally      cli · with · serve
+BULK UPLOAD                                      scan · upload
+TEAM MANAGEMENT                                  audit · org · invites · accept · agents · admin
+CONFIG                                           config · login · logout · onboard · update · version
 ```
+
+The order **is** the pitch: what you can do with no setup comes before what you have to register
+yourself, and `balance`/`topup` sit next to the thing that spends them rather than under team
+management. `test_help_is_grouped_and_hides_aliases` pins both the order and that `catalog` precedes
+`tool`, so a drift back to vault-first fails the suite.
 
 **Old → new.** Every one of these still parses and routes exactly as before — hidden, not removed:
 

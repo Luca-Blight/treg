@@ -1397,7 +1397,11 @@ async def tutorial_js():
     js = _WEB_DIR / "tutorial.js"
     if not js.exists():
         raise HTTPException(status_code=404, detail="tutorial.js not bundled")
-    return FileResponse(js, media_type="application/javascript")
+    # no-cache, like index.html and the landing: the page includes this as a bare `<script
+    # src="/tutorial.js">` with no version query, so without the header a browser keeps serving the
+    # tutorial from before the last deploy until someone hard-refreshes.
+    return FileResponse(js, media_type="application/javascript",
+                        headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/legal.css", include_in_schema=False)
@@ -1437,7 +1441,14 @@ async def tutorial_page():
     page = _WEB_DIR / "tutorial.html"
     if not page.exists():
         return HTMLResponse("<h3>Tutorial not bundled.</h3>")
-    return FileResponse(page)
+    # Stamp the tutorial.js URL with the bundle version. `no-cache` alone is not enough: a browser
+    # that cached the file BEFORE that header existed applies a heuristic lifetime and never
+    # revalidates, so an edited tutorial silently keeps serving the old steps (cost an hour to find).
+    js = _WEB_DIR / "tutorial.js"
+    stamp = int(js.stat().st_mtime) if js.exists() else 0   # tutorial.js's OWN mtime: _app_version()
+    html = page.read_text(encoding="utf-8").replace(       # hashes index.html and would not move
+        'src="/tutorial.js"', f'src="/tutorial.js?v={stamp}"')
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 # Provider logos, resolved by convention: /logos/<service>.svg, matching `service` in

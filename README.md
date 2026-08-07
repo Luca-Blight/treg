@@ -1,18 +1,40 @@
 # Treg (Tool-Registry)
 
-![treg — share skills & secrets without leaking keys](docs/assets/treg-hero.png)
+![treg — the tool catalog for your agent](docs/assets/treg-hero.png)
 
-**Stop pasting API keys & skills into agent contexts and Slack DMs.** Treg is your team's shared registry
-of skills, CLIs, endpoints, and secrets. Agents call Stripe, PostHog, `gh` directly - auth
-injected server-side, every call logged. Nothing to paste, nothing to leak.
+**OpenRouter, but for agent tools instead of models.** Point an agent at one base URL with one token
+and it can do the job: **~2,600 catalogued endpoints across ~40 providers** — SEO and backlinks,
+social and trends, people and company enrichment, ads, scraping — **priced per call, from a cent**,
+with no provider signup. Plus your own team's keys, skills and CLIs, callable by every teammate's
+agent without the credential ever leaving the server.
 
-Built for the Superdesign team, live at [treg.superdesign.dev](https://treg.superdesign.dev) - anyone can self-host.
+**Ask for the task, not the tool.** You do not need to know which vendor sells backlink data, or to
+hold an account with them. Search for what you want to do, read the price, call it.
+
+Built for the Superdesign team, live at [treg.superdesign.dev](https://treg.superdesign.dev) — anyone can self-host.
+
+## Why it exists
+
+The tools an agent needs for real work sit behind subscriptions nobody buys for a single run —
+Semrush $139/mo, Moz $99/mo, Crunchbase $99/mo, Apollo $59/seat — behind signup walls, or behind no
+public API at all (invite-only, partner-only, app-review-only). treg carries those accounts and
+bills fractions of a cent per call.
+
+## Two kinds of tool, one token
+
+- **The catalog** — external endpoints treg can serve **on its own key**, metered against your
+  team's prepaid balance (**$1.00 free** on every new team). No account with the provider needed.
+- **Your own tools** — anything a teammate registered: a paid API account, an OAuth connection, a
+  vendor CLI, a `SKILL.md`. **Your own key always wins over treg's, and those calls are never
+  metered.**
+
+The vocabulary for the second half:
 
 - **tool** = something the registry calls for you with the org's credential. Two kinds:
-  - **endpoint** - an upstream `base_url` + credential **bindings** (each binding injects one
+  - **endpoint** — an upstream `base_url` + credential **bindings** (each binding injects one
   secret into the request; a request can carry several, e.g. an OAuth bearer *and* a
   `developer-token` header).
-  - **CLI** - a vendor binary (`stripe`, `gh`, `vercel`, ...) run with the credential injected.
+  - **CLI** — a vendor binary (`stripe`, `gh`, `vercel`, ...) run with the credential injected.
 - **skill / bundle** = a recipe (`SKILL.md`) + its secrets + its tool(s), registered together.
 
 **The one rule:** the proxy **relays, never models** the upstream, and **injects auth server-side**
@@ -36,14 +58,51 @@ curl -fsSL https://treg.superdesign.dev/install.sh | sh
 # 2. sign in (GitHub default · --email for a one-time code · --token for agents/CI)
 treg login
 
-# 3. guided setup - share your skills & keys, or connect to your team's
-treg onboard
+# 3. do something useful immediately — no key, nothing registered
+treg catalog search "backlinks for a domain"     # find a tool by what it DOES
+treg call tikhub.tiktok.user.profile --query uniqueId=tiktok
+treg balance                                     # exactly what that cost
+
+# (or `treg onboard` for the guided walkthrough)
 ```
 
 Your token identifies you on every call (`X-Treg-Token` header) and is the same for all tools.
 Discover what your team has shared: `treg tool ls` · check credential health: `treg health`.
 
-## Share & use tools
+## Call a tool you don't have a key for
+
+The catalog is grouped by what endpoints **do**: keyword and rank tracking, backlinks and authority,
+AI visibility, trending and discovery, publishing to socials, people and company enrichment, ads
+management and creative, measurement.
+
+```bash
+treg catalog                                    # every platform, busiest first
+treg catalog search "find a work email"         # by the job, not the vendor
+treg catalog get hunter.people.email.find       # params, PRICE, example response
+treg call hunter.people.email.find --query domain=reddit.com --query full_name="Alexis Ohanian"
+```
+
+**How a catalogued call is served** — the credential ladder, in order:
+
+1. your team registered its own tool for that provider → that tool, that key;
+2. your team stored a secret for the provider → injected through a virtual tool;
+3. neither → **treg's own key**, billed to the team's prepaid balance.
+
+Your own credential always beats treg's, so connecting a key you already pay for makes those calls
+free of the balance rather than duplicating them. An endpoint treg has no published price for is
+**refused**, not served free — you are told to connect your own key instead. Where several providers
+serve one capability, `treg catalog search` shows them side by side with prices; **choosing is
+yours** — treg does not silently pick or fail over for you.
+
+```bash
+treg balance          # credit left, calls in flight, recent spend
+treg topup            # add funds, or set up automatic top-ups
+```
+
+Out of balance is an HTTP **402** carrying `balance_micro`, `estimated_cost_micro` and a `topup_url`,
+so an agent can act on it without reading prose.
+
+## Share & use your own tools
 
 The zero-thought path — point treg at a project and it figures out what's shareable:
 
@@ -112,7 +171,7 @@ treg upload skills --dir ~/.claude/skills --all   # register a folder of skills 
 ```
 
 **Use** — pull any shared skill into your agent; its API calls go through treg with your token,
-so the key stays in the vault, never in the skill:
+so the key stays on the server, never in the skill:
 
 ```bash
 treg skill install seo-blog-writer      # writes into ./.claude/skills/  (--all for the library)

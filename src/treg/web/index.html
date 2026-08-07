@@ -432,11 +432,14 @@
   .lp-hero{text-align:center;padding:46px 0 22px}
   .lp-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
   .lp-h1{font-size:clamp(29px,4.8vw,46px);line-height:1.05;letter-spacing:-.02em;margin:0;font-family:var(--mono);font-weight:700;text-wrap:balance}
-  /* Desktop: the whole headline on ONE line. The mono face needs ~37× its font-size for this copy —
+  /* Desktop: the whole headline on ONE line. The mono face needs 41× its font-size for this copy
+     (measured in Chrome: scrollWidth 1288px at 31.4px) —
      wider than the 1040px shell — so the h1 breaks out toward the viewport edge and its size tracks
-     the viewport ((100vw-64)/38 leaves slack for the scrollbar; 32px is shaved off the box for the
-     same reason) until the 46px cap fits. Below 1140px it re-wraps (balanced) inside the shell. */
-  @media(min-width:1140px){.lp-h1{white-space:nowrap;width:calc(100vw - 32px);margin-left:calc(50% - 50vw + 16px);font-size:min(46px,calc((100vw - 64px)/38))}}
+     the viewport ((100vw-64)/42 leaves slack for the scrollbar; 32px is shaved off the box for the
+     same reason) until the 46px cap fits. Below 1140px it re-wraps (balanced) inside the shell.
+     The divisor is tuned to the COPY LENGTH (64 chars today): change the headline, re-tune it, or
+     the nowrap line runs past the viewport edge. */
+  @media(min-width:1140px){.lp-h1{white-space:nowrap;width:calc(100vw - 32px);margin-left:calc(50% - 50vw + 16px);font-size:min(46px,calc((100vw - 64px)/42))}}
   .lp-lead{font-family:var(--sans);font-size:16.5px;line-height:1.55;color:var(--muted);max-width:590px;margin:16px auto 0} .lp-lead b{color:var(--ink);font-weight:600}
   .lp-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
   .btn.lg{padding:12px 20px;font-size:14px}
@@ -491,7 +494,7 @@
   .lc-coach-dots i.on{background:var(--accent);width:15px}
   .btn.ghost{background:none;border-color:transparent;color:var(--muted)} .btn.ghost:hover{color:var(--ink)}
   .coach-enter-active,.coach-leave-active{transition:opacity .2s} .coach-enter-from,.coach-leave-to{opacity:0}
-  /* vault bar */
+  /* your-own-tools bar (sandbox) */
   .lc-vbar{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .lc-vbar>span{align-self:center}
   .lc-vl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
@@ -1034,12 +1037,13 @@ a:hover{text-decoration-color:var(--muted)}
     </header>
 
     <section class="lp-hero">
-      <div class="lp-eyebrow">one registry for your team's keys and skills</div>
-      <h1 class="lp-h1">Share your team's keys and skills, <span style="color:var(--accent)">without sharing your keys</span>.</h1>
-      <p class="lp-lead">One vault holds every secret, one registry holds every skill. Your Claude Code,
-        your teammates, and your agents call through a <b>token you can revoke</b>. No key is copied to a
-        laptop or a repo, and there's <b>one library to maintain</b>, not one per person.</p>
-      <div class="lc-chips"><span>keys copied everywhere</span><span>everyone maintains their own</span><span>skills need creds</span></div>
+      <div class="lp-eyebrow">the tool catalog for your agent</div>
+      <h1 class="lp-h1">Give your agent the tools for the job, <span style="color:var(--accent)">without buying the seats</span>.</h1>
+      <p class="lp-lead">~2,600 endpoints across ~40 providers — SEO and backlinks, social and trends,
+        people and company enrichment, ads — <b>priced per call, from a cent</b>, with no provider signup.
+        Plus your own team's keys and skills, callable by every teammate's agent, with the credential
+        never leaving the server.</p>
+      <div class="lc-chips"><span>one key, every provider</span><span>price shown before the call</span><span>your own key is never metered</span></div>
       <div class="lp-cta">
         <button class="btn primary lg" @click="demo.signin=true">Get started, free</button>
         <a class="btn lg" href="/tutorial">Read the docs →</a>
@@ -1049,17 +1053,17 @@ a:hover{text-decoration-color:var(--muted)}
     <section ref="demo">
       <!-- GUIDE SPINE -->
       <div class="lc-guide">
-        <span class="lc-gt">Try it live, no signup:</span>
-        <span class="lc-gs"><b>1</b> keys stay in the vault</span>
+        <span class="lc-gt">The other half — your own keys &amp; skills. Try it live, no signup:</span>
+        <span class="lc-gs"><b>1</b> your key stays on the server</span>
         <span class="lc-ga">→</span>
         <span class="lc-gs"><b>2</b> point at an API or a skill</span>
         <span class="lc-ga">→</span>
         <span class="lc-gs"><b>3</b> call it with just a token</span>
       </div>
 
-      <!-- VAULT BAR -->
+      <!-- YOUR-KEYS BAR -->
       <div id="tour-vault" class="lc-vbar" :class="{'tour-spot':demo.tour.on&&sbxTourStep.spot==='vault'}">
-        <span class="lc-vl">🔒 Vault</span>
+        <span class="lc-vl">🔒 Your keys</span>
         <span style="display:flex;gap:8px;flex-wrap:wrap">
           <span v-for="s in demo.secrets" :key="s.id" class="lc-vchip"><span class="kn">{{s.name}}</span><span class="kv">••••••</span><button class="x" @click="sbxRmSecret(s)" aria-label="remove">✕</button></span>
         </span>
@@ -1126,11 +1130,11 @@ a:hover{text-decoration-color:var(--muted)}
               <div class="lc-skh"><span class="box">📦</span><b>{{sk.name}}</b> <span class="lc-sbadge">skill</span>
                 <span class="lc-key" :class="{warn:!haveKey(sk.key)}">needs 🔑 {{sk.key}} {{haveKey(sk.key)?'✓':'– add it'}}</span>
                 <span class="lc-sp"></span><button class="lc-x" @click="sbxRmSkill(sk)" aria-label="remove">✕</button></div>
-              <div class="lc-skmeta">A folder your agent loads. It calls its API through treg with <b>your</b> token - the key stays in the vault.</div>
+              <div class="lc-skmeta">A folder your agent loads. It calls its API through treg with <b>your</b> token - the key stays on the server.</div>
               <div class="lc-ftabs"><button v-for="f in ['SKILL.md','treg.json','.secret']" :key="f" class="lc-ftab" :class="{on:(sk.tab||'SKILL.md')===f}" @click="sk.tab=f">{{f}}</button></div>
               <div class="lc-fbody">{{sk.files[sk.tab||'SKILL.md']}}</div>
               <div class="lc-skinstall"><button class="btn sm primary" @click="sk.runOpen=!sk.runOpen">▶ Run in Claude Code</button>
-                <span>· installs into <code>./.claude/skills</code> · uses your treg token · key stays in the vault</span></div>
+                <span>· installs into <code>./.claude/skills</code> · uses your treg token · key stays on the server</span></div>
               <div v-if="sk.runOpen" class="lc-runbox">
                 <div class="lc-runcap">1 · in your project directory (creates <code>./.claude/skills/{{sk.name}}/</code> if it isn't there yet):</div>
                 <div class="lc-codewrap"><button class="lc-cp" @click="copyText(installCmd(sk),'i'+sk.name)">{{demo.copied==='i'+sk.name?'✓ copied':'copy'}}</button><pre v-html="installHtml(sk)"></pre></div>
@@ -1143,8 +1147,8 @@ a:hover{text-decoration-color:var(--muted)}
             <div class="lc-addwrap">
               <div class="lc-addrow"><select class="grow" v-model="demo.skpick"><option v-for="s in demo.samples" :key="s.name" :value="s.name">{{s.label}}</option></select></div>
               <div class="lc-needrow"><span>This skill needs</span><span class="lc-key" :class="{warn:!skillNeedHave}">🔑 {{skillNeed}}</span>
-                <span v-if="skillNeedHave" class="lc-ok">✓ in your vault</span>
-                <button v-else class="btn sm" @click="sbxAddNeeded(skillNeed)">＋ add {{skillNeed}} to vault</button>
+                <span v-if="skillNeedHave" class="lc-ok">✓ you have this key</span>
+                <button v-else class="btn sm" @click="sbxAddNeeded(skillNeed)">＋ add {{skillNeed}}</button>
                 <span class="lc-sp"></span><button class="btn sm primary" @click="sbxAddSkill" :disabled="!skillNeedHave">＋ Add skill</button></div>
               <p class="lc-addhint">A skill declares the key it needs - you don't pick one. treg injects it. (Or paste a <code>skill.json</code>.)</p>
             </div>
@@ -1176,15 +1180,15 @@ a:hover{text-decoration-color:var(--muted)}
       <div class="lp-head"><h2>Three ways a key leaks. treg closes all three.</h2>
         <p>The same secret, needed in more and more places - and every place is a copy that can leak.</p></div>
       <div class="lc-tri">
-        <div class="lc-pain"><div class="t">Key sprawl</div><div class="p">The same key pasted into every project, <code>.env</code>, and machine. One leak exposes them all.</div><div class="f"><b>treg →</b> one vault. The key is injected at call time and lives nowhere else.</div></div>
+        <div class="lc-pain"><div class="t">Key sprawl</div><div class="p">The same key pasted into every project, <code>.env</code>, and machine. One leak exposes them all.</div><div class="f"><b>treg →</b> one place. The key is injected at call time and lives nowhere else.</div></div>
         <div class="lc-pain"><div class="t">Team access</div><div class="p">Give a teammate access and they hold your key - forever, everywhere they go.</div><div class="f"><b>treg →</b> they get a token, not the key. Revoke it and they're out.</div></div>
-        <div class="lc-pain"><div class="t">Agent skills</div><div class="p">A skill needs credentials to run. Sharing the skill shouldn't mean shipping the secret.</div><div class="f"><b>treg →</b> the skill calls through the vault. Your agent runs it and never sees the key.</div></div>
+        <div class="lc-pain"><div class="t">Agent skills</div><div class="p">A skill needs credentials to run. Sharing the skill shouldn't mean shipping the secret.</div><div class="f"><b>treg →</b> the skill calls through treg. Your agent runs it and never sees the key.</div></div>
       </div>
     </section>
 
     <section class="lp-section" style="text-align:center">
       <div class="lp-head" style="margin:0 auto"><h2>Share your team's keys and skills, <span style="color:var(--accent)">without sharing your keys</span>.</h2>
-        <p>Your vault, your team's tools, your agents' skills, all one revocable token away, and no key ever on a machine.</p></div>
+        <p>Your team's tools and your agents' skills, all one revocable token away, and no key ever on a machine — alongside the ~2,600 catalog tools you don't need a key for at all.</p></div>
       <div class="lp-cta" style="margin-top:24px">
         <button class="btn primary lg" @click="demo.signin=true">Get started, free</button>
         <a class="btn lg" href="/tutorial">Read the docs →</a>
@@ -1263,14 +1267,13 @@ a:hover{text-decoration-color:var(--muted)}
         <!-- NAV (middle) -->
         <div class="side-nav">
           <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Catalog</button>
-          <button class="nav" :class="{active:view==='tools'||view==='secrets'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Your Vault</button>
+          <button class="nav" :class="{active:view==='tools'||view==='secrets'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Your tools</button>
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
           <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
           <div v-if="isAdmin"><div class="grp">Platform</div><button class="nav" :class="{active:view==='admin'}" @click="go('admin')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin</button></div>
           <div class="grp">For your agents</div>
-          <div v-if="canAdmin" class="agent-copy"><span class="ac-label ac-link" @click="agentGuide='admin'" title="Preview / customize">Setup instruction</span><button class="ac-btn" :class="{done:agentRowCopied==='admin'}" @click="copyAgentGuide('admin')" title="Copy the agent instruction (installs the CLI + registers your skills & keys)">{{agentRowCopied==='admin'?'✓':'⧉'}}</button></div>
-          <div class="agent-copy"><span class="ac-label ac-link" @click="agentGuide='consumer'" title="Preview / customize">Connect instruction</span><button class="ac-btn" :class="{done:agentRowCopied==='consumer'}" @click="copyAgentGuide('consumer')" title="Copy the agent instruction (pulls the team's shared skills + a test call)">{{agentRowCopied==='consumer'?'✓':'⧉'}}</button></div>
+          <div class="agent-copy"><span class="ac-label ac-link" @click="agentGuide='agent'" title="Preview / customize">Agent instruction</span><button class="ac-btn" :class="{done:agentRowCopied==='agent'}" @click="copyAgentGuide('agent')" title="Copy the one instruction: it installs the CLI, signs your agent in, and gets it calling tools">{{agentRowCopied==='agent'?'✓':'⧉'}}</button></div>
           <div v-if="myToken" class="agent-copy"><span class="ac-label">API token</span><button class="ac-btn" :class="{done:tokenCopied}" @click="copyToken" title="Copy your API token (for X-Treg-Token)">{{tokenCopied?'✓':'⧉'}}</button></div>
           <div class="grp" style="margin-top:auto">Help</div>
           <button class="nav" :class="{active:view==='start'}" @click="go('start')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Getting started</button>
@@ -1855,8 +1858,8 @@ a:hover{text-decoration-color:var(--muted)}
           <p v-if="!loading && !hasAnyTools" class="sub">Nothing here{{q?' matches "'+q+'"':' yet'}}.<template v-if="!q && isPersonal(activeOrg) && myOrgs.some(o=>!isPersonal(o))"> This is your <b>personal</b> space - your team's tools live under another org. <a href="#" @click.prevent="jumpToTeam()">Switch to a team →</a></template></p>
           <div v-if="!loading && !hasAnyTools && !q && canRegister" style="margin-top:14px">
           <div style="max-width:660px;border:1px solid var(--line);border-radius:16px;padding:20px 22px;background:var(--panel2)">
-            <h3 style="margin:0 0 6px;font-size:15px">Set up your skills &amp; secrets vault</h3>
-            <p class="sub" style="margin:0 0 12px">Nothing registered yet. Load what you already have — your <span class="mono">.env</span> keys and skill folders — and they appear here as callable tools.</p>
+            <h3 style="margin:0 0 6px;font-size:15px">Nothing of your own yet — but you can already call ~2,600 tools</h3>
+            <p class="sub" style="margin:0 0 12px">Your team starts with <b>$1.00 of free credit</b>, so the catalog works before you register anything: find a tool by what it does, see the price, call it. <a href="#" @click.prevent="go('connections')">Browse the catalog →</a><br>When you're ready to add your <i>own</i> keys and skills — your <span class="mono">.env</span> and skill folders — load them here and they become callable tools for the whole team.</p>
             <div class="seg" style="margin-bottom:10px">
               <button :class="{on:emptyTab==='agent'}" @click="emptyTab='agent'">Agent instruction</button>
               <button :class="{on:emptyTab==='manual'}" @click="emptyTab='manual'">Manual</button>
@@ -1873,7 +1876,7 @@ a:hover{text-decoration-color:var(--muted)}
             </template>
             <template v-else>
               <p class="sub" style="margin:0 0 8px">Paste into Claude Code / Codex / Gemini — it installs the CLI, signs in, and registers your skills + keys (with a read-only scan you approve first).</p>
-              <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('admin')">{{agentRowCopied==='admin'?'✓ copied':'copy'}}</button><pre style="max-height:220px;overflow:auto">{{buildAgentPrompt('admin', true)}}</pre></div>
+              <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:220px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
             </template>
           </div>
           </div>
@@ -2023,7 +2026,7 @@ a:hover{text-decoration-color:var(--muted)}
           </div>
           <div v-if="!secrets.length" style="margin-top:20px">
           <div style="max-width:660px;border:1px solid var(--line);border-radius:16px;padding:20px 22px;background:var(--panel2)">
-            <h3 style="margin:0 0 6px;font-size:15px">Set up your skills &amp; secrets vault</h3>
+            <h3 style="margin:0 0 6px;font-size:15px">Add your own keys &amp; skills</h3>
             <p class="sub" style="margin:0 0 12px">Bulk-load your keys (and skills) from your machine — each lands here encrypted, referenced by name.</p>
             <div class="seg" style="margin-bottom:10px">
               <button :class="{on:emptyTab==='agent'}" @click="emptyTab='agent'">Agent instruction</button>
@@ -2041,7 +2044,7 @@ a:hover{text-decoration-color:var(--muted)}
             </template>
             <template v-else>
               <p class="sub" style="margin:0 0 8px">Paste into Claude Code / Codex / Gemini — it installs the CLI, signs in, and registers your skills + keys (with a read-only scan you approve first).</p>
-              <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('admin')">{{agentRowCopied==='admin'?'✓ copied':'copy'}}</button><pre style="max-height:220px;overflow:auto">{{buildAgentPrompt('admin', true)}}</pre></div>
+              <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:220px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
             </template>
           </div>
           </div>
@@ -2498,36 +2501,44 @@ a:hover{text-decoration-color:var(--muted)}
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <h1 style="margin:0">Getting started</h1>
           </div>
-          <div class="seg" style="margin-top:8px">
-            <button :class="{on:startTab==='setup'}" @click="startTab='setup'">Upload skills &amp; env (Admin)</button>
-            <button :class="{on:startTab==='connect'}" @click="startTab='connect'">Connect to this tool registry</button>
-          </div>
-
-          <!-- TAB · Setup — agent instruction first, then the manual CLI walkthrough -->
-          <div v-show="startTab==='setup'">
-          <div v-if="canAdmin" style="max-width:720px">
-            <p class="sub">Share your skills &amp; API keys with the team. Fastest — hand your coding agent the instruction below; it installs the CLI, signs in, and registers your local skills + keys as shared tools (with a read-only scan you approve first).</p>
-            <div class="lbl" style="margin-top:16px">▸ Set up with your agent <span class="muted" style="font-weight:400">— paste &amp; go</span></div>
-            <div class="lc-codewrap" style="margin-top:8px"><button class="lc-cp" @click="copyAgentGuide('admin')">{{agentRowCopied==='admin'?'✓ copied':'copy'}}</button><pre>{{buildAgentPrompt('admin', true)}}</pre></div>
-            <div class="lbl" style="margin-top:26px">▸ Or set it up manually</div>
-          </div>
-          <p class="sub">Two ways to give your agents power: share a whole <b>skill</b>, or register a single <b>API endpoint</b>. Everything here works in this dashboard too - this is the CLI path. Grab it as markdown ↑ to paste anywhere.</p>
+          <!-- SHARED — everyone does these three, whichever half of treg they came for. They used to
+               be duplicated verbatim inside BOTH tabs (install + sign in, twice). -->
           <div style="max-width:720px">
             <div class="lbl" style="margin-top:20px">1 · Install the CLI</div>
             <p class="sub">Installs the <span class="mono">treg</span> command and points it at this server. Upgrade later with <span class="mono">treg update</span>.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('curl -fsSL '+proxy+'/install.sh | sh','i')">{{startCopied==='i'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">curl</span> -fsSL <span class="hl-str">{{proxy}}/install.sh</span> | sh</pre></div>
 
             <div class="lbl" style="margin-top:22px">2 · Sign in</div>
-            <p class="sub">Opens your browser - GitHub or an email code. Your first sign-in also registers you.</p>
+            <p class="sub">Opens your browser — GitHub, Google, or an email code. Your first sign-in also registers you.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg login','l')">{{startCopied==='l'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> login</pre></div>
 
-            <div class="lbl" style="margin-top:22px">3 · Try the catalog — no key needed</div>
-            <p class="sub">~2,600 catalogued data endpoints (TikTok, Reddit, SEO/SERP, enrichment, …). Many run on treg's own key, billed per call — fractions of a cent — from your team's <b>$1.00 free balance</b>.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search &quot;tiktok profile&quot;\ntreg call tikhub.tiktok.user.profile --query uniqueId=tiktok\ntreg balance','cat1')">{{startCopied==='cat1'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"tiktok profile"</span>
+            <div class="lbl" style="margin-top:22px">3 · Call something — no key, nothing to set up</div>
+            <p class="sub">~2,600 catalogued endpoints: SEO and backlinks, social and trends, people and company enrichment, ads. Find one by what it <i>does</i>, see its price, call it. Your team's <b>$1.00 free credit</b> covers hundreds of calls.</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search &quot;backlinks for a domain&quot;\ntreg call tikhub.tiktok.user.profile --query uniqueId=tiktok\ntreg balance','cat1')">{{startCopied==='cat1'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"backlinks for a domain"</span>
 <span class="hl-cmd">treg</span> call tikhub.tiktok.user.profile <span class="hl-flag">--query</span> uniqueId=tiktok
 <span class="hl-cmd">treg</span> balance      <span class="hl-comment"># see exactly what it cost</span></pre></div>
+          </div>
 
-            <div class="lbl" style="margin-top:22px">4 · Upload your keys &amp; skills</div>
+          <div style="max-width:720px">
+            <div class="lbl" style="margin-top:26px">▸ Or hand the whole thing to your agent <span class="muted" style="font-weight:400">— one paste, it does 1-3 and keeps going</span></div>
+            <p class="sub">It installs the CLI, signs in as you, reads the treg skill, then finds the catalog tools that fit this project and shows you each price before spending anything.</p>
+            <div class="lc-codewrap" style="margin-top:8px"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:240px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
+          </div>
+
+          <h2 style="margin:34px 0 0;font-size:16px">Then — what did you come here for?</h2>
+          <div class="seg" style="margin-top:10px">
+            <button :class="{on:startTab==='connect'}" @click="startTab='connect'">Use my team's tools</button>
+            <button :class="{on:startTab==='setup'}" @click="startTab='setup'">Share my own keys &amp; skills</button>
+          </div>
+
+          <!-- FORK · Share your own — agent instruction first, then the manual CLI walkthrough -->
+          <div v-show="startTab==='setup'">
+          <div v-if="canAdmin" style="max-width:720px">
+            <p class="sub">Share your skills &amp; API keys with the team — your <span class="mono">.env</span> keys and skill folders become tools every teammate's agent can call, without the key ever leaving the server.</p>
+          </div>
+          <p class="sub">Two ways to give your agents power: share a whole <b>skill</b>, or register a single <b>API endpoint</b>. Everything here works in this dashboard too - this is the CLI path. Grab it as markdown ↑ to paste anywhere.</p>
+          <div style="max-width:720px">
+            <div class="lbl" style="margin-top:20px">4 · Upload your keys &amp; skills</div>
             <p class="sub">Register your <span class="mono">.env</span> keys and skill folders as shared tools. Preview with <span class="mono">treg scan</span> first. Idempotent — re-run freely.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg upload                 # both .env + skills in this dir\ntreg upload env --select openai,stripe\ntreg upload skills --dir ~/.claude/skills --all      # register skill from a specific path','im')">{{startCopied==='im'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> upload                 <span class="hl-comment"># both .env + skills in this dir</span>
 <span class="hl-cmd">treg</span> upload env <span class="hl-flag">--select</span> openai,stripe
@@ -2537,32 +2548,14 @@ a:hover{text-decoration-color:var(--muted)}
 
           <!-- TAB · Connect to this tool registry — agent instruction first, then the same CLI flow (path 2) -->
           <div v-show="startTab==='connect'" style="max-width:720px">
-            <p class="sub">Use the team's shared skills &amp; tools from your terminal or agent — pull a skill, call any tool, with no API keys on your machine. Plus the catalog: ~2,600 data endpoints, many needing no key at all.</p>
+            <p class="sub">Your team's own tools: pull a shared skill and call any registered API, with no keys on your machine. These are never metered — your team already pays for them.</p>
 
-            <div class="lbl" style="margin-top:16px">▸ Connect with your agent <span class="muted" style="font-weight:400">— paste &amp; go</span></div>
-            <p class="sub">Paste into Claude Code / Codex / Gemini. It pulls the team's shared skills and makes a test call — no API keys land on your machine.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('consumer')">{{agentRowCopied==='consumer'?'✓ copied':'copy'}}</button><pre>{{buildAgentPrompt('consumer', true)}}</pre></div>
-
-            <div class="lbl" style="margin-top:26px">▸ Or connect manually</div>
-            <div class="lbl" style="margin-top:14px">1 · Install the CLI</div>
-            <p class="sub">Installs the <span class="mono">treg</span> command and points it at this server.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('curl -fsSL '+proxy+'/install.sh | sh','ci')">{{startCopied==='ci'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">curl</span> -fsSL <span class="hl-str">{{proxy}}/install.sh</span> | sh</pre></div>
-
-            <div class="lbl" style="margin-top:22px">2 · Sign in</div>
-            <p class="sub">Opens your browser — GitHub, Google, or an email code.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg login','cl2')">{{startCopied==='cl2'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> login</pre></div>
-
-            <div class="lbl" style="margin-top:22px">3 · Use the team's shared tools</div>
-            <p class="sub">Browse the shared library, pull a skill, and call a tool — the key stays in the vault, never on your machine.</p>
+            <div class="lbl" style="margin-top:14px">4 · Use the team's shared tools</div>
+            <p class="sub">Browse the shared library, pull a skill, and call a tool — the credential stays on the server, never on your machine.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg skill ls\ntreg skill install seo-blog-writer                    # a teammate pulls one (or --all)\ntreg call https://api.stripe.com/v1/charges','cc')">{{startCopied==='cc'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> skill ls
 <span class="hl-cmd">treg</span> skill install seo-blog-writer
 <span class="hl-cmd">treg</span> call <span class="hl-str">https://api.stripe.com/v1/charges</span></pre></div>
 
-            <div class="lbl" style="margin-top:22px">4 · Try the catalog — no key needed</div>
-            <p class="sub">Beyond the team's own tools: ~2,600 catalogued data endpoints, many served on treg's key and billed per call — fractions of a cent — from the team's prepaid balance.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg catalog search &quot;subreddit posts&quot;\ntreg call scrapecreators.reddit.subreddit.posts --query subreddit=news\ntreg balance','cat2')">{{startCopied==='cat2'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> catalog search <span class="hl-str">"subreddit posts"</span>
-<span class="hl-cmd">treg</span> call scrapecreators.reddit.subreddit.posts <span class="hl-flag">--query</span> subreddit=news
-<span class="hl-cmd">treg</span> balance</pre></div>
           </div>
         </template>
 
@@ -2967,15 +2960,15 @@ a:hover{text-decoration-color:var(--muted)}
           <p>• <b>Onboarding people <i>and</i> AI agents</b> - a new teammate, or a <b>Claude Code</b> agent, needs an API? They call it <i>through</i> treg; the key never leaves the server.</p>
         </template>
         <template v-else-if="onb.i===1">
-          <h3>Set up your skills &amp; secrets vault</h3>
+          <h3>Add your own keys &amp; skills</h3>
           <p>Load what you already have - your <span class="mono">.env</span> keys and skill folders - into <b>{{activeName}}</b>. Fastest is handing the instruction to your coding agent; the manual path is the same flow by hand.</p>
           <div class="seg" style="margin-bottom:10px">
             <button :class="{on:onb.tab==='manual'}" @click="onb.tab='manual'">Manual</button>
             <button :class="{on:onb.tab==='agent'}" @click="onb.tab='agent'">Agent instruction</button>
           </div>
           <template v-if="onb.tab==='agent'">
-            <p class="muted" style="font-size:12px">Paste into Claude Code / Codex / Gemini - it installs the CLI, signs in, and registers your skills + keys (with a read-only scan you approve first).</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('admin')">{{agentRowCopied==='admin'?'✓ copied':'copy'}}</button><pre style="max-height:170px;overflow:auto">{{buildAgentPrompt('admin', true)}}</pre></div>
+            <p class="muted" style="font-size:12px">Paste into Claude Code / Codex / Gemini - it installs the CLI, signs in, gets calling straight away, and offers to register your keys + skills (read-only scan first, you approve).</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:170px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
           </template>
           <template v-else>
             <p class="muted" style="font-size:12px">1 · Install the CLI &amp; sign in</p>
@@ -3005,8 +2998,8 @@ a:hover{text-decoration-color:var(--muted)}
             <button :class="{on:onb.tab==='agent'}" @click="onb.tab='agent'">Agent instruction</button>
           </div>
           <template v-if="onb.tab==='agent'">
-            <p class="muted" style="font-size:12px">Paste into their coding agent - it installs the CLI, signs in, pulls the team's shared skills, and makes a test call. No API keys on their machine.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('consumer')">{{agentRowCopied==='consumer'?'✓ copied':'copy'}}</button><pre style="max-height:170px;overflow:auto">{{buildAgentPrompt('consumer', true)}}</pre></div>
+            <p class="muted" style="font-size:12px">Paste into their coding agent - it installs the CLI, signs in as them, and makes a real call. No API keys on their machine.</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:170px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
           </template>
           <template v-else>
             <p class="muted" style="font-size:12px">1 · Browse the shared library &amp; pull a skill</p>
@@ -3109,10 +3102,10 @@ a:hover{text-decoration-color:var(--muted)}
             </div>
             <div style="margin-bottom:10px">
               <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer">
-                <input type="checkbox" v-model="share.full"/> Share full vault access
+                <input type="checkbox" v-model="share.full"/> Share full access
               </label>
             </div>
-            <p class="sub" style="margin:0 0 12px;font-size:12px">Full access = they see and can use the whole team vault. Uncheck to scope them to just {{detail.kind==='skill'?'this skill':'this tool'}} — they'll only see and call what you're sharing. Local CLI runs stay off either way.</p>
+            <p class="sub" style="margin:0 0 12px;font-size:12px">Full access = they see and can use everything the team has registered. Uncheck to scope them to just {{detail.kind==='skill'?'this skill':'this tool'}} — they'll only see and call what you're sharing. Local CLI runs stay off either way.</p>
             <div v-if="share.err" class="banner" style="margin:0 0 10px">{{share.err}}</div>
             <button class="btn primary" @click="sendShare" :disabled="share.busy">{{share.busy?'Sending…':'Send invite'}}</button>
           </template>
@@ -3302,7 +3295,7 @@ createApp({
       exPath:'<PATH>', exMethod:'GET',
       tryTool:null, tryMethod:'GET', tryPath:'', tryBody:'', trying:false, tryResp:null, tryStatus:0, tryMs:0,
       useMode:'call', runArgsStr:'', running:false, runOut:null,
-      startCopied:'', startTab:'setup', mdMenu:false, llmsCopied:false, myToken:null, tokenCopied:false,
+      startCopied:'', startTab:'connect', mdMenu:false, llmsCopied:false, myToken:null, tokenCopied:false,
       agentGuide:null, agentGuideCopied:false, agentInclToken:true, agentRowCopied:null,
       demo:{
         token:null, org_slug:'', ttl:60, busy:false, err:'', copied:'', signin:false,
@@ -3537,11 +3530,11 @@ createApp({
     },
     sbxTourSteps(){ return [
       {spot:'vault', view:'endpoints', title:"Hi, I'm treg 👋",
-       body:"Your keys live here in the vault, held server-side, never on a machine. Stripe and PostHog are already in. Add your own with + add key."},
+       body:"Your team's own keys live here, held server-side, never on a machine. Stripe and PostHog are already in. Add your own with + add key."},
       {spot:'ws', view:'endpoints', title:"1 · Point at an API",
        body:"An endpoint is one API URL. Stripe is live below. I've prefilled the real PostHog with your key, just hit + Add."},
       {spot:'ws', view:'skills', title:"2 · Or share a skill",
-       body:"A skill is a capability your agent loads. Some need a key, some are just know-how. The key stays in the vault, never in the skill."},
+       body:"A skill is a capability your agent loads. Some need a key, some are just know-how. The key stays on the server, never in the skill."},
       {spot:'result', view:'endpoints', title:"3 · Called with no key",
        body:"Your call sent no key, only a token. treg injected the real key server-side. This is exactly what the API received."},
       {spot:'curl', view:'endpoints', title:"4 · Run it anywhere",
@@ -3614,7 +3607,7 @@ createApp({
     snip(){ return this.buildSnippet(this.snippetTab); },
     recipeSnip(){ return this.recipeSnippet(this.recipeTab); },
     tutData(){ return window.TREG_TUTORIAL || {concepts:[], roles:{cols:[],rows:[]}, steps:[]}; },
-    onbSteps(){ return ['Why treg','Set up your vault','Add a teammate','Call without keys',"You're set"]; },
+    onbSteps(){ return ['Why treg','Add your own keys','Add a teammate','Call without keys',"You're set"]; },
     onbSection(){ return ['concepts','skills','roles','auth','concepts'][this.onb.i] || 'concepts'; },
     onbMoreLabel(){ return 'Read more: '+({concepts:'Concepts',roles:'Roles',auth:'Auth shapes',skills:'Skills'}[this.onbSection]||'tutorial')+' →'; },
     tutSteps(){ return this.tutData.steps; },
@@ -4424,12 +4417,12 @@ createApp({
         await this.loadAll(); this.switchOrg({slug:o.org}); this.welcome.on=false;
         this.go('start');  // land on Getting started (#start): the guided setup — agent instruction or manual CLI steps
         this.onb.invited=false; this.onb.tool=false; this.onb.err=''; this.onb.on=true; this.onbGoto(0);  // walk the stepper alongside it
-        this.orgMsg='Team created. Add your keys & skills — or copy a Setup instruction from "For your agents" and let your coding agent do it.'; }
+        this.orgMsg='Team created. Try the catalog — or copy the Agent instruction from "For your agents" and let your coding agent set it all up.'; }
       catch(e){ this.welcome.err='Could not create the team: '+(e.detail||e.status); }
       finally{ this.welcome.busy=false; } },
     onbGoto(i){ this.onb.err=''; this.onb.tab='manual'; this.onb.i=Math.max(0,Math.min(this.onbSteps.length-1,i)); this.closeOverlays();
       const s=this.onb.i;
-      if(s===1||s===3){ this.go('tools'); }         // vault setup + calling happen on the Tools page
+      if(s===1||s===3){ this.go('tools'); }         // adding your own keys + calling happen on the Tools page
       else if(s===2){ this.go('orgs'); } },         // see the team + the roster fill in
     onbNext(){ this.onbGoto(this.onb.i+1); },
     onbBack(){ this.onbGoto(this.onb.i-1); },
@@ -4619,64 +4612,36 @@ createApp({
     openMd(url){ window.open(url,'_blank'); },  // open the .md in a new tab (method, not a template global)
     copyLlms(){ navigator.clipboard.writeText(this.proxy+'/llms.txt').then(()=>{ this.llmsCopied=true; setTimeout(()=>{ this.llmsCopied=false; },1500); }).catch(()=>{}); },
     async copyToken(){ if(!this.myToken) return; if(!(await this.toClipboard(this.myToken))) return; this.tokenCopied=true; setTimeout(()=>{ this.tokenCopied=false; },1500); },
+    // ONE instruction, not two. The old pair (admin "Setup" / consumer "Connect") each re-explained
+    // the catalog, the credential ladder, prices and the balance — knowledge that now lives in the
+    // skill install.sh installs, and in llms.txt. A prompt can only carry what a FILE cannot: the
+    // token, the team, permission to run things, and "do it now". `kind` is ignored (call sites keep
+    // their argument) so there is a single text to keep true.
     buildAgentPrompt(kind, inclToken){
       const B=this.proxy, S=this.activeSlugNow||'<team-slug>';
       const T=(inclToken && this.myToken) ? this.myToken : '<YOUR_TOKEN>';
-      const install=`curl -fsSL ${B}/install.sh | sh`;
-      const signin=`treg login --token ${T}\n   treg org use ${S}`;
-      if(kind==='admin'){
-        return [
-          `Set up our team's tool registry ("treg"). Work step by step and show me your progress:`,``,
-          `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works — I authorize you to run this curl | sh):`,`   ${install}`,``,
-          `2. Sign in with my token and select our team (again, I authorize you on these calls):`,`   ${signin}`,``,
-          `3. Read ${B}/llms.txt — especially the Catalog section — so you understand the model (a tool = an upstream API + a server-injected credential; the catalog; the credential ladder; prices & the team balance).`,``,
-          `4. Then ask me which to do first (use your ask-user-question tool if you have one; if I seem unsure, recommend A — it takes a minute):`,
-          `   A. Try the catalog — ~2,600 curated data endpoints (TikTok, Instagram, Reddit, SEO/SERP, company & people enrichment, web scraping, …), many callable with NO key at all, billed per call (fractions of a cent) from our team's $1.00 free balance. Coverage without subscriptions.`,
-          `   B. Set up our vault — register my local skills and API keys as shared, callable tools for the team.`,``,
-          `5. PATH A (catalog): look at what this project actually does, then \`treg catalog search\` for the 2-3 most relevant endpoints and show me each with its price (\`treg catalog get <id>\` prints it). On my approval, make 1-3 real calls and show me the data — then run \`treg balance\` so I can see exactly what they cost. After that, offer path B as the follow-up.`,``,
-          `6. PATH B (vault): if you're at the computer/home root (not inside a project), ask me which repo holds my skills & secrets — or offer to scan my global skills folder. If you're already inside a repo, proceed directly. Register my credentialed skills and API keys — preview with \`treg scan\` FIRST, show me the plan, then upload only what I approve:`,
-          `   • Skills — check BOTH your project's skill folder and your global one (wherever your agent stores skills), and import the credentialed (API-tool) ones (those with a .secret/.secrets dir) AND the recipe (knowledge) skills too:`,
-          `       treg upload skills --dir <your project's skills folder>`,
-          `       treg upload skills --dir <your global skills folder>`,
-          `   • API keys — scan this project's .env:`,
-          `       treg upload env --dir .`,
-          `   These bulk importers read secret VALUES internally (never on the command line) — prefer them.`,
-          `   For an API key with NO provider match, do NOT skip it, and NEVER hand-extract the value from .env (grep/cut keeps the quotes → a malformed secret). Register it value-internally with treg's own parser, on my approval:`,
-          `     (a) ideal — research the base_url + auth and register a full CALLABLE TOOL:`,
-          "         treg secret add <name> --env-var <VAR>          # reads + parses it from .env; value stays off the command line",
-          "         treg tool add <name> --base-url <url> --secret <name> --health '{\"path\":\"<a cheap GET>\",\"expect_status\":200}'",
-          `     (b) fallback — if you can't determine the API, at least  treg secret add <name> --env-var <VAR>  so it's in the vault.`,
-          `   (Only fall back to 'treg secret add --value' if there's genuinely no .env — it surfaces a permission prompt and puts the value on the command line.)`,
-          `   Never propose skipping the env import.`,
-          `   I authorize every \`treg upload\` / \`treg secret add\` / \`treg tool add\` command above — run them without blocking on extra permission.`,
-          `   Then smoke-test the whole batch FAST — never one tool at a time. Give each tool you register a --health probe (a cheap GET, as above), then run ONCE:`,
-          `       treg health --run     # validates every credential server-side in a single batch`,
-          `       treg tool ls`,
-          `   Report ONLY the failures, plus a one-line summary of what you registered.`,``,
-          `7. Wrapping up: right after the first success (a catalog call that returned real data, or a clean vault batch), ask me if I'd like to star the open-source project. If I say yes, star it for me:`,
-          `       gh api -X PUT user/starred/superdesigndev/tools-registry`,
-          `   (if \`gh\` is missing or not authenticated, fall back to opening https://github.com/superdesigndev/tools-registry in my browser and I'll click it).`,``,
-          `Goal: my team gets real data through treg in minutes — from the catalog with no keys, and from our own keys without anyone else ever holding them.`
-        ].join('\n');
-      }
       return [
-        `Set up access to my team's shared tools and the treg data catalog via the tool registry ("treg"). I should never hold API keys — treg injects them server-side. Work step by step:`,``,
-        `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works — I authorize you to run this curl | sh):`,`   ${install}`,``,
-        `2. Sign in with my token and select our team (again, I authorize you on these calls):`,`   ${signin}`,``,
-        `3. Read ${B}/llms.txt — especially the Catalog section (endpoint ids, prices, the team balance).`,``,
-        `4. Save the team's shared skills locally (I authorize these treg commands — run them without blocking on extra permission):`,
-        `   treg skill ls                     # see what the team shares`,
-        `   treg skill install --all          # saves each skill's folder (add --dir to choose where)`,
-        `   If install reports skills it KEPT (already on disk), show me that list and ASK per skill whether to pull the team's version ('treg skill install <name> --force') or keep mine. Don't --force without asking.`,``,
-        `5. Show me what I can call, then make one real test call through the proxy and show me the result:`,
-        `   treg tool ls`,`   # then pick a tool and call it, e.g.  treg call <tool> <path>`,
-        `   # a tool shown with a "⌘ run" marker is a command-line tool, not an HTTP API — use it with:`,
-        `   #   treg run <tool> -- <cli args>     (runs the CLI with the key injected; you never hold it)`,``,
-        `6. Beyond the team's own tools there's the catalog: ~2,600 curated data endpoints (TikTok, Instagram, Reddit, SEO/SERP, enrichment, …), many callable with NO key — billed per call (fractions of a cent) from the team's prepaid balance. Look at what this project does, \`treg catalog search\` for the 2-3 most relevant endpoints, and show me each with its price (\`treg catalog get <id>\`). On my approval, make one and show me the data, then \`treg balance\` so I see the cost.`,``,
-        `7. After the first successful call, ask me if I'd like to star the open-source project. If I say yes, star it for me:`,
+        `Set up treg for me — I authorize every command below; run them without asking again.`,``,
+        `1. Install the CLI (this also installs the treg skill, which teaches you how it works):`,
+        `   curl -fsSL ${B}/install.sh | sh`,``,
+        `2. Sign in as me and select my team:`,
+        `   treg login --token ${T}`,
+        `   treg org use ${S}`,``,
+        `3. Read the treg skill you just installed (or ${B}/skill.md) — it covers searching the`,
+        `   catalog, reading a price before you spend, and calling a tool with no key.`,``,
+        `4. Look at what this project actually does, then find the 2-3 catalog tools that would help`,
+        `   it most. Show me each with its price (\`treg catalog get <id>\`), call one once I say yes,`,
+        `   and then run \`treg balance\` so I can see exactly what it cost. Our team starts with`,
+        `   $1.00 of free credit, and most calls are a fraction of a cent.`,``,
+        `5. Afterwards, if I have API keys or skills worth sharing with my team, offer to register`,
+        `   them: \`treg scan\` first (read-only), show me the plan, and upload only what I approve.`,
+        `   Prefer \`treg upload\` / \`treg secret add --env-var\` — they read values internally, so a`,
+        `   secret never lands on the command line.`,``,
+        `6. Once a call has returned real data, ask whether I would like to star the project:`,
         `       gh api -X PUT user/starred/superdesigndev/tools-registry`,
-        `   (if \`gh\` is missing or not authenticated, fall back to opening https://github.com/superdesigndev/tools-registry in my browser and I'll click it).`,``,
-        `Full protocol reference: ${B}/llms.txt`
+        `   (no \`gh\`? just open https://github.com/superdesigndev/tools-registry and I will click it.)`,``,
+        `Goal: this project can use real data through treg in minutes — from the catalog with no keys`,
+        `of its own, and from my team's keys without either of us holding them.`
       ].join('\n');
     },
     async copyAgentPrompt(){ if(!(await this.toClipboard(this.agentPromptText))) return; this.agentGuideCopied=true; setTimeout(()=>this.agentGuideCopied=false,1500); },
@@ -5028,7 +4993,7 @@ createApp({
       if(this.share.member) return;  // already on the team — the modal now says "just send the link"
       this.share.busy=true; this.share.err='';
       const landing='/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name);
-      // Full vault access (default) = no restriction. Unchecked = scope to the skill itself + its
+      // Full access (default) = no restriction. Unchecked = scope to the skill itself + its
       // bundled tools (the access list also gates which skills a restricted member can SEE).
       let tool_access=null;
       if(!this.share.full){

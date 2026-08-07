@@ -1,22 +1,28 @@
-# treg — one endpoint between your agent and every tool
+# treg — the tool catalog for your agent
 
-> Think OpenRouter, but for agent tools instead of models: point an agent at ONE base URL
-> with ONE token and it can call **any tool** - a catalog of ~2,600 external data endpoints
-> (TikTok, Instagram, Reddit, SEO/SERP, enrichment, scraping, …, many with **no key at
-> all**, billed per call from a prepaid balance) AND your team's own internal & external
-> APIs, keys and CLIs. Every credential is injected **server-side**; nothing sensitive
-> lands on the agent's machine, and every call is audited. Built for AI agents (Claude
-> Code, Codex, Gemini) and the humans running them.
+> **OpenRouter, but for agent tools instead of models.** Point an agent at ONE base URL with ONE
+> token and it can do the *job*: ~2,600 catalogued endpoints across ~40 providers (SEO and SERP
+> data, backlinks, social and trends, people and company enrichment, ads, scraping) — plus your
+> own team's keys, skills and CLIs. Every credential is injected **server-side**; nothing
+> sensitive lands on the agent's machine, and every call is audited.
 
-Two sources of callable tools live behind the same `/call/`:
+**Ask for the task, not the tool.** You do not need to know which vendor sells backlink data, or
+to hold an account with them. Search the catalog for what you want to do, read the price, call it.
 
-- **The CATALOG** - curated external data endpoints, callable by id. If nobody on the
-  team holds a key, treg serves eligible endpoints on its own key, metered per call
-  against the team's prepaid balance ($1.00 free on every new team). Coverage without
-  provider signups or subscriptions.
-- **The VAULT** - the team's own tools: any API key or credentialed skill a member
-  registers becomes callable by every teammate (and their agents) without the key ever
-  leaving the server. Internal services, paid accounts, OAuth connections, vendor CLIs.
+Why this exists: the tools an agent needs for real work are behind subscriptions nobody buys for a
+single run (Semrush $139/mo, Moz $99/mo, Crunchbase $99/mo, Apollo $59/seat), behind signup walls,
+or behind no public API at all — invite-only, partner-only, app-review-only. treg carries those
+accounts and bills you fractions of a cent per call.
+
+Two kinds of tool answer to the same token, through the same `/call/`:
+
+- **The catalog** — curated external endpoints, callable by id. If nobody on your team holds a key
+  for that provider, treg serves eligible endpoints **on its own key**, metered per call against
+  the team's prepaid balance (**$1.00 free** on every new team). No provider signup, no
+  subscription.
+- **Your own tools** — anything a teammate registered: an internal service, a paid API account, an
+  OAuth connection, a vendor CLI, a SKILL.md. Callable by the whole team, with the credential held
+  server-side. **Your own key always wins over treg's, and those calls are never metered.**
 
 Multi-tenant: a token = a (user, org) membership; resources are org-scoped.
 
@@ -25,9 +31,16 @@ Repo: https://github.com/superdesigndev/tools-registry
 
 ## The one mechanic: /call/
 
-For a VAULT tool, take the **real upstream URL** you'd normally call, prefix it with
-`{BASE}/call/`, and send your token. treg resolves the tool by host and injects the
-credential (a CATALOG endpoint is the same call with the endpoint id in place of the URL):
+Two shapes, one endpoint, one token.
+
+**A catalog endpoint** — use its id, and treg picks the credential (yours if you have one, its own
+if you don't):
+
+    curl "{BASE}/call/tikhub.tiktok.user.profile?uniqueId=tiktok" \
+      -H "X-Treg-Token: $TREG_TOKEN"
+
+**One of your own tools** — take the real upstream URL you would normally call and prefix it; treg
+resolves the tool by host and injects the credential:
 
     curl "{BASE}/call/https://api.stripe.com/v1/charges" \
       -H "X-Treg-Token: $TREG_TOKEN"
@@ -43,23 +56,35 @@ credential (a CATALOG endpoint is the same call with the endpoint id in place of
   `base64+gzip`); treg decodes it server-side, so the upstream still gets the real bytes. The
   `treg` CLI does this automatically on a WAF 403 - you only need it over raw HTTP.
 
-## Source 1 — the CATALOG: external data endpoints, many with NO key
+## The catalog — tools you do not have a key for
 
-~2,600 curated endpoints across ~40 data providers (TikTok, Instagram, Reddit, YouTube,
-LinkedIn, Google SERP & keyword data, backlinks/SEO, company & people enrichment, web
-scraping, …). Call one by its **endpoint id**:
+Curated endpoints across ~40 providers, grouped by what they DO: keyword and rank tracking,
+backlinks and authority, AI visibility, trending and discovery, publishing to socials, people and
+company enrichment, ads management and creative, measurement. Ask for the task; the catalog tells
+you which endpoints serve it, what each costs, and how you would be served. Exact live counts:
+`GET {BASE}/catalog/platforms`.
 
-    treg catalog search "instagram profile"         # find endpoints by what they do
+Start from the job, not the vendor:
+
+    treg catalog                                    # every platform, busiest first
+    treg catalog search "backlinks for a domain"    # find endpoints by what they DO
     treg catalog get tikhub.tiktok.user.profile     # docs, params, PRICE, and how you'd be served
     treg call tikhub.tiktok.user.profile --query uniqueId=tiktok
     # raw HTTP: GET {BASE}/call/tikhub.tiktok.user.profile?uniqueId=tiktok  + X-Treg-Token
 
-How a catalogued call is served - the credential ladder, tried in order:
+**How a catalogued call is served** — the credential ladder, tried in this order. Note the shape:
+your own credential always beats treg's, so connecting a key you already pay for makes those calls
+free of the balance rather than duplicating them.
 1. the org registered its own tool for that provider → that tool, that key;
 2. the org stored a secret for the provider → injected via a virtual tool;
-3. neither → **treg's own key**, billed per call to the team's prepaid balance. Fractions of
-   a cent per call (a TikTok profile is ~$0.001); every new team starts with **$1.00 free**.
-   No provider signup, no subscription - coverage without commitment.
+3. neither → **treg's own key**, billed per call to the team's prepaid balance. Fractions of a
+   cent (a TikTok profile is ~$0.001); every new team starts with **$1.00 free**. No provider
+   signup, no subscription.
+
+An endpoint treg has no published price for is **refused**, not served free — you are told to
+connect your own key instead. Choosing *between* several providers of one capability is yours to
+make today (`treg catalog search` shows them side by side with prices); treg does not silently
+pick or fail over for you.
 
 Money rules for agents:
 - The price is shown BEFORE you call (`treg catalog get`, or `estimated_cost_usd` in
@@ -72,17 +97,17 @@ Money rules for agents:
 - `treg balance` shows the prepaid balance and recent charges; the dashboard Activity page
   shows the exact settled cost of every call.
 
-## Source 2 — the VAULT: your team's own tools, keys & skills
+## Your own tools — what your team already has
 
-Anything a teammate registered - an internal service, a paid API account, an OAuth
-connection, a vendor CLI - is callable by the whole team with the credential held
-server-side. Discover what's there:
+The catalog is the public half; this half is yours. Anything a teammate registered — an internal
+service, a paid API account, an OAuth connection, a vendor CLI — is callable by the whole team with
+the credential held server-side, and never metered. Discover what is there:
 
 - CLI: `treg tool ls` - names, hosts, bindings (which credential is injected where).
 - API: `GET {BASE}/tools` with your token → JSON list of `{name, base_url, host, bindings}`.
 - `GET {BASE}/meta` → `{public_url, github}` (unauthenticated; handy to confirm the base URL).
 
-Vault tools come in two shapes: HTTP APIs (`treg call`, or the URL-prefix form above) and
+Your own tools come in two shapes: HTTP APIs (`treg call`, or the URL-prefix form above) and
 **command-line tools** (stripe, gh, vercel, gcloud, …) via `treg run` - treg supplies the
 credential and runs the CLI, so you use it without owning or logging into it.
 
@@ -273,12 +298,12 @@ skills` restrict it (`--dir` sets the location).
 
 ## For AI agents (Claude Code / Codex / Gemini)
 
-1. You do NOT hunt for API keys. Take the upstream request you'd make, prefix its URL with
-   `{BASE}/call/`, add `X-Treg-Token: <token>` (and `X-Treg-Org: <slug>` for an identity
-   token), and send it.
-2. Need data nobody has a key for? **Search the catalog first** (`treg catalog search …`) -
-   catalog endpoints may need no key at all (billed to the team balance; see the
-   Catalog section above, including the price-before-you-spend rule).
+1. **Start from the task.** Need data you have no key for — backlinks, a TikTok profile, a work
+   email, ad creative? `treg catalog search "<what you want to do>"` FIRST. Most of it needs no
+   key at all, billed to the team balance; read the price before you spend it.
+2. You do NOT hunt for API keys. For one of the team's own tools, take the upstream request you'd
+   make, prefix its URL with `{BASE}/call/`, add `X-Treg-Token: <token>` (and `X-Treg-Org: <slug>`
+   for an identity token), and send it.
 3. Discover the org's own tools with `treg tool ls` or `GET {BASE}/tools`.
 4. Prefer a **per-org token** for an agent (scoped to one team), not a human identity token.
 5. The registry records who called what - calls are attributed to the token's user.
@@ -314,7 +339,7 @@ Example (an agent calling Intercom with no key on its box):
 
 ## Notes
 
-- Currently self-hosted; the base URL may change (moving to Render). Always read the live
-  `{BASE}/meta` for the current `public_url`, and re-fetch this file at `{BASE}/llms.txt`.
+- Always read the live `{BASE}/meta` for the current `public_url`, and re-fetch this file at
+  `{BASE}/llms.txt` — the catalog grows and prices are re-checked.
 - Registered upstreams grow over time - treat `treg tool ls` / `GET /tools` as the source
   of truth, not this file.
