@@ -333,15 +333,19 @@ platform without opening it, and every field comes off the `/catalog/platforms` 
   out, which is what left room for the name to wrap. The data is still served and still used: it is
   the card's hover `title`.
 - **Footer** — the endpoint count on the left, and on the right the starting price from the row's
-  `price_from`, via `platPrice` (see **Prices are unified USD** below).
+  `price_from`, via `platPrice` (see **Prices are unified USD** below). The USD figure stands alone —
+  the native amount ("1 credit") used to trail it in parentheses and broke the card layout on long
+  prices; it lives in the hover `title` now.
   A `price_from` that exists but publishes no number renders **nothing** — "from —" says less than
-  silence. Absent price data is ambiguous on its own, since it covers both "rate unpublished" and
-  "nothing to charge for", so `platPrice` splits them on **auth kind**: a platform whose every provider is
-  an `oauth` integration reads **"free with your account"** (the account you connect is the licence),
-  while a key-auth provider with no published rate stays silent. Note that `price_from` arrives as
-  `null` *or* as an empty `{}`, and the empty object has to be normalised to null first — being truthy,
-  it otherwise short-circuits the auth-kind branch and silently costs an OAuth-only platform its
-  "free with your account".
+  silence. "From" is a **floor**, and an `oauth` integration among the platform's providers makes the
+  floor $0 (the account you connect is the licence): **any** OAuth provider ⇒ **"free with your
+  account"**, even when metered providers also serve the platform and publish a rate — Google Ads is
+  served by its own OAuth integration *and* by scrapers, and must not read "from $0.00188". The
+  metered rate moves into the tooltip ("without it, metered providers serve this from …"). A key-auth
+  provider with no published rate stays silent. Note that `price_from` arrives as `null` *or* as an
+  empty `{}`, and the empty object has to be normalised to null first — being truthy, it otherwise
+  short-circuits the auth-kind branch and silently costs an OAuth-only platform its "free with your
+  account".
 
 **Prices are unified USD.** Every price the marketplace displays — the card footer, the capability card's
 "from", and the per-endpoint cost chip — is the **server's computed `usd`** field on `cost` / `price_from`,

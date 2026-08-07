@@ -1,5 +1,9 @@
 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Youku">
-  <!-- Lettermark: the brand's own wordmark character on its brand colour. -->
-  <rect width="24" height="24" rx="5.5" fill="#0BA9E8"/>
-  <text x="12" y="12.6" fill="#fff" font-family="ui-sans-serif,system-ui,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="central">优</text>
+  <!-- Youku's current (2019+) play mark: blue swoosh triangle with orange wedge; path data from the
+       official youku.com logo SVG (Wikimedia Commons "Youku Global logo, 21 Mar 2024"), gradients
+       flattened to flat brand blue/orange. -->
+  <g transform="translate(1.75,0) scale(0.3636)">
+    <path fill="#FF7300" d="M18.8912277,31.7762037 L20.95,32.9992037 L46.2122362,48.0251668 L18.9453417,64.2540559 C12.9039107,67.8476315 5.18024101,65.716616 1.69386234,59.4894269 C-1.79251633,53.2622379 0.274930601,45.3010857 6.31636161,41.7075101 L18.8560952,34.245796 C19.2703685,33.9948803 19.5484382,33.5308958 19.5484382,33 C19.5484382,32.4842553 19.2860136,32.0316573 18.8912277,31.7762037 Z"/>
+    <path fill="#1CA5FC" d="M46.2122362,17.9698072 L18.9453417,1.74594414 C12.9039107,-1.84763148 5.18024101,0.283383991 1.69386234,6.51057306 C-1.79251633,12.7377621 0.274930601,20.6989143 6.31636161,24.2924899 L20.954276,33.002513 L46.2122362,48.0301928 L46.2122362,48.0301928 C57.4369127,41.3506656 57.4369127,24.6493344 46.2122362,17.9698072 L46.2122362,17.9698072 Z"/>
+  </g>
 </svg>
