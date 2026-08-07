@@ -46,7 +46,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from . import audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, health, injectors, ledger, localrun, oauth
+from . import audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings, platform_setting_name
@@ -416,7 +416,7 @@ async def catalog_search(q: str = "", limit: int = 25) -> dict:
 
 
 @app.get("/catalog/endpoints/{endpoint_id}", include_in_schema=False)
-async def catalog_endpoint(endpoint_id: str) -> dict:
+async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_session)) -> dict:
     """Open: everything about ONE endpoint — the INSPECT half of the loop.
 
     Deliberately one round-trip: params, cost, the sibling providers offering the same capability
@@ -441,6 +441,18 @@ async def catalog_endpoint(endpoint_id: str) -> dict:
             example = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             example = None
+    # What the calls we have already served say about this endpoint and its alternatives — the half
+    # of "compare providers" that only treg can answer (see endpoint_stats + CAPABILITY-CHOICE-PLAN).
+    # Attached to the SAME response because the choice is made here; a second round-trip to compare
+    # reliability is a round-trip an agent will skip.
+    try:
+        stats = await endpoint_stats.observed(db, [endpoint_id] + [s["id"] for s in siblings])
+    except Exception:  # noqa: BLE001 — telemetry must never take the catalog down
+        logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
+        stats = {}
+    view = view | {"observed": stats.get(endpoint_id)}
+    siblings = [s | {"observed": stats.get(s["id"])} for s in siblings]
+
     return {
         "endpoint": view,
         "provider": {"service": ep["provider"], "display_name": _provider_display(ep["provider"]),

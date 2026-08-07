@@ -3891,6 +3891,55 @@ def _native_amount(value, currency: str, meter: str = "") -> str:
 
 
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _pad(text: str, width: int) -> str:
+    """Left-justify by VISIBLE width. `f"{s:<7}"` counts ANSI escape bytes as characters, so any
+    coloured cell silently shifts every column to its right."""
+    pad = width - len(_ANSI_RE.sub("", text))
+    return text + " " * max(0, pad)
+
+
+def _observed_cell(obs: dict | None) -> str:
+    """The success rate, or an honest blank. `—` means nobody has called it enough to say (the
+    server refuses to publish a rate below its sample floor); a rate with a tiny sample is worse
+    than no rate, because it reads as evidence."""
+    if not obs or obs.get("ok_rate") is None:
+        n = (obs or {}).get("samples") or 0
+        return f"{_M}— ({n}){_R}" if n else f"{_M}—{_R}"
+    pct = obs["ok_rate"] * 100
+    colour = _G if pct >= 99 else (_AM if pct >= 90 else _A)
+    return f"{colour}{pct:.0f}%{_R} {_M}({obs['samples']}){_R}"
+
+
+def _speed_cell(obs: dict | None) -> str:
+    ms = (obs or {}).get("p50_ms")
+    return f"{_M}—{_R}" if ms is None else (f"{ms}ms" if ms < 1000 else f"{ms/1000:.1f}s")
+
+
+def _last_ok_cell(row: dict) -> str:
+    """When this endpoint last answered. Two different facts, never merged into one badge:
+
+    a plain age is MEASURED — the last time a real call through treg came back 2xx. A `✓` age is
+    the catalog's `verified:` stamp: somebody ran it by hand on that date and it worked. The stamp
+    is the honest fallback while an endpoint has no traffic yet (76% of eligible endpoints carry
+    one), but it is a dated claim, not live evidence, so it must not read as though it were.
+    """
+    days = (row.get("observed") or {}).get("last_ok_days")
+    if days is not None:
+        return "today" if days == 0 else f"{days}d"
+    v = row.get("verified")
+    if not v:
+        return f"{_M}—{_R}"
+    try:
+        from datetime import date
+        d = v if isinstance(v, date) else date.fromisoformat(str(v)[:10])
+        return f"{_M}✓{(date.today() - d).days}d{_R}"
+    except (ValueError, TypeError):
+        return f"{_M}✓{_R}"
+
+
 def _connected_providers(cfg) -> set:
     """Provider services this org holds a working credential for — best-effort, silent on failure.
 
@@ -4082,11 +4131,20 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
     sibs = body.get("siblings") or []
     if sibs:
         connected = _connected_providers(cfg)
-        print(f"  {'PROVIDER':<12} {'ENDPOINT':<46} {'COST':<16} ●")
-        for s in sibs:
-            print(f"  {_clip(s['provider'], 12):<12} {_clip(s['id'], 46):<46} {_clip(_cost_usd(s.get('cost')), 16):<16} "
+        # This endpoint sits in the table too: comparing alternatives against each other while the
+        # one you asked about is somewhere above is how you pick the wrong row.
+        rows = [dict(e, id=e["id"], provider=e["provider"], observed=e.get("observed"), _me=True)] + \
+               [dict(x, _me=False) for x in sibs]
+        print(f"  {'PROVIDER':<12} {'ENDPOINT':<38} {'COST':<15} {'WORKS':<11} {'SPEED':<7} {'LAST OK':<8} ●")
+        for s in rows:
+            mark = f"{_A}▸{_R}" if s.get("_me") else " "
+            print(f" {mark}{_clip(s['provider'], 12):<12} {_clip(s['id'], 38):<38} "
+                  f"{_clip(_cost_usd(s.get('cost')), 15):<15} {_pad(_observed_cell(s.get('observed')), 11)} "
+                  f"{_pad(_speed_cell(s.get('observed')), 7)} {_pad(_last_ok_cell(s), 8)} "
                   f"{'●' if s['provider'] in connected else ' '}")
-        _dim("  the same job from another provider — compare price and verification before you call")
+        _dim("  the same job from another provider. WORKS/SPEED are what treg has actually observed;")
+        _dim("  a ✓ age is the catalog's own verification stamp, not live traffic. Pick the one whose")
+        _dim("  inputs match what you HAVE, then weigh reliability against price.")
     elif e.get("capability"):
         _dim("  the only provider offering this capability")
 
