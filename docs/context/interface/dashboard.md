@@ -56,12 +56,16 @@ Two are **session** (cookie) paths, one is a token fallback:
   For copy-paste convenience it also fetches `GET /auth/cli-token` on load into `myToken` (a minted
   identity token) — the per-tool snippets embed it + `X-Treg-Org` so a copied curl runs as-is, and a
   **"Copy API token"** button (`copyToken`) puts it on the clipboard.
-- **"For your agents" sidebar** — copyable **agent instructions** (a prompt to paste into Claude Code /
-  Codex), built client-side by `buildAgentPrompt(kind, inclToken)` with the caller's minted token +
-  active org slug baked in. Two compact copy-rows: **Setup instruction** (`kind:'admin'`, shown only to
-  `canAdmin`) — install the CLI → `treg login --token` + `org use` → read `/llms.txt` → `treg upload
-  skills`/`import env` (dry-run first) → `treg health --run`; and **Access instruction** (`kind:'consumer'`,
-  everyone) — install → auth → `treg skill install --all` → `treg tool ls` + a test call. The row's ⧉
+- **"For your agents" sidebar** — ONE copyable **agent instruction** (a prompt to paste into Claude
+  Code / Codex), built client-side by `buildAgentPrompt(kind, inclToken)` with the caller's minted
+  token + active org slug baked in. It was two prompts (admin "Setup" / consumer "Connect"), each
+  ~30 lines that re-explained the catalog, the ladder, prices and the balance — knowledge that lives
+  in the skill `install.sh` installs and in `/llms.txt`. A prompt can only carry what a FILE cannot:
+  the token, the team, permission, and "do it now". So `kind` is now **ignored** (call sites keep
+  their argument; there is one text to keep true), and one instruction serves everyone because it
+  needs no path chosen up front — step 4 (find the catalog tools that fit this project, price them,
+  call one on approval) works with nothing registered, and step 5 offers the sharing path only if
+  the user has keys worth sharing. The row's ⧉
   (`copyAgentGuide`) copies with the token embedded (paste-and-run); clicking the label opens a preview
   modal (`agentGuide`) with an **Embed my token** toggle (`agentInclToken`) → off yields a
   `<YOUR_TOKEN>` placeholder that's safe to share. Plus the **API token** copy-row (`copyToken`).
@@ -595,7 +599,12 @@ otherwise drop the path).
 `importShell[]` and `access[]`, same step shape) + a self-contained `tregHL(text,lang)` shell/json
 highlighter. (The `CONCEPTS` proxy analogy was reworded from "a coat check" to **"a bank teller"** — you
 hand over your token, the teller fetches the real secret from the vault and makes the call for you; the key
-never crosses the counter.) It's served at `/tutorial.js` and consumed by **both** the dashboard Help view (native Vue
+never crosses the counter.) It's served at `/tutorial.js` with **`Cache-Control: no-cache`**, and `/tutorial` rewrites the
+`<script src>` to carry **tutorial.js's own mtime** (`?v=<mtime>`) — not `_app_version()`, which
+hashes `index.html` and would not move when only the tutorial changed. Both are needed: the page
+includes the file by a bare path, so a browser that cached it before the header existed applies a
+heuristic lifetime and never revalidates, and an edited tutorial silently keeps serving the old
+steps. Consumed by **both** the dashboard Help view (native Vue
 render) and the **standalone** `src/treg/web/tutorial.html` (vanilla render, served at `/tutorial`;
 renders `steps` only) — so they can never drift. `docs/tutorial.html` is now a redirect to `/tutorial`;
 the prose walkthrough is `docs/TUTORIAL.md`. Editing steps means editing `tutorial.js` only.
