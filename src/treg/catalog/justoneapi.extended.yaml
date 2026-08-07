@@ -475,6 +475,7 @@ endpoints:
   platform: beike
   method: GET
   path: /api/beike/community/list/v1
+  cost: {type: per_success, value: null, currency: CNY, unit: call, source: inferred, checked: '2026-08-07', confidence: unknown, note: 'UNPRICED and unmeasurable from here. JustOneAPI publishes no rate-card API (the other rates came from a dashboard price export), exposes no balance endpoint, and returns no billing field in its responses — so a per-call price cannot be observed the way DataForSEO and Lusha were. The route is DEPRECATED upstream but still answers (400 for missing params, not 404), and it is the only endpoint in the catalog for this platform, so it is kept rather than dropped. To price it: re-export the JustOneAPI dashboard price list'}
   name: "List Beike residential communities"
   summary: Retrieves Beike residential communities for a city with optional condition filters and offset pagination.
   docs_url: https://docs.justoneapi.com/en/api/beike/community-list-v1-deprecated
@@ -505,6 +506,7 @@ endpoints:
   platform: beike
   method: GET
   path: /api/beike/ershoufang/detail/v1
+  cost: {type: per_success, value: null, currency: CNY, unit: call, source: inferred, checked: '2026-08-07', confidence: unknown, note: 'UNPRICED and unmeasurable from here. JustOneAPI publishes no rate-card API (the other rates came from a dashboard price export), exposes no balance endpoint, and returns no billing field in its responses — so a per-call price cannot be observed the way DataForSEO and Lusha were. The route is DEPRECATED upstream but still answers (400 for missing params, not 404), and it is the only endpoint in the catalog for this platform, so it is kept rather than dropped. To price it: re-export the JustOneAPI dashboard price list'}
   name: "Get Beike resale-housing listing detail"
   summary: Retrieves a Beike resale-housing listing by city ID and house code.
   docs_url: https://docs.justoneapi.com/en/api/beike/resale-housing-details-v1-deprecated
@@ -525,6 +527,7 @@ endpoints:
   platform: beike
   method: GET
   path: /api/beike/get-ershoufang-list/v1
+  cost: {type: per_success, value: null, currency: CNY, unit: call, source: inferred, checked: '2026-08-07', confidence: unknown, note: 'UNPRICED and unmeasurable from here. JustOneAPI publishes no rate-card API (the other rates came from a dashboard price export), exposes no balance endpoint, and returns no billing field in its responses — so a per-call price cannot be observed the way DataForSEO and Lusha were. The route is DEPRECATED upstream but still answers (400 for missing params, not 404), and it is the only endpoint in the catalog for this platform, so it is kept rather than dropped. To price it: re-export the JustOneAPI dashboard price list'}
   name: "List Beike resale-housing listings"
   summary: Retrieves Beike resale-housing listings for a city with optional condition filters and offset pagination.
   docs_url: https://docs.justoneapi.com/en/api/beike/resale-housing-list-v1-deprecated
@@ -903,6 +906,7 @@ endpoints:
   platform: dewu
   method: GET
   path: /api/dewu/search-item-list/v1
+  cost: {type: per_success, value: null, currency: CNY, unit: call, source: inferred, checked: '2026-08-07', confidence: unknown, note: 'UNPRICED and unmeasurable from here. JustOneAPI publishes no rate-card API (the other rates came from a dashboard price export), exposes no balance endpoint, and returns no billing field in its responses — so a per-call price cannot be observed the way DataForSEO and Lusha were. The route is DEPRECATED upstream but still answers (400 for missing params, not 404), and it is the only endpoint in the catalog for this platform, so it is kept rather than dropped. To price it: re-export the JustOneAPI dashboard price list'}
   name: "Search Dewu (Poizon) products"
   summary: Searches Dewu (Poizon) products by keyword with page-based pagination.
   docs_url: https://docs.justoneapi.com/en/api/dewu-poizon/product-search-v1-deprecated
@@ -1163,6 +1167,7 @@ endpoints:
   platform: ai-search
   method: GET
   path: /api/llm/doubao-answer/v1
+  cost: {type: per_success, value: null, currency: CNY, unit: call, source: inferred, checked: '2026-08-07', confidence: unknown, note: 'UNPRICED and unmeasurable from here. JustOneAPI publishes no rate-card API (the other rates came from a dashboard price export), exposes no balance endpoint, and returns no billing field in its responses — so a per-call price cannot be observed the way DataForSEO and Lusha were. The route is DEPRECATED upstream but still answers (400 for missing params, not 404), and it is the only endpoint in the catalog for this platform, so it is kept rather than dropped. To price it: re-export the JustOneAPI dashboard price list'}
   name: "Get a Doubao answer"
   summary: Requests a Doubao web answer for a submitted keyword or question.
   docs_url: https://docs.justoneapi.com/en/api/llm/doubao-answer-v1-deprecated
@@ -6534,6 +6539,7 @@ endpoints:
   platform: taobao
   method: GET
   path: /api/taobao/get-item-sale/v1
+  cost: {type: per_success, value: null, currency: CNY, unit: call, source: inferred, checked: '2026-08-07', confidence: unknown, note: 'UNPRICED and unmeasurable from here. JustOneAPI publishes no rate-card API (the other rates came from a dashboard price export), exposes no balance endpoint, and returns no billing field in its responses — so a per-call price cannot be observed the way DataForSEO and Lusha were. The route is DEPRECATED upstream but still answers (400 for missing params, not 404), and it is the only endpoint in the catalog for this platform, so it is kept rather than dropped. To price it: re-export the JustOneAPI dashboard price list'}
   name: "Get 30-day sales count for a Taobao product"
   summary: Retrieves the 30-day sales count for a Taobao or Tmall product by item ID.
   docs_url: https://docs.justoneapi.com/en/api/taobao-and-tmall/product-sales-v1-deprecated
