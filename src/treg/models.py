@@ -402,6 +402,13 @@ class CapabilityPin(SQLModel, table=True):
     it is what `DenyRule` (host-scoped, applied to every shape of call) is for. Two tools, two jobs.
     """
 
+    # UNIQUE(org_id, capability): `set_capability_pin` is a SELECT then an INSERT, so two admins
+    # pinning the same job at once — or one admin against two web workers — would write two rows.
+    # Enforcement would then read them with scalar_one_or_none() and raise MultipleResultsFound,
+    # turning a policy row into a 500 on EVERY call to that capability. Same shape as the
+    # double-credit bug in ledger.topup (#45): the database has to be the one that says no.
+    __table_args__ = (UniqueConstraint("org_id", "capability", name="uq_pin_org_capability"),)
+
     id: int | None = Field(default=None, primary_key=True)
     org_id: int = Field(foreign_key="org.id", index=True)
     capability: str = Field(index=True)         # e.g. "people.email.find"

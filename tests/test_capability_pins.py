@@ -131,3 +131,38 @@ async def test_a_capability_can_never_restructure_a_url(clients: AsyncClient):
 
     assert (await clients.delete(f"/orgs/{org}?confirm=not-the-slug")).status_code == 422
     assert (await clients.get("/orgs")).json()                      # still there
+
+
+async def test_two_admins_pinning_at_once_leave_one_row(clients: AsyncClient):
+    """Same shape as the double-credit bug found in #45: SELECT-then-INSERT with no unique index.
+    Two admins (or one admin against two web workers) would write two rows, and enforcement reading
+    them with scalar_one_or_none() would raise MultipleResultsFound — a 500 on EVERY call to that
+    capability, caused by a policy row. The database is what says no."""
+    import asyncio
+    from sqlmodel import select
+    from treg.db import session_maker
+    from treg.models import CapabilityPin
+
+    org = await _org_id(clients)
+
+    async def pin(provider):
+        return await clients.post(f"/orgs/{org}/pins",
+                                  json={"capability": CAP, "provider": provider})
+
+    results = await asyncio.gather(*[pin(PINNED) for _ in range(5)], return_exceptions=True)
+    assert all(getattr(r, "status_code", None) == 200 for r in results), results
+
+    async with session_maker() as db:
+        rows = (await db.execute(select(CapabilityPin).where(
+            CapabilityPin.org_id == org, CapabilityPin.capability == CAP))).scalars().all()
+    assert len(rows) == 1, f"{len(rows)} rows — the unique index did not hold"
+
+    # and enforcement still answers rather than 500ing
+    blocked = await clients.get(f"/call/{OTHER_EP}?uniqueId=x")
+    assert blocked.status_code == 403
+
+
+# NOTE: there is no test for "unpin clears a legacy duplicate", because the unique index now makes
+# that state unreachable — an attempt to forge one is rejected by the database, which is the point.
+# `clear_capability_pin` still deletes ALL matching rows rather than one, as cheap insurance for a
+# database written before the index existed.

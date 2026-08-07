@@ -3687,16 +3687,33 @@ async def set_capability_pin(
         raise HTTPException(status_code=422, detail=(
             f"{body.provider!r} does not serve {body.capability!r} — "
             f"these do: {', '.join(providers)}"))
+    # Read the caller's email NOW, as a plain string. A rollback below expires every ORM instance
+    # behind `caller`, and touching one afterwards lazy-loads outside the async context —
+    # MissingGreenlet, which is how this first failed under concurrency.
+    who = caller.email
     row = (await db.execute(select(CapabilityPin).where(
         CapabilityPin.org_id == org_id,
-        CapabilityPin.capability == body.capability))).scalar_one_or_none()
+        CapabilityPin.capability == body.capability))).scalars().first()
     if row is None:
         row = CapabilityPin(org_id=org_id, capability=body.capability, provider=body.provider,
-                            created_by=caller.email)
+                            created_by=who)
         db.add(row)
     else:
-        row.provider, row.created_by = body.provider, caller.email
-    await db.commit()
+        row.provider, row.created_by = body.provider, who
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Lost the race to another admin (or another web worker). The UNIQUE index is what actually
+        # prevents the duplicate; this makes losing look like the sequential path — re-apply onto
+        # the winner's row rather than handing back a 500 for a pin that plainly succeeded.
+        await db.rollback()
+        row = (await db.execute(select(CapabilityPin).where(
+            CapabilityPin.org_id == org_id,
+            CapabilityPin.capability == body.capability))).scalars().first()
+        if row is None:
+            raise
+        row.provider, row.created_by = body.provider, who
+        await db.commit()
     return {"capability": body.capability, "provider": body.provider,
             "alternatives": [p for p in providers if p != body.provider]}
 
@@ -3715,11 +3732,12 @@ async def clear_capability_pin(
     did destroy an org in testing. Server-side validation cannot defend against it, because the
     rewrite happens in the client; taking the value out of the path removes the class entirely."""
     _require_admin_of(org_id, caller)
-    row = (await db.execute(select(CapabilityPin).where(
-        CapabilityPin.org_id == org_id, CapabilityPin.capability == capability))).scalar_one_or_none()
-    if row is None:
+    rows = (await db.execute(select(CapabilityPin).where(
+        CapabilityPin.org_id == org_id, CapabilityPin.capability == capability))).scalars().all()
+    if not rows:
         raise HTTPException(status_code=404, detail=f"no pin for {capability!r}")
-    await db.delete(row)
+    for row in rows:      # all of them, in case a duplicate predates the unique index
+        await db.delete(row)
     await db.commit()
     return {"capability": capability, "pinned": False}
 
@@ -6099,7 +6117,8 @@ async def _enforce_capability_pin(ep: dict, caller: Caller, db: AsyncSession) ->
     if not cap or caller.org_id is None:
         return
     pin = (await db.execute(select(CapabilityPin).where(
-        CapabilityPin.org_id == caller.org_id, CapabilityPin.capability == cap))).scalar_one_or_none()
+        CapabilityPin.org_id == caller.org_id,
+        CapabilityPin.capability == cap).order_by(CapabilityPin.id))).scalars().first()
     if pin is None or pin.provider == ep["provider"]:
         return
     cat = catalog_store.load()
