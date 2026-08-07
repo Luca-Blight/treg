@@ -174,9 +174,17 @@ def _admin_client(cfg: dict) -> httpx.Client:
 
 
 def _active_org_id(cfg: dict, c: httpx.Client) -> int | None:
-    """The active org's numeric id (for /orgs/{id}/... endpoints), resolved via GET /orgs."""
+    """The active org's numeric id (for /orgs/{id}/... endpoints), resolved via GET /orgs.
+
+    A MACHINE identity (an agent token) cannot call `/orgs` — the server refuses it there on purpose
+    — but its token IS one membership, so `/auth/me` tells it the one org id it could ever mean.
+    Without this fallback every /orgs/{id}/… command (balance, topup, pins, deny) died with a bare
+    "no active org" for exactly the callers those commands exist to serve."""
     r = c.get("/orgs")
     if r.status_code != 200:
+        me = c.get("/auth/me")
+        if me.status_code == 200 and me.json().get("org_id"):
+            return int(me.json()["org_id"])
         return None
     orgs = r.json()
     target = _effective_org(cfg)

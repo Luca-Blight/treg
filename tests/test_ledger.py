@@ -396,16 +396,29 @@ async def test_balance_endpoint_paginates_entries(c: AsyncClient):
     assert last[-1]["kind"] == "grant"  # oldest entry is the signup promo
 
 
-async def test_balance_endpoint_requires_admin_of_that_org(c: AsyncClient):
-    """Same gate as /orgs/{id}/usage — spend is billing data, so member/viewer can't read it, and a
-    token for another org can't reach it at all."""
+async def test_balance_shows_the_wallet_to_members_and_the_history_to_admins(c: AsyncClient):
+    """POLICY CHANGE (2026-08, from Jason's report): this route used to be admin-only, which meant a
+    machine identity could not read the balance it was spending — while every 402 already handed it
+    `balance_micro`, and both llms.txt and skill.md tell an agent to run `treg balance` after a call.
+    Refusing the number here while shipping it in an error was incoherent.
+
+    So the split is by WHAT, not by who: the wallet (figure + in-flight holds) is every member's; the
+    funding detail (which blocks were bought, when, what is left of each, and the ledger) is the org's
+    purchase history and stays admin+. Cross-org and unauthenticated access are unchanged."""
     org_id, owner = await _org(c, "owner@superdesign.dev")
     r = await c.post(f"/orgs/{org_id}/invites", json={"email": "m@superdesign.dev", "role": "member"},
                      headers=_h(owner))
     code = r.json()["code"]
     member = (await c.post("/invites/accept",
                            json={"code": code, "email": "m@superdesign.dev"})).json()["token"]
-    assert (await c.get(f"/orgs/{org_id}/balance", headers=_h(member))).status_code == 403
+
+    seen = await c.get(f"/orgs/{org_id}/balance", headers=_h(member))
+    assert seen.status_code == 200
+    assert "balance_micro" in seen.json()                     # the wallet: yes
+    assert seen.json()["blocks"] == []                        # the purchase history: no
+    assert seen.json()["entries"]["items"] == []
+
+    assert (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()["blocks"]
 
     other_org, other = await _org(c, "stranger@superdesign.dev")
     assert (await c.get(f"/orgs/{org_id}/balance", headers=_h(other))).status_code == 403

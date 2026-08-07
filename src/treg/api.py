@@ -995,8 +995,10 @@ async def auth_me(
     """Who is the caller? Drives the dashboard's identity display in BOTH session mode (cookie) and
     token mode (X-Treg-Token) — the token door otherwise had no way to learn its own email, which
     broke `isPersonal` and join-by-code."""
+    membership = None
     if x_treg_token:
         m = await _membership_by_token(x_treg_token, db)
+        membership = m
         user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
         if user is not None and user.suspended:
             user = None
@@ -1004,8 +1006,17 @@ async def auth_me(
         user = await _user_from_session(treg_session, db)
     if user is None:
         raise HTTPException(status_code=401, detail="no session")
-    return {"email": user.email, "is_superadmin": user.is_superadmin, "onboarded": user.onboarded,
-            "github": bool(get_settings().github_client_id)}
+    out = {"email": user.email, "is_superadmin": user.is_superadmin, "onboarded": user.onboarded,
+           "github": bool(get_settings().github_client_id)}
+    if membership is not None:
+        # The org this token IS. A machine identity cannot call GET /orgs — `require_identity`
+        # refuses it on purpose, since `create_org` hangs off that dependency and an agent could
+        # otherwise mint an org it owns. But it still has to learn its OWN org id to reach any
+        # /orgs/{id}/... route, and being unable to told `treg balance` there was "no active org".
+        org = await db.get(Org, membership.org_id)
+        out |= {"org_id": membership.org_id, "org": org.slug if org else None,
+                "role": membership.role}
+    return out
 
 
 @app.post("/auth/logout")
@@ -2814,11 +2825,18 @@ async def org_balance(
     org_id: int, limit: int = 20, offset: int = 0,
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
-    """The org's prepaid balance (admin/owner — same gate as /usage, since spend is billing data):
-    the materialized balance, the credit blocks it is made of, any in-flight holds, and a page of the
-    append-only ledger. Amounts are integer micro-USD (`*_micro`) with a display-only USD twin —
-    never compute against the USD field (see ledger.py on why money is integers here)."""
-    _require_admin_of(org_id, caller)
+    """The org's prepaid balance. Amounts are integer micro-USD (`*_micro`) with a display-only USD
+    twin — never compute against the USD field (see ledger.py on why money is integers here).
+
+    **Two audiences, one route.** Any MEMBER sees the figure and the in-flight holds: they are the
+    ones spending it, every agent is told to run `treg balance` after a call, and a 402 already hands
+    them `balance_micro` anyway — refusing the same number here while shipping it in an error was
+    incoherent. The FUNDING DETAIL is admin+: the credit blocks (what was bought, when, what is left
+    of each) and the ledger, which together are the org's purchase history, not its wallet.
+    """
+    if caller.org_id != org_id:
+        raise HTTPException(status_code=403, detail="not a member of this org")
+    detailed = _role_at_least(caller.role, "admin")
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
     balance = await ledger.balance_of(db, org_id)
@@ -2834,7 +2852,8 @@ async def org_balance(
         "balance_micro": balance,
         "balance_usd": ledger.usd(balance),
         "promo_grant_micro": get_settings().promo_grant_micro,
-        "blocks": [
+        # admin+ only — see the docstring: the wallet is everyone's, the purchase history is not
+        "blocks": [] if not detailed else [
             {"id": b.id, "kind": b.kind, "amount_micro": b.amount_micro,
              "remaining_micro": b.remaining_micro, "remaining_usd": ledger.usd(b.remaining_micro),
              "currency": b.currency, "expires_at": b.expires_at.isoformat() if b.expires_at else None,
@@ -2848,7 +2867,7 @@ async def org_balance(
         ],
         "entries": {
             "limit": limit, "offset": offset,
-            "items": [
+            "items": [] if not detailed else [
                 {"id": e.id, "kind": e.kind, "amount_micro": e.amount_micro,
                  "amount_usd": ledger.usd(e.amount_micro), "block_id": e.block_id,
                  "call_id": e.call_id, "endpoint_id": e.endpoint_id, "meta": e.meta,
