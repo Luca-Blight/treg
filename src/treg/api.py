@@ -51,7 +51,7 @@ from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
-from .models import ROLE_RANK, Bundle, CallRecord, DenyRule, Invite, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User
+from .models import ROLE_RANK, Bundle, CallRecord, CapabilityPin, DenyRule, Invite, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User
 from .proxy import relay
 
 
@@ -3618,6 +3618,75 @@ def _deny_view(r: DenyRule) -> dict:
             "created_at": r.created_at}
 
 
+class CapabilityPinIn(BaseModel):
+    capability: str
+    provider: str
+
+
+@app.get("/orgs/{org_id}/pins")
+async def list_capability_pins(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    """The team's provider choices, per capability. Readable by any member — an agent has to know
+    what it is allowed to call, and finding out by being refused is a wasted round-trip."""
+    if caller.org_id != org_id:      # the token IS the membership (same rule as every org route)
+        raise HTTPException(status_code=403, detail="not a member of this org")
+    rows = (await db.execute(select(CapabilityPin).where(CapabilityPin.org_id == org_id)
+                             .order_by(CapabilityPin.capability))).scalars().all()
+    return [{"id": r.id, "capability": r.capability, "provider": r.provider,
+             "created_by": r.created_by, "created_at": r.created_at} for r in rows]
+
+
+@app.post("/orgs/{org_id}/pins")
+async def set_capability_pin(
+    org_id: int, body: CapabilityPinIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Pin a capability to one provider for the whole team (admin+). Re-pinning replaces.
+
+    Both halves are validated against the catalog: an unknown capability, or a provider that does
+    not actually serve it, would be a rule that silently blocks every call to a job the team
+    genuinely uses — a typo must fail here, loudly, not at 3am in an agent's log."""
+    _require_admin_of(org_id, caller)
+    cat = catalog_store.load()
+    serving = cat.for_capability(body.capability)
+    if not serving:
+        raise HTTPException(status_code=422, detail=f"unknown capability {body.capability!r}")
+    providers = sorted({e["provider"] for e in serving})
+    if body.provider not in providers:
+        raise HTTPException(status_code=422, detail=(
+            f"{body.provider!r} does not serve {body.capability!r} — "
+            f"these do: {', '.join(providers)}"))
+    row = (await db.execute(select(CapabilityPin).where(
+        CapabilityPin.org_id == org_id,
+        CapabilityPin.capability == body.capability))).scalar_one_or_none()
+    if row is None:
+        row = CapabilityPin(org_id=org_id, capability=body.capability, provider=body.provider,
+                            created_by=caller.email)
+        db.add(row)
+    else:
+        row.provider, row.created_by = body.provider, caller.email
+    await db.commit()
+    return {"capability": body.capability, "provider": body.provider,
+            "alternatives": [p for p in providers if p != body.provider]}
+
+
+@app.delete("/orgs/{org_id}/pins/{capability}")
+async def clear_capability_pin(
+    org_id: int, capability: str,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Remove a pin (admin+) — the capability goes back to the caller's choice."""
+    _require_admin_of(org_id, caller)
+    row = (await db.execute(select(CapabilityPin).where(
+        CapabilityPin.org_id == org_id, CapabilityPin.capability == capability))).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"no pin for {capability!r}")
+    await db.delete(row)
+    await db.commit()
+    return {"capability": capability, "pinned": False}
+
+
 @app.post("/orgs/{org_id}/deny")
 async def create_deny_rule(
     org_id: int, body: DenyRuleIn,
@@ -5980,6 +6049,39 @@ def _marketplace_upstream(ep: dict, provider, query_params) -> tuple[str, set[st
     return provider.base_url.rstrip("/") + "/" + path.lstrip("/"), consumed
 
 
+async def _enforce_capability_pin(ep: dict, caller: Caller, db: AsyncSession) -> None:
+    """Refuse a catalog call that goes around the team's pin for that capability.
+
+    A pin is a decision the team already made ("for finding work emails we use Hunter"), so the
+    answer names the endpoint they DO use — an agent that gets told "no" without being told "use
+    this instead" will simply try the next provider and be refused again.
+
+    Enforced here rather than in the client so it does not depend on the caller's goodwill, and
+    before anything is reserved, so a refusal never has to un-hold money."""
+    cap = ep.get("capability")
+    if not cap or caller.org_id is None:
+        return
+    pin = (await db.execute(select(CapabilityPin).where(
+        CapabilityPin.org_id == caller.org_id, CapabilityPin.capability == cap))).scalar_one_or_none()
+    if pin is None or pin.provider == ep["provider"]:
+        return
+    cat = catalog_store.load()
+    # Suggest the OBVIOUS endpoint, not merely the first one in file order: `core` is the curated
+    # route for a job, `extended` is the bulk-ingested long tail. Suggesting
+    # `tikhub.x.tiktok-analytics-fetch-creator-info-and-milestones` when `tikhub.tiktok.user.profile`
+    # exists reads as a broken suggestion and sends the caller somewhere they did not ask to go.
+    mine = [e for e in cat.for_capability(cap) if e["provider"] == pin.provider]
+    mine.sort(key=lambda e: ((e.get("tier") or "") != "core", not cat.platform_eligible(e), e["id"]))
+    alt = mine[0]["id"] if mine else None
+    raise HTTPException(status_code=403, detail={
+        "error": "capability_pinned",
+        "message": (f"this team uses {pin.provider!r} for {cap!r}"
+                    + (f" — call {alt} instead" if alt else "")
+                    + f". An admin can change it: treg org unpin {cap}"),
+        "capability": cap, "pinned_provider": pin.provider, "use_endpoint": alt,
+    })
+
+
 async def _resolve_marketplace_call(
     ep: dict, request: Request, caller: Caller, db: AsyncSession
 ) -> MarketplaceCall:
@@ -5993,6 +6095,7 @@ async def _resolve_marketplace_call(
 
     NOTHING is reserved here. Resolution only PRICES the call; `call_tool` reserves after the deny
     rules and caps have had their say, so a refused call never has to un-hold money."""
+    await _enforce_capability_pin(ep, caller, db)
     service = ep["provider"]
     provider = oauth_providers.get(service)
     if provider is None or not provider.base_url:

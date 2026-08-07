@@ -379,6 +379,31 @@ class Tool(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
+class CapabilityPin(SQLModel, table=True):
+    """"For THIS job, our team uses THIS provider." One row per (org, capability).
+
+    Not expressible as a DenyRule. A deny is negative and closed — blocking the other eight providers
+    of a capability leaves the ninth allowed by accident the day a tenth is added to the catalog. A
+    pin is positive and stays correct as the catalog grows.
+
+    It is a real gate, not a hint: a catalog call to a DIFFERENT provider of a pinned capability is
+    refused, naming the endpoint the team does use. A hint would be honoured by a well-behaved agent
+    and ignored by the one you actually needed to stop — and the point of team policy is that it does
+    not depend on the caller's goodwill.
+
+    Deliberately per-capability, not per-provider: "we use Hunter for finding work emails" is a
+    decision a team can hold in its head, whereas "we use Hunter" says nothing about the twelve other
+    jobs Hunter also happens to serve.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int = Field(foreign_key="org.id", index=True)
+    capability: str = Field(index=True)         # e.g. "people.email.find"
+    provider: str                               # a catalog provider service id, e.g. "hunter"
+    created_by: str = Field(default="")         # the admin who set it — pins outlive their author
+    created_at: datetime = Field(default_factory=_now)
+
+
 class DenyRule(SQLModel, table=True):
     """A policy rule evaluated on every proxied call: block this host / path / method.
 
