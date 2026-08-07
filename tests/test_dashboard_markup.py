@@ -843,3 +843,10 @@ def test_muted_output_panes_use_the_ramps_comment_grey():
     shows what a command printed."""
     assert "pre.term.out{color:var(--sx-cmt)}" in INDEX
     assert "pre.out{color:var(--sx-cmt)}" in TUTORIAL
+
+
+def test_dashboard_delete_org_sends_the_confirmation_slug():
+    """DELETE /orgs/{id} refuses without `?confirm=<slug>` (it is irreversible and reachable by path
+    normalization from any deeper org route). The dashboard already makes the human type the slug —
+    if this ever stops being sent, Delete org silently 422s for every dashboard user."""
+    assert "'/orgs/'+this.activeOrgId+'?confirm='" in INDEX
