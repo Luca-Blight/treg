@@ -432,11 +432,13 @@
   .lp-hero{text-align:center;padding:46px 0 22px}
   .lp-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
   .lp-h1{font-size:clamp(29px,4.8vw,46px);line-height:1.05;letter-spacing:-.02em;margin:0;font-family:var(--mono);font-weight:700;text-wrap:balance}
-  /* Desktop: the whole headline on ONE line. The mono face needs ~37× its font-size for this copy —
+  /* Desktop: the whole headline on ONE line. The mono face needs ~39× its font-size for this copy —
      wider than the 1040px shell — so the h1 breaks out toward the viewport edge and its size tracks
-     the viewport ((100vw-64)/38 leaves slack for the scrollbar; 32px is shaved off the box for the
-     same reason) until the 46px cap fits. Below 1140px it re-wraps (balanced) inside the shell. */
-  @media(min-width:1140px){.lp-h1{white-space:nowrap;width:calc(100vw - 32px);margin-left:calc(50% - 50vw + 16px);font-size:min(46px,calc((100vw - 64px)/38))}}
+     the viewport ((100vw-64)/40 leaves slack for the scrollbar; 32px is shaved off the box for the
+     same reason) until the 46px cap fits. Below 1140px it re-wraps (balanced) inside the shell.
+     The divisor is tuned to the COPY LENGTH (64 chars today): change the headline, re-tune it, or
+     the nowrap line runs past the viewport edge. */
+  @media(min-width:1140px){.lp-h1{white-space:nowrap;width:calc(100vw - 32px);margin-left:calc(50% - 50vw + 16px);font-size:min(46px,calc((100vw - 64px)/40))}}
   .lp-lead{font-family:var(--sans);font-size:16.5px;line-height:1.55;color:var(--muted);max-width:590px;margin:16px auto 0} .lp-lead b{color:var(--ink);font-weight:600}
   .lp-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
   .btn.lg{padding:12px 20px;font-size:14px}
@@ -1034,12 +1036,13 @@ a:hover{text-decoration-color:var(--muted)}
     </header>
 
     <section class="lp-hero">
-      <div class="lp-eyebrow">one registry for your team's keys and skills</div>
-      <h1 class="lp-h1">Share your team's keys and skills, <span style="color:var(--accent)">without sharing your keys</span>.</h1>
-      <p class="lp-lead">One vault holds every secret, one registry holds every skill. Your Claude Code,
-        your teammates, and your agents call through a <b>token you can revoke</b>. No key is copied to a
-        laptop or a repo, and there's <b>one library to maintain</b>, not one per person.</p>
-      <div class="lc-chips"><span>keys copied everywhere</span><span>everyone maintains their own</span><span>skills need creds</span></div>
+      <div class="lp-eyebrow">the tool catalog for your agent</div>
+      <h1 class="lp-h1">Give your agent the tools for the job, <span style="color:var(--accent)">without buying the seats</span>.</h1>
+      <p class="lp-lead">~2,600 endpoints across ~40 providers — SEO and backlinks, social and trends,
+        people and company enrichment, ads — <b>priced per call, from a cent</b>, with no provider signup.
+        Plus your own team's keys and skills, callable by every teammate's agent, with the credential
+        never leaving the server.</p>
+      <div class="lc-chips"><span>one key, every provider</span><span>price shown before the call</span><span>your own key is never metered</span></div>
       <div class="lp-cta">
         <button class="btn primary lg" @click="demo.signin=true">Get started, free</button>
         <a class="btn lg" href="/tutorial">Read the docs →</a>
@@ -1263,7 +1266,7 @@ a:hover{text-decoration-color:var(--muted)}
         <!-- NAV (middle) -->
         <div class="side-nav">
           <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Catalog</button>
-          <button class="nav" :class="{active:view==='tools'||view==='secrets'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Your Vault</button>
+          <button class="nav" :class="{active:view==='tools'||view==='secrets'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Your tools</button>
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
           <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
@@ -1855,8 +1858,8 @@ a:hover{text-decoration-color:var(--muted)}
           <p v-if="!loading && !hasAnyTools" class="sub">Nothing here{{q?' matches "'+q+'"':' yet'}}.<template v-if="!q && isPersonal(activeOrg) && myOrgs.some(o=>!isPersonal(o))"> This is your <b>personal</b> space - your team's tools live under another org. <a href="#" @click.prevent="jumpToTeam()">Switch to a team →</a></template></p>
           <div v-if="!loading && !hasAnyTools && !q && canRegister" style="margin-top:14px">
           <div style="max-width:660px;border:1px solid var(--line);border-radius:16px;padding:20px 22px;background:var(--panel2)">
-            <h3 style="margin:0 0 6px;font-size:15px">Set up your skills &amp; secrets vault</h3>
-            <p class="sub" style="margin:0 0 12px">Nothing registered yet. Load what you already have — your <span class="mono">.env</span> keys and skill folders — and they appear here as callable tools.</p>
+            <h3 style="margin:0 0 6px;font-size:15px">Nothing of your own yet — but you can already call ~2,600 tools</h3>
+            <p class="sub" style="margin:0 0 12px">Your team starts with <b>$1.00 of free credit</b>, so the catalog works before you register anything: find a tool by what it does, see the price, call it. <a href="#" @click.prevent="go('connections')">Browse the catalog →</a><br>When you're ready to add your <i>own</i> keys and skills — your <span class="mono">.env</span> and skill folders — load them here and they become callable tools for the whole team.</p>
             <div class="seg" style="margin-bottom:10px">
               <button :class="{on:emptyTab==='agent'}" @click="emptyTab='agent'">Agent instruction</button>
               <button :class="{on:emptyTab==='manual'}" @click="emptyTab='manual'">Manual</button>
