@@ -24,6 +24,7 @@ endpoints:
     platform: people
     method: GET
     path: /v3/contacts/prospecting/filters/{filterType}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.lusha.com/v3/account/usage', checked: '2026-08-07', note: 'measured on our own account — called it twice and credits.used did not move (24 -> 24); only the request rate-limit counter advanced. Filter enumeration is metadata, not data'}
     name: "List contact filter values"
     summary: "Enumerate the accepted values for one contact-prospecting filter type (job titles, seniority, departments, locations, etc.)"
     input:
@@ -42,6 +43,7 @@ endpoints:
     platform: companies
     method: GET
     path: /v3/companies/prospecting/filters/{filterType}
+    cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.lusha.com/v3/account/usage', checked: '2026-08-07', note: 'measured on our own account — called it twice and credits.used did not move (24 -> 24); only the request rate-limit counter advanced. Filter enumeration is metadata, not data'}
     name: "List company filter values"
     summary: "Enumerate the accepted values for one company-prospecting filter type (industry, size, revenue, technologies, intent topics, etc.)"
     input:
@@ -257,6 +259,7 @@ endpoints:
     platform: companies
     method: POST
     path: /v3/companies/website-visits
+    cost: {type: per_call, value: null, currency: USD, unit: call, source: observed, checked: '2026-08-07', confidence: unknown, note: 'NOT on our plan — the API answers "Website Visits is not available on your current plan", so there is no rate to record and treg cannot serve it on our key'}
     name: "Rank companies by website-visit signals"
     summary: "Returns companies ranked by website-visit signals for your tracked domains, combining firmographics with visit metrics (score, sessions, unique visitors, avg session length)"
     input:
