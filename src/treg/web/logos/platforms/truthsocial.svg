@@ -1,0 +1,8 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Truth Social">
+  <!-- App-icon "T + detached flag square" glyph, geometry scaled from the official 2022 wordmark SVG (Wikimedia Commons: Truth Social logo 2022.svg), white on the brand purple tile. -->
+  <rect width="24" height="24" rx="5.5" fill="#5448EE"/>
+  <g fill="#FFFFFF">
+    <path d="M18.5 9.19V5.88h-7.73v12.25h3.95V9.19h3.78Z"/>
+    <path d="M5.5 5.88h3.79v3.31H5.5Z"/>
+  </g>
+</svg>

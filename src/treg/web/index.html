@@ -1383,8 +1383,7 @@ a:hover{text-decoration-color:var(--muted)}
                   <div class="pt-foot">
                     <span class="pt-eps"><span class="pt-dot"></span>{{pl.endpoints}} endpoint{{pl.endpoints===1?'':'s'}}</span>
                     <span v-if="platPrice(pl)" class="pt-price" :class="{free:platPrice(pl).free}"
-                          :title="platPriceTitle(pl)"><template v-if="!platPrice(pl).free">from </template><b>{{platPrice(pl).text}}</b><span
-                          v-if="platPrice(pl).native" class="cost-nat">({{platPrice(pl).native}})</span></span>
+                          :title="platPriceTitle(pl)"><template v-if="!platPrice(pl).free">from </template><b>{{platPrice(pl).text}}</b></span>
                   </div>
                 </button>
               </div>
@@ -4753,20 +4752,21 @@ createApp({
     platPrice(pl){
       const raw=pl && pl.price_from;
       const pf=(raw && Object.keys(raw).length) ? raw : null;
+      const paid=(pf && typeof pf.usd==='number') ? '$'+this.usdNum(pf.usd)+' / '+this.priceUnit(pf.type) : null;
       if(pf && pf.type==='free') return {free:true, text:'free with your account'};
-      if(pf && typeof pf.usd==='number')
-        return {free:false, text:'$'+this.usdNum(pf.usd)+' / '+this.priceUnit(pf.type), native:this.nativeAmount(pf)};
-      if(pf) return null;   // priced, but no published number — "from —" says less than silence
-      // No price at all AND every provider is an OAuth integration: the account you connect IS the
-      // licence, so the platform is free to call once connected. A key-auth provider with no
-      // published rate is a different thing — unknown, not free — and shows nothing.
+      // An OAuth integration among the providers means the floor price is $0: the account you
+      // connect IS the licence. Metered providers may serve the same platform (that rate moves to
+      // the tooltip) — but "from" is a floor, and the floor is free.
       const provs=(pl && pl.providers)||[];
-      const oauthOnly=provs.length && provs.every(s=>{
+      const hasOauth=provs.some(s=>{
         const p=this.providers.find(x=>x.service===s); return p && p.auth_kind==='oauth'; });
-      return oauthOnly ? {free:true, text:'free with your account'} : null; },
+      if(hasOauth) return {free:true, text:'free with your account', paid};
+      if(paid) return {free:false, text:paid, native:this.nativeAmount(pf)};
+      return null; },  // priced with no published number, or key-auth with no rate — unknown, not free
     platPriceTitle(pl){
       const p=this.platPrice(pl); if(!p) return '';
-      if(p.free) return 'Served only by OAuth integrations — connect the account and the calls cost nothing extra';
+      if(p.free) return 'Connect the account and the calls cost nothing extra'+
+        (p.paid ? ' — without it, metered providers serve this from '+p.paid : '');
       const pf=pl.price_from||{};
       return ['The cheapest published rate across this platform’s endpoints',
               p.native ? 'billed as '+p.native+' / '+this.priceUnit(pf.type)+', converted at the catalog’s FX rate' : '',

@@ -20,3 +20,18 @@ Rules for adding one:
 - CJK lettermarks (`小`, `微`, `知`, …) all share one shape: a `rx="5.5"` rounded square in the
   brand colour with a single 13px bold character centred on it. Copy an existing one rather than
   redrawing, so the set stays optically even.
+
+## Where the marks come from
+
+The drawn set was refreshed in Aug 2026 against two unified sources, in preference order:
+
+1. **Simple Icons** (CC0 path data, `simple-icons` npm package) — the official monochrome path in
+   the brand's published colour, emitted directly. Marks whose brand colour is too light for the
+   near-white tile (Snapchat, IMDb, Kick, …) instead wear the brand-colour `rx="5.5"` tile with the
+   glyph in black — which is how those brands render themselves on light surfaces.
+2. **The brand's own published vector** (Wikimedia Commons originals, product-icon CDNs) for marks
+   Simple Icons does not carry (Bing, Yahoo, Yandex, Google Business Profile, Seznam, Youku,
+   Toutiao, Truth Social, the multicolour Google Play triangle) — gradients flattened to the
+   dominant flat colours, geometry kept verbatim.
+
+Obscure CJK platforms with no published simple mark keep the lettermark convention above.
