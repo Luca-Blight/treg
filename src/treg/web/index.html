@@ -494,7 +494,7 @@
   .lc-coach-dots i.on{background:var(--accent);width:15px}
   .btn.ghost{background:none;border-color:transparent;color:var(--muted)} .btn.ghost:hover{color:var(--ink)}
   .coach-enter-active,.coach-leave-active{transition:opacity .2s} .coach-enter-from,.coach-leave-to{opacity:0}
-  /* vault bar */
+  /* your-own-tools bar (sandbox) */
   .lc-vbar{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .lc-vbar>span{align-self:center}
   .lc-vl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
@@ -1053,17 +1053,17 @@ a:hover{text-decoration-color:var(--muted)}
     <section ref="demo">
       <!-- GUIDE SPINE -->
       <div class="lc-guide">
-        <span class="lc-gt">Try it live, no signup:</span>
-        <span class="lc-gs"><b>1</b> keys stay in the vault</span>
+        <span class="lc-gt">The other half — your own keys &amp; skills. Try it live, no signup:</span>
+        <span class="lc-gs"><b>1</b> your key stays on the server</span>
         <span class="lc-ga">→</span>
         <span class="lc-gs"><b>2</b> point at an API or a skill</span>
         <span class="lc-ga">→</span>
         <span class="lc-gs"><b>3</b> call it with just a token</span>
       </div>
 
-      <!-- VAULT BAR -->
+      <!-- YOUR-KEYS BAR -->
       <div id="tour-vault" class="lc-vbar" :class="{'tour-spot':demo.tour.on&&sbxTourStep.spot==='vault'}">
-        <span class="lc-vl">🔒 Vault</span>
+        <span class="lc-vl">🔒 Your keys</span>
         <span style="display:flex;gap:8px;flex-wrap:wrap">
           <span v-for="s in demo.secrets" :key="s.id" class="lc-vchip"><span class="kn">{{s.name}}</span><span class="kv">••••••</span><button class="x" @click="sbxRmSecret(s)" aria-label="remove">✕</button></span>
         </span>
@@ -1130,11 +1130,11 @@ a:hover{text-decoration-color:var(--muted)}
               <div class="lc-skh"><span class="box">📦</span><b>{{sk.name}}</b> <span class="lc-sbadge">skill</span>
                 <span class="lc-key" :class="{warn:!haveKey(sk.key)}">needs 🔑 {{sk.key}} {{haveKey(sk.key)?'✓':'– add it'}}</span>
                 <span class="lc-sp"></span><button class="lc-x" @click="sbxRmSkill(sk)" aria-label="remove">✕</button></div>
-              <div class="lc-skmeta">A folder your agent loads. It calls its API through treg with <b>your</b> token - the key stays in the vault.</div>
+              <div class="lc-skmeta">A folder your agent loads. It calls its API through treg with <b>your</b> token - the key stays on the server.</div>
               <div class="lc-ftabs"><button v-for="f in ['SKILL.md','treg.json','.secret']" :key="f" class="lc-ftab" :class="{on:(sk.tab||'SKILL.md')===f}" @click="sk.tab=f">{{f}}</button></div>
               <div class="lc-fbody">{{sk.files[sk.tab||'SKILL.md']}}</div>
               <div class="lc-skinstall"><button class="btn sm primary" @click="sk.runOpen=!sk.runOpen">▶ Run in Claude Code</button>
-                <span>· installs into <code>./.claude/skills</code> · uses your treg token · key stays in the vault</span></div>
+                <span>· installs into <code>./.claude/skills</code> · uses your treg token · key stays on the server</span></div>
               <div v-if="sk.runOpen" class="lc-runbox">
                 <div class="lc-runcap">1 · in your project directory (creates <code>./.claude/skills/{{sk.name}}/</code> if it isn't there yet):</div>
                 <div class="lc-codewrap"><button class="lc-cp" @click="copyText(installCmd(sk),'i'+sk.name)">{{demo.copied==='i'+sk.name?'✓ copied':'copy'}}</button><pre v-html="installHtml(sk)"></pre></div>
@@ -1147,8 +1147,8 @@ a:hover{text-decoration-color:var(--muted)}
             <div class="lc-addwrap">
               <div class="lc-addrow"><select class="grow" v-model="demo.skpick"><option v-for="s in demo.samples" :key="s.name" :value="s.name">{{s.label}}</option></select></div>
               <div class="lc-needrow"><span>This skill needs</span><span class="lc-key" :class="{warn:!skillNeedHave}">🔑 {{skillNeed}}</span>
-                <span v-if="skillNeedHave" class="lc-ok">✓ in your vault</span>
-                <button v-else class="btn sm" @click="sbxAddNeeded(skillNeed)">＋ add {{skillNeed}} to vault</button>
+                <span v-if="skillNeedHave" class="lc-ok">✓ you have this key</span>
+                <button v-else class="btn sm" @click="sbxAddNeeded(skillNeed)">＋ add {{skillNeed}}</button>
                 <span class="lc-sp"></span><button class="btn sm primary" @click="sbxAddSkill" :disabled="!skillNeedHave">＋ Add skill</button></div>
               <p class="lc-addhint">A skill declares the key it needs - you don't pick one. treg injects it. (Or paste a <code>skill.json</code>.)</p>
             </div>
@@ -1180,15 +1180,15 @@ a:hover{text-decoration-color:var(--muted)}
       <div class="lp-head"><h2>Three ways a key leaks. treg closes all three.</h2>
         <p>The same secret, needed in more and more places - and every place is a copy that can leak.</p></div>
       <div class="lc-tri">
-        <div class="lc-pain"><div class="t">Key sprawl</div><div class="p">The same key pasted into every project, <code>.env</code>, and machine. One leak exposes them all.</div><div class="f"><b>treg →</b> one vault. The key is injected at call time and lives nowhere else.</div></div>
+        <div class="lc-pain"><div class="t">Key sprawl</div><div class="p">The same key pasted into every project, <code>.env</code>, and machine. One leak exposes them all.</div><div class="f"><b>treg →</b> one place. The key is injected at call time and lives nowhere else.</div></div>
         <div class="lc-pain"><div class="t">Team access</div><div class="p">Give a teammate access and they hold your key - forever, everywhere they go.</div><div class="f"><b>treg →</b> they get a token, not the key. Revoke it and they're out.</div></div>
-        <div class="lc-pain"><div class="t">Agent skills</div><div class="p">A skill needs credentials to run. Sharing the skill shouldn't mean shipping the secret.</div><div class="f"><b>treg →</b> the skill calls through the vault. Your agent runs it and never sees the key.</div></div>
+        <div class="lc-pain"><div class="t">Agent skills</div><div class="p">A skill needs credentials to run. Sharing the skill shouldn't mean shipping the secret.</div><div class="f"><b>treg →</b> the skill calls through treg. Your agent runs it and never sees the key.</div></div>
       </div>
     </section>
 
     <section class="lp-section" style="text-align:center">
       <div class="lp-head" style="margin:0 auto"><h2>Share your team's keys and skills, <span style="color:var(--accent)">without sharing your keys</span>.</h2>
-        <p>Your vault, your team's tools, your agents' skills, all one revocable token away, and no key ever on a machine.</p></div>
+        <p>Your team's tools and your agents' skills, all one revocable token away, and no key ever on a machine — alongside the ~2,600 catalog tools you don't need a key for at all.</p></div>
       <div class="lp-cta" style="margin-top:24px">
         <button class="btn primary lg" @click="demo.signin=true">Get started, free</button>
         <a class="btn lg" href="/tutorial">Read the docs →</a>
@@ -2026,7 +2026,7 @@ a:hover{text-decoration-color:var(--muted)}
           </div>
           <div v-if="!secrets.length" style="margin-top:20px">
           <div style="max-width:660px;border:1px solid var(--line);border-radius:16px;padding:20px 22px;background:var(--panel2)">
-            <h3 style="margin:0 0 6px;font-size:15px">Set up your skills &amp; secrets vault</h3>
+            <h3 style="margin:0 0 6px;font-size:15px">Add your own keys &amp; skills</h3>
             <p class="sub" style="margin:0 0 12px">Bulk-load your keys (and skills) from your machine — each lands here encrypted, referenced by name.</p>
             <div class="seg" style="margin-bottom:10px">
               <button :class="{on:emptyTab==='agent'}" @click="emptyTab='agent'">Agent instruction</button>
@@ -3102,10 +3102,10 @@ a:hover{text-decoration-color:var(--muted)}
             </div>
             <div style="margin-bottom:10px">
               <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer">
-                <input type="checkbox" v-model="share.full"/> Share full vault access
+                <input type="checkbox" v-model="share.full"/> Share full access
               </label>
             </div>
-            <p class="sub" style="margin:0 0 12px;font-size:12px">Full access = they see and can use the whole team vault. Uncheck to scope them to just {{detail.kind==='skill'?'this skill':'this tool'}} — they'll only see and call what you're sharing. Local CLI runs stay off either way.</p>
+            <p class="sub" style="margin:0 0 12px;font-size:12px">Full access = they see and can use everything the team has registered. Uncheck to scope them to just {{detail.kind==='skill'?'this skill':'this tool'}} — they'll only see and call what you're sharing. Local CLI runs stay off either way.</p>
             <div v-if="share.err" class="banner" style="margin:0 0 10px">{{share.err}}</div>
             <button class="btn primary" @click="sendShare" :disabled="share.busy">{{share.busy?'Sending…':'Send invite'}}</button>
           </template>
@@ -3530,11 +3530,11 @@ createApp({
     },
     sbxTourSteps(){ return [
       {spot:'vault', view:'endpoints', title:"Hi, I'm treg 👋",
-       body:"Your keys live here in the vault, held server-side, never on a machine. Stripe and PostHog are already in. Add your own with + add key."},
+       body:"Your team's own keys live here, held server-side, never on a machine. Stripe and PostHog are already in. Add your own with + add key."},
       {spot:'ws', view:'endpoints', title:"1 · Point at an API",
        body:"An endpoint is one API URL. Stripe is live below. I've prefilled the real PostHog with your key, just hit + Add."},
       {spot:'ws', view:'skills', title:"2 · Or share a skill",
-       body:"A skill is a capability your agent loads. Some need a key, some are just know-how. The key stays in the vault, never in the skill."},
+       body:"A skill is a capability your agent loads. Some need a key, some are just know-how. The key stays on the server, never in the skill."},
       {spot:'result', view:'endpoints', title:"3 · Called with no key",
        body:"Your call sent no key, only a token. treg injected the real key server-side. This is exactly what the API received."},
       {spot:'curl', view:'endpoints', title:"4 · Run it anywhere",
@@ -3607,7 +3607,7 @@ createApp({
     snip(){ return this.buildSnippet(this.snippetTab); },
     recipeSnip(){ return this.recipeSnippet(this.recipeTab); },
     tutData(){ return window.TREG_TUTORIAL || {concepts:[], roles:{cols:[],rows:[]}, steps:[]}; },
-    onbSteps(){ return ['Why treg','Set up your vault','Add a teammate','Call without keys',"You're set"]; },
+    onbSteps(){ return ['Why treg','Add your own keys','Add a teammate','Call without keys',"You're set"]; },
     onbSection(){ return ['concepts','skills','roles','auth','concepts'][this.onb.i] || 'concepts'; },
     onbMoreLabel(){ return 'Read more: '+({concepts:'Concepts',roles:'Roles',auth:'Auth shapes',skills:'Skills'}[this.onbSection]||'tutorial')+' →'; },
     tutSteps(){ return this.tutData.steps; },
@@ -4422,7 +4422,7 @@ createApp({
       finally{ this.welcome.busy=false; } },
     onbGoto(i){ this.onb.err=''; this.onb.tab='manual'; this.onb.i=Math.max(0,Math.min(this.onbSteps.length-1,i)); this.closeOverlays();
       const s=this.onb.i;
-      if(s===1||s===3){ this.go('tools'); }         // vault setup + calling happen on the Tools page
+      if(s===1||s===3){ this.go('tools'); }         // adding your own keys + calling happen on the Tools page
       else if(s===2){ this.go('orgs'); } },         // see the team + the roster fill in
     onbNext(){ this.onbGoto(this.onb.i+1); },
     onbBack(){ this.onbGoto(this.onb.i-1); },
@@ -4993,7 +4993,7 @@ createApp({
       if(this.share.member) return;  // already on the team — the modal now says "just send the link"
       this.share.busy=true; this.share.err='';
       const landing='/app/'+(this.detail.kind==='skill'?'skills':'tools')+'/'+encodeURIComponent(this.detail.name);
-      // Full vault access (default) = no restriction. Unchecked = scope to the skill itself + its
+      // Full access (default) = no restriction. Unchecked = scope to the skill itself + its
       // bundled tools (the access list also gates which skills a restricted member can SEE).
       let tool_access=null;
       if(!this.share.full){
