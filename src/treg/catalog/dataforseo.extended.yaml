@@ -2130,6 +2130,7 @@ endpoints:
   platform: amazon
   method: GET
   path: /merchant/amazon/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of supported Amazon locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/merchant/amazon/locations/
@@ -2931,6 +2932,7 @@ endpoints:
   platform: baidu
   method: GET
   path: /serp/baidu/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/baidu/locations/
@@ -3047,6 +3049,7 @@ endpoints:
   platform: bing
   method: GET
   path: /keywords_data/bing/audience_estimation/industries
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List targetable industries
   summary: By calling this API you will receive the list of industries with industry_id supported by Bing Ads Audience Estimation endpoint.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/audience_estimation/industries/
@@ -3057,6 +3060,7 @@ endpoints:
   platform: bing
   method: GET
   path: /keywords_data/bing/audience_estimation/job_functions
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List targetable job functions
   summary: By calling this API you will receive the list of job functions with job_function_id supported by Bing Ads Audience Estimation endpoint.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/bing/audience_estimation/job_functions/
@@ -3545,6 +3549,7 @@ endpoints:
   platform: bing
   method: GET
   path: /serp/bing/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/bing/locations/
@@ -3915,6 +3920,7 @@ endpoints:
   platform: ai-search
   method: GET
   path: /ai_optimization/chat_gpt/llm_scraper/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of locations by this API call.
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -4460,6 +4466,7 @@ endpoints:
   platform: google
   method: GET
   path: /business_data/google/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/business_data/google/locations/
@@ -4884,6 +4891,7 @@ endpoints:
   platform: google
   method: GET
   path: /dataforseo_labs/google/available_history
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List available history dates
   summary: By calling this endpoint, you will find obtain a list of dates available for setting in the first_date and second_date fields of the Domain Metrics by Categories endpoint.
   docs_url: https://docs.dataforseo.com/v3/dataforseo_labs/google/available_history/live/
@@ -7134,6 +7142,7 @@ endpoints:
   platform: google
   method: GET
   path: /keywords_data/google_ads/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List Ads targeting locations
   summary: We use Google Geographical Targeting.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/google_ads/locations/
@@ -7229,6 +7238,7 @@ endpoints:
   platform: google
   method: GET
   path: /keywords_data/google_trends/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List Trends locations
   summary: GoogleTrendsLocationsCountry
   docs_url: https://docs.dataforseo.com/v3/keywords_data/google_trends/locations/
@@ -7239,6 +7249,7 @@ endpoints:
   platform: google
   method: GET
   path: /merchant/google/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List Shopping locations
   summary: MerchantGoogleLocationsCountry
   docs_url: https://docs.dataforseo.com/v3/merchant/google/locations/
@@ -7437,6 +7448,7 @@ endpoints:
   platform: google
   method: GET
   path: /merchant/google/sellers/ad_url/{shop_ad_aclk}
+  cost: {type: per_call, value: 1e-06, currency: USD, per: 1, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', confidence: verified, note: 'read from our own account rate card'}
   name: Resolve a Shopping ad's full URL
   summary: Google Shopping Sellers Ad URL is designed to provide you with a full URL of the advertisement containing all additional parameters set by the seller.
   docs_url: https://docs.dataforseo.com/v3/merchant/google/sellers/ad_url/
@@ -8559,6 +8571,7 @@ endpoints:
   platform: google
   method: GET
   path: /serp/google/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/google/locations/
@@ -9417,6 +9430,7 @@ endpoints:
   platform: google-play
   method: GET
   path: /app_data/google/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: By calling this endpoint you will receive the list of Google locations supported in App Data API.
   docs_url: https://docs.dataforseo.com/v3/app_data/google/locations/
@@ -9604,6 +9618,7 @@ endpoints:
   platform: seznam
   method: GET
   path: /serp/seznam/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/seznam/locations/
@@ -9726,6 +9741,7 @@ endpoints:
   platform: tripadvisor
   method: GET
   path: /business_data/tripadvisor/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/business_data/tripadvisor/locations/
@@ -10620,6 +10636,7 @@ endpoints:
   platform: web
   method: GET
   path: /backlinks/index
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Size of the backlink index
   summary: This endpoint will provide you with the total number of backlinks, domains, and pages our database contains for the moment when you make a request.
   untestable: the OpenAPI spec ships no example request body for this route, so no test request could be generated
@@ -11896,6 +11913,7 @@ endpoints:
   platform: web
   method: GET
   path: /domain_analytics/technologies/technologies
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List all known technologies
   summary: This endpoint will provide you with the full list of available technologies structured by technology groups and categories each particular technology belongs to.
   docs_url: https://docs.dataforseo.com/v3/domain_analytics/technologies/technologies/
@@ -12367,6 +12385,7 @@ endpoints:
   platform: web
   method: GET
   path: /keywords_data/dataforseo_trends/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List Trends locations
   summary: You will receive the list of DataForSEO Trends locations by calling this API.
   docs_url: https://docs.dataforseo.com/v3/keywords_data/dataforseo_trends/locations/
@@ -12621,6 +12640,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/duplicate_content
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Pages with duplicate content
   summary: This endpoint returns a list of pages that have content similar to the page specified in the request.
   docs_url: https://docs.dataforseo.com/v3/on_page/duplicate_content/
@@ -12660,6 +12680,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/duplicate_tags
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Pages with duplicate titles or tags
   summary: This endpoint returns a list of pages that contain duplicate title or description tags.
   docs_url: https://docs.dataforseo.com/v3/on_page/duplicate_tags/
@@ -12700,6 +12721,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/keyword_density
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Keyword density on a page or site
   summary: This endpoint will provide you with keyword density and keyword frequency data for terms appearing on the specified website or web page.
   docs_url: https://docs.dataforseo.com/v3/on_page/keyword_density/
@@ -12749,6 +12771,7 @@ endpoints:
   platform: web
   method: GET
   path: /on_page/lighthouse/audits
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List Lighthouse audit checks
   summary: The OnPage Lighthouse API is based on Google’s open-source Lighthouse project and provides data on the quality of web pages.
   docs_url: https://docs.dataforseo.com/v3/on_page/lighthouse/audits/
@@ -12833,6 +12856,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/links
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Internal and external links found
   summary: This endpoint will provide you with a list of internal and external links detected on a target website.
   docs_url: https://docs.dataforseo.com/v3/on_page/links/
@@ -12916,6 +12940,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/non_indexable
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Pages blocked from indexing
   summary: This endpoint returns a list of pages that are blocked from being indexed by Google and other search engines through robots.txt, HTTP headers, or meta tags settings.
   docs_url: https://docs.dataforseo.com/v3/on_page/non_indexable/
@@ -12955,6 +12980,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/page_screenshot
+  cost: {type: per_result, value: 0.0048, currency: USD, per: 1, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', confidence: verified, note: 'read from our own account rate card'}
   name: Screenshot a webpage
   summary: Using this endpoint, you can capture a full high-quality screenshot of any webpage.
   docs_url: https://docs.dataforseo.com/v3/on_page/page_screenshot/
@@ -13013,6 +13039,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/pages
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Crawled pages with on-page checks
   summary: This endpoint returns a list of crawled pages with on-page check-ups and other metrics related to the page performance.
   docs_url: https://docs.dataforseo.com/v3/on_page/pages/
@@ -13066,6 +13093,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/pages_by_resource
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Pages using a given resource
   summary: This endpoint will return the list of pages where a specific resource is located.
   docs_url: https://docs.dataforseo.com/v3/on_page/page_by_resource/
@@ -13109,6 +13137,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/raw_html
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Raw HTML of a page
   summary: This endpoint returns the HTML of a page you indicate in the request.
   docs_url: https://docs.dataforseo.com/v3/on_page/raw_html/
@@ -13132,6 +13161,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/redirect_chains
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Redirect chains found on a site
   summary: Redirect chains occur when there are at least two redirects between the initial URL and the destination URL.
   docs_url: https://docs.dataforseo.com/v3/on_page/redirect_chains/
@@ -13171,6 +13201,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/resources
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Images, scripts and other resources
   summary: This endpoint will provide you with a list of resources, including images, scripts, stylesheets, and broken elements.
   docs_url: https://docs.dataforseo.com/v3/on_page/resources/
@@ -13232,6 +13263,7 @@ endpoints:
   platform: web
   method: GET
   path: /on_page/summary/{id}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Crawl summary for a site
   summary: Using this function, you can get the overall information on a website as well as drill down into exact on-page issues of a website that has been scanned.
   docs_url: https://docs.dataforseo.com/v3/on_page/summary/
@@ -13448,6 +13480,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/uncrawlable_resources
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Resources that could not be crawled
   summary: This endpoint returns a list of resources detected on the target website that could not be crawled due to a content type inconsistency.
   input:
@@ -13490,6 +13523,7 @@ endpoints:
   platform: web
   method: POST
   path: /on_page/waterfall
+  cost: {type: free, value: 0, currency: USD, unit: call, source: rate_card_api, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: Page load timing waterfall
   summary: This endpoint is designed to provide you with the page speed insights.
   docs_url: https://docs.dataforseo.com/v3/on_page/waterfall/
@@ -13518,6 +13552,7 @@ endpoints:
   platform: yahoo
   method: GET
   path: /serp/yahoo/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/yahoo/locations/
@@ -13728,6 +13763,7 @@ endpoints:
   platform: youtube
   method: GET
   path: /serp/youtube/locations/{country}
+  cost: {type: free, value: 0, currency: USD, unit: call, source: observed, source_url: 'https://api.dataforseo.com/v3/appendix/user_data', checked: '2026-08-07', note: 'DataForSEO reports cost 0 for this route on our own account — reference/utility data, not metered'}
   name: List supported locations
   summary: You will receive the list of locations by this API call.
   docs_url: https://docs.dataforseo.com/v3/serp/youtube/locations/

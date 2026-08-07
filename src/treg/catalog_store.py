@@ -133,9 +133,16 @@ class Catalog:
         coverage beats caution now that the ladder and settle logic are proven.
         """
         cost = self.cost_view(endpoint.get("cost"), endpoint.get("provider"))
-        return bool(cost
-                    and cost.get("usd") is not None
-                    and cost.get("confidence") in ("verified", "documented")
+        if not cost or cost.get("usd") is None:
+            return False
+        # A FREE route needs no price provenance: `confidence` exists to say how much we trust a
+        # NUMBER we are about to charge, and there is no number here. Requiring it anyway refused 61
+        # endpoints across 8 providers — 28 of Hunter's 35 — as though "costs nothing" were the same
+        # answer as "we don't know", which is the exact distinction the rest of this file is careful
+        # to keep apart.
+        priced_or_free = (cost.get("type") == "free" and not cost.get("usd")) \
+            or cost.get("confidence") in ("verified", "documented")
+        return bool(priced_or_free
                     and endpoint.get("scope") != "own_account"
                     and (endpoint.get("kind") or DEFAULT_KIND) not in PLATFORM_INELIGIBLE_KINDS)
 
