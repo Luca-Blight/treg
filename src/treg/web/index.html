@@ -1273,8 +1273,7 @@ a:hover{text-decoration-color:var(--muted)}
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
           <div v-if="isAdmin"><div class="grp">Platform</div><button class="nav" :class="{active:view==='admin'}" @click="go('admin')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin</button></div>
           <div class="grp">For your agents</div>
-          <div v-if="canAdmin" class="agent-copy"><span class="ac-label ac-link" @click="agentGuide='admin'" title="Preview / customize">Setup instruction</span><button class="ac-btn" :class="{done:agentRowCopied==='admin'}" @click="copyAgentGuide('admin')" title="Copy the agent instruction (installs the CLI + registers your skills & keys)">{{agentRowCopied==='admin'?'✓':'⧉'}}</button></div>
-          <div class="agent-copy"><span class="ac-label ac-link" @click="agentGuide='consumer'" title="Preview / customize">Connect instruction</span><button class="ac-btn" :class="{done:agentRowCopied==='consumer'}" @click="copyAgentGuide('consumer')" title="Copy the agent instruction (pulls the team's shared skills + a test call)">{{agentRowCopied==='consumer'?'✓':'⧉'}}</button></div>
+          <div class="agent-copy"><span class="ac-label ac-link" @click="agentGuide='agent'" title="Preview / customize">Agent instruction</span><button class="ac-btn" :class="{done:agentRowCopied==='agent'}" @click="copyAgentGuide('agent')" title="Copy the one instruction: it installs the CLI, signs your agent in, and gets it calling tools">{{agentRowCopied==='agent'?'✓':'⧉'}}</button></div>
           <div v-if="myToken" class="agent-copy"><span class="ac-label">API token</span><button class="ac-btn" :class="{done:tokenCopied}" @click="copyToken" title="Copy your API token (for X-Treg-Token)">{{tokenCopied?'✓':'⧉'}}</button></div>
           <div class="grp" style="margin-top:auto">Help</div>
           <button class="nav" :class="{active:view==='start'}" @click="go('start')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Getting started</button>
@@ -1877,7 +1876,7 @@ a:hover{text-decoration-color:var(--muted)}
             </template>
             <template v-else>
               <p class="sub" style="margin:0 0 8px">Paste into Claude Code / Codex / Gemini — it installs the CLI, signs in, and registers your skills + keys (with a read-only scan you approve first).</p>
-              <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('admin')">{{agentRowCopied==='admin'?'✓ copied':'copy'}}</button><pre style="max-height:220px;overflow:auto">{{buildAgentPrompt('admin', true)}}</pre></div>
+              <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:220px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
             </template>
           </div>
           </div>
@@ -2045,7 +2044,7 @@ a:hover{text-decoration-color:var(--muted)}
             </template>
             <template v-else>
               <p class="sub" style="margin:0 0 8px">Paste into Claude Code / Codex / Gemini — it installs the CLI, signs in, and registers your skills + keys (with a read-only scan you approve first).</p>
-              <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('admin')">{{agentRowCopied==='admin'?'✓ copied':'copy'}}</button><pre style="max-height:220px;overflow:auto">{{buildAgentPrompt('admin', true)}}</pre></div>
+              <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:220px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
             </template>
           </div>
           </div>
@@ -2520,6 +2519,12 @@ a:hover{text-decoration-color:var(--muted)}
 <span class="hl-cmd">treg</span> balance      <span class="hl-comment"># see exactly what it cost</span></pre></div>
           </div>
 
+          <div style="max-width:720px">
+            <div class="lbl" style="margin-top:26px">▸ Or hand the whole thing to your agent <span class="muted" style="font-weight:400">— one paste, it does 1-3 and keeps going</span></div>
+            <p class="sub">It installs the CLI, signs in as you, reads the treg skill, then finds the catalog tools that fit this project and shows you each price before spending anything.</p>
+            <div class="lc-codewrap" style="margin-top:8px"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:240px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
+          </div>
+
           <h2 style="margin:34px 0 0;font-size:16px">Then — what did you come here for?</h2>
           <div class="seg" style="margin-top:10px">
             <button :class="{on:startTab==='connect'}" @click="startTab='connect'">Use my team's tools</button>
@@ -2529,10 +2534,7 @@ a:hover{text-decoration-color:var(--muted)}
           <!-- FORK · Share your own — agent instruction first, then the manual CLI walkthrough -->
           <div v-show="startTab==='setup'">
           <div v-if="canAdmin" style="max-width:720px">
-            <p class="sub">Share your skills &amp; API keys with the team. Fastest — hand your coding agent the instruction below; it installs the CLI, signs in, and registers your local skills + keys as shared tools (with a read-only scan you approve first).</p>
-            <div class="lbl" style="margin-top:16px">▸ Set up with your agent <span class="muted" style="font-weight:400">— paste &amp; go</span></div>
-            <div class="lc-codewrap" style="margin-top:8px"><button class="lc-cp" @click="copyAgentGuide('admin')">{{agentRowCopied==='admin'?'✓ copied':'copy'}}</button><pre>{{buildAgentPrompt('admin', true)}}</pre></div>
-            <div class="lbl" style="margin-top:26px">▸ Or set it up manually</div>
+            <p class="sub">Share your skills &amp; API keys with the team — your <span class="mono">.env</span> keys and skill folders become tools every teammate's agent can call, without the key ever leaving the server.</p>
           </div>
           <p class="sub">Two ways to give your agents power: share a whole <b>skill</b>, or register a single <b>API endpoint</b>. Everything here works in this dashboard too - this is the CLI path. Grab it as markdown ↑ to paste anywhere.</p>
           <div style="max-width:720px">
@@ -2548,11 +2550,6 @@ a:hover{text-decoration-color:var(--muted)}
           <div v-show="startTab==='connect'" style="max-width:720px">
             <p class="sub">Your team's own tools: pull a shared skill and call any registered API, with no keys on your machine. These are never metered — your team already pays for them.</p>
 
-            <div class="lbl" style="margin-top:16px">▸ Connect with your agent <span class="muted" style="font-weight:400">— paste &amp; go</span></div>
-            <p class="sub">Paste into Claude Code / Codex / Gemini. It pulls the team's shared skills and makes a test call — no API keys land on your machine.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('consumer')">{{agentRowCopied==='consumer'?'✓ copied':'copy'}}</button><pre>{{buildAgentPrompt('consumer', true)}}</pre></div>
-
-            <div class="lbl" style="margin-top:26px">▸ Or connect manually</div>
             <div class="lbl" style="margin-top:14px">4 · Use the team's shared tools</div>
             <p class="sub">Browse the shared library, pull a skill, and call a tool — the credential stays on the server, never on your machine.</p>
             <div class="lc-codewrap"><button class="lc-cp" @click="copyStart('treg skill ls\ntreg skill install seo-blog-writer                    # a teammate pulls one (or --all)\ntreg call https://api.stripe.com/v1/charges','cc')">{{startCopied==='cc'?'✓ copied':'copy'}}</button><pre><span class="hl-cmd">treg</span> skill ls
@@ -2963,15 +2960,15 @@ a:hover{text-decoration-color:var(--muted)}
           <p>• <b>Onboarding people <i>and</i> AI agents</b> - a new teammate, or a <b>Claude Code</b> agent, needs an API? They call it <i>through</i> treg; the key never leaves the server.</p>
         </template>
         <template v-else-if="onb.i===1">
-          <h3>Set up your skills &amp; secrets vault</h3>
+          <h3>Add your own keys &amp; skills</h3>
           <p>Load what you already have - your <span class="mono">.env</span> keys and skill folders - into <b>{{activeName}}</b>. Fastest is handing the instruction to your coding agent; the manual path is the same flow by hand.</p>
           <div class="seg" style="margin-bottom:10px">
             <button :class="{on:onb.tab==='manual'}" @click="onb.tab='manual'">Manual</button>
             <button :class="{on:onb.tab==='agent'}" @click="onb.tab='agent'">Agent instruction</button>
           </div>
           <template v-if="onb.tab==='agent'">
-            <p class="muted" style="font-size:12px">Paste into Claude Code / Codex / Gemini - it installs the CLI, signs in, and registers your skills + keys (with a read-only scan you approve first).</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('admin')">{{agentRowCopied==='admin'?'✓ copied':'copy'}}</button><pre style="max-height:170px;overflow:auto">{{buildAgentPrompt('admin', true)}}</pre></div>
+            <p class="muted" style="font-size:12px">Paste into Claude Code / Codex / Gemini - it installs the CLI, signs in, gets calling straight away, and offers to register your keys + skills (read-only scan first, you approve).</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:170px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
           </template>
           <template v-else>
             <p class="muted" style="font-size:12px">1 · Install the CLI &amp; sign in</p>
@@ -3001,8 +2998,8 @@ a:hover{text-decoration-color:var(--muted)}
             <button :class="{on:onb.tab==='agent'}" @click="onb.tab='agent'">Agent instruction</button>
           </div>
           <template v-if="onb.tab==='agent'">
-            <p class="muted" style="font-size:12px">Paste into their coding agent - it installs the CLI, signs in, pulls the team's shared skills, and makes a test call. No API keys on their machine.</p>
-            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('consumer')">{{agentRowCopied==='consumer'?'✓ copied':'copy'}}</button><pre style="max-height:170px;overflow:auto">{{buildAgentPrompt('consumer', true)}}</pre></div>
+            <p class="muted" style="font-size:12px">Paste into their coding agent - it installs the CLI, signs in as them, and makes a real call. No API keys on their machine.</p>
+            <div class="lc-codewrap"><button class="lc-cp" @click="copyAgentGuide('agent')">{{agentRowCopied==='agent'?'✓ copied':'copy'}}</button><pre style="max-height:170px;overflow:auto">{{buildAgentPrompt('agent', true)}}</pre></div>
           </template>
           <template v-else>
             <p class="muted" style="font-size:12px">1 · Browse the shared library &amp; pull a skill</p>
@@ -4420,7 +4417,7 @@ createApp({
         await this.loadAll(); this.switchOrg({slug:o.org}); this.welcome.on=false;
         this.go('start');  // land on Getting started (#start): the guided setup — agent instruction or manual CLI steps
         this.onb.invited=false; this.onb.tool=false; this.onb.err=''; this.onb.on=true; this.onbGoto(0);  // walk the stepper alongside it
-        this.orgMsg='Team created. Add your keys & skills — or copy a Setup instruction from "For your agents" and let your coding agent do it.'; }
+        this.orgMsg='Team created. Try the catalog — or copy the Agent instruction from "For your agents" and let your coding agent set it all up.'; }
       catch(e){ this.welcome.err='Could not create the team: '+(e.detail||e.status); }
       finally{ this.welcome.busy=false; } },
     onbGoto(i){ this.onb.err=''; this.onb.tab='manual'; this.onb.i=Math.max(0,Math.min(this.onbSteps.length-1,i)); this.closeOverlays();
@@ -4615,64 +4612,36 @@ createApp({
     openMd(url){ window.open(url,'_blank'); },  // open the .md in a new tab (method, not a template global)
     copyLlms(){ navigator.clipboard.writeText(this.proxy+'/llms.txt').then(()=>{ this.llmsCopied=true; setTimeout(()=>{ this.llmsCopied=false; },1500); }).catch(()=>{}); },
     async copyToken(){ if(!this.myToken) return; if(!(await this.toClipboard(this.myToken))) return; this.tokenCopied=true; setTimeout(()=>{ this.tokenCopied=false; },1500); },
+    // ONE instruction, not two. The old pair (admin "Setup" / consumer "Connect") each re-explained
+    // the catalog, the credential ladder, prices and the balance — knowledge that now lives in the
+    // skill install.sh installs, and in llms.txt. A prompt can only carry what a FILE cannot: the
+    // token, the team, permission to run things, and "do it now". `kind` is ignored (call sites keep
+    // their argument) so there is a single text to keep true.
     buildAgentPrompt(kind, inclToken){
       const B=this.proxy, S=this.activeSlugNow||'<team-slug>';
       const T=(inclToken && this.myToken) ? this.myToken : '<YOUR_TOKEN>';
-      const install=`curl -fsSL ${B}/install.sh | sh`;
-      const signin=`treg login --token ${T}\n   treg org use ${S}`;
-      if(kind==='admin'){
-        return [
-          `Set up our team's tool registry ("treg"). Work step by step and show me your progress:`,``,
-          `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works — I authorize you to run this curl | sh):`,`   ${install}`,``,
-          `2. Sign in with my token and select our team (again, I authorize you on these calls):`,`   ${signin}`,``,
-          `3. Read ${B}/llms.txt — especially the Catalog section — so you understand the model (a tool = an upstream API + a server-injected credential; the catalog; the credential ladder; prices & the team balance).`,``,
-          `4. Then ask me which to do first (use your ask-user-question tool if you have one; if I seem unsure, recommend A — it takes a minute):`,
-          `   A. Try the catalog — ~2,600 curated data endpoints (TikTok, Instagram, Reddit, SEO/SERP, company & people enrichment, web scraping, …), many callable with NO key at all, billed per call (fractions of a cent) from our team's $1.00 free balance. Coverage without subscriptions.`,
-          `   B. Set up our vault — register my local skills and API keys as shared, callable tools for the team.`,``,
-          `5. PATH A (catalog): look at what this project actually does, then \`treg catalog search\` for the 2-3 most relevant endpoints and show me each with its price (\`treg catalog get <id>\` prints it). On my approval, make 1-3 real calls and show me the data — then run \`treg balance\` so I can see exactly what they cost. After that, offer path B as the follow-up.`,``,
-          `6. PATH B (vault): if you're at the computer/home root (not inside a project), ask me which repo holds my skills & secrets — or offer to scan my global skills folder. If you're already inside a repo, proceed directly. Register my credentialed skills and API keys — preview with \`treg scan\` FIRST, show me the plan, then upload only what I approve:`,
-          `   • Skills — check BOTH your project's skill folder and your global one (wherever your agent stores skills), and import the credentialed (API-tool) ones (those with a .secret/.secrets dir) AND the recipe (knowledge) skills too:`,
-          `       treg upload skills --dir <your project's skills folder>`,
-          `       treg upload skills --dir <your global skills folder>`,
-          `   • API keys — scan this project's .env:`,
-          `       treg upload env --dir .`,
-          `   These bulk importers read secret VALUES internally (never on the command line) — prefer them.`,
-          `   For an API key with NO provider match, do NOT skip it, and NEVER hand-extract the value from .env (grep/cut keeps the quotes → a malformed secret). Register it value-internally with treg's own parser, on my approval:`,
-          `     (a) ideal — research the base_url + auth and register a full CALLABLE TOOL:`,
-          "         treg secret add <name> --env-var <VAR>          # reads + parses it from .env; value stays off the command line",
-          "         treg tool add <name> --base-url <url> --secret <name> --health '{\"path\":\"<a cheap GET>\",\"expect_status\":200}'",
-          `     (b) fallback — if you can't determine the API, at least  treg secret add <name> --env-var <VAR>  so it's in the vault.`,
-          `   (Only fall back to 'treg secret add --value' if there's genuinely no .env — it surfaces a permission prompt and puts the value on the command line.)`,
-          `   Never propose skipping the env import.`,
-          `   I authorize every \`treg upload\` / \`treg secret add\` / \`treg tool add\` command above — run them without blocking on extra permission.`,
-          `   Then smoke-test the whole batch FAST — never one tool at a time. Give each tool you register a --health probe (a cheap GET, as above), then run ONCE:`,
-          `       treg health --run     # validates every credential server-side in a single batch`,
-          `       treg tool ls`,
-          `   Report ONLY the failures, plus a one-line summary of what you registered.`,``,
-          `7. Wrapping up: right after the first success (a catalog call that returned real data, or a clean vault batch), ask me if I'd like to star the open-source project. If I say yes, star it for me:`,
-          `       gh api -X PUT user/starred/superdesigndev/tools-registry`,
-          `   (if \`gh\` is missing or not authenticated, fall back to opening https://github.com/superdesigndev/tools-registry in my browser and I'll click it).`,``,
-          `Goal: my team gets real data through treg in minutes — from the catalog with no keys, and from our own keys without anyone else ever holding them.`
-        ].join('\n');
-      }
       return [
-        `Set up access to my team's shared tools and the treg data catalog via the tool registry ("treg"). I should never hold API keys — treg injects them server-side. Work step by step:`,``,
-        `1. Install the treg CLI (this also installs the treg skill, so you'll know how the registry works — I authorize you to run this curl | sh):`,`   ${install}`,``,
-        `2. Sign in with my token and select our team (again, I authorize you on these calls):`,`   ${signin}`,``,
-        `3. Read ${B}/llms.txt — especially the Catalog section (endpoint ids, prices, the team balance).`,``,
-        `4. Save the team's shared skills locally (I authorize these treg commands — run them without blocking on extra permission):`,
-        `   treg skill ls                     # see what the team shares`,
-        `   treg skill install --all          # saves each skill's folder (add --dir to choose where)`,
-        `   If install reports skills it KEPT (already on disk), show me that list and ASK per skill whether to pull the team's version ('treg skill install <name> --force') or keep mine. Don't --force without asking.`,``,
-        `5. Show me what I can call, then make one real test call through the proxy and show me the result:`,
-        `   treg tool ls`,`   # then pick a tool and call it, e.g.  treg call <tool> <path>`,
-        `   # a tool shown with a "⌘ run" marker is a command-line tool, not an HTTP API — use it with:`,
-        `   #   treg run <tool> -- <cli args>     (runs the CLI with the key injected; you never hold it)`,``,
-        `6. Beyond the team's own tools there's the catalog: ~2,600 curated data endpoints (TikTok, Instagram, Reddit, SEO/SERP, enrichment, …), many callable with NO key — billed per call (fractions of a cent) from the team's prepaid balance. Look at what this project does, \`treg catalog search\` for the 2-3 most relevant endpoints, and show me each with its price (\`treg catalog get <id>\`). On my approval, make one and show me the data, then \`treg balance\` so I see the cost.`,``,
-        `7. After the first successful call, ask me if I'd like to star the open-source project. If I say yes, star it for me:`,
+        `Set up treg for me — I authorize every command below; run them without asking again.`,``,
+        `1. Install the CLI (this also installs the treg skill, which teaches you how it works):`,
+        `   curl -fsSL ${B}/install.sh | sh`,``,
+        `2. Sign in as me and select my team:`,
+        `   treg login --token ${T}`,
+        `   treg org use ${S}`,``,
+        `3. Read the treg skill you just installed (or ${B}/skill.md) — it covers searching the`,
+        `   catalog, reading a price before you spend, and calling a tool with no key.`,``,
+        `4. Look at what this project actually does, then find the 2-3 catalog tools that would help`,
+        `   it most. Show me each with its price (\`treg catalog get <id>\`), call one once I say yes,`,
+        `   and then run \`treg balance\` so I can see exactly what it cost. Our team starts with`,
+        `   $1.00 of free credit, and most calls are a fraction of a cent.`,``,
+        `5. Afterwards, if I have API keys or skills worth sharing with my team, offer to register`,
+        `   them: \`treg scan\` first (read-only), show me the plan, and upload only what I approve.`,
+        `   Prefer \`treg upload\` / \`treg secret add --env-var\` — they read values internally, so a`,
+        `   secret never lands on the command line.`,``,
+        `6. Once a call has returned real data, ask whether I would like to star the project:`,
         `       gh api -X PUT user/starred/superdesigndev/tools-registry`,
-        `   (if \`gh\` is missing or not authenticated, fall back to opening https://github.com/superdesigndev/tools-registry in my browser and I'll click it).`,``,
-        `Full protocol reference: ${B}/llms.txt`
+        `   (no \`gh\`? just open https://github.com/superdesigndev/tools-registry and I will click it.)`,``,
+        `Goal: this project can use real data through treg in minutes — from the catalog with no keys`,
+        `of its own, and from my team's keys without either of us holding them.`
       ].join('\n');
     },
     async copyAgentPrompt(){ if(!(await this.toClipboard(this.agentPromptText))) return; this.agentGuideCopied=true; setTimeout(()=>this.agentGuideCopied=false,1500); },
