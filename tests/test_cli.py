@@ -455,11 +455,16 @@ def test_alias_flags_match_their_canonical_command():
 
 def test_help_is_grouped_and_hides_aliases():
     help_ = cli.build_parser().format_help()
-    for header in ("MARKETPLACE", "CORE", "BULK UPLOAD", "TEAM MANAGEMENT", "CONFIG"):
-        assert f"\n{header}\n" in help_, header
-    # order is the approved IA, not argparse's registration order
-    positions = [help_.index(h) for h in ("MARKETPLACE", "CORE", "BULK UPLOAD", "TEAM MANAGEMENT", "CONFIG")]
+    # The order IS the pitch: what you can do with no setup (the catalog) comes before what you
+    # have to register yourself. It is the approved IA, not argparse's registration order.
+    headers = ("THE CATALOG", "YOUR OWN TOOLS", "ON YOUR MACHINE", "BULK UPLOAD",
+               "TEAM MANAGEMENT", "CONFIG")
+    for header in headers:
+        assert f"\n{header}" in help_, header
+    positions = [help_.index(h) for h in headers]
     assert positions == sorted(positions)
+    # and `catalog` is the first command a reader meets
+    assert help_.index("    catalog") < help_.index("    tool")
     listed = {ln.split()[0] for ln in help_.splitlines() if ln.startswith("    ") and ln.strip()}
     for gone in ("add", "oauth", "setup-local-run", "run", "runs", "calls", "shell", "import"):
         assert gone not in listed, gone

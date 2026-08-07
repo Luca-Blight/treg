@@ -4117,15 +4117,21 @@ _RAWFMT = argparse.RawDescriptionHelpFormatter
 # aliases (`oauth`, `add`, `run`, `runs`, `calls`, `shell`, `setup-local-run`, `import`) keep
 # working for existing scripts without teaching them to anyone new.
 HELP_GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
-    ("MARKETPLACE", [
-        ("catalog", "Browse the library of endpoints & tools for data access and integrations."),
+    # Ordered as the job is done: find a tool → call it → see what it cost. The catalog leads
+    # because it is the half a newcomer can use with no setup at all.
+    ("THE CATALOG — tools you don't have a key for", [
+        ("catalog", "Find a tool by what you want to DO. ~2,600 endpoints, each with its price."),
+        ("call", "Call a tool: a catalog endpoint by id, or one of your own by URL."),
+        ("balance", "Prepaid balance: credit left, calls in flight, recent spend."),
+        ("topup", "Add funds, or set up automatic top-ups."),
     ]),
-    ("CORE", [
+    ("YOUR OWN TOOLS — what your team already has", [
         ("tool", "Manage tools (endpoint or CLI)."),
         ("skill", "Register / manage skills (a recipe + its secrets + tool(s), as one bundle)."),
         ("secret", "Manage stored credentials (encrypted server-side, never returned)."),
         ("connections", "Your connected accounts: connect providers, health, expiry."),
-        ("call", "Call a tool through the proxy — key injected server-side."),
+    ]),
+    ("ON YOUR MACHINE — use the team's credentials locally", [
         ("cli", "Run vendor CLIs with the org's credential injected (run · shell · setup)."),
         # Listed as `with`, because that is the name argparse knows; the epilog teaches the bare
         # form (`treg claude`), which is how anyone will actually type it.
@@ -4138,8 +4144,6 @@ HELP_GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
     ]),
     ("TEAM MANAGEMENT", [
         ("audit", "Who called/ran what, when, and the result."),
-        ("balance", "Prepaid balance: credit left, calls in flight, recent spend."),
-        ("topup", "Add funds to the balance, or set up automatic top-ups."),
         ("org", "Manage teams (orgs): create, switch, invite, members, join, leave."),
         ("invites", "List invites addressed to your email."),
         ("accept", "Accept an invite addressed to your email."),
@@ -4213,14 +4217,19 @@ def _pop_org_flag(argv: list[str]) -> str | None:
 def build_parser() -> argparse.ArgumentParser:
     p = _GroupedHelpParser(
         prog="treg", formatter_class=_RAWFMT,
-        description="tools-registry (treg): call your team's APIs through one proxy, with no keys on your machine.",
+        # Hard-wrapped: _RAWFMT is RawDescriptionHelpFormatter, so argparse will NOT wrap this for
+        # us and an unwrapped paragraph runs off the edge of a narrow terminal.
+        description=("treg — the tool catalog for your agent.\n"
+                     "Call the tool a job needs without owning its API key: ~2,600 catalogued\n"
+                     "endpoints priced per call, plus your team's own keys, skills and CLIs.\n"
+                     "Credentials are injected server-side, never on your machine."),
         epilog=_ex(
             "treg login                                              # sign in; first login registers you",
-            "treg tool add stripe --base-url https://api.stripe.com --secret 1",
-            "treg call https://api.stripe.com/v1/charges             # key injected server-side",
+            "treg catalog search \"backlinks for a domain\"            # find a tool by what it DOES",
+            "treg call tikhub.tiktok.user.profile --query uniqueId=tiktok",
+            "treg balance                                            # what you have, what you spent",
             "treg claude                                             # run any command with the team's keys",
-            "treg scan                                               # what would upload? (read-only)",
-            "treg upload                                             # register a .env + a skills folder",
+            "treg upload                                             # register your own .env + skills",
         ) + "\n\n`treg <command> -h` for details.")
     p.add_argument("--version", action="version", version=f"treg {cli_version()}", help="print the treg version and exit")
     # parser_class: without it argparse clones OUR class into every subparser, so `treg call -h`
