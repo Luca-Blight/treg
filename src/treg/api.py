@@ -36,7 +36,7 @@ INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 import httpx
 from pathlib import Path
 
-from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -46,12 +46,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from . import audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, health, injectors, ledger, localrun, oauth
+from . import audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
-from .models import ROLE_RANK, Bundle, CallRecord, DenyRule, Invite, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User
+from .models import ROLE_RANK, Bundle, CallRecord, CapabilityPin, DenyRule, Invite, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User
 from .proxy import relay
 
 
@@ -416,7 +416,7 @@ async def catalog_search(q: str = "", limit: int = 25) -> dict:
 
 
 @app.get("/catalog/endpoints/{endpoint_id}", include_in_schema=False)
-async def catalog_endpoint(endpoint_id: str) -> dict:
+async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_session)) -> dict:
     """Open: everything about ONE endpoint — the INSPECT half of the loop.
 
     Deliberately one round-trip: params, cost, the sibling providers offering the same capability
@@ -441,6 +441,18 @@ async def catalog_endpoint(endpoint_id: str) -> dict:
             example = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             example = None
+    # What the calls we have already served say about this endpoint and its alternatives — the half
+    # of "compare providers" that only treg can answer (see endpoint_stats + CAPABILITY-CHOICE-PLAN).
+    # Attached to the SAME response because the choice is made here; a second round-trip to compare
+    # reliability is a round-trip an agent will skip.
+    try:
+        stats = await endpoint_stats.observed(db, [endpoint_id] + [s["id"] for s in siblings])
+    except Exception:  # noqa: BLE001 — telemetry must never take the catalog down
+        logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
+        stats = {}
+    view = view | {"observed": stats.get(endpoint_id)}
+    siblings = [s | {"observed": stats.get(s["id"])} for s in siblings]
+
     return {
         "endpoint": view,
         "provider": {"service": ep["provider"], "display_name": _provider_display(ep["provider"]),
@@ -983,8 +995,10 @@ async def auth_me(
     """Who is the caller? Drives the dashboard's identity display in BOTH session mode (cookie) and
     token mode (X-Treg-Token) — the token door otherwise had no way to learn its own email, which
     broke `isPersonal` and join-by-code."""
+    membership = None
     if x_treg_token:
         m = await _membership_by_token(x_treg_token, db)
+        membership = m
         user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
         if user is not None and user.suspended:
             user = None
@@ -992,8 +1006,17 @@ async def auth_me(
         user = await _user_from_session(treg_session, db)
     if user is None:
         raise HTTPException(status_code=401, detail="no session")
-    return {"email": user.email, "is_superadmin": user.is_superadmin, "onboarded": user.onboarded,
-            "github": bool(get_settings().github_client_id)}
+    out = {"email": user.email, "is_superadmin": user.is_superadmin, "onboarded": user.onboarded,
+           "github": bool(get_settings().github_client_id)}
+    if membership is not None:
+        # The org this token IS. A machine identity cannot call GET /orgs — `require_identity`
+        # refuses it on purpose, since `create_org` hangs off that dependency and an agent could
+        # otherwise mint an org it owns. But it still has to learn its OWN org id to reach any
+        # /orgs/{id}/... route, and being unable to told `treg balance` there was "no active org".
+        org = await db.get(Org, membership.org_id)
+        out |= {"org_id": membership.org_id, "org": org.slug if org else None,
+                "role": membership.role}
+    return out
 
 
 @app.post("/auth/logout")
@@ -2802,11 +2825,18 @@ async def org_balance(
     org_id: int, limit: int = 20, offset: int = 0,
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
-    """The org's prepaid balance (admin/owner — same gate as /usage, since spend is billing data):
-    the materialized balance, the credit blocks it is made of, any in-flight holds, and a page of the
-    append-only ledger. Amounts are integer micro-USD (`*_micro`) with a display-only USD twin —
-    never compute against the USD field (see ledger.py on why money is integers here)."""
-    _require_admin_of(org_id, caller)
+    """The org's prepaid balance. Amounts are integer micro-USD (`*_micro`) with a display-only USD
+    twin — never compute against the USD field (see ledger.py on why money is integers here).
+
+    **Two audiences, one route.** Any MEMBER sees the figure and the in-flight holds: they are the
+    ones spending it, every agent is told to run `treg balance` after a call, and a 402 already hands
+    them `balance_micro` anyway — refusing the same number here while shipping it in an error was
+    incoherent. The FUNDING DETAIL is admin+: the credit blocks (what was bought, when, what is left
+    of each) and the ledger, which together are the org's purchase history, not its wallet.
+    """
+    if caller.org_id != org_id:
+        raise HTTPException(status_code=403, detail="not a member of this org")
+    detailed = _role_at_least(caller.role, "admin")
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
     balance = await ledger.balance_of(db, org_id)
@@ -2822,7 +2852,8 @@ async def org_balance(
         "balance_micro": balance,
         "balance_usd": ledger.usd(balance),
         "promo_grant_micro": get_settings().promo_grant_micro,
-        "blocks": [
+        # admin+ only — see the docstring: the wallet is everyone's, the purchase history is not
+        "blocks": [] if not detailed else [
             {"id": b.id, "kind": b.kind, "amount_micro": b.amount_micro,
              "remaining_micro": b.remaining_micro, "remaining_usd": ledger.usd(b.remaining_micro),
              "currency": b.currency, "expires_at": b.expires_at.isoformat() if b.expires_at else None,
@@ -2836,7 +2867,7 @@ async def org_balance(
         ],
         "entries": {
             "limit": limit, "offset": offset,
-            "items": [
+            "items": [] if not detailed else [
                 {"id": e.id, "kind": e.kind, "amount_micro": e.amount_micro,
                  "amount_usd": ledger.usd(e.amount_micro), "block_id": e.block_id,
                  "call_id": e.call_id, "endpoint_id": e.endpoint_id, "meta": e.meta,
@@ -3122,12 +3153,23 @@ async def leave_org(
 
 @app.delete("/orgs/{org_id}")
 async def delete_org(
-    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+    org_id: int, confirm: str = Query(..., min_length=1),
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
+    """Delete a team and everything in it (owner only). `?confirm=<slug>` must match.
+
+    The confirmation is REQUIRED by the API, not just collected by the clients that already ask for
+    it. This route is irreversible and sits one path segment above every other org route, so any
+    client that normalizes `..` turns `DELETE /orgs/{id}/<anything>/..` into this call — that is how
+    `treg org unpin ..` deleted a team during testing. A request arriving without the slug it is
+    about to destroy is not a request anyone meant to send."""
     _require_owner_of(org_id, caller)
     org = await db.get(Org, org_id)
     if org is None:
         raise HTTPException(status_code=404, detail="org not found")
+    if confirm != org.slug:
+        raise HTTPException(status_code=422, detail=(
+            f"to delete this team, confirm with its slug: ?confirm={org.slug}"))
     await _cascade_delete_org(org, db)
     await db.commit()
     return {"deleted_org": org_id}
@@ -3604,6 +3646,100 @@ def _deny_view(r: DenyRule) -> dict:
             "project_id": r.project_id,
             "verdict": r.verdict, "note": r.note, "created_by": r.created_by,
             "created_at": r.created_at}
+
+
+class CapabilityPinIn(BaseModel):
+    capability: str
+    provider: str
+
+
+@app.get("/orgs/{org_id}/pins")
+async def list_capability_pins(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    """The team's provider choices, per capability. Readable by any member — an agent has to know
+    what it is allowed to call, and finding out by being refused is a wasted round-trip."""
+    if caller.org_id != org_id:      # the token IS the membership (same rule as every org route)
+        raise HTTPException(status_code=403, detail="not a member of this org")
+    rows = (await db.execute(select(CapabilityPin).where(CapabilityPin.org_id == org_id)
+                             .order_by(CapabilityPin.capability))).scalars().all()
+    return [{"id": r.id, "capability": r.capability, "provider": r.provider,
+             "created_by": r.created_by, "created_at": r.created_at} for r in rows]
+
+
+@app.post("/orgs/{org_id}/pins")
+async def set_capability_pin(
+    org_id: int, body: CapabilityPinIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Pin a capability to one provider for the whole team (admin+). Re-pinning replaces.
+
+    Both halves are validated against the catalog: an unknown capability, or a provider that does
+    not actually serve it, would be a rule that silently blocks every call to a job the team
+    genuinely uses — a typo must fail here, loudly, not at 3am in an agent's log."""
+    _require_admin_of(org_id, caller)
+    cat = catalog_store.load()
+    serving = cat.for_capability(body.capability)
+    if not serving:
+        raise HTTPException(status_code=422, detail=f"unknown capability {body.capability!r}")
+    providers = sorted({e["provider"] for e in serving})
+    if body.provider not in providers:
+        raise HTTPException(status_code=422, detail=(
+            f"{body.provider!r} does not serve {body.capability!r} — "
+            f"these do: {', '.join(providers)}"))
+    # Read the caller's email NOW, as a plain string. A rollback below expires every ORM instance
+    # behind `caller`, and touching one afterwards lazy-loads outside the async context —
+    # MissingGreenlet, which is how this first failed under concurrency.
+    who = caller.email
+    row = (await db.execute(select(CapabilityPin).where(
+        CapabilityPin.org_id == org_id,
+        CapabilityPin.capability == body.capability))).scalars().first()
+    if row is None:
+        row = CapabilityPin(org_id=org_id, capability=body.capability, provider=body.provider,
+                            created_by=who)
+        db.add(row)
+    else:
+        row.provider, row.created_by = body.provider, who
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Lost the race to another admin (or another web worker). The UNIQUE index is what actually
+        # prevents the duplicate; this makes losing look like the sequential path — re-apply onto
+        # the winner's row rather than handing back a 500 for a pin that plainly succeeded.
+        await db.rollback()
+        row = (await db.execute(select(CapabilityPin).where(
+            CapabilityPin.org_id == org_id,
+            CapabilityPin.capability == body.capability))).scalars().first()
+        if row is None:
+            raise
+        row.provider, row.created_by = body.provider, who
+        await db.commit()
+    return {"capability": body.capability, "provider": body.provider,
+            "alternatives": [p for p in providers if p != body.provider]}
+
+
+@app.delete("/orgs/{org_id}/pins")
+async def clear_capability_pin(
+    org_id: int, capability: str = Query(..., min_length=1, max_length=200),
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Remove a pin (admin+) — the capability goes back to the caller's choice.
+
+    The capability is a QUERY parameter, not a path segment, and that is a safety decision rather
+    than a style one. As `/orgs/{id}/pins/{capability}` it was one keystroke from a catastrophe:
+    every normalizing HTTP client (httpx included) rewrites `/orgs/1/pins/..` to `/orgs/1` BEFORE
+    sending it — which is DELETE /orgs/{id}, the delete-the-team route. `treg org unpin ..` really
+    did destroy an org in testing. Server-side validation cannot defend against it, because the
+    rewrite happens in the client; taking the value out of the path removes the class entirely."""
+    _require_admin_of(org_id, caller)
+    rows = (await db.execute(select(CapabilityPin).where(
+        CapabilityPin.org_id == org_id, CapabilityPin.capability == capability))).scalars().all()
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"no pin for {capability!r}")
+    for row in rows:      # all of them, in case a duplicate predates the unique index
+        await db.delete(row)
+    await db.commit()
+    return {"capability": capability, "pinned": False}
 
 
 @app.post("/orgs/{org_id}/deny")
@@ -5968,6 +6104,40 @@ def _marketplace_upstream(ep: dict, provider, query_params) -> tuple[str, set[st
     return provider.base_url.rstrip("/") + "/" + path.lstrip("/"), consumed
 
 
+async def _enforce_capability_pin(ep: dict, caller: Caller, db: AsyncSession) -> None:
+    """Refuse a catalog call that goes around the team's pin for that capability.
+
+    A pin is a decision the team already made ("for finding work emails we use Hunter"), so the
+    answer names the endpoint they DO use — an agent that gets told "no" without being told "use
+    this instead" will simply try the next provider and be refused again.
+
+    Enforced here rather than in the client so it does not depend on the caller's goodwill, and
+    before anything is reserved, so a refusal never has to un-hold money."""
+    cap = ep.get("capability")
+    if not cap or caller.org_id is None:
+        return
+    pin = (await db.execute(select(CapabilityPin).where(
+        CapabilityPin.org_id == caller.org_id,
+        CapabilityPin.capability == cap).order_by(CapabilityPin.id))).scalars().first()
+    if pin is None or pin.provider == ep["provider"]:
+        return
+    cat = catalog_store.load()
+    # Suggest the OBVIOUS endpoint, not merely the first one in file order: `core` is the curated
+    # route for a job, `extended` is the bulk-ingested long tail. Suggesting
+    # `tikhub.x.tiktok-analytics-fetch-creator-info-and-milestones` when `tikhub.tiktok.user.profile`
+    # exists reads as a broken suggestion and sends the caller somewhere they did not ask to go.
+    mine = [e for e in cat.for_capability(cap) if e["provider"] == pin.provider]
+    mine.sort(key=lambda e: ((e.get("tier") or "") != "core", not cat.platform_eligible(e), e["id"]))
+    alt = mine[0]["id"] if mine else None
+    raise HTTPException(status_code=403, detail={
+        "error": "capability_pinned",
+        "message": (f"this team uses {pin.provider!r} for {cap!r}"
+                    + (f" — call {alt} instead" if alt else "")
+                    + f". An admin can change it: treg org unpin {cap}"),
+        "capability": cap, "pinned_provider": pin.provider, "use_endpoint": alt,
+    })
+
+
 async def _resolve_marketplace_call(
     ep: dict, request: Request, caller: Caller, db: AsyncSession
 ) -> MarketplaceCall:
@@ -5981,6 +6151,7 @@ async def _resolve_marketplace_call(
 
     NOTHING is reserved here. Resolution only PRICES the call; `call_tool` reserves after the deny
     rules and caps have had their say, so a refused call never has to un-hold money."""
+    await _enforce_capability_pin(ep, caller, db)
     service = ep["provider"]
     provider = oauth_providers.get(service)
     if provider is None or not provider.base_url:

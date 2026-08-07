@@ -265,7 +265,7 @@ p.sub b{color:var(--ink);font-weight:600}
   font-weight:550;font-size:13px;color:var(--ink);white-space:nowrap}
 .kw-chip img{width:20px;height:20px;border-radius:5px;object-fit:contain}
 
-/* 03 — capability routing (scripted: ask → match → options pop → scan → pick) */
+/* 03 — capability comparison (scripted: ask → match → options pop → scan → the AGENT picks) */
 .cap{padding:8px 20px 12px}
 .cap-req{display:flex;align-items:center;gap:8px;padding:10px 2px 12px;font-size:12.5px;min-height:42px}
 .cap-req img{width:20px;height:20px;border-radius:6px;flex:none}
@@ -671,11 +671,11 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
       <div class="bentext">
         <div class="bennum">02</div>
         <h3>Expert tool for <i>everything.</i></h3>
-        <p>Your agent asks for the <b>task, not the tool</b>. Nineteen providers sell backlinks, nine sell email lookup — treg knows the ladder for each scenario and routes every call to the best one that's up.</p>
-        <div class="benmeta"><span>priced per result, compared live</span><span>failover built in</span><span>pin a vendor any time</span></div>
+        <p>Your agent asks for the <b>task, not the tool</b>. Nineteen providers sell backlinks, nine sell email lookup — treg shows what each one charges and <b>what we've measured them doing</b>: success rate, speed, last time it answered. Your agent picks on evidence, not on a guess.</p>
+        <div class="benmeta"><span>priced per result, compared live</span><span>success rate &amp; speed we measured</span><span>pin a vendor any time</span></div>
       </div>
       <div class="win">
-        <div class="wbar"><i></i><i></i><i></i><span class="wt">catalog — <b>capability routing</b></span></div>
+        <div class="wbar"><i></i><i></i><i></i><span class="wt">catalog — <b>compare the providers</b></span></div>
         <div class="cap" id="cap">
           <div class="cap-req"><img src="https://unpkg.com/@lobehub/icons-static-png@latest/light/claudecode-color.png" alt="Claude Code"/><b>claude code</b><code id="capq"></code><span class="capcaret" id="capcaret"></span></div>
           <div class="cap-h"><span class="cap-t" id="capt"></span><span class="cap-n" id="capn"></span></div>
@@ -688,7 +688,7 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
           </div>
           <div class="cap-res" id="capres"><span class="cr-arr">↩</span><span id="caprestxt"></span></div>
         </div>
-        <div class="wf" id="capwf">✓ your agent never picked a vendor — treg routed it</div>
+        <div class="wf" id="capwf">✓ your agent picked on live data — price, success rate, speed</div>
       </div>
     </div>
 

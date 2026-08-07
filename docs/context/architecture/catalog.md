@@ -1,3 +1,15 @@
+---
+title: Endpoint catalog — what you can DO with a connected key, and which provider should do it
+status: shipped
+sources:
+  - src/treg/catalog_store.py
+  - src/treg/endpoint_stats.py
+related:
+  - architecture/money.md
+  - architecture/proxy-model.md
+  - interface/cli.md
+---
+
 # Endpoint catalog — platform-grouped operations per provider
 
 ## Why
@@ -632,6 +644,49 @@ the core file's paths are relative to it (`/serp/google/organic/live/regular`). 
 **the ingester's core-wins dedup silently misses**, because it compares `(method, path)` across the
 two spellings — every DataForSEO route curated in core is also present in the extended file under
 a different id. Fixing that belongs in `catalog_ingest.py` and needs a regeneration.
+
+## Choosing between providers (`endpoint_stats.py`)
+
+307 capabilities are served by more than one provider, and prices inside one capability differ by up
+to **261×**. So "which provider" is a real decision, made on every call.
+
+**The agent makes it, not treg** — see `docs/CAPABILITY-CHOICE-PLAN.md` for the measurement behind
+that. Two reasons, and the second is the load-bearing one. Providers of the same capability take
+*different requests* (only 5 of 171 match exactly), so a router would need a canonical schema treg
+does not have; and they sometimes ask a different QUESTION entirely — `hunter.people.email.find`
+wants a domain and a name, `leadmagic.x.b2b-profile-email` wants a LinkedIn URL. **Only the caller
+knows which inputs it holds.** A router picking on price would choose the second for someone holding
+a name, and fail. Routing would also have been the first feature to break the founding rule that treg
+relays rather than models.
+
+What treg owes instead is the half only treg can supply, because only treg sees every call from every
+tenant: `endpoint_stats.observed()` aggregates **success rate, p50/p95 latency, last-answered and
+sample size** per endpoint from `CallRecord` — which has recorded `endpoint_id`, `status_code` and
+`duration_ms` since the marketplace shipped and was never read. It rides on
+`/catalog/endpoints/{id}`, attached to the endpoint **and every sibling**, because the choice is made
+on that page and an agent will not make a second round-trip to compare reliability.
+
+Four rules worth keeping:
+
+- **A 4xx never counts against the provider.** It usually means the caller sent bad parameters;
+  counting it would let one agent's mistake make a healthy endpoint look broken to everyone. Only
+  2xx versus 5xx decides the rate.
+- **Below `MIN_SAMPLES` we publish the count and nothing else.** "100% from two calls" is noise
+  dressed as evidence, and on a quiet endpoint a rate could expose one org's activity.
+- **Sample size is always visible**, so `100% (8)` cannot beat `99% (121)` by looking rounder.
+- **A claim never wears a measurement's badge.** The `LAST OK` column prints a bare age when a real
+  call produced it and a **`✓` age** when it came from the catalog's `verified:` stamp — the same
+  discipline `confidence:` already applies to price. The stamp is the cold-start answer: it covers
+  1,380 of 1,810 eligible endpoints for free, which is why the column is useful on day one.
+
+Team policy sits on top: `CapabilityPin` (see [data-model](data-model.md)) lets an org fix a
+capability to one provider, enforced in `_resolve_marketplace_call` before anything is reserved.
+
+Its boundary, verified rather than assumed: a pin gates the **catalog id**, which is the only route
+to treg's own key — so it cannot be side-stepped to spend our money (a URL-passthrough call resolves
+against the org's OWN tools and 404s without one). A team holding its own key for another provider
+can still call that provider by URL; that is their credential and their bill, and `DenyRule` —
+host-scoped, applied to every shape of call — is the tool for blocking it.
 
 ## Security
 

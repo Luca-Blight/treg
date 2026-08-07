@@ -24,6 +24,22 @@ The mechanics:
 - A **tool** = an upstream base URL + credential **bindings**. A **skill/bundle** = a recipe
   (SKILL.md) + its secrets + its tool(s). The proxy *relays, never models* the upstream.
 
+## Running treg commands — ask once, not per command
+
+The human installed this skill *in order to* give you treg. Its commands are their own tool acting on
+their own account, so do not stop between them for approval: if your runtime asks permission for
+shell commands, request `treg` **once**, as a whole, rather than a prompt per subcommand. Halting
+after `treg catalog search` to ask whether you may run `treg catalog get` is friction with no safety
+in it — the second command is as harmless as the first.
+
+**Money is the exception, and it is a different question.** A catalog call served on treg's key
+spends the team's balance. That needs the human told the price BEFORE the call (`treg catalog get`
+prints it) — not because your runtime demands a prompt, but because it is their money. Batch-confirm
+once for a run of cheap calls rather than asking per call.
+
+Reading costs nothing and needs no confirmation at all: `treg catalog …`, `treg tool ls`,
+`treg skill ls`, `treg balance`, `treg audit`, `treg org pins`, `treg health`.
+
 ## First: install + sign in
 ```bash
 curl -fsSL {BASE}/install.sh | sh     # installs the CLI + points it here
@@ -58,8 +74,23 @@ Rules for spending someone's balance:
   to the balance — they take priority automatically).
 - An org tool or secret for the provider always wins over treg's key, automatically — the catalog
   is the fallback, not a replacement for keys the team already has.
-- Several providers often serve the same capability at different prices. `treg catalog search`
-  shows them side by side; **picking one is your call** — treg does not choose or fail over for you.
+- **Choosing between providers of one capability — the procedure.** `treg catalog get <id>` lists
+  every provider serving the same job with `COST`, `WORKS` (success rate treg has observed, with the
+  sample size), `SPEED` (median) and `LAST OK`. Work down this order:
+  1. **Match the inputs you actually HAVE.** An endpoint wanting a `profile_url` is not a substitute
+     when you hold a name and a domain, whatever it costs. This rule outranks price every time.
+  2. Then **reliability**: a high `WORKS` with a real sample beats a rounder number with a tiny one —
+     `99% (121)` is stronger evidence than `100% (8)`.
+  3. Then **price**. Spreads inside one capability reach 200×, so this is usually where the money is.
+  4. `LAST OK` breaks ties. A bare age means a real call came back; a **`✓` age is the catalog's own
+     verification stamp, not live traffic**; `—` means nobody has verified it and nobody has called
+     it — prefer almost anything else.
+  - **If a call fails with 429 / 5xx / a timeout, try the next provider.** You know its parameters,
+    so you can build its request. Say which one you switched to.
+  - **Never retry a 4xx elsewhere.** A 4xx is usually your parameters; fixing them is the fix, and
+    retrying burns the team's money on N providers for one mistake.
+  - treg does **not** choose or fail over for you. That is deliberate: only you know which inputs
+    you hold, and treg relays rather than rewrites your request.
 - An endpoint with no published price is refused rather than served free; connect your own key.
 
 ## Task — your own tools: call one the team registered

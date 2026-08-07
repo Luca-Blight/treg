@@ -173,10 +173,29 @@ def _admin_client(cfg: dict) -> httpx.Client:
     return httpx.Client(base_url=cfg["base_url"], headers={"X-Treg-Token": token, "ngrok-skip-browser-warning": "1"}, timeout=30.0)
 
 
-def _active_org_id(cfg: dict, c: httpx.Client) -> int | None:
-    """The active org's numeric id (for /orgs/{id}/... endpoints), resolved via GET /orgs."""
+def _active_org_id(cfg: dict, c: httpx.Client, *, strict: bool = True) -> int | None:
+    """The active org's numeric id (for /orgs/{id}/... endpoints), resolved via GET /orgs.
+
+    A MACHINE identity (an agent token) cannot call `/orgs` — the server refuses it there on purpose
+    — but its token IS one membership, so `/auth/me` tells it the one org id it could ever mean.
+    Without this fallback every /orgs/{id}/… command (balance, topup, pins, deny) died with a bare
+    "no active org" for exactly the callers those commands exist to serve."""
     r = c.get("/orgs")
     if r.status_code != 200:
+        me = c.get("/auth/me")
+        if me.status_code == 200 and me.json().get("org_id"):
+            return int(me.json()["org_id"])
+        # An invalid or expired token used to fall through to the caller's bare "no active org",
+        # which sends the reader to fix org config when the real problem is authentication. 21
+        # commands printed that message, so the honest answer belongs here, once.
+        # `strict=False` for callers that only ENRICH output (the pin marker on `catalog get`):
+        # the catalog is public, so a signed-out reader must still get the page. sys.exit raises
+        # SystemExit, which `except Exception` does not catch — a try/except around the call site
+        # would NOT have saved it.
+        if strict and 401 in (r.status_code, me.status_code):
+            sys.exit("treg: not signed in, or this token is invalid/expired.\n"
+                     "  Sign in:            treg login\n"
+                     "  Using TREG_TOKEN?   check it is the token `org agent-new` printed.")
         return None
     orgs = r.json()
     target = _effective_org(cfg)
@@ -879,7 +898,10 @@ def _run_setup(cfg: dict, args) -> None:
         _dim('You\'re not in a team yet. Create one:  treg org create "Your Team"')
         return
     _kv("team", org.get("name") or org.get("slug"))
-    print("  You pick what to share; values are read internally, never on the command line.")
+    print("  This is the OTHER half of treg: turning keys and skills you already have into tools")
+    print("  your teammates' agents can call. Nothing is uploaded until you pick it from a preview,")
+    print("  and values are read internally — never on the command line.")
+    _dim("  (Only want to USE treg? Ctrl-C and run `treg onboard` — the catalog needs none of this.)")
     from . import skills as sk
     cwd = Path(os.getcwd())
 
@@ -1104,35 +1126,23 @@ def _onboard_test_call(cfg: dict, tools: list) -> None:
         _dim(f"  (call failed: {exc})")
 
 
-def _demo_scan_preview(cfg: dict) -> None:
-    """Read-only: show what treg WOULD detect to share (API keys + skills). A DEMO — nothing is uploaded."""
-    from . import providers as prov, skills as sk
-    cwd = Path(os.getcwd())
-    env_path = cwd / ".env"
-    keys: list[str] = []
-    skill_names: set[str] = set()
-    with _spinner("scanning this folder for keys & skills"):
-        if env_path.is_file():
-            try:
-                keys = [a.tool_name for a in prov.plan_actions(prov.scan_env(str(env_path), _load_catalog(cfg))) if a.supported]
-            except Exception:  # noqa: BLE001
-                pass
-        for cand in [cwd, cwd / ".claude" / "skills", cwd / ".agents" / "skills"]:
-            try:
-                if cand.is_dir():
-                    for det in sk.scan_skills(str(cand)):
-                        skill_names.add(det.name)
-            except Exception:  # noqa: BLE001
-                pass
-    if keys:
-        print(f"  {_M}API keys in your .env treg could share:{_R} {', '.join(keys[:8])}"
-              + (f" +{len(keys)-8} more" if len(keys) > 8 else ""))
-    if skill_names:
-        print(f"  {_M}skills in this project:{_R} {len(skill_names)}")
-    if not keys and not skill_names:
-        _dim("  (no .env or skills here — in a real project treg detects your keys + skill folders)")
-    print()
-    _dim("  This is just a DEMO — nothing is uploaded. The 'Upload' path is where you actually share.")
+def _demo_catalog_peek(cfg: dict) -> None:
+    """Read-only: what the catalog can already do for this team, with nothing registered and no key.
+    Costs nothing — a search is free; only a call spends the balance."""
+    print("  ~2,600 endpoints across ~40 providers. Ask for the JOB, not the vendor:")
+    _cmd('treg catalog search "backlinks for a domain"')
+    try:
+        with _client(cfg) as c:
+            r = c.get("/catalog/search", params={"q": "backlinks for a domain", "limit": 3})
+        rows = (r.json() or {}).get("results") or [] if r.status_code == 200 else []
+    except Exception:  # noqa: BLE001 — a walkthrough must survive an unreachable registry
+        rows = []
+    for e in rows:
+        cost = _cost_usd(e.get("cost")) or "—"
+        print(f"    {_A}{_clip(e.get('id', ''), 44):<44}{_R} {_M}{cost}{_R}")
+    if not rows:
+        _dim("    (the registry didn't answer — the catalog is still there, try `treg catalog`)")
+    _arrow("treg holds the key; you pay fractions of a cent per call, from $1.00 of free credit.")
 
 
 def _demo_teammate_call(cfg: dict) -> str | None:
@@ -1195,8 +1205,11 @@ def _run_demo(cfg: dict, args) -> None:
     yes = getattr(args, "yes", False)
     _brand("demo — the whole loop (a walkthrough; nothing is changed)")
 
-    _section("① Auto-discover local skills & env")
-    _demo_scan_preview(cfg)
+    # Was: a read-only scan of the user's folder. Jason found it confusing, and rightly — a demo that
+    # opens by reading your disk shows you your OWN files before it has shown you anything treg does.
+    # The catalog is the shorter answer to "what is this?": it needs nothing of yours at all.
+    _section("① Call a tool you don't have a key for")
+    _demo_catalog_peek(cfg)
     _pause(yes)
 
     _section("② Share credentials & skills with your team")
@@ -3717,6 +3730,66 @@ def cmd_org_project_rm(args, cfg) -> None:
         _show(c.delete(f"/orgs/{org_id}/projects/{args.project_id}"))
 
 
+def cmd_org_pin(args, cfg) -> None:
+    """Pin a capability to one provider for the whole team (admin+)."""
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        r = c.post(f"/orgs/{org_id}/pins",
+                   json={"capability": _valid_capability(args.capability), "provider": args.provider})
+        if r.status_code >= 400:
+            _show(r)
+            return
+        out = r.json()
+        _ok(f"{out['capability']} → {_B}{out['provider']}{_R}")
+        if out.get("alternatives"):
+            _dim(f"  calls to {', '.join(out['alternatives'])} for this job are now refused")
+
+
+def cmd_org_pins(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        r = c.get(f"/orgs/{org_id}/pins")
+    if _JSON_OVERRIDE or r.status_code >= 400:
+        _show(r)
+        return
+    rows = r.json()
+    if not rows:
+        _dim("  no pins — every member picks the provider for each job "
+             "(treg catalog get <id> compares them)")
+        return
+    print(f"\n  {'CAPABILITY':<34} {'PROVIDER':<16} SET BY")
+    for x in rows:
+        print(f"  {_clip(x['capability'], 34):<34} {_clip(x['provider'], 16):<16} {_M}{x['created_by']}{_R}")
+
+
+_CAPABILITY_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,199}$")
+
+
+def _valid_capability(value: str) -> str:
+    """A capability id, or exit. Not cosmetic validation: a value like `..` used to be interpolated
+    into the URL path, and every normalizing HTTP client rewrites `/orgs/1/pins/..` to `/orgs/1` —
+    the DELETE-the-team route — before the request is sent. The value now travels as a query
+    parameter, and this refuses anything URL-shaped as well, so neither layer alone has to hold."""
+    v = (value or "").strip()
+    if not _CAPABILITY_RE.match(v):
+        sys.exit(f"treg: {value!r} is not a capability id (lowercase letters, digits, dots, dashes)."
+                 f"\n  See one with:  treg catalog get <endpoint-id>")
+    return v
+
+
+def cmd_org_unpin(args, cfg) -> None:
+    cap = _valid_capability(args.capability)
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.delete(f"/orgs/{org_id}/pins", params={"capability": cap}))
+
+
 def cmd_org_deny(args, cfg) -> None:
     with _client(cfg) as c:
         org_id = _active_org_id(cfg, c)
@@ -3790,7 +3863,7 @@ def cmd_org_delete(args, cfg) -> None:
         org_id = _active_org_id(cfg, c)
         if org_id is None:
             sys.exit("no active org")
-        r = c.delete(f"/orgs/{org_id}")
+        r = c.delete(f"/orgs/{org_id}", params={"confirm": args.slug})
     if r.status_code == 200:
         _clear_active_if_targeted(cfg)
     _show(r)
@@ -3889,6 +3962,73 @@ def _native_amount(value, currency: str, meter: str = "") -> str:
         return f"{value:g} {noun}{'' if value == 1 else 's'}"
     return f"${value:g}" if currency in ("USD", "") else f"{currency} {value:g}"
 
+
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _pad(text: str, width: int) -> str:
+    """Left-justify by VISIBLE width. `f"{s:<7}"` counts ANSI escape bytes as characters, so any
+    coloured cell silently shifts every column to its right."""
+    pad = width - len(_ANSI_RE.sub("", text))
+    return text + " " * max(0, pad)
+
+
+def _pinned_provider(cfg: dict, capability: str | None) -> str | None:
+    """The provider this team pinned for `capability`, or None. Best-effort: a registry that is old,
+    unreachable or does not know about pins must not stop `catalog get` from rendering."""
+    if not capability:
+        return None
+    try:
+        with _client(cfg) as c:
+            org_id = _active_org_id(cfg, c, strict=False)
+            if org_id is None:
+                return None
+            r = c.get(f"/orgs/{org_id}/pins")
+            if r.status_code >= 400:
+                return None
+            return next((x["provider"] for x in r.json() if x["capability"] == capability), None)
+    except Exception:  # noqa: BLE001 — a comparison table is not worth a traceback
+        return None
+
+
+def _observed_cell(obs: dict | None) -> str:
+    """The success rate, or an honest blank. `—` means nobody has called it enough to say (the
+    server refuses to publish a rate below its sample floor); a rate with a tiny sample is worse
+    than no rate, because it reads as evidence."""
+    if not obs or obs.get("ok_rate") is None:
+        n = (obs or {}).get("samples") or 0
+        return f"{_M}— ({n}){_R}" if n else f"{_M}—{_R}"
+    pct = obs["ok_rate"] * 100
+    colour = _G if pct >= 99 else (_AM if pct >= 90 else _A)
+    return f"{colour}{pct:.0f}%{_R} {_M}({obs['samples']}){_R}"
+
+
+def _speed_cell(obs: dict | None) -> str:
+    ms = (obs or {}).get("p50_ms")
+    return f"{_M}—{_R}" if ms is None else (f"{ms}ms" if ms < 1000 else f"{ms/1000:.1f}s")
+
+
+def _last_ok_cell(row: dict) -> str:
+    """When this endpoint last answered. Two different facts, never merged into one badge:
+
+    a plain age is MEASURED — the last time a real call through treg came back 2xx. A `✓` age is
+    the catalog's `verified:` stamp: somebody ran it by hand on that date and it worked. The stamp
+    is the honest fallback while an endpoint has no traffic yet (76% of eligible endpoints carry
+    one), but it is a dated claim, not live evidence, so it must not read as though it were.
+    """
+    days = (row.get("observed") or {}).get("last_ok_days")
+    if days is not None:
+        return "today" if days == 0 else f"{days}d"
+    v = row.get("verified")
+    if not v:
+        return f"{_M}—{_R}"
+    try:
+        from datetime import date
+        d = v if isinstance(v, date) else date.fromisoformat(str(v)[:10])
+        return f"{_M}✓{(date.today() - d).days}d{_R}"
+    except (ValueError, TypeError):
+        return f"{_M}✓{_R}"
 
 
 def _connected_providers(cfg) -> set:
@@ -4082,11 +4222,28 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
     sibs = body.get("siblings") or []
     if sibs:
         connected = _connected_providers(cfg)
-        print(f"  {'PROVIDER':<12} {'ENDPOINT':<46} {'COST':<16} ●")
-        for s in sibs:
-            print(f"  {_clip(s['provider'], 12):<12} {_clip(s['id'], 46):<46} {_clip(_cost_usd(s.get('cost')), 16):<16} "
+        pinned = _pinned_provider(cfg, e.get("capability"))
+        # This endpoint sits in the table too: comparing alternatives against each other while the
+        # one you asked about is somewhere above is how you pick the wrong row.
+        rows = [dict(e, id=e["id"], provider=e["provider"], observed=e.get("observed"), _me=True)] + \
+               [dict(x, _me=False) for x in sibs]
+        print(f"  {'PROVIDER':<12} {'ENDPOINT':<38} {'COST':<15} {'WORKS':<11} {'SPEED':<7} {'LAST OK':<8} ●")
+        for s in rows:
+            mark = f"{_A}▸{_R}" if s.get("_me") else " "
+            if pinned and s["provider"] != pinned:
+                continue          # the team pinned this job elsewhere; these are not callable
+            print(f" {mark}{_clip(s['provider'], 12):<12} {_clip(s['id'], 38):<38} "
+                  f"{_clip(_cost_usd(s.get('cost')), 15):<15} {_pad(_observed_cell(s.get('observed')), 11)} "
+                  f"{_pad(_speed_cell(s.get('observed')), 7)} {_pad(_last_ok_cell(s), 8)} "
                   f"{'●' if s['provider'] in connected else ' '}")
-        _dim("  the same job from another provider — compare price and verification before you call")
+        if pinned:
+            _dim(f"  your team pins this job to {_B}{pinned}{_R}{_M} — other providers are refused, so")
+            _dim(f"  only theirs are listed (admin: treg org unpin {e.get('capability')}).")
+        else:
+            _dim("  the same job from another provider.")
+        _dim("  WORKS/SPEED are what treg has actually observed; a ✓ age is the catalog's own")
+        _dim("  verification stamp, not live traffic. Pick the one whose inputs match what you")
+        _dim("  HAVE, then weigh reliability against price.")
     elif e.get("capability"):
         _dim("  the only provider offering this capability")
 
@@ -4475,6 +4632,17 @@ def build_parser() -> argparse.ArgumentParser:
               "treg org project-rm 2")
     oprm.add_argument("project_id", type=int, help="the project id (from `org projects`)")
     oprm.set_defaults(fn=cmd_org_project_rm)
+    opin = mk(og, "pin", "For this JOB, our team uses this provider — the rest are refused (admin+).",
+              "treg org pin people.email.find --provider hunter",
+              "treg org pins", "treg org unpin people.email.find")
+    opin.add_argument("capability", help="a capability id, e.g. people.email.find (see `treg catalog get`)")
+    opin.add_argument("--provider", required=True, help="the provider service id, e.g. hunter")
+    opin.set_defaults(fn=cmd_org_pin)
+    mk(og, "pins", "The team's pinned provider per capability.", "treg org pins").set_defaults(fn=cmd_org_pins)
+    oup = mk(og, "unpin", "Remove a pin — the job goes back to the caller's choice (admin+).",
+             "treg org unpin people.email.find")
+    oup.add_argument("capability", help="the capability to unpin")
+    oup.set_defaults(fn=cmd_org_unpin)
     od2 = mk(og, "deny", "Block calls to a host / path / method — for the team, or one member (admin+).",
              "treg org deny --method DELETE --note 'no deletes'",
              "treg org deny --host api.stripe.com", "treg org deny --path /admin --user 7")

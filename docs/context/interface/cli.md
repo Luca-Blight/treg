@@ -109,6 +109,10 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
     today's usage; **`org agent-rm <user_id>`** revokes. Nested under `org` on purpose — the top-level
     **`treg agents`** already means "which coding agents can I install skills for", an unrelated concept
     (`agents.py`). See [multi-tenancy](../architecture/multi-tenancy.md).
+  - **`org pin <capability> --provider <p>`** / **`org pins`** / **`org unpin <capability>`** —
+    the team's provider choice per job, enforced server-side (a gate, not a hint). `catalog get`
+    shows the pin and lists only that provider's endpoints, so an agent does not learn the policy by
+    being refused. See [catalog](../architecture/catalog.md).
   - **`org deny`** (`--host`, `--path`, `--method`, `--user`, `--project <slug|id>`, `--note`) blocks
     calls for the whole team, one member/agent, and/or one project's tools;
     **`org deny-ls`** / **`org deny-rm <id>`**. An empty field means *any*, so

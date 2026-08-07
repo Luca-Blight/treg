@@ -82,9 +82,27 @@ free of the balance rather than duplicating them.
    signup, no subscription.
 
 An endpoint treg has no published price for is **refused**, not served free — you are told to
-connect your own key instead. Choosing *between* several providers of one capability is yours to
-make today (`treg catalog search` shows them side by side with prices); treg does not silently
-pick or fail over for you.
+connect your own key instead.
+
+**Choosing between providers of one capability — the procedure.** `treg catalog get <id>` lists
+every provider serving the same job with `COST`, `WORKS` (the success rate treg has actually
+observed, with its sample size), `SPEED` (median) and `LAST OK`. Work down this order:
+
+1. **Match the inputs you actually HAVE.** An endpoint wanting a `profile_url` is not a substitute
+   when you hold a name and a domain, whatever it costs. This outranks price every time.
+2. **Reliability.** A high `WORKS` with a real sample beats a rounder number with a tiny one:
+   `99% (121)` is stronger evidence than `100% (8)`.
+3. **Price.** Spreads inside one capability reach 200×, so this is usually where the money is.
+4. `LAST OK` breaks ties. A bare age means a real call came back; a **`✓` age is the catalog's own
+   verification stamp, not live traffic**; `—` means nobody has verified it and nobody has called it.
+
+If a call fails with **429 / 5xx / a timeout, try the next provider** — you know its parameters, so
+you can build its request; tell the human which one you switched to. **Never retry a 4xx
+elsewhere**: that is usually your parameters, and retrying burns the team's money on N providers for
+one mistake.
+
+treg does **not** choose or fail over for you, by design: only you know which inputs you hold, and
+treg relays your request rather than rewriting it.
 
 Money rules for agents:
 - The price is shown BEFORE you call (`treg catalog get`, or `estimated_cost_usd` in

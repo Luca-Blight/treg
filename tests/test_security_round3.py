@@ -65,7 +65,8 @@ async def test_delete_org_removes_run_records(clients: AsyncClient):
     async with session_maker() as s:
         before = len((await s.execute(select(RunRecord).where(RunRecord.org_id == org_id))).scalars().all())
     assert before >= 1
-    r = await clients.delete(f"/orgs/{org_id}")
+    slug = (await clients.get("/orgs")).json()[0]["slug"]
+    r = await clients.delete(f"/orgs/{org_id}?confirm={slug}")
     assert r.status_code == 200, r.text
     async with session_maker() as s:
         after = len((await s.execute(select(RunRecord).where(RunRecord.org_id == org_id))).scalars().all())
