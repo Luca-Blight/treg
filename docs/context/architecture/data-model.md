@@ -147,3 +147,15 @@ no `TREG_SECRET_KEY` on a real DB (an ephemeral key would lose every stored secr
 
 > **Tenant isolation shipped:** resources are scoped by `org_id` and a token = a `(user, org)` membership.
 > See [multi-tenancy](multi-tenancy.md). `owner` (creator email) is retained for audit + the role gate.
+
+## `CapabilityPin` — "for this job, our team uses this provider"
+
+One row per `(org, capability)`. Deliberately **not** a `DenyRule`: a deny is negative and closed, so
+blocking eight of nine providers leaves the ninth allowed the day a tenth joins the catalog. A pin is
+positive and stays correct as the catalog grows.
+
+It is a gate, not a hint — a catalog call to a different provider of a pinned capability is refused
+in `_resolve_marketplace_call`, before anything is reserved, and the 403 carries `use_endpoint` so
+the caller is told what to use instead rather than just "no". Both halves are validated against the
+catalog when the pin is set, because a typo would otherwise block a job the team really uses and
+surface at 3am in an agent's log. See [catalog](catalog.md) and `docs/CAPABILITY-CHOICE-PLAN.md`.
