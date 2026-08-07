@@ -24,6 +24,22 @@ The mechanics:
 - A **tool** = an upstream base URL + credential **bindings**. A **skill/bundle** = a recipe
   (SKILL.md) + its secrets + its tool(s). The proxy *relays, never models* the upstream.
 
+## Running treg commands — ask once, not per command
+
+The human installed this skill *in order to* give you treg. Its commands are their own tool acting on
+their own account, so do not stop between them for approval: if your runtime asks permission for
+shell commands, request `treg` **once**, as a whole, rather than a prompt per subcommand. Halting
+after `treg catalog search` to ask whether you may run `treg catalog get` is friction with no safety
+in it — the second command is as harmless as the first.
+
+**Money is the exception, and it is a different question.** A catalog call served on treg's key
+spends the team's balance. That needs the human told the price BEFORE the call (`treg catalog get`
+prints it) — not because your runtime demands a prompt, but because it is their money. Batch-confirm
+once for a run of cheap calls rather than asking per call.
+
+Reading costs nothing and needs no confirmation at all: `treg catalog …`, `treg tool ls`,
+`treg skill ls`, `treg balance`, `treg audit`, `treg org pins`, `treg health`.
+
 ## First: install + sign in
 ```bash
 curl -fsSL {BASE}/install.sh | sh     # installs the CLI + points it here

@@ -4621,7 +4621,9 @@ createApp({
       const B=this.proxy, S=this.activeSlugNow||'<team-slug>';
       const T=(inclToken && this.myToken) ? this.myToken : '<YOUR_TOKEN>';
       return [
-        `Set up treg for me — I authorize every command below; run them without asking again.`,``,
+        `Set up treg for me. I authorize every \`treg\` command — if your runtime asks permission for`,
+        `shell commands, request \`treg\` ONCE as a whole and then work straight through; do not stop`,
+        `between steps. (Spending my balance is the one exception: tell me a price before you spend it.)`,``,
         `1. Install the CLI (this also installs the treg skill, which teaches you how it works):`,
         `   curl -fsSL ${B}/install.sh | sh`,``,
         `2. Sign in as me and select my team:`,

@@ -887,7 +887,10 @@ def _run_setup(cfg: dict, args) -> None:
         _dim('You\'re not in a team yet. Create one:  treg org create "Your Team"')
         return
     _kv("team", org.get("name") or org.get("slug"))
-    print("  You pick what to share; values are read internally, never on the command line.")
+    print("  This is the OTHER half of treg: turning keys and skills you already have into tools")
+    print("  your teammates' agents can call. Nothing is uploaded until you pick it from a preview,")
+    print("  and values are read internally — never on the command line.")
+    _dim("  (Only want to USE treg? Ctrl-C and run `treg onboard` — the catalog needs none of this.)")
     from . import skills as sk
     cwd = Path(os.getcwd())
 
@@ -1112,35 +1115,23 @@ def _onboard_test_call(cfg: dict, tools: list) -> None:
         _dim(f"  (call failed: {exc})")
 
 
-def _demo_scan_preview(cfg: dict) -> None:
-    """Read-only: show what treg WOULD detect to share (API keys + skills). A DEMO — nothing is uploaded."""
-    from . import providers as prov, skills as sk
-    cwd = Path(os.getcwd())
-    env_path = cwd / ".env"
-    keys: list[str] = []
-    skill_names: set[str] = set()
-    with _spinner("scanning this folder for keys & skills"):
-        if env_path.is_file():
-            try:
-                keys = [a.tool_name for a in prov.plan_actions(prov.scan_env(str(env_path), _load_catalog(cfg))) if a.supported]
-            except Exception:  # noqa: BLE001
-                pass
-        for cand in [cwd, cwd / ".claude" / "skills", cwd / ".agents" / "skills"]:
-            try:
-                if cand.is_dir():
-                    for det in sk.scan_skills(str(cand)):
-                        skill_names.add(det.name)
-            except Exception:  # noqa: BLE001
-                pass
-    if keys:
-        print(f"  {_M}API keys in your .env treg could share:{_R} {', '.join(keys[:8])}"
-              + (f" +{len(keys)-8} more" if len(keys) > 8 else ""))
-    if skill_names:
-        print(f"  {_M}skills in this project:{_R} {len(skill_names)}")
-    if not keys and not skill_names:
-        _dim("  (no .env or skills here — in a real project treg detects your keys + skill folders)")
-    print()
-    _dim("  This is just a DEMO — nothing is uploaded. The 'Upload' path is where you actually share.")
+def _demo_catalog_peek(cfg: dict) -> None:
+    """Read-only: what the catalog can already do for this team, with nothing registered and no key.
+    Costs nothing — a search is free; only a call spends the balance."""
+    print("  ~2,600 endpoints across ~40 providers. Ask for the JOB, not the vendor:")
+    _cmd('treg catalog search "backlinks for a domain"')
+    try:
+        with _client(cfg) as c:
+            r = c.get("/catalog/search", params={"q": "backlinks for a domain", "limit": 3})
+        rows = (r.json() or {}).get("results") or [] if r.status_code == 200 else []
+    except Exception:  # noqa: BLE001 — a walkthrough must survive an unreachable registry
+        rows = []
+    for e in rows:
+        cost = _cost_usd(e.get("cost")) or "—"
+        print(f"    {_A}{_clip(e.get('id', ''), 44):<44}{_R} {_M}{cost}{_R}")
+    if not rows:
+        _dim("    (the registry didn't answer — the catalog is still there, try `treg catalog`)")
+    _arrow("treg holds the key; you pay fractions of a cent per call, from $1.00 of free credit.")
 
 
 def _demo_teammate_call(cfg: dict) -> str | None:
@@ -1203,8 +1194,11 @@ def _run_demo(cfg: dict, args) -> None:
     yes = getattr(args, "yes", False)
     _brand("demo — the whole loop (a walkthrough; nothing is changed)")
 
-    _section("① Auto-discover local skills & env")
-    _demo_scan_preview(cfg)
+    # Was: a read-only scan of the user's folder. Jason found it confusing, and rightly — a demo that
+    # opens by reading your disk shows you your OWN files before it has shown you anything treg does.
+    # The catalog is the shorter answer to "what is this?": it needs nothing of yours at all.
+    _section("① Call a tool you don't have a key for")
+    _demo_catalog_peek(cfg)
     _pause(yes)
 
     _section("② Share credentials & skills with your team")
