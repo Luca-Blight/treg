@@ -682,6 +682,12 @@ Four rules worth keeping:
 Team policy sits on top: `CapabilityPin` (see [data-model](data-model.md)) lets an org fix a
 capability to one provider, enforced in `_resolve_marketplace_call` before anything is reserved.
 
+Its boundary, verified rather than assumed: a pin gates the **catalog id**, which is the only route
+to treg's own key — so it cannot be side-stepped to spend our money (a URL-passthrough call resolves
+against the org's OWN tools and 404s without one). A team holding its own key for another provider
+can still call that provider by URL; that is their credential and their bill, and `DenyRule` —
+host-scoped, applied to every shape of call — is the tool for blocking it.
+
 ## Security
 
 PII IS THE HARD RULE. This repo is public, and every captured example ships in it. Three checks

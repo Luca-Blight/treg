@@ -207,10 +207,16 @@ async def test_delete_org_cascades_and_is_owner_only(c):
     org_id, otok, mtok, _, _ = await _team_with_member(c)
     sid = (await c.post("/secrets", headers=_h(otok), json={"name": "k", "value": "V"})).json()["id"]
     await c.post("/tools", headers=_h(otok), json={"name": "echo", "base_url": "http://upstream", "secret_id": sid})
+    slug = next(o["slug"] for o in (await c.get("/orgs", headers=_h(otok))).json()
+               if o["org_id"] == org_id)
     # a member cannot delete the org
-    assert (await c.delete(f"/orgs/{org_id}", headers=_h(mtok))).status_code == 403
+    assert (await c.delete(f"/orgs/{org_id}?confirm={slug}", headers=_h(mtok))).status_code == 403
+    # ...and NOBODY deletes it without naming it: this route sits one segment above every other org
+    # route, so a client that normalizes `..` turns DELETE /orgs/{id}/<anything>/.. into this call.
+    assert (await c.delete(f"/orgs/{org_id}", headers=_h(otok))).status_code == 422
+    assert (await c.delete(f"/orgs/{org_id}?confirm=wrong", headers=_h(otok))).status_code == 422
     # the owner can — and every membership is gone (both tokens now invalid)
-    assert (await c.delete(f"/orgs/{org_id}", headers=_h(otok))).status_code == 200
+    assert (await c.delete(f"/orgs/{org_id}?confirm={slug}", headers=_h(otok))).status_code == 200
     assert (await c.get("/tools", headers=_h(otok))).status_code == 401
     assert (await c.get("/tools", headers=_h(mtok))).status_code == 401
 

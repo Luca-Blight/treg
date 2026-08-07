@@ -36,7 +36,7 @@ INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 import httpx
 from pathlib import Path
 
-from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -3153,12 +3153,23 @@ async def leave_org(
 
 @app.delete("/orgs/{org_id}")
 async def delete_org(
-    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+    org_id: int, confirm: str = Query(..., min_length=1),
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
+    """Delete a team and everything in it (owner only). `?confirm=<slug>` must match.
+
+    The confirmation is REQUIRED by the API, not just collected by the clients that already ask for
+    it. This route is irreversible and sits one path segment above every other org route, so any
+    client that normalizes `..` turns `DELETE /orgs/{id}/<anything>/..` into this call — that is how
+    `treg org unpin ..` deleted a team during testing. A request arriving without the slug it is
+    about to destroy is not a request anyone meant to send."""
     _require_owner_of(org_id, caller)
     org = await db.get(Org, org_id)
     if org is None:
         raise HTTPException(status_code=404, detail="org not found")
+    if confirm != org.slug:
+        raise HTTPException(status_code=422, detail=(
+            f"to delete this team, confirm with its slug: ?confirm={org.slug}"))
     await _cascade_delete_org(org, db)
     await db.commit()
     return {"deleted_org": org_id}
@@ -3690,12 +3701,19 @@ async def set_capability_pin(
             "alternatives": [p for p in providers if p != body.provider]}
 
 
-@app.delete("/orgs/{org_id}/pins/{capability}")
+@app.delete("/orgs/{org_id}/pins")
 async def clear_capability_pin(
-    org_id: int, capability: str,
+    org_id: int, capability: str = Query(..., min_length=1, max_length=200),
     caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
 ) -> dict:
-    """Remove a pin (admin+) — the capability goes back to the caller's choice."""
+    """Remove a pin (admin+) — the capability goes back to the caller's choice.
+
+    The capability is a QUERY parameter, not a path segment, and that is a safety decision rather
+    than a style one. As `/orgs/{id}/pins/{capability}` it was one keystroke from a catastrophe:
+    every normalizing HTTP client (httpx included) rewrites `/orgs/1/pins/..` to `/orgs/1` BEFORE
+    sending it — which is DELETE /orgs/{id}, the delete-the-team route. `treg org unpin ..` really
+    did destroy an org in testing. Server-side validation cannot defend against it, because the
+    rewrite happens in the client; taking the value out of the path removes the class entirely."""
     _require_admin_of(org_id, caller)
     row = (await db.execute(select(CapabilityPin).where(
         CapabilityPin.org_id == org_id, CapabilityPin.capability == capability))).scalar_one_or_none()

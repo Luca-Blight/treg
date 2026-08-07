@@ -173,7 +173,7 @@ def _admin_client(cfg: dict) -> httpx.Client:
     return httpx.Client(base_url=cfg["base_url"], headers={"X-Treg-Token": token, "ngrok-skip-browser-warning": "1"}, timeout=30.0)
 
 
-def _active_org_id(cfg: dict, c: httpx.Client) -> int | None:
+def _active_org_id(cfg: dict, c: httpx.Client, *, strict: bool = True) -> int | None:
     """The active org's numeric id (for /orgs/{id}/... endpoints), resolved via GET /orgs.
 
     A MACHINE identity (an agent token) cannot call `/orgs` — the server refuses it there on purpose
@@ -185,6 +185,17 @@ def _active_org_id(cfg: dict, c: httpx.Client) -> int | None:
         me = c.get("/auth/me")
         if me.status_code == 200 and me.json().get("org_id"):
             return int(me.json()["org_id"])
+        # An invalid or expired token used to fall through to the caller's bare "no active org",
+        # which sends the reader to fix org config when the real problem is authentication. 21
+        # commands printed that message, so the honest answer belongs here, once.
+        # `strict=False` for callers that only ENRICH output (the pin marker on `catalog get`):
+        # the catalog is public, so a signed-out reader must still get the page. sys.exit raises
+        # SystemExit, which `except Exception` does not catch — a try/except around the call site
+        # would NOT have saved it.
+        if strict and 401 in (r.status_code, me.status_code):
+            sys.exit("treg: not signed in, or this token is invalid/expired.\n"
+                     "  Sign in:            treg login\n"
+                     "  Using TREG_TOKEN?   check it is the token `org agent-new` printed.")
         return None
     orgs = r.json()
     target = _effective_org(cfg)
@@ -3726,7 +3737,7 @@ def cmd_org_pin(args, cfg) -> None:
         if org_id is None:
             sys.exit("no active org")
         r = c.post(f"/orgs/{org_id}/pins",
-                   json={"capability": args.capability, "provider": args.provider})
+                   json={"capability": _valid_capability(args.capability), "provider": args.provider})
         if r.status_code >= 400:
             _show(r)
             return
@@ -3755,12 +3766,28 @@ def cmd_org_pins(args, cfg) -> None:
         print(f"  {_clip(x['capability'], 34):<34} {_clip(x['provider'], 16):<16} {_M}{x['created_by']}{_R}")
 
 
+_CAPABILITY_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,199}$")
+
+
+def _valid_capability(value: str) -> str:
+    """A capability id, or exit. Not cosmetic validation: a value like `..` used to be interpolated
+    into the URL path, and every normalizing HTTP client rewrites `/orgs/1/pins/..` to `/orgs/1` —
+    the DELETE-the-team route — before the request is sent. The value now travels as a query
+    parameter, and this refuses anything URL-shaped as well, so neither layer alone has to hold."""
+    v = (value or "").strip()
+    if not _CAPABILITY_RE.match(v):
+        sys.exit(f"treg: {value!r} is not a capability id (lowercase letters, digits, dots, dashes)."
+                 f"\n  See one with:  treg catalog get <endpoint-id>")
+    return v
+
+
 def cmd_org_unpin(args, cfg) -> None:
+    cap = _valid_capability(args.capability)
     with _client(cfg) as c:
         org_id = _active_org_id(cfg, c)
         if org_id is None:
             sys.exit("no active org")
-        _show(c.delete(f"/orgs/{org_id}/pins/{args.capability}"))
+        _show(c.delete(f"/orgs/{org_id}/pins", params={"capability": cap}))
 
 
 def cmd_org_deny(args, cfg) -> None:
@@ -3836,7 +3863,7 @@ def cmd_org_delete(args, cfg) -> None:
         org_id = _active_org_id(cfg, c)
         if org_id is None:
             sys.exit("no active org")
-        r = c.delete(f"/orgs/{org_id}")
+        r = c.delete(f"/orgs/{org_id}", params={"confirm": args.slug})
     if r.status_code == 200:
         _clear_active_if_targeted(cfg)
     _show(r)
@@ -3954,7 +3981,7 @@ def _pinned_provider(cfg: dict, capability: str | None) -> str | None:
         return None
     try:
         with _client(cfg) as c:
-            org_id = _active_org_id(cfg, c)
+            org_id = _active_org_id(cfg, c, strict=False)
             if org_id is None:
                 return None
             r = c.get(f"/orgs/{org_id}/pins")

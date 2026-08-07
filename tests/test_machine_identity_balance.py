@@ -7,6 +7,7 @@ symptom. Both are pinned here.
 
 from __future__ import annotations
 
+import pytest
 from httpx import AsyncClient
 
 
@@ -68,3 +69,45 @@ async def test_a_missing_org_is_indistinguishable_from_one_you_cannot_see(client
     existing = await clients.get(f"/orgs/{org_id}/balance", headers=other)
     assert missing.status_code == existing.status_code == 403
     assert missing.json() == existing.json()
+
+
+# ---- what a BAD token is told, and what stays public --------------------------------------------
+def test_an_invalid_token_is_named_as_such_not_as_a_missing_org(monkeypatch, capsys):
+    """`_active_org_id` returns None both when the token is bad and when there is genuinely no org.
+    21 commands turned that into a bare "no active org", sending the reader to fix org config when
+    the real problem was authentication."""
+    import httpx
+    from treg import cli
+
+    class _Resp:
+        status_code = 401
+        def json(self): return {"detail": "invalid token"}
+
+    class _C:
+        def get(self, path, **kw): return _Resp()
+
+    with pytest.raises(SystemExit) as exc:
+        cli._active_org_id({"base_url": "http://x", "token": "bad"}, _C())
+    assert "invalid/expired" in str(exc.value) and "treg login" in str(exc.value)
+
+
+def test_the_public_catalog_still_renders_when_signed_out(monkeypatch):
+    """`catalog get` only ENRICHES its table with the team's pin, so a signed-out reader must still
+    get the page. The auth exit is a SystemExit, which `except Exception` does NOT catch — a
+    try/except at the call site would not have saved this, which is why the caller passes
+    strict=False instead."""
+    from treg import cli
+
+    class _Resp:
+        status_code = 401
+        def json(self): return {"detail": "invalid token"}
+
+    class _C:
+        def get(self, path, **kw): return _Resp()
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    monkeypatch.setattr(cli, "_client", lambda cfg: _C())
+    # must return None quietly, NOT exit the process
+    assert cli._pinned_provider({"base_url": "http://x"}, "tiktok.user.profile") is None
+    assert cli._active_org_id({"base_url": "http://x"}, _C(), strict=False) is None

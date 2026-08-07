@@ -394,6 +394,12 @@ class CapabilityPin(SQLModel, table=True):
     Deliberately per-capability, not per-provider: "we use Hunter for finding work emails" is a
     decision a team can hold in its head, whereas "we use Hunter" says nothing about the twelve other
     jobs Hunter also happens to serve.
+
+    **Boundary — a pin governs the CATALOG, not every route to a vendor.** It is enforced where an
+    endpoint is addressed by its catalog id, which is the only way to reach treg's own key, so it
+    cannot be side-stepped to spend OUR money. A team that holds its own key for another provider can
+    still call that provider by upstream URL: that is their credential and their bill, and blocking
+    it is what `DenyRule` (host-scoped, applied to every shape of call) is for. Two tools, two jobs.
     """
 
     id: int | None = Field(default=None, primary_key=True)

@@ -4148,7 +4148,7 @@ createApp({
         this.forgetActiveOrg(); await this.loadAll(); }
       catch(e){ this.orgErr='Leave failed: '+(e.detail||e.status); } },
     async deleteOrg(){ if(this.confirmDel!==this.activeSlugNow) return;
-      try{ await this.api('/orgs/'+this.activeOrgId,{method:'DELETE'});
+      try{ await this.api('/orgs/'+this.activeOrgId+'?confirm='+encodeURIComponent(this.activeSlugNow),{method:'DELETE'});
         this.confirmDel=''; this.forgetActiveOrg(); await this.loadAll(); }
       catch(e){ this.orgErr='Delete failed: '+(e.detail||e.status); } },
     // ---- Phase 2b: resource registration (secrets + tools) ----
