@@ -69,9 +69,92 @@ done
 
 ---
 
-# Part 1 - Tom founds Superdesign
+# Part 1 - The catalog (no key, no setup)
 
-## Step 1 - Tom signs in (the email door)
+Everything after this part needs a team, a secret and a registered tool before anything happens.
+The catalog needs none of them - it is the shortest path from "installed" to "got real data",
+and it is what treg now leads with.
+
+## Step 1 - Find a tool by what it DOES
+
+Tom has just installed the CLI. No team, no keys, nothing registered - and he can already work.
+He does not need to know which vendor sells backlink data; he searches by the **job**, and every
+hit shows what it costs.
+
+```bash
+treg catalog search "backlinks for a domain"
+```
+
+```
+76 matches for "backlinks for a domain" - showing 25
+
+  ENDPOINT                              PLATFORM   PROVIDER     COST
+  dataforseo.web.backlinks.summary      web        DataForSEO   $0.024/call
+  moz.links.summary                     web        Moz          $0.0025/call
+  majestic.backlinks.list               web        Majestic     $0.010/call
+```
+
+> Several providers usually serve one capability at different prices. treg shows them side by side
+> - **choosing is yours**; it does not silently pick or fail over for you.
+
+## Step 2 - Read the price before you spend
+
+Every catalogued endpoint carries its price, parameters and an example response. An agent is
+expected to read this and tell the human the cost *before* spending the team's balance.
+
+```bash
+treg catalog get tikhub.tiktok.user.profile
+```
+
+```
+tikhub.tiktok.user.profile
+Public TikTok profile by username (uniqueId) or secUid
+
+  provider  TikHub (tikhub)
+  call      GET /api/v1/tiktok/web/fetch_user_profile
+  cost      $0.001/success
+            charged on 2xx only
+  verified  2026-07-28
+```
+
+> An endpoint treg has no published price for is **refused**, never served for free - you are
+> told to connect your own key instead.
+
+## Step 3 - Call it, with no key anywhere
+
+No account with TikHub, no signup, no key on the machine. treg holds the credential, injects it
+server-side, and bills the call to the team's prepaid balance. Every new team starts with
+**$1.00 free**, which is hundreds of calls at this price.
+
+```bash
+treg call tikhub.tiktok.user.profile --query uniqueId=tiktok
+```
+
+> If your team already has its own key for that provider it wins automatically - and those calls
+> are never metered.
+
+## Step 4 - See exactly what it cost
+
+The balance is an append-only ledger in integer micro-USD (a millionth of a dollar), so a call
+costing a fraction of a cent is recorded exactly rather than rounded away. Out of balance is an
+HTTP **402** carrying the numbers an agent can act on.
+
+```bash
+treg balance
+```
+
+```
+  Balance  $0.9990   (999000 micro-USD)
+
+  RECENT
+  settle   -$0.0010   tikhub.tiktok.user.profile
+```
+
+> Only calls on treg's key cost balance. Your own keys, your own tools and vendor CLIs are free of it.
+
+# Part 2 - Tom founds Superdesign
+
+## Step 5 - Tom signs in (the email door)
 
 There is no `register`. Tom proves his email with a one-time code - and since it's his first time, that same
 act **creates** him plus a personal org (so there's never an empty state). The code is **emailed** to him;
@@ -90,7 +173,7 @@ Enter code: 429641
 works across every org he joins - no per-org tokens to juggle. (A dev box can set `TREG_EMAIL_DEV_MODE=true`
 to print the code inline instead of emailing it.)
 
-## Step 2 - Tom creates the team
+## Step 6 - Tom creates the team
 
 His personal org is just his own. Now he spins up the shared team and becomes its **owner**; his active org
 switches to it, so everything after runs there.
@@ -112,9 +195,9 @@ HOME=~/.treg-personas/tom treg org create "Superdesign"
 
 ---
 
-# Part 2 - Bob joins via the email door
+# Part 3 - Bob joins via the email door
 
-## Step 3 - Tom invites Bob
+## Step 7 - Tom invites Bob
 
 Tom invites a teammate by **email**. The invite attaches to that email and Tom gets a one-time code he
 *could* hand over - but Bob won't even need it.
@@ -134,7 +217,7 @@ HOME=~/.treg-personas/tom treg org invite bob@superdesign.dev --role member
 
 **Notice:** the invite is pending, addressed to Bob's email, valid 7 days (`--expires-days` to change).
 
-## Step 4 - Bob signs in as himself
+## Step 8 - Bob signs in as himself
 
 Switch to Bob. He proves his email the same way - and since it's his first time, this **creates** him too,
 with his own identity token and personal org. He never touches the invite code.
@@ -151,7 +234,7 @@ Enter code: 512740
 **Notice:** same door as Tom - the code lands in Bob's inbox, he enters it. The email is the identity - the
 door (GitHub / code) is just how you prove it.
 
-## Step 5 - Bob sees his invite (no code)
+## Step 9 - Bob sees his invite (no code)
 
 Because the invite is tied to Bob's now-proven email, he can just ask what's waiting for him. This is the
 full circle: proving the email reveals every invite addressed to it.
@@ -175,7 +258,7 @@ HOME=~/.treg-personas/bob treg invites
 
 **Notice:** no code, no copy-paste from Tom - the proven email is the proof.
 
-## Step 6 - Bob accepts
+## Step 10 - Bob accepts
 
 Bob joins Superdesign by naming the org. No code - his proven identity is the proof. His active org switches
 to Superdesign.
@@ -194,7 +277,7 @@ HOME=~/.treg-personas/bob treg accept superdesign
 
 **Notice:** Bob is now a **member** of Superdesign.
 
-## Step 7 - Bob's two hats
+## Step 11 - Bob's two hats
 
 One identity, two memberships - owner of his personal org, member of Superdesign. The same identity token
 works in both.
@@ -211,9 +294,9 @@ HOME=~/.treg-personas/bob treg org ls
 
 ---
 
-# Part 3 - Alice joins via the code door
+# Part 4 - Alice joins via the code door
 
-## Step 8 - Tom invites Alice as a viewer
+## Step 12 - Tom invites Alice as a viewer
 
 The other door: the **code**. First Tom invites Alice as a **viewer** - she'll be able to read and call, but
 not register anything.
@@ -233,7 +316,7 @@ HOME=~/.treg-personas/tom treg org invite alice@superdesign.dev --role viewer
 
 **Notice:** this time we **keep the code** - Alice uses it directly next.
 
-## Step 9 - Alice joins by code (no login first)
+## Step 13 - Alice joins by code (no login first)
 
 The contrast with Bob: Alice **never runs** `login`. The code itself proves her email, so `join` creates
 her, adds her to Superdesign, and saves her token - all in one command.
@@ -253,7 +336,7 @@ HOME=~/.treg-personas/alice treg org join ZTeW5ss-cXiyvzeMs3em-… --email alice
 **Notice:** one command created Alice, gave her a personal org, and made her a viewer - Tom never handled
 her token.
 
-## Step 10 - The viewer role has teeth
+## Step 14 - The viewer role has teeth
 
 Alice can read and call, but a viewer **cannot register** anything. Watch her get stopped.
 
@@ -270,9 +353,9 @@ HOME=~/.treg-personas/alice treg secret add testkey --value "nope"
 
 ---
 
-# Part 4 - A tool through the proxy
+# Part 5 - A tool through the proxy
 
-## Step 11 - Bob registers a secret
+## Step 15 - Bob registers a secret
 
 Unlike Alice, a **member** can register. Bob adds an API key - encrypted server-side, its value never
 returned again.
@@ -292,7 +375,7 @@ HOME=~/.treg-personas/bob treg secret add echo-key --value "sk-demo-secret-123"
 
 **Notice:** the secret is org-scoped (lives in Superdesign) and owned by Bob. A tool binds to it by `id`.
 
-## Step 12 - Bob registers a tool
+## Step 16 - Bob registers a tool
 
 A tool = an upstream `base_url` + how to inject the credential. We point at postman-echo so we can *see* the
 injection. A single `--secret` defaults to a `Bearer` token in the `Authorization` header.
@@ -314,7 +397,7 @@ HOME=~/.treg-personas/bob treg tool add echo --base-url https://postman-echo.com
 **Notice:** for multi-credential upstreams, add more bindings with `--bind` - treg applies every binding on
 each call.
 
-## Step 13 - Alice calls it (with no key)
+## Step 17 - Alice calls it (with no key)
 
 The whole point of treg. Alice is a **viewer** with **no secret** on her machine. Yet when she calls, the
 upstream sees Bob's key, injected server-side.
@@ -336,7 +419,7 @@ HOME=~/.treg-personas/alice treg call echo /get
 
 **Notice:** `authorization: Bearer sk-demo-secret-123` - Bob's secret, which Alice never had, saw, or stored.
 
-## Step 14 - Every call is on the record
+## Step 18 - Every call is on the record
 
 The proxy writes an audit row per call. The owner reviews the org's activity.
 
@@ -361,9 +444,9 @@ HOME=~/.treg-personas/tom treg calls --limit 5
 
 ---
 
-# Part 5 - Call shapes & skills
+# Part 6 - Call shapes & skills
 
-## Step 15 - Call by full URL (agent-native)
+## Step 19 - Call by full URL (agent-native)
 
 An agent often already knows the real upstream URL. Instead of `call <tool> <path>`, hand treg the **whole
 URL** - it matches the host to a registered tool and injects the key. No treg-specific knowledge needed.
@@ -378,7 +461,7 @@ HOME=~/.treg-personas/alice treg call https://postman-echo.com/get
 
 **Notice:** treg resolves the tool by **host**, so the agent-native full-URL form just works.
 
-## Step 16 - The raw HTTP underneath
+## Step 20 - The raw HTTP underneath
 
 `treg call` is sugar. Under the hood it's a plain HTTP request to `<proxy>/call/<upstream-url>` with your
 token header - any language, any agent, `curl`.
@@ -396,7 +479,7 @@ curl -s -H "X-Treg-Token: $ATOK" \
 **Notice:** the whole product in one line: prefix any upstream URL with the proxy, send your token, treg
 swaps in the real credential.
 
-## Step 17 - Draft a skill's registration
+## Step 21 - Draft a skill's registration
 
 A whole skill folder (a recipe + credential files) can register in one shot via a `treg.json` contract.
 `skill init` scans `SKILL.md` + the `.secret/` dir and drafts it - guessing the base URL and finding the
@@ -416,7 +499,7 @@ wrote /tmp/skills/echo-svc/treg.json
 **Notice:** it read the recipe and correctly guessed `base_url` + found the secret - fix anything it flagged,
 then register.
 
-## Step 18 - Upload the whole skill
+## Step 22 - Upload the whole skill
 
 One command turns the folder into a live tool: the recipe, the secret (value loaded from `.secret/`, never
 the json), and the tool - all created atomically as a **bundle**.
@@ -437,12 +520,12 @@ HOME=~/.treg-personas/bob treg skill add --dir /tmp/skills/echo-svc
 
 ---
 
-# Part 5b - Import: the magic bulk on-ramp
+# Part 6b - Import: the magic bulk on-ramp
 
 Everything above, but for your **whole environment at once**. This is the fastest way to fill a team's
 registry.
 
-## Step 18a - Turn your whole `.env` into tools
+## Step 22a - Turn your whole `.env` into tools
 
 `treg upload env` reads your `.env`, matches each variable against a catalog of ~80 providers, and
 registers the ones you pick as ready-to-call tools. Detection reads **names only**; the value is loaded
@@ -465,7 +548,7 @@ Registered 3/3 tools.
 `treg oauth connect` instead of a broken bearer key. Other auth shapes are handled too - an API-key
 header (`x-api-key`), a query-param key (`?apiKey=`), or a Basic pair (base64 `id:secret`).
 
-## Step 18b - Import a whole folder of skills
+## Step 22b - Import a whole folder of skills
 
 Point `treg upload skills` at a directory of skills. For each, it uses an existing `treg.json`, or
 **builds one** from the skill's script (base URL + the env var it reads) - registering API skills as
@@ -492,9 +575,9 @@ any of them with `treg skill install <name>` (or `--all`), which writes the reci
 
 ---
 
-# Part 6 - Org administration
+# Part 7 - Org administration
 
-## Step 19 - See the team
+## Step 23 - See the team
 
 The owner lists everyone and their roles. Role changes reference a member by `user_id`.
 
@@ -511,7 +594,7 @@ HOME=~/.treg-personas/tom treg org members
 
 **Notice:** the full roster from one command.
 
-## Step 20 - Promote Bob to admin
+## Step 24 - Promote Bob to admin
 
 Only an owner changes roles. Let's make Bob an **admin** - he can invite/manage, but transfer and delete
 stay owner-only. The last-owner guard stops an org from becoming ownerless.
@@ -529,7 +612,7 @@ HOME=~/.treg-personas/tom treg org set-role 2 admin
 
 **Notice:** one primitive (`set-role`) covers promotion, demotion, and ownership transfer.
 
-## Step 21 - Admin rights in action
+## Step 25 - Admin rights in action
 
 As a plain member Bob couldn't invite; as an **admin** he can. He invites a new teammate.
 
@@ -548,7 +631,7 @@ HOME=~/.treg-personas/bob treg org invite dana@superdesign.dev --role member
 
 **Notice:** Bob manages the team without being the owner.
 
-## Step 22 - Review pending invites
+## Step 26 - Review pending invites
 
 Admins see every invite still outstanding for the org. Accepted, revoked, and expired ones are filtered out.
 
@@ -566,7 +649,7 @@ HOME=~/.treg-personas/bob treg org invites
 
 **Notice:** only Dana shows - Bob's and Alice's invites are already accepted, so they're gone from the list.
 
-## Step 23 - Revoke an invite
+## Step 27 - Revoke an invite
 
 Plans change - Bob kills Dana's invite before she uses it. This hard-deletes the code so it can never be
 accepted.
@@ -582,7 +665,7 @@ HOME=~/.treg-personas/bob treg org revoke 3
 
 **Notice:** at join time: expired → `410`; revoked / used / unknown → `404 invalid or already-used invite`.
 
-## Step 24 - The role gate, from the viewer side
+## Step 28 - The role gate, from the viewer side
 
 Alice is a viewer. She can call tools, but she can't invite - that needs admin+. She gets refused.
 
@@ -599,9 +682,9 @@ HOME=~/.treg-personas/alice treg org invite eve@superdesign.dev --role member
 
 ---
 
-# Part 7 - Super-admin
+# Part 8 - Super-admin
 
-## Step 25 - Become the platform operator
+## Step 29 - Become the platform operator
 
 Super-admin sits *above* orgs - it reads and manages every tenant. Two ways to authorise: the platform
 bearer `TREG_ADMIN_TOKEN`, or a user flagged `is_superadmin`. We use the bearer, read from `.env` so it
@@ -616,7 +699,7 @@ admin token saved
 
 **Notice:** gated by `require_superadmin`, separate from org roles: a normal token → 403, no token → 401.
 
-## Step 26 - The whole platform at a glance
+## Step 30 - The whole platform at a glance
 
 One call gives totals across every tenant - the picture no single org owner can see. Plus
 `admin orgs / users / tools / health` for cross-tenant inventory.
@@ -634,7 +717,7 @@ treg admin stats
 **Notice:** portal-ready JSON: distributions by injector/host, a credential-health rollup, call volume, and
 growth counts.
 
-## Step 27 - Every org, across all tenants
+## Step 31 - Every org, across all tenants
 
 Cross-tenant visibility: Superdesign with its members + tools, plus everyone's personal orgs.
 
@@ -652,7 +735,7 @@ treg admin orgs
 
 **Notice:** the seam a support console or billing portal sits on later - same JSON, just rendered.
 
-## Step 28 - Grant a real user super-admin
+## Step 32 - Grant a real user super-admin
 
 The env bearer bootstraps; then you promote named users so they reach `/admin/*` with their own identity
 token - no shared secret to pass around.
@@ -672,9 +755,9 @@ Admin panel lights up for him.
 
 ---
 
-# Part 8 - The dashboard
+# Part 9 - The dashboard
 
-## Step 29 - The same registry, in the browser
+## Step 33 - The same registry, in the browser
 
 Open **treg.superdesign.dev** and sign in with the **email code** door (the same one you used in the terminal):
 type your email → click **Email me a sign-in code** → **check your inbox** for the 6-digit code → paste it
@@ -696,9 +779,9 @@ write UI is Phase 2).
 
 ---
 
-# Part 9 - Cleanup
+# Part 10 - Cleanup
 
-## Step 30 - Delete the tool
+## Step 34 - Delete the tool
 
 Bob (its creator, and an admin) removes the tool. The bound secret stays - only the tool goes. A member
 can't delete a teammate's resource.
@@ -714,7 +797,7 @@ HOME=~/.treg-personas/bob treg tool rm 1
 
 **Notice:** delete order matters: remove the tool (or its binding) before the secret it uses.
 
-## Step 31 - Delete the org (full cascade)
+## Step 35 - Delete the org (full cascade)
 
 The finale. Deleting an org is owner-only and **confirm-by-name** - you must type the slug, and it must be
 your active org. The cascade removes all memberships, tools, secrets, bundles, invites, and audit rows.
