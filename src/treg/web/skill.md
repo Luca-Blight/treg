@@ -1,17 +1,28 @@
 ---
 name: tools-registry
-description: How to use the treg CLI (tools-registry) — two jobs in one skill. (1) The team VAULT — call shared team tools without holding their credentials, and turn your local skills & API keys into shareable tools. (2) The CATALOG — call ~2,600 catalogued data endpoints (TikTok, Instagram, Reddit, SEO/SERP, enrichment, …), many with NO key at all, billed per call from the team's prepaid balance. Use when working with the `treg` command, when you need an upstream API but don't have the key locally, or when you need third-party data with no key at all.
+description: Call the tool you need for a task without owning its API key. (1) THE CATALOG — ~2,600 curated endpoints across ~40 providers (SEO/SERP, backlinks, social & trends, people/company enrichment, ads, scraping); most need no key at all and cost fractions of a cent from the team's prepaid balance. Search by what you want to DO, not by vendor. (2) YOUR OWN TOOLS — the team's registered keys, OAuth connections, vendor CLIs and skills, callable without holding the credential. Use when you need data or an API and have no key locally, when a task needs a paid provider (backlinks, keyword volume, work emails, ad creative, social data), or when working with the `treg` command.
 ---
 
-# tools-registry — the team vault + the data catalog
+# treg — the tool catalog for your agent
 
-A remote registry + **credential-injecting proxy**. You make the *real* upstream API call; it is
-routed through the proxy, which injects the auth **server-side**. You never hold the secret.
+**Ask for the task, not the tool.** When a job needs data or an API you have no key for — backlinks,
+keyword volume, a TikTok profile, a work email, competitor ad creative — do not stop and ask the
+human for a key. Search the catalog, read the price, call it.
+
+Two kinds of tool answer to the same token, through the same proxy, which injects the credential
+**server-side** so you never hold it:
+
+- **The catalog** — external endpoints treg can serve on **its own key**, billed per call from the
+  team's prepaid balance. No provider signup.
+- **Your own tools** — what the team registered: paid API accounts, OAuth connections, vendor CLIs,
+  skills. **Your own key always wins over treg's, and those calls are never metered.**
+
+The mechanics:
 
 - **Endpoint:** `{BASE}`  ·  **CLI:** `treg`  ·  the CLI is a thin client over the API.
 - **Auth:** every call sends `X-Treg-Token: <your token>`.
-- **Core idea:** a **tool** = an upstream base URL + a list of credential **bindings**. A **skill/bundle**
-  = a recipe (SKILL.md) + its secrets + its tool(s). The proxy *relays, never models* the upstream.
+- A **tool** = an upstream base URL + credential **bindings**. A **skill/bundle** = a recipe
+  (SKILL.md) + its secrets + its tool(s). The proxy *relays, never models* the upstream.
 
 ## First: install + sign in
 ```bash
@@ -24,10 +35,11 @@ Everything runs in your **active org** (first login creates a personal one). Tea
 email — see them with `treg invites`, accept with `treg accept` (or `treg org join <code>`). Switch
 teams: `treg org switch <slug>`.
 
-## Task — CATALOG (external data endpoints, many with no key)
+## Task — the catalog: data you have no key for (start here)
 
-~2,600 catalogued endpoints across ~40 providers: TikTok, Instagram, Reddit, YouTube, LinkedIn,
-Google SERP & keyword data, backlinks/SEO, company & people enrichment, web scraping, …
+~2,600 catalogued endpoints across ~40 providers, grouped by what they DO: keyword & rank tracking,
+backlinks & authority, AI visibility, trending & discovery, publishing to socials, people & company
+enrichment, ads management & creative, measurement.
 If nobody on the team holds a key, treg can serve eligible endpoints on **its own key**, billed per
 call to the team's prepaid balance (fractions of a cent; a new team starts with **$1.00 free**).
 No provider signup, no subscription.
@@ -44,10 +56,13 @@ Rules for spending someone's balance:
   `estimated_cost_micro`, `topup_url`). Recovery: `treg balance` → top up in the dashboard
   (Team → Billing) → or store the org's own key for that provider (own keys are never billed
   to the balance — they take priority automatically).
-- An org tool or secret for the provider always wins over treg's key; the catalog is the
-  fallback, not a replacement for keys the team already has.
+- An org tool or secret for the provider always wins over treg's key, automatically — the catalog
+  is the fallback, not a replacement for keys the team already has.
+- Several providers often serve the same capability at different prices. `treg catalog search`
+  shows them side by side; **picking one is your call** — treg does not choose or fail over for you.
+- An endpoint with no published price is refused rather than served free; connect your own key.
 
-## Task — VAULT: call a shared tool (use the team's keys without holding them)
+## Task — your own tools: call one the team registered
 **You already know the upstream API. Just build the real request and prefix it.** No treg
 vocabulary, no special params — use the API exactly as its own docs say:
 ```
@@ -71,7 +86,7 @@ treg run stripe -- get /v1/balance          # local
 treg run --server agentmail-cli inboxes list # server-side
 ```
 
-## Task — VAULT: share your keys & skills (turn them into shared tools)
+## Task — share your keys & skills so teammates' agents can use them
 **Bulk (the fast path):** point treg at a directory — it detects provider keys in the `.env` AND
 scans skill subdirs, then registers what you pick:
 ```bash
@@ -129,7 +144,7 @@ expires. Same storage; a credential can graduate from manual to auto with no mig
   → prints a consent URL; you approve in the browser; treg captures the token directly.
   One-time setup: add `{BASE}/oauth/callback` to your OAuth app's redirect URIs.
 
-## Task — VAULT: manage the team + monitor
+## Task — manage the team + monitor
 ```bash
 treg tool ls / secret ls / skill ls / calls          # inventory + audit log — scoped to the active org
 treg tool rm <id> / secret rm <id> / skill rm <id>   # secret rm is blocked while a tool binds it
