@@ -283,7 +283,10 @@ def test_the_card_price_is_the_servers_computed_usd():
     fn = INDEX[INDEX.index("platPrice(pl){") :][:1400]
     assert "typeof pf.usd==='number'" in fn
     assert "'$'+this.usdNum(pf.usd)+' / '+this.priceUnit(pf.type)" in fn
-    assert "if(pf) return null;" in fn  # priced but unpublished → say nothing, not "from —"
+    assert "return null; }" in fn  # priced but unpublished → say nothing, not "from —"
+    # "from" is a floor: an OAuth provider among the platform's providers makes the floor $0, even
+    # when metered providers publish a rate — that rate demotes to the tooltip.
+    assert fn.index("if(hasOauth) return {free:true") < fn.index("if(paid) return {free:false")
 
 
 def test_an_empty_price_from_object_reads_as_no_price_at_all():
@@ -295,13 +298,15 @@ def test_an_empty_price_from_object_reads_as_no_price_at_all():
 
 def test_a_converted_price_still_shows_the_providers_own_figure():
     """Nobody should have to wonder whether we invented the number: the native amount rides along
-    as a muted suffix wherever the provider bills in something other than USD."""
+    wherever the provider bills in something other than USD. On the platform card it rides in the
+    hover title, not the footer — "(1 credit)" after an already-long price wrapped the card."""
     assert ".cost-nat{" in INDEX
     fn = INDEX[INDEX.index("nativeAmount(c){") :][:500]
     assert "c.currency==='USD'" in fn  # ...and is omitted when there is nothing to convert
     assert "n.toFixed(2)" in fn  # money keeps its cents: ¥0.10, not ¥0.1
-    # all three price surfaces carry it
-    assert "platPrice(pl).native" in INDEX
+    # the two roomy price surfaces carry it inline; the platform card only in its tooltip
+    assert "platPrice(pl).native" not in INDEX
+    assert "'billed as '+p.native" in INDEX
     assert "r.priceNative" in INDEX
     assert 'v-if="costNative(e.cost)"' in INDEX
 
