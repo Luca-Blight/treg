@@ -117,8 +117,16 @@ cooldown stamped in the DB *before* the charge so a second web worker sees it, a
 limit, and an idempotency key derived from the threshold crossing — so a burst of concurrent calls
 that all notice the low balance produces exactly ONE charge.
 
-Authorization: `_billing_org` requires **admin or owner**. A card and a spend policy are the org's
-money, not a member's preference.
+Authorization splits by WHAT, not by who. `_billing_org` (the `/billing/*` routes — cards, top-ups,
+auto-top-up policy) requires **admin or owner**: a card and a spend policy are the org's money, not a
+member's preference.
+
+`GET /orgs/{id}/balance` is different, and deliberately so. Any **member** sees the figure and the
+in-flight holds; the **funding detail** (credit blocks, the ledger) stays admin+. It used to be
+admin-only, which meant a machine identity could not read the balance it was spending — while every
+402 already hands the caller `balance_micro`, and both `llms.txt` and `skill.md` tell an agent to run
+`treg balance` after a call. Refusing the number there while shipping it in an error was incoherent.
+(Reported by Jason, 2026-08-07.)
 
 ## The spend ceiling (`api.py`)
 
