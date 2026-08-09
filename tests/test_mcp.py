@@ -189,6 +189,23 @@ async def test_one_team_cannot_read_another_teams_tools(clients):
     assert "a-only-tool" not in names_b, f"org B saw org A's tool: {seen_b}"
 
 
+async def test_call_reaches_the_TEAMS_OWN_tools_too(clients):
+    """`my_tools` lists what the team registered; `call` must be able to call it.
+
+    The first version pre-checked the catalog and refused anything absent, which made `my_tools` a
+    list of things an agent could see and never use — found by trying it on production. `/call/`
+    already resolves a team's own tool first and falls back to a catalog id, so the fix was to stop
+    second-guessing it."""
+    made = await clients.post("/tools", json={"name": "echo", "base_url": "http://upstream"})
+    assert made.status_code == 200, made.text
+    token = clients.headers.get("X-Treg-Token")
+
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {"endpoint_id": "echo/anything"}, token=token)
+    assert out.get("status") == 200, out
+    assert "unknown endpoint" not in json.dumps(out)
+
+
 async def test_call_refuses_an_endpoint_that_does_not_exist(clients):
     async with mcp_session(clients) as c:
         out = await _call_tool(c, "call", {"endpoint_id": "nope.not.real"}, token="tok_whatever")
