@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Treg Support</title>
+<meta name="description" content="How to get help with treg — the tool catalog for your agent."/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/legal.css"/>
+</head>
+<body>
+
+<div class="topbar"><div class="in">
+  <a class="brand" href="/"><span class="glyph">▚</span> treg</a>
+  <span class="sp"></span>
+  <a class="nav on" href="/support">support</a>
+  <a class="nav" href="/terms">terms</a>
+  <a class="nav" href="/privacy">privacy</a>
+  <a class="nav" href="/tutorial">docs</a>
+</div></div>
+
+<div class="page">
+<div class="doc">
+
+  <div class="eyebrow">Help</div>
+  <h1>Support</h1>
+  <div class="stamp">
+    <span>treg is operated by Superdesign</span>
+    <span>Early access</span>
+  </div>
+
+  <div class="summary">
+    <h2>The short version</h2>
+    <ul>
+      <li><b>Email us:</b> <a href="mailto:jason@superdesign.dev">jason@superdesign.dev</a> — for anything at all, including account, billing and security.</li>
+      <li><b>Bugs and feature requests:</b> <a href="https://github.com/superdesigndev/tools-registry/issues" target="_blank" rel="noopener">open an issue on GitHub</a>. It is usually the fastest route, and the discussion stays public and searchable.</li>
+      <li><b>Security problems:</b> email rather than filing a public issue, so it can be fixed before it is described in the open.</li>
+      <li><b>Response time:</b> we aim for two working days. treg is in early access and there is no formal service-level agreement.</li>
+    </ul>
+  </div>
+
+  <h2 class="sec" id="s1"><span class="n">01</span>Before you write in</h2>
+  <p>Most questions are answered faster by one of these:</p>
+  <ul>
+    <li>The <a href="/tutorial">interactive tutorial</a> — what treg is, and the whole loop end to end.</li>
+    <li><code>treg --help</code>, and <code>treg &lt;command&gt; --help</code> for any command.</li>
+    <li><a href="/llms.txt">/llms.txt</a> — the file to point a coding agent at, so it can work out the rest itself.</li>
+  </ul>
+
+  <h2 class="sec" id="s2"><span class="n">02</span>Common things</h2>
+
+  <p><b>I cannot sign in.</b> treg has three doors: GitHub, Google, and a one-time code sent to your
+  email. If a code does not arrive, check spam for mail from <code>no-reply@treg.superdesign.dev</code>.
+  Signing in for the first time creates the account — there is no separate registration.</p>
+
+  <p><b>A call was refused for funds.</b> Catalog endpoints that treg serves on its own key are
+  metered against your team's prepaid balance. Run <code>treg balance</code> to see it, and
+  <code>treg topup</code> to add more. A new team starts with <b>$1.00 free</b>, and there is a
+  default ceiling of <b>$5 per team per day</b> so a runaway agent cannot spend without limit.</p>
+
+  <p><b>I want my API keys removed.</b> Deleting a tool or a secret in the dashboard removes the
+  stored credential. To delete an entire team and everything in it, use
+  <code>treg org delete &lt;slug&gt;</code>. If you would rather we did it, email us from the address
+  on the account.</p>
+
+  <p><b>Something is charging more than I expected.</b> Every metered call is recorded with what it
+  cost. <code>treg balance</code> shows the ledger. If a price looks wrong, tell us the endpoint id
+  and we will check it against the provider's own rate — the catalog's prices are read from provider
+  rate cards and from what we observe being charged, and both can drift.</p>
+
+  <p><b>Is my data used for anything else?</b> No. Credentials are encrypted at rest and used only to
+  make the calls you or your team ask for. The <a href="/privacy">privacy policy</a> is the full
+  answer.</p>
+
+  <h2 class="sec" id="s3"><span class="n">03</span>Reporting a security issue</h2>
+  <div class="note">
+    <p>Email <a href="mailto:jason@superdesign.dev">jason@superdesign.dev</a> with the details and
+    how to reproduce it. Please do not open a public issue first. We will confirm we received it,
+    tell you what we found, and credit you when the fix ships if you would like us to.</p>
+  </div>
+
+  <h2 class="sec" id="s4"><span class="n">04</span>Self-hosted installations</h2>
+  <p>treg is open source, and you can run your own registry with
+  <code>curl -fsSL https://treg.superdesign.dev/selfhost.sh | sh</code>. We are happy to help through
+  <a href="https://github.com/superdesigndev/tools-registry/issues" target="_blank" rel="noopener">GitHub
+  issues</a>, but we have no access to your deployment and cannot see its data — so please include
+  logs and versions rather than asking us to look.</p>
+
+  <h2 class="sec" id="s5"><span class="n">05</span>Contact</h2>
+  <p><b>Superdesign</b><br/>
+  Email: <a href="mailto:jason@superdesign.dev">jason@superdesign.dev</a><br/>
+  Issues: <a href="https://github.com/superdesigndev/tools-registry/issues" target="_blank" rel="noopener">github.com/superdesigndev/tools-registry/issues</a><br/>
+  Service: <a href="https://treg.superdesign.dev">treg.superdesign.dev</a></p>
+
+</div>
+
+<nav class="toc">
+  <a href="#s1">Before you write in</a>
+  <a href="#s2">Common things</a>
+  <a href="#s3">Security</a>
+  <a href="#s4">Self-hosted</a>
+  <a href="#s5">Contact</a>
+</nav>
+</div>
+
+<footer><div class="foot-in">
+  <span class="brand"><span class="glyph">▚</span> treg</span>
+  <span class="muted">— 100% open source</span>
+  <span class="sp"></span>
+  <a href="/support">support</a>
+  <a href="/terms">terms</a>
+  <a href="/privacy">privacy</a>
+  <a href="/tutorial">docs</a>
+  <a href="https://github.com/superdesigndev/tools-registry" target="_blank" rel="noopener">github ↗</a>
+</div></footer>
+
+<script>
+// Highlight the TOC entry for whichever section is currently on screen.
+const links = [...document.querySelectorAll('.toc a')];
+const byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+const seen = new Set();
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => e.isIntersecting ? seen.add(e.target.id) : seen.delete(e.target.id));
+  const first = [...byId.keys()].find(id => seen.has(id));
+  links.forEach(a => a.classList.toggle('on', a === byId.get(first)));
+}, {rootMargin: '-72px 0px -70% 0px'});
+document.querySelectorAll('h2.sec').forEach(h => io.observe(h));
+</script>
+
+</body>
+</html>
