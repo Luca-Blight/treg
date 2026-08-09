@@ -42,9 +42,23 @@ import httpx
 from mcp.server import MCPServer
 from mcp.server.mcpserver import Context
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.types import ToolAnnotations
 
 from . import catalog_store
 from .config import get_settings
+
+# Every tool must declare what it can DO, and the review process checks these against real behaviour.
+# Read-only means it changes nothing anywhere; open-world means it can change state visible on the
+# public internet; destructive means an effect that cannot be undone.
+_READS = ToolAnnotations(read_only_hint=True, destructive_hint=False, open_world_hint=False,
+                         idempotent_hint=True)
+# `call` is the honest exception, and it is honest in the strongest direction: it relays whatever the
+# caller asks to whichever upstream the endpoint names. That can be a POST that publishes, an email
+# that sends, or a DELETE — treg does not model the upstream, so it cannot promise the call is safe,
+# and claiming otherwise here would be a false assurance in exactly the place a model consults before
+# acting. It also spends real money from the team's balance.
+_CALLS = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_hint=True,
+                         idempotent_hint=False)
 
 # One shared in-process client. ASGITransport speaks straight to the app object — no socket, no DNS,
 # no TLS — so this is a function call wearing an HTTP shape, which is what makes reusing the real
@@ -164,7 +178,8 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
         "Returns each endpoint's id, provider, price per call, and whether treg can serve it "
         "without you owning an API key. Call this FIRST when a task needs data or an API you have "
         "no key for."
-    )
+    ),
+    annotations=_READS
 )
 async def catalog_search(query: str, limit: int = 8) -> dict:
     cat = catalog_store.load()
@@ -196,7 +211,8 @@ async def catalog_search(query: str, limit: int = 8) -> dict:
         "its own key, and the other providers that answer the same capability — with the success "
         "rate and speed treg has measured across real calls. Read this BEFORE call() so you can "
         "tell the human what it will cost."
-    )
+    ),
+    annotations=_READS
 )
 async def catalog_get(endpoint_id: str, ctx: Context) -> dict:
     """Goes through the HTTP route rather than the store: that route attaches the observed
@@ -222,7 +238,8 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> dict:
         "response unchanged, so you never hold an API key. Catalog calls on treg's key are metered "
         "from the team's prepaid balance; a team's own tool is never metered. Tell the human the "
         "price (from catalog_get) before calling anything that costs more than a cent."
-    )
+    ),
+    annotations=_CALLS
 )
 async def call(endpoint_id: str, params: dict | None = None,
                method: str | None = None, ctx: Context = None) -> dict:  # type: ignore[assignment]
@@ -269,7 +286,8 @@ async def call(endpoint_id: str, params: dict | None = None,
     description=(
         "The team's prepaid balance in USD, and any spend currently in flight. Check it when a call "
         "is refused for funds, or before a job that will make many calls."
-    )
+    ),
+    annotations=_READS
 )
 async def balance(ctx: Context) -> dict:
     token = _bearer(ctx)
@@ -296,7 +314,8 @@ async def balance(ctx: Context) -> dict:
         "What THIS team has registered and you can call without holding the credential: their own "
         "API keys, OAuth connections, vendor CLIs and skills. A team's own tool always wins over "
         "treg's catalog key, and those calls are never metered."
-    )
+    ),
+    annotations=_READS
 )
 async def my_tools(ctx: Context) -> dict:
     token = _bearer(ctx)

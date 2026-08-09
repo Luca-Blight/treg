@@ -1475,6 +1475,22 @@ async def privacy_page():
     return _legal_page("privacy.html")
 
 
+@app.get("/.well-known/openai-apps-challenge", include_in_schema=False)
+async def openai_apps_challenge():
+    """Domain-verification token for the OpenAI plugin directory.
+
+    The portal issues a token and fetches it here to confirm we control the host serving the MCP
+    endpoint. It must return THAT token as plain text and nothing else — the documentation is
+    explicit that JSON, a list, or several tokens all fail. 404 when unset, which is correct for
+    every deployment that is not ours: an empty file would read as a verification that never
+    completes.
+    """
+    token = (get_settings().openai_apps_challenge or "").strip()
+    if not token:
+        raise HTTPException(status_code=404, detail="not configured")
+    return PlainTextResponse(token, headers={"Cache-Control": "no-store"})
+
+
 @app.get("/support", include_in_schema=False)
 @app.get("/contact", include_in_schema=False)
 @app.get("/help", include_in_schema=False)

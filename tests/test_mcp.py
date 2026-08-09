@@ -255,3 +255,45 @@ async def test_the_price_is_visible_before_spending(clients):
     async with mcp_session(clients) as c:
         out = await _call_tool(c, "catalog_search", {"query": "backlinks", "limit": 5})
     assert any(r.get("usd_per_call") is not None for r in out["results"])
+
+
+# ---- what the plugin directory's review checks ---------------------------------------------
+
+async def test_every_tool_declares_what_it_can_do(clients):
+    """The submission portal validates `readOnlyHint`/`openWorldHint`/`destructiveHint` against the
+    tool's real behaviour, and a model consults them before acting. The four reading tools change
+    nothing; `call` is the honest exception — it relays whatever the caller asks to whichever
+    upstream the endpoint names, which can be a POST that publishes, an email that sends or a DELETE.
+    treg does not model the upstream, so it cannot promise the call is safe, and saying otherwise
+    here would be a false assurance in the exact place it matters."""
+    from treg.mcp import mcp as server
+
+    ann = {t.name: t.annotations for t in await server.list_tools()}
+    assert set(ann) == {"catalog_search", "catalog_get", "call", "balance", "my_tools"}
+    for name in ("catalog_search", "catalog_get", "balance", "my_tools"):
+        a = ann[name]
+        assert a and a.read_only_hint is True, name
+        assert a.destructive_hint is False and a.open_world_hint is False, name
+    a = ann["call"]
+    assert a.read_only_hint is False
+    assert a.destructive_hint is True and a.open_world_hint is True
+
+
+async def test_the_domain_challenge_is_404_until_configured(clients):
+    """Empty means unset, and unset must 404. An empty 200 would read to the portal as a
+    verification that never completes, which is harder to debug than a plain absence."""
+    r = await clients.get("/.well-known/openai-apps-challenge")
+    assert r.status_code == 404
+
+
+async def test_the_domain_challenge_returns_the_token_ALONE(clients, monkeypatch):
+    """The portal is explicit: that URL must return the token and nothing else — not JSON, not a
+    list, not several tokens. Returning a JSON body here is a documented rejection."""
+    from treg import config
+
+    settings = config.get_settings()
+    monkeypatch.setattr(settings, "openai_apps_challenge", "tok-abc-123", raising=False)
+    r = await clients.get("/.well-known/openai-apps-challenge")
+    assert r.status_code == 200
+    assert r.text == "tok-abc-123"
+    assert r.headers["content-type"].startswith("text/plain")
