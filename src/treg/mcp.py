@@ -216,22 +216,31 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> dict:
 
 @mcp.tool(
     description=(
-        "Call a catalog endpoint by its id. treg injects the credential server-side and relays the "
-        "provider's response unchanged — you never hold an API key. Metered from the team's prepaid "
-        "balance when treg's own key is used; free when the team registered its own. Tell the human "
-        "the price (from catalog_get) before calling anything that costs more than a cent."
+        "Call something through treg. Either a CATALOG endpoint by its id (from catalog_search), or "
+        "one of THIS TEAM'S own tools as '<tool-name>/<path>' (from my_tools) — e.g. "
+        "'render/v1/services'. treg injects the credential server-side and relays the provider's "
+        "response unchanged, so you never hold an API key. Catalog calls on treg's key are metered "
+        "from the team's prepaid balance; a team's own tool is never metered. Tell the human the "
+        "price (from catalog_get) before calling anything that costs more than a cent."
     )
 )
-async def call(endpoint_id: str, params: dict | None = None, ctx: Context = None) -> dict:  # type: ignore[assignment]
+async def call(endpoint_id: str, params: dict | None = None,
+               method: str | None = None, ctx: Context = None) -> dict:  # type: ignore[assignment]
     token = _bearer(ctx) if ctx else ""
     if not token:
         return _need_token()
-    ep = catalog_store.load().by_id.get(endpoint_id)
-    if ep is None:
-        return {"error": f"unknown endpoint {endpoint_id!r}",
-                "hint": "use catalog_search to find the right id"}
 
-    method = (ep.get("method") or "GET").upper()
+    # BOTH halves answer here, exactly as `treg call` does: `/call/{rest}` resolves a team's own tool
+    # first and falls back to a catalog id, so an org tool always wins over the catalog. Pre-checking
+    # the catalog and refusing anything absent would have made `my_tools` a list of things the agent
+    # could see and never call — which is how this gap was found.
+    ep = catalog_store.load().by_id.get(endpoint_id)
+    if ep is None and "/" not in endpoint_id:
+        return {"error": f"unknown endpoint {endpoint_id!r}",
+                "hint": "use catalog_search for a catalog id, or my_tools then "
+                        "'<tool-name>/<path>' for one of this team's own tools"}
+
+    method = (method or (ep.get("method") if ep else None) or "GET").upper()
     args = params or {}
     async with _api(token) as client:
         # The SAME route the CLI and the proxy use, so the tool ACL, deny rules, both daily caps,
