@@ -210,6 +210,8 @@ in the `X-Treg-Token` header on every call. Never share the upstream key - share
     treg org members | set-role <user_id> <role>  roster / change a role (owner)
     treg org invites | revoke <invite_id>         pending invites (admin+)
     treg org leave | delete <slug>                self-remove / delete (owner, confirm-by-name)
+    treg org pin <capability> --provider <p>      for THIS job the team uses THIS provider; calls to
+      treg org pins | unpin <capability>          any other provider of it are refused (admin+)
 
     treg secret add <name> (--value V | --file F | --dir D) [--kind env|oauth|secret_file]
     treg secret ls | rm <id> | update <id> …

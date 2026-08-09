@@ -674,6 +674,12 @@ Four rules worth keeping:
 - **Below `MIN_SAMPLES` we publish the count and nothing else.** "100% from two calls" is noise
   dressed as evidence, and on a quiet endpoint a rate could expose one org's activity.
 - **Sample size is always visible**, so `100% (8)` cannot beat `99% (121)` by looking rounder.
+- **"Free" is a price, not a missing one.** `platform_eligible` used to demand
+  `confidence in (verified, documented)` for every route, but `confidence` says how much we trust a
+  NUMBER we are about to charge — and a free route has no number. Requiring it anyway refused 61
+  endpoints across 8 providers (28 of Hunter's 35) as though "costs nothing" meant "we don't know",
+  which is the one distinction this file otherwise keeps apart. A `type: free` route is now eligible
+  without provenance; a PAID route without provenance is still refused.
 - **A claim never wears a measurement's badge.** The `LAST OK` column prints a bare age when a real
   call produced it and a **`✓` age** when it came from the catalog's `verified:` stamp — the same
   discipline `confidence:` already applies to price. The stamp is the cold-start answer: it covers

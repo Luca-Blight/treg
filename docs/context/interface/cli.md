@@ -32,6 +32,13 @@ once, base64-encoded with `X-Treg-Body-Encoding: base64`, which the server decod
 [api](api.md)). This is what lets `treg upload` push SQL-bearing recipes and `treg call` proxy
 SQL/HTML bodies through Cloudflare/Render. Transparent — no effect on any request that isn't blocked.
 
+`_active_org_id(cfg, c, strict=True)` resolves the active org's numeric id via `GET /orgs`, falling
+back to `/auth/me` when that 403s — which is what a MACHINE identity gets, since the server refuses it
+there on purpose. An invalid token now exits naming the real problem instead of the bare "no active
+org" that 21 commands used to print. `strict=False` is for callers that only ENRICH output (the pin
+marker on `catalog get`): the catalog is public, and `sys.exit` raises `SystemExit`, which
+`except Exception` does NOT catch — so a try/except at the call site would not have saved that page.
+
 ## Config + client (identity-first)
 `~/.treg/config.json` (`CONFIG_PATH`) is v2: `{base_url, token, email, active_org, identity, admin_token}`
 — **one bearer token + an active org slug** (`_load_config` migrates a legacy multi-org or flat config on

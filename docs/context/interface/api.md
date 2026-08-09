@@ -62,7 +62,8 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `require_identity`) accepts one with no code (403 if the invite's email ≠ yours). `list_members` /
   `remove_member`
   (`GET`/`DELETE /orgs/{id}/members[/{user}]`, admin+); `set_member_role` (`PATCH …/members/{user}`,
-  owner-only), `leave_org` (`POST /orgs/{id}/leave`), `delete_org` (`DELETE /orgs/{id}`, owner-only — via
+  owner-only), `leave_org` (`POST /orgs/{id}/leave`), `delete_org` (`DELETE /orgs/{id}?confirm=<slug>`, owner-only
+  AND the slug is REQUIRED — see hardening — via
   `_cascade_delete_org`, which now also sweeps each org's `RunRecord` rows);
   `list_invites` / `revoke_invite` (`GET`/`DELETE /orgs/{id}/invites[/{id}]`, admin+). Full behavior:
   [multi-tenancy](../architecture/multi-tenancy.md).
@@ -420,6 +421,18 @@ surfaced by `GET /tools` / `/bundles/{id}`).
   `base_url`/passthrough) into a `422`/`400`.
 - **CSRF/redirect:** `auth_logout` rejects a cross-`Origin` request (forced-logout CSRF); `oauth_start`
   pins `redirect_uri` to treg's own `/oauth/callback` (consent-phishing guard).
+- **Destructive routes name their target:** `DELETE /orgs/{id}` requires `?confirm=<slug>` and 422s
+  without it. It is irreversible and sits one path segment above every other org route, so any client
+  that normalizes `..` turns `DELETE /orgs/{id}/<anything>/..` into it — `treg org unpin ..` really
+  did delete a team in testing, because httpx rewrites the path before the request is sent. Server-
+  side validation cannot see that, so the defence is the confirmation, plus keeping user-supplied
+  values out of path segments (the pin capability moved to a query parameter for the same reason).
+  The CLI and the dashboard already made a human type the slug; now the API insists too.
+- **A machine identity can learn its own org:** `GET /auth/me` returns `org_id`/`org`/`role` when the
+  caller authenticated with a token. `require_identity` refuses machine identities on `/orgs` by
+  design (`create_org` hangs off it, so an agent could otherwise mint an org it owns) — but its token
+  IS one membership, and without this every `/orgs/{id}/…` command died with "no active org" for
+  exactly the callers those commands serve.
 - **Config default:** returning the OTP in the response (`dev_code`) is now gated by a dedicated
   `expose_dev_code` — true only on a local sqlite box, never on a real (Postgres) deploy — so a
   misconfigured `email_dev_mode` can't leak the code and enable an unauth takeover in prod.
