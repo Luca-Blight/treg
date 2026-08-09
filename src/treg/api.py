@@ -1474,6 +1474,17 @@ async def privacy_page():
     return _legal_page("privacy.html")
 
 
+@app.get("/support", include_in_schema=False)
+@app.get("/contact", include_in_schema=False)
+@app.get("/help", include_in_schema=False)
+async def support_page():
+    """How to get help. Three paths for one page because people guess differently, and because a
+    plugin-directory listing must give a Support URL that resolves — a 404 there reads as an
+    abandoned product. Like `/privacy`, this path is effectively public API once it is filed with a
+    directory or an OAuth console: don't rename it without updating them."""
+    return _legal_page("support.html")
+
+
 @app.get("/tutorial", include_in_schema=False)
 async def tutorial_page():
     """Standalone shareable interactive tutorial (same STEPS[] as the dashboard Help view)."""
