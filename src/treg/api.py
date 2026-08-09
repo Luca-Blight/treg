@@ -120,6 +120,15 @@ async def _local_owner(db: AsyncSession) -> User | None:
     return (await db.execute(select(User).where(User.email == LOCAL_USER_EMAIL))).scalar_one_or_none()
 
 
+# The MCP front door is OPTIONAL at import time. It lives in the `[server]` extra, and a deploy that
+# has not picked the dependency up yet must still serve the API — a missing optional feature is not a
+# reason for the whole registry to refuse to boot.
+try:
+    from . import mcp as _mcp
+except Exception:  # pragma: no cover - exercised by deploys without the extra
+    _mcp = None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
@@ -129,7 +138,14 @@ async def lifespan(app: FastAPI):
     limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
     app.state.http = httpx.AsyncClient(limits=limits, timeout=httpx.Timeout(float(get_settings().call_timeout_s)))
     try:
-        yield
+        if _mcp is None:
+            yield
+        else:
+            # `app.mount()` does NOT run a mounted app's lifespan, and the streamable-HTTP session
+            # manager builds its task group there. Without entering it here, every /mcp request fails
+            # with "Task group is not initialized" — silently, and only under real traffic.
+            async with _mcp.mcp_lifespan():
+                yield
     finally:
         await audit.drain()  # flush pending audit writes before tearing down
         await app.state.http.aclose()
@@ -6720,3 +6736,13 @@ async def _bundle_view(bundle_id: int, db: AsyncSession) -> dict:
         "tools": [_tool_view(t) for t in tools],
         "secrets": [_secret_view(s) for s in secrets],
     }
+
+
+# ---------------------------------------------------------------------------------------------
+# The MCP front door
+# ---------------------------------------------------------------------------------------------
+# Mounted LAST so it cannot shadow a route, and guarded so a deploy without the `[server]` extra's
+# `mcp` dependency still serves everything else. Its lifespan is entered in `lifespan` above — a
+# mounted app's own lifespan never runs, and this one builds the transport's task group there.
+if _mcp is not None:
+    app.mount("/mcp", _mcp.mcp_app)
