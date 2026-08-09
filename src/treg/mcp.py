@@ -113,11 +113,44 @@ def _body(r: httpx.Response) -> Any:
         return r.text
 
 
-async def _org_id(client: httpx.AsyncClient) -> int | None:
-    """The token's org. A per-org token has one baked in, and `/auth/me` reports it — the same route
-    the CLI uses, so a machine identity resolves here exactly as it does there."""
-    r = await client.get("/auth/me")
-    return _body(r).get("org_id") if r.status_code == 200 else None
+async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | None, dict | None]:
+    """Which team is this caller acting for? Returns `(org_id, slug, problem)`.
+
+    There are two kinds of token and they answer differently — a distinction that cost a production
+    bug here. A PER-ORG token (what `treg org agent-new` mints) has its org baked in and `/auth/me`
+    reports it. An IDENTITY token (what `treg login` gives, which is what most people actually hold)
+    belongs to a person who may be in several teams, so `/auth/me` reports no org at all and every
+    `/orgs/{id}/…` route needs to be told which one.
+
+    So: ask `/auth/me` first, then fall back to `/orgs` and take the active team — the same order
+    `cli._active_org_id` uses. When a person is in several teams and none is marked active, say so
+    and NAME them rather than silently picking one: reading the wrong team's balance is a confusing
+    answer, and spending from it would be worse.
+    """
+    me = await client.get("/auth/me")
+    if me.status_code == 200 and _body(me).get("org_id"):
+        body = _body(me)
+        return int(body["org_id"]), body.get("org"), None
+
+    r = await client.get("/orgs")
+    if r.status_code == 401 or me.status_code == 401:
+        return None, None, {"error": "not signed in, or this token is invalid or expired",
+                            "hint": "copy a fresh token from https://treg.superdesign.dev"}
+    if r.status_code != 200:
+        return None, None, {"error": "could not read the teams for this token"}
+    orgs = _body(r) or []
+    if not orgs:
+        return None, None, {"error": "this account is not a member of any team"}
+    active = [o for o in orgs if o.get("active")]
+    chosen = active[0] if active else (orgs[0] if len(orgs) == 1 else None)
+    if chosen is None:
+        return None, None, {
+            "error": "this account belongs to several teams and none is marked active",
+            "teams": [o.get("slug") for o in orgs],
+            "hint": "ask the human which team to use, then set TREG_TOKEN to that team's token "
+                    "(treg org agent-new) so the choice is unambiguous",
+        }
+    return int(chosen["org_id"]), chosen.get("slug"), None
 
 
 # --------------------------------------------------------------------------------------------
@@ -234,15 +267,15 @@ async def balance(ctx: Context) -> dict:
     if not token:
         return _need_token()
     async with _api(token) as client:
-        org_id = await _org_id(client)
-        if org_id is None:
-            return {"error": "could not resolve the team for this token",
-                    "hint": "the token may be expired — copy a fresh one from the dashboard"}
-        r = await client.get(f"/orgs/{org_id}/balance")
+        org_id, slug, problem = await _resolve_org(client)
+        if problem:
+            return problem
+        r = await client.get(f"/orgs/{org_id}/balance", headers={"X-Treg-Org": slug or ""})
     body = _body(r)
     if r.status_code != 200:
         return {"error": "could not read the balance", "detail": body}
     return {
+        "team": slug,
         "balance_usd": round((body.get("balance_micro") or 0) / 1_000_000, 6),
         "balance_micro": body.get("balance_micro"),
         "holds_micro": body.get("holds_micro"),
@@ -261,12 +294,16 @@ async def my_tools(ctx: Context) -> dict:
     if not token:
         return _need_token()
     async with _api(token) as client:
-        r = await client.get("/tools")
+        _, slug, problem = await _resolve_org(client)
+        if problem:
+            return problem
+        r = await client.get("/tools", headers={"X-Treg-Org": slug or ""})
     body = _body(r)
     if r.status_code != 200:
         return {"error": "could not list the team's tools", "detail": body}
     tools = body if isinstance(body, list) else body.get("tools", [])
     return {
+        "team": slug,
         "count": len(tools),
         "tools": [{"name": t.get("name"), "base_url": t.get("base_url"),
                    "description": t.get("description")} for t in tools],
