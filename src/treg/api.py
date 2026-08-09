@@ -51,7 +51,8 @@ from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
-from .models import ROLE_RANK, Bundle, CallRecord, CapabilityPin, DenyRule, Invite, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User
+from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold, Invite,
+                     LedgerEntry, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User)
 from .proxy import relay
 
 
@@ -1728,11 +1729,29 @@ async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
     return len(actives) <= 1
 
 
+# Every model carrying an `org_id`. Deleting the org without clearing these leaves rows pointing at
+# a row that no longer exists, and the delete fails with a 500 at the foreign key.
+#
+# This list has to be kept in step with the schema, and twice it was not: the money tables arrived
+# with the prepaid balance and `CapabilityPin` with capability pins, and neither was added here. The
+# effect was invisible until someone tried it — since every NEW team is granted $1.00, every team has
+# a CreditBlock, so NO team could be deleted at all. `test_org_delete_clears_every_org_scoped_table`
+# now walks the models module and fails if a new one is ever missed, rather than trusting this list.
+#
+# Order matters: LedgerEntry references a CreditBlock, so it goes first.
+_ORG_SCOPED_MODELS = (
+    Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project,
+    CapabilityPin, LedgerEntry, Hold, CreditBlock,
+    Membership,   # last: it is what makes the caller a member of the org being deleted
+)
+
+
 async def _cascade_delete_org(org: Org, db: AsyncSession) -> None:
     """Delete every org-scoped row then the org. Shared by owner delete_org + admin force-delete."""
-    for model in (Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project, Membership):
+    for model in _ORG_SCOPED_MODELS:
         for r in (await db.execute(select(model).where(model.org_id == org.id))).scalars().all():
             await db.delete(r)
+        await db.flush()   # honour the ordering above rather than leaving it to the unit of work
     await db.delete(org)
 
 
