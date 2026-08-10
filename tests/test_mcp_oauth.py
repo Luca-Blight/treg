@@ -779,3 +779,30 @@ async def test_omitting_the_resource_is_fine(clients):
     async with mcp_session(clients) as c:
         out = await _call_tool(c, "balance", {}, token=tok.json()["access_token"])
     assert "balance_usd" in out, "the default audience must be the one the MCP server accepts"
+
+
+async def test_a_null_origin_from_a_redirect_chain_is_not_treated_as_cross_site(clients):
+    """The intermittent failure Unclecode hit: approve worked on one attempt and was refused on
+    another. `Origin: null` is a browser reporting an OPAQUE origin, which happens after certain
+    redirect chains — a consent page reached by way of a sign-in bounce through GitHub, say. It is
+    not evidence of a cross-site request.
+
+    `Sec-Fetch-Site` is the corroboration that makes accepting it safe: the browser sets it and script
+    cannot, so another site cannot forge `same-origin`.
+    """
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "nullorigin@superdesign.dev")
+    _, challenge = _pkce()
+    body = {"client_id": client_id, "redirect_uri": "https://client.test/cb",
+            "response_type": "code", "code_challenge": challenge,
+            "code_challenge_method": "S256", "org_id": org_id, "decision": "allow"}
+
+    ok = await clients.post("/oauth/authorize", data=body, follow_redirects=False,
+                            headers={"Origin": "null", "Sec-Fetch-Site": "same-origin"})
+    assert ok.status_code == 302 and "code=" in ok.headers["location"]
+
+    # ...but `null` WITHOUT that corroboration is still refused: the guard is narrowed, not removed.
+    nope = await clients.post("/oauth/authorize", data=body, follow_redirects=False,
+                              headers={"Origin": "null", "Sec-Fetch-Site": "cross-site"})
+    assert nope.status_code == 403
+    assert "Sec-Fetch-Site: cross-site" in nope.json()["detail"], "the refusal must say what it saw"

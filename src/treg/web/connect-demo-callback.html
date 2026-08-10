@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>treg — returning…</title>
+<meta name="robots" content="noindex"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="stylesheet" href="/legal.css"/>
+</head>
+<body>
+<div class="page"><div class="doc" style="text-align:center;padding-top:60px">
+  <div style="font-size:22px">▚</div>
+  <p id="msg">Returning to the app…</p>
+</div></div>
+<script>
+// The popup's only job: hand the code back to the page that opened it, then close.
+// Posted to our OWN origin explicitly — a wildcard target would broadcast an authorization code to
+// whatever else happened to be listening.
+const q = new URLSearchParams(location.search);
+const payload = { source: "treg-connect-demo", code: q.get("code"), state: q.get("state"),
+                  error: q.get("error"), error_description: q.get("error_description") };
+if (window.opener) {
+  window.opener.postMessage(payload, location.origin);
+  document.getElementById("msg").textContent = payload.error ? "Cancelled. You can close this." : "Done — you can close this.";
+  setTimeout(() => window.close(), 600);
+} else {
+  document.getElementById("msg").textContent =
+    "This page is the OAuth callback for the connect demo. Open /connect-demo instead.";
+}
+</script>
+</body>
+</html>

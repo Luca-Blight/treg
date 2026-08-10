@@ -429,6 +429,29 @@ def _allowed_hosts() -> list[str]:
     return sorted(dict.fromkeys(hosts))
 
 
+def _allowed_origins() -> list[str]:
+    """Which `Origin` headers the transport will answer to.
+
+    `"*"` is NOT a wildcard here — the SDK compares origins literally, and only a `:*` port suffix is
+    special. Setting `["*"]` therefore allowed exactly one origin, the literal string "*", and
+    refused every browser with "Invalid Origin header". Nothing caught it: the test suite and every
+    CLI client send no Origin at all, so the check never ran until a real page called /mcp/.
+
+    So the list is built like `_allowed_hosts`: this deployment plus the loopback origins a developer
+    uses, extended by `TREG_MCP_ALLOWED_ORIGINS`. A browser-based MCP client — including a web page
+    like /connect-demo — needs its origin here to work at all.
+    """
+    origins: list[str] = []
+    public = get_settings().public_url.rstrip("/")
+    if public:
+        origins.append(public)
+    origins += [f"http://localhost:{p}" for p in ("8000", "18790")]
+    origins += [f"http://127.0.0.1:{p}" for p in ("8000", "18790")]
+    origins += ["http://localhost", "http://127.0.0.1"]
+    origins += [o.strip() for o in os.environ.get("TREG_MCP_ALLOWED_ORIGINS", "").split(",") if o.strip()]
+    return sorted(dict.fromkeys(origins))
+
+
 def build_mcp_app():
     """A fresh ASGI app for the MCP transport.
 
@@ -447,7 +470,7 @@ def build_mcp_app():
         transport_security=TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
             allowed_hosts=_allowed_hosts(),
-            allowed_origins=["*"],  # identity is the bearer token, not the origin; a CLI sends none
+            allowed_origins=_allowed_origins(),
         ),
     )
 

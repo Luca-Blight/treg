@@ -512,7 +512,20 @@ def _same_origin(request: Request) -> bool:
     if origin == get_settings().public_url.rstrip("/"):
         return True
     host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
-    return origin == f"{'https' if _is_https(request) else 'http'}://{host}"
+    if origin == f"{'https' if _is_https(request) else 'http'}://{host}":
+        return True
+    # `Origin: null` is a browser telling us the submitting document has an OPAQUE origin, which it
+    # does after certain redirect chains — a consent form reached by way of a sign-in bounce through
+    # GitHub, for instance. It is not evidence of a cross-site request, and treating it as one made
+    # the OAuth consent screen fail intermittently: refused on the attempt that went through
+    # sign-in, accepted on the retry that did not.
+    #
+    # `Sec-Fetch-Site` is the right corroboration. It is set by the browser and cannot be written by
+    # script, so a page on another site cannot forge `same-origin` — which is exactly what Origin was
+    # being used to prove.
+    if origin == "null" and request.headers.get("sec-fetch-site") in ("same-origin", "none"):
+        return True
+    return False
 
 
 # In-memory handshake state for `treg login` (single-instance; short-lived, fine to lose on restart).
@@ -1811,7 +1824,10 @@ async def oauth_authorize_approve(
     # Without this, a page anywhere could auto-submit a form and grant itself a team's balance —
     # the user is signed in, so their cookie would ride along. Same guard `auth_logout` uses.
     if not _same_origin(request):
-        raise HTTPException(status_code=403, detail="cross-origin authorization rejected")
+        raise HTTPException(status_code=403, detail=(
+            "cross-origin authorization rejected — this form must be submitted from treg's own "
+            f"consent page (saw Origin: {request.headers.get('origin') or 'none'}, "
+            f"Sec-Fetch-Site: {request.headers.get('sec-fetch-site') or 'none'})"))
 
     client, err = await _authorize_request(client_id, redirect_uri, response_type,
                                            code_challenge, code_challenge_method, db)
@@ -2034,6 +2050,24 @@ async def openai_apps_challenge():
     if not token:
         raise HTTPException(status_code=404, detail="not configured")
     return PlainTextResponse(token, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/connect-demo", include_in_schema=False)
+async def connect_demo_page():
+    """A page that PRETENDS to be someone else's app, so the OAuth flow can be seen end to end.
+
+    It uses only public endpoints — register, authorize, token, revoke, and /mcp/ — with nothing
+    privileged about being served from treg's own domain. The point is to watch the whole dance in a
+    browser before trusting it inside ChatGPT, where a failure surfaces as a shrug rather than an
+    error message.
+    """
+    return _legal_page("connect-demo.html")
+
+
+@app.get("/connect-demo/callback", include_in_schema=False)
+async def connect_demo_callback():
+    """Where treg sends the browser back. Hands the code to the opener and closes."""
+    return _legal_page("connect-demo-callback.html")
 
 
 @app.get("/support", include_in_schema=False)
