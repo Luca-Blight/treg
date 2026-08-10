@@ -193,6 +193,20 @@ async def test_tier4_relays_with_the_platform_key_and_charges_the_balance(client
     assert await _balance(clients) == before - EP_MICRO
     kinds = [e["kind"] for e in await _entries(clients)]
     assert kinds[:2] == ["settle", "reserve"], f"reserve→settle, newest first: {kinds}"
+    # The caller is TOLD what it cost. Both llms.txt and skill.md instruct an agent to report the
+    # price it spent, and without this the only way to find out is reading the balance before and
+    # after — which races with any other call and cannot attribute a figure to one request.
+    assert r.headers.get("X-Treg-Cost-Micro") == str(EP_MICRO), dict(r.headers)
+
+
+async def test_an_unmetered_call_carries_NO_cost_header(clients: AsyncClient, platform_on):
+    """A team's own key is never charged, so the header is ABSENT rather than `0` — zero would read
+    as "this was free" when the truth is "this was not ours to bill". Same call as tier 2 above, so
+    the only difference under test is the header."""
+    await clients.post("/secrets", json={"name": "tikhub", "value": "MKKEY"})
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200 and r.json()["auth"] == "Bearer MKKEY"
+    assert "X-Treg-Cost-Micro" not in r.headers
 
 
 async def test_tier2_shadows_tier4(clients: AsyncClient, platform_on):
