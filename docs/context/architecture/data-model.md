@@ -159,3 +159,17 @@ in `_resolve_marketplace_call`, before anything is reserved, and the 403 carries
 the caller is told what to use instead rather than just "no". Both halves are validated against the
 catalog when the pin is set, because a typo would otherwise block a job the team really uses and
 surface at 3am in an agent's log. See [catalog](catalog.md) and `docs/CAPABILITY-CHOICE-PLAN.md`.
+
+## OAuth (the MCP authorization server)
+
+Three tables, all added with the MCP front door. See `architecture/mcp-oauth.md` for the reasoning.
+
+| Table | Holds | Note |
+|---|---|---|
+| `OAuthClient` | a client that may ask for a token | one row shape for both DCR and CIMD, so authorize/consent/token never ask how it arrived |
+| `OAuthCode` | a one-time authorization code | deleted on redemption, not flagged — a used code that still exists is a race |
+| `OAuthRefresh` | a refresh token, **hashed** | `family_id` groups every descendant of one grant, so a replay can revoke all of them |
+
+`OAuthCode` and `OAuthRefresh` are org-scoped and therefore listed in `_ORG_SCOPED_MODELS`: a pending
+grant naming a deleted team is a dangling row. `OAuthClient` is not — a client is global, and nothing
+about it belongs to one team.

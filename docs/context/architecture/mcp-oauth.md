@@ -1,0 +1,170 @@
+---
+title: MCP — the front door for assistants, and treg as an OAuth authorization server
+status: shipped
+sources:
+  - src/treg/mcp.py
+  - src/treg/mcp_oauth.py
+  - src/treg/web/connect-demo.html
+related:
+  - architecture/auth-secrets.md
+  - architecture/proxy-model.md
+  - architecture/money.md
+  - interface/api.md
+---
+
+# MCP
+
+Everything else in treg is reached by a CLI or an HTTP call. This is the door an **assistant** comes
+through: ChatGPT, Claude Code, Cursor, or anything else that speaks the Model Context Protocol. It is
+mounted at `/mcp/` on the same app, so there is one deployment, one database and one set of rules.
+
+## Five tools, and why only five
+
+| Tool | Job |
+|---|---|
+| `catalog_search` | find endpoints by what you want to DO, with prices |
+| `catalog_get` | one endpoint in full: params, cost, reliability, sibling providers |
+| `call` | a catalog endpoint by id, or `<tool-name>/<path>` for the team's own tool |
+| `balance` | the team's prepaid balance |
+| `my_tools` | what the team registered that can be called without holding the key |
+
+Deliberately not one tool per provider. A catalog of 2,600 endpoints exposed as 2,600 MCP tools would
+bury the client's tool list and force a re-connect every time the catalog grew. `catalog_search`
+plus `call` covers all of it and stays the same size.
+
+`call` is annotated **destructive + open-world + non-idempotent**, which reads as pessimistic until
+you notice treg does not model the upstream: it relays to somebody else's API and cannot know whether
+that endpoint charges, writes or deletes. Claiming otherwise would be a guess presented as a fact.
+
+## In-process, not over the network
+
+Tools reach the rest of treg through `httpx.ASGITransport` against our own app — a real request
+through the real routes, without a socket. That matters because the enforcement rules (deny rules,
+capability pins, per-member tool access, the credential ladder, metering) live in those routes. A
+second path that "just read the database" would be a second implementation of every one of them,
+drifting quietly.
+
+The catalog is the one exception: read straight from `catalog_store`, which is already parsed in
+memory, so a search answers in about a millisecond. That is a **speed** choice, not a permission one.
+
+## Authentication: every tool, no exceptions
+
+All five require a credential. An uncredentialed `tools/call` is answered by
+`RequireAuthForProtectedTools` with **401** and a `WWW-Authenticate` header naming
+`/.well-known/oauth-protected-resource`.
+
+The header is the point. A friendly error inside a 200 tells a human what happened and tells a
+program nothing — a client that connects first and discovers auth lazily, which the spec allows,
+would read 200 as success. The challenge lives in front of the transport because a tool function can
+return neither a status code nor a header.
+
+`initialize` and `tools/list` stay open, and that is what makes the flow work: connect → list what
+exists → call → 401 → discover → authorize. If discovery itself challenged, a client could not scan
+the server to find the tools at all.
+
+The middleware fires only when there is **no** credential. Whether a token is valid needs the
+database, and doing that in middleware would put a second authentication implementation in front of
+the first.
+
+# treg as an authorization server
+
+Elsewhere treg speaks OAuth as a **client** (`oauth.py` signs in with GitHub, connects a provider
+account). Here it is the thing that **issues** tokens. Different direction, different module.
+
+Built refusal-first: the metadata and the `aud` check landed before anything could issue a token, so
+there was never a window where the server accepted credentials it had not learned to check.
+
+## The `aud` claim carries the weight
+
+The spec has a client send `resource=<the mcp url>` on the authorize and token requests, and the
+server copy it into the token's audience. Without checking it, a token a user granted to *another*
+MCP server would work here — they consented to that server, not to treg, and we would spend their
+balance on it.
+
+`read_access_token` therefore takes `expected_audience` as a **required argument with no default**.
+A test asserts that calling without it raises rather than defaulting to permissive.
+
+`/oauth/authorize` also refuses a `resource` we do not serve, up front. Accepting one mints a token
+that is valid, well-formed and silently useless — the failure then surfaces at the first tool call as
+"not signed in", pointing the reader at authentication when the problem was the audience.
+
+## Two doors in, one row out
+
+`OAuthClient` holds both kinds of client:
+
+- **DCR** (RFC 7591) — `POST /oauth/register`. Claude Code and most clients.
+- **CIMD** — the `client_id` IS an https URL we fetch. What ChatGPT uses.
+
+Supporting one and not the other locks out a whole family of clients, and it is the kind of gap that
+hides: the client you test with is the one that does not need the other path.
+
+The CIMD fetch is fenced because the URL is caller-chosen: https only, no redirects followed, a public
+address at connect time, 5s timeout, 64KB cap, reusing `health.safe_webhook_url` and
+`health.host_is_public` rather than a second copy. The document must also **claim its own URL**, or a
+document hosted anywhere could assert someone else's client_id and inherit their consent.
+
+`redirect_uris` are matched **exactly**, never by prefix — `https://good.test/cb.evil` starts with the
+registered value, and an open redirect under a registered host turns one sloppy page into stolen
+codes.
+
+## The consent screen is the security boundary
+
+It is the only place a human sees what they are granting, so it says it in words — *this spends the
+team's balance*, *uses the keys your team registered, without seeing them* — rather than listing
+scopes. It warns when a client registered itself, because DCR is open and anyone can arrive with any
+name.
+
+It carries the **team picker**, and each option shows that team's balance. Which team a client spends
+from is decided here, once, and fixed on the token for the life of the grant: a person in several
+teams is asked rather than guessed at. Showing the balance is not decoration — picking a $0.00 team
+is the failure this screen exists to prevent, and it happened before the balances were added.
+
+Approval is a POST (a GET that granted access could be triggered by any page that can navigate),
+same-origin, and the page inherits `X-Frame-Options: DENY`.
+
+`Origin: null` is accepted **only** when `Sec-Fetch-Site` corroborates it. A browser reports an opaque
+origin after certain redirect chains — a consent page reached by way of a sign-in bounce — and
+treating that as cross-site made approval fail intermittently.
+
+## Codes and refresh
+
+Authorization codes are single-use and **deleted before validation**, not flagged: holding one while
+checking leaves a window where two redemptions both read it. Same reasoning as the conditional UPDATE
+in `ledger.reserve` — let the database arbitrate.
+
+Refresh tokens rotate, and the retired row is **kept** so a replay is recognisable. A deleted token
+looks merely unknown; a retired one says somebody used a credential that had already been spent. At
+that point a client retrying after a dropped response and a thief with a copy are indistinguishable,
+so the whole `family_id` is revoked. Being wrong that way costs one sign-in; being wrong the other way
+costs somebody's balance.
+
+## Tokens are exchanged, not forwarded
+
+`_internal_auth` validates an OAuth access token and presents it onward as a short-lived (120s)
+identity token for the user it names, pinned to the org on the grant. That keeps OAuth inside `mcp.py`
+instead of teaching `require_member` a third token type, and it means `_resolve_org` must honour the
+pinned team rather than re-deriving it.
+
+Both were found by running the flow rather than testing the pieces: `_oauth_claims` validated tokens
+perfectly while every tool still forwarded the raw bearer and got "not signed in".
+
+## Sign-in mid-authorization
+
+A signed-out visitor to `/oauth/authorize` has the destination parked in a short-lived cookie and
+resumed at the **dashboard**, which is the one point every browser sign-in door ends at. It stores a
+relative path and honours only `/oauth/authorize`, so it cannot become a general "send me anywhere
+after login" primitive.
+
+## `/connect-demo`
+
+A page that pretends to be someone else's app and runs the whole flow — register, consent popup,
+token exchange, tool calls. It uses only public endpoints; being served from treg's domain gives it
+nothing. It exists because a failure inside ChatGPT surfaces as a shrug, and it earned itself
+immediately: it found that browsers were refused outright (`"*"` is not a wildcard in the SDK's
+origin check) and that consent failed intermittently on `Origin: null`.
+
+## What is deliberately NOT here
+
+- **No per-provider MCP tools.** See above.
+- **No routing or failover.** treg publishes facts and calls what it is told; the agent chooses.
+- **No second copy of the enforcement rules.** Everything goes through the API's own routes.
