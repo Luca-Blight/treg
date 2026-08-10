@@ -95,6 +95,19 @@ def _bearer(ctx: Context) -> str:
     return raw.removeprefix("Bearer ").removeprefix("bearer ").strip()
 
 
+def _oauth_claims(token: str) -> dict | None:
+    """If this is an OAuth access token we issued FOR THIS SERVER, its claims; otherwise None.
+
+    Returning None is not a rejection — it means "not an OAuth token", and the caller falls through
+    to the per-org and identity tokens that Codex uses. What IS a rejection, silently and on purpose,
+    is a token whose `aud` names a different resource: the user granted that to someone else's MCP
+    server, and honouring it here would spend their treg balance on a consent they never gave us.
+    """
+    from . import mcp_oauth
+
+    return mcp_oauth.read_access_token(token, expected_audience=mcp_oauth.mcp_resource_url())
+
+
 def _need_token() -> dict:
     return {
         "error": "not authenticated",

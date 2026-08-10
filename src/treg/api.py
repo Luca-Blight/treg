@@ -1475,6 +1475,30 @@ async def privacy_page():
     return _legal_page("privacy.html")
 
 
+@app.get("/.well-known/oauth-protected-resource", include_in_schema=False)
+@app.get("/.well-known/oauth-protected-resource/mcp", include_in_schema=False)
+async def oauth_protected_resource():
+    """Tells an MCP client which authorization server guards /mcp/ and what it may ask for.
+
+    Two paths for one document: the spec has clients look it up either at the host root or under the
+    resource's own path, and which one a given client tries is not something we get to choose.
+    """
+    from . import mcp_oauth
+
+    return JSONResponse(mcp_oauth.protected_resource_metadata(),
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/.well-known/oauth-authorization-server", include_in_schema=False)
+async def oauth_authorization_server():
+    """How to get a token: the authorize and token endpoints, S256, and that we accept both dynamic
+    registration and a client-id metadata document."""
+    from . import mcp_oauth
+
+    return JSONResponse(mcp_oauth.authorization_server_metadata(),
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
 @app.get("/.well-known/openai-apps-challenge", include_in_schema=False)
 async def openai_apps_challenge():
     """Domain-verification token for the OpenAI plugin directory.
