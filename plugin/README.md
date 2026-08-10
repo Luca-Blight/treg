@@ -58,7 +58,7 @@ Then:
 ```bash
 codex plugin list                   # treg@superdesign-local — not installed
 codex plugin add treg@superdesign-local     # the @marketplace suffix is REQUIRED
-codex plugin list                   # installed, enabled, 0.7.0
+codex plugin list                   # installed, enabled, 0.7.1
 ```
 
 Installed copies land in `~/.codex/plugins/cache/$MARKETPLACE/$PLUGIN/$VERSION/`. Confirm the skill

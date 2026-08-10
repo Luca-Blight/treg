@@ -1,6 +1,6 @@
 {
   "name": "treg",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Call ~2,600 curated API endpoints across ~40 providers without owning the keys — treg holds the credential and meters each call from your team's prepaid balance.",
   "author": {
     "name": "superdesign",
