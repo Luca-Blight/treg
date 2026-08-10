@@ -2171,6 +2171,13 @@ if _LOGO_DIR.exists():
     app.mount("/logos", StaticFiles(directory=str(_LOGO_DIR)), name="logos")
 
 
+# Demo recordings — the plugin-directory submission requires a publicly reachable video URL, and
+# hosting it ourselves means no third-party account decides whether reviewers can watch it.
+_MEDIA_DIR = _WEB_DIR / "media"
+if _MEDIA_DIR.exists():
+    app.mount("/media", StaticFiles(directory=str(_MEDIA_DIR)), name="media")
+
+
 # The interactive dashboard tour (matted screenshots) — served + its WebP images, at /dashboard-tour/.
 _TOUR_DIR = _WEB_DIR / "tour"
 if _TOUR_DIR.exists():
