@@ -578,3 +578,40 @@ class OAuthClient(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
     # cimd only: documents change, so a cached copy has to be refreshable rather than permanent.
     refreshed_at: datetime | None = Field(default=None)
+
+
+class OAuthCode(SQLModel, table=True):
+    """A one-time authorization code: the few seconds between a human approving and a client
+    redeeming.
+
+    Every field here exists to bind the code to the exact request that created it, because a code is
+    a bearer credential travelling through a browser redirect — through the user's history, possibly
+    a referrer header, possibly a proxy log.
+
+    - `client_id` + `redirect_uri`: a code minted for one client, deliverable to one place. Without
+      both, a code intercepted from one client could be redeemed by another.
+    - `code_challenge`: PKCE. The redeemer must prove it knows the verifier, so a code stolen in
+      transit is worthless to whoever stole it.
+    - `resource`: what the user consented to, carried into the token's `aud`. This is what stops a
+      grant for one MCP server working against another.
+    - `org_id`: WHICH TEAM. A person may belong to several, and this is the answer they chose — not
+      one the server guesses later.
+
+    Rows are deleted on redemption rather than flagged. A used code that still exists is a race
+    waiting for two redemptions to read it before either writes; deletion makes the database the
+    arbiter, the same reasoning as the conditional UPDATE in `ledger.reserve`.
+    """
+
+    __table_args__ = (UniqueConstraint("code", name="uq_oauth_code"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    code: str = Field(index=True)
+    client_id: str = Field(index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    org_id: int = Field(foreign_key="org.id", index=True)
+    redirect_uri: str
+    code_challenge: str = Field(default="")
+    resource: str = Field(default="")
+    scope: str = Field(default="")
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=_now)

@@ -36,7 +36,7 @@ INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 import httpx
 from pathlib import Path
 
-from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import Cookie, Depends, FastAPI, Form, Header, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -52,8 +52,8 @@ from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, se
 from .config import get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold, Invite,
-                     LedgerEntry, Membership, OAuthClient, Org, PendingOAuth, Project, RunRecord,
-                     Secret, Tool, User)
+                     LedgerEntry, Membership, OAuthClient, OAuthCode, Org, PendingOAuth, Project,
+                     RunRecord, Secret, Tool, User)
 from .proxy import relay
 
 
@@ -1559,6 +1559,207 @@ async def _resolve_oauth_client(client_id: str, db: AsyncSession) -> OAuthClient
     return row
 
 
+AUTH_CODE_TTL_S = 300   # a code is redeemed within seconds; five minutes is generous, not a window
+
+
+def _oauth_error(redirect_uri: str, state: str, error: str, desc: str = ""):
+    """OAuth errors go BACK TO THE CLIENT via the redirect, once we trust the redirect.
+
+    Before the client and redirect_uri are validated we must NOT redirect — bouncing an error to an
+    unvalidated URI is an open redirect, and it would leak `state` to whoever asked for it. Those
+    cases raise a plain 400 instead, which is why this helper is only ever called after validation.
+    """
+    from urllib.parse import urlencode
+
+    q = {"error": error}
+    if desc:
+        q["error_description"] = desc
+    if state:
+        q["state"] = state
+    sep = "&" if "?" in redirect_uri else "?"
+    return RedirectResponse(f"{redirect_uri}{sep}{urlencode(q)}", status_code=302)
+
+
+async def _authorize_request(client_id: str, redirect_uri: str, response_type: str,
+                             code_challenge: str, code_challenge_method: str,
+                             db: AsyncSession):
+    """Validate an authorization request. Returns (client, error_response) — exactly one is None.
+
+    Order matters and is deliberate: identify the client and its redirect FIRST, because until both
+    are known-good there is nowhere safe to send an error. Everything after that can be reported to
+    the client properly.
+    """
+    from . import mcp_oauth
+
+    client = await _resolve_oauth_client(client_id, db) if client_id else None
+    if client is None:
+        return None, JSONResponse(status_code=400, content={
+            "error": "invalid_client",
+            "error_description": "unknown client_id — register first, or serve a client-id metadata document"})
+    if not mcp_oauth.redirect_uri_allowed(client, redirect_uri):
+        # NOT a redirect: we do not bounce errors to a URI the client has not proven is theirs.
+        return None, JSONResponse(status_code=400, content={
+            "error": "invalid_request",
+            "error_description": "redirect_uri does not exactly match one registered for this client"})
+    return client, None
+
+
+@app.get("/oauth/authorize", include_in_schema=False)
+async def oauth_authorize(
+    request: Request,
+    client_id: str = Query(default=""), redirect_uri: str = Query(default=""),
+    response_type: str = Query(default="code"), scope: str = Query(default=""),
+    state: str = Query(default=""), code_challenge: str = Query(default=""),
+    code_challenge_method: str = Query(default=""), resource: str = Query(default=""),
+    treg_session: str = Cookie(default=""), db: AsyncSession = Depends(get_session),
+):
+    """What is this client asking for, and on behalf of which team?
+
+    Step 3 answers that as JSON; step 4 puts a consent page on top of the same checks. It issues
+    NOTHING — approval is a POST, because a GET that granted access could be triggered by any page
+    that can make the browser navigate.
+    """
+    client, err = await _authorize_request(client_id, redirect_uri, response_type,
+                                           code_challenge, code_challenge_method, db)
+    if err is not None:
+        return err
+    if response_type != "code":
+        return _oauth_error(redirect_uri, state, "unsupported_response_type",
+                            "only the authorization code flow is supported")
+    if not code_challenge or code_challenge_method != "S256":
+        return _oauth_error(redirect_uri, state, "invalid_request",
+                            "PKCE with code_challenge_method=S256 is required")
+
+    user = await _user_from_session(treg_session, db)
+    if user is None:
+        # Sign in first, then come back to this exact request.
+        from urllib.parse import quote
+
+        return RedirectResponse(f"/?next={quote(str(request.url), safe='')}", status_code=302)
+
+    memberships = (await db.execute(
+        select(Membership).where(Membership.user_id == user.id))).scalars().all()
+    teams = []
+    for m in memberships:
+        org = await db.get(Org, m.org_id)
+        if org is not None and not org.suspended:
+            teams.append({"org_id": org.id, "slug": org.slug, "role": m.role})
+    return {
+        "client": {"client_id": client.client_id, "name": client.client_name,
+                   "uri": client.client_uri, "kind": client.kind},
+        "redirect_uri": redirect_uri, "scope": scope, "resource": resource,
+        "user": user.email,
+        # The team picker. A person may belong to several, and which one this client may spend from
+        # is a decision for the human here — not something resolved per call later.
+        "teams": teams,
+        "approve_with": "POST /oauth/authorize with the same parameters plus org_id",
+    }
+
+
+@app.post("/oauth/authorize", include_in_schema=False)
+async def oauth_authorize_approve(
+    client_id: str = Form(default=""), redirect_uri: str = Form(default=""),
+    response_type: str = Form(default="code"), scope: str = Form(default=""),
+    state: str = Form(default=""), code_challenge: str = Form(default=""),
+    code_challenge_method: str = Form(default=""), resource: str = Form(default=""),
+    org_id: int = Form(default=0),
+    treg_session: str = Cookie(default=""), db: AsyncSession = Depends(get_session),
+):
+    """The human approved. Mint a one-time code bound to everything that made this request."""
+    import secrets as _s
+
+    from . import mcp_oauth
+
+    client, err = await _authorize_request(client_id, redirect_uri, response_type,
+                                           code_challenge, code_challenge_method, db)
+    if err is not None:
+        return err
+    if not code_challenge or code_challenge_method != "S256":
+        return _oauth_error(redirect_uri, state, "invalid_request",
+                            "PKCE with code_challenge_method=S256 is required")
+
+    user = await _user_from_session(treg_session, db)
+    if user is None:
+        return JSONResponse(status_code=401, content={"error": "access_denied",
+                                                      "error_description": "not signed in"})
+    # The chosen team must be one this user actually belongs to — the field is client-supplied.
+    membership = (await db.execute(select(Membership).where(
+        Membership.user_id == user.id, Membership.org_id == org_id))).scalar_one_or_none()
+    if membership is None:
+        return _oauth_error(redirect_uri, state, "access_denied",
+                            "choose a team you are a member of")
+
+    code = OAuthCode(
+        code=_s.token_urlsafe(32), client_id=client.client_id, user_id=user.id, org_id=org_id,
+        redirect_uri=redirect_uri, code_challenge=code_challenge,
+        resource=resource or mcp_oauth.mcp_resource_url(), scope=scope,
+        expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
+        + timedelta(seconds=AUTH_CODE_TTL_S))
+    db.add(code)
+    await db.commit()
+
+    from urllib.parse import urlencode
+
+    q = {"code": code.code}
+    if state:
+        q["state"] = state
+    sep = "&" if "?" in redirect_uri else "?"
+    return RedirectResponse(f"{redirect_uri}{sep}{urlencode(q)}", status_code=302)
+
+
+@app.post("/oauth/token", include_in_schema=False)
+async def oauth_token(
+    grant_type: str = Form(default=""), code: str = Form(default=""),
+    redirect_uri: str = Form(default=""), client_id: str = Form(default=""),
+    code_verifier: str = Form(default=""), resource: str = Form(default=""),
+    db: AsyncSession = Depends(get_session),
+):
+    """Exchange a code for an access token.
+
+    Errors here are JSON, not redirects: this is a back-channel call from the client itself, and
+    there is no browser to send anywhere.
+    """
+    from . import mcp_oauth
+
+    def bad(err: str, desc: str, status: int = 400):
+        return JSONResponse(status_code=status,
+                            content={"error": err, "error_description": desc})
+
+    if grant_type != "authorization_code":
+        return bad("unsupported_grant_type", "only authorization_code is supported here")
+
+    row = (await db.execute(select(OAuthCode).where(OAuthCode.code == code))
+           ).scalar_one_or_none() if code else None
+    if row is None:
+        return bad("invalid_grant", "unknown or already-redeemed code")
+
+    # DELETE FIRST. A code is single-use, and holding it while validating leaves a window where two
+    # redemptions both read it. Everything below is validated against values already in hand.
+    await db.delete(row)
+    await db.commit()
+
+    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        return bad("invalid_grant", "code expired")
+    if client_id and client_id != row.client_id:
+        return bad("invalid_grant", "code was issued to a different client")
+    if redirect_uri != row.redirect_uri:
+        return bad("invalid_grant", "redirect_uri does not match the one the code was issued for")
+    if not mcp_oauth.verify_pkce(code_verifier, row.code_challenge):
+        return bad("invalid_grant", "code_verifier does not match the code_challenge")
+    if resource and resource != row.resource:
+        return bad("invalid_target", "resource does not match the one that was consented to")
+
+    user = await db.get(User, row.user_id)
+    if user is None or user.suspended:
+        return bad("invalid_grant", "the account behind this grant is no longer active")
+
+    token = mcp_oauth.make_access_token(
+        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        token_version=user.token_version)
+    return JSONResponse({"access_token": token, "token_type": "Bearer",
+                         "expires_in": mcp_oauth.ACCESS_TTL_SECONDS, "scope": row.scope})
+
+
 @app.get("/.well-known/oauth-protected-resource", include_in_schema=False)
 @app.get("/.well-known/oauth-protected-resource/mcp", include_in_schema=False)
 async def oauth_protected_resource():
@@ -1866,6 +2067,7 @@ async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
 _ORG_SCOPED_MODELS = (
     Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project,
     CapabilityPin, LedgerEntry, Hold, CreditBlock,
+    OAuthCode,    # a pending grant naming a team that no longer exists
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 

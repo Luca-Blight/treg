@@ -252,3 +252,175 @@ async def test_cimd_accepts_a_well_formed_document(monkeypatch):
     assert doc["client_name"] == "ChatGPT"
     # the unsafe redirect in the document is dropped rather than accepted alongside the good one
     assert doc["redirect_uris"] == ["https://chatgpt.com/connector/oauth/x"]
+
+
+# ---- step 3: the authorization code flow ----------------------------------------------------
+
+def _pkce():
+    import base64
+    import hashlib
+    import secrets
+
+    verifier = secrets.token_urlsafe(48)
+    challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+    return verifier, challenge
+
+
+async def _register(clients, redirect="https://client.test/cb"):
+    r = await clients.post("/oauth/register",
+                           json={"client_name": "Test Client", "redirect_uris": [redirect]})
+    assert r.status_code == 201, r.text
+    return r.json()["client_id"]
+
+
+async def _signed_in(clients, email="oauth-user@superdesign.dev"):
+    """A browser session plus the org it belongs to. The consent step is a HUMAN action, so it needs
+    a session cookie rather than a token."""
+    r = await clients.post("/users", json={"email": email})
+    assert r.status_code == 200, r.text
+    token = r.json()["token"]
+    prev = clients.headers.get("X-Treg-Token")
+    clients.headers["X-Treg-Token"] = token
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    me = (await clients.get("/auth/me")).json()
+    if prev:
+        clients.headers["X-Treg-Token"] = prev
+    from sqlmodel import select
+
+    from treg import session as _sess
+    from treg.db import session_maker
+    from treg.models import User
+
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == me["email"]))).scalar_one()
+        cookie = _sess.make(user.id, token_version=user.token_version)
+    clients.cookies.set("treg_session", cookie)   # on the client: httpx deprecates per-request
+    return cookie, org_id
+
+
+async def test_the_whole_flow_end_to_end(clients):
+    """Register, authorize, approve, exchange — and the token that comes out is one our MCP server
+    accepts, for the team the human chose."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients)
+    verifier, challenge = _pkce()
+    params = {"client_id": client_id, "redirect_uri": "https://client.test/cb",
+              "response_type": "code", "code_challenge": challenge,
+              "code_challenge_method": "S256", "state": "xyz",
+              "resource": mcp_oauth.mcp_resource_url(), "scope": "treg:call"}
+
+    shown = await clients.get("/oauth/authorize", params=params)
+    assert shown.status_code == 200, shown.text
+    assert shown.json()["client"]["name"] == "Test Client"
+    assert any(t["org_id"] == org_id for t in shown.json()["teams"]), "the team picker must offer it"
+
+    approved = await clients.post("/oauth/authorize", data={**params, "org_id": org_id}, follow_redirects=False)
+    assert approved.status_code == 302
+    loc = approved.headers["location"]
+    assert loc.startswith("https://client.test/cb?") and "state=xyz" in loc
+    code = loc.split("code=")[1].split("&")[0]
+
+    tok = await clients.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code,
+        "redirect_uri": "https://client.test/cb", "client_id": client_id,
+        "code_verifier": verifier, "resource": mcp_oauth.mcp_resource_url()})
+    assert tok.status_code == 200, tok.text
+    access = tok.json()["access_token"]
+    assert tok.json()["token_type"] == "Bearer"
+
+    claims = mcp._oauth_claims(access)
+    assert claims is not None, "the MCP server must accept what we just issued"
+    assert claims["org"] == org_id, "the token spends from the team the human picked"
+
+
+async def test_a_code_can_be_redeemed_only_ONCE(clients):
+    """The row is deleted on redemption rather than flagged, so a replay finds nothing. A used code
+    that still exists is a race waiting for two redemptions to read it before either writes."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "once@superdesign.dev")
+    verifier, challenge = _pkce()
+    params = {"client_id": client_id, "redirect_uri": "https://client.test/cb",
+              "response_type": "code", "code_challenge": challenge,
+              "code_challenge_method": "S256", "resource": mcp_oauth.mcp_resource_url()}
+    r = await clients.post("/oauth/authorize", data={**params, "org_id": org_id}, follow_redirects=False)
+    code = r.headers["location"].split("code=")[1].split("&")[0]
+    body = {"grant_type": "authorization_code", "code": code,
+            "redirect_uri": "https://client.test/cb", "client_id": client_id,
+            "code_verifier": verifier}
+    assert (await clients.post("/oauth/token", data=body)).status_code == 200
+    second = await clients.post("/oauth/token", data=body)
+    assert second.status_code == 400 and second.json()["error"] == "invalid_grant"
+
+
+async def test_the_WRONG_verifier_cannot_redeem_a_stolen_code(clients):
+    """The whole point of PKCE: a code intercepted in the browser redirect is worthless without the
+    verifier, which never left the client."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "pkce@superdesign.dev")
+    _, challenge = _pkce()
+    other_verifier, _ = _pkce()
+    r = await clients.post("/oauth/authorize", data={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256", "org_id": org_id,
+        "resource": mcp_oauth.mcp_resource_url()}, follow_redirects=False)
+    code = r.headers["location"].split("code=")[1].split("&")[0]
+    tok = await clients.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code,
+        "redirect_uri": "https://client.test/cb", "client_id": client_id,
+        "code_verifier": other_verifier})
+    assert tok.status_code == 400 and tok.json()["error"] == "invalid_grant"
+
+
+async def test_an_unregistered_redirect_is_refused_WITHOUT_redirecting(clients):
+    """Bouncing an error to an unvalidated URI would be an open redirect, and would hand `state` to
+    whoever asked for it. So this is a flat 400, not a 302."""
+    client_id = await _register(clients)
+    r = await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://attacker.test/steal",
+        "response_type": "code", "code_challenge": "x", "code_challenge_method": "S256"},
+        follow_redirects=False)
+    assert r.status_code == 400
+    assert r.json()["error"] == "invalid_request"
+
+
+async def test_pkce_is_mandatory(clients):
+    """A client that omits the challenge, or offers `plain`, is refused — otherwise a downgrade is
+    available to anyone who asks for it."""
+    client_id = await _register(clients)
+    for extra in ({}, {"code_challenge": "abc", "code_challenge_method": "plain"}):
+        r = await clients.get("/oauth/authorize", params={
+            "client_id": client_id, "redirect_uri": "https://client.test/cb",
+            "response_type": "code", **extra}, follow_redirects=False)
+        assert r.status_code == 302 and "error=invalid_request" in r.headers["location"]
+
+
+async def test_you_cannot_approve_for_a_team_you_are_not_in(clients):
+    """`org_id` arrives from the browser, so it is client-supplied. Trusting it would let anyone
+    grant a client access to any team by editing one form field."""
+    client_id = await _register(clients)
+    cookie, _ = await _signed_in(clients, "outsider@superdesign.dev")
+    other = await clients.post("/users", json={"email": "stranger@superdesign.dev"})
+    prev = clients.headers.get("X-Treg-Token")
+    clients.headers["X-Treg-Token"] = other.json()["token"]
+    foreign_org = (await clients.get("/orgs")).json()[0]["org_id"]
+    if prev:
+        clients.headers["X-Treg-Token"] = prev
+    _, challenge = _pkce()
+    r = await clients.post("/oauth/authorize", data={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256", "org_id": foreign_org}, follow_redirects=False)
+    assert r.status_code == 302 and "error=access_denied" in r.headers["location"]
+
+
+async def test_a_GET_never_grants_anything(clients):
+    """Approval is a POST. A GET that granted access could be triggered by any page able to make the
+    browser navigate."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "getonly@superdesign.dev")
+    _, challenge = _pkce()
+    r = await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256", "org_id": org_id}, follow_redirects=False)
+    assert r.status_code == 200
+    assert "code" not in r.text or "approve_with" in r.text
