@@ -119,6 +119,44 @@ def _need_token() -> dict:
     }
 
 
+async def _internal_auth(token: str) -> dict[str, str]:
+    """Turn whatever the caller presented into headers treg's own API understands.
+
+    Two kinds of credential arrive here and only one of them is native. A per-org or identity token
+    (what Codex sends) passes straight through. An OAuth access token does NOT: it is ours, issued by
+    our authorization server, and the rest of the API has never heard of it.
+
+    So it is exchanged rather than forwarded — validated here, then presented onward as a short-lived
+    identity token for the user it names, pinned to the ORG THE HUMAN CHOSE at consent. That keeps
+    OAuth inside this module instead of teaching `require_member` a third token type, and it means
+    the team on the grant is the team that gets billed, with no per-call guessing.
+
+    Found by running the flow rather than by testing the pieces: `_oauth_claims` validated a token
+    perfectly while every tool still forwarded the raw bearer and got "not signed in".
+    """
+    claims = _oauth_claims(token)
+    if claims is None:
+        return {"X-Treg-Token": token}
+
+    from sqlmodel import select
+
+    from . import session
+    from .db import session_maker
+    from .models import Org, User
+
+    async with session_maker() as db:
+        user = await db.get(User, claims["sub"])
+        if user is None or user.suspended or user.token_version != claims["tv"]:
+            # tv mismatch = the user revoked their tokens after this grant was made.
+            return {"X-Treg-Token": token}
+        org = await db.get(Org, claims["org"])
+        if org is None or org.suspended:
+            return {"X-Treg-Token": token}
+        slug = org.slug
+    return {"X-Treg-Token": session.make(user.id, ttl=120, token_version=user.token_version),
+            "X-Treg-Org": slug}
+
+
 @asynccontextmanager
 async def _api(token: str):
     """An in-process client bound to treg's own ASGI app, carrying the caller's identity."""
@@ -128,7 +166,7 @@ async def _api(token: str):
         transport=httpx.ASGITransport(app=app),
         base_url=_INTERNAL_BASE,
         timeout=_TIMEOUT,
-        headers={"X-Treg-Token": token},
+        headers=await _internal_auth(token),
     ) as client:
         yield client
 
@@ -154,6 +192,17 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
     and NAME them rather than silently picking one: reading the wrong team's balance is a confusing
     answer, and spending from it would be worse.
     """
+    # An OAuth grant already names its team — the human chose it at the consent screen. Re-deriving
+    # it here would ignore that decision and, for a person in several teams, ask a question that has
+    # already been answered.
+    pinned = client.headers.get("X-Treg-Org")
+    if pinned:
+        r = await client.get("/orgs")
+        for o in (_body(r) or []) if r.status_code == 200 else []:
+            if o.get("slug") == pinned:
+                return int(o["org_id"]), pinned, None
+        return None, None, {"error": f"the team named in this grant ({pinned}) is no longer available"}
+
     me = await client.get("/auth/me")
     if me.status_code == 200 and _body(me).get("org_id"):
         body = _body(me)

@@ -11,11 +11,16 @@ other MCP server must not spend a treg balance just because it happens to be val
 
 from __future__ import annotations
 
+import json
 import time
 
 import pytest
 
 from treg import mcp, mcp_oauth, session
+
+# The MCP transport helpers live with the MCP tests; a token is only interesting here because it can
+# drive a tool, so reuse them rather than keeping a second copy that can drift.
+from test_mcp import _call_tool, mcp_session
 
 pytestmark = pytest.mark.anyio
 
@@ -310,7 +315,8 @@ async def test_the_whole_flow_end_to_end(clients):
               "code_challenge_method": "S256", "state": "xyz",
               "resource": mcp_oauth.mcp_resource_url(), "scope": "treg:call"}
 
-    shown = await clients.get("/oauth/authorize", params=params)
+    shown = await clients.get("/oauth/authorize", params=params,
+                              headers={"Accept": "application/json"})
     assert shown.status_code == 200, shown.text
     assert shown.json()["client"]["name"] == "Test Client"
     assert any(t["org_id"] == org_id for t in shown.json()["teams"]), "the team picker must offer it"
@@ -415,12 +421,187 @@ async def test_you_cannot_approve_for_a_team_you_are_not_in(clients):
 
 async def test_a_GET_never_grants_anything(clients):
     """Approval is a POST. A GET that granted access could be triggered by any page able to make the
-    browser navigate."""
+    browser navigate — even with `org_id` supplied, as here."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import OAuthCode
+
     client_id = await _register(clients)
     cookie, org_id = await _signed_in(clients, "getonly@superdesign.dev")
     _, challenge = _pkce()
     r = await clients.get("/oauth/authorize", params={
         "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
-        "code_challenge": challenge, "code_challenge_method": "S256", "org_id": org_id}, follow_redirects=False)
+        "code_challenge": challenge, "code_challenge_method": "S256", "org_id": org_id},
+        follow_redirects=False)
+    assert r.status_code == 200, "it renders the question"
+    assert "location" not in r.headers, "and never redirects back with a code"
+    async with session_maker() as db:
+        codes = (await db.execute(select(OAuthCode).where(
+            OAuthCode.client_id == client_id))).scalars().all()
+    assert codes == [], "a GET must not have minted anything"
+
+
+# ---- step 4: the consent screen — the only place a human sees what they grant ----------------
+
+async def test_the_consent_page_says_what_it_costs_in_WORDS(clients):
+    """A screen that lists `treg:call` and calls that informed consent is a formality. The two things
+    that actually cost money or expose data have to be legible: this client can spend the team's
+    balance, and can use keys the team registered."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "consent@superdesign.dev")
+    _, challenge = _pkce()
+    r = await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256"})
     assert r.status_code == 200
-    assert "code" not in r.text or "approve_with" in r.text
+    page = r.text
+    assert "text/html" in r.headers["content-type"]
+    assert "Test Client" in page, "the human must see WHICH application is asking"
+    assert "consent@superdesign.dev" in page, "and which account they are granting from"
+    assert "spends the team's balance" in page
+    assert "without seeing them" in page, "keys are used, never revealed — say so"
+    assert 'name="org_id"' in page, "the team picker belongs here"
+
+
+async def test_the_page_warns_when_a_client_registered_ITSELF(clients):
+    """Dynamic registration is open by design, so anyone can appear here with any name. The user is
+    the only one who can tell whether they started this, and they can only judge if we say so."""
+    client_id = await _register(clients)
+    cookie, _ = await _signed_in(clients, "warned@superdesign.dev")
+    _, challenge = _pkce()
+    r = await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256"})
+    assert "registered itself" in r.text
+    assert "only continue if you recognise it" in r.text
+
+
+async def test_json_is_still_available_for_a_non_browser_client(clients):
+    """The HTML is for humans; a client that asks for JSON gets the same facts without scraping."""
+    client_id = await _register(clients)
+    cookie, _ = await _signed_in(clients, "jsonclient@superdesign.dev")
+    _, challenge = _pkce()
+    r = await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256"},
+        headers={"Accept": "application/json"})
+    assert r.status_code == 200 and r.json()["client"]["name"] == "Test Client"
+
+
+async def test_CANCEL_tells_the_client_no_rather_than_hanging(clients):
+    """Declining is a real answer. A client left waiting on a redirect that never comes is a worse
+    outcome than a clean refusal."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "declines@superdesign.dev")
+    _, challenge = _pkce()
+    r = await clients.post("/oauth/authorize", data={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256", "org_id": org_id,
+        "state": "s1", "decision": "deny"}, follow_redirects=False)
+    assert r.status_code == 302
+    assert "error=access_denied" in r.headers["location"] and "state=s1" in r.headers["location"]
+    assert "code=" not in r.headers["location"]
+
+
+async def test_a_CROSS_ORIGIN_submission_is_refused(clients):
+    """The consent form is the security boundary. Without this, a page anywhere could auto-submit and
+    grant itself a team's balance — the user is signed in, so their cookie rides along."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "csrf@superdesign.dev")
+    _, challenge = _pkce()
+    r = await clients.post("/oauth/authorize", data={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256", "org_id": org_id,
+        "decision": "allow"},
+        headers={"Origin": "https://attacker.test"}, follow_redirects=False)
+    assert r.status_code == 403
+
+
+async def test_the_consent_page_cannot_be_framed(clients):
+    """Clickjacking: an invisible frame over a decoy page turns "Allow" into a click the user thought
+    was something else. treg sets this globally; asserting it here is what notices if that changes."""
+    client_id = await _register(clients)
+    cookie, _ = await _signed_in(clients, "framed@superdesign.dev")
+    _, challenge = _pkce()
+    r = await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256"})
+    assert r.headers.get("X-Frame-Options") == "DENY"
+
+
+# ---- the token has to WORK, not merely validate ---------------------------------------------
+
+async def _grant(clients, email):
+    """Run the whole flow and return the access token, plus the team it was granted for."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, email)
+    verifier, challenge = _pkce()
+    params = {"client_id": client_id, "redirect_uri": "https://client.test/cb",
+              "response_type": "code", "code_challenge": challenge,
+              "code_challenge_method": "S256", "resource": mcp_oauth.mcp_resource_url()}
+    r = await clients.post("/oauth/authorize", data={**params, "org_id": org_id, "decision": "allow"},
+                           follow_redirects=False)
+    code = r.headers["location"].split("code=")[1].split("&")[0]
+    tok = await clients.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code,
+        "redirect_uri": "https://client.test/cb", "client_id": client_id,
+        "code_verifier": verifier})
+    assert tok.status_code == 200, tok.text
+    return tok.json()["access_token"], org_id
+
+
+async def test_an_oauth_token_actually_CALLS_the_tools(clients):
+    """The gap running it found and the unit tests missed: `_oauth_claims` validated a token
+    perfectly while every tool still forwarded the raw bearer to the internal API, which has never
+    heard of an OAuth token — so all three authenticated tools answered "not signed in".
+
+    Validating a credential and being able to USE it are different claims, and only this one matters
+    to a user.
+    """
+    access, org_id = await _grant(clients, "usable@superdesign.dev")
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=access)
+    assert "balance_usd" in out, out
+    assert "not signed in" not in json.dumps(out)
+
+
+async def test_the_token_spends_from_the_team_ON_THE_GRANT(clients):
+    """A person in several teams answered "which one" at the consent screen. That answer travels on
+    the token, and nothing downstream may re-derive it — re-deriving is how the wrong team's balance
+    gets spent, and `balance` used to refuse and ask precisely because it had no answer."""
+    access, granted_org = await _grant(clients, "multi@superdesign.dev")
+    # a second team for the same person, deliberately created AFTER the grant
+    made = await clients.post("/orgs", json={"name": "second-team-after-grant"})
+    assert made.status_code == 200, made.text
+
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=access)
+    assert "balance_usd" in out, out
+    teams = (await clients.get("/orgs")).json()
+    granted_slug = next(t["slug"] for t in teams if t["org_id"] == granted_org)
+    assert out["team"] == granted_slug, "the grant's team, not a freshly-guessed one"
+
+
+async def test_revoking_your_tokens_kills_an_existing_grant(clients):
+    """`token_version` is treg's kill switch for a leaked credential. An OAuth grant must honour it
+    too, or the one button a user has for "make it stop" would quietly miss this door."""
+    access, _ = await _grant(clients, "revoker@superdesign.dev")
+    async with mcp_session(clients) as c:
+        before = await _call_tool(c, "balance", {}, token=access)
+    assert "balance_usd" in before
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import User
+    async with session_maker() as db:
+        user = (await db.execute(
+            select(User).where(User.email == "revoker@superdesign.dev"))).scalar_one()
+        user.token_version += 1
+        db.add(user)
+        await db.commit()
+
+    async with mcp_session(clients) as c:
+        after = await _call_tool(c, "balance", {}, token=access)
+    assert "balance_usd" not in after, "a revoked user's grant must stop working"

@@ -1561,6 +1561,72 @@ async def _resolve_oauth_client(client_id: str, db: AsyncSession) -> OAuthClient
 
 AUTH_CODE_TTL_S = 300   # a code is redeemed within seconds; five minutes is generous, not a window
 
+_CONSENT_CSS = """
+.consent{max-width:460px;text-align:left}
+.consent h1{font-size:20px;margin:0 0 4px}
+.consent .who{color:var(--ink55,#8a8a8a);font-size:13.5px;margin:0 0 18px}
+.consent .grants{list-style:none;padding:0;margin:0 0 18px}
+.consent .grants li{padding:7px 0 7px 22px;position:relative;font-size:13.5px;line-height:1.45}
+.consent .grants li:before{content:"›";position:absolute;left:6px;color:#e0703f}
+.consent label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink55,#8a8a8a);margin:0 0 6px}
+.consent select{width:100%;padding:9px 10px;border-radius:8px;font:inherit;font-size:14px;
+  background:#1a1a1a;color:inherit;border:1px solid #333;margin-bottom:16px}
+.consent .row{display:flex;gap:10px}
+.consent button{flex:1;padding:10px 14px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer;
+  border:1px solid #333;background:#1a1a1a;color:inherit}
+.consent button.primary{background:#e0703f;border-color:#e0703f;color:#161310;font-weight:600}
+.consent .fine{color:var(--ink55,#8a8a8a);font-size:12px;margin:14px 0 0;line-height:1.5}
+"""
+
+
+def _consent_page(*, client_name: str, client_uri: str, user_email: str, teams: list,
+                  hidden: dict, unverified: bool) -> HTMLResponse:
+    """The one place a human sees what they are granting — so it says it in words, not scopes.
+
+    Deliberately plain about the two things that cost money or leak data: this client will be able to
+    spend the team's balance, and to use the keys the team registered. A consent screen that lists
+    `treg:call` and calls it informed is a formality, not a decision.
+
+    The team picker is here rather than anywhere else because this is the only moment a human is
+    present to answer it. `balance` used to have to refuse and ask when someone belonged to several
+    teams; that question belongs at the grant, once.
+    """
+    import html as _h
+
+    opts = "".join(
+        f'<option value="{t["org_id"]}">{_h.escape(t["slug"])} — {_h.escape(t["role"])}</option>'
+        for t in teams)
+    fields = "".join(
+        f'<input type="hidden" name="{_h.escape(k)}" value="{_h.escape(str(v))}"/>'
+        for k, v in hidden.items())
+    who = _h.escape(client_name or "An application")
+    where = (f' <span class="who">({_h.escape(client_uri)})</span>' if client_uri else "")
+    warn = ("" if not unverified else
+            '<p class="fine"><b>This application registered itself.</b> treg has not reviewed it — '
+            'only continue if you recognise it and started this yourself.</p>')
+    return HTMLResponse(
+        f"{_AUTH_HEAD.replace('</style>', _CONSENT_CSS + '</style>')}"
+        f'<body><div class="wrap"><div class="card consent">'
+        f'<div class="logo">▚ tools-registry</div>'
+        f"<h1>{who} wants to use treg</h1>{where}"
+        f'<p class="who">Signed in as {_h.escape(user_email)}</p>'
+        f'<ul class="grants">'
+        f"<li>Search the catalog and read prices</li>"
+        f"<li>Call tools on your team's behalf — <b>this spends the team's balance</b></li>"
+        f"<li>Use the API keys and connections your team has registered, without seeing them</li>"
+        f"<li>Read the team's balance</li>"
+        f"</ul>"
+        f'<form method="post" action="/oauth/authorize">{fields}'
+        f'<label for="org_id">Which team?</label>'
+        f'<select id="org_id" name="org_id" required>{opts}</select>'
+        f'<div class="row">'
+        f'<button type="submit" name="decision" value="deny">Cancel</button>'
+        f'<button type="submit" name="decision" value="allow" class="primary">Allow</button>'
+        f"</div></form>{warn}"
+        f'<p class="fine">You can revoke this at any time from your treg dashboard.</p>'
+        f"</div></div></body></html>")
+
 
 def _oauth_error(redirect_uri: str, state: str, error: str, desc: str = ""):
     """OAuth errors go BACK TO THE CLIENT via the redirect, once we trust the redirect.
@@ -1644,20 +1710,33 @@ async def oauth_authorize(
         org = await db.get(Org, m.org_id)
         if org is not None and not org.suspended:
             teams.append({"org_id": org.id, "slug": org.slug, "role": m.role})
-    return {
-        "client": {"client_id": client.client_id, "name": client.client_name,
-                   "uri": client.client_uri, "kind": client.kind},
-        "redirect_uri": redirect_uri, "scope": scope, "resource": resource,
-        "user": user.email,
-        # The team picker. A person may belong to several, and which one this client may spend from
-        # is a decision for the human here — not something resolved per call later.
-        "teams": teams,
-        "approve_with": "POST /oauth/authorize with the same parameters plus org_id",
-    }
+    if not teams:
+        return _oauth_error(redirect_uri, state, "access_denied",
+                            "this account is not a member of any team")
+
+    hidden = {"client_id": client_id, "redirect_uri": redirect_uri, "response_type": response_type,
+              "scope": scope, "state": state, "code_challenge": code_challenge,
+              "code_challenge_method": code_challenge_method, "resource": resource}
+    if "application/json" in (request.headers.get("accept") or ""):
+        return {
+            "client": {"client_id": client.client_id, "name": client.client_name,
+                       "uri": client.client_uri, "kind": client.kind},
+            "redirect_uri": redirect_uri, "scope": scope, "resource": resource,
+            "user": user.email,
+            # The team picker. A person may belong to several, and which one this client may spend
+            # from is a decision for the human here — not something resolved per call later.
+            "teams": teams,
+            "approve_with": "POST /oauth/authorize with the same parameters plus org_id",
+        }
+    return _consent_page(client_name=client.client_name, client_uri=client.client_uri,
+                         user_email=user.email, teams=teams, hidden=hidden,
+                         unverified=(client.kind == "dcr"))
 
 
 @app.post("/oauth/authorize", include_in_schema=False)
 async def oauth_authorize_approve(
+    request: Request,
+    decision: str = Form(default="allow"),
     client_id: str = Form(default=""), redirect_uri: str = Form(default=""),
     response_type: str = Form(default="code"), scope: str = Form(default=""),
     state: str = Form(default=""), code_challenge: str = Form(default=""),
@@ -1665,15 +1744,25 @@ async def oauth_authorize_approve(
     org_id: int = Form(default=0),
     treg_session: str = Cookie(default=""), db: AsyncSession = Depends(get_session),
 ):
-    """The human approved. Mint a one-time code bound to everything that made this request."""
+    """The human decided. On approval, mint a one-time code bound to everything that made this
+    request; on anything else, tell the client no."""
     import secrets as _s
 
     from . import mcp_oauth
+
+    # The consent form is the security boundary, so the submission must have come from OUR page.
+    # Without this, a page anywhere could auto-submit a form and grant itself a team's balance —
+    # the user is signed in, so their cookie would ride along. Same guard `auth_logout` uses.
+    if not _same_origin(request):
+        raise HTTPException(status_code=403, detail="cross-origin authorization rejected")
 
     client, err = await _authorize_request(client_id, redirect_uri, response_type,
                                            code_challenge, code_challenge_method, db)
     if err is not None:
         return err
+    if decision != "allow":
+        # Cancel is a real answer and the client is entitled to hear it, rather than hang.
+        return _oauth_error(redirect_uri, state, "access_denied", "the user declined")
     if not code_challenge or code_challenge_method != "S256":
         return _oauth_error(redirect_uri, state, "invalid_request",
                             "PKCE with code_challenge_method=S256 is required")
