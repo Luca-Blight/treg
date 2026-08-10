@@ -542,3 +542,112 @@ class Project(SQLModel, table=True):
     slug: str = Field(index=True)  # the human handle inside the org
     created_by: str = Field(default="")
     created_at: datetime = Field(default_factory=_now)
+
+
+class OAuthClient(SQLModel, table=True):
+    """An MCP client that may ask treg for a token — ChatGPT, Claude Code, Cursor, anything.
+
+    Two ways a client arrives here and ONE row shape afterwards, which is the point: everything
+    downstream (authorize, consent, token) reads this table and never asks how the client got in.
+
+    - **dcr** — dynamic client registration (RFC 7591). The client POSTs its name and redirect URIs
+      and we mint an opaque `client_id`. This is what Claude Code and most clients do.
+    - **cimd** — a client-id metadata document. The `client_id` IS an https URL that we fetch to
+      learn the name and redirect URIs. This is what ChatGPT prefers.
+
+    Supporting only one would lock the other family out, and we would not have noticed: the client
+    we happened to test with first is the one that does not need registration.
+
+    `redirect_uris` is the security-critical column. An authorization code is delivered to a redirect
+    URI, so a client that could name an arbitrary one at authorize time could have codes posted to an
+    attacker. They are fixed here at registration and matched EXACTLY later — no prefix matching,
+    which is the classic way this check is defeated.
+    """
+
+    __table_args__ = (UniqueConstraint("client_id", name="uq_oauth_client_id"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    client_id: str = Field(index=True)
+    kind: str = Field(default="dcr")            # "dcr" | "cimd"
+    client_name: str = Field(default="")
+    client_uri: str = Field(default="")
+    logo_uri: str = Field(default="")
+    redirect_uris: list = Field(default_factory=list,
+                                sa_column=Column("redirect_uris", JSON, nullable=False))
+    scope: str = Field(default="")
+    created_at: datetime = Field(default_factory=_now)
+    # cimd only: documents change, so a cached copy has to be refreshable rather than permanent.
+    refreshed_at: datetime | None = Field(default=None)
+
+
+class OAuthCode(SQLModel, table=True):
+    """A one-time authorization code: the few seconds between a human approving and a client
+    redeeming.
+
+    Every field here exists to bind the code to the exact request that created it, because a code is
+    a bearer credential travelling through a browser redirect — through the user's history, possibly
+    a referrer header, possibly a proxy log.
+
+    - `client_id` + `redirect_uri`: a code minted for one client, deliverable to one place. Without
+      both, a code intercepted from one client could be redeemed by another.
+    - `code_challenge`: PKCE. The redeemer must prove it knows the verifier, so a code stolen in
+      transit is worthless to whoever stole it.
+    - `resource`: what the user consented to, carried into the token's `aud`. This is what stops a
+      grant for one MCP server working against another.
+    - `org_id`: WHICH TEAM. A person may belong to several, and this is the answer they chose — not
+      one the server guesses later.
+
+    Rows are deleted on redemption rather than flagged. A used code that still exists is a race
+    waiting for two redemptions to read it before either writes; deletion makes the database the
+    arbiter, the same reasoning as the conditional UPDATE in `ledger.reserve`.
+    """
+
+    __table_args__ = (UniqueConstraint("code", name="uq_oauth_code"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    code: str = Field(index=True)
+    client_id: str = Field(index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    org_id: int = Field(foreign_key="org.id", index=True)
+    redirect_uri: str
+    code_challenge: str = Field(default="")
+    resource: str = Field(default="")
+    scope: str = Field(default="")
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=_now)
+
+
+class OAuthRefresh(SQLModel, table=True):
+    """A refresh token: the thing that keeps a connector working past the access token's hour.
+
+    Stored as a HASH, like every other credential treg holds. A database copy is a database leak, and
+    a refresh token is the long-lived half — the one worth stealing.
+
+    **Rotation with reuse detection**, which is the whole reason this table has a `family_id`. Each
+    refresh mints a replacement and retires the old row. If a retired token is ever presented again,
+    two things are possible and we cannot tell them apart: a client retried after a dropped response,
+    or somebody else has a copy. Treating that as ordinary would leave a thief with a working
+    credential, so the entire family is revoked and the human signs in again. An interrupted client
+    reconnects; a thief loses the token. The failure mode is inconvenience on one side and containment
+    on the other, which is the right way round.
+
+    `org_id` rides along because it is what the human chose at consent. A refresh must not become a
+    chance to quietly re-pick a team.
+    """
+
+    __table_args__ = (UniqueConstraint("token_hash", name="uq_oauth_refresh_token"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    token_hash: str = Field(index=True)
+    family_id: str = Field(index=True)      # every descendant of one grant shares this
+    client_id: str = Field(index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    org_id: int = Field(foreign_key="org.id", index=True)
+    resource: str = Field(default="")
+    scope: str = Field(default="")
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=_now)
+    # Set when this row is superseded or killed. A row is kept rather than deleted precisely so a
+    # replay can be RECOGNISED — deleting it would make a stolen token look merely unknown.
+    retired_at: datetime | None = Field(default=None)
+    retired_reason: str = Field(default="")

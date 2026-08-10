@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>treg — connect demo</title>
+<meta name="robots" content="noindex"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/legal.css"/>
+<style>
+.demo{max-width:760px}
+.step{border:1px solid #2a2a2a;border-radius:10px;padding:14px 16px;margin:0 0 12px}
+.step h3{margin:0 0 4px;font-size:14px}
+.step p{margin:0;font-size:13px;color:var(--ink55,#8a8a8a);line-height:1.5}
+.state{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid #333;margin-left:8px}
+.state.on{background:#123a25;border-color:#1c5c3a;color:#7fdcae}
+.state.off{color:#8a8a8a}
+button{padding:9px 14px;border-radius:8px;font:inherit;font-size:13.5px;cursor:pointer;
+  border:1px solid #333;background:#1a1a1a;color:inherit;margin:8px 8px 0 0}
+button.primary{background:#e0703f;border-color:#e0703f;color:#161310;font-weight:600}
+button:disabled{opacity:.4;cursor:not-allowed}
+pre{background:#141414;border:1px solid #262626;border-radius:8px;padding:12px;overflow:auto;
+  font-size:12px;line-height:1.5;max-height:340px;margin:12px 0 0}
+.tools{display:flex;flex-wrap:wrap;gap:0}
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="in">
+  <a class="brand" href="/"><span class="glyph">▚</span> treg</a>
+  <span class="sp"></span>
+  <a class="nav" href="/support">support</a>
+  <a class="nav" href="/tutorial">docs</a>
+</div></div>
+
+<div class="page"><div class="doc demo">
+
+  <div class="eyebrow">Developer</div>
+  <h1>Connect demo</h1>
+  <p style="color:var(--ink55,#8a8a8a);font-size:13.5px;line-height:1.6">
+    This page pretends to be someone else's app. It does exactly what ChatGPT, Claude Code or any
+    other MCP client does when it connects to treg — registers itself, sends you to treg to approve,
+    gets a token back, and calls tools with it. Nothing here is privileged: it uses the same public
+    endpoints any client would.
+  </p>
+
+  <div class="step">
+    <h3>1. Register <span id="s1" class="state off">not yet</span></h3>
+    <p>The app tells treg its name and where to send the user back. This is dynamic client
+    registration — no pre-arrangement, no key.</p>
+    <button id="btnRegister" class="primary">Register this app</button>
+  </div>
+
+  <div class="step">
+    <h3>2. Connect <span id="s2" class="state off">not connected</span></h3>
+    <p>Opens treg in a popup so you can sign in and choose which team this app may act for. treg
+    sends back a one-time code, which the app exchanges for a token. The app never sees your
+    password, and treg never gives it your API keys.</p>
+    <button id="btnConnect" class="primary" disabled>Connect treg</button>
+    <button id="btnDisconnect" disabled>Disconnect</button>
+  </div>
+
+  <div class="step">
+    <h3>3. Call tools <span id="s3" class="state off">no token</span></h3>
+    <p>The same five tools any MCP client gets. <b>catalog_search</b> and <b>catalog_get</b> are
+    public; the rest need the token you just granted. <b>call</b> is the only one that spends the
+    team's balance, so it does what treg asks an agent to do — reads the price first and asks before
+    spending.</p>
+    <div class="tools">
+      <button class="tool" data-tool="catalog_search" disabled>catalog_search</button>
+      <button class="tool" data-tool="catalog_get" disabled>catalog_get</button>
+      <button class="tool" data-tool="balance" disabled>balance</button>
+      <button id="btnCall" disabled>call <span style="opacity:.6">(spends)</span></button>
+      <button class="tool" data-tool="my_tools" disabled>my_tools</button>
+      <button id="btnRefresh" disabled>refresh the token</button>
+    </div>
+  </div>
+
+  <pre id="log">ready.</pre>
+</div></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (label, data) => {
+  const now = new Date().toISOString().slice(11, 19);
+  const body = typeof data === "string" ? data : JSON.stringify(data, null, 1);
+  $("log").textContent = `[${now}] ${label}\n${body}\n\n` + $("log").textContent;
+};
+const setState = (el, on, text) => { el.className = "state " + (on ? "on" : "off"); el.textContent = text; };
+
+// Everything this page knows lives in sessionStorage — a demo should not outlive its tab.
+const S = {
+  get: (k) => { try { return JSON.parse(sessionStorage.getItem("tregdemo." + k)); } catch { return null; } },
+  set: (k, v) => sessionStorage.setItem("tregdemo." + k, JSON.stringify(v)),
+  del: (k) => sessionStorage.removeItem("tregdemo." + k),
+};
+
+const REDIRECT = location.origin + "/connect-demo/callback";
+let META = null, RESOURCE = null;
+
+async function discover() {
+  // Exactly what a client does first: find the resource id and the endpoints. Never hard-coded —
+  // hard-coding is what made an earlier acceptance run mint a token with the wrong audience.
+  const prm = await (await fetch("/.well-known/oauth-protected-resource")).json();
+  RESOURCE = prm.resource;
+  META = await (await fetch("/.well-known/oauth-authorization-server")).json();
+  log("discovered", { resource: RESOURCE, authorize: META.authorization_endpoint });
+}
+
+async function register() {
+  const r = await fetch(META.registration_endpoint, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ client_name: "treg connect demo", redirect_uris: [REDIRECT] }),
+  });
+  const body = await r.json();
+  if (!r.ok) { log("registration failed", body); return; }
+  S.set("client_id", body.client_id);
+  setState($("s1"), true, body.client_id.slice(0, 18) + "…");
+  $("btnConnect").disabled = false;
+  log("registered", body);
+}
+
+// PKCE in the browser, the same S256 the spec requires.
+async function pkce() {
+  const bytes = crypto.getRandomValues(new Uint8Array(48));
+  const verifier = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return { verifier, challenge };
+}
+
+async function connect() {
+  const { verifier, challenge } = await pkce();
+  const state = crypto.randomUUID();
+  S.set("verifier", verifier); S.set("state", state);
+  const q = new URLSearchParams({
+    client_id: S.get("client_id"), redirect_uri: REDIRECT, response_type: "code",
+    code_challenge: challenge, code_challenge_method: "S256",
+    resource: RESOURCE, scope: "treg:call", state,
+  });
+  log("opening treg for approval", { url: META.authorization_endpoint + "?…" });
+  window.open(META.authorization_endpoint + "?" + q, "treg-connect", "width=520,height=760");
+}
+
+// The popup posts the code back here rather than the page polling for it.
+window.addEventListener("message", async (e) => {
+  if (e.origin !== location.origin || !e.data || e.data.source !== "treg-connect-demo") return;
+  if (e.data.error) { log("treg returned an error", e.data); return; }
+  if (e.data.state !== S.get("state")) { log("state mismatch — ignoring", e.data); return; }
+  log("got an authorization code", { code: e.data.code.slice(0, 8) + "…" });
+  await exchange(e.data.code);
+});
+
+async function exchange(code) {
+  const r = await fetch(META.token_endpoint, {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "authorization_code", code, redirect_uri: REDIRECT,
+      client_id: S.get("client_id"), code_verifier: S.get("verifier"), resource: RESOURCE }),
+  });
+  const body = await r.json();
+  if (!r.ok) { log("token exchange failed", body); return; }
+  S.set("access", body.access_token); S.set("refresh", body.refresh_token);
+  setState($("s2"), true, "connected");
+  setState($("s3"), true, "token held");
+  document.querySelectorAll(".tool").forEach((b) => (b.disabled = false));
+  $("btnRefresh").disabled = false; $("btnDisconnect").disabled = false; $("btnCall").disabled = false;
+  log("token received", { token_type: body.token_type, expires_in: body.expires_in,
+                          access_token: body.access_token.slice(0, 24) + "…",
+                          refresh_token: body.refresh_token.slice(0, 12) + "…" });
+}
+
+let rpcId = 0;
+async function callTool(name, args) {
+  const headers = { "Content-Type": "application/json",
+                    "Accept": "application/json, text/event-stream" };
+  const tok = S.get("access");
+  if (tok) headers["Authorization"] = "Bearer " + tok;
+  const rpc = (body) => fetch("/mcp/", { method: "POST", headers, body: JSON.stringify(body) })
+    .then((r) => r.json());
+  await rpc({ jsonrpc: "2.0", id: ++rpcId, method: "initialize", params: {
+    protocolVersion: "2025-06-18", capabilities: {},
+    clientInfo: { name: "treg connect demo", version: "1" } } });
+  const out = await rpc({ jsonrpc: "2.0", id: ++rpcId, method: "tools/call",
+                          params: { name, arguments: args || {} } });
+  const text = out?.result?.content?.[0]?.text;
+  try { log(name, JSON.parse(text)); } catch { log(name, text || out); }
+}
+
+// `call` is the only button here that costs money, so it follows the same rule the skill gives an
+// agent: look up the price, say it out loud, and get a yes before spending. A demo that quietly
+// charged on each click would be teaching the opposite of what the product asks for.
+const DEMO_ENDPOINT = "hunter.people.email.find";
+async function callWithPrice() {
+  log("checking the price first", { endpoint: DEMO_ENDPOINT });
+  const headers = { "Content-Type": "application/json",
+                    "Accept": "application/json, text/event-stream" };
+  const tok = S.get("access");
+  if (tok) headers["Authorization"] = "Bearer " + tok;
+  const rpc = (body) => fetch("/mcp/", { method: "POST", headers, body: JSON.stringify(body) })
+    .then((r) => r.json());
+  await rpc({ jsonrpc: "2.0", id: ++rpcId, method: "initialize", params: {
+    protocolVersion: "2025-06-18", capabilities: {},
+    clientInfo: { name: "treg connect demo", version: "1" } } });
+  const info = await rpc({ jsonrpc: "2.0", id: ++rpcId, method: "tools/call",
+    params: { name: "catalog_get", arguments: { endpoint_id: DEMO_ENDPOINT } } });
+  // The price lives on `endpoint.cost.usd`. A first version read `cost` from the top level, found
+  // nothing, and — because the whole thing sat in a bare try/catch — said nothing at all. A demo
+  // that fails silently teaches the reader that the feature is broken rather than that the code is.
+  let price = null;
+  try {
+    price = JSON.parse(info.result.content[0].text).endpoint.cost.usd ?? null;
+  } catch (err) {
+    log("could not read the price", { error: String(err), response: info });
+  }
+  const shown = price === null ? "an unknown amount" : "$" + price;
+  log("price", { endpoint: DEMO_ENDPOINT, usd_per_call: price });
+  if (!confirm(`Calling ${DEMO_ENDPOINT} will spend ${shown} from your team's balance.\n\nGo ahead?`)) {
+    log("call cancelled", "nothing was spent");
+    return;
+  }
+  const out = await rpc({ jsonrpc: "2.0", id: ++rpcId, method: "tools/call",
+    params: { name: "call", arguments: { endpoint_id: DEMO_ENDPOINT,
+      params: { domain: "stripe.com", first_name: "Patrick", last_name: "Collison" } } } });
+  const text = out?.result?.content?.[0]?.text;
+  try { log("call", JSON.parse(text)); } catch { log("call", text || out); }
+  log("note", "on the dev box there are no provider keys, so a catalog call is refused before " +
+              "anything is spent — that refusal IS the credential ladder working");
+}
+
+async function refresh() {
+  const r = await fetch(META.token_endpoint, {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: S.get("refresh"),
+                                client_id: S.get("client_id") }) });
+  const body = await r.json();
+  if (!r.ok) { log("refresh failed", body); return; }
+  const rotated = body.refresh_token !== S.get("refresh");
+  S.set("access", body.access_token); S.set("refresh", body.refresh_token);
+  log("refreshed", { rotated, expires_in: body.expires_in });
+}
+
+async function disconnect() {
+  await fetch("/oauth/revoke", { method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token: S.get("refresh") || "" }) });
+  ["access", "refresh", "verifier", "state"].forEach(S.del);
+  setState($("s2"), false, "not connected"); setState($("s3"), false, "no token");
+  document.querySelectorAll(".tool").forEach((b) => (b.disabled = true));
+  $("btnRefresh").disabled = true; $("btnDisconnect").disabled = true; $("btnCall").disabled = true;
+  log("disconnected", "the grant was revoked at treg, not just forgotten here");
+}
+
+// Every handler reports its own failure. Without this a rejected promise vanishes into the console,
+// and the page just looks inert — which is exactly how the price bug above hid.
+const guard = (fn, label) => () => fn().catch((e) => log(label + " failed", String(e)));
+$("btnRegister").onclick = guard(register, "register");
+$("btnConnect").onclick = guard(connect, "connect");
+$("btnDisconnect").onclick = guard(disconnect, "disconnect");
+$("btnRefresh").onclick = guard(refresh, "refresh");
+$("btnCall").onclick = () => callWithPrice().catch((e) => log("call failed", String(e)));
+document.querySelectorAll(".tool").forEach((b) => {
+  b.onclick = () => callTool(b.dataset.tool,
+    b.dataset.tool === "catalog_search" ? { query: "work email", limit: 3 }
+    : b.dataset.tool === "catalog_get" ? { endpoint_id: "hunter.people.email.find" } : {});
+});
+
+discover().then(() => {
+  if (S.get("client_id")) { setState($("s1"), true, "registered"); $("btnConnect").disabled = false; }
+  if (S.get("access")) {
+    setState($("s2"), true, "connected"); setState($("s3"), true, "token held");
+    document.querySelectorAll(".tool").forEach((b) => (b.disabled = false));
+    $("btnRefresh").disabled = false; $("btnDisconnect").disabled = false; $("btnCall").disabled = false;
+  }
+});
+</script>
+</body>
+</html>

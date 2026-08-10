@@ -297,3 +297,31 @@ async def test_the_domain_challenge_returns_the_token_ALONE(clients, monkeypatch
     assert r.status_code == 200
     assert r.text == "tok-abc-123"
     assert r.headers["content-type"].startswith("text/plain")
+
+
+async def test_a_BROWSER_origin_is_accepted(clients):
+    """`"*"` is not a wildcard in this SDK — origins are compared literally, and only a `:*` port
+    suffix is special. Setting `allowed_origins=["*"]` therefore allowed exactly one origin, the
+    literal string "*", and refused every browser with "Invalid Origin header".
+
+    Nothing caught it: the suite and every CLI client send NO Origin header, so the check never ran
+    until a real web page called /mcp/. This test sends one deliberately."""
+    from treg.config import get_settings
+
+    origin = get_settings().public_url.rstrip("/")
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                       "clientInfo": {"name": "browser", "version": "1"}}},
+            headers={**MCP_HEADERS, "Origin": origin})
+    assert r.status_code == 200, f"a browser at our own origin must be served: {r.text[:120]}"
+
+
+async def test_an_UNKNOWN_origin_is_still_refused(clients):
+    """The protection has to remain real — the fix widens the list, it does not remove the check."""
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+            headers={**MCP_HEADERS, "Origin": "https://attacker.example"})
+    assert r.status_code == 403, r.text

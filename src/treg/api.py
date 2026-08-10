@@ -36,7 +36,7 @@ INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 import httpx
 from pathlib import Path
 
-from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import Cookie, Depends, FastAPI, Form, Header, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -52,7 +52,8 @@ from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, se
 from .config import get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold, Invite,
-                     LedgerEntry, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User)
+                     LedgerEntry, Membership, OAuthClient, OAuthCode, OAuthRefresh, Org,
+                     PendingOAuth, Project, RunRecord, Secret, Tool, User)
 from .proxy import relay
 
 
@@ -511,7 +512,20 @@ def _same_origin(request: Request) -> bool:
     if origin == get_settings().public_url.rstrip("/"):
         return True
     host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
-    return origin == f"{'https' if _is_https(request) else 'http'}://{host}"
+    if origin == f"{'https' if _is_https(request) else 'http'}://{host}":
+        return True
+    # `Origin: null` is a browser telling us the submitting document has an OPAQUE origin, which it
+    # does after certain redirect chains — a consent form reached by way of a sign-in bounce through
+    # GitHub, for instance. It is not evidence of a cross-site request, and treating it as one made
+    # the OAuth consent screen fail intermittently: refused on the attempt that went through
+    # sign-in, accepted on the retry that did not.
+    #
+    # `Sec-Fetch-Site` is the right corroboration. It is set by the browser and cannot be written by
+    # script, so a page on another site cannot forge `same-origin` — which is exactly what Origin was
+    # being used to prove.
+    if origin == "null" and request.headers.get("sec-fetch-site") in ("same-origin", "none"):
+        return True
+    return False
 
 
 # In-memory handshake state for `treg login` (single-instance; short-lived, fine to lose on restart).
@@ -1475,6 +1489,553 @@ async def privacy_page():
     return _legal_page("privacy.html")
 
 
+class OAuthClientRegistration(BaseModel):
+    """RFC 7591 registration request. Extra fields are ignored rather than refused — clients send
+    plenty we do not use, and rejecting an unknown key would break them for no benefit."""
+
+    client_name: str = ""
+    redirect_uris: list[str] = []
+    client_uri: str = ""
+    logo_uri: str = ""
+    scope: str = ""
+
+
+@app.post("/oauth/register", include_in_schema=False)
+async def oauth_register(body: OAuthClientRegistration,
+                         db: AsyncSession = Depends(get_session)) -> JSONResponse:
+    """Dynamic client registration (RFC 7591) — how Claude Code and most MCP clients arrive.
+
+    Open by design: the spec has clients register unauthenticated, and a registration grants nothing
+    on its own. Every token still requires a human to sign in and approve at the consent screen, so
+    the worst a spurious registration achieves is a row in a table.
+
+    What is NOT open is the redirect URI. It is fixed here and matched exactly at authorize time,
+    because that is where authorization codes get delivered.
+    """
+    from . import mcp_oauth
+
+    uris = [u for u in body.redirect_uris if mcp_oauth.valid_redirect_uri(u)]
+    if not uris:
+        return JSONResponse(status_code=400, content={
+            "error": "invalid_redirect_uri",
+            "error_description": ("at least one https redirect_uri is required (http is accepted "
+                                  "only for 127.0.0.1 / localhost, for CLI clients)")})
+    client = OAuthClient(
+        client_id=mcp_oauth.new_client_id(), kind="dcr",
+        client_name=(body.client_name or "unnamed client")[:200],
+        client_uri=body.client_uri[:500], logo_uri=body.logo_uri[:500],
+        redirect_uris=uris[:20], scope=body.scope[:200])
+    db.add(client)
+    await db.commit()
+    return JSONResponse(status_code=201, content={
+        "client_id": client.client_id,
+        "client_id_issued_at": int(client.created_at.timestamp()),
+        "client_name": client.client_name,
+        "redirect_uris": client.redirect_uris,
+        "grant_types": ["authorization_code", "refresh_token"],
+        "response_types": ["code"],
+        "token_endpoint_auth_method": "none",
+    })
+
+
+async def _resolve_oauth_client(client_id: str, db: AsyncSession) -> OAuthClient | None:
+    """One client row, whichever door it came through.
+
+    A registered client is a lookup. A client_id that is an https URL is a metadata document: fetched
+    on first sight, cached as a row, and refreshed when stale — documents change, and a cache that
+    never expires would pin a client to redirect URIs it has since retired.
+    """
+    from . import mcp_oauth
+
+    row = (await db.execute(select(OAuthClient).where(OAuthClient.client_id == client_id))
+           ).scalar_one_or_none()
+    fresh_enough = row is not None and (
+        row.kind != "cimd" or (row.refreshed_at is not None and
+                               (datetime.now(timezone.utc).replace(tzinfo=None) - row.refreshed_at
+                                ).total_seconds() < mcp_oauth._CIMD_REFRESH_S))
+    if fresh_enough:
+        return row
+    if not client_id.startswith("https://"):
+        return row  # a dcr client we do not know is simply unknown
+    doc = await mcp_oauth.fetch_client_id_metadata(client_id)
+    if doc is None:
+        return row  # keep a stale copy over nothing: a transient fetch failure is not a revocation
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if row is None:
+        row = OAuthClient(client_id=client_id, kind="cimd")
+        db.add(row)
+    row.kind, row.refreshed_at = "cimd", now
+    row.client_name, row.client_uri = doc["client_name"], doc["client_uri"]
+    row.logo_uri, row.redirect_uris, row.scope = doc["logo_uri"], doc["redirect_uris"], doc["scope"]
+    await db.commit()
+    await db.refresh(row)
+    return row
+
+
+AUTH_CODE_TTL_S = 300   # a code is redeemed within seconds; five minutes is generous, not a window
+REFRESH_TTL_S = 30 * 24 * 3600   # a connector the user still uses keeps working for a month
+
+
+async def _issue_refresh(*, family_id: str, client_id: str, user_id: int, org_id: int,
+                         resource: str, scope: str, db: AsyncSession) -> str:
+    """Mint a refresh token and store only its hash — a database copy is a database leak."""
+    import secrets as _s
+
+    token = _s.token_urlsafe(40)
+    db.add(OAuthRefresh(
+        token_hash=crypto.hash_token(token), family_id=family_id, client_id=client_id,
+        user_id=user_id, org_id=org_id, resource=resource, scope=scope,
+        expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
+        + timedelta(seconds=REFRESH_TTL_S)))
+    return token
+
+
+async def _revoke_refresh_family(family_id: str, reason: str, db: AsyncSession) -> int:
+    """Kill every refresh token descended from one grant.
+
+    Called when a retired token is presented again. We cannot tell a client retrying after a dropped
+    response from a thief replaying a stolen copy — so we assume the worse one, because the cost of
+    being wrong is a re-login rather than someone else's balance.
+    """
+    rows = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.family_id == family_id, OAuthRefresh.retired_at.is_(None)))).scalars().all()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    for r in rows:
+        r.retired_at, r.retired_reason = now, reason
+        db.add(r)
+    return len(rows)
+
+_CONSENT_CSS = """
+.consent{max-width:460px;text-align:left}
+.consent h1{font-size:20px;margin:0 0 4px}
+.consent .who{color:var(--ink55,#8a8a8a);font-size:13.5px;margin:0 0 18px}
+.consent .grants{list-style:none;padding:0;margin:0 0 18px}
+.consent .grants li{padding:7px 0 7px 22px;position:relative;font-size:13.5px;line-height:1.45}
+.consent .grants li:before{content:"›";position:absolute;left:6px;color:#e0703f}
+.consent label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink55,#8a8a8a);margin:0 0 6px}
+.consent select{width:100%;padding:9px 10px;border-radius:8px;font:inherit;font-size:14px;
+  background:#1a1a1a;color:inherit;border:1px solid #333;margin-bottom:16px}
+.consent .row{display:flex;gap:10px}
+.consent button{flex:1;padding:10px 14px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer;
+  border:1px solid #333;background:#1a1a1a;color:inherit}
+.consent button.primary{background:#e0703f;border-color:#e0703f;color:#161310;font-weight:600}
+.consent .fine{color:var(--ink55,#8a8a8a);font-size:12px;margin:14px 0 0;line-height:1.5}
+"""
+
+
+def _consent_page(*, client_name: str, client_uri: str, user_email: str, teams: list,
+                  hidden: dict, unverified: bool) -> HTMLResponse:
+    """The one place a human sees what they are granting — so it says it in words, not scopes.
+
+    Deliberately plain about the two things that cost money or leak data: this client will be able to
+    spend the team's balance, and to use the keys the team registered. A consent screen that lists
+    `treg:call` and calls it informed is a formality, not a decision.
+
+    The team picker is here rather than anywhere else because this is the only moment a human is
+    present to answer it. `balance` used to have to refuse and ask when someone belonged to several
+    teams; that question belongs at the grant, once.
+    """
+    import html as _h
+
+    opts = "".join(
+        f'<option value="{t["org_id"]}">{_h.escape(t["slug"])} — {_h.escape(t["role"])}</option>'
+        for t in teams)
+    fields = "".join(
+        f'<input type="hidden" name="{_h.escape(k)}" value="{_h.escape(str(v))}"/>'
+        for k, v in hidden.items())
+    who = _h.escape(client_name or "An application")
+    where = (f' <span class="who">({_h.escape(client_uri)})</span>' if client_uri else "")
+    warn = ("" if not unverified else
+            '<p class="fine"><b>This application registered itself.</b> treg has not reviewed it — '
+            'only continue if you recognise it and started this yourself.</p>')
+    return HTMLResponse(
+        f"{_AUTH_HEAD.replace('</style>', _CONSENT_CSS + '</style>')}"
+        f'<body><div class="wrap"><div class="card consent">'
+        f'<div class="logo">▚ tools-registry</div>'
+        f"<h1>{who} wants to use treg</h1>{where}"
+        f'<p class="who">Signed in as {_h.escape(user_email)}</p>'
+        f'<ul class="grants">'
+        f"<li>Search the catalog and read prices</li>"
+        f"<li>Call tools on your team's behalf — <b>this spends the team's balance</b></li>"
+        f"<li>Use the API keys and connections your team has registered, without seeing them</li>"
+        f"<li>Read the team's balance</li>"
+        f"</ul>"
+        f'<form method="post" action="/oauth/authorize">{fields}'
+        f'<label for="org_id">Which team?</label>'
+        f'<select id="org_id" name="org_id" required>{opts}</select>'
+        f'<div class="row">'
+        f'<button type="submit" name="decision" value="deny">Cancel</button>'
+        f'<button type="submit" name="decision" value="allow" class="primary">Allow</button>'
+        f"</div></form>{warn}"
+        f'<p class="fine">You can revoke this at any time from your treg dashboard.</p>'
+        f"</div></div></body></html>")
+
+
+def _wrong_resource(resource: str) -> str | None:
+    """Is this `resource` one we actually protect? Returns an error message, or None if fine.
+
+    Refusing early matters more than it looks. `resource` becomes the token's audience, and the MCP
+    server accepts only its own — so accepting a resource we do not serve mints a token that is
+    valid, well-formed, and silently useless. That failure surfaces later, at the first tool call,
+    as "not signed in", which points the reader at authentication when the real problem was the
+    audience. Found exactly that way: an independent MCP client sent the URL it was connecting to
+    rather than the canonical identifier from our metadata, and got a token that could never work.
+
+    Empty is allowed: a client that omits `resource` gets our canonical one, which is what it would
+    have discovered anyway.
+    """
+    from . import mcp_oauth
+
+    if not resource:
+        return None
+    canonical = mcp_oauth.mcp_resource_url()
+    if resource.rstrip("/") == canonical.rstrip("/"):
+        return None
+    return (f"this server issues tokens for {canonical} only — use the `resource` value from "
+            f"/.well-known/oauth-protected-resource")
+
+
+def _oauth_error(redirect_uri: str, state: str, error: str, desc: str = ""):
+    """OAuth errors go BACK TO THE CLIENT via the redirect, once we trust the redirect.
+
+    Before the client and redirect_uri are validated we must NOT redirect — bouncing an error to an
+    unvalidated URI is an open redirect, and it would leak `state` to whoever asked for it. Those
+    cases raise a plain 400 instead, which is why this helper is only ever called after validation.
+    """
+    from urllib.parse import urlencode
+
+    q = {"error": error}
+    if desc:
+        q["error_description"] = desc
+    if state:
+        q["state"] = state
+    sep = "&" if "?" in redirect_uri else "?"
+    return RedirectResponse(f"{redirect_uri}{sep}{urlencode(q)}", status_code=302)
+
+
+async def _authorize_request(client_id: str, redirect_uri: str, response_type: str,
+                             code_challenge: str, code_challenge_method: str,
+                             db: AsyncSession):
+    """Validate an authorization request. Returns (client, error_response) — exactly one is None.
+
+    Order matters and is deliberate: identify the client and its redirect FIRST, because until both
+    are known-good there is nowhere safe to send an error. Everything after that can be reported to
+    the client properly.
+    """
+    from . import mcp_oauth
+
+    client = await _resolve_oauth_client(client_id, db) if client_id else None
+    if client is None:
+        return None, JSONResponse(status_code=400, content={
+            "error": "invalid_client",
+            "error_description": "unknown client_id — register first, or serve a client-id metadata document"})
+    if not mcp_oauth.redirect_uri_allowed(client, redirect_uri):
+        # NOT a redirect: we do not bounce errors to a URI the client has not proven is theirs.
+        return None, JSONResponse(status_code=400, content={
+            "error": "invalid_request",
+            "error_description": "redirect_uri does not exactly match one registered for this client"})
+    return client, None
+
+
+@app.get("/oauth/authorize", include_in_schema=False)
+async def oauth_authorize(
+    request: Request,
+    client_id: str = Query(default=""), redirect_uri: str = Query(default=""),
+    response_type: str = Query(default="code"), scope: str = Query(default=""),
+    state: str = Query(default=""), code_challenge: str = Query(default=""),
+    code_challenge_method: str = Query(default=""), resource: str = Query(default=""),
+    treg_session: str = Cookie(default=""), db: AsyncSession = Depends(get_session),
+):
+    """What is this client asking for, and on behalf of which team?
+
+    Step 3 answers that as JSON; step 4 puts a consent page on top of the same checks. It issues
+    NOTHING — approval is a POST, because a GET that granted access could be triggered by any page
+    that can make the browser navigate.
+    """
+    client, err = await _authorize_request(client_id, redirect_uri, response_type,
+                                           code_challenge, code_challenge_method, db)
+    if err is not None:
+        return err
+    if response_type != "code":
+        return _oauth_error(redirect_uri, state, "unsupported_response_type",
+                            "only the authorization code flow is supported")
+    if not code_challenge or code_challenge_method != "S256":
+        return _oauth_error(redirect_uri, state, "invalid_request",
+                            "PKCE with code_challenge_method=S256 is required")
+    if (bad_target := _wrong_resource(resource)) is not None:
+        return _oauth_error(redirect_uri, state, "invalid_target", bad_target)
+
+    user = await _user_from_session(treg_session, db)
+    if user is None:
+        # Sign in first, then come back to this exact request.
+        from urllib.parse import quote
+
+        return RedirectResponse(f"/?next={quote(str(request.url), safe='')}", status_code=302)
+
+    memberships = (await db.execute(
+        select(Membership).where(Membership.user_id == user.id))).scalars().all()
+    teams = []
+    for m in memberships:
+        org = await db.get(Org, m.org_id)
+        if org is not None and not org.suspended:
+            teams.append({"org_id": org.id, "slug": org.slug, "role": m.role})
+    if not teams:
+        return _oauth_error(redirect_uri, state, "access_denied",
+                            "this account is not a member of any team")
+
+    hidden = {"client_id": client_id, "redirect_uri": redirect_uri, "response_type": response_type,
+              "scope": scope, "state": state, "code_challenge": code_challenge,
+              "code_challenge_method": code_challenge_method, "resource": resource}
+    if "application/json" in (request.headers.get("accept") or ""):
+        return {
+            "client": {"client_id": client.client_id, "name": client.client_name,
+                       "uri": client.client_uri, "kind": client.kind},
+            "redirect_uri": redirect_uri, "scope": scope, "resource": resource,
+            "user": user.email,
+            # The team picker. A person may belong to several, and which one this client may spend
+            # from is a decision for the human here — not something resolved per call later.
+            "teams": teams,
+            "approve_with": "POST /oauth/authorize with the same parameters plus org_id",
+        }
+    return _consent_page(client_name=client.client_name, client_uri=client.client_uri,
+                         user_email=user.email, teams=teams, hidden=hidden,
+                         unverified=(client.kind == "dcr"))
+
+
+@app.post("/oauth/authorize", include_in_schema=False)
+async def oauth_authorize_approve(
+    request: Request,
+    decision: str = Form(default="allow"),
+    client_id: str = Form(default=""), redirect_uri: str = Form(default=""),
+    response_type: str = Form(default="code"), scope: str = Form(default=""),
+    state: str = Form(default=""), code_challenge: str = Form(default=""),
+    code_challenge_method: str = Form(default=""), resource: str = Form(default=""),
+    org_id: int = Form(default=0),
+    treg_session: str = Cookie(default=""), db: AsyncSession = Depends(get_session),
+):
+    """The human decided. On approval, mint a one-time code bound to everything that made this
+    request; on anything else, tell the client no."""
+    import secrets as _s
+
+    from . import mcp_oauth
+
+    # The consent form is the security boundary, so the submission must have come from OUR page.
+    # Without this, a page anywhere could auto-submit a form and grant itself a team's balance —
+    # the user is signed in, so their cookie would ride along. Same guard `auth_logout` uses.
+    if not _same_origin(request):
+        raise HTTPException(status_code=403, detail=(
+            "cross-origin authorization rejected — this form must be submitted from treg's own "
+            f"consent page (saw Origin: {request.headers.get('origin') or 'none'}, "
+            f"Sec-Fetch-Site: {request.headers.get('sec-fetch-site') or 'none'})"))
+
+    client, err = await _authorize_request(client_id, redirect_uri, response_type,
+                                           code_challenge, code_challenge_method, db)
+    if err is not None:
+        return err
+    if decision != "allow":
+        # Cancel is a real answer and the client is entitled to hear it, rather than hang.
+        return _oauth_error(redirect_uri, state, "access_denied", "the user declined")
+    if (bad_target := _wrong_resource(resource)) is not None:
+        return _oauth_error(redirect_uri, state, "invalid_target", bad_target)
+    if not code_challenge or code_challenge_method != "S256":
+        return _oauth_error(redirect_uri, state, "invalid_request",
+                            "PKCE with code_challenge_method=S256 is required")
+
+    user = await _user_from_session(treg_session, db)
+    if user is None:
+        return JSONResponse(status_code=401, content={"error": "access_denied",
+                                                      "error_description": "not signed in"})
+    # The chosen team must be one this user actually belongs to — the field is client-supplied.
+    membership = (await db.execute(select(Membership).where(
+        Membership.user_id == user.id, Membership.org_id == org_id))).scalar_one_or_none()
+    if membership is None:
+        return _oauth_error(redirect_uri, state, "access_denied",
+                            "choose a team you are a member of")
+
+    code = OAuthCode(
+        code=_s.token_urlsafe(32), client_id=client.client_id, user_id=user.id, org_id=org_id,
+        redirect_uri=redirect_uri, code_challenge=code_challenge,
+        resource=resource or mcp_oauth.mcp_resource_url(), scope=scope,
+        expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
+        + timedelta(seconds=AUTH_CODE_TTL_S))
+    db.add(code)
+    await db.commit()
+
+    from urllib.parse import urlencode
+
+    q = {"code": code.code}
+    if state:
+        q["state"] = state
+    sep = "&" if "?" in redirect_uri else "?"
+    return RedirectResponse(f"{redirect_uri}{sep}{urlencode(q)}", status_code=302)
+
+
+async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
+                         db: AsyncSession, bad):
+    """Exchange a refresh token for a new access token, ROTATING the refresh token as we go.
+
+    The retired row is kept, not deleted. That is what makes a replay recognisable: a deleted token
+    looks merely unknown, while a retired one tells us somebody used a credential that had already
+    been spent — and at that point the safe reading is that it was copied.
+    """
+    from . import mcp_oauth
+
+    if not refresh_token:
+        return bad("invalid_request", "refresh_token is required")
+    row = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.token_hash == crypto.hash_token(refresh_token)))).scalar_one_or_none()
+    if row is None:
+        return bad("invalid_grant", "unknown refresh token")
+
+    if row.retired_at is not None:
+        # Already spent. Either a client retried after a dropped response, or someone else has a
+        # copy — indistinguishable from here, so assume the worse one and end the whole family. The
+        # cost of being wrong is one sign-in; the cost of the other mistake is somebody's balance.
+        killed = await _revoke_refresh_family(row.family_id, "reuse detected", db)
+        await db.commit()
+        audit.record_call(org_id=row.org_id, user_email="", tool_name="oauth.refresh_reuse",
+                          method="POST", path="/oauth/token", status_code=400, client="",
+                          telemetry={"family": row.family_id, "revoked": killed})
+        return bad("invalid_grant",
+                   "this refresh token was already used — the grant has been revoked, sign in again")
+
+    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        return bad("invalid_grant", "refresh token expired")
+    if client_id and client_id != row.client_id:
+        return bad("invalid_grant", "refresh token was issued to a different client")
+    if resource and resource != row.resource:
+        return bad("invalid_target", "resource does not match the one that was consented to")
+
+    user = await db.get(User, row.user_id)
+    if user is None or user.suspended:
+        return bad("invalid_grant", "the account behind this grant is no longer active")
+    org = await db.get(Org, row.org_id)
+    if org is None or org.suspended:
+        return bad("invalid_grant", "the team on this grant is no longer available")
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    row.retired_at, row.retired_reason = now, "rotated"
+    db.add(row)
+    replacement = await _issue_refresh(family_id=row.family_id, client_id=row.client_id,
+                                       user_id=row.user_id, org_id=row.org_id,
+                                       resource=row.resource, scope=row.scope, db=db)
+    access = mcp_oauth.make_access_token(
+        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        token_version=user.token_version)
+    await db.commit()
+    return JSONResponse({"access_token": access, "token_type": "Bearer",
+                         "expires_in": mcp_oauth.ACCESS_TTL_SECONDS, "scope": row.scope,
+                         "refresh_token": replacement})
+
+
+@app.post("/oauth/revoke", include_in_schema=False)
+async def oauth_revoke(token: str = Form(default=""),
+                       db: AsyncSession = Depends(get_session)) -> JSONResponse:
+    """RFC 7009. Revoking a refresh token ends its whole family — a user who disconnects an app
+    means all of it, not the one string they happened to send.
+
+    Always answers 200, as the RFC requires: an unknown token is already revoked as far as the caller
+    is concerned, and saying otherwise would turn this into an oracle for guessing valid tokens.
+    """
+    if token:
+        row = (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.token_hash == crypto.hash_token(token)))).scalar_one_or_none()
+        if row is not None:
+            await _revoke_refresh_family(row.family_id, "revoked by client", db)
+            await db.commit()
+    return JSONResponse({"ok": True})
+
+
+@app.post("/oauth/token", include_in_schema=False)
+async def oauth_token(
+    grant_type: str = Form(default=""), code: str = Form(default=""),
+    redirect_uri: str = Form(default=""), client_id: str = Form(default=""),
+    code_verifier: str = Form(default=""), resource: str = Form(default=""),
+    refresh_token: str = Form(default=""),
+    db: AsyncSession = Depends(get_session),
+):
+    """Exchange a code for an access token.
+
+    Errors here are JSON, not redirects: this is a back-channel call from the client itself, and
+    there is no browser to send anywhere.
+    """
+    from . import mcp_oauth
+
+    def bad(err: str, desc: str, status: int = 400):
+        return JSONResponse(status_code=status,
+                            content={"error": err, "error_description": desc})
+
+    if grant_type == "refresh_token":
+        return await _refresh_grant(refresh_token=refresh_token, client_id=client_id,
+                                    resource=resource, db=db, bad=bad)
+    if grant_type != "authorization_code":
+        return bad("unsupported_grant_type",
+                   "supported grants: authorization_code, refresh_token")
+
+    row = (await db.execute(select(OAuthCode).where(OAuthCode.code == code))
+           ).scalar_one_or_none() if code else None
+    if row is None:
+        return bad("invalid_grant", "unknown or already-redeemed code")
+
+    # DELETE FIRST. A code is single-use, and holding it while validating leaves a window where two
+    # redemptions both read it. Everything below is validated against values already in hand.
+    await db.delete(row)
+    await db.commit()
+
+    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        return bad("invalid_grant", "code expired")
+    if client_id and client_id != row.client_id:
+        return bad("invalid_grant", "code was issued to a different client")
+    if redirect_uri != row.redirect_uri:
+        return bad("invalid_grant", "redirect_uri does not match the one the code was issued for")
+    if not mcp_oauth.verify_pkce(code_verifier, row.code_challenge):
+        return bad("invalid_grant", "code_verifier does not match the code_challenge")
+    if resource and resource != row.resource:
+        return bad("invalid_target", "resource does not match the one that was consented to")
+
+    user = await db.get(User, row.user_id)
+    if user is None or user.suspended:
+        return bad("invalid_grant", "the account behind this grant is no longer active")
+
+    token = mcp_oauth.make_access_token(
+        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        token_version=user.token_version)
+    import secrets as _s
+
+    refresh = await _issue_refresh(family_id=_s.token_urlsafe(16), client_id=row.client_id,
+                                   user_id=row.user_id, org_id=row.org_id, resource=row.resource,
+                                   scope=row.scope, db=db)
+    await db.commit()
+    return JSONResponse({"access_token": token, "token_type": "Bearer",
+                         "expires_in": mcp_oauth.ACCESS_TTL_SECONDS, "scope": row.scope,
+                         "refresh_token": refresh})
+
+
+@app.get("/.well-known/oauth-protected-resource", include_in_schema=False)
+@app.get("/.well-known/oauth-protected-resource/mcp", include_in_schema=False)
+async def oauth_protected_resource():
+    """Tells an MCP client which authorization server guards /mcp/ and what it may ask for.
+
+    Two paths for one document: the spec has clients look it up either at the host root or under the
+    resource's own path, and which one a given client tries is not something we get to choose.
+    """
+    from . import mcp_oauth
+
+    return JSONResponse(mcp_oauth.protected_resource_metadata(),
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/.well-known/oauth-authorization-server", include_in_schema=False)
+async def oauth_authorization_server():
+    """How to get a token: the authorize and token endpoints, S256, and that we accept both dynamic
+    registration and a client-id metadata document."""
+    from . import mcp_oauth
+
+    return JSONResponse(mcp_oauth.authorization_server_metadata(),
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
 @app.get("/.well-known/openai-apps-challenge", include_in_schema=False)
 async def openai_apps_challenge():
     """Domain-verification token for the OpenAI plugin directory.
@@ -1489,6 +2050,24 @@ async def openai_apps_challenge():
     if not token:
         raise HTTPException(status_code=404, detail="not configured")
     return PlainTextResponse(token, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/connect-demo", include_in_schema=False)
+async def connect_demo_page():
+    """A page that PRETENDS to be someone else's app, so the OAuth flow can be seen end to end.
+
+    It uses only public endpoints — register, authorize, token, revoke, and /mcp/ — with nothing
+    privileged about being served from treg's own domain. The point is to watch the whole dance in a
+    browser before trusting it inside ChatGPT, where a failure surfaces as a shrug rather than an
+    error message.
+    """
+    return _legal_page("connect-demo.html")
+
+
+@app.get("/connect-demo/callback", include_in_schema=False)
+async def connect_demo_callback():
+    """Where treg sends the browser back. Hands the code to the opener and closes."""
+    return _legal_page("connect-demo-callback.html")
 
 
 @app.get("/support", include_in_schema=False)
@@ -1758,6 +2337,7 @@ async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
 _ORG_SCOPED_MODELS = (
     Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project,
     CapabilityPin, LedgerEntry, Hold, CreditBlock,
+    OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 
