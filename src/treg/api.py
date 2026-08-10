@@ -7316,6 +7316,12 @@ async def call_tool(
         charged, observed = await _platform_settle(mk, response.status_code, body)
         _audit(response.status_code, observed_micro=observed, charged_micro=charged,
                duration_ms=duration_ms, response_bytes=len(body))
+        # Tell the caller what the call actually cost. Both llms.txt and skill.md instruct an agent to
+        # report the price it spent, and until now the only way to find out was to read the balance
+        # before and after — which races with any other call and cannot attribute a figure to a
+        # request. The header is set only on a METERED call: a team's own key is never charged, and a
+        # `0` there would read as "free" rather than "not applicable".
+        response.headers["X-Treg-Cost-Micro"] = str(charged)
         return response
     # Fire-and-forget audit — does not block the streaming response (rule #2).
     _audit(response.status_code, duration_ms=duration_ms)

@@ -430,8 +430,12 @@ async def call(endpoint_id: str, params: dict | list | None = None,
             r = await client.request(method, f"/call/{endpoint_id}", json=args)
 
     out: dict[str, Any] = {"status": r.status_code, "endpoint_id": endpoint_id, "body": _body(r)}
+    # Set by /call/ on a METERED call only — a team's own key is never charged, and its absence
+    # therefore means "not applicable" rather than "free". This header did not exist when the tool
+    # first read it: I wrote against a convention I had invented, so `cost_usd` was always null and
+    # an agent could not report what it spent. Same mistake as the `?next=` redirect.
     spent = r.headers.get("X-Treg-Cost-Micro")
-    if spent:
+    if spent is not None:
         try:
             out["cost_usd"] = round(int(spent) / 1_000_000, 6)
         except ValueError:
