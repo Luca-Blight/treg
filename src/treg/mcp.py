@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, TypedDict
 from urllib.parse import urlsplit
 
 import httpx
@@ -82,6 +82,91 @@ mcp = MCPServer(
         "measured; choosing is yours. There is no automatic routing and no failover."
     ),
 )
+
+
+# ---------------------------------------------------------------------------------------------
+# What each tool returns. These exist so a model knows the SHAPE of an answer before it gets one —
+# ChatGPT's connector review asks for them, and a model that has to guess at field names guesses.
+#
+# EVERY FIELD IS OPTIONAL (`total=False`), and that is the load-bearing detail. A strict schema is
+# validated on the way out, so the first `{"error": "not authenticated"}` would raise instead of
+# returning — turning a refusal written to tell an agent exactly how to recover into an opaque tool
+# failure. Optional fields document the success shape while letting the error shape through, which is
+# the trade worth making: a schema is a hint to the model, not a gate on our own error handling.
+
+# NULLABLE as well as optional. `total=False` says a key may be ABSENT; it does not say the value may
+# be null, and real rows carry nulls — a registered tool with no description, an endpoint with no
+# published price. The first version typed these as plain `str` and a team tool with
+# `description: None` failed validation, so `my_tools` returned a schema error instead of the team's
+# tools. Caught by the isolation test's "org A must genuinely SEE its tool" assertion, which exists
+# precisely so a passing-for-free result is impossible.
+class SearchResult(TypedDict, total=False):
+    endpoint_id: str | None
+    name: str | None
+    provider: str | None
+    usd_per_call: float | None
+    no_key_needed: bool | None
+    score: int | None
+
+
+class SearchOut(TypedDict, total=False):
+    query: str | None
+    count: int | None
+    total_matches: int | None
+    results: list[SearchResult]
+    hint: str
+    next: str
+    error: str
+    detail: str
+
+
+class CatalogGetOut(TypedDict, total=False):
+    endpoint: dict[str, Any]        # the full catalog entry: params, cost, observed reliability
+    provider: dict[str, Any]
+    siblings: list[dict[str, Any]]  # other providers of the same capability, for comparison
+    call_template: str
+    example_response: dict[str, Any]
+    hints: list[str]
+    error: str
+    detail: str
+
+
+class CallOut(TypedDict, total=False):
+    status: int | None              # the UPSTREAM status, relayed
+    endpoint_id: str | None
+    body: Any                       # the provider's response, verbatim
+    cost_usd: float
+    whose_error: str                # "treg" or "provider" — who to blame, and whether to retry
+    hint: str
+    error: str
+    detail: str
+
+
+class BalanceOut(TypedDict, total=False):
+    team: str | None
+    balance_usd: float | None
+    balance_micro: int | None
+    holds_micro: int | None
+    error: str
+    detail: str
+    teams: list[str]                # when a person is in several and none is active
+    hint: str
+
+
+class TeamTool(TypedDict, total=False):
+    name: str | None
+    base_url: str | None
+    description: str | None
+
+
+class MyToolsOut(TypedDict, total=False):
+    team: str | None
+    count: int | None
+    tools: list[TeamTool]
+    error: str
+    detail: str
+    teams: list[str]
+    hint: str
 
 
 def _bearer(ctx: Context) -> str:
@@ -241,9 +326,10 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
         "without you owning an API key. Call this FIRST when a task needs data or an API you have "
         "no key for."
     ),
-    annotations=_READS
+    annotations=_READS,
+    structured_output=True
 )
-async def catalog_search(query: str, limit: int = 8) -> dict:
+async def catalog_search(query: str, limit: int = 8) -> SearchOut:
     cat = catalog_store.load()
     ranked, total = catalog_store.search(query, cat, max(1, min(limit, 25)))
     results = []
@@ -274,9 +360,10 @@ async def catalog_search(query: str, limit: int = 8) -> dict:
         "rate and speed treg has measured across real calls. Read this BEFORE call() so you can "
         "tell the human what it will cost."
     ),
-    annotations=_READS
+    annotations=_READS,
+    structured_output=True
 )
-async def catalog_get(endpoint_id: str, ctx: Context) -> dict:
+async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
     """Goes through the HTTP route rather than the store: that route attaches the observed
     reliability figures and the capability siblings, and those come from the database."""
     token = _bearer(ctx)
@@ -301,10 +388,11 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> dict:
         "from the team's prepaid balance; a team's own tool is never metered. Tell the human the "
         "price (from catalog_get) before calling anything that costs more than a cent."
     ),
-    annotations=_CALLS
+    annotations=_CALLS,
+    structured_output=True
 )
 async def call(endpoint_id: str, params: dict | None = None,
-               method: str | None = None, ctx: Context = None) -> dict:  # type: ignore[assignment]
+               method: str | None = None, ctx: Context = None) -> CallOut:  # type: ignore[assignment]
     token = _bearer(ctx) if ctx else ""
     if not token:
         return _need_token()
@@ -349,9 +437,10 @@ async def call(endpoint_id: str, params: dict | None = None,
         "The team's prepaid balance in USD, and any spend currently in flight. Check it when a call "
         "is refused for funds, or before a job that will make many calls."
     ),
-    annotations=_READS
+    annotations=_READS,
+    structured_output=True
 )
-async def balance(ctx: Context) -> dict:
+async def balance(ctx: Context) -> BalanceOut:
     token = _bearer(ctx)
     if not token:
         return _need_token()
@@ -377,9 +466,10 @@ async def balance(ctx: Context) -> dict:
         "API keys, OAuth connections, vendor CLIs and skills. A team's own tool always wins over "
         "treg's catalog key, and those calls are never metered."
     ),
-    annotations=_READS
+    annotations=_READS,
+    structured_output=True
 )
-async def my_tools(ctx: Context) -> dict:
+async def my_tools(ctx: Context) -> MyToolsOut:
     token = _bearer(ctx)
     if not token:
         return _need_token()
