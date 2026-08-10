@@ -167,3 +167,100 @@ def verify_pkce(verifier: str, challenge: str) -> bool:
         return False
     digest = hashlib.sha256(verifier.encode("ascii")).digest()
     return hmac.compare_digest(_b64(digest), challenge)
+
+
+# ---------------------------------------------------------------------------------------------
+# Client registration — two doors in, one row shape out
+# ---------------------------------------------------------------------------------------------
+
+# A client-id metadata document is fetched from a URL the CALLER chose, which makes it a
+# request-forgery primitive unless it is fenced. The fence: https only, no redirects followed, a
+# public address at connect time, a short timeout, and a size cap. `health` already owns both halves
+# of the address check and is reused rather than reimplemented — a second copy of an SSRF guard is a
+# second thing to forget to update.
+_CIMD_TIMEOUT_S = 5.0
+_CIMD_MAX_BYTES = 64 * 1024
+_CIMD_REFRESH_S = 24 * 3600
+
+
+def valid_redirect_uri(uri: str) -> bool:
+    """A redirect URI must be https, or a loopback http address.
+
+    Loopback is the documented exception and a real need: a CLI client listens on 127.0.0.1 to catch
+    the code, and there is no way for it to hold a certificate. Everything else must be https,
+    because an authorization code travelling over http is a code an eavesdropper can redeem.
+    """
+    from urllib.parse import urlsplit
+
+    try:
+        u = urlsplit(uri)
+    except ValueError:
+        return False
+    if not u.hostname or u.fragment:      # a fragment cannot be matched exactly and hides intent
+        return False
+    if u.scheme == "https":
+        return True
+    return u.scheme == "http" and u.hostname in ("127.0.0.1", "::1", "localhost")
+
+
+def redirect_uri_allowed(client, uri: str) -> bool:
+    """EXACT match against what the client registered.
+
+    Not a prefix or a host comparison. Prefix matching is the classic way this check is defeated —
+    `https://good.example.com.evil.test/` starts with the registered origin, and an open redirect
+    under a registered host turns one sloppy page into stolen authorization codes.
+    """
+    return bool(uri) and uri in (client.redirect_uris or [])
+
+
+async def fetch_client_id_metadata(url: str) -> dict | None:
+    """Fetch a client-id metadata document, or None if it is not safe or not usable.
+
+    Returning None rather than raising: an unreachable or malformed document is a client we cannot
+    identify, which is a refusal, not a server error.
+    """
+    from urllib.parse import urlsplit
+
+    import httpx
+
+    from . import health
+
+    u = urlsplit(url)
+    if u.scheme != "https" or not u.hostname:
+        return None
+    if not health.safe_webhook_url(url) or not health.host_is_public(u.hostname):
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=_CIMD_TIMEOUT_S, follow_redirects=False) as c:
+            r = await c.get(url, headers={"Accept": "application/json"})
+        if r.status_code != 200 or len(r.content) > _CIMD_MAX_BYTES:
+            return None
+        doc = r.json()
+    except Exception:  # noqa: BLE001 — any failure to fetch is "cannot identify this client"
+        return None
+    if not isinstance(doc, dict):
+        return None
+    # The document must claim the URL it was served from. Without this, a document hosted anywhere
+    # could assert someone else's client_id and inherit their consent.
+    if doc.get("client_id") not in (None, url):
+        return None
+    redirects = [r for r in (doc.get("redirect_uris") or []) if isinstance(r, str)]
+    redirects = [r for r in redirects if valid_redirect_uri(r)]
+    if not redirects:
+        return None
+    return {
+        "client_id": url,
+        "client_name": str(doc.get("client_name") or url)[:200],
+        "client_uri": str(doc.get("client_uri") or "")[:500],
+        "logo_uri": str(doc.get("logo_uri") or "")[:500],
+        "redirect_uris": redirects[:20],
+        "scope": str(doc.get("scope") or "")[:200],
+    }
+
+
+def new_client_id() -> str:
+    """Opaque, for dynamically registered clients. Not guessable, and not carrying meaning: a
+    client_id that encoded anything would tempt something downstream into parsing it."""
+    import secrets
+
+    return "treg-client-" + secrets.token_urlsafe(24)

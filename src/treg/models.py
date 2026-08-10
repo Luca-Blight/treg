@@ -542,3 +542,39 @@ class Project(SQLModel, table=True):
     slug: str = Field(index=True)  # the human handle inside the org
     created_by: str = Field(default="")
     created_at: datetime = Field(default_factory=_now)
+
+
+class OAuthClient(SQLModel, table=True):
+    """An MCP client that may ask treg for a token — ChatGPT, Claude Code, Cursor, anything.
+
+    Two ways a client arrives here and ONE row shape afterwards, which is the point: everything
+    downstream (authorize, consent, token) reads this table and never asks how the client got in.
+
+    - **dcr** — dynamic client registration (RFC 7591). The client POSTs its name and redirect URIs
+      and we mint an opaque `client_id`. This is what Claude Code and most clients do.
+    - **cimd** — a client-id metadata document. The `client_id` IS an https URL that we fetch to
+      learn the name and redirect URIs. This is what ChatGPT prefers.
+
+    Supporting only one would lock the other family out, and we would not have noticed: the client
+    we happened to test with first is the one that does not need registration.
+
+    `redirect_uris` is the security-critical column. An authorization code is delivered to a redirect
+    URI, so a client that could name an arbitrary one at authorize time could have codes posted to an
+    attacker. They are fixed here at registration and matched EXACTLY later — no prefix matching,
+    which is the classic way this check is defeated.
+    """
+
+    __table_args__ = (UniqueConstraint("client_id", name="uq_oauth_client_id"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    client_id: str = Field(index=True)
+    kind: str = Field(default="dcr")            # "dcr" | "cimd"
+    client_name: str = Field(default="")
+    client_uri: str = Field(default="")
+    logo_uri: str = Field(default="")
+    redirect_uris: list = Field(default_factory=list,
+                                sa_column=Column("redirect_uris", JSON, nullable=False))
+    scope: str = Field(default="")
+    created_at: datetime = Field(default_factory=_now)
+    # cimd only: documents change, so a cached copy has to be refreshable rather than permanent.
+    refreshed_at: datetime | None = Field(default=None)

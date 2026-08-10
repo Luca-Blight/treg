@@ -1,4 +1,4 @@
-"""treg as an OAuth authorization server — step 1: the metadata, and the refusals.
+"""treg as an OAuth authorization server — the metadata, the refusals, and client registration.
 
 Nothing issues tokens yet. This file covers the half that says NO, deliberately built first: there is
 never a window where the server accepts tokens it has not learned to check.
@@ -146,3 +146,109 @@ async def test_a_token_outlives_neither_its_ttl_nor_reason():
                                       audience=mcp_oauth.mcp_resource_url())
     claims = mcp_oauth.read_access_token(tok, expected_audience=mcp_oauth.mcp_resource_url())
     assert claims and claims["exp"] <= int(time.time()) + mcp_oauth.ACCESS_TTL_SECONDS + 2
+
+
+# ---- step 2: client registration — two doors in, one row shape out --------------------------
+
+async def test_dynamic_registration_mints_a_client(clients):
+    """RFC 7591, unauthenticated by design: registering grants nothing on its own, because every
+    token still needs a human to approve at the consent screen."""
+    r = await clients.post("/oauth/register", json={
+        "client_name": "Claude Code",
+        "redirect_uris": ["http://127.0.0.1:8976/callback"]})
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["client_id"].startswith("treg-client-")
+    assert body["redirect_uris"] == ["http://127.0.0.1:8976/callback"]
+    assert body["token_endpoint_auth_method"] == "none"   # public client + PKCE
+
+
+async def test_registration_requires_a_usable_redirect_uri(clients):
+    """An authorization code is delivered to the redirect URI. A client with none, or with one an
+    eavesdropper could read, has nowhere safe to receive it."""
+    for uris in ([], ["http://evil.example.com/cb"], ["ftp://x/cb"], ["https://a.test/cb#frag"]):
+        r = await clients.post("/oauth/register",
+                               json={"client_name": "x", "redirect_uris": uris})
+        assert r.status_code == 400, f"{uris} should be refused, got {r.status_code}"
+        assert r.json()["error"] == "invalid_redirect_uri"
+
+
+async def test_loopback_http_is_allowed_because_a_CLI_cannot_hold_a_certificate(clients):
+    for uri in ("http://127.0.0.1:1234/cb", "http://localhost:9999/cb"):
+        r = await clients.post("/oauth/register", json={"client_name": "cli", "redirect_uris": [uri]})
+        assert r.status_code == 201, uri
+
+
+async def test_redirect_matching_is_EXACT_not_prefix():
+    """The classic defeat of this check. `https://good.test/cb.evil` starts with the registered URI,
+    and an open redirect under a registered host turns one sloppy page into stolen codes."""
+    from treg.mcp_oauth import redirect_uri_allowed
+
+    class C:
+        redirect_uris = ["https://good.test/cb"]
+
+    assert redirect_uri_allowed(C(), "https://good.test/cb")
+    for evil in ("https://good.test/cb.evil", "https://good.test/cb/../x", "https://good.test/CB",
+                 "https://good.test.evil/cb", ""):
+        assert not redirect_uri_allowed(C(), evil), evil
+
+
+# ---- the CIMD fetch: a URL the caller chose, so it must be fenced ---------------------------
+
+@pytest.mark.parametrize("url", [
+    "http://example.com/cimd.json",          # not https
+    "https://127.0.0.1/cimd.json",           # loopback
+    "https://169.254.169.254/latest/meta",   # cloud metadata — the classic SSRF target
+    "https://10.0.0.5/cimd.json",            # private
+    "https://localhost/cimd.json",
+    "not-a-url",
+])
+async def test_cimd_refuses_unsafe_urls(url):
+    """`client_id` is a URL our SERVER fetches, which makes it a request-forgery primitive unless
+    fenced. Reuses the same guard the webhook and tool base_url paths already use."""
+    from treg.mcp_oauth import fetch_client_id_metadata
+
+    assert await fetch_client_id_metadata(url) is None
+
+
+async def test_cimd_document_must_claim_its_own_url(monkeypatch):
+    """Without this, a document hosted anywhere could assert somebody else's client_id and inherit
+    the consent users granted them."""
+    import httpx
+
+    from treg import health, mcp_oauth
+
+    monkeypatch.setattr(health, "safe_webhook_url", lambda u: True)
+    monkeypatch.setattr(health, "host_is_public", lambda h: True)
+
+    async def fake_get(self, url, **kw):
+        return httpx.Response(200, json={"client_id": "https://someone-else.test/cimd.json",
+                                         "client_name": "impostor",
+                                         "redirect_uris": ["https://impostor.test/cb"]},
+                              request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+    assert await mcp_oauth.fetch_client_id_metadata("https://real.test/cimd.json") is None
+
+
+async def test_cimd_accepts_a_well_formed_document(monkeypatch):
+    """Not vacuous: the refusals above only mean something if a good document DOES load."""
+    import httpx
+
+    from treg import health, mcp_oauth
+
+    monkeypatch.setattr(health, "safe_webhook_url", lambda u: True)
+    monkeypatch.setattr(health, "host_is_public", lambda h: True)
+
+    async def fake_get(self, url, **kw):
+        return httpx.Response(200, json={"client_id": url, "client_name": "ChatGPT",
+                                         "redirect_uris": ["https://chatgpt.com/connector/oauth/x",
+                                                           "http://evil.test/cb"]},
+                              request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+    doc = await mcp_oauth.fetch_client_id_metadata("https://chatgpt.com/cimd.json")
+    assert doc is not None
+    assert doc["client_name"] == "ChatGPT"
+    # the unsafe redirect in the document is dropped rather than accepted alongside the good one
+    assert doc["redirect_uris"] == ["https://chatgpt.com/connector/oauth/x"]

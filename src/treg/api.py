@@ -52,7 +52,8 @@ from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, se
 from .config import get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold, Invite,
-                     LedgerEntry, Membership, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User)
+                     LedgerEntry, Membership, OAuthClient, Org, PendingOAuth, Project, RunRecord,
+                     Secret, Tool, User)
 from .proxy import relay
 
 
@@ -1473,6 +1474,89 @@ async def privacy_page():
     (Google requires a reachable privacy policy carrying the Limited Use disclosure), so this path
     is effectively public API — don't rename it without updating the provider consoles."""
     return _legal_page("privacy.html")
+
+
+class OAuthClientRegistration(BaseModel):
+    """RFC 7591 registration request. Extra fields are ignored rather than refused — clients send
+    plenty we do not use, and rejecting an unknown key would break them for no benefit."""
+
+    client_name: str = ""
+    redirect_uris: list[str] = []
+    client_uri: str = ""
+    logo_uri: str = ""
+    scope: str = ""
+
+
+@app.post("/oauth/register", include_in_schema=False)
+async def oauth_register(body: OAuthClientRegistration,
+                         db: AsyncSession = Depends(get_session)) -> JSONResponse:
+    """Dynamic client registration (RFC 7591) — how Claude Code and most MCP clients arrive.
+
+    Open by design: the spec has clients register unauthenticated, and a registration grants nothing
+    on its own. Every token still requires a human to sign in and approve at the consent screen, so
+    the worst a spurious registration achieves is a row in a table.
+
+    What is NOT open is the redirect URI. It is fixed here and matched exactly at authorize time,
+    because that is where authorization codes get delivered.
+    """
+    from . import mcp_oauth
+
+    uris = [u for u in body.redirect_uris if mcp_oauth.valid_redirect_uri(u)]
+    if not uris:
+        return JSONResponse(status_code=400, content={
+            "error": "invalid_redirect_uri",
+            "error_description": ("at least one https redirect_uri is required (http is accepted "
+                                  "only for 127.0.0.1 / localhost, for CLI clients)")})
+    client = OAuthClient(
+        client_id=mcp_oauth.new_client_id(), kind="dcr",
+        client_name=(body.client_name or "unnamed client")[:200],
+        client_uri=body.client_uri[:500], logo_uri=body.logo_uri[:500],
+        redirect_uris=uris[:20], scope=body.scope[:200])
+    db.add(client)
+    await db.commit()
+    return JSONResponse(status_code=201, content={
+        "client_id": client.client_id,
+        "client_id_issued_at": int(client.created_at.timestamp()),
+        "client_name": client.client_name,
+        "redirect_uris": client.redirect_uris,
+        "grant_types": ["authorization_code", "refresh_token"],
+        "response_types": ["code"],
+        "token_endpoint_auth_method": "none",
+    })
+
+
+async def _resolve_oauth_client(client_id: str, db: AsyncSession) -> OAuthClient | None:
+    """One client row, whichever door it came through.
+
+    A registered client is a lookup. A client_id that is an https URL is a metadata document: fetched
+    on first sight, cached as a row, and refreshed when stale — documents change, and a cache that
+    never expires would pin a client to redirect URIs it has since retired.
+    """
+    from . import mcp_oauth
+
+    row = (await db.execute(select(OAuthClient).where(OAuthClient.client_id == client_id))
+           ).scalar_one_or_none()
+    fresh_enough = row is not None and (
+        row.kind != "cimd" or (row.refreshed_at is not None and
+                               (datetime.now(timezone.utc).replace(tzinfo=None) - row.refreshed_at
+                                ).total_seconds() < mcp_oauth._CIMD_REFRESH_S))
+    if fresh_enough:
+        return row
+    if not client_id.startswith("https://"):
+        return row  # a dcr client we do not know is simply unknown
+    doc = await mcp_oauth.fetch_client_id_metadata(client_id)
+    if doc is None:
+        return row  # keep a stale copy over nothing: a transient fetch failure is not a revocation
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if row is None:
+        row = OAuthClient(client_id=client_id, kind="cimd")
+        db.add(row)
+    row.kind, row.refreshed_at = "cimd", now
+    row.client_name, row.client_uri = doc["client_name"], doc["client_uri"]
+    row.logo_uri, row.redirect_uris, row.scope = doc["logo_uri"], doc["redirect_uris"], doc["scope"]
+    await db.commit()
+    await db.refresh(row)
+    return row
 
 
 @app.get("/.well-known/oauth-protected-resource", include_in_schema=False)
