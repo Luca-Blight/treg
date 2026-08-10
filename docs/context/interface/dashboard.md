@@ -174,12 +174,24 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   confirmation spelling out that an admin agent can register/delete tools and secrets and manage members.
 - **Tool form** — Add/Edit now carries a **Project** dropdown (default "team-wide"); `loadProjectsIfNeeded`
   fetches the list on demand so it works even if the Team page was never opened.
-- **Getting started** (`view==='start'`, under Help) — two tabs (`startTab`, default `access`), each
-  leading with the agent instruction (`buildAgentPrompt('agent')`) then a manual CLI walkthrough:
-  **"Access 2000+ treg tools"** (install `{BASE}/install.sh` → `treg login` → catalog search/call/
-  `treg balance`) and **"Setup your team's skills & env vault"**, which stacks two sections — set up
-  the vault (install → login → `treg scan`/`treg upload`) then *let the team use it* (`treg skill ls`
-  / `skill install` / URL-passthrough call). Per-block copy via `copyStart`.
+- **Getting started** (`view==='start'`, the FIRST nav item, above Catalog; the sidebar's team half is
+  labeled **"Your vault"** — Jason's explicit naming call, overriding the no-"vault" vocabulary rule) —
+  two numbered **step cards** (`.start-card`):
+  **① Set up your \<agent\>** — an agent dropdown (`startAgentOpen`, shares `welcome.agent` +
+  `welcomeAgents`/`welcomeMoreAgents` with the first-run modal; "Docs" links `/tutorial`) above the
+  per-agent setup line (`welcomeSetupCmd` = `buildAgentPrompt` — `set up treg — <proxy>/llms.txt with token <T>, team <slug>`; the long multi-step agent prompt is retired, llms.txt itself now carries the setup flow, the do-not-stop authorization framing and the star ask, and its money rules no longer demand per-call price confirmation) and, combined into the
+  same card, **Your API key** (`myToken`, masked with a `startTokenShow` reveal + copy — the key
+  already exists, so there is no "create key" step). **② Try it out** — four copyable example
+  prompts (`tryExamples`, category-labeled `.try-card`s: Social/Trends/SEO/Enrichment — concrete
+  live-data asks a bare agent can't answer), then an `.oauth-div` divider ("also connect OAuth
+  accounts for new agent capabilities") over three grouped rows of `.prov-chip` logo chips
+  (`tryOauth` — Post on social: X/YouTube/TikTok/LinkedIn with a dotted "`N` coming soon"
+  `.soon-note` whose `title` tooltip lists Instagram/Facebook Pages · Manage ad campaigns:
+  Google/Meta Ads · SEO on your own site: GA/GSC/GBP) — each chip `openProvider(service)` into the
+  marketplace connect page.
+  Below, a collapsed `<details>` ("Prefer the terminal?") keeps the old two-tab manual walkthrough
+  (`startTab`: **Access** install → login → catalog search/call/balance; **Setup** scan/upload then
+  the team-use commands). Per-block copy via `copyStart`.
 - **Activity** — one time-sorted feed (`activityRows`) merging `GET /calls` (proxy calls) + `GET /runs`
   (CLI executions). Local runs now arrive via `/runs` (tagged `where`), so the calls feed **excludes**
   `local_run` rows to avoid double-counting, and each run row shows a **local/server** chip.
@@ -190,8 +202,13 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   (`u.email===me`) to prevent lockout.
 - **First-run onboarding** — a brand-new user has **zero teams** (no auto personal org), so `maybeOnboard`
   shows a **mandatory "name your team" welcome** (`welcome.*`; team name pre-suggested from the email
-  domain via `_suggestTeamName`). It is NOT dismissable — no skip, survives Escape/backdrop — the only
-  action is `welcomeCreate` (`POST /orgs`, marks onboarded, lands on Secrets with a hint). **Exception —
+  domain via `_suggestTeamName`). Step 0 is NOT dismissable — no skip, survives Escape/backdrop — the only
+  action is `welcomeCreate` (`POST /orgs`, marks onboarded). Two more steps follow **inside the same
+  modal**: an **agent picker** (`welcome.step===1` — OpenClaw / Hermes Agent / Claude.ai / Claude Code /
+  Codex, plus a "More" expander with opencode / pi / Cursor / Gemini CLI / Other; LobeHub icons via
+  unpkg, theme-aware light/dark variants through `agentIcon`) with Skip/Next, then the **setup line**
+  (`step===2` — "In your agent's chat, send:" + `welcomeSetupCmd`, copy button) with Back/Done. Skip and Done both call `welcomeFinish` → close + `go('start')` (Getting started, also the default landing for any signed-in arrival with no deep link/hash).
+  **Exception —
   an invited user**: `maybeOnboard` checks `pendingInvites` first and, if any, shows a **multi-select
   accept-invite modal** (`inviteChoice` / `openInviteChoice` seeds `inviteSel` with ALL invites checked;
   `sortedInvites` puts the clicked link's team — `inviteLinkOrg` — first) — "Accept & join N teams →" →
@@ -212,12 +229,11 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   real door and the invite auto-appears via `/invites/mine` (newest-first). Invalid/expired →
   `/?invite_expired=1`. Neither path consumes the invite (still `pending`); the accept modal does. `loadAll`
   short-circuits the org-scoped fetches while `myOrgs` is empty so no error banner flashes behind it. The
-  old demo/guided stepper (`onb.*`) is now opt-in, replayable from Help. A `demo` chip marks a sandbox org.
+  old demo/guided stepper (`onb.*`) is removed entirely. A `demo` chip marks a sandbox org.
 - **Help → Tutorial** — the full interactive walkthrough, rendered natively (Vue) from the shared
   `window.TREG_TUTORIAL` data (`tutGo`/`tutHL`/`tutCopy`, syntax-highlighted command + output blocks,
   persona chips, and four toggle panels — **Concepts · Roles · Auth shapes · Skills**). The standalone
-  `/tutorial` mirrors it and opens a panel from the URL hash (`/tutorial#auth`, `#skills`); the onboarding
-  stepper deep-links each step's "Read more" there via `readMore(onbSection)`. See below.
+  `/tutorial` mirrors it and opens a panel from the URL hash (`/tutorial#auth`, `#skills`). See below.
 
 ## Marketplace — the in-browser OAuth-connect UI (`view==='connections'` / `'provider'`)
 The dashboard now runs the whole **hosted connect flow** in the browser, so a member can attach a
@@ -503,13 +519,24 @@ Both panes are the **same bounded box**: `.prm` and `.cat-ex pre` cap at **320px
 themselves. A DataForSEO body carries thirty parameters, and uncapped a single expansion pushed every
 row below it off the screen.
 
-The tab bar's right side carries the two things you should never have to scroll for: the provider's
-**docs** (falling back to its pricing page) and **Connect**, which wears the ink fill (`.btn.primary`
-over `--inverse`) — the strongest treatment the design language has, since connecting the provider is
-the one action that unblocks every row on the page and it used to be a ghost button under a parameter
-table. Once connected the button is replaced in place by the green **`Connected`** chip. Everything
-here renders identically in a single row's expansion and in a merged row's provider sub-row, because
-both paths share the one `.lep` block.
+The tab bar's right side carries the provider's **docs** (falling back to its pricing page), then the
+two run actions — and which one is primary depends on the provider's `auth_kind` (`mkOauth(service)`).
+For a **key/token** provider, **▶ Try it** (`openEpTry`) is the ink-fill **primary** — trying on treg's
+own key is what most visitors want — and **Bring your own key** (`openProvider`, formerly the ink-filled
+"Connect {provider}") is the secondary ghost beside it. For an **OAuth** provider treg *can't* serve on
+its own key (calls act as your account), so the order flips: **Connect {provider}** is the ink-fill
+primary and Try-it is secondary. Once an account is connected the connect/own-key button is replaced in
+place by the green **`Connected`** chip. Everything here renders identically in a single row's expansion
+and in a merged row's provider sub-row, because both paths share the one `.lep` block.
+
+**The Try-it drawer (`epTry`) is four tabs** (`epTryTab`, default **AI Agent**): **AI Agent** — the
+one-line setup (`epTrySetupLine`, with team + token embedded **here only**, a copy-and-run-now context;
+the setup line everywhere else stays clean) plus a ready "Use treg to call `<id>` — `<summary>`" prompt
+(`epTryAgentUse`); **CLI** — install/login, `treg catalog get <id>`, and the filled `treg call <id>
+--query …` (`epTryCliCall`); **API** — the `curl {BASE}/call/<id>?<query>` passthrough with the token
+header (`epTryCurl`, adding `X-Treg-Org` in session mode since the minted token is an identity token);
+and **Manual** — the live test form (params + `❯ Run`, disabled with a reason when the access dry-run
+says this org can't call it) that the drawer used to be by itself.
 
 **Example responses** load when their tab is FIRST opened (`setEpTab` → `loadExample`, guarded by
 `if(this.platEx[e.id]) return`), never with the page and never twice — a platform can carry hundreds of
