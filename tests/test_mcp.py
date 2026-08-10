@@ -98,11 +98,12 @@ async def test_the_server_lists_exactly_the_five_tools(clients):
     assert names == {"catalog_search", "catalog_get", "call", "balance", "my_tools"}
 
 
-async def test_catalog_search_answers_without_any_token(clients):
-    """The catalog is public — discovery must work before anyone has signed up, or the first
-    impression of the plugin is an auth error."""
+async def test_catalog_search_returns_priced_results(clients):
+    """Search is the entry point: an agent asks for a task and gets endpoints with prices. Needs a
+    credential now, like every tool — see test_EVERY_tool_needs_a_credential_including_the_catalog."""
+    token = (await clients.post("/users", json={"email": "searcher@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
-        out = await _call_tool(c, "catalog_search", {"query": "backlinks", "limit": 3})
+        out = await _call_tool(c, "catalog_search", {"query": "backlinks", "limit": 3}, token=token)
     assert out["results"], out
     first = out["results"][0]
     assert first["endpoint_id"] and first["provider"]
@@ -110,8 +111,9 @@ async def test_catalog_search_answers_without_any_token(clients):
 
 
 async def test_search_says_so_when_nothing_matches(clients):
+    token = (await clients.post("/users", json={"email": "nomatch@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
-        out = await _call_tool(c, "catalog_search", {"query": "zzzz-no-such-capability"})
+        out = await _call_tool(c, "catalog_search", {"query": "zzzz-no-such-capability"}, token=token)
     assert out["count"] == 0
     assert "hint" in out
 
@@ -258,8 +260,9 @@ async def test_the_deployments_own_host_is_allowed():
 async def test_the_price_is_visible_before_spending(clients):
     """An agent that cannot see a price before calling cannot warn the human, and the skill's rule is
     to state the cost first. Search must carry the number."""
+    token = (await clients.post("/users", json={"email": "pricer@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
-        out = await _call_tool(c, "catalog_search", {"query": "backlinks", "limit": 5})
+        out = await _call_tool(c, "catalog_search", {"query": "backlinks", "limit": 5}, token=token)
     assert any(r.get("usd_per_call") is not None for r in out["results"])
 
 
@@ -383,7 +386,7 @@ async def test_the_schema_tolerates_NULLS_not_just_missing_keys(clients):
 
 # ---- refusing in the right SHAPE, not just refusing ------------------------------------------
 
-@pytest.mark.parametrize("tool", ["call", "balance", "my_tools"])
+@pytest.mark.parametrize("tool", ["call", "balance", "my_tools", "catalog_search", "catalog_get"])
 async def test_a_protected_tool_answers_401_with_WWW_Authenticate(clients, tool):
     """The spec has a protected resource reply 401 with `WWW-Authenticate: Bearer
     resource_metadata="…"`, because that header is how a client DISCOVERS it must authenticate and
@@ -406,15 +409,19 @@ async def test_a_protected_tool_answers_401_with_WWW_Authenticate(clients, tool)
 
 @pytest.mark.parametrize("tool,args", [("catalog_search", {"query": "backlinks"}),
                                        ("catalog_get", {"endpoint_id": "hunter.people.email.find"})])
-async def test_the_PUBLIC_tools_still_answer_without_a_token(clients, tool, args):
-    """Deliberate, and worth protecting: someone evaluating treg should see what is in the catalog
-    and what it costs before creating an account. Nothing tenant-specific or spendable is exposed —
-    the same data /catalog/search already serves on the website."""
+async def test_EVERY_tool_needs_a_credential_including_the_catalog(clients, tool, args):
+    """One rule instead of two. An earlier version left the catalog tools open so a client could
+    browse before signing up, which made the contract "some tools need auth, some do not" — something
+    each client has to learn by trying.
+
+    This is about a predictable contract, not about hiding the catalog: /catalog/search is still
+    public on the WEBSITE, which the landing page and `treg catalog search` both rely on."""
     async with mcp_session(clients) as c:
         r = await c.post("http://localhost/mcp/", json={
             "jsonrpc": "2.0", "id": 1, "method": "tools/call",
             "params": {"name": tool, "arguments": args}}, headers=MCP_HEADERS)
-    assert r.status_code == 200, r.text
+    assert r.status_code == 401, r.text
+    assert "resource_metadata" in r.headers.get("www-authenticate", "")
 
 
 async def test_discovery_still_works_unauthenticated(clients):

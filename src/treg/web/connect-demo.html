@@ -65,10 +65,10 @@ pre{background:#141414;border:1px solid #262626;border-radius:8px;padding:12px;o
 
   <div class="step">
     <h3>3. Call tools <span id="s3" class="state off">no token</span></h3>
-    <p>The same five tools any MCP client gets. <b>catalog_search</b> and <b>catalog_get</b> are
-    public; the rest need the token you just granted. <b>call</b> is the only one that spends the
-    team's balance, so it does what treg asks an agent to do — reads the price first and asks before
-    spending.</p>
+    <p>The same five tools any MCP client gets. All of them need the token you just granted — an
+    unauthenticated call is answered with a 401 telling the client where to authorize. <b>call</b> is
+    the only one that spends the team's balance, so it does what treg asks an agent to do — reads the
+    price first and asks before spending.</p>
     <div class="tools">
       <button class="tool" data-tool="catalog_search" disabled>catalog_search</button>
       <button class="tool" data-tool="catalog_get" disabled>catalog_get</button>

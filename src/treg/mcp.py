@@ -16,8 +16,10 @@ daily cap, the platform daily cap, the balance reserve and the settle — a seco
 re-implemented any of that is exactly how one copy quietly stops being enforced. The cost is one
 in-process round trip with no socket, which measured at well under a millisecond.
 
-Only the **public catalog** is read directly (`catalog_store`), because it is already parsed in
-memory, needs no database and no identity, and answering from it takes ~1 ms.
+The **catalog** is read directly from `catalog_store` rather than through the API, because it is
+already parsed in memory and answering from it takes ~1 ms. That is a performance choice, not a
+permission one: every tool requires a credential, and the transport refuses an uncredentialed call
+before it reaches any of them.
 
 **Headers are not identity.** The SDK's own docstring says it and it is worth repeating: the bearer
 token arriving on an MCP request is client-supplied input. It is validated against the database on
@@ -316,7 +318,7 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
 
 
 # --------------------------------------------------------------------------------------------
-# The catalog — public, in memory, no identity needed
+# The catalog — read straight from memory. Still credentialed: the transport challenges first.
 # --------------------------------------------------------------------------------------------
 
 @mcp.tool(
@@ -543,10 +545,16 @@ def _allowed_origins() -> list[str]:
     return sorted(dict.fromkeys(origins))
 
 
-# The tools that touch money or a team's data. `catalog_search` and `catalog_get` are deliberately
-# absent: the catalog is public, and someone evaluating treg should see what is in it and what it
-# costs before creating an account — the same data /catalog/search already serves on the website.
-_NEEDS_AUTH = {"call", "balance", "my_tools"}
+# EVERY tool needs a credential. An earlier version left `catalog_search` and `catalog_get` open so a
+# client could browse before signing up, which made the contract "some tools need auth, some do not"
+# — a rule each client has to learn by trying. Unclecode's call, and the simpler one: connect, then
+# use treg.
+#
+# Note what this does and does not buy. `/catalog/search` is still public on the WEBSITE — the
+# landing page and `treg catalog search` both rely on it — so this is about giving MCP clients one
+# predictable rule, not about hiding the catalog. Anyone wanting the data unauthenticated can still
+# take the website route, and closing that is a separate decision with different consequences.
+_NEEDS_AUTH = {"catalog_search", "catalog_get", "call", "balance", "my_tools"}
 
 
 class RequireAuthForProtectedTools:
