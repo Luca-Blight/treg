@@ -858,3 +858,53 @@ async def test_a_signed_out_visitor_is_not_bounced_in_a_loop(clients):
     clients.cookies.set("treg_oauth_return", "/oauth/authorize?client_id=x")
     r = await clients.get("/app", follow_redirects=False)
     assert r.status_code == 200
+
+
+async def test_the_team_picker_shows_which_team_can_PAY(clients):
+    """Choosing a team here decides which balance the client spends for the life of the grant, so
+    "which of these can actually pay?" has to be visible at the moment of choosing.
+
+    Unclecode picked a $0.00 team on the first real ChatGPT connect; the call was refused and nothing
+    on the page could have told him. A team with no balance is still a legitimate choice — a team's
+    OWN keys are never metered — so it is LABELLED rather than hidden."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "picker@superdesign.dev")
+    _, challenge = _pkce()
+    r = await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256"})
+    assert r.status_code == 200
+    page = r.text
+    # a new team carries the $1.00 grant, so the amount must be on the option
+    assert "$1.00" in page, f"the balance is not shown in the picker: {page[page.find('org_id'):][:300]}"
+
+    # and the JSON view carries it too, for a client that renders its own picker
+    j = await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256"},
+        headers={"Accept": "application/json"})
+    assert any("balance_usd" in t for t in j.json()["teams"])
+
+
+async def test_a_team_with_no_balance_is_labelled_not_hidden(clients):
+    """Removing the option would be wrong: work that uses the team's OWN registered keys is never
+    metered, so an empty team is a perfectly good choice for it."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import Org
+
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "broke@superdesign.dev")
+    async with session_maker() as db:
+        org = (await db.execute(select(Org).where(Org.id == org_id))).scalar_one()
+        org.balance_micro = 0
+        db.add(org)
+        await db.commit()
+
+    _, challenge = _pkce()
+    page = (await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256"})).text
+    assert "no balance" in page
+    assert f'value="{org_id}"' in page, "the team must still be selectable"
