@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -483,3 +484,30 @@ async def test_a_list_is_refused_for_a_GET_with_a_clear_reason(clients):
         out = await _call_tool(c, "call", {
             "endpoint_id": "hunter.people.email.find", "params": [{"x": 1}]}, token=token)
     assert "must be an object, not a list" in json.dumps(out), out
+
+
+async def test_the_MCP_path_never_points_a_user_at_a_payment_page(clients):
+    """ChatGPT's submission form asks whether a plugin "links or directs users out of ChatGPT to make
+    purchases", and states that only PHYSICAL goods can be supported. treg sells prepaid API credit,
+    which is a digital good, so a top-up link made the honest answer a yes in the one category they
+    cannot support.
+
+    The 402 now states the fact and stops. Asserted on the whole response, not just the hint, because
+    the relayed body carried `topup_url` too — removing only the sentence would have left the link.
+    """
+    from treg import mcp as m
+
+    src = Path(m.__file__).read_text()
+    call_body = src[src.index("async def call("):src.index("async def balance(")]
+    assert "topup_url" in call_body, "the strip must still be here"
+    assert "top up at" not in call_body, "no purchase pointer on the MCP path"
+    assert "treg.superdesign.dev" not in call_body.split("if r.status_code == 402")[1][:900]
+
+
+async def test_the_402_hint_still_says_what_is_wrong(clients):
+    """Removing the link must not remove the diagnosis: an agent still has to know it ran out of
+    money rather than hitting a broken endpoint."""
+    from treg import mcp as m
+
+    src = Path(m.__file__).read_text()
+    assert "prepaid balance is not enough" in src
