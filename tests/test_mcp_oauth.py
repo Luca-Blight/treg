@@ -731,3 +731,51 @@ async def test_refresh_tokens_are_stored_HASHED(clients):
     assert rows, "expected a stored refresh token"
     assert all(body["refresh_token"] not in (r.token_hash or "") for r in rows)
     assert all(len(r.token_hash) == 64 for r in rows), "sha256 hex, as everywhere else in treg"
+
+
+# ---- step 6: what an INDEPENDENT client found ------------------------------------------------
+
+async def test_a_resource_we_do_not_serve_is_refused_UP_FRONT(clients):
+    """Found by driving the flow with the MCP SDK's own client instead of my curl.
+
+    It sent the URL it had dialled (`http://127.0.0.1:18790/mcp/`) rather than the canonical
+    identifier our metadata declares, which is a reasonable thing for a client to do. treg accepted
+    it and minted a token that was valid, well-formed and silently useless — the audience did not
+    match, so the first tool call answered "not signed in" and pointed the reader at authentication
+    when the real problem was the resource.
+
+    Refusing at authorize time turns a confusing failure an hour downstream into a clear one
+    immediately, and names the fix.
+    """
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "wrongres@superdesign.dev")
+    _, challenge = _pkce()
+    r = await clients.get("/oauth/authorize", params={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256",
+        "resource": "https://somewhere-else.test/mcp/"}, follow_redirects=False)
+    assert r.status_code == 302
+    assert "error=invalid_target" in r.headers["location"]
+    assert "well-known" in r.headers["location"], "and it must say where the right value lives"
+
+
+async def test_omitting_the_resource_is_fine(clients):
+    """A client that sends no `resource` gets our canonical one — which is what it would have
+    discovered anyway, so refusing would be pedantry rather than safety."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, "nores@superdesign.dev")
+    verifier, challenge = _pkce()
+    r = await clients.post("/oauth/authorize", data={
+        "client_id": client_id, "redirect_uri": "https://client.test/cb", "response_type": "code",
+        "code_challenge": challenge, "code_challenge_method": "S256", "org_id": org_id,
+        "decision": "allow"}, follow_redirects=False)
+    assert r.status_code == 302 and "code=" in r.headers["location"]
+    code = r.headers["location"].split("code=")[1].split("&")[0]
+    tok = await clients.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code,
+        "redirect_uri": "https://client.test/cb", "client_id": client_id,
+        "code_verifier": verifier})
+    assert tok.status_code == 200
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=tok.json()["access_token"])
+    assert "balance_usd" in out, "the default audience must be the one the MCP server accepts"

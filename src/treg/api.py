@@ -1659,6 +1659,30 @@ def _consent_page(*, client_name: str, client_uri: str, user_email: str, teams: 
         f"</div></div></body></html>")
 
 
+def _wrong_resource(resource: str) -> str | None:
+    """Is this `resource` one we actually protect? Returns an error message, or None if fine.
+
+    Refusing early matters more than it looks. `resource` becomes the token's audience, and the MCP
+    server accepts only its own — so accepting a resource we do not serve mints a token that is
+    valid, well-formed, and silently useless. That failure surfaces later, at the first tool call,
+    as "not signed in", which points the reader at authentication when the real problem was the
+    audience. Found exactly that way: an independent MCP client sent the URL it was connecting to
+    rather than the canonical identifier from our metadata, and got a token that could never work.
+
+    Empty is allowed: a client that omits `resource` gets our canonical one, which is what it would
+    have discovered anyway.
+    """
+    from . import mcp_oauth
+
+    if not resource:
+        return None
+    canonical = mcp_oauth.mcp_resource_url()
+    if resource.rstrip("/") == canonical.rstrip("/"):
+        return None
+    return (f"this server issues tokens for {canonical} only — use the `resource` value from "
+            f"/.well-known/oauth-protected-resource")
+
+
 def _oauth_error(redirect_uri: str, state: str, error: str, desc: str = ""):
     """OAuth errors go BACK TO THE CLIENT via the redirect, once we trust the redirect.
 
@@ -1726,6 +1750,8 @@ async def oauth_authorize(
     if not code_challenge or code_challenge_method != "S256":
         return _oauth_error(redirect_uri, state, "invalid_request",
                             "PKCE with code_challenge_method=S256 is required")
+    if (bad_target := _wrong_resource(resource)) is not None:
+        return _oauth_error(redirect_uri, state, "invalid_target", bad_target)
 
     user = await _user_from_session(treg_session, db)
     if user is None:
@@ -1794,6 +1820,8 @@ async def oauth_authorize_approve(
     if decision != "allow":
         # Cancel is a real answer and the client is entitled to hear it, rather than hang.
         return _oauth_error(redirect_uri, state, "access_denied", "the user declined")
+    if (bad_target := _wrong_resource(resource)) is not None:
+        return _oauth_error(redirect_uri, state, "invalid_target", bad_target)
     if not code_challenge or code_challenge_method != "S256":
         return _oauth_error(redirect_uri, state, "invalid_request",
                             "PKCE with code_challenge_method=S256 is required")
