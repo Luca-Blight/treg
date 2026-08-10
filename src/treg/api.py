@@ -1652,9 +1652,21 @@ def _consent_page(*, client_name: str, client_uri: str, user_email: str, teams: 
     """
     import html as _h
 
+    def _label(t: dict) -> str:
+        bal = t.get("balance_usd")
+        if bal is None:
+            money = ""
+        elif bal <= 0:
+            # Named, not hidden: an empty team is still a legitimate choice when the work uses the
+            # team's OWN keys, which are never metered. Saying "no balance" is the useful warning;
+            # removing the option would be wrong.
+            money = "  ·  no balance — catalog calls will be refused"
+        else:
+            money = f"  ·  ${bal:.2f}"
+        return f'{t["slug"]} — {t["role"]}{money}'
+
     opts = "".join(
-        f'<option value="{t["org_id"]}">{_h.escape(t["slug"])} — {_h.escape(t["role"])}</option>'
-        for t in teams)
+        f'<option value="{t["org_id"]}">{_h.escape(_label(t))}</option>' for t in teams)
     fields = "".join(
         f'<input type="hidden" name="{_h.escape(k)}" value="{_h.escape(str(v))}"/>'
         for k, v in hidden.items())
@@ -1826,7 +1838,13 @@ async def oauth_authorize(
     for m in memberships:
         org = await db.get(Org, m.org_id)
         if org is not None and not org.suspended:
-            teams.append({"org_id": org.id, "slug": org.slug, "role": m.role})
+            # The BALANCE belongs on this list. Choosing a team here decides which balance the
+            # client spends for the life of the grant, and a list of slugs makes the one question
+            # that matters — "which of these can actually pay?" — invisible at the moment of
+            # choosing. Unclecode picked a $0.00 team on the first real ChatGPT connect and the call
+            # was refused; nothing on the page could have told him.
+            teams.append({"org_id": org.id, "slug": org.slug, "role": m.role,
+                          "balance_usd": round((org.balance_micro or 0) / 1_000_000, 4)})
     if not teams:
         return _oauth_error(redirect_uri, state, "access_denied",
                             "this account is not a member of any team")
