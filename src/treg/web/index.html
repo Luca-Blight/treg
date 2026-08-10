@@ -2568,7 +2568,7 @@ a:hover{text-decoration-color:var(--muted)}
             <div class="start-bd">
               <p class="sub" style="margin:0 0 14px">treg is ready with your agent. Copy any example below and send it to your agent.</p>
               <div class="try-grid">
-                <button v-for="ex in tryExamples" :key="ex.k" type="button" class="try-card" @click="copyStart(ex.prompt,'try-'+ex.k)">
+                <button v-for="ex in tryExamples" :key="ex.k" type="button" class="try-card" @click="track('tryit_prompt_copied',{key:ex.k,cat:ex.cat,from:'getting_started'}); copyStart(ex.prompt,'try-'+ex.k)">
                   <span class="try-cat"><span style="display:inline-flex;align-items:center;gap:7px"><img class="try-ico" :src="'/logos/platforms/'+ex.logo+'.svg'" alt=""/><img v-if="ex.avatar" class="try-ico avatar" :src="ex.avatar" alt=""/>{{ex.cat}}</span><span class="try-copy" :class="{done:startCopied==='try-'+ex.k}">{{startCopied==='try-'+ex.k ? '✓ copied' : '⧉ copy'}}</span></span>
                   <span class="try-txt">{{ex.prompt}}</span>
                 </button>
@@ -2577,7 +2577,7 @@ a:hover{text-decoration-color:var(--muted)}
               <div v-for="g in tryOauth" :key="g.label" style="margin-top:14px">
                 <div class="oauth-grp">{{g.label}}</div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-                  <button v-for="p in g.items" :key="p.s" type="button" class="prov-chip" @click="openProvider(p.s)"><img :src="'/logos/'+p.s+'.svg'" alt=""/>{{p.n}}</button>
+                  <button v-for="p in g.items" :key="p.s" type="button" class="prov-chip" @click="track('tryit_oauth_clicked',{service:p.s,group:g.label,from:'getting_started'}); openProvider(p.s)"><img :src="'/logos/'+p.s+'.svg'" alt=""/>{{p.n}}</button>
                   <span v-if="g.soon.length" class="soon-note" :data-tip="g.soon.map(p=>p.n).join(', ')">{{g.soon.length}} coming soon</span>
                 </div>
               </div>
@@ -3040,7 +3040,7 @@ a:hover{text-decoration-color:var(--muted)}
             </div>
             <div class="wc-foot">
               <a href="#" class="sub" @click.prevent="welcomeFinish">Skip</a>
-              <button class="btn primary" @click="welcome.step=2">Next →</button>
+              <button class="btn primary" @click="track('onboarding_agent_picked',{agent:welcome.agent}); welcome.step=2">Next →</button>
             </div>
           </template>
           <template v-else-if="welcome.step===2">
@@ -3058,7 +3058,7 @@ a:hover{text-decoration-color:var(--muted)}
             <h2 style="margin:0 0 6px;font-size:19px">Try it out</h2>
             <div class="wc-wait" style="margin:0 0 16px"><span class="wc-waitdot"></span>Waiting for your agent — copy an example below and send it to get your first result.</div>
             <div class="try-grid">
-              <button v-for="ex in tryExamples" :key="ex.k" type="button" class="try-card" @click="copyStart(ex.prompt,'wtry-'+ex.k)">
+              <button v-for="ex in tryExamples" :key="ex.k" type="button" class="try-card" @click="track('tryit_prompt_copied',{key:ex.k,cat:ex.cat,from:'onboarding'}); copyStart(ex.prompt,'wtry-'+ex.k)">
                 <span class="try-cat"><span style="display:inline-flex;align-items:center;gap:7px"><img class="try-ico" :src="'/logos/platforms/'+ex.logo+'.svg'" alt=""/><img v-if="ex.avatar" class="try-ico avatar" :src="ex.avatar" alt=""/>{{ex.cat}}</span><span class="try-copy" :class="{done:startCopied==='wtry-'+ex.k}">{{startCopied==='wtry-'+ex.k ? '✓ copied' : '⧉ copy'}}</span></span>
                 <span class="try-txt">{{ex.prompt}}</span>
               </button>
@@ -3067,13 +3067,13 @@ a:hover{text-decoration-color:var(--muted)}
             <div v-for="g in tryOauth" :key="g.label" style="margin-top:12px">
               <div class="oauth-grp">{{g.label}}</div>
               <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-                <button v-for="p in g.items" :key="p.s" type="button" class="prov-chip" @click="welcome.on=false; openProvider(p.s)"><img :src="'/logos/'+p.s+'.svg'" alt=""/>{{p.n}}</button>
+                <button v-for="p in g.items" :key="p.s" type="button" class="prov-chip" @click="track('tryit_oauth_clicked',{service:p.s,group:g.label,from:'onboarding'}); welcome.on=false; openProvider(p.s)"><img :src="'/logos/'+p.s+'.svg'" alt=""/>{{p.n}}</button>
                 <span v-if="g.soon.length" class="soon-note" :data-tip="g.soon.map(p=>p.n).join(', ')">{{g.soon.length}} coming soon</span>
               </div>
             </div>
             <div class="wc-foot">
               <a href="#" class="sub" @click.prevent="welcomeFinish">Skip</a>
-              <button class="btn primary" @click="welcome.on=false; go('connections')">Browse all catalog →</button>
+              <button class="btn primary" @click="track('tryit_browse_catalog',{from:'onboarding'}); welcome.on=false; go('connections')">Browse all catalog →</button>
             </div>
           </template>
           <div v-if="welcome.err" class="banner" style="margin-top:12px">{{welcome.err}}</div>
@@ -4577,12 +4577,28 @@ createApp({
       try{ const o=await this.api('/orgs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
         this.onboarded=true; try{ await this.api('/onboard/skip',{method:'POST'}); }catch(e){}  // don't re-prompt
         await this.loadAll(); this.switchOrg({slug:o.org});
+        this.analyticsIdentify(); this.track('onboarding_team_created',{team:o.org});
         this.welcome.step=1; }  // stay in the modal: pick your agent → get the setup line
       catch(e){ this.welcome.err='Could not create the team: '+(e.detail||e.status); }
       finally{ this.welcome.busy=false; } },
-    welcomeFinish(){ this.welcome.on=false; this.go('start');
+    welcomeFinish(){ this.track('onboarding_finished',{agent:this.welcome.agent, step:this.welcome.step}); this.welcome.on=false; this.go('start');
       this.orgMsg='Team created. Send your agent the setup line any time — it lives on Getting started.'; },
     agentIcon(icon){ return 'https://unpkg.com/@lobehub/icons-static-png@latest/'+(this.theme==='dark'?'dark':'light')+'/'+icon+'.png'; },
+    // Product analytics — only when this deployment opted in (meta.posthog_key present); self-hosters send nothing.
+    initAnalytics(){
+      const key=this.meta && this.meta.posthog_key; if(!key || window.__phInit) return; window.__phInit=true;
+      const host=this.meta.posthog_host || 'https://eu.i.posthog.com';
+      !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug getPageViewId captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+      // Session replay is enabled on the project; MASK aggressively — the dashboard shows API tokens
+      // and the setup line + curl snippets carry the caller's token in <pre> blocks. Mask all inputs
+      // and every code block so a replay can never leak a credential.
+      window.posthog.init(key,{api_host:host, person_profiles:'identified_only', capture_pageview:false,
+        session_recording:{maskAllInputs:true, maskTextSelector:'pre, .lc-codewrap, .agent-copy'}});
+      this.analyticsIdentify();
+    },
+    analyticsIdentify(){ if(!window.posthog || !window.posthog.identify || !this.me) return;
+      try{ window.posthog.identify(this.me, {email:this.me}); if(this.activeSlugNow) window.posthog.group('team', this.activeSlugNow); }catch(e){} },
+    track(name, props){ try{ if(window.posthog && window.posthog.capture) window.posthog.capture(name, props||{}); }catch(e){} },
     async resetDemo(){ try{ await this.api('/onboard/reset',{method:'POST'}); this.onboarded=true; await this.loadAll(); this.orgMsg='Demo teammates removed.'; }
       catch(e){ this.err='Reset failed: '+(e.detail||e.status); } },
     readMore(section){ try{ window.open('/tutorial'+(section?('#'+section):''),'_blank'); }catch(e){} },
@@ -5325,6 +5341,7 @@ createApp({
     });
     this.meta = await fetch('/meta',{headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.json()).catch(()=>this.meta);
     this.proxy = this.meta.public_url || location.origin;
+    this.initAnalytics();
     // deploy detection: long-lived tabs learn about a new bundle on tab focus + a slow poll,
     // then offer a one-click refresh (index.html is no-cache, so a soft reload is enough)
     this.bootVersion = this.meta.app_version || '';
@@ -5347,7 +5364,7 @@ createApp({
         if(route||mkRoute) history.replaceState(null,'',stashed);
       } }
     const me = await fetch('/auth/me',{credentials:'include',headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll();
+    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll(); this.analyticsIdentify();
       // Share-born arrival (/app/skills/x?invite_org=N from the invite email): accept silently and
       // enter that team — the emailed "Sign in & accept" click was the consent. Otherwise the normal
       // first-run / invite-banner flow.
