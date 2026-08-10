@@ -75,6 +75,23 @@ Everything runs in your **active org** (first login creates a personal one). Tea
 email — see them with `treg invites`, accept with `treg accept` (or `treg org join <code>`). Switch
 teams: `treg org switch <slug>`.
 
+## Already connected over MCP? Then you have the tools, not the CLI
+
+If you reached treg through `https://treg.superdesign.dev/mcp/` — ChatGPT, Claude Code, Cursor — the CLI steps above do not
+apply to you. You have five tools: `catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`.
+Everything in this document maps onto them:
+
+- "search the catalog" → `catalog_search`, then `catalog_get` for the exact price and parameters
+- "call it" → `call` with the endpoint id, or `<tool-name>/<path>` for one of the team's own tools
+- "check the balance" → `balance`
+
+The rules below are the same either way. The one that matters most — **say the price before you
+spend it** — matters more here, because `call` returns `cost_usd` and you can report what a call
+actually cost rather than estimating.
+
+A `call` on a catalog endpoint spends the team's balance. A `call` on one of the team's own tools
+spends nothing: that key belongs to them.
+
 ## Task — the catalog: data you have no key for (start here)
 
 ~2,600 catalogued endpoints across ~40 providers, grouped by what they DO: keyword & rank tracking,

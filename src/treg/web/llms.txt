@@ -195,6 +195,35 @@ Agents/CI use a **per-org token** directly: `treg login --token <token>`. Get on
 `treg org create` / `treg org join` (returned once), or ask a team owner. The token goes
 in the `X-Treg-Token` header on every call. Never share the upstream key - share access.
 
+## MCP — connect an assistant instead of copying a token
+
+treg is also an **MCP server** at `{BASE}/mcp/`. Any client that speaks the MCP authorization spec
+— ChatGPT, Claude Code, Cursor — connects with a link and a consent screen rather than a pasted
+token. Choose **OAuth** when the client asks; there is no API-key option to look for.
+
+Five tools, the same ones for every client:
+
+    catalog_search   find endpoints by what you want to DO, with prices
+    catalog_get      one endpoint in full: params, cost, reliability, siblings
+    call             call a catalog endpoint by id, or one of your team's own tools
+    balance          the team's prepaid balance
+    my_tools         what your team registered that you can call without the key
+
+All five need a credential. An uncredentialed call is answered with **401** and a
+`WWW-Authenticate` header naming `{BASE}/.well-known/oauth-protected-resource`, which is how a
+client discovers where to authorize. `initialize` and `tools/list` stay open so a client can see
+what exists before deciding to connect.
+
+**Which team it spends from is chosen by a human at the consent screen**, once, and fixed for the
+life of the grant — a person in several teams is asked rather than guessed at. The screen shows each
+team's balance, because that is the question that actually matters there.
+
+A `call` on a CATALOG endpoint spends the team's balance and returns `cost_usd`. A `call` on one of
+the team's OWN tools is unmetered and carries no cost — the key is theirs, not ours to bill.
+
+Clients that register dynamically (RFC 7591) and clients that present a client-id metadata document
+are both supported; you do not need to pre-arrange anything with us.
+
 ## CLI command reference (compact)
 
     treg --version | version                      print the installed CLI version

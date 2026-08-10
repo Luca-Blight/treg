@@ -1,6 +1,9 @@
 # OAuth for the MCP server — one authorization server, any MCP client
 
-**Status:** planned, awaiting approval. Nothing built.
+**Status: SHIPPED and live on production.** Built in the six steps below, each reviewed
+before the next. The acceptance test passed — the MCP SDK's own OAuth client drove the
+whole flow with no treg-specific special case — and ChatGPT connected over CIMD, made a
+metered call and was billed correctly. Reference doc: `docs/context/architecture/mcp-oauth.md`.
 
 ## Not a ChatGPT feature
 

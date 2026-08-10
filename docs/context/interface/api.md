@@ -438,3 +438,24 @@ surfaced by `GET /tools` / `/bundles/{id}`).
   misconfigured `email_dev_mode` can't leak the code and enable an unauth takeover in prod.
 
 Full endpoint list + the running server's OpenAPI: `README.md` and `/docs`. CLI-level usage: `USAGE.md`.
+
+## OAuth + MCP routes
+
+treg is an OAuth authorization server for its own MCP endpoint. Detail in
+`architecture/mcp-oauth.md`; this is the surface.
+
+    GET  /.well-known/oauth-protected-resource      what guards /mcp/ (served at BOTH lookup paths)
+    GET  /.well-known/oauth-authorization-server    endpoints, S256, DCR + CIMD support
+    POST /oauth/register                            dynamic client registration (RFC 7591)
+    GET  /oauth/authorize                           the consent screen (JSON with Accept: application/json)
+    POST /oauth/authorize                           the human's decision — approval is never a GET
+    POST /oauth/token                               authorization_code and refresh_token grants
+    POST /oauth/revoke                              RFC 7009; ends the whole refresh family, always 200
+    POST /mcp/                                      the MCP transport itself
+
+    GET  /connect-demo                              a page that pretends to be an MCP client
+    GET  /connect-demo/callback                     its OAuth callback
+
+`/call/` gained one thing for this: a metered response now carries `X-Treg-Cost-Micro`, so a caller
+can report what it spent instead of diffing the balance. Absent on an unmetered call — a team's own
+key is not ours to bill, and `0` would read as "free".
