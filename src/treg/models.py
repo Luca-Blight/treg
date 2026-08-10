@@ -615,3 +615,39 @@ class OAuthCode(SQLModel, table=True):
     scope: str = Field(default="")
     expires_at: datetime
     created_at: datetime = Field(default_factory=_now)
+
+
+class OAuthRefresh(SQLModel, table=True):
+    """A refresh token: the thing that keeps a connector working past the access token's hour.
+
+    Stored as a HASH, like every other credential treg holds. A database copy is a database leak, and
+    a refresh token is the long-lived half — the one worth stealing.
+
+    **Rotation with reuse detection**, which is the whole reason this table has a `family_id`. Each
+    refresh mints a replacement and retires the old row. If a retired token is ever presented again,
+    two things are possible and we cannot tell them apart: a client retried after a dropped response,
+    or somebody else has a copy. Treating that as ordinary would leave a thief with a working
+    credential, so the entire family is revoked and the human signs in again. An interrupted client
+    reconnects; a thief loses the token. The failure mode is inconvenience on one side and containment
+    on the other, which is the right way round.
+
+    `org_id` rides along because it is what the human chose at consent. A refresh must not become a
+    chance to quietly re-pick a team.
+    """
+
+    __table_args__ = (UniqueConstraint("token_hash", name="uq_oauth_refresh_token"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    token_hash: str = Field(index=True)
+    family_id: str = Field(index=True)      # every descendant of one grant shares this
+    client_id: str = Field(index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    org_id: int = Field(foreign_key="org.id", index=True)
+    resource: str = Field(default="")
+    scope: str = Field(default="")
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=_now)
+    # Set when this row is superseded or killed. A row is kept rather than deleted precisely so a
+    # replay can be RECOGNISED — deleting it would make a stolen token look merely unknown.
+    retired_at: datetime | None = Field(default=None)
+    retired_reason: str = Field(default="")

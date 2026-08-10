@@ -605,3 +605,129 @@ async def test_revoking_your_tokens_kills_an_existing_grant(clients):
     async with mcp_session(clients) as c:
         after = await _call_tool(c, "balance", {}, token=access)
     assert "balance_usd" not in after, "a revoked user's grant must stop working"
+
+
+# ---- step 5: refresh tokens, rotation, and catching a replay --------------------------------
+
+async def _grant_full(clients, email):
+    """The whole flow, returning the token response so the refresh token is visible."""
+    client_id = await _register(clients)
+    cookie, org_id = await _signed_in(clients, email)
+    verifier, challenge = _pkce()
+    params = {"client_id": client_id, "redirect_uri": "https://client.test/cb",
+              "response_type": "code", "code_challenge": challenge,
+              "code_challenge_method": "S256", "resource": mcp_oauth.mcp_resource_url()}
+    r = await clients.post("/oauth/authorize", data={**params, "org_id": org_id, "decision": "allow"},
+                           follow_redirects=False)
+    code = r.headers["location"].split("code=")[1].split("&")[0]
+    tok = await clients.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code,
+        "redirect_uri": "https://client.test/cb", "client_id": client_id,
+        "code_verifier": verifier})
+    assert tok.status_code == 200, tok.text
+    return tok.json(), client_id, org_id
+
+
+async def test_a_grant_comes_with_a_refresh_token(clients):
+    """An access token lasts an hour. Without a refresh, every connector breaks hourly and the user
+    is the one who has to notice."""
+    body, _, _ = await _grant_full(clients, "refresher@superdesign.dev")
+    assert body["refresh_token"]
+    assert body["expires_in"] == mcp_oauth.ACCESS_TTL_SECONDS
+
+
+async def test_refreshing_ROTATES_the_token_and_the_new_one_works(clients):
+    """The old token is spent, the new one carries on, and the access token that comes out still
+    drives the tools — a refresh that returned an unusable token would fail silently an hour later."""
+    body, client_id, _ = await _grant_full(clients, "rotate@superdesign.dev")
+    first = body["refresh_token"]
+
+    r = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": first, "client_id": client_id})
+    assert r.status_code == 200, r.text
+    second = r.json()["refresh_token"]
+    assert second and second != first, "a refresh must MINT a replacement, not hand back the same one"
+
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=r.json()["access_token"])
+    assert "balance_usd" in out, out
+
+
+async def test_replaying_a_SPENT_refresh_token_kills_the_whole_family(clients):
+    """The reason the retired row is kept rather than deleted. A spent token being presented again
+    means either a client retried after a dropped response or somebody else has a copy — and those
+    are indistinguishable from here. Assume the worse one: the cost of being wrong is a sign-in, and
+    the cost of the other mistake is somebody's balance."""
+    body, client_id, _ = await _grant_full(clients, "replay@superdesign.dev")
+    first = body["refresh_token"]
+
+    ok = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": first, "client_id": client_id})
+    assert ok.status_code == 200
+    second = ok.json()["refresh_token"]
+
+    replay = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": first, "client_id": client_id})
+    assert replay.status_code == 400
+    assert "already used" in replay.json()["error_description"]
+
+    # and the descendant is dead too — containment is the point, not just refusing the replay
+    after = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": second, "client_id": client_id})
+    assert after.status_code == 400, "the whole family must be revoked, not only the replayed token"
+
+
+async def test_a_refresh_cannot_quietly_change_teams(clients):
+    """The team was chosen by a human at consent. A refresh renews that grant; it is not a second
+    chance to pick, and nothing in the request may influence it."""
+    body, client_id, org_id = await _grant_full(clients, "steady@superdesign.dev")
+    made = await clients.post("/orgs", json={"name": "team-created-after"})
+    assert made.status_code == 200
+
+    r = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert r.status_code == 200
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=r.json()["access_token"])
+    teams = (await clients.get("/orgs")).json()
+    granted_slug = next(t["slug"] for t in teams if t["org_id"] == org_id)
+    assert out["team"] == granted_slug
+
+
+async def test_a_refresh_token_is_bound_to_its_client(clients):
+    """Otherwise one client's stolen refresh token is every client's."""
+    body, _, _ = await _grant_full(clients, "bound@superdesign.dev")
+    other = await _register(clients, "https://other.test/cb")
+    r = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"], "client_id": other})
+    assert r.status_code == 400 and r.json()["error"] == "invalid_grant"
+
+
+async def test_revoking_ends_the_family_and_never_leaks_whether_a_token_existed(clients):
+    """RFC 7009: always 200. Distinguishing a known token from an unknown one would turn this into
+    an oracle for guessing valid ones."""
+    body, client_id, _ = await _grant_full(clients, "revoke@superdesign.dev")
+    assert (await clients.post("/oauth/revoke", data={"token": "never-existed"})).status_code == 200
+    assert (await clients.post("/oauth/revoke",
+                               data={"token": body["refresh_token"]})).status_code == 200
+    dead = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert dead.status_code == 400
+
+
+async def test_refresh_tokens_are_stored_HASHED(clients):
+    """A database copy is a database leak, and the refresh token is the long-lived half — the one
+    worth stealing."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import OAuthRefresh
+
+    body, _, _ = await _grant_full(clients, "hashed@superdesign.dev")
+    async with session_maker() as db:
+        rows = (await db.execute(select(OAuthRefresh))).scalars().all()
+    assert rows, "expected a stored refresh token"
+    assert all(body["refresh_token"] not in (r.token_hash or "") for r in rows)
+    assert all(len(r.token_hash) == 64 for r in rows), "sha256 hex, as everywhere else in treg"

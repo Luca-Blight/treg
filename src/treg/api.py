@@ -52,8 +52,8 @@ from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, se
 from .config import get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold, Invite,
-                     LedgerEntry, Membership, OAuthClient, OAuthCode, Org, PendingOAuth, Project,
-                     RunRecord, Secret, Tool, User)
+                     LedgerEntry, Membership, OAuthClient, OAuthCode, OAuthRefresh, Org,
+                     PendingOAuth, Project, RunRecord, Secret, Tool, User)
 from .proxy import relay
 
 
@@ -1560,6 +1560,37 @@ async def _resolve_oauth_client(client_id: str, db: AsyncSession) -> OAuthClient
 
 
 AUTH_CODE_TTL_S = 300   # a code is redeemed within seconds; five minutes is generous, not a window
+REFRESH_TTL_S = 30 * 24 * 3600   # a connector the user still uses keeps working for a month
+
+
+async def _issue_refresh(*, family_id: str, client_id: str, user_id: int, org_id: int,
+                         resource: str, scope: str, db: AsyncSession) -> str:
+    """Mint a refresh token and store only its hash — a database copy is a database leak."""
+    import secrets as _s
+
+    token = _s.token_urlsafe(40)
+    db.add(OAuthRefresh(
+        token_hash=crypto.hash_token(token), family_id=family_id, client_id=client_id,
+        user_id=user_id, org_id=org_id, resource=resource, scope=scope,
+        expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
+        + timedelta(seconds=REFRESH_TTL_S)))
+    return token
+
+
+async def _revoke_refresh_family(family_id: str, reason: str, db: AsyncSession) -> int:
+    """Kill every refresh token descended from one grant.
+
+    Called when a retired token is presented again. We cannot tell a client retrying after a dropped
+    response from a thief replaying a stolen copy — so we assume the worse one, because the cost of
+    being wrong is a re-login rather than someone else's balance.
+    """
+    rows = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.family_id == family_id, OAuthRefresh.retired_at.is_(None)))).scalars().all()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    for r in rows:
+        r.retired_at, r.retired_reason = now, reason
+        db.add(r)
+    return len(rows)
 
 _CONSENT_CSS = """
 .consent{max-width:460px;text-align:left}
@@ -1796,11 +1827,88 @@ async def oauth_authorize_approve(
     return RedirectResponse(f"{redirect_uri}{sep}{urlencode(q)}", status_code=302)
 
 
+async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
+                         db: AsyncSession, bad):
+    """Exchange a refresh token for a new access token, ROTATING the refresh token as we go.
+
+    The retired row is kept, not deleted. That is what makes a replay recognisable: a deleted token
+    looks merely unknown, while a retired one tells us somebody used a credential that had already
+    been spent — and at that point the safe reading is that it was copied.
+    """
+    from . import mcp_oauth
+
+    if not refresh_token:
+        return bad("invalid_request", "refresh_token is required")
+    row = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.token_hash == crypto.hash_token(refresh_token)))).scalar_one_or_none()
+    if row is None:
+        return bad("invalid_grant", "unknown refresh token")
+
+    if row.retired_at is not None:
+        # Already spent. Either a client retried after a dropped response, or someone else has a
+        # copy — indistinguishable from here, so assume the worse one and end the whole family. The
+        # cost of being wrong is one sign-in; the cost of the other mistake is somebody's balance.
+        killed = await _revoke_refresh_family(row.family_id, "reuse detected", db)
+        await db.commit()
+        audit.record_call(org_id=row.org_id, user_email="", tool_name="oauth.refresh_reuse",
+                          method="POST", path="/oauth/token", status_code=400, client="",
+                          telemetry={"family": row.family_id, "revoked": killed})
+        return bad("invalid_grant",
+                   "this refresh token was already used — the grant has been revoked, sign in again")
+
+    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        return bad("invalid_grant", "refresh token expired")
+    if client_id and client_id != row.client_id:
+        return bad("invalid_grant", "refresh token was issued to a different client")
+    if resource and resource != row.resource:
+        return bad("invalid_target", "resource does not match the one that was consented to")
+
+    user = await db.get(User, row.user_id)
+    if user is None or user.suspended:
+        return bad("invalid_grant", "the account behind this grant is no longer active")
+    org = await db.get(Org, row.org_id)
+    if org is None or org.suspended:
+        return bad("invalid_grant", "the team on this grant is no longer available")
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    row.retired_at, row.retired_reason = now, "rotated"
+    db.add(row)
+    replacement = await _issue_refresh(family_id=row.family_id, client_id=row.client_id,
+                                       user_id=row.user_id, org_id=row.org_id,
+                                       resource=row.resource, scope=row.scope, db=db)
+    access = mcp_oauth.make_access_token(
+        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        token_version=user.token_version)
+    await db.commit()
+    return JSONResponse({"access_token": access, "token_type": "Bearer",
+                         "expires_in": mcp_oauth.ACCESS_TTL_SECONDS, "scope": row.scope,
+                         "refresh_token": replacement})
+
+
+@app.post("/oauth/revoke", include_in_schema=False)
+async def oauth_revoke(token: str = Form(default=""),
+                       db: AsyncSession = Depends(get_session)) -> JSONResponse:
+    """RFC 7009. Revoking a refresh token ends its whole family — a user who disconnects an app
+    means all of it, not the one string they happened to send.
+
+    Always answers 200, as the RFC requires: an unknown token is already revoked as far as the caller
+    is concerned, and saying otherwise would turn this into an oracle for guessing valid tokens.
+    """
+    if token:
+        row = (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.token_hash == crypto.hash_token(token)))).scalar_one_or_none()
+        if row is not None:
+            await _revoke_refresh_family(row.family_id, "revoked by client", db)
+            await db.commit()
+    return JSONResponse({"ok": True})
+
+
 @app.post("/oauth/token", include_in_schema=False)
 async def oauth_token(
     grant_type: str = Form(default=""), code: str = Form(default=""),
     redirect_uri: str = Form(default=""), client_id: str = Form(default=""),
     code_verifier: str = Form(default=""), resource: str = Form(default=""),
+    refresh_token: str = Form(default=""),
     db: AsyncSession = Depends(get_session),
 ):
     """Exchange a code for an access token.
@@ -1814,8 +1922,12 @@ async def oauth_token(
         return JSONResponse(status_code=status,
                             content={"error": err, "error_description": desc})
 
+    if grant_type == "refresh_token":
+        return await _refresh_grant(refresh_token=refresh_token, client_id=client_id,
+                                    resource=resource, db=db, bad=bad)
     if grant_type != "authorization_code":
-        return bad("unsupported_grant_type", "only authorization_code is supported here")
+        return bad("unsupported_grant_type",
+                   "supported grants: authorization_code, refresh_token")
 
     row = (await db.execute(select(OAuthCode).where(OAuthCode.code == code))
            ).scalar_one_or_none() if code else None
@@ -1845,8 +1957,15 @@ async def oauth_token(
     token = mcp_oauth.make_access_token(
         user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
         token_version=user.token_version)
+    import secrets as _s
+
+    refresh = await _issue_refresh(family_id=_s.token_urlsafe(16), client_id=row.client_id,
+                                   user_id=row.user_id, org_id=row.org_id, resource=row.resource,
+                                   scope=row.scope, db=db)
+    await db.commit()
     return JSONResponse({"access_token": token, "token_type": "Bearer",
-                         "expires_in": mcp_oauth.ACCESS_TTL_SECONDS, "scope": row.scope})
+                         "expires_in": mcp_oauth.ACCESS_TTL_SECONDS, "scope": row.scope,
+                         "refresh_token": refresh})
 
 
 @app.get("/.well-known/oauth-protected-resource", include_in_schema=False)
@@ -2156,7 +2275,7 @@ async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
 _ORG_SCOPED_MODELS = (
     Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project,
     CapabilityPin, LedgerEntry, Hold, CreditBlock,
-    OAuthCode,    # a pending grant naming a team that no longer exists
+    OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 
