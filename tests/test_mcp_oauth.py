@@ -806,3 +806,55 @@ async def test_a_null_origin_from_a_redirect_chain_is_not_treated_as_cross_site(
                               headers={"Origin": "null", "Sec-Fetch-Site": "cross-site"})
     assert nope.status_code == 403
     assert "Sec-Fetch-Site: cross-site" in nope.json()["detail"], "the refusal must say what it saw"
+
+
+# ---- signing in mid-authorization must RETURN you to the authorization ----------------------
+
+async def test_a_signed_out_user_is_returned_to_the_consent_screen(clients):
+    """The bug ChatGPT found on its first real connect. A signed-out user clicking "Sign in with
+    treg" landed on the dashboard and the authorization was silently dropped.
+
+    The cause was a `?next=` query I invented and nothing implemented, so the sign-in doors simply
+    ignored it. The destination is now parked in a cookie and resumed at the dashboard, which is the
+    one point every browser door ends at.
+    """
+    client_id = await _register(clients)
+    _, challenge = _pkce()
+    params = {"client_id": client_id, "redirect_uri": "https://client.test/cb",
+              "response_type": "code", "code_challenge": challenge,
+              "code_challenge_method": "S256"}
+
+    clients.cookies.clear()
+    sent_away = await clients.get("/oauth/authorize", params=params, follow_redirects=False)
+    assert sent_away.status_code == 302
+    parked = (sent_away.cookies.get("treg_oauth_return") or "").strip('"')
+    assert parked.startswith("/oauth/authorize?"), f"nothing was parked: {parked!r}"
+    assert params["client_id"] in parked, "the parked destination must be THIS request"
+
+    # now sign in and land on the dashboard, as every browser door does
+    cookie, _ = await _signed_in(clients, "returner@superdesign.dev")
+    clients.cookies.set("treg_oauth_return", parked)
+    back = await clients.get("/app", follow_redirects=False)
+    assert back.status_code == 302, "the dashboard must resume the parked authorization"
+    assert back.headers["location"].startswith("/oauth/authorize?")
+
+
+async def test_the_parked_destination_cannot_be_used_as_an_open_redirect(clients):
+    """The cookie is only honoured for /oauth/authorize. Accepting any path would make it a general
+    "send me anywhere after login" primitive — a phishing aid rather than a feature."""
+    cookie, _ = await _signed_in(clients, "openredir@superdesign.dev")
+    for evil in ("https://attacker.test/", "//attacker.test/", "/app/../oauth/authorize?x=1",
+                 "/anything-else"):
+        clients.cookies.set("treg_oauth_return", evil)
+        r = await clients.get("/app", follow_redirects=False)
+        assert r.status_code == 200, f"{evil!r} must NOT be honoured, got {r.status_code}"
+    clients.cookies.delete("treg_oauth_return")
+
+
+async def test_a_signed_out_visitor_is_not_bounced_in_a_loop(clients):
+    """Resuming only once signed in. Otherwise the dashboard would send them to /oauth/authorize,
+    which would send them back here, forever."""
+    clients.cookies.clear()
+    clients.cookies.set("treg_oauth_return", "/oauth/authorize?client_id=x")
+    r = await clients.get("/app", follow_redirects=False)
+    assert r.status_code == 200

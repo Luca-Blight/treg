@@ -1285,6 +1285,11 @@ async def dashboard(
 ):
     """Serve the single-file dashboard (same-origin, so it calls this API directly).
 
+    Also the place a parked OAuth authorization resumes. Every browser sign-in door — GitHub, Google,
+    the email code — ends here, so honouring the cookie at this ONE point covers all of them, rather
+    than threading a return value through five handlers that each finish differently (two redirect,
+    one answers JSON).
+
     In frictionless local mode the dashboard opens ALREADY SIGNED IN: with no valid session we
     attach one for the machine's single user, so `curl … | sh` reaches a working dashboard without
     an account. Only reachable when `single_user_ok` holds (local sqlite + loopback URL), so this
@@ -1293,8 +1298,15 @@ async def dashboard(
     index = _WEB_DIR / "index.html"
     if not index.exists():
         return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
+    signed_in = await _user_from_session(treg_session, db)
+    # A parked authorization resumes here, but ONLY once the user is actually signed in — otherwise
+    # this would bounce them back to /oauth/authorize, which would bounce them here again.
+    if signed_in and (parked := _take_oauth_return(request)) is not None:
+        resume = RedirectResponse(parked, status_code=302)
+        resume.delete_cookie(OAUTH_RETURN_COOKIE)
+        return resume
     resp = FileResponse(index, headers={"Cache-Control": "no-cache"})
-    if not await _user_from_session(treg_session, db):
+    if not signed_in:
         owner = await _local_owner(db)
         if owner is not None:
             resp.set_cookie(sess.COOKIE, sess.make(owner.id, token_version=owner.token_version),
@@ -1672,6 +1684,36 @@ def _consent_page(*, client_name: str, client_uri: str, user_email: str, teams: 
         f"</div></div></body></html>")
 
 
+OAUTH_RETURN_COOKIE = "treg_oauth_return"
+
+
+def _remember_oauth_return(resp, request: Request) -> None:
+    """Park where to come back to after the user signs in.
+
+    A RELATIVE path, deliberately — never a full URL. A stored absolute URL would have to be
+    validated against our own origin before being redirected to, and getting that check subtly wrong
+    is how open redirects happen. A path cannot leave the site.
+
+    Short-lived: this is a detour of seconds, and a stale one would silently hijack the next sign-in.
+    """
+    target = request.url.path + (f"?{request.url.query}" if request.url.query else "")
+    resp.set_cookie(OAUTH_RETURN_COOKIE, target, httponly=True, samesite="lax",
+                    secure=_is_https(request), max_age=600)
+
+
+def _take_oauth_return(request: Request) -> str | None:
+    """The parked destination, if it is one we actually park — else None.
+
+    Only `/oauth/authorize` is honoured. Accepting any path would turn this cookie into a general
+    "redirect me anywhere after login" primitive, which is a phishing aid rather than a feature.
+    """
+    # Starlette quotes a cookie value containing separators, and not every client strips the quotes
+    # back off. Tolerating them here costs nothing; assuming they are absent cost a failing test and
+    # would have cost a silently-dropped authorization in production.
+    target = (request.cookies.get(OAUTH_RETURN_COOKIE) or "").strip('"')
+    return target if target.startswith("/oauth/authorize?") else None
+
+
 def _wrong_resource(resource: str) -> str | None:
     """Is this `resource` one we actually protect? Returns an error message, or None if fine.
 
@@ -1768,10 +1810,13 @@ async def oauth_authorize(
 
     user = await _user_from_session(treg_session, db)
     if user is None:
-        # Sign in first, then come back to this exact request.
-        from urllib.parse import quote
-
-        return RedirectResponse(f"/?next={quote(str(request.url), safe='')}", status_code=302)
+        # Sign in first, then come back to THIS request. Parked in a cookie rather than a `?next=`
+        # query the sign-in page would have to understand — the first version invented that
+        # convention and nothing implemented it, so the user signed in and landed on the dashboard
+        # with the authorization silently dropped.
+        resp = RedirectResponse("/", status_code=302)
+        _remember_oauth_return(resp, request)
+        return resp
 
     memberships = (await db.execute(
         select(Membership).where(Membership.user_id == user.id))).scalars().all()
