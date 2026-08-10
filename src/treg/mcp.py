@@ -441,7 +441,20 @@ async def call(endpoint_id: str, params: dict | list | None = None,
         except ValueError:
             pass
     if r.status_code == 402:
-        out["hint"] = "the team's prepaid balance is short — top up at https://treg.superdesign.dev"
+        # States the fact and stops. No link, and `topup_url` is stripped from the relayed body, so
+        # nothing on this path points a user at a payment page.
+        #
+        # ChatGPT's submission form asks whether a plugin "links or directs users out of ChatGPT to
+        # make purchases", and says only PHYSICAL goods can be supported. treg sells prepaid API
+        # credit, which is a digital good — so a top-up link made the honest answer a yes, in the one
+        # category they cannot support. The link was a convenience, not the product: someone out of
+        # balance can find their own dashboard.
+        #
+        # Scoped to the MCP path deliberately. `/call/`'s 402 still carries `topup_url` for the CLI
+        # and the dashboard, where no such policy applies and the shortcut is genuinely useful.
+        if isinstance(out.get("body"), dict):
+            out["body"].pop("topup_url", None)
+        out["hint"] = "the team's prepaid balance is not enough for this call"
     elif r.status_code >= 400:
         # Whose fault it was matters to an agent deciding whether to retry elsewhere.
         out["whose_error"] = "treg" if r.headers.get("X-Treg-Error") else "provider"
