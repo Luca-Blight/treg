@@ -183,6 +183,36 @@ def _bearer(ctx: Context) -> str:
     return raw.removeprefix("Bearer ").removeprefix("bearer ").strip()
 
 
+def _without_purchase_pointers(body: Any) -> Any:
+    """Strip anything that points at a payment page out of a relayed 402.
+
+    The first attempt popped a top-level `topup_url` and a test asserted on the SOURCE TEXT of this
+    module — so it passed while production still returned the link, because the real body nests
+    everything under `detail` AND repeats the URL inside a prose `message` ("add funds:
+    https://…/app#billing"). Checking the code instead of the response is the exact failure this
+    codebase keeps finding, and I wrote one.
+
+    So: walk the structure, drop the key wherever it appears, and remove the URL from any string. The
+    remaining sentence still says what is wrong and how much was needed — the diagnosis survives, the
+    invitation to pay does not.
+    """
+    def scrub(v: Any) -> Any:
+        if isinstance(v, dict):
+            return {k: scrub(x) for k, x in v.items() if k != "topup_url"}
+        if isinstance(v, list):
+            return [scrub(x) for x in v]
+        if isinstance(v, str) and ("http://" in v or "https://" in v):
+            # Any URL, not just ours. A first version matched `public_url`, which differs per
+            # environment — so it stripped nothing anywhere except production, and the local test
+            # passed while the deployed behaviour was wrong. The property we want is "no link out",
+            # which does not depend on which host we happen to be running as.
+            kept = [ln for ln in v.splitlines() if "http://" not in ln and "https://" not in ln]
+            return "\n".join(kept).rstrip()
+        return v
+
+    return scrub(body)
+
+
 def _oauth_claims(token: str) -> dict | None:
     """If this is an OAuth access token we issued FOR THIS SERVER, its claims; otherwise None.
 
@@ -452,8 +482,7 @@ async def call(endpoint_id: str, params: dict | list | None = None,
         #
         # Scoped to the MCP path deliberately. `/call/`'s 402 still carries `topup_url` for the CLI
         # and the dashboard, where no such policy applies and the shortcut is genuinely useful.
-        if isinstance(out.get("body"), dict):
-            out["body"].pop("topup_url", None)
+        out["body"] = _without_purchase_pointers(out.get("body"))
         out["hint"] = "the team's prepaid balance is not enough for this call"
     elif r.status_code >= 400:
         # Whose fault it was matters to an agent deciding whether to retry elsewhere.

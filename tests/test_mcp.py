@@ -486,28 +486,97 @@ async def test_a_list_is_refused_for_a_GET_with_a_clear_reason(clients):
     assert "must be an object, not a list" in json.dumps(out), out
 
 
-async def test_the_MCP_path_never_points_a_user_at_a_payment_page(clients):
+def test_a_relayed_402_carries_NO_link_out(clients):
     """ChatGPT's submission form asks whether a plugin "links or directs users out of ChatGPT to make
-    purchases", and states that only PHYSICAL goods can be supported. treg sells prepaid API credit,
-    which is a digital good, so a top-up link made the honest answer a yes in the one category they
-    cannot support.
+    purchases", and only PHYSICAL goods can be supported. treg sells prepaid API credit — a digital
+    good — so a top-up link made the honest answer a yes in the one category they cannot support.
 
-    The 402 now states the fact and stops. Asserted on the whole response, not just the hint, because
-    the relayed body carried `topup_url` too — removing only the sentence would have left the link.
+    Asserted on a REAL 402 body, not on the source. My first version checked the module's text,
+    passed, and shipped a production response that still contained the link: the body nests under
+    `detail` and repeats the URL inside a prose `message`. Checking the code instead of the response
+    is precisely the failure this codebase keeps catching, and I wrote one.
     """
-    from treg import mcp as m
+    from treg.mcp import _without_purchase_pointers
 
-    src = Path(m.__file__).read_text()
-    call_body = src[src.index("async def call("):src.index("async def balance(")]
-    assert "topup_url" in call_body, "the strip must still be here"
-    assert "top up at" not in call_body, "no purchase pointer on the MCP path"
-    assert "treg.superdesign.dev" not in call_body.split("if r.status_code == 402")[1][:900]
+    real = {"detail": {
+        "error": "insufficient_balance",
+        "message": ("akta.companies.enrich would cost ~$0.875 on treg's akta key and this team's "
+                    "balance is $0.5765.\n  add funds:      https://treg.superdesign.dev/app#billing"
+                    "\n  or use your own key: treg connections connect --provider akta"),
+        "balance_micro": 576500, "estimated_cost_micro": 875000,
+        "topup_url": "/app#billing", "provider": "akta"}}
+    blob = json.dumps(_without_purchase_pointers(real))
+    assert "http://" not in blob and "https://" not in blob, blob
+    assert "topup_url" not in blob, blob
 
 
-async def test_the_402_hint_still_says_what_is_wrong(clients):
-    """Removing the link must not remove the diagnosis: an agent still has to know it ran out of
-    money rather than hitting a broken endpoint."""
-    from treg import mcp as m
+def test_stripping_the_link_keeps_the_DIAGNOSIS(clients):
+    """Removing the invitation to pay must not remove the explanation. An agent still needs to know
+    it ran out of money, how short it was, and that its own key is an alternative — otherwise the
+    refusal is indistinguishable from a broken endpoint."""
+    from treg.mcp import _without_purchase_pointers
 
-    src = Path(m.__file__).read_text()
-    assert "prepaid balance is not enough" in src
+    real = {"detail": {
+        "error": "insufficient_balance",
+        "message": ("akta.companies.enrich would cost ~$0.875 and this team's balance is $0.5765."
+                    "\n  add funds:      https://treg.superdesign.dev/app#billing"
+                    "\n  or use your own key: treg connections connect --provider akta"),
+        "balance_micro": 576500, "estimated_cost_micro": 875000}}
+    out = _without_purchase_pointers(real)
+    blob = json.dumps(out)
+    assert "insufficient_balance" in blob and "would cost" in blob
+    assert "connections connect" in blob, "the own-key alternative must survive"
+    assert out["detail"]["balance_micro"] == 576500
+
+
+def test_the_strip_does_not_depend_on_which_host_we_run_as(clients):
+    """A first version matched `public_url`, which differs per environment — so it stripped nothing
+    anywhere except production, and the local test passed while the deployed behaviour was wrong."""
+    from treg.mcp import _without_purchase_pointers
+
+    for host in ("https://treg.ngrok.app", "http://127.0.0.1:18790", "https://anything.example"):
+        out = _without_purchase_pointers({"m": f"pay here: {host}/app#billing"})
+        assert "http" not in json.dumps(out), host
+
+
+async def test_a_402_THROUGH_THE_CALL_TOOL_carries_no_link(clients, monkeypatch):
+    """The test the previous two should have been. They exercised `_without_purchase_pointers`
+    directly and passed even with the strip DELETED from `call` — the helper worked and nothing
+    connected it to the response a user sees.
+
+    This drives the real path: drain the balance, call a metered endpoint through the MCP tool, and
+    assert on what comes back.
+    """
+    from sqlmodel import select
+
+    from treg.config import get_settings
+    from treg.db import session_maker
+    from treg.models import Org
+
+    monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "PLATKEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub")
+    get_settings.cache_clear()
+
+    token = (await clients.post("/users", json={"email": "broke402@superdesign.dev"})).json()["token"]
+    prev = clients.headers.get("X-Treg-Token")
+    clients.headers["X-Treg-Token"] = token
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    if prev:
+        clients.headers["X-Treg-Token"] = prev
+    async with session_maker() as db:
+        org = (await db.execute(select(Org).where(Org.id == org_id))).scalar_one()
+        org.balance_micro = 0            # spent out
+        db.add(org)
+        await db.commit()
+
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "tikhub.tiktok.video.comments",
+            "params": {"aweme_id": "7"}}, token=token)
+    get_settings.cache_clear()
+
+    assert out.get("status") == 402, out
+    blob = json.dumps(out)
+    assert "http://" not in blob and "https://" not in blob, f"a link out survived: {blob}"
+    assert "topup_url" not in blob, blob
+    assert "not enough for this call" in blob, "the diagnosis must survive"
