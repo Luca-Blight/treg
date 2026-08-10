@@ -384,7 +384,9 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
 
 @mcp.tool(
     description=(
-        "Call something through treg. Either a CATALOG endpoint by its id (from catalog_search), or "
+        "Call something through treg. `params` is the request body for a POST (an object, or an "
+        "ARRAY of task objects for providers like DataForSEO that expect one) and the query string "
+        "for a GET. Either a CATALOG endpoint by its id (from catalog_search), or "
         "one of THIS TEAM'S own tools as '<tool-name>/<path>' (from my_tools) — e.g. "
         "'render/v1/services'. treg injects the credential server-side and relays the provider's "
         "response unchanged, so you never hold an API key. Catalog calls on treg's key are metered "
@@ -394,7 +396,7 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
     annotations=_CALLS,
     structured_output=True
 )
-async def call(endpoint_id: str, params: dict | None = None,
+async def call(endpoint_id: str, params: dict | list | None = None,
                method: str | None = None, ctx: Context = None) -> CallOut:  # type: ignore[assignment]
     token = _bearer(ctx) if ctx else ""
     if not token:
@@ -411,11 +413,18 @@ async def call(endpoint_id: str, params: dict | None = None,
                         "'<tool-name>/<path>' for one of this team's own tools"}
 
     method = (method or (ep.get("method") if ep else None) or "GET").upper()
-    args = params or {}
+    # A LIST is a legitimate body, not a mistake. DataForSEO — the largest provider in the catalog at
+    # 217 endpoints — takes an ARRAY of task objects on every one of its `live` POST routes, so a
+    # dict-only signature made all of them uncallable. Found by trying one rather than by reading the
+    # type. Query strings still need key/value pairs, so a list is only meaningful as a body.
+    args = params if params is not None else {}
     async with _api(token) as client:
         # The SAME route the CLI and the proxy use, so the tool ACL, deny rules, both daily caps,
         # the balance reserve and the settle all happen exactly once, in one place.
         if method in ("GET", "HEAD", "DELETE"):
+            if isinstance(args, list):
+                return {"error": "this endpoint takes query parameters, so `params` must be an "
+                                 "object, not a list", "endpoint_id": endpoint_id}
             r = await client.request(method, f"/call/{endpoint_id}", params=args)
         else:
             r = await client.request(method, f"/call/{endpoint_id}", json=args)

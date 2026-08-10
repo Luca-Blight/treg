@@ -449,3 +449,37 @@ async def test_a_BAD_token_is_the_tool_s_business_not_the_transport_s(clients):
             headers={**MCP_HEADERS, "Authorization": "Bearer not-a-real-token"})
     assert r.status_code == 200
     assert "error" in json.loads(r.json()["result"]["content"][0]["text"])
+
+
+async def test_call_accepts_an_ARRAY_body(clients):
+    """DataForSEO — the largest provider in the catalog at 217 endpoints — takes an ARRAY of task
+    objects on every one of its `live` POST routes. A dict-only `params` made all of them uncallable
+    with a pydantic type error, which reads as "you passed it wrong" rather than "this tool cannot
+    express that".
+
+    Found by trying a real call for the demo, not by reading the signature."""
+    token = (await clients.post("/users", json={"email": "arraybody@superdesign.dev"})).json()["token"]
+    # register the tool AS THAT TOKEN's org — a tool created in another org is correctly invisible
+    prev = clients.headers.get("X-Treg-Token")
+    clients.headers["X-Treg-Token"] = token
+    made = await clients.post("/tools", json={"name": "echo", "base_url": "http://upstream"})
+    if prev:
+        clients.headers["X-Treg-Token"] = prev
+    assert made.status_code == 200, made.text
+
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/anything", "method": "POST",
+            "params": [{"keyword": "payment api", "depth": 10}]}, token=token)
+    assert out.get("status") == 200, out
+    assert "validation error" not in json.dumps(out)
+
+
+async def test_a_list_is_refused_for_a_GET_with_a_clear_reason(clients):
+    """A query string is key/value pairs, so a list has no meaning there. Saying so beats a pydantic
+    trace that blames the caller for the tool's own limitation."""
+    token = (await clients.post("/users", json={"email": "listget@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "hunter.people.email.find", "params": [{"x": 1}]}, token=token)
+    assert "must be an object, not a list" in json.dumps(out), out
