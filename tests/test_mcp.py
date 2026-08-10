@@ -325,3 +325,49 @@ async def test_an_UNKNOWN_origin_is_still_refused(clients):
             "jsonrpc": "2.0", "id": 1, "method": "tools/list"},
             headers={**MCP_HEADERS, "Origin": "https://attacker.example"})
     assert r.status_code == 403, r.text
+
+
+async def test_every_tool_declares_what_it_RETURNS(clients):
+    """ChatGPT's connector review flags a tool with no output schema, and a model that has to guess
+    at field names guesses. Each tool now declares its shape."""
+    from treg.mcp import mcp as server
+
+    for t in await server.list_tools():
+        assert t.output_schema, f"{t.name} has no output schema"
+        assert t.output_schema.get("properties"), f"{t.name}'s schema is empty"
+
+
+async def test_the_output_schema_does_not_BREAK_the_error_paths(clients):
+    """The load-bearing detail. A strict schema is validated on the way out, so `{"error": "not
+    authenticated"}` would RAISE instead of returning — turning a refusal written to tell an agent
+    how to recover into an opaque tool failure.
+
+    Every field is optional so both shapes pass. A schema is a hint to the model, not a gate on our
+    own error handling."""
+    from treg.mcp import mcp as server
+
+    for t in await server.list_tools():
+        assert not t.output_schema.get("required"), (
+            f"{t.name} has required output fields — the first error response will raise")
+
+    # and prove it end to end, not just in the schema
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {})
+    assert out.get("error") == "not authenticated", out
+    assert "TREG_TOKEN" in json.dumps(out), "the recovery instruction must survive"
+
+
+async def test_the_schema_tolerates_NULLS_not_just_missing_keys(clients):
+    """`total=False` says a key may be ABSENT; it does not say the value may be null. Real rows carry
+    nulls — a registered tool with no description, an endpoint with no published price — and typing
+    those as plain `str` made `my_tools` return a schema error instead of the team's tools.
+
+    Asserted on the schema so the next field added is held to the same rule."""
+    from treg.mcp import mcp as server
+
+    tools = {t.name: t.output_schema for t in await server.list_tools()}
+    defs = tools["my_tools"].get("$defs", {})
+    team_tool = defs.get("TeamTool", {})
+    for field, spec in team_tool.get("properties", {}).items():
+        allows_null = "null" in str(spec)
+        assert allows_null, f"TeamTool.{field} does not allow null — a real row will fail validation"
