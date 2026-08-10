@@ -286,7 +286,9 @@ async def meta() -> dict:
     — plus the bundle version, so an open tab can detect a new deploy and offer a refresh."""
     s = get_settings()
     return {"public_url": s.public_url.rstrip("/"), "github": bool(s.github_client_id),
-            "google": bool(s.google_client_id), "app_version": _app_version()}
+            "google": bool(s.google_client_id), "app_version": _app_version(),
+            # public ingestion key — only present when this deployment opts in (self-hosters send nothing)
+            "posthog_key": s.posthog_key, "posthog_host": s.posthog_host.rstrip("/") if s.posthog_key else ""}
 
 
 @app.get("/providers.json", include_in_schema=False)

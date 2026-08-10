@@ -184,6 +184,11 @@ class Settings(BaseSettings):
     # its capability needs, so the two never share a consent screen.
     google_client_id: str = ""
     google_client_secret: str = ""
+    # Product analytics (dashboard onboarding + Try-it). Empty key = OFF, so self-hosted treg instances
+    # send nothing — only a deployment that sets TREG_POSTHOG_KEY reports. The key is a PUBLIC posthog
+    # ingestion key (safe to expose to the browser); host defaults to EU cloud.
+    posthog_key: str = ""
+    posthog_host: str = "https://eu.i.posthog.com"
     # Registry OAuth apps for the non-Google providers (oauth_providers.py). Empty = that provider
     # is listed as unconfigured rather than failing part-way through a consent.
     # treg's own Google Ads developer token, from OUR approved manager account. Ads needs it on
