@@ -121,12 +121,18 @@ async def test_search_says_so_when_nothing_matches(clients):
 @pytest.mark.parametrize("tool", ["call", "balance", "my_tools"])
 async def test_every_spending_or_tenant_tool_refuses_without_a_token(clients, tool):
     """A public MCP endpoint onto a paid catalog is the whole risk of this feature. Anything that
-    reads a team's data or moves its money must fail closed, and say what to do about it."""
+    reads a team's data or moves its money must fail closed, and say what to do about it.
+
+    The refusal is now an HTTP 401 carrying `WWW-Authenticate`, rather than an error dict inside a
+    200 — see `test_a_protected_tool_answers_401_with_WWW_Authenticate` for why the shape matters.
+    This test keeps its original job: proving these three cannot be reached without a credential."""
     args = {"endpoint_id": "tikhub.tiktok.video.comments"} if tool == "call" else {}
     async with mcp_session(clients) as c:
-        out = await _call_tool(c, tool, args)
-    assert out.get("error") == "not authenticated", out
-    assert "TREG_TOKEN" in json.dumps(out)
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": tool, "arguments": args}}, headers=MCP_HEADERS)
+    assert r.status_code == 401, r.text
+    assert "resource_metadata" in r.headers.get("www-authenticate", "")
 
 
 async def test_a_bogus_token_gets_nothing(clients):
@@ -350,11 +356,13 @@ async def test_the_output_schema_does_not_BREAK_the_error_paths(clients):
         assert not t.output_schema.get("required"), (
             f"{t.name} has required output fields — the first error response will raise")
 
-    # and prove it end to end, not just in the schema
+    # and prove it end to end, not just in the schema. A BAD token rather than none: a missing
+    # credential is now answered at the transport with a 401, so it never reaches the tool — and it
+    # is the tool's own error shape that has to survive the schema.
     async with mcp_session(clients) as c:
-        out = await _call_tool(c, "balance", {})
-    assert out.get("error") == "not authenticated", out
-    assert "TREG_TOKEN" in json.dumps(out), "the recovery instruction must survive"
+        out = await _call_tool(c, "balance", {}, token="not-a-real-token")
+    assert out.get("error"), out
+    assert "hint" in out or "detail" in out, "the recovery instruction must survive the schema"
 
 
 async def test_the_schema_tolerates_NULLS_not_just_missing_keys(clients):
@@ -371,3 +379,66 @@ async def test_the_schema_tolerates_NULLS_not_just_missing_keys(clients):
     for field, spec in team_tool.get("properties", {}).items():
         allows_null = "null" in str(spec)
         assert allows_null, f"TeamTool.{field} does not allow null — a real row will fail validation"
+
+
+# ---- refusing in the right SHAPE, not just refusing ------------------------------------------
+
+@pytest.mark.parametrize("tool", ["call", "balance", "my_tools"])
+async def test_a_protected_tool_answers_401_with_WWW_Authenticate(clients, tool):
+    """The spec has a protected resource reply 401 with `WWW-Authenticate: Bearer
+    resource_metadata="…"`, because that header is how a client DISCOVERS it must authenticate and
+    where to start. A friendly sentence inside a 200 tells a human what happened and tells a program
+    nothing.
+
+    This passed unnoticed because ChatGPT authenticates up front. A client that connects first and
+    discovers auth lazily — which the spec allows — would read 200 as success."""
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": tool, "arguments": {}}}, headers=MCP_HEADERS)
+    assert r.status_code == 401, r.text
+    challenge = r.headers.get("www-authenticate", "")
+    assert challenge.startswith("Bearer "), challenge
+    assert "resource_metadata=" in challenge
+    assert "/.well-known/oauth-protected-resource" in challenge
+    assert r.json()["resource_metadata"].endswith("/.well-known/oauth-protected-resource")
+
+
+@pytest.mark.parametrize("tool,args", [("catalog_search", {"query": "backlinks"}),
+                                       ("catalog_get", {"endpoint_id": "hunter.people.email.find"})])
+async def test_the_PUBLIC_tools_still_answer_without_a_token(clients, tool, args):
+    """Deliberate, and worth protecting: someone evaluating treg should see what is in the catalog
+    and what it costs before creating an account. Nothing tenant-specific or spendable is exposed —
+    the same data /catalog/search already serves on the website."""
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": tool, "arguments": args}}, headers=MCP_HEADERS)
+    assert r.status_code == 200, r.text
+
+
+async def test_discovery_still_works_unauthenticated(clients):
+    """`initialize` and `tools/list` must not be challenged, or a client cannot learn what exists
+    before deciding to authenticate."""
+    async with mcp_session(clients) as c:
+        for method in ("initialize", "tools/list"):
+            params = {"protocolVersion": "2025-06-18", "capabilities": {},
+                      "clientInfo": {"name": "t", "version": "1"}} if method == "initialize" else None
+            body = {"jsonrpc": "2.0", "id": 1, "method": method}
+            if params:
+                body["params"] = params
+            r = await c.post("http://localhost/mcp/", json=body, headers=MCP_HEADERS)
+            assert r.status_code == 200, f"{method}: {r.status_code}"
+
+
+async def test_a_BAD_token_is_the_tool_s_business_not_the_transport_s(clients):
+    """The challenge fires only when there is NO credential. Deciding whether a token is valid needs
+    the database, and doing that in transport middleware would put a second authentication
+    implementation in front of the first."""
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "balance", "arguments": {}}},
+            headers={**MCP_HEADERS, "Authorization": "Bearer not-a-real-token"})
+    assert r.status_code == 200
+    assert "error" in json.loads(r.json()["result"]["content"][0]["text"])

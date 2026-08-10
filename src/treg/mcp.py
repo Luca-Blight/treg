@@ -33,6 +33,7 @@ not initialized". `api.py` must compose this module's lifespan with its own; see
 
 from __future__ import annotations
 
+import json
 import os
 from contextlib import asynccontextmanager
 from typing import Any, TypedDict
@@ -542,6 +543,91 @@ def _allowed_origins() -> list[str]:
     return sorted(dict.fromkeys(origins))
 
 
+# The tools that touch money or a team's data. `catalog_search` and `catalog_get` are deliberately
+# absent: the catalog is public, and someone evaluating treg should see what is in it and what it
+# costs before creating an account — the same data /catalog/search already serves on the website.
+_NEEDS_AUTH = {"call", "balance", "my_tools"}
+
+
+class RequireAuthForProtectedTools:
+    """Answer 401 with `WWW-Authenticate` when a protected tool is called without a credential.
+
+    A tool function can return an error dict, but it cannot set an HTTP status or a header — and the
+    status and header are the whole point here. The MCP spec has a protected resource reply **401**
+    with `WWW-Authenticate: Bearer resource_metadata="…"`, because that header is how a client
+    DISCOVERS it must authenticate and where to begin. Returning a friendly English sentence inside a
+    200 tells a human what went wrong and tells a program nothing.
+
+    It worked with ChatGPT only because ChatGPT authenticates up front. A client that connects first
+    and discovers auth lazily — which the spec allows — would see 200, conclude all was well, and
+    surface our prose to the user with no way to act on it. I saw this in an RFC 9728 probe earlier
+    and moved on because the client in front of me did not need it, which is the same reasoning that
+    nearly cost us dynamic client registration.
+
+    Sits in front of the transport rather than inside it: this is an HTTP concern, and the SDK owns
+    everything below.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope.get("method") != "POST":
+            return await self.app(scope, receive, send)
+
+        body, more = b"", True
+        while more:
+            msg = await receive()
+            body += msg.get("body", b"")
+            more = msg.get("more_body", False)
+
+        if self._unauthenticated_protected_call(scope, body):
+            return await self._challenge(send)
+
+        # The body was consumed to inspect it, so hand the transport a receive() that replays it.
+        replayed = False
+
+        async def replay():
+            nonlocal replayed
+            if replayed:
+                return {"type": "http.disconnect"}
+            replayed = True
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        return await self.app(scope, replay, send)
+
+    @staticmethod
+    def _unauthenticated_protected_call(scope, body: bytes) -> bool:
+        has_token = any(k.lower() == b"authorization" and v.strip()
+                        for k, v in scope.get("headers", []))
+        if has_token:
+            return False        # whether it is VALID is the tool's business, not the transport's
+        try:
+            rpc = json.loads(body or b"{}")
+        except ValueError:
+            return False        # malformed input is the transport's problem, not ours to relabel
+        if rpc.get("method") != "tools/call":
+            return False
+        return (rpc.get("params") or {}).get("name") in _NEEDS_AUTH
+
+    @staticmethod
+    async def _challenge(send) -> None:
+        base = get_settings().public_url.rstrip("/")
+        payload = json.dumps({
+            "error": "unauthorized",
+            "error_description": ("this tool needs a treg grant — authorize at "
+                                  f"{base}/oauth/authorize, or send a per-org token as a bearer"),
+            "resource_metadata": f"{base}/.well-known/oauth-protected-resource",
+        }).encode()
+        await send({"type": "http.response.start", "status": 401, "headers": [
+            (b"content-type", b"application/json"),
+            # The header the spec is actually about: it names where to discover how to authenticate.
+            (b"www-authenticate",
+             f'Bearer resource_metadata="{base}/.well-known/oauth-protected-resource"'.encode()),
+        ]})
+        await send({"type": "http.response.body", "body": payload})
+
+
 def build_mcp_app():
     """A fresh ASGI app for the MCP transport.
 
@@ -555,7 +641,7 @@ def build_mcp_app():
     would need sticky routing; `json_response` because these are request/response tools with nothing
     to stream, and skipping SSE framing is most of the speed.
     """
-    return mcp.streamable_http_app(
+    transport = mcp.streamable_http_app(
         streamable_http_path="/", stateless_http=True, json_response=True,
         transport_security=TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
@@ -563,6 +649,10 @@ def build_mcp_app():
             allowed_origins=_allowed_origins(),
         ),
     )
+    # Wrapped HERE, not around the module-level value, so a caller that builds its own app gets the
+    # same thing production runs. The first version wrapped only the module-level app, and the tests
+    # — which build a fresh transport per test — silently exercised an unprotected server.
+    return RequireAuthForProtectedTools(transport)
 
 
 mcp_app = build_mcp_app()
@@ -574,5 +664,6 @@ async def mcp_lifespan(target=None):
     lifespan, and the streamable-HTTP session manager builds its task group there — without this
     every MCP request fails with "Task group is not initialized"."""
     target = target or mcp_app
-    async with target.router.lifespan_context(target):
+    inner = getattr(target, "app", target)   # unwrap RequireAuthForProtectedTools
+    async with inner.router.lifespan_context(inner):
         yield
