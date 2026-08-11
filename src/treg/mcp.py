@@ -607,32 +607,21 @@ def _allowed_origins() -> list[str]:
     return sorted(dict.fromkeys(origins))
 
 
-# EVERY tool needs a credential. An earlier version left `catalog_search` and `catalog_get` open so a
-# client could browse before signing up, which made the contract "some tools need auth, some do not"
-# — a rule each client has to learn by trying. Unclecode's call, and the simpler one: connect, then
-# use treg.
-#
-# Note what this does and does not buy. `/catalog/search` is still public on the WEBSITE — the
-# landing page and `treg catalog search` both rely on it — so this is about giving MCP clients one
-# predictable rule, not about hiding the catalog. Anyone wanting the data unauthenticated can still
-# take the website route, and closing that is a separate decision with different consequences.
-_NEEDS_AUTH = {"catalog_search", "catalog_get", "call", "balance", "my_tools"}
-
-
 class RequireAuthForProtectedTools:
-    """Answer 401 with `WWW-Authenticate` when a protected tool is called without a credential.
+    """Answer 401 with `WWW-Authenticate` for any uncredentialed MCP request — eager, not lazy.
 
     A tool function can return an error dict, but it cannot set an HTTP status or a header — and the
-    status and header are the whole point here. The MCP spec has a protected resource reply **401**
-    with `WWW-Authenticate: Bearer resource_metadata="…"`, because that header is how a client
-    DISCOVERS it must authenticate and where to begin. Returning a friendly English sentence inside a
-    200 tells a human what went wrong and tells a program nothing.
+    status and header are the whole point. The MCP spec has a protected resource reply **401** with
+    `WWW-Authenticate: Bearer resource_metadata="…"`, because that header is how a client DISCOVERS it
+    must authenticate and where to begin. A friendly English sentence inside a 200 tells a human what
+    went wrong and tells a program nothing.
 
-    It worked with ChatGPT only because ChatGPT authenticates up front. A client that connects first
-    and discovers auth lazily — which the spec allows — would see 200, conclude all was well, and
-    surface our prose to the user with no way to act on it. I saw this in an RFC 9728 probe earlier
-    and moved on because the client in front of me did not need it, which is the same reasoning that
-    nearly cost us dynamic client registration.
+    **Every request, not just tool calls.** Every treg tool needs auth, so there is nothing to browse
+    anonymously; the spec's canonical flow challenges the client's FIRST request (the `initialize`
+    handshake) so OAuth runs before the session proceeds — which is what Stripe/Subframe/AuthKit MCP
+    servers do, and what makes a client show "needs authentication" and prompt, rather than "Connected"
+    with silent 200s on a server nothing works against. Only notifications and `ping` pass without a
+    credential (see `_auth_verdict`); `.well-known/*` discovery is separate GET routes, untouched.
 
     Sits in front of the transport rather than inside it: this is an HTTP concern, and the SDK owns
     everything below.
@@ -651,8 +640,9 @@ class RequireAuthForProtectedTools:
             body += msg.get("body", b"")
             more = msg.get("more_body", False)
 
-        if self._unauthenticated_protected_call(scope, body):
-            return await self._challenge(send)
+        verdict = self._auth_verdict(scope, body)
+        if verdict is not None:
+            return await self._challenge(send, invalid=(verdict == "invalid"))
 
         # The body was consumed to inspect it, so hand the transport a receive() that replays it.
         replayed = False
@@ -667,35 +657,80 @@ class RequireAuthForProtectedTools:
         return await self.app(scope, replay, send)
 
     @staticmethod
-    def _unauthenticated_protected_call(scope, body: bytes) -> bool:
-        has_token = any(k.lower() == b"authorization" and v.strip()
-                        for k, v in scope.get("headers", []))
-        if has_token:
-            return False        # whether it is VALID is the tool's business, not the transport's
+    def _auth_verdict(scope, body: bytes) -> str | None:
+        """None = pass through. "missing" = no credential. "invalid" = a DEAD access token.
+
+        **Eager, not lazy.** Every treg tool needs auth, so there is nothing to browse anonymously —
+        and the MCP spec's canonical flow has the client's FIRST request (the `initialize` handshake)
+        answered with 401 so it discovers the authorization server and runs OAuth before proceeding.
+        A production MCP server (Stripe, Subframe, AuthKit) does exactly this; FastMCP even tracks a
+        401-free `initialize` as a bug (#3020). Leaving `initialize`/`tools/list` open was why Claude
+        Code showed "✔ Connected" and never prompted — a connected-but-unusable server. So we
+        challenge every non-notification JSON-RPC request without a valid credential, whatever the
+        method. (`.well-known/*` metadata is separate GET routes, untouched — that is discovery.)
+
+        The "invalid" case is what makes refresh work end to end. An OAuth client whose access token
+        expired presents it anyway; per RFC 6750 the resource answers 401 with
+        `error="invalid_token"`, and THAT is the signal on which the client silently runs its refresh
+        grant — rather than giving up with "requires re-authorization".
+
+        Only tokens that CLAIM to be our OAuth access tokens are judged here
+        (`looks_like_access_token`); a per-org or identity token is the API's to validate downstream,
+        and those callers (Codex with an env var) are not OAuth clients and cannot refresh anyway.
+        """
         try:
             rpc = json.loads(body or b"{}")
         except ValueError:
-            return False        # malformed input is the transport's problem, not ours to relabel
-        if rpc.get("method") != "tools/call":
-            return False
-        return (rpc.get("params") or {}).get("name") in _NEEDS_AUTH
+            return None         # malformed input is the transport's problem, not ours to relabel
+        method = rpc.get("method")
+        # Notifications carry no id and expect no response — challenging one would be a 401 nobody
+        # asked for. `ping` is the liveness check and must answer without a token. Everything else
+        # (initialize, tools/list, tools/call, prompts/*, resources/*) needs a credential.
+        if not isinstance(method, str) or method.startswith("notifications/") or method == "ping":
+            return None
+        token = ""
+        for k, v in scope.get("headers", []):
+            if k.lower() == b"authorization" and v.strip():
+                token = v.decode("latin-1").strip()
+                token = token[7:].strip() if token.lower().startswith("bearer ") else token
+                break
+        if not token:
+            return "missing"
+        from . import mcp_oauth
+        if mcp_oauth.looks_like_access_token(token) and \
+                mcp_oauth.read_access_token(token, expected_audience=mcp_oauth.mcp_resource_url()) is None:
+            return "invalid"
+        return None             # a live access token, or a per-org token the tool validates itself
 
     @staticmethod
-    async def _challenge(send) -> None:
+    async def _challenge(send, *, invalid: bool = False) -> None:
         base = get_settings().public_url.rstrip("/")
-        payload = json.dumps({
-            "error": "unauthorized",
-            "error_description": ("this tool needs a treg grant — authorize at "
-                                  f"{base}/oauth/authorize, or send a per-org token as a bearer"),
-            "resource_metadata": f"{base}/.well-known/oauth-protected-resource",
-        }).encode()
+        meta = f"{base}/.well-known/oauth-protected-resource"
+        # The spec SHOULDs a `scope` in the challenge so a client requests the right scopes up front,
+        # least-privilege, without a second round-trip. These match scopes_supported in the metadata.
+        scope = "treg:catalog treg:call treg:read"
+        if invalid:
+            # RFC 6750 §3.1: the expired/invalid-token challenge. `error="invalid_token"` is the
+            # machine-readable cue on which an OAuth client runs its refresh grant instead of
+            # bothering the human.
+            www = (f'Bearer error="invalid_token", error_description="the access token is expired or invalid", '
+                   f'scope="{scope}", resource_metadata="{meta}"')
+            payload = {"error": "invalid_token",
+                       "error_description": ("the access token is expired or invalid — refresh the "
+                                             "grant, or re-authorize at " + base + "/oauth/authorize"),
+                       "resource_metadata": meta}
+        else:
+            www = f'Bearer scope="{scope}", resource_metadata="{meta}"'
+            payload = {"error": "unauthorized",
+                       "error_description": ("this MCP server needs a treg grant — authorize at "
+                                             f"{base}/oauth/authorize, or send a per-org token as a bearer"),
+                       "resource_metadata": meta}
         await send({"type": "http.response.start", "status": 401, "headers": [
             (b"content-type", b"application/json"),
             # The header the spec is actually about: it names where to discover how to authenticate.
-            (b"www-authenticate",
-             f'Bearer resource_metadata="{base}/.well-known/oauth-protected-resource"'.encode()),
+            (b"www-authenticate", www.encode()),
         ]})
-        await send({"type": "http.response.body", "body": payload})
+        await send({"type": "http.response.body", "body": json.dumps(payload).encode()})
 
 
 def build_mcp_app():

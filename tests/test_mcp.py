@@ -91,10 +91,11 @@ async def mcp_session(client: AsyncClient):
 async def test_the_server_lists_exactly_the_five_tools(clients):
     """Five tools, not 2,600. The catalog is DATA reached through a tool, never a tool per endpoint —
     2,600 schemas would bury the model's context and make the catalog unusable."""
+    token = (await clients.post("/users", json={"email": "lister@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
         await _rpc(c, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
-                                     "clientInfo": {"name": "t", "version": "1"}})
-        r = await _rpc(c, "tools/list")
+                                     "clientInfo": {"name": "t", "version": "1"}}, token)
+        r = await _rpc(c, "tools/list", token=token)
         names = {t["name"] for t in r.json()["result"]["tools"]}
     assert names == {"catalog_search", "catalog_get", "call", "balance", "my_tools"}
 
@@ -226,10 +227,11 @@ async def test_tool_descriptions_do_not_promise_routing(clients):
     """The charter's standing rule, and the one the landing page already had to be corrected for:
     treg COMPARES providers and the caller chooses. These descriptions are read by every model that
     installs the plugin, so a false claim here travels further than the website's did."""
+    token = (await clients.post("/users", json={"email": "descs@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
         await _rpc(c, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
-                                     "clientInfo": {"name": "t", "version": "1"}})
-        r = await _rpc(c, "tools/list")
+                                     "clientInfo": {"name": "t", "version": "1"}}, token)
+        r = await _rpc(c, "tools/list", token=token)
         blob = json.dumps(r.json()).lower()
     for claim in ("routes for you", "automatic failover", "fails over", "picks the best provider"):
         assert claim not in blob
@@ -242,10 +244,12 @@ async def test_an_unknown_host_is_refused(clients):
     first tool call. `mcp._allowed_hosts()` builds the list from this deployment's `public_url` plus
     the loopback names, so this asserts both directions: a known host works (every other test) and an
     unknown one does not."""
+    token = (await clients.post("/users", json={"email": "host@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
         r = await c.post("http://evil.example.com/mcp/", json={"jsonrpc": "2.0", "id": 1,
-                         "method": "tools/list"}, headers=MCP_HEADERS)
-    assert r.status_code == 421, r.text
+                         "method": "tools/list"},
+                         headers={**MCP_HEADERS, "Authorization": f"Bearer {token}"})
+    assert r.status_code == 421, r.text  # a credential passes auth; the HOST guard still refuses
 
 
 async def test_the_deployments_own_host_is_allowed():
@@ -319,22 +323,25 @@ async def test_a_BROWSER_origin_is_accepted(clients):
     from treg.config import get_settings
 
     origin = get_settings().public_url.rstrip("/")
+    token = (await clients.post("/users", json={"email": "browser@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
         r = await c.post("http://localhost/mcp/", json={
             "jsonrpc": "2.0", "id": 1, "method": "initialize",
             "params": {"protocolVersion": "2025-06-18", "capabilities": {},
                        "clientInfo": {"name": "browser", "version": "1"}}},
-            headers={**MCP_HEADERS, "Origin": origin})
+            headers={**MCP_HEADERS, "Origin": origin, "Authorization": f"Bearer {token}"})
     assert r.status_code == 200, f"a browser at our own origin must be served: {r.text[:120]}"
 
 
 async def test_an_UNKNOWN_origin_is_still_refused(clients):
     """The protection has to remain real — the fix widens the list, it does not remove the check."""
+    token = (await clients.post("/users", json={"email": "origin@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
         r = await c.post("http://localhost/mcp/", json={
             "jsonrpc": "2.0", "id": 1, "method": "tools/list"},
-            headers={**MCP_HEADERS, "Origin": "https://attacker.example"})
-    assert r.status_code == 403, r.text
+            headers={**MCP_HEADERS, "Origin": "https://attacker.example",
+                     "Authorization": f"Bearer {token}"})
+    assert r.status_code == 403, r.text  # a credential passes auth; the ORIGIN guard still refuses
 
 
 async def test_every_tool_declares_what_it_RETURNS(clients):
@@ -425,9 +432,12 @@ async def test_EVERY_tool_needs_a_credential_including_the_catalog(clients, tool
     assert "resource_metadata" in r.headers.get("www-authenticate", "")
 
 
-async def test_discovery_still_works_unauthenticated(clients):
-    """`initialize` and `tools/list` must not be challenged, or a client cannot learn what exists
-    before deciding to authenticate."""
+async def test_EAGER_auth_challenges_initialize_itself(clients):
+    """Eager, not lazy. Every treg tool needs auth, so there is nothing to browse anonymously — and
+    the spec's canonical flow challenges the client's FIRST request (`initialize`) so OAuth runs
+    before the session proceeds. Leaving it open was why a client showed "Connected" and never
+    prompted. So `initialize` and `tools/list` without a credential are 401 + WWW-Authenticate, same
+    as a tool call."""
     async with mcp_session(clients) as c:
         for method in ("initialize", "tools/list"):
             params = {"protocolVersion": "2025-06-18", "capabilities": {},
@@ -436,7 +446,22 @@ async def test_discovery_still_works_unauthenticated(clients):
             if params:
                 body["params"] = params
             r = await c.post("http://localhost/mcp/", json=body, headers=MCP_HEADERS)
-            assert r.status_code == 200, f"{method}: {r.status_code}"
+            assert r.status_code == 401, f"{method}: {r.status_code}"
+            challenge = r.headers.get("www-authenticate", "")
+            assert "resource_metadata=" in challenge and 'scope="' in challenge, challenge
+
+
+async def test_a_notification_and_ping_pass_without_a_token(clients):
+    """Not everything is challenged: a JSON-RPC notification carries no id and expects no response,
+    and `ping` is the liveness check — 401ing either would be a challenge nobody can act on. Only
+    id-bearing requests (initialize, tools/*, …) need a credential."""
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", headers=MCP_HEADERS,
+                         json={"jsonrpc": "2.0", "method": "notifications/initialized"})
+        assert r.status_code != 401, r.text
+        r = await c.post("http://localhost/mcp/", headers=MCP_HEADERS,
+                         json={"jsonrpc": "2.0", "id": 1, "method": "ping"})
+        assert r.status_code != 401, r.text
 
 
 async def test_a_BAD_token_is_the_tool_s_business_not_the_transport_s(clients):
@@ -580,3 +605,54 @@ async def test_a_402_THROUGH_THE_CALL_TOOL_carries_no_link(clients, monkeypatch)
     assert "http://" not in blob and "https://" not in blob, f"a link out survived: {blob}"
     assert "topup_url" not in blob, blob
     assert "not enough for this call" in blob, "the diagnosis must survive"
+
+
+# ---- the expired-token challenge: what makes silent refresh possible -------------------------
+
+async def test_an_EXPIRED_access_token_gets_401_invalid_token(clients):
+    """RFC 6750 §3.1. A client whose access token expired presents it anyway; the resource answers
+    401 with `error="invalid_token"`, and THAT is the cue on which the client silently runs its
+    refresh grant. Our first challenge only covered the missing-header case, so an expired token
+    sailed through to the tool's friendly prose in a 200 — and Claude Code, told nothing, gave up
+    with "requires re-authorization" instead of refreshing."""
+    from treg import mcp_oauth
+    dead = mcp_oauth.make_access_token(user_id=7, org_id=3, audience=mcp_oauth.mcp_resource_url(),
+                                       scope="treg:call", ttl=-60)  # born expired
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "balance", "arguments": {}}},
+            headers={**MCP_HEADERS, "Authorization": f"Bearer {dead}"})
+    assert r.status_code == 401, r.text
+    challenge = r.headers.get("www-authenticate", "")
+    assert 'error="invalid_token"' in challenge, challenge
+    assert "resource_metadata=" in challenge
+    assert r.json()["error"] == "invalid_token"
+
+
+async def test_a_wrong_audience_access_token_gets_401_invalid_token(clients):
+    """A grant consented to a DIFFERENT resource must not be honoured here — and the refusal should
+    still be the machine-readable 401, not tool prose."""
+    from treg import mcp_oauth
+    other = mcp_oauth.make_access_token(user_id=7, org_id=3,
+                                        audience="https://evil.example/mcp/", scope="treg:call")
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "balance", "arguments": {}}},
+            headers={**MCP_HEADERS, "Authorization": f"Bearer {other}"})
+    assert r.status_code == 401, r.text
+    assert 'error="invalid_token"' in r.headers.get("www-authenticate", "")
+
+
+async def test_a_per_org_token_still_reaches_the_tool(clients):
+    """Only bearers that CLAIM to be our OAuth access tokens are judged by the transport. A per-org
+    or identity token (the Codex env-var path) is the API's to validate downstream — the middleware
+    must pass it through, valid or not, rather than mislabel it `invalid_token` (its holder has no
+    refresh grant to run)."""
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "balance", "arguments": {}}},
+            headers={**MCP_HEADERS, "Authorization": "Bearer not-an-oauth-token-shape"})
+    assert r.status_code == 200, r.text  # the tool answers (with its own error prose) — not a 401

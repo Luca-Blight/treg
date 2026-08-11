@@ -198,6 +198,30 @@ async def test_redirect_matching_is_EXACT_not_prefix():
         assert not redirect_uri_allowed(C(), evil), evil
 
 
+async def test_loopback_redirect_allows_ANY_port_but_not_other_drift():
+    """RFC 8252 §7.3: a native/CLI client (Claude Code, Codex, Cursor) registers a PORTLESS loopback
+    URI and sends the ephemeral port it actually bound at authorize time. The AS MUST allow the port
+    to vary — treg's pure exact-match rejected `http://localhost:3118/callback` against a registered
+    `http://localhost/callback` and broke every native client. Port varies; scheme, host and path do
+    NOT, and the loopback exception must not leak to public hosts."""
+    from treg.mcp_oauth import redirect_uri_allowed
+
+    class C:  # exactly what Claude Code's client-id metadata document registers
+        redirect_uris = ["http://localhost/callback", "http://127.0.0.1/callback"]
+
+    # the real failing case + variants that MUST now pass
+    assert redirect_uri_allowed(C(), "http://localhost:3118/callback")
+    assert redirect_uri_allowed(C(), "http://127.0.0.1:52713/callback")
+    assert redirect_uri_allowed(C(), "http://localhost/callback")        # portless still fine
+    # but the exception is loopback-only and path-exact — these MUST still be refused
+    for bad in ("http://localhost:3118/evil",              # wrong path
+                "http://localhost.evil/callback",          # not actually loopback
+                "http://evil.test:3118/callback",          # public host — no port flexibility
+                "https://localhost:3118/callback",         # scheme drift (registered is http)
+                "http://[::1]:9/other"):                   # loopback but wrong path
+        assert not redirect_uri_allowed(C(), bad), bad
+
+
 # ---- the CIMD fetch: a URL the caller chose, so it must be fenced ---------------------------
 
 @pytest.mark.parametrize("url", [
