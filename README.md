@@ -1,4 +1,4 @@
-# Treg (Tool-Registry)
+# Treg (OpenRouter for Tools)
 
 ![treg — the tool catalog for your agent](docs/assets/treg-hero.png)
 
