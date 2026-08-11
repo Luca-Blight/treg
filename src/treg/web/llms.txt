@@ -224,10 +224,20 @@ Five tools, the same ones for every client:
     balance          the team's prepaid balance
     my_tools         what your team registered that you can call without the key
 
-All five need a credential. An uncredentialed call is answered with **401** and a
-`WWW-Authenticate` header naming `{BASE}/.well-known/oauth-protected-resource`, which is how a
-client discovers where to authorize. `initialize` and `tools/list` stay open so a client can see
-what exists before deciding to connect.
+All five need a credential, and the challenge comes EARLY: every id-bearing JSON-RPC request,
+`initialize` included, is answered with **401** and a `WWW-Authenticate` header naming
+`{BASE}/.well-known/oauth-protected-resource`. That header is how a client discovers where to
+authorize, and challenging the first request is what makes it run OAuth before the session proceeds
+rather than reporting a connected server whose every tool then fails.
+
+Only notifications (no id, no response expected) and `ping` pass without a credential. The
+`.well-known/*` documents are ordinary GET routes and stay open, which is the discovery a client
+actually needs.
+
+An access token that is expired, forged, or minted for another resource gets a 401 carrying
+`error="invalid_token"`. That is the cue an OAuth client uses to run its refresh grant silently, so a
+token going stale mid-session is invisible to the user instead of surfacing as "requires
+re-authorization".
 
 **Which team it spends from is chosen by a human at the consent screen**, once, and fixed for the
 life of the grant — a person in several teams is asked rather than guessed at. The screen shows each
