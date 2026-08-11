@@ -1173,7 +1173,7 @@ SERPSTAT = OAuthProvider(
     docs_url="https://api-docs.serpstat.com/",
     # JSON-RPC over POST; a bad token answers HTTP 200 with an `error` object, so reject on that field.
     probe_method="POST",
-    probe_json={"id": "1", "method": "SerpstatLimitsApiProcedure.getStats", "params": {}},
+    probe_json={"id": "1", "method": "SerpstatLimitsProcedure.getStats", "params": {}},
     token_reject_field="error",
 )
 

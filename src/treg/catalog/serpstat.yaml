@@ -46,11 +46,10 @@ source:
 #     (result.data.top[]). Each entry below records where its rows actually live — do not assume
 #     result.data[] across the file.
 #
-# REGISTRY DISCREPANCY worth reconciling: treg's oauth_providers.SERPSTAT probes with method
-# `SerpstatLimitsApiProcedure.getStats`, but Serpstat's own MCP server calls
-# `SerpstatLimitsProcedure.getStats` (no "Api" infix) — see src/services/credits_service.ts. Both
-# names appear in the wild. This file catalogues the MCP server's spelling; if the probe ever starts
-# failing with an unknown-method error, that infix is the first thing to check.
+# REGISTRY DISCREPANCY, resolved 2026-08-11 by a live call: `SerpstatLimitsApiProcedure.getStats`
+# (the spelling treg's probe used to send) now answers -32601 "Method not found", while
+# `SerpstatLimitsProcedure.getStats` (no "Api" infix — the spelling Serpstat's own MCP server uses)
+# returns the stats. oauth_providers.SERPSTAT's probe was switched to the working spelling.
 
 
 pricing_url: https://serpstat.com/pay/
@@ -466,13 +465,13 @@ endpoints:
       note: |
         Takes no parameters but `params` must still be present as `{}`. This is the right call to
         make BEFORE any large `size` sweep, since every list method in this file is metered per row.
-        See the registry-discrepancy note in the file header: treg's probe uses the
-        `SerpstatLimitsApiProcedure.getStats` spelling instead of this one.
+        See the registry-discrepancy note in the file header: this spelling (no "Api" infix) is the
+        one that works live; treg's probe sends it too.
         Any captured example must have the account's real balances masked before commit.
     cost:
       type: free
       value: 0
       currency: USD
       unit: call
-      note: the limits/credits meter itself does not consume credits — the standard pattern for this class of endpoint, and what makes it the correct liveness probe for a Serpstat token. Not confirmed against a live call.
+      note: the limits/credits meter itself does not consume credits — the standard pattern for this class of endpoint, and what makes it the correct liveness probe for a Serpstat token. Confirmed live 2026-08-11 (used_lines stayed 0 after the call).
     docs_url: https://api-docs.serpstat.com/docs/serpstat-public-api/

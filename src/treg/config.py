@@ -118,6 +118,10 @@ class Settings(BaseSettings):
     platform_key_diffbot: str = ""
     platform_key_akta: str = ""
     platform_key_apify: str = ""
+    platform_key_serpstat: str = ""
+    platform_key_spyfu: str = ""    # the SpyFu *secret key* alone (?api_key=…), not the id or base64 pair
+    platform_key_coresignal: str = ""
+    platform_key_thecompaniesapi: str = ""  # raw token — injected as "Basic {secret}" un-encoded
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
