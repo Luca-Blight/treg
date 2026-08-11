@@ -644,8 +644,9 @@ class RequireAuthForProtectedTools:
             body += msg.get("body", b"")
             more = msg.get("more_body", False)
 
-        if self._unauthenticated_protected_call(scope, body):
-            return await self._challenge(send)
+        verdict = self._auth_verdict(scope, body)
+        if verdict is not None:
+            return await self._challenge(send, invalid=(verdict == "invalid"))
 
         # The body was consumed to inspect it, so hand the transport a receive() that replays it.
         replayed = False
@@ -660,35 +661,67 @@ class RequireAuthForProtectedTools:
         return await self.app(scope, replay, send)
 
     @staticmethod
-    def _unauthenticated_protected_call(scope, body: bytes) -> bool:
-        has_token = any(k.lower() == b"authorization" and v.strip()
-                        for k, v in scope.get("headers", []))
-        if has_token:
-            return False        # whether it is VALID is the tool's business, not the transport's
+    def _auth_verdict(scope, body: bytes) -> str | None:
+        """None = pass through. "missing" = no credential. "invalid" = a DEAD access token.
+
+        The "invalid" case is what makes refresh work end to end. An OAuth client whose access token
+        expired presents it anyway; per RFC 6750 the resource answers 401 with
+        `error="invalid_token"`, and THAT is the signal on which the client silently runs its refresh
+        grant. Our first version challenged only the missing-header case, so an expired token sailed
+        through to the tool's friendly prose in a 200 — and the client, told nothing, gave up with
+        "requires re-authorization" instead of refreshing.
+
+        Only tokens that CLAIM to be our OAuth access tokens are judged here
+        (`looks_like_access_token`); a per-org or identity token is the API's to validate downstream,
+        and those callers (Codex with an env var) are not OAuth clients and cannot refresh anyway.
+        """
         try:
             rpc = json.loads(body or b"{}")
         except ValueError:
-            return False        # malformed input is the transport's problem, not ours to relabel
+            return None         # malformed input is the transport's problem, not ours to relabel
         if rpc.get("method") != "tools/call":
-            return False
-        return (rpc.get("params") or {}).get("name") in _NEEDS_AUTH
+            return None
+        if (rpc.get("params") or {}).get("name") not in _NEEDS_AUTH:
+            return None
+        token = ""
+        for k, v in scope.get("headers", []):
+            if k.lower() == b"authorization" and v.strip():
+                token = v.decode("latin-1").strip()
+                token = token[7:].strip() if token.lower().startswith("bearer ") else token
+                break
+        if not token:
+            return "missing"
+        from . import mcp_oauth
+        if mcp_oauth.looks_like_access_token(token) and \
+                mcp_oauth.read_access_token(token, expected_audience=mcp_oauth.mcp_resource_url()) is None:
+            return "invalid"
+        return None             # a live access token, or a per-org token the tool validates itself
 
     @staticmethod
-    async def _challenge(send) -> None:
+    async def _challenge(send, *, invalid: bool = False) -> None:
         base = get_settings().public_url.rstrip("/")
-        payload = json.dumps({
-            "error": "unauthorized",
-            "error_description": ("this tool needs a treg grant — authorize at "
-                                  f"{base}/oauth/authorize, or send a per-org token as a bearer"),
-            "resource_metadata": f"{base}/.well-known/oauth-protected-resource",
-        }).encode()
+        meta = f"{base}/.well-known/oauth-protected-resource"
+        if invalid:
+            # RFC 6750 §3.1: the expired/invalid-token challenge. `error="invalid_token"` is the
+            # machine-readable cue on which an OAuth client runs its refresh grant instead of
+            # bothering the human.
+            www = f'Bearer error="invalid_token", error_description="the access token is expired or invalid", resource_metadata="{meta}"'
+            payload = {"error": "invalid_token",
+                       "error_description": ("the access token is expired or invalid — refresh the "
+                                             "grant, or re-authorize at " + base + "/oauth/authorize"),
+                       "resource_metadata": meta}
+        else:
+            www = f'Bearer resource_metadata="{meta}"'
+            payload = {"error": "unauthorized",
+                       "error_description": ("this tool needs a treg grant — authorize at "
+                                             f"{base}/oauth/authorize, or send a per-org token as a bearer"),
+                       "resource_metadata": meta}
         await send({"type": "http.response.start", "status": 401, "headers": [
             (b"content-type", b"application/json"),
             # The header the spec is actually about: it names where to discover how to authenticate.
-            (b"www-authenticate",
-             f'Bearer resource_metadata="{base}/.well-known/oauth-protected-resource"'.encode()),
+            (b"www-authenticate", www.encode()),
         ]})
-        await send({"type": "http.response.body", "body": payload})
+        await send({"type": "http.response.body", "body": json.dumps(payload).encode()})
 
 
 def build_mcp_app():

@@ -580,3 +580,54 @@ async def test_a_402_THROUGH_THE_CALL_TOOL_carries_no_link(clients, monkeypatch)
     assert "http://" not in blob and "https://" not in blob, f"a link out survived: {blob}"
     assert "topup_url" not in blob, blob
     assert "not enough for this call" in blob, "the diagnosis must survive"
+
+
+# ---- the expired-token challenge: what makes silent refresh possible -------------------------
+
+async def test_an_EXPIRED_access_token_gets_401_invalid_token(clients):
+    """RFC 6750 §3.1. A client whose access token expired presents it anyway; the resource answers
+    401 with `error="invalid_token"`, and THAT is the cue on which the client silently runs its
+    refresh grant. Our first challenge only covered the missing-header case, so an expired token
+    sailed through to the tool's friendly prose in a 200 — and Claude Code, told nothing, gave up
+    with "requires re-authorization" instead of refreshing."""
+    from treg import mcp_oauth
+    dead = mcp_oauth.make_access_token(user_id=7, org_id=3, audience=mcp_oauth.mcp_resource_url(),
+                                       scope="treg:call", ttl=-60)  # born expired
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "balance", "arguments": {}}},
+            headers={**MCP_HEADERS, "Authorization": f"Bearer {dead}"})
+    assert r.status_code == 401, r.text
+    challenge = r.headers.get("www-authenticate", "")
+    assert 'error="invalid_token"' in challenge, challenge
+    assert "resource_metadata=" in challenge
+    assert r.json()["error"] == "invalid_token"
+
+
+async def test_a_wrong_audience_access_token_gets_401_invalid_token(clients):
+    """A grant consented to a DIFFERENT resource must not be honoured here — and the refusal should
+    still be the machine-readable 401, not tool prose."""
+    from treg import mcp_oauth
+    other = mcp_oauth.make_access_token(user_id=7, org_id=3,
+                                        audience="https://evil.example/mcp/", scope="treg:call")
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "balance", "arguments": {}}},
+            headers={**MCP_HEADERS, "Authorization": f"Bearer {other}"})
+    assert r.status_code == 401, r.text
+    assert 'error="invalid_token"' in r.headers.get("www-authenticate", "")
+
+
+async def test_a_per_org_token_still_reaches_the_tool(clients):
+    """Only bearers that CLAIM to be our OAuth access tokens are judged by the transport. A per-org
+    or identity token (the Codex env-var path) is the API's to validate downstream — the middleware
+    must pass it through, valid or not, rather than mislabel it `invalid_token` (its holder has no
+    refresh grant to run)."""
+    async with mcp_session(clients) as c:
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "balance", "arguments": {}}},
+            headers={**MCP_HEADERS, "Authorization": "Bearer not-an-oauth-token-shape"})
+    assert r.status_code == 200, r.text  # the tool answers (with its own error prose) — not a 401

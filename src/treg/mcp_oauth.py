@@ -131,6 +131,22 @@ def make_access_token(*, user_id: int, org_id: int, audience: str, scope: str = 
     return f"{_b64(raw)}.{_b64(sig)}"
 
 
+def looks_like_access_token(token: str) -> bool:
+    """Does this bearer CLAIM to be one of our OAuth access tokens? (No validation — a discriminator.)
+
+    The transport needs to tell "an expired/broken access token" apart from "a per-org token the API
+    validates downstream", because the first must be answered `401 error="invalid_token"` (the signal
+    that tells an OAuth client to run its refresh grant) while the second must pass through untouched.
+    Reading the unverified payload's `typ` is safe for THAT question: a forger gains nothing by making
+    an invalid token get the more honest status code."""
+    if not token or "." not in token:
+        return False
+    try:
+        return json.loads(_unb64(token.split(".", 1)[0])).get("typ") == _TOKEN_TYPE
+    except Exception:  # noqa: BLE001 — not even parseable → not our shape
+        return False
+
+
 def read_access_token(token: str, *, expected_audience: str) -> dict | None:
     """Validate an access token and return its claims, or None.
 

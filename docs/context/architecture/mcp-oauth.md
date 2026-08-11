@@ -62,9 +62,17 @@ return neither a status code nor a header.
 exists → call → 401 → discover → authorize. If discovery itself challenged, a client could not scan
 the server to find the tools at all.
 
-The middleware fires only when there is **no** credential. Whether a token is valid needs the
-database, and doing that in middleware would put a second authentication implementation in front of
-the first.
+The middleware judges two cases, not one. **No credential** → the plain challenge above. **A dead
+access token** — a bearer that *claims* to be our OAuth access token (`looks_like_access_token`
+reads the unverified payload's `typ`) but fails `read_access_token` (expired, bad signature, wrong
+audience) → 401 with **`error="invalid_token"`** (RFC 6750 §3.1). That error code is what an OAuth
+client runs its refresh grant on; without it, an expired token sailed through to the tool's friendly
+prose in a 200 and Claude Code gave up with "requires re-authorization" instead of silently
+refreshing. Access-token validation is stateless (HMAC + expiry), so the transport can afford it.
+What stays out of the middleware is anything needing the **database**: a per-org or identity token
+(the Codex env-var path) passes through, valid or not, for the tool to validate downstream — its
+holder has no refresh grant to run, and judging it here would put a second authentication
+implementation in front of the first.
 
 # treg as an authorization server
 
