@@ -47,20 +47,24 @@ drifting quietly.
 The catalog is the one exception: read straight from `catalog_store`, which is already parsed in
 memory, so a search answers in about a millisecond. That is a **speed** choice, not a permission one.
 
-## Authentication: every tool, no exceptions
+## Authentication: eager, every request
 
-All five require a credential. An uncredentialed `tools/call` is answered by
-`RequireAuthForProtectedTools` with **401** and a `WWW-Authenticate` header naming
-`/.well-known/oauth-protected-resource`.
+`RequireAuthForProtectedTools` answers **any** uncredentialed MCP request with **401** and a
+`WWW-Authenticate: Bearer scope="…" resource_metadata="…"` header. The header is the point — a
+friendly error inside a 200 tells a human what happened and tells a program nothing. The challenge
+lives in front of the transport because a tool function can set neither a status code nor a header.
 
-The header is the point. A friendly error inside a 200 tells a human what happened and tells a
-program nothing — a client that connects first and discovers auth lazily, which the spec allows,
-would read 200 as success. The challenge lives in front of the transport because a tool function can
-return neither a status code nor a header.
-
-`initialize` and `tools/list` stay open, and that is what makes the flow work: connect → list what
-exists → call → 401 → discover → authorize. If discovery itself challenged, a client could not scan
-the server to find the tools at all.
+**Eager, not lazy — a deliberate reversal.** The first version left `initialize` and `tools/list`
+open so a client could browse before authenticating. But every treg tool needs auth, so there is
+nothing to browse anonymously, and the open handshake had a real cost: a client (Claude Code, Cursor)
+`initialize`d, got a 200, showed **"✓ Connected"**, and never prompted — connected-but-unusable, the
+"sign in" surfacing only later as prose inside a tool result. The MCP spec's canonical flow instead
+challenges the client's FIRST request so OAuth runs before the session proceeds (Stripe/Subframe/
+AuthKit MCP servers all do this; FastMCP tracks a 401-free `initialize` as a bug). So the challenge
+now fires for **every id-bearing JSON-RPC request** — `initialize`, `tools/list`, `tools/call`. Only
+**notifications** (no id, no response expected) and **`ping`** (liveness) pass without a credential;
+`.well-known/*` discovery is separate GET routes, untouched — that IS the discovery the client needs.
+The challenge also carries `scope` (spec SHOULD) so a client requests least-privilege scopes up front.
 
 The middleware judges two cases, not one. **No credential** → the plain challenge above. **A dead
 access token** — a bearer that *claims* to be our OAuth access token (`looks_like_access_token`
@@ -72,7 +76,11 @@ refreshing. Access-token validation is stateless (HMAC + expiry), so the transpo
 What stays out of the middleware is anything needing the **database**: a per-org or identity token
 (the Codex env-var path) passes through, valid or not, for the tool to validate downstream — its
 holder has no refresh grant to run, and judging it here would put a second authentication
-implementation in front of the first.
+implementation in front of the first. 
+
+The transport's own DNS-rebinding host check (421) and Origin check (403) sit *behind* this
+middleware, so a credentialed request with a bad host or origin is still refused by them — auth does
+not mask the transport guard.
 
 # treg as an authorization server
 
