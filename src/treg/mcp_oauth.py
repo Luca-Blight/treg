@@ -131,6 +131,22 @@ def make_access_token(*, user_id: int, org_id: int, audience: str, scope: str = 
     return f"{_b64(raw)}.{_b64(sig)}"
 
 
+def looks_like_access_token(token: str) -> bool:
+    """Does this bearer CLAIM to be one of our OAuth access tokens? (No validation — a discriminator.)
+
+    The transport needs to tell "an expired/broken access token" apart from "a per-org token the API
+    validates downstream", because the first must be answered `401 error="invalid_token"` (the signal
+    that tells an OAuth client to run its refresh grant) while the second must pass through untouched.
+    Reading the unverified payload's `typ` is safe for THAT question: a forger gains nothing by making
+    an invalid token get the more honest status code."""
+    if not token or "." not in token:
+        return False
+    try:
+        return json.loads(_unb64(token.split(".", 1)[0])).get("typ") == _TOKEN_TYPE
+    except Exception:  # noqa: BLE001 — not even parseable → not our shape
+        return False
+
+
 def read_access_token(token: str, *, expected_audience: str) -> dict | None:
     """Validate an access token and return its claims, or None.
 
@@ -205,13 +221,43 @@ def valid_redirect_uri(uri: str) -> bool:
 
 
 def redirect_uri_allowed(client, uri: str) -> bool:
-    """EXACT match against what the client registered.
+    """EXACT match against what the client registered — with ONE spec-mandated exception for loopback.
 
     Not a prefix or a host comparison. Prefix matching is the classic way this check is defeated —
     `https://good.example.com.evil.test/` starts with the registered origin, and an open redirect
     under a registered host turns one sloppy page into stolen authorization codes.
+
+    The exception, per **RFC 8252 §7.3**: a native/CLI client (Claude Code, Codex, Cursor) listens on
+    a loopback port it cannot know in advance, so it registers a PORTLESS loopback URI
+    (`http://localhost/callback`) and sends the actual ephemeral port at authorize time
+    (`http://localhost:52713/callback`). The AS **MUST** allow the port to vary. So for a loopback
+    request we match scheme + host + path and IGNORE the port. This is safe where the public-host case
+    is not: the redirect lands on the USER'S OWN machine, so there is no remote party to steal the code
+    — the open-redirect attack the exact-match defends against does not exist on 127.0.0.1.
     """
-    return bool(uri) and uri in (client.redirect_uris or [])
+    if not uri:
+        return False
+    registered = client.redirect_uris or []
+    if uri in registered:
+        return True
+    from urllib.parse import urlsplit
+
+    try:
+        u = urlsplit(uri)
+    except ValueError:
+        return False
+    loopback = {"127.0.0.1", "::1", "localhost"}
+    if u.scheme != "http" or u.hostname not in loopback:
+        return False        # only loopback http gets the port-flexible path; everything else is exact
+    for r in registered:
+        try:
+            ru = urlsplit(r)
+        except ValueError:
+            continue
+        if ru.scheme == "http" and ru.hostname in loopback \
+                and ru.hostname == u.hostname and (ru.path or "/") == (u.path or "/"):
+            return True     # same loopback host + path, any port — RFC 8252 §7.3
+    return False
 
 
 async def fetch_client_id_metadata(url: str) -> dict | None:
