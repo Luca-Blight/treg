@@ -380,7 +380,12 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
             "name": ep.get("name") or (ep.get("summary") or "")[:70],
             "provider": ep.get("provider"),
             "usd_per_call": cost.get("usd"),
-            "no_key_needed": cat.platform_eligible(ep),
+            # BOTH halves of tier 4's own truth, not just the price side: `platform_eligible` says
+            # the row is priceable, `platform_key_for` says this deploy actually holds an enabled
+            # key. Eligible-but-keyless rows used to advertise `no_key_needed: true` here and then
+            # refuse at call time — an agent-facing lie the CLI's /access line never told.
+            "no_key_needed": cat.platform_eligible(ep)
+                             and bool(get_settings().platform_key_for(ep.get("provider"))),
             "score": score,
         })
     out = {"query": query, "count": len(results), "total_matches": total, "results": results}
