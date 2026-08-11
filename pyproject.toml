@@ -60,8 +60,8 @@ treg = "treg.cli:main"
 
 [project.urls]
 Homepage = "https://treg.superdesign.dev"
-Repository = "https://github.com/superdesigndev/tools-registry"
-Issues = "https://github.com/superdesigndev/tools-registry/issues"
+Repository = "https://github.com/superdesigndev/treg"
+Issues = "https://github.com/superdesigndev/treg/issues"
 
 [dependency-groups]
 dev = [

@@ -8,7 +8,7 @@
     "url": "https://treg.superdesign.dev"
   },
   "homepage": "https://treg.superdesign.dev",
-  "repository": "https://github.com/superdesigndev/tools-registry",
+  "repository": "https://github.com/superdesigndev/treg",
   "license": "MIT",
   "keywords": [
     "api",

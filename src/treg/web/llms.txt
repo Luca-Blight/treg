@@ -29,7 +29,7 @@ Two kinds of tool answer to the same token, through the same `/call/`:
 Multi-tenant: a token = a (user, org) membership; resources are org-scoped.
 
 Base URL: {BASE}
-Repo: https://github.com/superdesigndev/tools-registry
+Repo: https://github.com/superdesigndev/treg
 
 ## The one mechanic: /call/
 
@@ -397,8 +397,8 @@ skills` restrict it (`--dir` sets the location).
    one), then prove it works — look at what this project does, pick ONE catalog tool that
    would genuinely help it, and call it.
 8. Once that first call returns real data, ask whether the human would like to star the
-   project: `gh api -X PUT user/starred/superdesigndev/tools-registry` (no `gh`? have them
-   open https://github.com/superdesigndev/tools-registry and click it).
+   project: `gh api -X PUT user/starred/superdesigndev/treg` (no `gh`? have them
+   open https://github.com/superdesigndev/treg and click it).
 
 Example (an agent calling Intercom with no key on its box):
 
@@ -418,11 +418,11 @@ Example (an agent calling Intercom with no key on its box):
   save it to `~/.claude/skills/treg/SKILL.md` (install.sh does this automatically).
 - [Web dashboard]({BASE}/): sign in and manage everything in the browser (tools, secrets,
   invites, Try-it, activity, admin). It also has a guided first-run and a screenshot tour.
-- [README](https://github.com/superdesigndev/tools-registry/blob/main/README.md): overview,
+- [README](https://github.com/superdesigndev/treg/blob/main/README.md): overview,
   quickstart, architecture.
-- [USAGE / CLI reference](https://github.com/superdesigndev/tools-registry/blob/main/USAGE.md):
+- [USAGE / CLI reference](https://github.com/superdesigndev/treg/blob/main/USAGE.md):
   every command with examples.
-- [Design docs](https://github.com/superdesigndev/tools-registry/tree/main/docs/context):
+- [Design docs](https://github.com/superdesigndev/treg/tree/main/docs/context):
   per-subsystem fragments (proxy, auth/secrets, API, CLI, dashboard, multi-tenancy).
 
 ## Notes

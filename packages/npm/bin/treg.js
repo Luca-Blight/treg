@@ -33,7 +33,7 @@ if (bin) run(bin);
 
 if (process.platform === 'win32') {
   console.error('treg is a Python CLI. Install it with:');
-  console.error('  uv tool install git+https://github.com/superdesigndev/tools-registry.git');
+  console.error('  uv tool install git+https://github.com/superdesigndev/treg.git');
   console.error('(get uv: https://docs.astral.sh/uv/getting-started/installation/)');
   process.exit(1);
 }

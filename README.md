@@ -337,7 +337,7 @@ upload/scan, orgs + invites, the dashboard API, CLI.
 ## Contributing & docs
 
 ```
-tools-registry/
+treg/
 ├── src/treg/            # the package (api, cli, proxy, injectors, oauth, health, convert, models, …)
 │   └── web/             # dashboard, landing, tutorial, llms.txt, skill.md, install.sh
 ├── tests/               # 521 tests
