@@ -53,9 +53,16 @@ Two are **session** (cookie) paths, one is a token fallback:
   dashboard just `location.reload()`s into session mode — identical to GitHub.
 - Either way the dashboard authenticates with the **cookie** (`credentials:'include'`) + picks the org
   with **`X-Treg-Org`**, detected via `/auth/me` on load. Cookie `Secure` only on HTTPS (`_is_https`).
-  For copy-paste convenience it also fetches `GET /auth/cli-token` on load into `myToken` (a minted
-  identity token) — the per-tool snippets embed it + `X-Treg-Org` so a copied curl runs as-is, and a
-  **"Copy API token"** button (`copyToken`) puts it on the clipboard.
+  For copy-paste convenience it also fetches `GET /auth/cli-token` on load into `myToken` — sent WITH
+  the active-org header, so the minted identity token is **team-pinned** (`sess.make(..., org=slug)`,
+  a stateless `org` claim; the endpoint only pins a team the caller is a member of). That is the point:
+  the "API key" then works as a **bare bearer** — pasted into an MCP server's `Authorization` header,
+  where no `X-Treg-Org` can travel, it still resolves to that team (fixing the "several teams, none
+  active" wall a multi-team user hit). `require_member` uses the token's org claim when no header is
+  sent (the header still overrides), and the MCP layer surfaces it via `_internal_auth`. `myToken` is
+  re-minted whenever the active org changes (`_myTokenOrg` guard) so it always names the shown team.
+  The per-tool snippets embed it (+ `X-Treg-Org`, now redundant but harmless), and **"Copy API token"**
+  (`copyToken`) puts it on the clipboard.
 - **"For your agents" sidebar** — ONE copyable **agent instruction** (a prompt to paste into Claude
   Code / Codex), built client-side by `buildAgentPrompt(kind, inclToken)` with the caller's minted
   token + active org slug baked in. It was two prompts (admin "Setup" / consumer "Connect"), each

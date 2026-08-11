@@ -45,6 +45,19 @@ def test_session_sign_roundtrip_tamper_expiry():
     assert sess.read(sess.make(1, ttl=-1)) is None  # expired
 
 
+def test_token_can_carry_an_org_claim_statelessly():
+    """A team-pinned identity token: same stateless HMAC, plus an `org` slug. Omitting org keeps the
+    plain shape (backward-compatible); passing it round-trips — and the signature still covers it, so
+    a tampered org is rejected like any other tampered claim."""
+    plain = sess.read_claims(sess.make(7))
+    assert plain is not None and "org" not in plain          # unchanged when no org given
+    pinned = sess.read_claims(sess.make(7, org="acme"))
+    assert pinned is not None and pinned["org"] == "acme" and pinned["uid"] == 7
+    # tampering the payload to inject/forge an org breaks the signature
+    good = sess.make(7, org="acme")
+    assert sess.read_claims(good + "x") is None
+
+
 @pytest.fixture
 async def gc(monkeypatch):
     monkeypatch.setenv("TREG_GITHUB_CLIENT_ID", "cid")
@@ -145,6 +158,30 @@ async def test_cli_token_mints_a_usable_identity_token(clients):
 async def test_cli_token_requires_auth(clients):
     r = await clients.get("/auth/cli-token", headers={"X-Treg-Token": "nope"})
     assert r.status_code == 401
+
+
+async def test_cli_token_bakes_the_active_org_and_works_as_a_BARE_bearer(clients):
+    """The point of this whole change: when the dashboard asks for its API key WITH the active team
+    (X-Treg-Org), the returned token pins that team — so it authenticates a call as a BARE bearer,
+    no X-Treg-Org header. That is what lets it be pasted into an MCP server's Authorization, where no
+    second header can travel, and still resolve to the right team."""
+    slug = (await clients.get("/orgs")).json()[0]["slug"]
+    r = await clients.get("/auth/cli-token", headers={"X-Treg-Org": slug})
+    assert r.status_code == 200 and r.json().get("org") == slug, r.text
+    baked = r.json()["token"]
+    # the baked token works with NO X-Treg-Org — the org rides on the token
+    ok = await clients.get("/tools", headers={"X-Treg-Token": baked, "X-Treg-Org": ""})
+    assert ok.status_code == 200, ok.text
+
+
+async def test_cli_token_refuses_to_pin_a_team_you_are_not_in(clients):
+    """The org claim is only baked when the caller is actually a member — a header naming someone
+    else's team yields a plain (unpinned) token, never one that pins a team you cannot reach."""
+    r = await clients.get("/auth/cli-token", headers={"X-Treg-Org": "some-other-teams-slug"})
+    assert r.status_code == 200 and r.json().get("org") is None, r.text
+    # and the plain token still needs X-Treg-Org, proving it wasn't silently pinned
+    plain = r.json()["token"]
+    assert (await clients.get("/tools", headers={"X-Treg-Token": plain, "X-Treg-Org": ""})).status_code == 400
 
 
 # ---- Google OAuth (a parallel login door) -------------------------------------------------

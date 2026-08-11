@@ -2274,12 +2274,31 @@ async def require_identity(
 
 
 @app.get("/auth/cli-token")
-async def auth_cli_token(user: User = Depends(require_identity)) -> dict:
+async def auth_cli_token(
+    user: User = Depends(require_identity),
+    x_treg_org: str = Header(default=""),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
     """Mint a fresh CLI/bearer token for the authenticated caller (session cookie OR token). Identity
     tokens are stateless (`sess.make`), so handing one out rotates/invalidates nothing — it just lets
     the dashboard embed a working token in copy-paste snippets + a 'copy token' button, so a human
-    doesn't have to hunt for it in `~/.treg/config.json`. Pair it with `X-Treg-Org` to pick the org."""
-    return {"token": sess.make(user.id, CLI_TOKEN_TTL, user.token_version), "email": user.email}
+    doesn't have to hunt for it in `~/.treg/config.json`.
+
+    When the caller names a team (the dashboard sends `X-Treg-Org` for the active org, and only after
+    confirming membership), the org slug is BAKED into the token. That is what makes the dashboard's
+    "your API key" work as a bare bearer where no `X-Treg-Org` header can travel — pasted into an MCP
+    server's Authorization it resolves to that team, no header, no per-org agent token to manage. A
+    caller in one team who sends no header still gets a plain token (MCP auto-selects the sole team)."""
+    org_slug = None
+    if x_treg_org:
+        org = await _resolve_org(x_treg_org, db)
+        if org is not None:
+            m = (await db.execute(select(Membership).where(
+                Membership.user_id == user.id, Membership.org_id == org.id))).scalar_one_or_none()
+            if m is not None:               # only pin a team the caller actually belongs to
+                org_slug = org.slug
+    return {"token": sess.make(user.id, CLI_TOKEN_TTL, user.token_version, org=org_slug),
+            "email": user.email, "org": org_slug}
 
 
 @app.post("/auth/revoke-tokens")
@@ -2336,7 +2355,13 @@ async def require_member(
         user = (await _user_from_identity_token(x_treg_token, db)) if x_treg_token else await _user_from_session(treg_session, db)
         if user is None:
             raise HTTPException(status_code=401, detail="invalid token" if x_treg_token else "not authenticated")
-        org = await _resolve_org(x_treg_org, db)
+        # The X-Treg-Org header wins; a team-pinned identity token (org baked into its claim) is the
+        # fallback, so a copyable "API key" resolves as a BARE bearer where no header can travel — an
+        # MCP server's Authorization. The header still overrides, so one token can act on another team
+        # when the caller can set it (the CLI does). Only the token owner could sign it, so trusting
+        # its own org claim grants nothing they could not already reach.
+        org_ref = x_treg_org or ((sess.read_claims(x_treg_token) or {}).get("org", "") if x_treg_token else "")
+        org = await _resolve_org(org_ref, db)
         if org is None:
             raise HTTPException(status_code=400, detail="choose an org (send X-Treg-Org)")
         membership = (

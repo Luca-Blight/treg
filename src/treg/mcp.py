@@ -254,7 +254,14 @@ async def _internal_auth(token: str) -> dict[str, str]:
     """
     claims = _oauth_claims(token)
     if claims is None:
-        return {"X-Treg-Token": token}
+        # Not an OAuth access token — a per-org or identity token, forwarded as-is. But an identity
+        # token may PIN a team in its own claim (the dashboard's org-scoped "API key", so it works as
+        # a bare MCP bearer where no X-Treg-Org header can travel). If it does, surface that as
+        # X-Treg-Org so `_resolve_org` takes its "pinned" path instead of asking "which team?" — the
+        # exact failure a multi-team user hit pasting their key into an MCP client.
+        from . import session as _session
+        pinned = (_session.read_claims(token) or {}).get("org")
+        return {"X-Treg-Token": token, "X-Treg-Org": pinned} if pinned else {"X-Treg-Token": token}
 
     from sqlmodel import select
 
