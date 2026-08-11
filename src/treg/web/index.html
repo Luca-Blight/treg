@@ -3403,7 +3403,7 @@ createApp({
       exPath:'<PATH>', exMethod:'GET',
       tryTool:null, tryMethod:'GET', tryPath:'', tryBody:'', trying:false, tryResp:null, tryStatus:0, tryMs:0,
       useMode:'call', runArgsStr:'', running:false, runOut:null,
-      startCopied:'', startTab:'access', startAgentOpen:false, startTokenShow:false, mdMenu:false, llmsCopied:false, myToken:null, tokenCopied:false,
+      startCopied:'', startTab:'access', startAgentOpen:false, startTokenShow:false, mdMenu:false, llmsCopied:false, myToken:null, _myTokenOrg:null, tokenCopied:false,
       agentGuide:null, agentGuideCopied:false, agentRowCopied:null,
       demo:{
         token:null, org_slug:'', ttl:60, busy:false, err:'', copied:'', signin:false,
@@ -5148,7 +5148,13 @@ createApp({
       try{
         this.myOrgs=await this.api('/orgs');
         if(!this.sessionMode && !this.me){ const who=await this.api('/auth/me').catch(()=>null); if(who){ this.me=who.email; this.isAdmin=!!who.is_superadmin; } }  // token mode: learn our own email + superadmin flag (isPersonal / join-by-code)
-        if(this.myToken===null){ this.myToken=(await this.api('/auth/cli-token').catch(()=>null)||{}).token||null; }  // a real bearer token to embed in copy snippets + the "copy token" button (works in session AND token mode)
+        // Re-mint the bearer whenever the ACTIVE org changes: the token now bakes the org slug in
+        // (so it works as a bare MCP Authorization bearer), and a stale one would name the old team.
+        // Stateless mint — cheap, nothing stored, nothing rotated.
+        if(this.myToken===null || this._myTokenOrg!==this.activeSlugNow){
+          this.myToken=(await this.api('/auth/cli-token').catch(()=>null)||{}).token||null;
+          this._myTokenOrg=this.activeSlugNow;
+        }
         if(this.sessionMode){ this.pendingInvites=await this.api('/invites/mine').catch(()=>[]); }  // BEFORE the no-orgs early return: an invited user has 0 orgs but DOES have a pending invite — maybeOnboard needs it to offer joining instead of forcing create-team
         if(!this.myOrgs.length){ this.tools=[]; this.bundles=[]; this.health={}; return; }  // brand-new user: no team yet → the mandatory welcome (maybeOnboard) creates the first one; skip org-scoped fetches (they'd 400). finally{} clears loading.
         if(this.sessionMode && (!this.activeSlug || !this.myOrgs.some(o=>o.slug===this.activeSlug)) && this.myOrgs.length){

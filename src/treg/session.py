@@ -41,19 +41,29 @@ def _unb64(s: str) -> bytes:
     return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
 
 
-def make(user_id: int, ttl: int = TTL_SECONDS, token_version: int = 0) -> str:
+def make(user_id: int, ttl: int = TTL_SECONDS, token_version: int = 0,
+         org: str | None = None) -> str:
     # `tv` binds the token to the user's current token_version; bumping that row invalidates every
     # token minted at an older version (see api._revoke path). Callers pass user.token_version.
-    raw = json.dumps({"uid": user_id, "exp": int(time.time()) + ttl, "tv": token_version},
-                     separators=(",", ":")).encode()
+    #
+    # `org` is optional and stateless like the rest of the claim: an identity token that PINS a team.
+    # It exists so a copyable "API key" works as a bare bearer where no `X-Treg-Org` header can travel
+    # (an MCP server's Authorization header). Omitted → today's org-less token, unchanged. Baking the
+    # slug in costs nothing to store and needs no rotation, because the whole token is re-derivable
+    # from (uid, tv, org) — the same reason the org-less one can be re-minted on every dashboard load.
+    claims = {"uid": user_id, "exp": int(time.time()) + ttl, "tv": token_version}
+    if org:
+        claims["org"] = org
+    raw = json.dumps(claims, separators=(",", ":")).encode()
     sig = hmac.new(_key(), raw, hashlib.sha256).digest()
     return f"{_b64(raw)}.{_b64(sig)}"
 
 
 def read_claims(cookie: str) -> dict | None:
-    """Return the token's claims ({uid, exp, tv}) if it is validly signed and unexpired, else None.
+    """Return the token's claims ({uid, exp, tv, org?}) if validly signed and unexpired, else None.
     `tv` defaults to 0 for tokens minted before token_version existed, so old tokens stay valid
-    against a user whose token_version is still 0 (no forced logout on deploy)."""
+    against a user whose token_version is still 0 (no forced logout on deploy). `org` is present only
+    on a team-pinned identity token (see `make`); absent for a plain one."""
     if not cookie or "." not in cookie:
         return None
     try:
@@ -65,7 +75,10 @@ def read_claims(cookie: str) -> dict | None:
         data = json.loads(raw)
         if int(data.get("exp", 0)) < time.time():
             return None
-        return {"uid": int(data["uid"]), "exp": int(data["exp"]), "tv": int(data.get("tv", 0))}
+        out = {"uid": int(data["uid"]), "exp": int(data["exp"]), "tv": int(data.get("tv", 0))}
+        if data.get("org"):
+            out["org"] = str(data["org"])
+        return out
     except Exception:  # noqa: BLE001 — any malformed cookie is simply "no session"
         return None
 
