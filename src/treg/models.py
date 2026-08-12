@@ -651,3 +651,62 @@ class OAuthRefresh(SQLModel, table=True):
     # replay can be RECOGNISED — deleting it would make a stolen token look merely unknown.
     retired_at: datetime | None = Field(default=None)
     retired_reason: str = Field(default="")
+
+
+class IdempotentCall(SQLModel, table=True):
+    """One remembered answer, so a retried call is not paid for twice.
+
+    An agent retries far more than a person does. Most of those retries are already free: a 5xx, a
+    timeout or a network error is never billed. The case this table exists for is narrower and worse
+    — treg called the provider, the provider succeeded AND CHARGED US, and the response was lost on
+    the way back. The agent retries, and without this we call the provider again and bill again.
+
+    Remembering only that a key was "already billed" would not be enough: we would still make the
+    second upstream call, so we would still pay the provider and would simply be absorbing the double
+    cost instead of passing it on. The answer has to be replayed so the second request never leaves
+    treg.
+
+    **Scoped to the CALLER, never to the key alone.** Keys are chosen by clients, so the same string
+    will be picked twice. Scoped by key alone that collision serves one team's response to another,
+    which is the single failure here that leaks data instead of money.
+
+    The caller is `membership_id`, because that is what every door already resolves to: a person's
+    token, an agent token and an OAuth grant all become one `Membership` (see `Caller`). So one rule
+    covers every case — the label belongs to whoever called — and it does not matter whether that is
+    a human, an agent, or two agents inside one team.
+
+    Per caller rather than per team on purpose. Two lazily-written agents in one team will both reach
+    for `retry-1`; scoped per team they collide and the second gets a confusing refusal, scoped per
+    caller they simply never meet. Nothing is given up: this is strictly narrower than per-team, so
+    the cross-tenant leak stays closed. Stripe scopes per API key for the same reason.
+
+    `request_fingerprint` catches a client reusing one key for a DIFFERENT request. That is a caller
+    bug, and returning the old answer would hide it, so the mismatch is refused loudly instead.
+
+    `status` is `pending` while the upstream call is in flight and `done` once stored. The pending row
+    is written BEFORE the call, so two retries arriving together race on the unique constraint and the
+    loser waits for the winner instead of making a second call. Same reasoning as the conditional
+    UPDATE in `ledger.reserve`: where two paths read before either writes, the database has to be the
+    one that says no.
+    """
+
+    __table_args__ = (UniqueConstraint("membership_id", "key", name="uq_idem_caller_key"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    # org_id is kept alongside the caller so the row is still org-scoped for deletion and audit:
+    # a membership can go away while the team remains, and the stored answer belongs to the team
+    # that paid for it.
+    org_id: int = Field(foreign_key="org.id", index=True)
+    membership_id: int = Field(foreign_key="membership.id", index=True)
+    key: str = Field(index=True)
+    request_fingerprint: str = Field(default="")
+    endpoint_id: str = Field(default="")
+    status: str = Field(default="pending")     # "pending" | "done"
+    # Only ever set for a METERED success. A team calling on its own key is billed by the provider,
+    # not by us, and storing those responses would hold someone's data for a reason that helps nobody.
+    response_status: int | None = Field(default=None)
+    response_body: bytes | None = Field(default=None)
+    response_media_type: str = Field(default="")
+    charged_micro: int = Field(default=0)
+    created_at: datetime = Field(default_factory=_now)
+    expires_at: datetime
