@@ -65,6 +65,34 @@ refused rather than answered, so the failure is loud.
 
 Full reasoning, storage rules and the concurrency guard: `architecture/money.md`.
 
+## Output schemas: every field optional AND nullable
+
+Each tool declares what it returns (ChatGPT's connector review asks; a model that must guess at
+field names guesses). Two rules, both learned the hard way:
+
+**Every field is optional** (`total=False`). The SDK validates a strict schema on the way out, so a
+required field would turn the first `{"error": "not authenticated"}` into an opaque tool failure
+instead of a recoverable refusal.
+
+**Every field is nullable** (`| None`) — not just the ones that carry data nulls (a tool with no
+description, an endpoint with no price). The SDK serializes each response through the
+TypedDict-derived pydantic model, and that dump fills every **absent** key in as `null` in
+`structuredContent`. So a response that never mentions `next` still ships `"next": null`, and a
+strict client validating against an advertised `type: string` refuses the whole answer with -32602.
+Two independent field reports arrived the same day (issue #93 and one on X) before this was caught:
+FastMCP's own client is lenient, so nothing local ever tripped it. The suite now validates real
+`structuredContent` against the advertised schema with `jsonschema` playing the strict client.
+
+## Responses forbid edge transforms
+
+Every `/mcp/` response carries `Cache-Control: no-store, no-transform` (the `NoTransformResponses`
+ASGI wrapper, outermost so 401 challenges carry it too). Production sits behind Render's Cloudflare
+edge — no account or dashboard of ours — which otherwise Brotli-compresses large responses; at least
+one real client stack (httpx + brotlicffi, issue #93) dies mid-decode and then hangs to its own
+timeout, minutes after the upstream answered in seconds. `no-transform` is the origin's standard
+"do not re-encode" (RFC 9111) and Cloudflare honours it; `no-store` rides along because these
+responses are per-caller and priced.
+
 ## Authentication: eager, every request
 
 `RequireAuthForProtectedTools` answers **any** uncredentialed MCP request with **401** and a
