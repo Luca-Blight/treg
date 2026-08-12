@@ -857,3 +857,110 @@ async def test_a_second_call_while_the_first_is_IN_FLIGHT_is_refused(clients: As
     r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "racing"})
     assert r.status_code == 409
     assert await _balance(clients) == before, "the loser of the race must not spend"
+
+
+async def test_a_stale_label_reused_later_starts_fresh(clients: AsyncClient, platform_on):
+    """A caller with stable labels (`nightly-report`, say) must be able to call again tomorrow.
+
+    Note what this does NOT prove: the read path already drops an expired row when it looks one up,
+    so this passes with the sweep removed. The sweep is covered separately below — I wrote this one
+    believing it tested the sweep, and only found out by deleting the sweep and watching it pass."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().first()
+        db.add(IdempotentCall(
+            org_id=org_id, membership_id=m.id, key="nightly-report", endpoint_id=EP,
+            status="done", response_status=200, response_body=b'{"yesterday":true}',
+            response_media_type="application/json", charged_micro=999,
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)))
+        await db.commit()
+
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "nightly-report"})
+    assert r.status_code == 200, r.text
+    assert "X-Treg-Idempotent-Replay" not in r.headers, "yesterday's answer must not be served"
+    assert r.json() != {"yesterday": True}
+
+    async with session_maker() as db:
+        rows = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "nightly-report"))).scalars().all()
+    assert len(rows) == 1, "exactly one row: the dead one swept, today's kept"
+    assert rows[0].response_body != b'{"yesterday":true}'
+
+
+async def test_the_sweep_clears_labels_NOBODY_COMES_BACK_FOR(clients: AsyncClient, platform_on):
+    """What the sweep is actually for, and the only thing that covers it.
+
+    A label used once and never again is never looked up, so the read path never sees it and never
+    drops it. Without a sweep those rows accumulate forever, and they hold response BODIES. Any later
+    call by the same caller clears them.
+
+    Lazy and caller-scoped, matching the hold reaper in ledger.py: a background timer would need a
+    scheduler and a leader election on a multi-instance deploy, and would still only run on a timer.
+    """
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().first()
+        db.add(IdempotentCall(
+            org_id=org_id, membership_id=m.id, key="abandoned-label", endpoint_id=EP,
+            status="done", response_status=200, response_body=b'{"big":"body"}',
+            response_media_type="application/json", charged_micro=500,
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=2)))
+        await db.commit()
+
+    # a call under a DIFFERENT label: the abandoned row is never looked up, only swept
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "unrelated"})
+    assert r.status_code == 200, r.text
+
+    async with session_maker() as db:
+        gone = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "abandoned-label"))).scalar_one_or_none()
+    assert gone is None, "an expired row nobody returns for must still be reclaimed"
+
+
+async def test_the_sweep_leaves_OTHER_callers_rows_alone(clients: AsyncClient, platform_on):
+    """Scoped to the caller doing the work. A sweep that reached across callers would be a caller
+    able to delete another's stored answers by making one call of their own."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    made = await clients.post(f"/orgs/{org_id}/agents", json={"name": "bystander"})
+    assert made.status_code in (200, 201), made.text
+
+    async with session_maker() as db:
+        members = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().all()
+        other = members[-1]
+        db.add(IdempotentCall(
+            org_id=org_id, membership_id=other.id, key="someone-elses", endpoint_id=EP,
+            status="done", response_status=200, response_body=b"{}", charged_micro=1,
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)))
+        await db.commit()
+
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "mine"})
+    assert r.status_code == 200
+
+    async with session_maker() as db:
+        still = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "someone-elses"))).scalar_one_or_none()
+    assert still is not None, "one caller's sweep must not delete another's rows"

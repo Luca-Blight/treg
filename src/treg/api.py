@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlsplit
 
-from sqlalchemy import case, func, or_
+from sqlalchemy import case, delete, func, or_
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -6985,6 +6985,18 @@ async def _claim_idempotent(key: str, fingerprint: str, rest: str, caller: Calle
     The pending row IS the lock. It goes in before the upstream call, so a concurrent retry loses the
     insert on `(membership_id, key)` and is told to wait rather than duplicating the spend.
     """
+    # Sweep this caller's expired labels first. LAZY and caller-scoped, matching the hold reaper in
+    # ledger.py and for the same reasons: a background timer would need a scheduler and a leader
+    # election on a multi-instance deploy, and would still only run on a timer. One indexed DELETE
+    # paid by the caller who benefits from it, and a caller who never calls again leaves rows that
+    # can no longer answer anything, because a replay checks the window before it serves.
+    #
+    # Freeing the label matters as much as reclaiming the space: without this, reusing a label a day
+    # later would hit the old row's unique constraint and be refused rather than starting fresh.
+    await db.execute(delete(IdempotentCall).where(
+        IdempotentCall.membership_id == caller.membership.id,
+        IdempotentCall.expires_at < datetime.now(timezone.utc).replace(tzinfo=None)))
+
     row = IdempotentCall(
         org_id=caller.org_id, membership_id=caller.membership.id, key=key,
         request_fingerprint=fingerprint, endpoint_id=rest[:200], status="pending",
