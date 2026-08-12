@@ -667,3 +667,83 @@ async def test_a_per_org_token_still_reaches_the_tool(clients):
             "params": {"name": "balance", "arguments": {}}},
             headers={**MCP_HEADERS, "Authorization": "Bearer not-an-oauth-token-shape"})
     assert r.status_code == 200, r.text  # the tool answers (with its own error prose) — not a 401
+
+
+async def test_call_passes_an_idempotency_key_through(clients):
+    """The feature was built for agents and MCP is the agent path, so leaving `call` unable to send a
+    key made it unreachable from the surface it was for.
+
+    The key is the CALLER's, never derived from the request: two identical searches an hour apart are
+    new work, not a retry, and a server-invented key would hand back the stale answer — a 24-hour
+    cache wearing an idempotency badge."""
+    token = (await clients.post("/users", json={"email": "mcpidem@superdesign.dev"})).json()["token"]
+    prev = clients.headers.get("X-Treg-Token")
+    clients.headers["X-Treg-Token"] = token
+    made = await clients.post("/tools", json={"name": "echo", "base_url": "http://upstream"})
+    if prev:
+        clients.headers["X-Treg-Token"] = prev
+    assert made.status_code == 200, made.text
+
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/anything", "method": "POST",
+            "params": {"x": 1}, "idempotency_key": "agent-retry-1"}, token=token)
+    assert out.get("status") == 200, out
+
+
+async def test_the_key_is_optional_and_described_for_the_model(clients):
+    """A model can only use it if the description says WHEN. The distinction that matters is retry
+    versus new work, because getting it wrong returns stale data rather than failing loudly."""
+    from treg.mcp import mcp as server
+
+    tool = [t for t in await server.list_tools() if t.name == "call"][0]
+    assert "idempotency_key" in tool.input_schema["properties"]
+    assert "idempotency_key" not in (tool.input_schema.get("required") or [])
+    desc = tool.description or ""
+    assert "repeating a call whose answer you did not receive" in desc
+    assert "new call, not a retry" in desc, "the model must be told when NOT to reuse a key"
+
+
+async def test_the_same_key_through_MCP_bills_once(clients, monkeypatch):
+    """End to end on the agent path: an agent retries with the same key, the provider is reached
+    once, and the balance moves once."""
+    from sqlmodel import select
+
+    from treg.config import get_settings
+    from treg.db import session_maker
+    from treg.models import Org
+
+    monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "PLATKEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub")
+    get_settings.cache_clear()
+
+    token = (await clients.post("/users", json={"email": "mcponce@superdesign.dev"})).json()["token"]
+    prev = clients.headers.get("X-Treg-Token")
+    clients.headers["X-Treg-Token"] = token
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    if prev:
+        clients.headers["X-Treg-Token"] = prev
+
+    async def balance() -> int:
+        async with session_maker() as db:
+            org = (await db.execute(select(Org).where(Org.id == org_id))).scalar_one()
+            return org.balance_micro or 0
+
+    args = {"endpoint_id": "tikhub.tiktok.video.comments", "params": {"aweme_id": "7"},
+            "idempotency_key": "one-piece-of-work"}
+    before = await balance()
+    async with mcp_session(clients) as c:
+        first = await _call_tool(c, "call", args, token=token)
+    assert first.get("status") == 200, first
+    charged = before - await balance()
+    assert charged > 0, "the first call must bill"
+
+    after_first = await balance()
+    async with mcp_session(clients) as c:
+        second = await _call_tool(c, "call", args, token=token)
+    get_settings.cache_clear()
+
+    assert second.get("status") == 200, second
+    assert second.get("replayed") is True, "the retry must be marked as a replay"
+    assert second.get("body") == first.get("body"), "and return the same answer"
+    assert await balance() == after_first, "and bill nothing"
