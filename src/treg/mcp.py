@@ -292,7 +292,9 @@ async def _api(token: str):
         transport=httpx.ASGITransport(app=app),
         base_url=_INTERNAL_BASE,
         timeout=_TIMEOUT,
-        headers=await _internal_auth(token),
+        # X-Treg-Client is attribution, not auth: without it every MCP-originated call lands
+        # in the audit trail as client="", indistinguishable from unreported CLI traffic.
+        headers={**await _internal_auth(token), "X-Treg-Client": "mcp"},
     ) as client:
         yield client
 

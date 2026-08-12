@@ -18,11 +18,11 @@ covers (frontmatter `sources:`). Regenerate this index with
 |---|---|---|
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
 | [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog_store.py, endpoint_stats.py |
-| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | models.py, db.py, audit.py, ratestore.py |
+| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | models.py, db.py, audit.py, analytics.py, … |
 | [Local proxy — catch a program's own outgoing calls (`treg <command>`)](architecture/local-proxy.md) | shipped | localproxy.py, server.js |
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
-| [Money — prepaid balance, the ledger, Stripe, and the reports that check it](architecture/money.md) | shipped | ledger.py, billing.py, reconcile.py |
-| [MCP — the front door for assistants, and treg as an OAuth authorization server](architecture/mcp-oauth.md) | shipped | mcp.py, mcp_oauth.py |
+| [MCP — the front door for assistants, and treg as an OAuth authorization server](architecture/mcp-oauth.md) | shipped | mcp.py, mcp_oauth.py, connect-demo.html |
+| [Money — prepaid balance, the ledger, Stripe, and the reports that check it](architecture/money.md) | shipped | ledger.py, billing.py, reconcile.py, api.py |
 | [Multi-tenancy — orgs, memberships, invites, per-org scoping](architecture/multi-tenancy.md) | shipped | models.py, api.py, db.py |
 | [The proxy — faithful credential-injecting relay + tool resolution](architecture/proxy-model.md) | shipped | proxy.py, api.py |
 | [Super-admin — cross-tenant read + control](architecture/super-admin.md) | shipped | api.py, config.py |
@@ -41,12 +41,6 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Shell mode (treg shell) — transparent CLI interception](interface/shell.md) | shipped | shell.py, cli.py |
 | [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md |
 
-## Guides (how-to)
-
-| Fragment | Status | Covers |
-|---|---|---|
-| [Expanding a marketplace category — the add-a-provider playbook](guides/expanding-a-category.md) | guide | oauth_providers.py, api.py, config.py |
-
 ## Ops (deploy, scale)
 
 | Fragment | Status | Covers |
@@ -58,4 +52,10 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [Glossary](reference/glossary.md) | reference | 2026-06-30-jason-tools-registry.md |
+
+## guides
+
+| Fragment | Status | Covers |
+|---|---|---|
+| [Expanding a marketplace category — the add-a-provider playbook](guides/expanding-a-category.md) | guide | oauth_providers.py, api.py, config.py |
 

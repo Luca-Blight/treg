@@ -42,7 +42,8 @@ Tools reach the rest of treg through `httpx.ASGITransport` against our own app â
 through the real routes, without a socket. That matters because the enforcement rules (deny rules,
 capability pins, per-member tool access, the credential ladder, metering) live in those routes. A
 second path that "just read the database" would be a second implementation of every one of them,
-drifting quietly.
+drifting quietly. The in-process client stamps `X-Treg-Client: mcp` (attribution, never a gate), so
+MCP traffic is distinguishable from unreported CLI traffic in the audit trail and analytics.
 
 The catalog is the one exception: read straight from `catalog_store`, which is already parsed in
 memory, so a search answers in about a millisecond. That is a **speed** choice, not a permission one.
