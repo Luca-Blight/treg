@@ -88,7 +88,9 @@ async def test_dashboard_served_at_root(clients: AsyncClient):
     # `/` is the marketing landing; the SPA (login shell + dashboard) lives at /app.
     r = await clients.get("/")
     assert r.status_code == 200
-    assert "tools-registry" in r.text and "Sign in" in r.text
+    # The product is branded `treg` everywhere since the rename; asserting the old name left main
+    # red and every PR failing CI behind it.
+    assert "treg" in r.text and "Sign in" in r.text
     r = await clients.get("/app")
     assert r.status_code == 200
     # the app root div may carry extra attributes (e.g. v-cloak) — match the id, not the exact tag
