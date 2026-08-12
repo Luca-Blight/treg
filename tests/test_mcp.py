@@ -388,19 +388,77 @@ async def test_the_output_schema_does_not_BREAK_the_error_paths(clients):
 
 
 async def test_the_schema_tolerates_NULLS_not_just_missing_keys(clients):
-    """`total=False` says a key may be ABSENT; it does not say the value may be null. Real rows carry
-    nulls — a registered tool with no description, an endpoint with no published price — and typing
-    those as plain `str` made `my_tools` return a schema error instead of the team's tools.
+    """`total=False` says a key may be ABSENT; it does not say the value may be null, and nulls reach
+    the client from two directions. Real rows carry them — a registered tool with no description, an
+    endpoint with no published price. And the SDK serializes every response through the
+    TypedDict-derived model, which fills ABSENT keys in as `null` in structuredContent — so a
+    response that never mentions `next` still ships `"next": null`, and a strict client validating
+    against a `type: string` schema refuses the whole answer with -32602 (issue #93, and a second
+    independent report the same day).
 
+    So EVERY field of EVERY tool must allow null, not just the ones known to carry data nulls.
     Asserted on the schema so the next field added is held to the same rule."""
     from treg.mcp import mcp as server
 
-    tools = {t.name: t.output_schema for t in await server.list_tools()}
-    defs = tools["my_tools"].get("$defs", {})
-    team_tool = defs.get("TeamTool", {})
-    for field, spec in team_tool.get("properties", {}).items():
-        allows_null = "null" in str(spec)
-        assert allows_null, f"TeamTool.{field} does not allow null — a real row will fail validation"
+    for t in await server.list_tools():
+        schemas = [t.output_schema] + list(t.output_schema.get("$defs", {}).values())
+        for schema in schemas:
+            for field, spec in schema.get("properties", {}).items():
+                # `Any` renders as an unconstrained schema (no type at all) — that accepts null.
+                unconstrained = "type" not in spec and "anyOf" not in spec
+                allows_null = unconstrained or "null" in str(spec)
+                assert allows_null, (f"{t.name}: {schema.get('title')}.{field} does not allow null — "
+                                     f"the SDK fills absent keys in as null, so a strict client "
+                                     f"will refuse the whole response")
+
+
+async def test_structured_content_VALIDATES_against_the_advertised_schema(clients):
+    """End to end, as the two field reports arrived: a strict client validates structuredContent
+    against the outputSchema from tools/list and refuses the response on any mismatch. The schema
+    test above checks what we promise; this checks what we actually ship — with jsonschema playing
+    the strict client, so a serialization change in the SDK cannot regress this silently."""
+    import jsonschema
+
+    from treg.mcp import mcp as server
+
+    schemas = {t.name: t.output_schema for t in await server.list_tools()}
+    token = (await clients.post("/users", json={"email": "strict@superdesign.dev"})).json()["token"]
+
+    async with mcp_session(clients) as c:
+        # The exact failing calls from the reports: a search (next set, hint absent) and the two
+        # tools whose error shape carries teams/hint — plus a catalog_get error path.
+        for tool, args in [("catalog_search", {"query": "backlinks"}),
+                           ("catalog_get", {"endpoint_id": "no.such.endpoint"}),
+                           ("balance", {}),
+                           ("my_tools", {})]:
+            await _rpc(c, "initialize", {
+                "protocolVersion": "2025-06-18", "capabilities": {},
+                "clientInfo": {"name": "strict", "version": "1"}}, token)
+            r = await _rpc(c, "tools/call", {"name": tool, "arguments": args}, token)
+            structured = (r.json().get("result") or {}).get("structuredContent")
+            assert structured is not None, f"{tool} returned no structuredContent: {r.text[:200]}"
+            jsonschema.validate(structured, schemas[tool])  # raises on any mismatch
+
+
+async def test_mcp_responses_forbid_edge_TRANSFORMS(clients):
+    """Production sits behind Render's Cloudflare edge, which Brotli-compresses responses unless the
+    origin says not to. At least one real client stack (httpx + brotlicffi, issue #93) dies decoding
+    large compressed bodies and then hangs to its own timeout. `Cache-Control: no-transform` is the
+    origin's standard "do not re-encode" (RFC 9111), and Cloudflare honours it; `no-store` rides
+    along because these responses are per-caller and priced.
+
+    Asserted on both an authenticated answer and the 401 challenge — the header wrapper is outermost
+    precisely so the challenge path carries it too."""
+    token = (await clients.post("/users", json={"email": "edge@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        challenged = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/list"}, headers=MCP_HEADERS)
+        answered = await _rpc(c, "initialize", {
+            "protocolVersion": "2025-06-18", "capabilities": {},
+            "clientInfo": {"name": "edge", "version": "1"}}, token)
+    assert challenged.status_code == 401
+    for r in (challenged, answered):
+        assert r.headers.get("cache-control") == "no-store, no-transform", dict(r.headers)
 
 
 # ---- refusing in the right SHAPE, not just refusing ------------------------------------------
