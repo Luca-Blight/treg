@@ -770,3 +770,90 @@ async def test_one_callers_label_is_invisible_to_another(clients: AsyncClient, p
     assert r.status_code == 200
     assert "X-Treg-Idempotent-Replay" not in r.headers, "another caller must not read this answer"
     assert r.json() != {"owner": "first"}
+
+
+# ---- idempotency step 3: storing the answer --------------------------------------------------
+
+async def test_the_SAME_LABEL_TWICE_bills_once_and_calls_the_provider_once(clients: AsyncClient,
+                                                                           platform_on):
+    """The feature, end to end, and the reason it exists.
+
+    An agent calls, the answer is lost on the way back, the agent retries with the same label. The
+    provider must be reached ONCE and the balance must move ONCE, and the second caller must get the
+    same body the first one would have.
+    """
+    before = await _balance(clients)
+    first = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "same-work"})
+    assert first.status_code == 200, first.text
+    assert "X-Treg-Idempotent-Replay" not in first.headers, "the first call is not a replay"
+    after_first = await _balance(clients)
+    assert after_first == before - EP_MICRO, "the first call bills"
+
+    second = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "same-work"})
+    assert second.status_code == 200, second.text
+    assert second.headers.get("X-Treg-Idempotent-Replay") == "true"
+    assert second.json() == first.json(), "the retry gets the SAME answer"
+    assert await _balance(clients) == after_first, "and the retry bills NOTHING"
+
+
+async def test_an_unmetered_call_is_not_stored(clients: AsyncClient):
+    """A team calling on its OWN key is billed by the provider, not by us. There is nothing to
+    protect, and treg has no business holding their response."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall
+
+    await clients.post("/secrets", json={"name": "tikhub", "value": "OWNKEY"})
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "own-key-call"})
+    assert r.status_code == 200 and r.json()["auth"] == "Bearer OWNKEY"
+    async with session_maker() as db:
+        row = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "own-key-call"))).scalar_one_or_none()
+    assert row is None, "an unmetered call must leave nothing behind, not even a claim"
+
+
+async def test_a_FAILED_call_frees_its_label(clients: AsyncClient, platform_on):
+    """A failure was never billed, so there is nothing to replay — and freezing an error would stop
+    the caller retrying out of it. The label must be usable again immediately."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall
+
+    bad = await clients.get(f"/call/{EP}", headers={"Idempotency-Key": "will-fail"})
+    assert bad.status_code >= 400, bad.text          # missing the required aweme_id
+    async with session_maker() as db:
+        row = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "will-fail"))).scalar_one_or_none()
+    assert row is None, "a failed call must not hold its label"
+
+    good = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "will-fail"})
+    assert good.status_code == 200, "and the same label works straight away"
+
+
+async def test_a_second_call_while_the_first_is_IN_FLIGHT_is_refused(clients: AsyncClient,
+                                                                     platform_on):
+    """The pending row is the lock. Claimed before the upstream call, so a concurrent retry loses the
+    insert on (membership_id, key) rather than duplicating the spend."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().first()
+        db.add(IdempotentCall(
+            org_id=org_id, membership_id=m.id, key="racing", request_fingerprint="",
+            endpoint_id=EP, status="pending",
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)))
+        await db.commit()
+
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "racing"})
+    assert r.status_code == 409
+    assert await _balance(clients) == before, "the loser of the race must not spend"
