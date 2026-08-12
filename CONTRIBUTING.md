@@ -5,8 +5,8 @@ Thanks for your interest!
 ## Getting set up
 
 ```bash
-git clone https://github.com/superdesigndev/tools-registry
-cd tools-registry
+git clone https://github.com/superdesigndev/treg
+cd treg
 uv sync                     # install deps (uv — https://docs.astral.sh/uv/)
 uv run pytest -q            # the full suite should pass before you start
 ```

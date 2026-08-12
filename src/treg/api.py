@@ -980,7 +980,20 @@ function done(email){const c=document.getElementById('card');c.innerHTML='';
  const mk=(t,cls,txt)=>{const e=document.createElement(t);if(cls)e.className=cls;if(txt)e.textContent=txt;c.appendChild(e);return e};
  mk('div','logo','\\u259a tools-registry');mk('div','mark','\\u2705');
  mk('h1',null,email?('Logged in as '+email):'Logged in');
- mk('p',null,'Return to your terminal. The CLI is finishing up, you can close this tab.')}
+ mk('p',null,'Return to your terminal. The CLI is finishing up.');
+ // Don't strand the tab: the approve() above set a session cookie, so /app works. Count down to
+ // Getting started, but let a click beat the clock — and a second click on "stay" cancel it.
+ const row=mk('p','hint','');let left=10;
+ const go=document.createElement('a');go.href='/app#start';go.textContent='Open Getting started now \\u2192';
+ go.style.color='var(--accent)';row.appendChild(go);
+ const cnt=document.createElement('span');row.appendChild(cnt);
+ const stay=document.createElement('a');stay.href='#';stay.textContent='stay here';stay.className='muted';
+ stay.style.marginLeft='8px';stay.style.textDecoration='underline';row.appendChild(stay);
+ const tick=()=>{cnt.textContent=' \\u00b7 auto in '+left+'s \\u00b7 '};tick();
+ const timer=setInterval(()=>{left--;if(left<=0){clearInterval(timer);location.href='/app#start'}else tick()},1000);
+ stay.onclick=e=>{e.preventDefault();clearInterval(timer);row.textContent='';
+  const a=document.createElement('a');a.href='/app#start';a.textContent='Open Getting started \\u2192';
+  a.style.color='var(--accent)';row.appendChild(a)}}
 async function approve(org){err('');
  const pc=pairCode();
  if(!pc.trim()){err('Enter the code shown in your terminal to continue.');const el=document.getElementById('paircode');if(el)el.focus();return}

@@ -15,7 +15,7 @@
   "homepage": "https://treg.superdesign.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/superdesigndev/tools-registry.git",
+    "url": "git+https://github.com/superdesigndev/treg.git",
     "directory": "packages/npm"
   },
   "keywords": [

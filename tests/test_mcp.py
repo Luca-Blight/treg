@@ -112,6 +112,17 @@ async def test_catalog_search_returns_priced_results(clients):
     assert "usd_per_call" in first and "no_key_needed" in first
 
 
+async def test_no_key_needed_is_false_when_the_deploy_holds_no_key(clients):
+    """`no_key_needed` must mean "THIS deploy will serve it on treg's key", not "the row is priced".
+    The test env configures no platform keys at all, so every result — however eligible its price —
+    must say False; anything else re-opens the advertise-then-refuse gap this field had."""
+    token = (await clients.post("/users", json={"email": "keyless@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "catalog_search", {"query": "backlinks", "limit": 5}, token=token)
+    assert out["results"]
+    assert all(r["no_key_needed"] is False for r in out["results"]), out["results"]
+
+
 async def test_search_says_so_when_nothing_matches(clients):
     token = (await clients.post("/users", json={"email": "nomatch@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:

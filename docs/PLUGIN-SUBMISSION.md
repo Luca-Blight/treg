@@ -23,7 +23,7 @@ Two options, in order of preference:
 
 - **Build `/support`** — a small page with what treg is, how to get help, and the contact address.
   Best for a consumer-facing listing, and about an hour of work.
-- **Use the repository's issue tracker**, `https://github.com/superdesigndev/tools-registry/issues`.
+- **Use the repository's issue tracker**, `https://github.com/superdesigndev/treg/issues`.
   Free, public, immediate, and legitimate for a developer tool — but it tells a non-technical
   reviewer that support means opening a GitHub issue.
 

@@ -95,5 +95,13 @@ services:
         sync: false
       - key: TREG_PLATFORM_KEY_APIFY
         sync: false
+      - key: TREG_PLATFORM_KEY_SERPSTAT           # Serpstat API token (?token=…)
+        sync: false
+      - key: TREG_PLATFORM_KEY_SPYFU              # SpyFu SECRET KEY alone (?api_key=…), not id/base64
+        sync: false
+      - key: TREG_PLATFORM_KEY_CORESIGNAL         # Coresignal API key (`apikey` header)
+        sync: false
+      - key: TREG_PLATFORM_KEY_THECOMPANIESAPI    # raw token, injected as "Basic {secret}" un-encoded
+        sync: false
       - key: TREG_PLATFORM_PROVIDERS           # e.g. "tikhub,dataforseo,scrapecreators"; "" = tier 4 off
         value: ""
