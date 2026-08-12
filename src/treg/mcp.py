@@ -137,6 +137,7 @@ class CatalogGetOut(TypedDict, total=False):
 class CallOut(TypedDict, total=False):
     status: int | None              # the UPSTREAM status, relayed
     endpoint_id: str | None
+    replayed: bool | None           # answered from an earlier call with the same idempotency_key
     body: Any                       # the provider's response, verbatim
     cost_usd: float
     whose_error: str                # "treg" or "provider" — who to blame, and whether to retry
@@ -433,13 +434,21 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
         "'render/v1/services'. treg injects the credential server-side and relays the provider's "
         "response unchanged, so you never hold an API key. Catalog calls on treg's key are metered "
         "from the team's prepaid balance; a team's own tool is never metered. Tell the human the "
-        "price (from catalog_get) before calling anything that costs more than a cent."
+        "price (from catalog_get) before calling anything that costs more than a cent.\n\n"
+        "`idempotency_key`: pass the SAME key when you are repeating a call whose answer you did "
+        "not receive — a timeout, a dropped connection, an error on your side after the request "
+        "went out. treg returns the stored answer, does not call the provider again, and charges "
+        "nothing the second time; the result carries `replayed: true`. Use a NEW key (or none) for "
+        "genuinely new work, even when the parameters are identical: repeating a search to see "
+        "what changed is a new call, not a retry, and reusing the key would hand you the old answer. "
+        "Reusing one key for a DIFFERENT request is refused rather than answered."
     ),
     annotations=_CALLS,
     structured_output=True
 )
 async def call(endpoint_id: str, params: dict | list | None = None,
-               method: str | None = None, ctx: Context = None) -> CallOut:  # type: ignore[assignment]
+               method: str | None = None, idempotency_key: str | None = None,
+               ctx: Context = None) -> CallOut:  # type: ignore[assignment]
     token = _bearer(ctx) if ctx else ""
     if not token:
         return _need_token()
@@ -461,6 +470,12 @@ async def call(endpoint_id: str, params: dict | list | None = None,
     # type. Query strings still need key/value pairs, so a list is only meaningful as a body.
     args = params if params is not None else {}
     async with _api(token) as client:
+        if idempotency_key:
+            # Straight through to the header the API already honours. Deliberately the CALLER's key
+            # and never derived from the request: two identical searches an hour apart are new work,
+            # not a retry, and a server-invented key would hand back the stale answer — a 24-hour
+            # cache wearing an idempotency badge.
+            client.headers["Idempotency-Key"] = idempotency_key[:200]
         # The SAME route the CLI and the proxy use, so the tool ACL, deny rules, both daily caps,
         # the balance reserve and the settle all happen exactly once, in one place.
         if method in ("GET", "HEAD", "DELETE"):
@@ -472,6 +487,10 @@ async def call(endpoint_id: str, params: dict | list | None = None,
             r = await client.request(method, f"/call/{endpoint_id}", json=args)
 
     out: dict[str, Any] = {"status": r.status_code, "endpoint_id": endpoint_id, "body": _body(r)}
+    if r.headers.get("X-Treg-Idempotent-Replay") == "true":
+        out["replayed"] = True
+        out["hint"] = ("this is the stored answer from the earlier call with the same "
+                       "idempotency_key — nothing was charged for it")
     # Set by /call/ on a METERED call only — a team's own key is never charged, and its absence
     # therefore means "not applicable" rather than "free". This header did not exist when the tool
     # first read it: I wrote against a convention I had invented, so `cost_usd` was always null and

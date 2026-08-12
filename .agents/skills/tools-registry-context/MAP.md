@@ -14,7 +14,9 @@ Regenerate via `scripts/build-map.py`.
 | `external:meetings/2026-06-30-jason-tools-registry.md` | foundation/charter.md, reference/glossary.md |
 | `render.yaml` | ops/deploy.md |
 | `src/treg/__main__.py` | ops/deploy.md |
-| `src/treg/api.py` | architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md |
+| `src/treg/api.py` | architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, architecture/money.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md |
+| `src/treg/mcp.py` | architecture/mcp-oauth.md |
+| `src/treg/mcp_oauth.py` | architecture/mcp-oauth.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/cli.py` | interface/cli.md, interface/onboarding.md, interface/shell.md |
 | `src/treg/config.py` | architecture/super-admin.md, ops/deploy.md |
@@ -54,6 +56,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/data-model.md` | `models.py`, `db.py`, `audit.py`, `ratestore.py` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `db.py` |
+| `architecture/mcp-oauth.md` | `mcp.py`, `mcp_oauth.py`, `connect-demo.html` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
 | `architecture/super-admin.md` | `api.py`, `config.py` |
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |

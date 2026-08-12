@@ -47,6 +47,23 @@ drifting quietly.
 The catalog is the one exception: read straight from `catalog_store`, which is already parsed in
 memory, so a search answers in about a millisecond. That is a **speed** choice, not a permission one.
 
+## `call` takes an `idempotency_key`
+
+Optional, and it is the caller's. Pass the same key when repeating a call whose answer never arrived:
+treg replays the stored response, does not reach the provider, and charges nothing, with
+`replayed: true` on the result.
+
+It exists because the feature was built for agents and MCP is the agent path. Without it the whole
+thing was unreachable from the surface it was for.
+
+Deliberately NOT derived server-side from the endpoint and parameters, which was proposed and
+rejected: two identical searches an hour apart are new work, treg cannot tell that from a retry, and
+a server-invented key would quietly serve stale data. The tool description therefore spends its words
+on WHEN to use it, because that is where a mistake costs something. Reuse for a different request is
+refused rather than answered, so the failure is loud.
+
+Full reasoning, storage rules and the concurrency guard: `architecture/money.md`.
+
 ## Authentication: eager, every request
 
 `RequireAuthForProtectedTools` answers **any** uncredentialed MCP request with **401** and a
