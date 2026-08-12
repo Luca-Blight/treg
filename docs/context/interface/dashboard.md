@@ -37,7 +37,10 @@ each team carries its own **⚙ Settings** (`orgSettings` → switch into it, th
 **Switch** (`switchTo`) button (long names truncate, actions pinned right; the click-outside handler
 keys on `.orgblock`); (middle) the nav — Tools · **Secrets** (member+) · **Marketplace** (member+, the
 OAuth-connect view — `go('connections')`) · Activity · **Usage** (admin/owner) · Team · Getting
-started · Tutorial · Admin; (bottom)
+started · Admin, then a Help group of two external links (**Open source** (the GitHub repo) ·
+**Discord community**) —
+the Tutorial nav entry was removed 2026-08-12 in their favor; the `help` view itself survives and
+is still reachable (welcome flow, in-app links); (bottom)
 the **account** block — avatar · email · theme · sign out. The old top-bar org dropdown and top-right
 account controls are gone.
 
@@ -243,7 +246,7 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   `/?invite_expired=1`. Neither path consumes the invite (still `pending`); the accept modal does. `loadAll`
   short-circuits the org-scoped fetches while `myOrgs` is empty so no error banner flashes behind it. The
   old demo/guided stepper (`onb.*`) is removed entirely. A `demo` chip marks a sandbox org.
-- **Help → Tutorial** — the full interactive walkthrough, rendered natively (Vue) from the shared
+- **Tutorial (`view==='help'`; no nav entry since 2026-08-12)** — the full interactive walkthrough, rendered natively (Vue) from the shared
   `window.TREG_TUTORIAL` data (`tutGo`/`tutHL`/`tutCopy`, syntax-highlighted command + output blocks,
   persona chips, and four toggle panels — **Concepts · Roles · Auth shapes · Skills**). The standalone
   `/tutorial` mirrors it and opens a panel from the URL hash (`/tutorial#auth`, `#skills`). See below.
@@ -274,6 +277,11 @@ rendering fault. Every tab but the last is the **platform axis**
 mount `_LOGO_DIR` (`src/treg/web/logos/`). `connCount` labels how many accounts are already connected.
 The tab bar itself is `v-if`'d on `plats.list.length` and `mkTabActive` collapses to `'platform'` when
 the catalog is absent, so a build that predates `/catalog` renders exactly the old marketplace.
+
+The catalog page's header carries a **List as vendor** button (`vendorAsk` modal): a vendor pastes the
+two-sentence prompt (`vendorPromptText`, built on `proxy` = the server's public URL) into their own
+coding agent, which follows the hosted `GET /vendor-listing` instructions and raises the listing PR —
+including the vendor's contact email, which is how a test credential gets arranged.
 
 **One integration** is its own view (`view==='provider'`, `mkProvider`/`mkConns` keyed on `mkService`) at a
 shareable path **`/app/marketplace/<service>`** (server route `dashboard_marketplace` — plain SPA, **no**
@@ -658,7 +666,7 @@ the prose walkthrough is `docs/TUTORIAL.md`. Editing steps means editing `tutori
 
 **Two focused tutorials as cards** — **Import & shell** (`importShell`, auto-import + shell mode + the
 local-run sandbox) and **Team access control** (`access`, per-member tool access + the local-run dial)
-are cards on the Help → Tutorial chooser, rendered by **one shared stepper template** in `index.html`
+are cards on the tutorial chooser (`view==='help'`), rendered by **one shared stepper template** in `index.html`
 (`helpMode === 'import-shell' || 'access'`), with its own `xtut*`-prefixed state/computed/method names
 (`xtut.i`, `xtutSteps`, `xtutStep`, `xtutTitle`, `xtutGo`) so they never collide with the CLI tutorial's
 `tut*` names. Two extra persona chips: `you` (green) and `sam` (amber). Each also has a **prose twin**
@@ -667,7 +675,8 @@ served as markdown: `web/tutorial-import-shell.md` at `/tutorial-import-shell.md
 agent-friendly versions; the main tutorial (`tutorial.md` + `docs/TUTORIAL.md`) links them near the top
 and `tutorial.js` ends with a "Further tutorials" step pointing at the cards + URLs.
 
-**Dashboard tour** (the web-UI walkthrough — screenshots, not commands): the **Help** nav (`◫ Tutorial`)
+**Dashboard tour** (the web-UI walkthrough — screenshots, not commands): the tutorial view
+(`go('help')` — no side-nav entry anymore)
 opens a **chooser** (`helpMode` = `cli` | `dashboard` | `import-shell` | `access`, plus the Guided-setup
 replay) with five cards; the dashboard card renders a native
 stepper (`tourGo` via `tourI`, `personaTour`, per-Part `tourMatColor` mats) from **`window.TREG_TOUR`**

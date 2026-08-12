@@ -1487,6 +1487,14 @@ async def tutorial_access_md():
     return _serve_md("tutorial-access.md")
 
 
+@app.get("/vendor-listing", include_in_schema=False)
+@app.get("/vendor-listing.md", include_in_schema=False)
+async def vendor_listing_md():
+    """Vendor listing instructions — what a vendor's coding agent reads before raising a PR that
+    adds their API to the catalog. Linked from the dashboard's "List your API" modal."""
+    return _serve_md("vendor-listing.md")
+
+
 @app.get("/skill.md", include_in_schema=False)
 async def skill_md():
     """The OFFICIAL treg Claude skill (3 personas), {BASE}-templated to this server.

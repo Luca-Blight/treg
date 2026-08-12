@@ -299,6 +299,10 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `_serve_md` backs `quickstart_md` (`GET /quickstart.md`) + `tutorial_md` (`GET /tutorial.md`) —
   `{BASE}`-templated markdown served as inline `text/plain` (so "open in new tab" shows it, not a
   download); the docs pages' **Copy markdown** dropdowns (copy / open-in-tab) fetch these.
+  `vendor_listing_md` (`GET /vendor-listing`, alias `/vendor-listing.md`) serves the same way: the
+  instructions a VENDOR's own coding agent follows to raise a listing PR on the repo (the dashboard's
+  "List as vendor" modal hands vendors a prompt naming this URL; the repo-side counterpart is
+  `docs/VENDORS.md`).
   Browser-facing auth pages (GitHub callback, OAuth-connect result) render via `_auth_page` (brand card).
 - **Landing sandbox + hosted skills:** `demo_sandbox_mint` (`POST /demo/sandbox`, open, per-IP
   rate-limited) mints an anonymous throwaway team (its response now carries `live` = whether the seeded
