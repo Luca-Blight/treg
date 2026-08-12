@@ -15,6 +15,7 @@ import asyncio
 import base64
 import gzip
 import hashlib
+from functools import lru_cache
 import hmac
 import json
 import logging
@@ -271,6 +272,22 @@ _WEB_DIR = Path(__file__).parent / "web"
 _app_version_cache: tuple[float, str] | None = None  # (index.html mtime, content hash)
 
 
+@lru_cache(maxsize=1)
+def _treg_version() -> str:
+    """The released package version, read from installed metadata.
+
+    Read directly rather than through `cli.cli_version`, which does the same thing: importing
+    `treg.cli` here costs ~200ms on first call and pulls the entire CLI into the server process for
+    one string. Cached because package metadata cannot change while the process runs.
+    """
+    try:
+        from importlib.metadata import version
+
+        return version("tools-registry")
+    except Exception:  # noqa: BLE001 — an editable/source run has no installed metadata
+        return "dev"
+
+
 def _app_version() -> str:
     """A stamp that changes with every deploy of the dashboard bundle: a hash of index.html,
     re-derived when the file's mtime moves (so dev --reload picks up edits too). Long-lived tabs
@@ -291,10 +308,18 @@ def _app_version() -> str:
 async def meta() -> dict:
     """Open: what the dashboard needs to render correct, shareable snippets — the public proxy URL
     (so copy/paste snippets use the real domain, not whatever origin the browser happens to be on)
-    — plus the bundle version, so an open tab can detect a new deploy and offer a refresh."""
+    — plus the bundle version, so an open tab can detect a new deploy and offer a refresh.
+
+    `treg_version` and `app_version` answer DIFFERENT questions and both are worth having.
+    `app_version` is a hash of index.html: it changes whenever the dashboard bundle does, which is
+    what an open tab compares to offer a refresh. `treg_version` is the released package version,
+    which is what a release check needs — after publishing 0.9.0 there was no way to confirm from the
+    live path which version was actually serving, only the commit id.
+    """
     s = get_settings()
     return {"public_url": s.public_url.rstrip("/"), "github": bool(s.github_client_id),
             "google": bool(s.google_client_id), "app_version": _app_version(),
+            "treg_version": _treg_version(),
             # public ingestion key — only present when this deployment opts in (self-hosters send nothing)
             "posthog_key": s.posthog_key, "posthog_host": s.posthog_host.rstrip("/") if s.posthog_key else ""}
 
