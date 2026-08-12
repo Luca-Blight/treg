@@ -5,6 +5,7 @@ sources:
   - src/treg/ledger.py
   - src/treg/billing.py
   - src/treg/reconcile.py
+  - src/treg/api.py
 related:
   - architecture/catalog.md
   - architecture/proxy-model.md
@@ -172,3 +173,73 @@ Closing the hold runs on its **own session** (the request's may be mid-rollback 
 being released for) and **never raises** — the caller already has their answer, and a ledger hiccup
 must not turn a served call into a 500. A hold that fails to close is not lost money either: the
 reaper releases it, which errs in the org's favour.
+
+## Retries: a call must not be paid for twice
+
+Prompted by a public question — *"how does result pricing handle retries, agents need idempotent
+billing before this works"* — and it matters more here than for a human-facing API, because agents
+retry far more than people do.
+
+**Most retries were already free**, which is what makes the real gap narrow. `_platform_billable`
+never bills a 5xx, a 3xx, a timeout or a network error, and bills a 4xx only under `per_call` where
+the provider charges for accepting the request at all. Result pricing settles on the provider's own
+reported number (`_observed_cost_micro`), so a `per_success` lookup that finds nothing costs nothing.
+
+The gap is one case: treg reached the provider, the provider succeeded **and charged us**, and the
+response was lost on the way back. The agent retries and we pay twice.
+
+### Why remembering the charge is not enough
+
+The cheap fix is to note that a key was already billed and skip the second charge. It does not work:
+treg would still make the second upstream call, so we would still pay the provider and would simply
+move the double cost onto ourselves. The second request has to not reach the provider at all, which
+means storing the first response and replaying it.
+
+### The surface
+
+`Idempotency-Key: <label>` on `/call/`, or the `idempotency_key` argument to the MCP `call` tool. A
+replay answers with `X-Treg-Idempotent-Replay: true` and `X-Treg-Cost-Micro` set to what the FIRST
+call cost, so a caller can report the charge honestly rather than implying a second one. Over MCP the
+result carries `replayed: true`.
+
+Nothing happens without it. A caller who sends no label sees byte-identical behaviour to before the
+feature existed, which is what made it safe to ship.
+
+### The key belongs to the caller
+
+`IdempotentCall` is keyed on `(membership_id, key)`. Every door — a personal token, an agent token,
+an OAuth grant — resolves to one `Membership`, so a single rule covers a human, an agent, and two
+agents in the same team: **the label belongs to whoever called**.
+
+Not `key` alone: clients choose their own labels, the same string will be picked twice, and that
+collision would serve one team's stored response to another. It is the only failure in this feature
+that leaks data rather than money. Not per-org either — two lazily written agents in one team both
+reach for `retry-1` and would collide for no reason.
+
+The key is never derived from the request. That was proposed and rejected: two identical searches an
+hour apart are new work, and treg cannot tell that from a retry. A server-invented key would turn a
+correctness feature into a 24-hour cache that quietly serves stale data.
+
+### What is stored, and for how long
+
+Metered successes only, for 24 hours. A team calling on its **own** key is billed by the provider, so
+there is nothing to protect and no reason to hold their response. A failure is never billed, and
+replaying one would freeze an error the caller should be free to retry out of — so a failed call
+frees its label immediately.
+
+That is also what bounds storage: bodies are kept only for calls that actually cost money, for a day.
+
+### Concurrency, and giving the label back
+
+A `pending` row is written **before** the upstream call, and that row is the lock: two retries
+arriving together race on the unique constraint, and the loser is told to wait (409) instead of
+duplicating the spend. Same reasoning as the conditional UPDATE in `ledger.reserve` — where two paths
+can read before either writes, the database has to arbitrate.
+
+A request that dies after claiming must give the label back, or a single bad parameter would hold it
+for the full window and answer every retry with 409 — worse than the problem this solves. The release
+happens in the `StarletteHTTPException` handler, the one place every refusal passes through; the call
+handler has a dozen raise points and releasing at each would be a dozen chances to miss one.
+
+Expired rows are swept lazily at claim time, scoped to the calling caller, exactly like the hold
+reaper: no scheduler, no leader election on a multi-instance deploy.

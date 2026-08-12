@@ -459,3 +459,21 @@ treg is an OAuth authorization server for its own MCP endpoint. Detail in
 `/call/` gained one thing for this: a metered response now carries `X-Treg-Cost-Micro`, so a caller
 can report what it spent instead of diffing the balance. Absent on an unmetered call — a team's own
 key is not ours to bill, and `0` would read as "free".
+
+## `Idempotency-Key` on `/call/`
+
+A caller-supplied label that makes a retry free. Sent on `/call/`, honoured only when present, so a
+caller who omits it sees byte-identical behaviour to before the feature existed.
+
+    Idempotency-Key: <caller's label>        → replay if we already answered this label
+    X-Treg-Idempotent-Replay: true           → on the response, when it came from store
+    X-Treg-Cost-Micro: <original charge>     → what the FIRST call cost, not a new charge
+
+Refusals: `422` when a key is reused for a different request (a caller bug, and answering it would
+hand them a response to a question they did not ask), `409` while the first call with that key is
+still in flight.
+
+Over MCP the same thing is the optional `idempotency_key` argument to the `call` tool, and a replayed
+result carries `replayed: true`.
+
+Reasoning, storage rules and the concurrency guard: `architecture/money.md`.
