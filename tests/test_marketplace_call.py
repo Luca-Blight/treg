@@ -17,6 +17,8 @@ from __future__ import annotations
 import json
 
 import httpx
+from datetime import datetime, timezone
+
 import pytest
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
@@ -588,3 +590,74 @@ def test_brightdata_documented_prices_are_billable(platform_on):
     assert rows, "brightdata is in the catalog"
     eligible = [e["id"] for e in rows if cat.platform_eligible(e)]
     assert len(eligible) >= 20, f"expected the dataset routes to be billable, got {len(eligible)}"
+
+
+# ---- idempotent calls: step 1, the table and its tenant boundary ----------------------------
+
+async def test_the_same_key_can_belong_to_two_different_CALLERS(clients: AsyncClient):
+    """Scoped to the caller, not to the key. Clients choose their own labels, so the same string will
+    be picked twice; scoped by key alone that collision serves one caller's stored response to
+    another, which is the single failure here that leaks data instead of money.
+
+    Per CALLER rather than per team, because two lazily-written agents inside one team will both
+    reach for `retry-1`. Every door resolves to a Membership, so one rule covers a person, an agent,
+    and two agents in the same team."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    # A second AGENT in the SAME team: the exact case this scoping is for. Two agents belonging to
+    # one org, both free to pick the same lazy label.
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    made = await clients.post(f"/orgs/{org_id}/agents", json={"name": "second-agent"})
+    assert made.status_code in (200, 201), made.text
+
+    async with session_maker() as db:
+        members = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).limit(2))).scalars().all()
+        assert len(members) >= 2, "need two callers in ONE team to prove they do not collide"
+        expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        for m in members[:2]:
+            db.add(IdempotentCall(org_id=m.org_id, membership_id=m.id, key="retry-1",
+                                  endpoint_id="x", status="done", expires_at=expiry))
+        await db.commit()      # must NOT raise: same label, different callers
+
+        rows = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "retry-1"))).scalars().all()
+    assert len(rows) == 2, "the same label must be storable once per caller"
+    assert len({r.membership_id for r in rows}) == 2
+
+
+async def test_one_caller_cannot_reuse_a_key_twice(clients: AsyncClient):
+    """Per caller the label is unique, which is what makes the pending row a usable lock: two retries
+    arriving together race on this constraint and only one reaches the provider."""
+    from datetime import timedelta
+
+    import sqlalchemy.exc
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).limit(1))).scalars().one()
+        expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        db.add(IdempotentCall(org_id=m.org_id, membership_id=m.id, key="dupe-key",
+                              endpoint_id="x", expires_at=expiry))
+        await db.commit()
+        db.add(IdempotentCall(org_id=m.org_id, membership_id=m.id, key="dupe-key",
+                              endpoint_id="x", expires_at=expiry))
+        with pytest.raises(sqlalchemy.exc.IntegrityError):
+            await db.commit()
+
+
+async def test_deleting_a_team_takes_its_remembered_answers(clients: AsyncClient):
+    """A stored response belongs to the team that paid for it. Left behind it is a dangling row
+    holding someone's data after they asked to be gone."""
+    from treg.api import _ORG_SCOPED_MODELS
+    from treg.models import IdempotentCall
+
+    assert IdempotentCall in _ORG_SCOPED_MODELS

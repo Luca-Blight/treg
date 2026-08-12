@@ -51,9 +51,9 @@ from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
-from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold, Invite,
-                     LedgerEntry, Membership, OAuthClient, OAuthCode, OAuthRefresh, Org,
-                     PendingOAuth, Project, RunRecord, Secret, Tool, User)
+from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
+                     IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
+                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User)
 from .proxy import relay
 
 
@@ -2435,6 +2435,7 @@ _ORG_SCOPED_MODELS = (
     Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project,
     CapabilityPin, LedgerEntry, Hold, CreditBlock,
     OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
+    IdempotentCall,            # a remembered answer belongs to the team that paid for it
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 
