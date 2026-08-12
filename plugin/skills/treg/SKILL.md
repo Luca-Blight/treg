@@ -39,7 +39,11 @@ Two kinds of tool answer to the same token, through the same proxy, which inject
 - **The catalog** — external endpoints treg can serve on **its own key**, billed per call from the
   team's prepaid balance. No provider signup.
 - **Your own tools** — what the team registered: paid API accounts, OAuth connections, vendor CLIs,
-  skills. **Your own key always wins over treg's, and those calls are never metered.**
+  skills. **Your own key always wins over treg's, and those calls are never metered.** Exception:
+  an X (Twitter) connection made through treg's app is metered per call (X bills the app owner per
+  use — reads per resource, ~$0.015 per post written, ~$0.20 if the post links out). The price
+  comes back on the response; treat X like a catalog provider when telling the human what a task
+  will cost. A team's own X developer app (BYO OAuth) stays unmetered.
 
 The mechanics:
 

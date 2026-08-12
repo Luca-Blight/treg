@@ -130,6 +130,15 @@ class Settings(BaseSettings):
     # Per-org, per-UTC-day ceiling on tier-4 spend. Enforced FAIL-CLOSED (unlike the soft per-user call
     # cap): a query error refuses the call rather than letting an unbounded amount of our money out.
     platform_daily_cap_usd: float = 5.0
+    # OAuth providers whose UPSTREAM bill lands on treg's developer app rather than the connected
+    # user (X moved to pay-per-use in Feb 2026: the app owner is billed per resource read / per post
+    # written, whoever's token made the call). Calls through a registry connect of a provider named
+    # here are metered against the org's balance — the same reserve→settle path as tier 4. Same
+    # kill-switch shape as `platform_providers`: empty (the default) = those calls stay free, so a
+    # deploy must OPT IN to charging (`TREG_OAUTH_BILLED_PROVIDERS=x`). BYO-app connections
+    # (/oauth/start with the caller's own client_id) are never metered — their upstream bill is
+    # already theirs.
+    oauth_billed_providers: str = ""
 
     # ---- Stripe top-ups (billing.py) -----------------------------------------------------------
     # OUR billing account's keys. Deliberately NOT the `demo_stripe_*` pair above: that one belongs to
@@ -286,6 +295,12 @@ class Settings(BaseSettings):
     @property
     def platform_daily_cap_micro(self) -> int:
         return int(round(self.platform_daily_cap_usd * 1_000_000))
+
+    @property
+    def oauth_billed_set(self) -> frozenset[str]:
+        """OAuth providers whose registry-connect calls are metered (comma-separated
+        `TREG_OAUTH_BILLED_PROVIDERS`). Empty = the current free behavior."""
+        return frozenset(p.strip().lower() for p in self.oauth_billed_providers.split(",") if p.strip())
 
     @property
     def expose_dev_code(self) -> bool:

@@ -2818,6 +2818,14 @@ a:hover{text-decoration-color:var(--muted)}
         <p class="sub" style="margin:0 0 14px">What should your agent be allowed to do with this account?
           Widening it later means going through the provider's consent screen again.</p>
         <p v-if="capAsk.provider.consent_notice" class="mk-notice" style="margin:0 0 14px">{{capAsk.provider.consent_notice}}</p>
+        <!-- The price BEFORE the consent screen, not on the invoice: an oauth-billed provider (X)
+             charges treg's app per use, so calls on this connection are metered from the balance. -->
+        <p v-if="capAsk.provider.metered" class="mk-notice" style="margin:0 0 14px">Calls on this connection are
+          metered from your team balance — {{capAsk.provider.display_name}} bills per use
+          (reads ~${{capAsk.provider.billed_rates.read_per_result_usd}}/result,
+          posts ${{capAsk.provider.billed_rates.write_per_call_usd}},
+          ${{capAsk.provider.billed_rates.write_with_link_usd}} when the post links out).
+          Connecting your own developer app instead is never metered.</p>
         <div class="ttable-wrap"><table class="ttable">
           <tr v-for="cap in capAsk.provider.capabilities" :key="cap">
             <!-- Deliberately NOT .tn: that class is nowrap, which is right for a name column

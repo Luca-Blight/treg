@@ -351,7 +351,10 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `token_uri`/`scopes`) or **REGISTRY** (supply `provider` + optional `capability`) where treg fills
   everything from **its own approved OAuth app** — the marketplace. `oauth_providers_list`
   (`GET /oauth/providers`) lists the providers treg holds an app for, each flagged `configured` (false
-  when this deployment hasn't set that provider's client credentials). In registry mode `oauth_start`
+  when this deployment hasn't set that provider's client credentials) and `metered` (true when the
+  provider's upstream bills treg's app per use AND this deployment charges for it — then
+  `billed_rates` carries the default prices, so the UI can show them before consent; see
+  [auth-secrets](../architecture/auth-secrets.md) on `platform_billed`). In registry mode `oauth_start`
   reads the provider from `oauth_providers.get`, resolves scopes via `scopes_for(capability)`, and
   stashes every per-provider auth quirk on the `PendingOAuth` (PKCE `code_verifier`, `auth_params`,
   `token_endpoint_auth_method`, `client_id_param`, `scope_separator`, `long_lived_exchange`) so the
