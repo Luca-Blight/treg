@@ -47,7 +47,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from . import audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
+from . import analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings, platform_setting_name
@@ -151,6 +151,7 @@ async def lifespan(app: FastAPI):
                 yield
     finally:
         await audit.drain()  # flush pending audit writes before tearing down
+        await analytics.drain()  # best-effort flush of queued analytics events
         await app.state.http.aclose()
 
 
@@ -3736,6 +3737,10 @@ async def billing_topup(
         raise HTTPException(status_code=503, detail=str(e))
     except billing.TopupRejected as e:
         raise HTTPException(status_code=422, detail=str(e))
+    # The one place the actual payer's identity exists — the webhook that later credits the
+    # balance is org-scoped, so the started/completed funnel joins on the team group.
+    analytics.capture(caller.email, "topup_started",
+                      {"amount_usd": amount, "org": org.slug}, groups={"team": org.slug})
     return out
 
 
@@ -7465,6 +7470,11 @@ async def call_tool(
                 method=request.method, path=rest, status_code=mkexc.status_code,
                 client=_client_of(request),
                 telemetry={"endpoint_id": ep["id"], "provider": ep.get("provider")})
+            analytics.capture(caller.email, "tool_called",
+                {"tool_name": ep["id"], "status_code": mkexc.status_code,
+                 "client": _client_of(request), "method": request.method,
+                 "own_tool": False, "provider": ep.get("provider"), "endpoint_id": ep["id"]},
+                groups={"team": caller.org.slug})
             raise
         tool, upstream_url, drop_params = mk.tool, mk.upstream, mk.consumed
     _require_tool_use(caller, tool)  # per-member tool + project ACL (NULL access = all; admins exempt)
@@ -7479,6 +7489,7 @@ async def call_tool(
     # Snapshot the audit identity NOW: a failed reserve rolls the session back, expiring the ORM
     # instances behind `caller` — reading them inside a later _audit would raise MissingGreenlet.
     audit_org_id, audit_email, audit_tool = caller.org_id, caller.email, tool.name
+    audit_slug = caller.org.slug  # PostHog group key — must match the browser's posthog.group('team', slug)
 
     def _audit(status_code: int, *, observed_micro: int | None = None, charged_micro: int | None = None,
                duration_ms: int | None = None, response_bytes: int | None = None) -> None:
@@ -7500,6 +7511,18 @@ async def call_tool(
             method=request.method, path=upstream_url, status_code=status_code,
             client=_client_of(request), telemetry=telemetry,
         )
+        # Product analytics mirror of the row above. Deliberately excludes params, bodies, and the
+        # full upstream URL (hostname only) — per-call detail beyond what a chart needs stays in the DB.
+        props = {"tool_name": audit_tool, "status_code": status_code,
+                 "client": _client_of(request), "method": request.method,
+                 "own_tool": mk is None, "duration_ms": duration_ms}
+        if mk is not None:
+            props |= {"provider": mk.provider, "endpoint_id": mk.endpoint_id,
+                      "tier": mk.tier, "metered": mk.metered, "cost_type": mk.cost_type,
+                      "charged_micro": charged_micro, "observed_micro": observed_micro}
+        else:
+            props["provider"] = urlsplit(upstream_url).hostname or ""
+        analytics.capture(audit_email, "tool_called", props, groups={"team": audit_slug})
 
     # Landing-page sandbox: never touch the network — EXCEPT the one live wire. A call to the
     # exact seeded stripe tool (fingerprint-matched; see sandbox.is_live_tool) relays to the real

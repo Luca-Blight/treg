@@ -4258,6 +4258,9 @@ createApp({
         this.autoAmount=Math.round(this.billing.autotopup.amount_usd);
         this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd); } },
     async addFunds(amount){ this.billingBusy=true; this.topupAmount=amount; this.err='';
+      // Named differently from the server's topup_started (same click, two vantage points —
+      // a shared name would double-count in trends); this one exists to link session replays.
+      this.track('topup_checkout_opened',{amount_usd:amount});
       try{ const out=await this.api('/billing/topup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({amount_usd:amount})});
         // Stripe's own hosted page does the payment; the balance moves when its webhook lands, never
         // on the return redirect (which a payer could simply type). Same tab, so the return lands here.

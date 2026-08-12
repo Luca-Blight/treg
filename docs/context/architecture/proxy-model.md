@@ -112,7 +112,9 @@ response.
 
 `call_tool()` loads every bound secret (running `oauth.ensure_fresh` on oauth secrets first — see
 [auth-secrets](auth-secrets.md)), calls `relay()`, then fires `audit.record_call(...)` off the response
-path. Methods allowed: GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS.
+path — and, when a PostHog key is configured, mirrors the same funnel as a `tool_called` product-analytics
+event (`analytics.capture`, see [data-model](data-model.md)): vendor = the catalog provider slug, or the
+upstream host for own tools. Methods allowed: GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS.
 
 **Resolution + error hardening:** the URL-passthrough prefix match respects a **path-segment boundary**
 (`norm == base` or `base + "/"`), so `.../v1` no longer matches `.../v10/...` and inject the wrong

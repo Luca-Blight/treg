@@ -204,6 +204,41 @@ async def test_promotion_link_survives_a_rotate(env):
     assert me["promoted_from"] == "m@x.dev|codex", "a rotate must not unlink the promotion"
 
 
+# ---- product analytics mirror ------------------------------------------------------------------
+async def test_call_emits_one_tool_called_event(env, monkeypatch):
+    """The audit funnel also mirrors each /call to PostHog (when a key is set): one `tool_called`
+    per call, carrying the runtime attribution and — for own tools — the upstream host as vendor."""
+    from treg import analytics
+    from treg.config import get_settings
+    monkeypatch.setattr(get_settings(), "posthog_key", "phc_test_suite", raising=False)
+
+    async def _no_post(batch):  # the flusher must not reach the real PostHog host
+        pass
+    monkeypatch.setattr(analytics, "_post", _no_post)
+    analytics._queue.clear()
+
+    r = await env.c.get("/call/alpha/ok", headers=_h(env.member, "claude-code"))
+    assert r.status_code == 200
+    events = [e for e in analytics._queue if e["event"] == "tool_called"]
+    assert len(events) == 1
+    e = events[0]
+    assert e["distinct_id"] == "m@x.dev"
+    p = e["properties"]
+    assert p["client"] == "claude-code" and p["status_code"] == 200
+    assert p["own_tool"] is True and p["tool_name"] == "alpha"
+    assert p["provider"] == "upstream"  # own tool → vendor falls back to the upstream host
+    assert p["$groups"] == {"team": "team"}
+    await analytics.drain()
+    analytics._queue.clear()
+
+
+async def test_no_key_no_tool_called_events(env):
+    from treg import analytics
+    analytics._queue.clear()  # default settings: no key
+    assert (await env.c.get("/call/alpha/ok", headers=_h(env.member, "codex"))).status_code == 200
+    assert analytics._queue == []
+
+
 # ---- the check-in handshake ---------------------------------------------------------------------
 async def test_checkin_flips_connected(env):
     made = await env.c.post(f"/orgs/{env.org_id}/agents", headers=_h(env.owner), json={"name": "ci-bot"})

@@ -42,6 +42,7 @@ import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from . import analytics
 from . import email as email_mod
 from . import ledger
 from .config import get_settings
@@ -633,6 +634,16 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
         if to:
             await email_mod.send_topup_receipt(to, (org.name or org.slug) if org else "", amount_micro,
                                               after, auto=auto)
+        # Rides `fresh` like the receipt above, so a webhook redelivery re-emits nothing. The webhook
+        # is org-scoped, so the owner's email is the best available person (the payer may differ);
+        # the `team` group is what makes org-level revenue exact. capture() never raises — an
+        # exception here would 500 the webhook and make Stripe retry an already-credited payment.
+        analytics.capture(to or f"org:{org_id}", "topup_completed",
+                          {"amount_micro": amount_micro,
+                           "amount_usd": amount_micro / 1_000_000,  # display-only, never computed against
+                           "auto": auto, "balance_after_micro": after,
+                           "org": org.slug if org else ""},
+                          groups={"team": org.slug if org else ""})
     return {"handled": True, "credited": fresh, "block_id": block.id,
             "amount_micro": amount_micro, "balance_micro": after}
 
