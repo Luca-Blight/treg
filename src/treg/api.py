@@ -6878,6 +6878,73 @@ async def _enforce_capability_pin(ep: dict, caller: Caller, db: AsyncSession) ->
     })
 
 
+IDEMPOTENCY_WINDOW_S = 24 * 3600   # retries happen in seconds; a day is generous and easy to reason about
+IDEMPOTENCY_HEADER = "idempotency-key"
+_IDEM_MAX_KEY = 200
+
+
+def _idempotency_key(request: Request) -> str:
+    """The caller's label for this request, or "" when they sent none.
+
+    Only ever the client's. A server-invented key — hashing the URL and body, say — would silently
+    collapse two calls a caller genuinely MEANT to make twice, and "do this again" is a legitimate
+    thing to ask of an API. No header means today's behaviour exactly: no lookup, no storage.
+    """
+    return (request.headers.get(IDEMPOTENCY_HEADER) or "").strip()[:_IDEM_MAX_KEY]
+
+
+def _request_fingerprint(method: str, rest: str, body: bytes) -> str:
+    """What the label was used FOR, so reusing it on a different request can be caught.
+
+    A client that reuses one label for two different requests has a bug. Quietly returning the first
+    answer would hide it, and the caller would be left wondering why their second call returned
+    somebody else's data. Refusing loudly is the useful behaviour, and it is what Stripe does.
+    """
+    h = hashlib.sha256()
+    h.update(method.upper().encode())
+    h.update(b"\0")
+    h.update(rest.encode())
+    h.update(b"\0")
+    h.update(body or b"")
+    return h.hexdigest()
+
+
+async def _replay_idempotent(key: str, fingerprint: str, caller: Caller,
+                             db: AsyncSession) -> Response | None:
+    """The stored answer for this caller's label, or None if there is nothing to replay.
+
+    Returns a real response, so the provider is never reached and no money moves. That is the whole
+    point: merely skipping the second CHARGE would still make the second upstream call, which means
+    still paying the provider and simply absorbing the double cost ourselves.
+    """
+    row = (await db.execute(select(IdempotentCall).where(
+        IdempotentCall.membership_id == caller.membership.id,
+        IdempotentCall.key == key))).scalar_one_or_none()
+    if row is None:
+        return None
+    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        # Past its window: the label is free again, and the call proceeds normally.
+        await db.delete(row)
+        await db.commit()
+        return None
+    if row.request_fingerprint and row.request_fingerprint != fingerprint:
+        raise HTTPException(status_code=422, detail=(
+            f"Idempotency-Key {key!r} was already used for a different request. Use a new key, or "
+            f"repeat the original request exactly."))
+    if row.status != "done" or row.response_status is None:
+        # Still in flight. The first call is talking to the provider right now; telling the caller to
+        # retry is honest and cheap, and it is what stops the second one duplicating the spend.
+        raise HTTPException(status_code=409, detail=(
+            f"a call with Idempotency-Key {key!r} is still in progress — retry shortly"))
+    return Response(
+        content=row.response_body or b"",
+        status_code=row.response_status,
+        media_type=row.response_media_type or "application/json",
+        headers={"X-Treg-Idempotent-Replay": "true",
+                 "X-Treg-Cost-Micro": str(row.charged_micro)},
+    )
+
+
 async def _resolve_marketplace_call(
     ep: dict, request: Request, caller: Caller, db: AsyncSession
 ) -> MarketplaceCall:
@@ -7206,6 +7273,18 @@ async def call_tool(
         _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
         if sep:
             rest = raw_rest
+    # A retry the caller has labelled: answer it from what we already returned, before resolving
+    # anything or reaching a provider. Nothing happens without the header, so a caller who sends none
+    # sees exactly today's behaviour.
+    idem_key = _idempotency_key(request)
+    idem_fingerprint = ""
+    if idem_key:
+        idem_body = await request.body()
+        idem_fingerprint = _request_fingerprint(request.method, rest, idem_body)
+        replayed = await _replay_idempotent(idem_key, idem_fingerprint, caller, db)
+        if replayed is not None:
+            return replayed
+
     drop_params: set[str] = set()
     mk: MarketplaceCall | None = None
     try:

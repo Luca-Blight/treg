@@ -661,3 +661,112 @@ async def test_deleting_a_team_takes_its_remembered_answers(clients: AsyncClient
     from treg.models import IdempotentCall
 
     assert IdempotentCall in _ORG_SCOPED_MODELS
+
+
+# ---- idempotency step 2: the lookup and replay (storage still off) ---------------------------
+
+async def _seed_answer(clients: AsyncClient, key: str, *, body: bytes = b'{"seeded":true}',
+                       fingerprint: str = "", status: str = "done", charged: int = 4200,
+                       ttl_s: int = 3600) -> int:
+    """Write a stored answer by hand. Step 2 only READS; storage arrives in step 3, so seeding is
+    how the read path gets exercised at all."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().first()
+        row = IdempotentCall(
+            org_id=org_id, membership_id=m.id, key=key, request_fingerprint=fingerprint,
+            endpoint_id="seeded", status=status, charged_micro=charged,
+            response_status=200 if status == "done" else None,
+            response_body=body if status == "done" else None,
+            response_media_type="application/json",
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=ttl_s))
+        db.add(row)
+        await db.commit()
+        await db.refresh(row)
+        return row.id
+
+
+async def test_no_key_means_nothing_changes(clients: AsyncClient, platform_on):
+    """The header is opt-in. A caller who sends none must see exactly the behaviour they saw before
+    this feature existed, which is what keeps the change safe to ship."""
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200
+    assert "X-Treg-Idempotent-Replay" not in r.headers
+    assert await _balance(clients) == before - EP_MICRO, "an unlabelled call bills normally"
+
+
+async def test_a_labelled_retry_is_answered_WITHOUT_reaching_the_provider(clients: AsyncClient,
+                                                                          platform_on):
+    """The point of the whole feature. The stored answer comes back, the upstream is never called,
+    and the balance does not move: merely skipping the second CHARGE would still pay the provider."""
+    await _seed_answer(clients, "retry-abc", body=b'{"from":"store"}')
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "retry-abc"})
+    assert r.status_code == 200
+    assert r.json() == {"from": "store"}, "the SAVED answer, not a fresh upstream response"
+    assert r.headers.get("X-Treg-Idempotent-Replay") == "true"
+    assert r.headers.get("X-Treg-Cost-Micro") == "4200", "and what it originally cost"
+    assert await _balance(clients) == before, "a replay must not move money"
+
+
+async def test_reusing_a_label_for_a_DIFFERENT_request_is_refused(clients: AsyncClient):
+    """A caller bug, and returning the first answer would hide it — they would be handed a response
+    to a question they did not ask."""
+    await _seed_answer(clients, "reused", fingerprint="a-different-request-entirely")
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "reused"})
+    assert r.status_code == 422
+    assert "already used for a different request" in r.json()["detail"]
+
+
+async def test_a_call_still_in_flight_answers_409_rather_than_duplicating(clients: AsyncClient):
+    """Two retries arriving together. The second is told to wait instead of being let through to the
+    provider, which is the duplicate spend this feature exists to prevent."""
+    await _seed_answer(clients, "inflight", status="pending")
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "inflight"})
+    assert r.status_code == 409
+    assert "still in progress" in r.json()["detail"]
+
+
+async def test_an_expired_label_frees_itself(clients: AsyncClient, platform_on):
+    """Past its window the label means nothing: the call proceeds normally and is billed normally.
+    A stale row must not answer for a request made a day later."""
+    await _seed_answer(clients, "stale", body=b'{"old":true}', ttl_s=-10)
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "stale"})
+    assert r.status_code == 200
+    assert r.json() != {"old": True}, "an expired answer must not be replayed"
+    assert await _balance(clients) == before - EP_MICRO, "and the fresh call bills"
+
+
+async def test_one_callers_label_is_invisible_to_another(clients: AsyncClient, platform_on):
+    """The tenant boundary, exercised through the HTTP path rather than asserted on the schema. A
+    second caller using the same label must reach the provider, not read the first one's answer."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    await _seed_answer(clients, "shared-label", body=b'{"owner":"first"}')
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    made = await clients.post(f"/orgs/{org_id}/agents", json={"name": "other-agent"})
+    assert made.status_code in (200, 201), made.text
+    other_token = made.json().get("token")
+    assert other_token, made.text
+
+    prev = clients.headers.get("X-Treg-Token")
+    clients.headers["X-Treg-Token"] = other_token
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "shared-label"})
+    if prev:
+        clients.headers["X-Treg-Token"] = prev
+    assert r.status_code == 200
+    assert "X-Treg-Idempotent-Replay" not in r.headers, "another caller must not read this answer"
+    assert r.json() != {"owner": "first"}
