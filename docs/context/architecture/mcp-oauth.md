@@ -88,15 +88,25 @@ provider sent, and `catalog_get.example_response` is a dict for most endpoints b
 providers whose response is a list of records (brightdata datasets) — typing it `dict` made the
 server's own outbound validation refuse the whole catalog entry.
 
-## Responses forbid edge transforms
+## Responses are gzip-compressed at the origin — the edge must find nothing to do
 
-Every `/mcp/` response carries `Cache-Control: no-store, no-transform` (the `NoTransformResponses`
-ASGI wrapper, outermost so 401 challenges carry it too). Production sits behind Render's Cloudflare
-edge — no account or dashboard of ours — which otherwise Brotli-compresses large responses; at least
-one real client stack (httpx + brotlicffi, issue #93) dies mid-decode and then hangs to its own
-timeout, minutes after the upstream answered in seconds. `no-transform` is the origin's standard
-"do not re-encode" (RFC 9111) and Cloudflare honours it; `no-store` rides along because these
-responses are per-caller and priced.
+Production sits behind Render's managed edge — no account or dashboard of ours — which
+Brotli-compresses large responses on the way out. At least one real client stack (httpx +
+brotlicffi, issue #93) dies mid-decode on that output and then hangs to its own timeout, minutes
+after the upstream answered in seconds.
+
+The first fix was `Cache-Control: no-store, no-transform` (the `NoTransformResponses` wrapper,
+outermost so 401 challenges carry it too) — the origin's standard "do not re-encode" (RFC 9111).
+**Render's edge ignores it** (issue #100: `content-encoding: br` arrived in production right next to
+the header). The header stays because it is correct and free, but the working fix is different: the
+MCP app gzips its own responses (`GZipMiddleware` inside `build_mcp_app`, ≥1KB). An edge only
+compresses what arrives uncompressed — a response already carrying `Content-Encoding: gzip` passes
+through — and gzip decodes via zlib on every mainstream client, sidestepping the brotli decoder
+entirely. Only a client accepting br-but-not-gzip (no mainstream stack does this) would still meet
+the edge's Brotli.
+
+Post-deploy check, any time this path changes: a large authenticated `catalog_get` over `/mcp/` with
+`Accept-Encoding: br, gzip` must come back `content-encoding: gzip`, not `br`.
 
 ## Authentication: eager, every request
 
