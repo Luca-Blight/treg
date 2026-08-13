@@ -78,11 +78,13 @@ endpoints:
       source_url: https://www.lusha.com/pricing/
       checked: '2026-08-13'
       confidence: verified
-      note: 'VERIFIED live 2026-08-13: search-and-enrich revealing emails for one matched contact
-        reported billing.creditsCharged 2 (resultsReturned 1) — a SEARCH charge plus a REVEAL charge,
-        1 + 1 — so a default email enrich is 2 credits per matched contact. A phone reveal is +5 and
-        an email +1 (GET /v3/account/usage.pricing: revealEmail 1 per 1, revealPhone 5 per 1). A
-        contact Lusha cannot match is free (billing.creditsCharged 0, observed 2026-07-31).'
+      note: 'VERIFIED live 2026-08-13. The live rate card (GET /v3/account/usage.pricing) prices
+        contactSearch at 1 credit per 25 results and revealEmail at 1 per 1, so a fresh single-contact
+        email enrich = 1 search + 1 reveal = 2 credits — confirmed by a fresh match reporting
+        billing.creditsCharged 2 (resultsReturned 1). A phone reveal is +5 (revealPhone 5 per 1), an
+        email +1. A contact Lusha cannot match is free (billing.creditsCharged 0, re-observed
+        2026-08-13). CAVEAT: re-revealing a contact already revealed to this account recently is
+        discounted (an immediate repeat charged 1, not 2); value 2 is the fresh/upper-bound cost.'
     verified: 2026-08-13
     example_response: examples/lusha.people.enrich.json
     docs_url: https://docs.lusha.com/apis/openapi/enrichment
