@@ -7514,6 +7514,9 @@ def _observed_cost_micro(provider: str, body: bytes) -> int | None:
         charge lives here. LeadMagic answers a miss with 2xx and `credits_consumed: 0` (observed at
         verify time), so honouring the field is what keeps a free miss from billing the estimate;
         it also reports fractions (email verify is 0.25).
+      - lusha: `billing.creditsCharged`, one level down — the same reported-credits contract,
+        including 0 on a 2xx miss (the captured people.enrich example IS one) and the 2-credit
+        company enrich. Converted through the lusha rate like the others.
       - apollo: DERIVED, not reported. Apollo answers a miss with 2xx (`organization: null` on
         enrich, an empty `organizations` page on search) and charges nothing for it, so status-based
         billing alone would bill the caller for a response Apollo gave away. The body says whether
@@ -7537,6 +7540,13 @@ def _observed_cost_micro(provider: str, body: bytes) -> int | None:
     if provider in ("scrapecreators", "akta", "leadmagic"):
         credits = doc.get("credits_charged" if provider == "scrapecreators" else "credits_consumed")
         rate = catalog_store.load().credit_rates.get(provider)
+        if isinstance(credits, (int, float)) and not isinstance(credits, bool) and credits >= 0 and rate:
+            return int(credits * rate * 1_000_000 + 0.5)
+        return None
+    if provider == "lusha":
+        billing = doc.get("billing")
+        credits = billing.get("creditsCharged") if isinstance(billing, dict) else None
+        rate = catalog_store.load().credit_rates.get("lusha")
         if isinstance(credits, (int, float)) and not isinstance(credits, bool) and credits >= 0 and rate:
             return int(credits * rate * 1_000_000 + 0.5)
         return None

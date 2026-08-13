@@ -430,6 +430,12 @@ def test_observed_cost_only_trusts_a_real_number():
     assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 1}') == 25_000
     assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 0}') == 0, "a 2xx miss is free"
     assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 0.25}') == 6_250
+    # lusha nests the same contract one level down: billing.creditsCharged — 0 on a 2xx miss
+    # (the captured people.enrich example is one), 2 credits on a company enrich. $0.1248/credit.
+    assert A._observed_cost_micro("lusha", b'{"billing": {"creditsCharged": 1, "resultsReturned": 10}}') == 124_800
+    assert A._observed_cost_micro("lusha", b'{"billing": {"creditsCharged": 0, "resultsReturned": 0}}') == 0, "a 2xx miss is free"
+    assert A._observed_cost_micro("lusha", b'{"billing": {"creditsCharged": 2}}') == 249_600
+    assert A._observed_cost_micro("lusha", b'{"requestId": "x"}') is None, "no billing block means we never learned it"
 
 
 def test_apollo_settles_a_2xx_miss_at_zero():
