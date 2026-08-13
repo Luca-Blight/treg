@@ -767,15 +767,19 @@ class RequireAuthForProtectedTools:
 class NoTransformResponses:
     """Stamp `Cache-Control: no-store, no-transform` on every MCP response.
 
-    Production sits behind Render's Cloudflare edge — not an account of ours, and there is no
+    Production sits behind Render's managed edge — not an account of ours, and there is no
     dashboard to configure — and that edge Brotli-compresses responses on the way out. A compliant
     client decodes `br` fine, but at least one real MCP client stack (httpx + brotlicffi, issue #93)
     dies mid-decode on large compressed bodies, and the failure mode is the worst one available: the
     RPC hangs until the client's own timeout, minutes after the upstream answered in seconds.
 
     `no-transform` is the standard way for an origin to tell an intermediary "do not re-encode this"
-    (RFC 9111 §5.2.2.6), and Cloudflare honours it. `no-store` rides along because these responses
-    are per-caller and priced — nothing on this path should ever be served from a cache.
+    (RFC 9111 §5.2.2.6) — and Render's edge IGNORES it (issue #100: `content-encoding: br` arrived
+    right next to this header in production). The header stays because it is correct and costs
+    nothing, but the fix that actually works is compressing at the origin — see `build_mcp_app`:
+    an edge does not re-encode a response that already carries `Content-Encoding`. `no-store` rides
+    along because these responses are per-caller and priced — nothing on this path should ever be
+    served from a cache.
 
     An ASGI wrapper rather than a header in api.py's middleware so that WHEREVER this app is mounted
     — production, or a test building its own transport — the header ships. Same lesson as the auth
@@ -824,8 +828,22 @@ def build_mcp_app():
     # Wrapped HERE, not around the module-level value, so a caller that builds its own app gets the
     # same thing production runs. The first version wrapped only the module-level app, and the tests
     # — which build a fresh transport per test — silently exercised an unprotected server.
-    # NoTransformResponses is outermost so the auth wrapper's own 401 challenges carry it too.
-    return NoTransformResponses(RequireAuthForProtectedTools(transport))
+    #
+    # GZip at the ORIGIN is the fix for edge re-compression (issue #100, the second half of #93).
+    # Render's edge ignored `Cache-Control: no-transform` and kept Brotli-compressing large
+    # responses, which a real client stack (httpx + brotlicffi) fails to decode and then hangs on.
+    # An edge only compresses what arrives UNCOMPRESSED — a response already carrying
+    # `Content-Encoding: gzip` passes through, and gzip is decoded by zlib on every mainstream
+    # client, which sidesteps the brotli decoder entirely. A client that does not accept gzip gets
+    # identity from us (GZipMiddleware respects Accept-Encoding); only a client accepting br-and-
+    # not-gzip — no mainstream stack — would still meet the edge's Brotli.
+    #
+    # NoTransformResponses is outermost so the auth wrapper's own 401 challenges carry the header
+    # too; gzip sits between so challenges and answers alike are origin-encoded.
+    from starlette.middleware.gzip import GZipMiddleware
+
+    return NoTransformResponses(GZipMiddleware(RequireAuthForProtectedTools(transport),
+                                               minimum_size=1024))
 
 
 mcp_app = build_mcp_app()

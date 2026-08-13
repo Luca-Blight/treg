@@ -443,6 +443,52 @@ async def test_structured_content_VALIDATES_against_the_advertised_schema(client
             jsonschema.validate(structured, schemas[tool])  # raises on any mismatch
 
 
+async def test_large_mcp_responses_are_gzipped_AT_THE_ORIGIN(clients):
+    """The fix that actually works for edge re-compression (issue #100). Render's edge ignored
+    `no-transform` and kept Brotli-compressing large responses — which a real client stack
+    (httpx + brotlicffi) fails to decode and then hangs on. An edge only compresses what arrives
+    UNCOMPRESSED, so the origin gzips its own responses: the edge passes them through, and gzip
+    decodes via zlib everywhere.
+
+    Asserted the way the field report arrived: a large catalog_get with `Accept-Encoding: br, gzip`
+    (what httpx sends) must come back gzip — OUR encoding — not unencoded (which the edge would
+    Brotli) and not br."""
+    import json as _json
+
+    token = (await clients.post("/users", json={"email": "gz@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        await _rpc(c, "initialize", {
+            "protocolVersion": "2025-06-18", "capabilities": {},
+            "clientInfo": {"name": "gz", "version": "1"}}, token)
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "catalog_get",
+                       "arguments": {"endpoint_id": "brightdata.linkedin.user.profile"}}},
+            headers={**MCP_HEADERS, "Authorization": f"Bearer {token}",
+                     "Accept-Encoding": "br, gzip"})
+    assert r.status_code == 200
+    assert r.headers.get("content-encoding") == "gzip", dict(r.headers)
+    # httpx transparently gunzips `.content` — that it parses is the end-to-end decode proof,
+    # through the exact client library the field reports used.
+    body = _json.loads(r.content)
+    assert body.get("result"), body
+
+    # And a client that does NOT accept gzip gets identity from us — GZipMiddleware respects
+    # Accept-Encoding rather than forcing an encoding the client cannot decode.
+    async with mcp_session(clients) as c:
+        await _rpc(c, "initialize", {
+            "protocolVersion": "2025-06-18", "capabilities": {},
+            "clientInfo": {"name": "gz2", "version": "1"}}, token)
+        r = await c.post("http://localhost/mcp/", json={
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "catalog_get",
+                       "arguments": {"endpoint_id": "brightdata.linkedin.user.profile"}}},
+            headers={**MCP_HEADERS, "Authorization": f"Bearer {token}",
+                     "Accept-Encoding": "identity"})
+    assert r.status_code == 200
+    assert "content-encoding" not in r.headers, dict(r.headers)
+
+
 async def test_mcp_responses_forbid_edge_TRANSFORMS(clients):
     """Production sits behind Render's Cloudflare edge, which Brotli-compresses responses unless the
     origin says not to. At least one real client stack (httpx + brotlicffi, issue #93) dies decoding
