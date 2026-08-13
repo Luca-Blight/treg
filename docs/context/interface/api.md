@@ -162,7 +162,13 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
     a no-op where `resource` is unavailable. Deliberately **no** address-space or process-count cap — a
     virtual-memory cap crashes Go CLIs (gh/stripe/doctl) and `RLIMIT_NPROC` is per-uid, shared with the
     server. Full **filesystem/network** isolation needs a container deploy and is a planned follow-up.
-- **Meta:** `meta` (`GET /meta`, open) → `{public_url, github}` for the dashboard.
+- **Meta:** `meta` (`GET /meta`, open) → `{public_url, github, google, app_version, treg_version,
+  posthog_key/posthog_host, intercom_app_id}` for the dashboard. The last three are the opt-in
+  third-party keys (analytics, support chat): empty on a deployment that didn't set them, so
+  self-hosted pages load neither PostHog nor the Intercom Messenger. `intercom_app_id` is paired
+  server-side with `intercom_secret`, which never leaves the server: `_intercom_user_hash` (HMAC-SHA256
+  of the email, keyed by the secret) is added to `GET /auth/me` as `intercom_user_hash` — Intercom
+  identity verification, so a third party who knows an email can't impersonate that user in chat.
 - **Provider catalog:** `providers_catalog` (`GET /providers.json`, open) → `{version, providers}` — the
   catalog `treg upload` uses to detect env keys → tools; served so the CLI can refresh centrally. See
   [env-import](env-import.md).
@@ -203,6 +209,12 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   behind `/catalog/examples`, and `call_template` is a paste-ready `treg call …` line built from the
   endpoint's `test_request` (the request the verifier actually ran) falling back to documented examples.
   `hints` on both routes carries the next command, since finding an endpoint is never the goal.
+  A zero-result search additionally points at **`POST /tool-requests`** (open, per-IP rate-limited,
+  fields capped): file what the catalog is missing — stored as a `ToolRequest` row (see
+  [data-model](../architecture/data-model.md)) with identity attached only when the caller happens
+  to be signed in (token, or same-origin session; a cross-origin cookie POST stores anonymously
+  rather than being rejected). The zero-result caller is exactly the demand signal the catalog team
+  wants, so no signup wall.
 - **Auth — three identity doors** (all resolve to a user via the shared `_find_or_create_user`, so
   first-proof = registration — the **user only, no auto personal org**; a brand-new user lands with zero
   teams and names their first via the mandatory welcome / `treg org create`): **GitHub** — `auth_github` (`GET /auth/github`,
@@ -390,7 +402,16 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   provider — a bring-your-own bot token (Slack) or an **API key** (Apollo, Hunter, TikHub, Semrush, …) —
   **verifying the credential against the provider's probe before storing** (a header- OR query-param probe,
   an off-host `probe_url`, tolerating a CSV/text body or a 200-with-false-`token_verify_field` reply), then
-  auto-provisioning its tool with a header or query binding. See
+  auto-provisioning its tool with a header or query binding. Two probe subtleties the code handles
+  because upstreams don't cooperate: a `probe_path` may bake in a required `?query` (PDL, Akta,
+  JustOneAPI, SpyFu), and httpx **replaces** a URL's own query when `params=` is passed — so the path's
+  query is parsed out and **merged into params** (the credential wins a key collision) rather than
+  silently dropped; and the body is parsed as JSON **regardless of content-type**, because ScrapeCreators
+  serves real JSON under `text/plain` and gating on `application/json` left `token_verify_field` unread
+  (a genuinely non-JSON balance still throws → empty payload → the `ERROR`-text branch, unchanged). A
+  base64-encode provider (`token_encode`, DataForSEO/Moz) accepts EITHER a raw `login:password` OR the
+  dashboard's ready-made base64 blob — a blob is detected (strict-decodes to printable text with a `:`)
+  and kept as-is instead of being double-encoded. See
   [auth-secrets](../architecture/auth-secrets.md). `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
   the second credential a provider needs when treg does NOT hold it centrally (rare) and finishes the
   tool with BOTH bindings. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and

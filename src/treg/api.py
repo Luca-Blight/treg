@@ -28,7 +28,7 @@ import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote, urlsplit
+from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
 
 from sqlalchemy import case, delete, func, or_
 
@@ -54,7 +54,8 @@ from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, plat
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
                      IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
-                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User)
+                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, ToolRequest,
+                     User)
 from .proxy import relay
 
 
@@ -402,7 +403,9 @@ async def meta() -> dict:
             "google": bool(s.google_client_id), "app_version": _app_version(),
             "treg_version": _treg_version(),
             # public ingestion key — only present when this deployment opts in (self-hosters send nothing)
-            "posthog_key": s.posthog_key, "posthog_host": s.posthog_host.rstrip("/") if s.posthog_key else ""}
+            "posthog_key": s.posthog_key, "posthog_host": s.posthog_host.rstrip("/") if s.posthog_key else "",
+            # public workspace id — only present when this deployment opts in (self-hosters load no widget)
+            "intercom_app_id": s.intercom_app_id}
 
 
 @app.get("/providers.json", include_in_schema=False)
@@ -540,7 +543,9 @@ async def catalog_search(q: str = "", limit: int = 25) -> dict:
     if not q.strip():
         hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
     elif not results:
-        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves"]
+        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves",
+                 "still missing? POST /tool-requests {\"capability\": \"<what you need>\"} — "
+                 "requests steer which provider gets added next"]
     else:
         hints = [f"treg catalog get {results[0]['id']}   # params, cost and an example response",
                  f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
@@ -610,6 +615,73 @@ async def catalog_example(endpoint_id: str) -> Response:
     if path is None or not path.is_file():
         raise HTTPException(status_code=404, detail=f"no example response for {endpoint_id!r}")
     return Response(content=path.read_bytes(), media_type="application/json")
+
+
+# ---- "the catalog doesn't have X" — tool requests -------------------------------------------
+TOOLREQ_HIT_NS = "toolreq"
+TOOLREQ_RATE_MAX = 10          # filings per IP per window
+TOOLREQ_RATE_WINDOW_S = 3600   # 1 hour
+TOOLREQ_SOURCES = {"web", "cli", "mcp", "api"}
+
+
+class ToolRequestIn(BaseModel):
+    capability: str          # what they wanted — "Ahrefs backlinks", "flight prices", a provider name
+    query: str = ""          # the catalog search that came up empty (agents auto-fill this)
+    note: str = ""
+    contact: str = ""        # optional reach-back; free text, unverified
+    source: str = "web"      # web | cli | mcp | api
+
+
+@app.post("/tool-requests", include_in_schema=False)
+async def create_tool_request(
+    body: ToolRequestIn,
+    request: Request,
+    x_treg_token: str = Header(default=""),
+    treg_session: str = Cookie(default=""),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Open: file a "the catalog doesn't have X" report. No auth on purpose — the filer is most
+    often an agent that just got zero search results and holds no token, and a signup wall here
+    costs exactly the demand signal the catalog team wants. Per-IP rate limiting (ratestore) is
+    the abuse valve, same shape as POST /demo/sandbox; field caps bound the row.
+
+    Identity is attribution, never authorization: when the caller happens to be signed in (token
+    or same-origin session), the row records who asked so they can be told when it lands — a
+    forged cross-origin cookie POST gets stored as anonymous, not rejected, hence the
+    `_same_origin` gate on the cookie path only."""
+    await ratestore.sweep(db, TOOLREQ_HIT_NS)
+    if not await ratestore.rate_check(db, TOOLREQ_HIT_NS,
+                                      [(_client_ip(request), TOOLREQ_RATE_MAX)], TOOLREQ_RATE_WINDOW_S):
+        await db.commit()  # persist the sweep even on reject
+        raise HTTPException(status_code=429, detail="too many tool requests from here — try again later")
+    capability = body.capability.strip()
+    if not capability:
+        raise HTTPException(status_code=422, detail="say what tool/capability you need")
+    if len(capability) > 200:
+        raise HTTPException(status_code=422, detail="capability is a headline — keep it under 200 chars")
+    org_id, user_email = None, ""
+    if x_treg_token:
+        m = await _membership_by_token(x_treg_token, db)
+        user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
+        if user is not None and not user.suspended:
+            org_id, user_email = (m.org_id if m else None), user.email
+    elif treg_session and _same_origin(request):
+        user = await _user_from_session(treg_session, db)
+        if user is not None:
+            user_email = user.email
+    row = ToolRequest(
+        org_id=org_id,
+        user_email=user_email,
+        capability=capability,
+        query=body.query.strip()[:300],
+        note=body.note.strip()[:2000],
+        contact=body.contact.strip()[:200],
+        source=body.source if body.source in TOOLREQ_SOURCES else "api",
+    )
+    db.add(row)
+    await db.commit()
+    return {"id": row.id, "status": "received",
+            "note": "logged — requests steer which provider gets keyed next"}
 
 
 # ---- human login via GitHub OAuth (dashboard sessions) ------------------------------------
@@ -1146,6 +1218,16 @@ if(HAS_SESSION)loadOrgs();
 """
 
 
+def _intercom_user_hash(email: str) -> str:
+    """Intercom identity verification: HMAC-SHA256 of the identifier the dashboard boots the
+    Messenger with (the email), keyed by the workspace secret — so a third party who knows an email
+    can't impersonate that user in support chat. Empty when unconfigured (self-hosted: no widget)."""
+    secret = get_settings().intercom_secret
+    if not secret:
+        return ""
+    return hmac.new(secret.encode(), email.encode(), hashlib.sha256).hexdigest()
+
+
 @app.get("/auth/me")
 async def auth_me(
     x_treg_token: str = Header(default=""),
@@ -1168,6 +1250,8 @@ async def auth_me(
         raise HTTPException(status_code=401, detail="no session")
     out = {"email": user.email, "is_superadmin": user.is_superadmin, "onboarded": user.onboarded,
            "github": bool(get_settings().github_client_id)}
+    if (ich := _intercom_user_hash(user.email)):
+        out["intercom_user_hash"] = ich
     if membership is not None:
         # The org this token IS. A machine identity cannot call GET /orgs — `require_identity`
         # refuses it on purpose, since `create_org` hangs off that dependency and an agent could
@@ -2590,6 +2674,7 @@ _ORG_SCOPED_MODELS = (
     CapabilityPin, LedgerEntry, Hold, CreditBlock,
     OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
     IdempotentCall,            # a remembered answer belongs to the team that paid for it
+    ToolRequest,  # attribution rows go with the team; anonymous filings carry no org_id and stay
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 
@@ -6203,10 +6288,22 @@ async def connect_with_token(
     if not token:
         raise HTTPException(status_code=422, detail=f"{provider.token_label or 'Token'} is required")
     # HTTP Basic providers (DataForSEO, Moz) take a pasted `login:password`; store the Base64 blob so
-    # `Basic {secret}` renders the same at connect and on every proxy call.
+    # `Basic {secret}` renders the same at connect and on every proxy call. Both dashboards ALSO hand
+    # out a ready-made Base64 credential, and users paste that at least as often as the raw pair —
+    # encoding it again produced a double-encoded blob the provider 401'd. So: if the paste already IS
+    # Base64 of a printable `login:password`, keep it. A raw pair can never be mistaken for one (":"
+    # is not in the Base64 alphabet, so strict decoding refuses it), and a Base64 blob can never be
+    # a working raw pair (it has no ":"), so the branch is unambiguous either way.
     if provider.token_encode == "base64":
         import base64
-        token = base64.b64encode(token.encode()).decode()
+        already = None
+        try:
+            decoded = base64.b64decode(token, validate=True).decode()
+            if ":" in decoded and decoded.isprintable():
+                already = token
+        except Exception:  # noqa: BLE001 — not Base64, or not text: encode it below
+            pass
+        token = already or base64.b64encode(token.encode()).decode()
 
     # The credential rides in a header (default) or a query param (Semrush: ?key=…). The cheapest
     # check may also live on a different host than base_url, so honor an absolute probe_url override,
@@ -6217,6 +6314,14 @@ async def connect_with_token(
     else:
         headers, params = {provider.token_header: rendered}, {}
     probe_url = provider.probe_url or f"{provider.base_url.rstrip('/')}{provider.probe_path}"
+    # httpx REPLACES a URL's own query string when `params=` is passed, so a probe_path like
+    # `/autocomplete?field=title&text=data` (PDL, Akta, JustOneAPI, SpyFu) silently lost its required
+    # params and the probe 400'd — rejecting a perfectly good key. Merge the path's query into params
+    # ourselves (params, i.e. the credential for a query provider, wins on a key collision).
+    split = urlsplit(probe_url)
+    if split.query:
+        params = {**dict(parse_qsl(split.query, keep_blank_values=True)), **params}
+        probe_url = urlunsplit((split.scheme, split.netloc, split.path, "", split.fragment))
     try:
         resp = await request.app.state.http.request(
             provider.probe_method or "GET", probe_url,
@@ -6224,13 +6329,17 @@ async def connect_with_token(
         )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"could not reach {provider.display_name}: {exc}") from None
-    # Only parse JSON when the response actually is JSON — a key check may answer in CSV/text
-    # (Semrush's balance endpoint), where resp.json() would throw and mask a valid key as unreachable.
+    # Try to parse the body as JSON regardless of the content-type header: ScrapeCreators returns a
+    # real JSON body labelled `text/plain`, and gating on `application/json` left its payload empty so
+    # `token_verify_field` (creditCount) read as false and a valid key was rejected. The parse is
+    # defensive — a genuinely non-JSON key check (Semrush's CSV/number balance) simply throws and
+    # leaves payload empty, falling through to the `text_error` branch exactly as before.
     ctype = resp.headers.get("content-type", "")
     payload: dict = {}
-    if resp.status_code < 500 and ctype.startswith("application/json"):
+    if resp.status_code < 500:
         try:
-            payload = resp.json()
+            parsed = resp.json()
+            payload = parsed if isinstance(parsed, dict) else {}
         except Exception:  # noqa: BLE001
             payload = {}
     # Some providers answer HTTP 200 even for a BAD key and signal validity only in the body: a JSON

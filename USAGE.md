@@ -136,6 +136,7 @@ treg tool add google-ads --base-url https://googleads.googleapis.com \
 | `treg catalog search` | `"what you want to do"` | find endpoints by capability |
 | `treg catalog get` | `ENDPOINT_ID` | docs, parameters, **the price**, and how you would be served |
 | `treg call ENDPOINT_ID` | `--query K=V`, `--data STR` | call it |
+| `treg catalog request` | `"what's missing"` | searched, not there? file it — requests steer what gets added next |
 
 ```bash
 treg catalog search "instagram profile"
