@@ -48,7 +48,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
 from . import catalog_store
-from .config import get_settings
+from .config import LEGACY_PUBLIC_HOSTS, get_settings
 
 # Every tool must declare what it can DO, and the review process checks these against real behaviour.
 # Read-only means it changes nothing anywhere; open-world means it can change state visible on the
@@ -229,14 +229,15 @@ def _oauth_claims(token: str) -> dict | None:
     """
     from . import mcp_oauth
 
-    return mcp_oauth.read_access_token(token, expected_audience=mcp_oauth.mcp_resource_url())
+    return mcp_oauth.read_access_token_any(token)
 
 
 def _need_token() -> dict:
+    base = get_settings().public_url.rstrip("/")
     return {
         "error": "not authenticated",
         "detail": (
-            "This MCP server needs a treg token. Get one at https://treg.to "
+            f"This MCP server needs a treg token. Get one at {base} "
             "(sign in, then Settings -> copy token) and set it as the TREG_TOKEN environment "
             "variable for this server."
         ),
@@ -344,7 +345,7 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
     r = await client.get("/orgs")
     if r.status_code == 401 or me.status_code == 401:
         return None, None, {"error": "not signed in, or this token is invalid or expired",
-                            "hint": "copy a fresh token from https://treg.to"}
+                            "hint": f"copy a fresh token from {get_settings().public_url.rstrip('/')}"}
     if r.status_code != 200:
         return None, None, {"error": "could not read the teams for this token"}
     orgs = _body(r) or []
@@ -608,6 +609,9 @@ def _allowed_hosts() -> list[str]:
     public = urlsplit(get_settings().public_url).netloc
     if public:
         hosts += [public, public.split(":")[0]]
+    # The pre-move hostnames answer forever: an old .mcp.json reaching /mcp/ on the legacy domain
+    # would otherwise 421 — a breakage invisible until the first tool call after cutover.
+    hosts += list(LEGACY_PUBLIC_HOSTS)
     hosts += ["localhost", "127.0.0.1", "treg.internal"]
     hosts += [h.strip() for h in os.environ.get("TREG_MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
     # a bare host and host:port are different header values, so allow the common local ports too
@@ -631,6 +635,7 @@ def _allowed_origins() -> list[str]:
     public = get_settings().public_url.rstrip("/")
     if public:
         origins.append(public)
+    origins += [f"https://{h}" for h in LEGACY_PUBLIC_HOSTS]
     origins += [f"http://localhost:{p}" for p in ("8000", "18790")]
     origins += [f"http://127.0.0.1:{p}" for p in ("8000", "18790")]
     origins += ["http://localhost", "http://127.0.0.1"]
@@ -729,7 +734,7 @@ class RequireAuthForProtectedTools:
             return "missing"
         from . import mcp_oauth
         if mcp_oauth.looks_like_access_token(token) and \
-                mcp_oauth.read_access_token(token, expected_audience=mcp_oauth.mcp_resource_url()) is None:
+                mcp_oauth.read_access_token_any(token) is None:
             return "invalid"
         return None             # a live access token, or a per-org token the tool validates itself
 

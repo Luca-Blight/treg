@@ -420,10 +420,17 @@ surfaced by `GET /tools` / `/bundles/{id}`).
 
 ## Cross-cutting hardening (bug-hunt)
 - **Legacy-host redirect:** `_legacy_host_redirect` 301s GET/HEAD marketing pages (`_REDIRECT_PATHS`)
-  from `treg.superdesign.dev` (`_LEGACY_HOSTS`) to the canonical `public_url` host (`treg.to`).
-  Everything else is served in place on BOTH hosts, forever: installed CLIs/skills hold tokens
-  pointed at the legacy host, HTTP clients strip `Authorization` on a cross-host redirect, and
-  `curl {BASE}/install.sh | sh` runs without `-L`. Never remove the legacy domain from Render.
+  from the legacy hosts (`config.LEGACY_PUBLIC_HOSTS`) to the canonical `public_url` host (`treg.to`)
+  — but only for **anonymous** visitors: a `treg_session` cookie is host-scoped, so a signed-in
+  browser (e.g. the invite flow landing on `/?invite_org=…`) is served in place. The OAuth login
+  entries `/auth/github` + `/auth/google` (`_REDIRECT_ALWAYS`) redirect unconditionally — their
+  state cookie must be minted on the host the provider calls back to. Everything else is served in
+  place on BOTH hosts, forever: installed CLIs/skills hold tokens pointed at the legacy host, HTTP
+  clients strip `Authorization` on a cross-host redirect, `/vendor-listing` is fetched by agents,
+  and `curl {BASE}/install.sh | sh` runs without `-L`. The legacy names also stay in MCP's
+  transport allow-lists (`mcp._allowed_hosts`/`_allowed_origins`) and in the OAuth token-audience
+  set (`mcp_oauth.mcp_resource_audiences()` — pre-move grants keep their old audience for life,
+  and refresh reissues it). Never remove the legacy domain from Render.
 - **Security headers:** a `@app.middleware` adds `X-Content-Type-Options: nosniff`, `X-Frame-Options:
   DENY`, `Referrer-Policy: no-referrer`, and HSTS to every response (`setdefault`, so the `/call`
   proxy's stricter CSP/nosniff wins).

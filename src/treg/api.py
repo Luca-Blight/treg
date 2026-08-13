@@ -50,7 +50,7 @@ from sqlmodel import select
 from . import analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
-from .config import get_settings, platform_setting_name
+from .config import LEGACY_PUBLIC_HOSTS, get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
                      IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
@@ -158,29 +158,41 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="tools-registry", version="0.0.1", lifespan=lifespan)
 
 
-# The pre-treg.to hostname. It must keep answering the API forever — every installed CLI, skill.md
+# The pre-treg.to hostnames must keep answering the API forever — every installed CLI, skill.md
 # and .mcp.json in the wild points here with a Bearer token, and most HTTP clients STRIP the
 # Authorization header when a redirect crosses hosts (and some MCP clients follow no redirects at
-# all). So only browser-facing marketing/doc pages redirect to the canonical host; everything else —
-# /call/, /mcp/, auth flows, webhooks, install scripts fetched by `curl | sh` without -L — is served
-# in place on both hosts.
-_LEGACY_HOSTS = {"treg.superdesign.dev"}
+# all). So only browser-facing marketing pages redirect to the canonical host; everything else —
+# /call/, /mcp/, auth flows, webhooks, agent-fetched pages like /vendor-listing, install scripts
+# fetched by `curl | sh` without -L — is served in place on both hosts.
+_LEGACY_HOSTS = set(LEGACY_PUBLIC_HOSTS)
+# Marketing pages — but only for ANONYMOUS visitors. A session cookie is host-scoped, so bouncing a
+# signed-in browser to the canonical host silently logs it out mid-flow (the invite confirmation,
+# for one, sets a legacy-host session and then lands on `/?invite_org=…`).
 _REDIRECT_PATHS = {"/", "/login", "/terms", "/privacy", "/support", "/contact", "/help",
-                   "/tutorial", "/vendor-listing"}
+                   "/tutorial"}
+# The OAuth login ENTRY points redirect unconditionally, and that is a correctness fix, not a
+# marketing one: they set a host-scoped state cookie and then send the provider to the callback on
+# `public_url` — started on the legacy host, the callback would never see the cookie ("Bad state").
+# Exact paths only; the /callback routes must keep serving in place.
+_REDIRECT_ALWAYS = {"/auth/github", "/auth/google"}
 
 
 @app.middleware("http")
 async def _legacy_host_redirect(request: Request, call_next):
-    """301 marketing pages from the legacy host to the canonical `public_url` host."""
-    host = request.headers.get("host", "").split(":")[0].lower()
-    if (request.method in ("GET", "HEAD") and host in _LEGACY_HOSTS
-            and request.url.path in _REDIRECT_PATHS):
-        canonical = get_settings().public_url.rstrip("/")
-        if host not in canonical:  # self-hosters who ARE the legacy host keep serving in place
-            target = canonical + request.url.path
-            if request.url.query:
-                target += "?" + request.url.query
-            return RedirectResponse(target, status_code=301)
+    """301 marketing pages (and OAuth login entries) from a legacy host to the canonical host."""
+    host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
+    if request.method in ("GET", "HEAD") and host in _LEGACY_HOSTS:
+        path = request.url.path
+        if path in _REDIRECT_ALWAYS or (path in _REDIRECT_PATHS
+                                        and sess.COOKIE not in request.cookies):
+            canonical = get_settings().public_url.rstrip("/")
+            # hostname equality, not substring: a self-hoster whose public_url IS a legacy host
+            # must keep serving in place, but "not-treg.superdesign.dev" must not.
+            if host != ((urlsplit(canonical).hostname or "").rstrip(".").lower()):
+                target = canonical + path
+                if request.url.query:
+                    target += "?" + request.url.query
+                return RedirectResponse(target, status_code=301)
     return await call_next(request)
 
 
@@ -1851,10 +1863,24 @@ def _wrong_resource(resource: str) -> str | None:
     if not resource:
         return None
     canonical = mcp_oauth.mcp_resource_url()
-    if resource.rstrip("/") == canonical.rstrip("/"):
+    # The legacy hosts' resource URLs stay valid: a pre-move client discovered its `resource` from
+    # the old domain's metadata and will keep sending it for the lifetime of the grant.
+    if any(resource.rstrip("/") == aud.rstrip("/") for aud in mcp_oauth.mcp_resource_audiences()):
         return None
     return (f"this server issues tokens for {canonical} only — use the `resource` value from "
             f"/.well-known/oauth-protected-resource")
+
+
+def _same_mcp_resource(a: str, b: str) -> bool:
+    """Whether two `resource` values name this same MCP server. Exact match, or both are members of
+    the canonical+legacy audience set (the domain move renamed the resource without changing it —
+    a grant consented on one name must stay exchangeable by a client re-based onto the other)."""
+    from . import mcp_oauth
+
+    if a == b:
+        return True
+    auds = mcp_oauth.mcp_resource_audiences()
+    return a in auds and b in auds
 
 
 def _oauth_error(redirect_uri: str, state: str, error: str, desc: str = ""):
@@ -2074,7 +2100,7 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
         return bad("invalid_grant", "refresh token expired")
     if client_id and client_id != row.client_id:
         return bad("invalid_grant", "refresh token was issued to a different client")
-    if resource and resource != row.resource:
+    if resource and not _same_mcp_resource(resource, row.resource):
         return bad("invalid_target", "resource does not match the one that was consented to")
 
     user = await db.get(User, row.user_id)
@@ -2161,7 +2187,7 @@ async def oauth_token(
         return bad("invalid_grant", "redirect_uri does not match the one the code was issued for")
     if not mcp_oauth.verify_pkce(code_verifier, row.code_challenge):
         return bad("invalid_grant", "code_verifier does not match the code_challenge")
-    if resource and resource != row.resource:
+    if resource and not _same_mcp_resource(resource, row.resource):
         return bad("invalid_target", "resource does not match the one that was consented to")
 
     user = await db.get(User, row.user_id)
