@@ -43,7 +43,7 @@ def test_no_unsubstituted_placeholder_reaches_the_plugin():
     plugin, so shipping the literal would break every URL in the most-read page of the product."""
     text = SKILL.read_text(encoding="utf-8")
     assert "{BASE}" not in text
-    assert "https://treg.superdesign.dev/install.sh" in text
+    assert "https://treg.to/install.sh" in text
 
 
 def test_the_skill_maps_itself_onto_the_MCP_TOOLS(manifest):

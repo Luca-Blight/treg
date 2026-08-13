@@ -377,7 +377,7 @@
   .drawer{position:fixed;top:0;right:0;height:100vh;width:min(520px,96vw);background:var(--panel);border-left:1px solid var(--line);z-index:50;box-shadow:-12px 0 44px rgba(20,16,10,.34);display:flex;flex-direction:column}
   pre{margin:0;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:12.5px;overflow:auto;white-space:pre-wrap;word-break:break-word;max-height:50vh}
   pre.code{white-space:pre;overflow-x:auto;word-break:normal;overflow-wrap:normal;line-height:1.55}
-  .field{display:flex;gap:8px;margin:8px 0} .field input,.field select{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:var(--rb);padding:8px 10px;font-family:var(--mono);font-size:13px} .field input{flex:1}
+  .field{display:flex;gap:8px;margin:8px 0} .field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:var(--rb);padding:8px 10px;font-family:var(--mono);font-size:13px} .field input,.field textarea{flex:1}
   .login{min-height:100vh;display:grid;place-items:center} .loginbox{width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px;text-align:center}
   .phase2{opacity:.5} .hint{font-family:var(--mono);font-size:11px;color:var(--amber);border:1px dashed var(--amber);border-radius:6px;padding:2px 7px}
   a{color:var(--accent);text-decoration:none;cursor:pointer}
@@ -640,7 +640,7 @@ th{background:rgba(0,0,0,.25)}
 .lc-codewrap{background:#0d0c0b}
 :root:not([data-theme=light]) pre{background:rgba(0,0,0,.28);
   box-shadow:rgba(0,0,0,.4) 0 2px 8px 0 inset;border-color:var(--line)}
-.frow input,.frow select,.field input,.field select,.search,.msel,.bindinput,.si-input{
+.frow input,.frow select,.field input,.field select,.field textarea,.search,.msel,.bindinput,.si-input{
   background:#0d0c0b;box-shadow:rgba(0,0,0,.35) 0 2px 6px 0 inset}
 .chip{border-radius:999px}
 .hint{color:var(--amber);border-color:rgba(216,210,194,.4)}
@@ -757,9 +757,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--ink)}
 table{background:var(--surface)}
 /* rows.gg's column heads are label text over a rule, not a filled bar. */
 th{background:none;color:var(--muted2);font-weight:450;border-bottom:1px solid var(--line2)}
-.frow input,.frow select,.field input,.field select,.search,.msel,.bindinput,.si-input{
+.frow input,.frow select,.field input,.field select,.field textarea,.search,.msel,.bindinput,.si-input{
   background:var(--surface);box-shadow:none;border:1px solid var(--line2);color:var(--ink)}
-.frow input::placeholder,.field input::placeholder,.search input::placeholder{color:var(--muted2)}
+.frow input::placeholder,.field input::placeholder,.field textarea::placeholder,.search input::placeholder{color:var(--muted2)}
 :root:not([data-theme=light]) pre{background:var(--panel2);box-shadow:none;border-color:var(--line)}
 [data-theme=light] pre{background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
 /* The scanline grain is a dark-theme texture; on paper it reads as dirt. */
@@ -1331,7 +1331,10 @@ a:hover{text-decoration-color:var(--muted)}
           <div class="tut-head">
             <div><h1>2,600+ tools for agents</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
             <!-- (The balance pill lives in the side nav, above the account block.) -->
-            <div class="tut-actions"><button class="btn sm" @click="vendorAsk=true" title="Sell an API? Get it listed in this catalog">List as vendor</button></div>
+            <div class="tut-actions">
+              <button class="btn sm" @click="openToolRequest()" title="Missing a tool or provider? Tell us — requests steer what gets added next"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg>Request a tool</button>
+              <button class="btn sm" @click="vendorAsk=true" title="Sell an API? Get it listed in this catalog"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>List as vendor</button>
+            </div>
           </div>
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
           <div v-for="c in needSecondCred" :key="'n'+c.id" class="banner" style="margin-top:12px">
@@ -3154,6 +3157,37 @@ a:hover{text-decoration-color:var(--muted)}
         </div></div>
     </div>
 
+    <!-- REQUEST A TOOL (a "the catalog doesn't have X" report — saved server-side, steers what gets keyed next) -->
+    <div class="scrim" role="dialog" aria-modal="true" v-if="reqAsk" @click.self="reqAsk=false;reqErr=''">
+      <div class="modal" style="width:min(520px,95vw)"><div class="hd"><b>Request a tool</b><button class="btn sm ico" @click="reqAsk=false;reqErr=''" aria-label="Close">✕</button></div>
+        <div style="padding:16px 18px">
+          <template v-if="!reqDone">
+            <p class="explain" style="margin-top:0">Missing a provider or capability? Requests go straight to the catalog team — the most-asked-for tools get added first.</p>
+            <div class="lbl" style="margin-top:14px">What's missing</div>
+            <div class="field" style="margin:0"><input v-model="reqForm.capability" maxlength="200" placeholder="e.g. Ahrefs backlinks, flight prices, HN comments" @keyup.enter="submitToolRequest"/></div>
+            <div class="lbl" style="margin-top:14px">Details <span style="text-transform:none;letter-spacing:0;color:var(--muted2)">— optional</span></div>
+            <div class="field" style="margin:0"><textarea v-model="reqForm.note" maxlength="2000" rows="3" placeholder="What you'd use it for, or a link to the provider's docs" style="resize:vertical;min-width:0"></textarea></div>
+            <template v-if="!me">
+              <div class="lbl" style="margin-top:14px">Contact <span style="text-transform:none;letter-spacing:0;color:var(--muted2)">— optional, to hear when it lands</span></div>
+              <div class="field" style="margin:0"><input v-model="reqForm.contact" maxlength="200" placeholder="you@work.com"/></div>
+            </template>
+            <div v-if="reqErr" class="banner" style="margin-top:12px">{{reqErr}}</div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:18px">
+              <button class="btn primary" @click="submitToolRequest" :disabled="reqBusy">{{reqBusy?'Sending…':'Send request'}}</button>
+              <span class="sub" style="font-size:11.5px;margin:0">Takes ten seconds — no signup needed.</span>
+            </div>
+          </template>
+          <template v-else>
+            <div style="text-align:center;padding:18px 6px 8px">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent, currentColor)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+              <p style="margin:12px 0 4px;font-weight:600">Got it — thanks.</p>
+              <p class="sub" style="margin:0 0 16px">Requests are reviewed as they come in; the most-asked-for tools get added first.</p>
+              <button class="btn" @click="reqAsk=false">Close</button>
+            </div>
+          </template>
+        </div></div>
+    </div>
+
     <!-- SHARE A DETAIL PAGE (invite someone new; they land right here after sign-in) -->
     <div class="scrim" role="dialog" aria-modal="true" v-if="share.on && detail" @click.self="share.on=false">
       <div class="modal" style="width:min(560px,95vw)"><div class="hd"><b>Share “{{detail.name}}”</b><button class="btn sm ico" @click="share.on=false" aria-label="Close">✕</button></div>
@@ -3423,6 +3457,7 @@ createApp({
       startCopied:'', startTab:'access', startAgentOpen:false, startTokenShow:false, mdMenu:false, llmsCopied:false, myToken:null, _myTokenOrg:null, tokenCopied:false,
       agentGuide:null, agentGuideCopied:false, agentRowCopied:null,
       vendorAsk:false, vendorCopied:false,
+      reqAsk:false, reqDone:false, reqBusy:false, reqErr:'', reqForm:{capability:'', note:'', contact:''},
       demo:{
         token:null, org_slug:'', ttl:60, busy:false, err:'', copied:'', signin:false,
         view:'endpoints', secrets:[], tools:[], maxSecrets:3, maxTools:3,
@@ -3931,7 +3966,7 @@ createApp({
     // a11y (WCAG 2.4.3): when a dialog/drawer opens, move focus INTO it (was left on the trigger)
     newTool(v){ this.focusOverlay(v); }, newSkill(v){ this.focusOverlay(v); }, newOrg(v){ this.focusOverlay(v); },
     showJoin(v){ this.focusOverlay(v); }, addOrg(v){ this.focusOverlay(v); }, copyTool(v){ this.focusOverlay(v); },
-    tryTool(v){ this.focusOverlay(v); }, 'welcome.on'(v){ this.focusOverlay(v); },
+    tryTool(v){ this.focusOverlay(v); }, 'welcome.on'(v){ this.focusOverlay(v); }, reqAsk(v){ this.focusOverlay(v); },
   },
   methods:{
     focusOverlay(open){ if(!open) return; this.$nextTick(()=>{ const el=document.querySelector('.scrim input,.scrim textarea,.scrim button,.drawer input,.drawer button'); el&&el.focus(); }); },
@@ -4828,6 +4863,15 @@ createApp({
     },
     async copyAgentPrompt(){ if(!(await this.toClipboard(this.agentPromptText))) return; this.agentGuideCopied=true; setTimeout(()=>this.agentGuideCopied=false,1500); },
     async copyVendorPrompt(){ if(!(await this.toClipboard(this.vendorPromptText))) return; this.vendorCopied=true; setTimeout(()=>this.vendorCopied=false,1500); },
+    openToolRequest(){ this.reqDone=false; this.reqErr=''; this.reqForm.capability=(this.q||'').trim(); this.reqAsk=true; },  // pre-fill with the search that came up short
+    async submitToolRequest(){ const cap=(this.reqForm.capability||'').trim();
+      if(!cap){ this.reqErr='Say what tool or capability you need.'; return; }
+      this.reqBusy=true; this.reqErr='';
+      try{ await this.api('/tool-requests',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({capability:cap, query:(this.q||'').trim(), note:this.reqForm.note, contact:this.reqForm.contact, source:'web'})});
+        this.reqDone=true; this.reqForm={capability:'', note:'', contact:''}; }
+      catch(e){ this.reqErr = e.status===429?'Too many requests from here — try again later.':('Could not send: '+(e.detail||e.status)); }
+      finally{ this.reqBusy=false; } },
     async copyAgentGuide(kind){ if(!(await this.toClipboard(this.buildAgentPrompt(kind, true)))) return; this.agentRowCopied=kind; setTimeout(()=>{ if(this.agentRowCopied===kind) this.agentRowCopied=null; },1500); },
     switchTo(o){ this.switchOrg(o); },  // dropdown "Switch" button - just switch, stay where you are
     orgSettings(o){ this.orgMenu=false;  // dropdown ⚙ - go INTO that team, then open its settings

@@ -50,11 +50,12 @@ from sqlmodel import select
 from . import analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
-from .config import get_settings, platform_setting_name
+from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
                      IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
-                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User)
+                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, ToolRequest,
+                     User)
 from .proxy import relay
 
 
@@ -156,6 +157,62 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="tools-registry", version="0.0.1", lifespan=lifespan)
+
+
+# The pre-treg.to hostnames must keep answering the API forever — every installed CLI, skill.md
+# and .mcp.json in the wild points here with a Bearer token, and most HTTP clients STRIP the
+# Authorization header when a redirect crosses hosts (and some MCP clients follow no redirects at
+# all). So only browser-facing marketing pages redirect to the canonical host; everything else —
+# /call/, /mcp/, auth flows, webhooks, agent-fetched pages like /vendor-listing, install scripts
+# fetched by `curl | sh` without -L — is served in place on both hosts.
+_LEGACY_HOSTS = set(LEGACY_PUBLIC_HOSTS)
+# Marketing pages — but only for ANONYMOUS visitors. A session cookie is host-scoped, so bouncing a
+# signed-in browser to the canonical host silently logs it out mid-flow (the invite confirmation,
+# for one, sets a legacy-host session and then lands on `/?invite_org=…`).
+_REDIRECT_PATHS = {"/", "/login", "/terms", "/privacy", "/support", "/contact", "/help",
+                   "/tutorial"}
+# The auth ENTRY points redirect unconditionally, and that is a correctness fix, not a marketing
+# one: each parks a host-scoped cookie and then continues on `public_url` — started on the legacy
+# host, the continuation never sees the cookie. /auth/github + /auth/google set the CSRF state
+# cookie the provider callback must find ("Bad state" otherwise); GET /oauth/authorize, signed out,
+# parks the whole authorization request in `treg_oauth_return` and sends the browser through `/` to
+# sign in. Exact paths only; the /callback routes (and POST /oauth/authorize, the consent approval)
+# must keep serving in place — the middleware only touches GET/HEAD.
+_REDIRECT_ALWAYS = {"/auth/github", "/auth/google", "/oauth/authorize"}
+
+
+def _login_callback_base(request: Request) -> str:
+    """The base URL a GitHub/Google login round-trip is anchored to. Normally `public_url` — but
+    the provider compares the exchange's `redirect_uri` byte-for-byte against the one the
+    authorization request named, so a flow living on a legacy host (a login in flight across the
+    cutover deploy, with its state cookie and provider registration both on the old name) must
+    keep building the OLD host's callback. Any recognized alias Host therefore wins — in BOTH
+    directions, so a login minted on treg.to also survives a TREG_PUBLIC_URL rollback."""
+    host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
+    if host in PUBLIC_HOST_ALIASES:
+        return f"https://{host}"
+    return get_settings().public_url.rstrip("/")
+
+
+@app.middleware("http")
+async def _legacy_host_redirect(request: Request, call_next):
+    """Redirect marketing pages (301) and auth entries (302) from a legacy host to the canonical
+    host. Auth entries get a temporary redirect: their URLs carry one-shot OAuth parameters, and a
+    cached permanent answer is exactly the wrong thing to keep."""
+    host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
+    if request.method in ("GET", "HEAD") and host in _LEGACY_HOSTS:
+        path = request.url.path
+        always = path in _REDIRECT_ALWAYS
+        if always or (path in _REDIRECT_PATHS and sess.COOKIE not in request.cookies):
+            canonical = get_settings().public_url.rstrip("/")
+            # hostname equality, not substring: a self-hoster whose public_url IS a legacy host
+            # must keep serving in place, but "not-treg.superdesign.dev" must not.
+            if host != ((urlsplit(canonical).hostname or "").rstrip(".").lower()):
+                target = canonical + path
+                if request.url.query:
+                    target += "?" + request.url.query
+                return RedirectResponse(target, status_code=302 if always else 301)
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -486,7 +543,9 @@ async def catalog_search(q: str = "", limit: int = 25) -> dict:
     if not q.strip():
         hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
     elif not results:
-        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves"]
+        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves",
+                 "still missing? POST /tool-requests {\"capability\": \"<what you need>\"} — "
+                 "requests steer which provider gets added next"]
     else:
         hints = [f"treg catalog get {results[0]['id']}   # params, cost and an example response",
                  f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
@@ -558,6 +617,73 @@ async def catalog_example(endpoint_id: str) -> Response:
     return Response(content=path.read_bytes(), media_type="application/json")
 
 
+# ---- "the catalog doesn't have X" — tool requests -------------------------------------------
+TOOLREQ_HIT_NS = "toolreq"
+TOOLREQ_RATE_MAX = 10          # filings per IP per window
+TOOLREQ_RATE_WINDOW_S = 3600   # 1 hour
+TOOLREQ_SOURCES = {"web", "cli", "mcp", "api"}
+
+
+class ToolRequestIn(BaseModel):
+    capability: str          # what they wanted — "Ahrefs backlinks", "flight prices", a provider name
+    query: str = ""          # the catalog search that came up empty (agents auto-fill this)
+    note: str = ""
+    contact: str = ""        # optional reach-back; free text, unverified
+    source: str = "web"      # web | cli | mcp | api
+
+
+@app.post("/tool-requests", include_in_schema=False)
+async def create_tool_request(
+    body: ToolRequestIn,
+    request: Request,
+    x_treg_token: str = Header(default=""),
+    treg_session: str = Cookie(default=""),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Open: file a "the catalog doesn't have X" report. No auth on purpose — the filer is most
+    often an agent that just got zero search results and holds no token, and a signup wall here
+    costs exactly the demand signal the catalog team wants. Per-IP rate limiting (ratestore) is
+    the abuse valve, same shape as POST /demo/sandbox; field caps bound the row.
+
+    Identity is attribution, never authorization: when the caller happens to be signed in (token
+    or same-origin session), the row records who asked so they can be told when it lands — a
+    forged cross-origin cookie POST gets stored as anonymous, not rejected, hence the
+    `_same_origin` gate on the cookie path only."""
+    await ratestore.sweep(db, TOOLREQ_HIT_NS)
+    if not await ratestore.rate_check(db, TOOLREQ_HIT_NS,
+                                      [(_client_ip(request), TOOLREQ_RATE_MAX)], TOOLREQ_RATE_WINDOW_S):
+        await db.commit()  # persist the sweep even on reject
+        raise HTTPException(status_code=429, detail="too many tool requests from here — try again later")
+    capability = body.capability.strip()
+    if not capability:
+        raise HTTPException(status_code=422, detail="say what tool/capability you need")
+    if len(capability) > 200:
+        raise HTTPException(status_code=422, detail="capability is a headline — keep it under 200 chars")
+    org_id, user_email = None, ""
+    if x_treg_token:
+        m = await _membership_by_token(x_treg_token, db)
+        user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
+        if user is not None and not user.suspended:
+            org_id, user_email = (m.org_id if m else None), user.email
+    elif treg_session and _same_origin(request):
+        user = await _user_from_session(treg_session, db)
+        if user is not None:
+            user_email = user.email
+    row = ToolRequest(
+        org_id=org_id,
+        user_email=user_email,
+        capability=capability,
+        query=body.query.strip()[:300],
+        note=body.note.strip()[:2000],
+        contact=body.contact.strip()[:200],
+        source=body.source if body.source in TOOLREQ_SOURCES else "api",
+    )
+    db.add(row)
+    await db.commit()
+    return {"id": row.id, "status": "received",
+            "note": "logged — requests steer which provider gets keyed next"}
+
+
 # ---- human login via GitHub OAuth (dashboard sessions) ------------------------------------
 def _is_https(request: Request) -> bool:
     # behind a reverse proxy (Render), TLS is terminated upstream and forwarded as http + X-Forwarded-Proto.
@@ -621,7 +747,7 @@ async def auth_github(request: Request, cli: str = ""):
     s = get_settings()
     if not s.github_client_id:
         raise HTTPException(status_code=503, detail="GitHub login not configured")
-    redirect = f"{s.public_url.rstrip('/')}/auth/github/callback"
+    redirect = f"{_login_callback_base(request)}/auth/github/callback"
     state = crypto.new_token()
     if cli:  # this is a `treg login` handshake, not a browser session
         _prune_handshakes()  # evict abandoned handshakes so this map can't grow unbounded
@@ -698,7 +824,7 @@ async def auth_github_callback(
         tok = (await client.post(
             s.github_token_url, headers={"Accept": "application/json"},
             data={"client_id": s.github_client_id, "client_secret": s.github_client_secret,
-                  "code": code, "redirect_uri": f"{s.public_url.rstrip('/')}/auth/github/callback"},
+                  "code": code, "redirect_uri": f"{_login_callback_base(request)}/auth/github/callback"},
         )).json()
         access = tok.get("access_token")
         if not access:
@@ -732,7 +858,7 @@ async def auth_google(request: Request, cli: str = ""):
     s = get_settings()
     if not s.google_client_id:
         raise HTTPException(status_code=503, detail="Google login not configured")
-    redirect = f"{s.public_url.rstrip('/')}/auth/google/callback"
+    redirect = f"{_login_callback_base(request)}/auth/google/callback"
     state = crypto.new_token()
     if cli:  # a `treg login` handshake, not a browser session
         _prune_handshakes()
@@ -759,7 +885,7 @@ async def auth_google_callback(
             s.google_token_url, headers={"Accept": "application/json"},
             data={"client_id": s.google_client_id, "client_secret": s.google_client_secret,
                   "code": code, "grant_type": "authorization_code",
-                  "redirect_uri": f"{s.public_url.rstrip('/')}/auth/google/callback"},
+                  "redirect_uri": f"{_login_callback_base(request)}/auth/google/callback"},
         )).json()
         access = tok.get("access_token")
         if not access:
@@ -1839,10 +1965,26 @@ def _wrong_resource(resource: str) -> str | None:
     if not resource:
         return None
     canonical = mcp_oauth.mcp_resource_url()
-    if resource.rstrip("/") == canonical.rstrip("/"):
+    # The legacy hosts' resource URLs stay valid: a pre-move client discovered its `resource` from
+    # the old domain's metadata and will keep sending it for the lifetime of the grant.
+    if any(resource.rstrip("/") == aud.rstrip("/") for aud in mcp_oauth.mcp_resource_audiences()):
         return None
     return (f"this server issues tokens for {canonical} only — use the `resource` value from "
             f"/.well-known/oauth-protected-resource")
+
+
+def _same_mcp_resource(a: str, b: str) -> bool:
+    """Whether two `resource` values name this same MCP server. Exact match, slash-variant match,
+    or BOTH normalize into the canonical+legacy audience set — the domain move renamed the
+    resource without changing it, so a grant consented on one name must stay exchangeable and
+    refreshable by a client re-based onto the other (in either direction)."""
+    from . import mcp_oauth
+
+    na, nb = mcp_oauth.normalize_resource(a), mcp_oauth.normalize_resource(b)
+    if a == b or na == nb:
+        return True
+    auds = mcp_oauth.mcp_resource_audiences()
+    return na in auds and nb in auds
 
 
 def _oauth_error(redirect_uri: str, state: str, error: str, desc: str = ""):
@@ -2014,7 +2156,8 @@ async def oauth_authorize_approve(
     code = OAuthCode(
         code=_s.token_urlsafe(32), client_id=client.client_id, user_id=user.id, org_id=org_id,
         redirect_uri=redirect_uri, code_challenge=code_challenge,
-        resource=resource or mcp_oauth.mcp_resource_url(), scope=scope,
+        resource=mcp_oauth.normalize_resource(resource) if resource else mcp_oauth.mcp_resource_url(),
+        scope=scope,
         expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
         + timedelta(seconds=AUTH_CODE_TTL_S))
     db.add(code)
@@ -2062,7 +2205,7 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
         return bad("invalid_grant", "refresh token expired")
     if client_id and client_id != row.client_id:
         return bad("invalid_grant", "refresh token was issued to a different client")
-    if resource and resource != row.resource:
+    if resource and not _same_mcp_resource(resource, row.resource):
         return bad("invalid_target", "resource does not match the one that was consented to")
 
     user = await db.get(User, row.user_id)
@@ -2079,7 +2222,8 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
                                        user_id=row.user_id, org_id=row.org_id,
                                        resource=row.resource, scope=row.scope, db=db)
     access = mcp_oauth.make_access_token(
-        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        user_id=row.user_id, org_id=row.org_id, scope=row.scope,
+        audience=mcp_oauth.normalize_resource(row.resource),  # heal pre-normalization spellings
         token_version=user.token_version)
     await db.commit()
     return JSONResponse({"access_token": access, "token_type": "Bearer",
@@ -2149,7 +2293,7 @@ async def oauth_token(
         return bad("invalid_grant", "redirect_uri does not match the one the code was issued for")
     if not mcp_oauth.verify_pkce(code_verifier, row.code_challenge):
         return bad("invalid_grant", "code_verifier does not match the code_challenge")
-    if resource and resource != row.resource:
+    if resource and not _same_mcp_resource(resource, row.resource):
         return bad("invalid_target", "resource does not match the one that was consented to")
 
     user = await db.get(User, row.user_id)
@@ -2157,7 +2301,8 @@ async def oauth_token(
         return bad("invalid_grant", "the account behind this grant is no longer active")
 
     token = mcp_oauth.make_access_token(
-        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        user_id=row.user_id, org_id=row.org_id, scope=row.scope,
+        audience=mcp_oauth.normalize_resource(row.resource),  # heal pre-normalization spellings
         token_version=user.token_version)
     import secrets as _s
 
@@ -2529,6 +2674,7 @@ _ORG_SCOPED_MODELS = (
     CapabilityPin, LedgerEntry, Hold, CreditBlock,
     OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
     IdempotentCall,            # a remembered answer belongs to the team that paid for it
+    ToolRequest,  # attribution rows go with the team; anonymous filings carry no org_id and stay
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 

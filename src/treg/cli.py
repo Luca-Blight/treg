@@ -6,7 +6,7 @@ stores a single **identity token** (first login also registers you). Then you wo
 orgs — `treg org ls` / `treg org use <slug>` picks the active one, sent as `X-Treg-Org`. Agents/CI
 can instead `treg login --token <token>` with a per-org token. `treg logout` clears it.
 
-    treg config --base-url https://treg.superdesign.dev
+    treg config --base-url https://treg.to
     treg login                       # GitHub (register-or-login); or: treg login --token <token>
     treg org ls | org use <slug>
     treg secret add / tool add / call / calls / health / skill / admin
@@ -255,7 +255,7 @@ def _as_list(resp: httpx.Response) -> list[dict]:
 def _detail_url(cfg: dict, kind: str, name: str) -> str:
     """The shareable dashboard page for a registered skill/tool. Printed after every registration so
     sharing is just forwarding the link — the page carries the preview + the agent install prompt."""
-    base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    base = (cfg.get("base_url") or "https://treg.to").rstrip("/")
     return f"{base}/app/{'skills' if kind == 'skill' else 'tools'}/{quote(str(name), safe='')}"
 
 
@@ -3353,7 +3353,7 @@ def cmd_mcp_install(args, cfg) -> None:
                  "dashboard), then retry.")
     if who.status_code >= 400:
         sys.exit(f"Token check failed ({who.status_code}): {who.text[:120]} — nothing was written.")
-    base_url = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    base_url = (cfg.get("base_url") or "https://treg.to").rstrip("/")
     name = getattr(args, "name", None) or "treg"
     out = mcp_install.install_mcp(base_url=base_url, token=token, server_name=name)
     ok = 0
@@ -3377,7 +3377,7 @@ def cmd_skill_bootstrap(args, cfg) -> None:
     skills dir, so whatever agent the user runs already knows how to use treg. install.sh calls this
     right after installing the CLI; it's also runnable by hand. Global (per-user) scope by default —
     it runs outside any project — with `--project` to target repo-local dirs instead."""
-    base_url = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    base_url = (cfg.get("base_url") or "https://treg.to").rstrip("/")
     try:
         resp = httpx.get(f"{base_url}/skill.md", timeout=15, follow_redirects=True)
         resp.raise_for_status()
@@ -3630,7 +3630,7 @@ def cmd_version(args, cfg) -> None:
 def cmd_update(args, cfg) -> None:
     """Re-run the server's install.sh to upgrade the CLI in place (uv/pipx/pip, from the git repo)."""
     import subprocess
-    base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    base = (cfg.get("base_url") or "https://treg.to").rstrip("/")
     print(f"Updating treg from {base}/install.sh …")
     with _client(cfg, auth=False) as c:
         r = c.get("/install.sh")
@@ -3745,7 +3745,7 @@ def cmd_org_invite(args, cfg) -> None:
         r = c.post(f"/orgs/{org_id}/invites", json=body)
         _show(r)
     if landing is not None:  # _show exits on error, so this only prints on success
-        base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+        base = (cfg.get("base_url") or "https://treg.to").rstrip("/")
         print(f"↗ share link: {base}{landing}?invite={quote(args.email, safe='')}")
         print("  One click for them: sign in as that email → invite auto-accepts → this page opens."
               "  (The invite email's button does the same.)")
@@ -4204,6 +4204,8 @@ def cmd_catalog(args, cfg) -> None:
             sys.exit("which endpoint? e.g. treg catalog get tikhub.tiktok.video.comments\n"
                      "find one with: treg catalog search <query>")
         return _catalog_get(rest[0], cfg)
+    if args.platform == "request":
+        return _catalog_request(" ".join(rest), cfg)
     if rest:
         sys.exit(f"unexpected argument {rest[0]!r} — did you mean `treg catalog search {args.platform} {' '.join(rest)}`?")
 
@@ -4306,6 +4308,7 @@ def _catalog_search(query: str, args, cfg) -> None:
     if not rows:
         print(f"nothing matches all of \"{query}\"")
         _dim("every word has to match — drop one, or browse the shelves with `treg catalog`")
+        _dim(f"still missing? file it: treg catalog request \"{query}\"   # requests steer what gets added next")
         return
 
     idw = min(max(len(e["id"]) for e in rows), 46)
@@ -4317,6 +4320,21 @@ def _catalog_search(query: str, args, cfg) -> None:
               f"{_clip(_cost_usd(e.get('cost')), 16):<16} {'●' if e['provider'] in connected else ' '}  "
               f"{_clip(e.get('summary', ''), 54)}")
     _dim(f"\ntreg catalog get {rows[0]['id']}   # params, cost, example response")
+
+
+def _catalog_request(text: str, cfg) -> None:
+    """File a "the catalog doesn't have X" report — the demand signal that steers which provider
+    gets keyed next. Open endpoint (rate-limited server-side); a configured token just adds
+    attribution so the filer can be told when it lands."""
+    if not text.strip():
+        sys.exit('request what? e.g. treg catalog request "Ahrefs backlinks"')
+    with _client(cfg) as c:  # token attaches if configured — attribution only, never required
+        r = c.post("/tool-requests", json={"capability": text.strip(), "source": "cli"})
+    if r.status_code != 200 or _JSON_OVERRIDE:
+        _show(r)
+        return
+    print(f'logged: "{text.strip()}"')
+    _dim("requests steer which provider gets added next — the most-asked-for tools land first")
 
 
 def _catalog_get(endpoint_id: str, cfg) -> None:
@@ -4666,7 +4684,7 @@ def build_parser() -> argparse.ArgumentParser:
     # ---- setup / auth ----
     c = mk(sub, "config", "Show or set the registry this CLI talks to (base URL).",
            "treg config                                    # show current base URL",
-           "treg config --base-url https://treg.superdesign.dev")
+           "treg config --base-url https://treg.to")
     c.add_argument("--base-url", help="point the CLI at this registry URL")
     c.set_defaults(fn=cmd_config)
 
@@ -5154,10 +5172,12 @@ def build_parser() -> argparse.ArgumentParser:
             "treg catalog                                   # platforms, busiest first",
             "treg catalog tiktok                            # every provider's tiktok endpoints, by capability",
             "treg catalog search tiktok comments            # find an endpoint by what it does",
-            "treg catalog get tikhub.tiktok.video.comments  # params, cost, example response, how to call it")
-    ct.add_argument("platform", nargs="?", metavar="<platform|search|get>",
-                    help="a platform slug (tiktok, web, google, …), or `search <query>` / `get <endpoint-id>`")
-    ct.add_argument("rest", nargs="*", metavar="<args>", help="the search query, or the endpoint id for `get`")
+            "treg catalog get tikhub.tiktok.video.comments  # params, cost, example response, how to call it",
+            "treg catalog request \"Ahrefs backlinks\"        # missing? file it — requests steer what gets added")
+    ct.add_argument("platform", nargs="?", metavar="<platform|search|get|request>",
+                    help="a platform slug (tiktok, web, google, …), or `search <query>` / `get <endpoint-id>` / "
+                         "`request <what's missing>`")
+    ct.add_argument("rest", nargs="*", metavar="<args>", help="the search query, endpoint id, or request text")
     ct.add_argument("--limit", type=int, default=25, help="search: how many results (default: 25, max 100)")
     ct.add_argument("--all", action="store_true", dest="show_all",
                     help="include management endpoints (account/utility CRUD) hidden from the browse by default")

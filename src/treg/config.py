@@ -9,6 +9,21 @@ from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Every hostname the reference deployment has EVER answered to. treg moved
+# treg.superdesign.dev → treg.to (2026-08); installed CLIs, skill.md files, .mcp.json configs and
+# MCP OAuth grants exist against BOTH names, so both stay valid everywhere a host or audience is
+# recognized — mcp.py's transport allow-lists, mcp_oauth's token audiences, api.py's login-callback
+# anchoring — REGARDLESS of which one `public_url` currently points at. That symmetry is what makes
+# a TREG_PUBLIC_URL revert a complete rollback: grants and logins minted on either name survive the
+# flip in either direction. Self-hosters are unaffected: these only ADD accepted names, and none of
+# them resolve to a self-hosted deployment.
+PUBLIC_HOST_ALIASES: tuple[str, ...] = ("treg.superdesign.dev", "treg.to")
+
+# The subset browsers are REDIRECTED AWAY FROM (marketing pages only; see api.py's middleware).
+# Deliberately one-way — only ever the pre-move name, never treg.to — so a browser that cached the
+# old→new 301 can never meet a new→old redirect and loop, even while a rollback is in effect.
+LEGACY_PUBLIC_HOSTS: tuple[str, ...] = ("treg.superdesign.dev",)
+
 
 def platform_setting_name(provider: str) -> str:
     """The Settings attribute holding treg's own key for `provider` — the string a `platform_setting`
@@ -162,7 +177,7 @@ class Settings(BaseSettings):
 
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
     # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.
-    public_url: str = "https://treg.superdesign.dev"
+    public_url: str = "https://treg.to"
     # Proof to OpenAI's plugin directory that we control this domain. The portal generates a token
     # and fetches it from /.well-known/openai-apps-challenge; that endpoint must return THAT token
     # and nothing else — not JSON, not a list. Empty (the default) leaves the route 404, which is the
@@ -300,9 +315,10 @@ class Settings(BaseSettings):
 
     # Transactional email via Resend (OTP sign-in codes + team invitations). Empty key = no real
     # send (dev mode still returns the code; prod without a key silently skips the send). From must
-    # be a Resend-verified domain — treg.superdesign.dev is verified (DKIM + SPF).
+    # be a Resend-verified domain — treg.to is verified (DKIM + SPF); treg.superdesign.dev remains
+    # verified as a fallback.
     resend_api_key: str = ""
-    email_from: str = "tools-registry <no-reply@treg.superdesign.dev>"
+    email_from: str = "tools-registry <no-reply@treg.to>"
 
 
 @lru_cache

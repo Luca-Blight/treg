@@ -209,6 +209,12 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   behind `/catalog/examples`, and `call_template` is a paste-ready `treg call …` line built from the
   endpoint's `test_request` (the request the verifier actually ran) falling back to documented examples.
   `hints` on both routes carries the next command, since finding an endpoint is never the goal.
+  A zero-result search additionally points at **`POST /tool-requests`** (open, per-IP rate-limited,
+  fields capped): file what the catalog is missing — stored as a `ToolRequest` row (see
+  [data-model](../architecture/data-model.md)) with identity attached only when the caller happens
+  to be signed in (token, or same-origin session; a cross-origin cookie POST stores anonymously
+  rather than being rejected). The zero-result caller is exactly the demand signal the catalog team
+  wants, so no signup wall.
 - **Auth — three identity doors** (all resolve to a user via the shared `_find_or_create_user`, so
   first-proof = registration — the **user only, no auto personal org**; a brand-new user lands with zero
   teams and names their first via the mandatory welcome / `treg org create`): **GitHub** — `auth_github` (`GET /auth/github`,
@@ -425,6 +431,20 @@ helpers `_secret_view` / `_tool_view` / `_bundle_view` never leak secret values 
 surfaced by `GET /tools` / `/bundles/{id}`).
 
 ## Cross-cutting hardening (bug-hunt)
+- **Legacy-host redirect:** `_legacy_host_redirect` 301s GET/HEAD marketing pages (`_REDIRECT_PATHS`)
+  from the legacy hosts (`config.LEGACY_PUBLIC_HOSTS`) to the canonical `public_url` host (`treg.to`)
+  — but only for **anonymous** visitors: a `treg_session` cookie is host-scoped, so a signed-in
+  browser (e.g. the invite flow landing on `/?invite_org=…`) is served in place. The auth entries
+  `/auth/github`, `/auth/google` and GET `/oauth/authorize` (`_REDIRECT_ALWAYS`) redirect
+  unconditionally and with a **302** (one-shot OAuth params must not be cached as permanent) —
+  each parks a host-scoped cookie (CSRF state / `treg_oauth_return`) that the flow's continuation
+  on `public_url` must be able to read. Everything else is served in
+  place on BOTH hosts, forever: installed CLIs/skills hold tokens pointed at the legacy host, HTTP
+  clients strip `Authorization` on a cross-host redirect, `/vendor-listing` is fetched by agents,
+  and `curl {BASE}/install.sh | sh` runs without `-L`. The legacy names also stay in MCP's
+  transport allow-lists (`mcp._allowed_hosts`/`_allowed_origins`) and in the OAuth token-audience
+  set (`mcp_oauth.mcp_resource_audiences()` — pre-move grants keep their old audience for life,
+  and refresh reissues it). Never remove the legacy domain from Render.
 - **Security headers:** a `@app.middleware` adds `X-Content-Type-Options: nosniff`, `X-Frame-Options:
   DENY`, `Referrer-Policy: no-referrer`, and HSTS to every response (`setdefault`, so the `/call`
   proxy's stricter CSP/nosniff wins).
