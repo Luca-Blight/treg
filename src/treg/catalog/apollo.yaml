@@ -66,9 +66,9 @@ endpoints:
       unit: record
       source: docs
       source_url: https://www.apollo.io/pricing
-      checked: '2026-07-28'
-      confidence: inferred
-      note: '1-9 credits per person, charged only when credit-consuming data is returned: 1 credit for demographics or an email, plus 8 credits if a mobile phone comes back (reveal_phone_number defaults off). No match, no charge. Waterfall vendors may bill even on a miss. No public $/credit.'
+      checked: '2026-08-13'
+      confidence: documented
+      note: 'Metered at the 1-credit baseline treg calls with: reveal_phone_number and reveal_personal_emails both default false, so a default enrich consumes 1 credit for demographics or an email, charged only when credit-consuming data comes back (no match, no charge) — the same documented Basic-plan rate (fx.yaml credit_rates_usd.apollo) as apollo.companies.enrich. CAVEAT: a caller that sets reveal_phone_number=true consumes up to 9 credits (a mobile is +8, returned async to webhook_url) and is under-metered by the extra 8. Waterfall vendors may bill even on a miss.'
     docs_url: https://docs.apollo.io/reference/people-enrichment
 
   - id: apollo.people.search
