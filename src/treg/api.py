@@ -170,21 +170,26 @@ _LEGACY_HOSTS = set(LEGACY_PUBLIC_HOSTS)
 # for one, sets a legacy-host session and then lands on `/?invite_org=…`).
 _REDIRECT_PATHS = {"/", "/login", "/terms", "/privacy", "/support", "/contact", "/help",
                    "/tutorial"}
-# The OAuth login ENTRY points redirect unconditionally, and that is a correctness fix, not a
-# marketing one: they set a host-scoped state cookie and then send the provider to the callback on
-# `public_url` — started on the legacy host, the callback would never see the cookie ("Bad state").
-# Exact paths only; the /callback routes must keep serving in place.
-_REDIRECT_ALWAYS = {"/auth/github", "/auth/google"}
+# The auth ENTRY points redirect unconditionally, and that is a correctness fix, not a marketing
+# one: each parks a host-scoped cookie and then continues on `public_url` — started on the legacy
+# host, the continuation never sees the cookie. /auth/github + /auth/google set the CSRF state
+# cookie the provider callback must find ("Bad state" otherwise); GET /oauth/authorize, signed out,
+# parks the whole authorization request in `treg_oauth_return` and sends the browser through `/` to
+# sign in. Exact paths only; the /callback routes (and POST /oauth/authorize, the consent approval)
+# must keep serving in place — the middleware only touches GET/HEAD.
+_REDIRECT_ALWAYS = {"/auth/github", "/auth/google", "/oauth/authorize"}
 
 
 @app.middleware("http")
 async def _legacy_host_redirect(request: Request, call_next):
-    """301 marketing pages (and OAuth login entries) from a legacy host to the canonical host."""
+    """Redirect marketing pages (301) and auth entries (302) from a legacy host to the canonical
+    host. Auth entries get a temporary redirect: their URLs carry one-shot OAuth parameters, and a
+    cached permanent answer is exactly the wrong thing to keep."""
     host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
     if request.method in ("GET", "HEAD") and host in _LEGACY_HOSTS:
         path = request.url.path
-        if path in _REDIRECT_ALWAYS or (path in _REDIRECT_PATHS
-                                        and sess.COOKIE not in request.cookies):
+        always = path in _REDIRECT_ALWAYS
+        if always or (path in _REDIRECT_PATHS and sess.COOKIE not in request.cookies):
             canonical = get_settings().public_url.rstrip("/")
             # hostname equality, not substring: a self-hoster whose public_url IS a legacy host
             # must keep serving in place, but "not-treg.superdesign.dev" must not.
@@ -192,7 +197,7 @@ async def _legacy_host_redirect(request: Request, call_next):
                 target = canonical + path
                 if request.url.query:
                     target += "?" + request.url.query
-                return RedirectResponse(target, status_code=301)
+                return RedirectResponse(target, status_code=302 if always else 301)
     return await call_next(request)
 
 
@@ -1877,10 +1882,7 @@ def _same_mcp_resource(a: str, b: str) -> bool:
     a grant consented on one name must stay exchangeable by a client re-based onto the other)."""
     from . import mcp_oauth
 
-    if a == b:
-        return True
-    auds = mcp_oauth.mcp_resource_audiences()
-    return a in auds and b in auds
+    return a == b or mcp_oauth.normalize_resource(a) == mcp_oauth.normalize_resource(b)
 
 
 def _oauth_error(redirect_uri: str, state: str, error: str, desc: str = ""):
@@ -2052,7 +2054,8 @@ async def oauth_authorize_approve(
     code = OAuthCode(
         code=_s.token_urlsafe(32), client_id=client.client_id, user_id=user.id, org_id=org_id,
         redirect_uri=redirect_uri, code_challenge=code_challenge,
-        resource=resource or mcp_oauth.mcp_resource_url(), scope=scope,
+        resource=mcp_oauth.normalize_resource(resource) if resource else mcp_oauth.mcp_resource_url(),
+        scope=scope,
         expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
         + timedelta(seconds=AUTH_CODE_TTL_S))
     db.add(code)
@@ -2117,7 +2120,8 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
                                        user_id=row.user_id, org_id=row.org_id,
                                        resource=row.resource, scope=row.scope, db=db)
     access = mcp_oauth.make_access_token(
-        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        user_id=row.user_id, org_id=row.org_id, scope=row.scope,
+        audience=mcp_oauth.normalize_resource(row.resource),  # heal pre-normalization spellings
         token_version=user.token_version)
     await db.commit()
     return JSONResponse({"access_token": access, "token_type": "Bearer",
@@ -2195,7 +2199,8 @@ async def oauth_token(
         return bad("invalid_grant", "the account behind this grant is no longer active")
 
     token = mcp_oauth.make_access_token(
-        user_id=row.user_id, org_id=row.org_id, audience=row.resource, scope=row.scope,
+        user_id=row.user_id, org_id=row.org_id, scope=row.scope,
+        audience=mcp_oauth.normalize_resource(row.resource),  # heal pre-normalization spellings
         token_version=user.token_version)
     import secrets as _s
 

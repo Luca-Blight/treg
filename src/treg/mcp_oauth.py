@@ -79,6 +79,18 @@ def mcp_resource_audiences() -> set[str]:
     return {mcp_resource_url(), *(f"https://{h}/mcp/" for h in LEGACY_PUBLIC_HOSTS)}
 
 
+def normalize_resource(resource: str) -> str:
+    """Map any slash-variant spelling of OUR OWN resource URLs onto the canonical member of
+    `mcp_resource_audiences()`; anything else passes through untouched. Authorization accepts
+    `…/mcp` via a forgiving compare, but a token whose audience is stored with that spelling would
+    fail the exact audience match forever — so every store/mint/compare site normalizes first."""
+    r = (resource or "").rstrip("/")
+    for aud in mcp_resource_audiences():
+        if r == aud.rstrip("/"):
+            return aud
+    return resource
+
+
 def read_access_token_any(token: str) -> dict | None:
     """`read_access_token` against each legitimate audience — the resource-server-side companion to
     `mcp_resource_audiences()`."""

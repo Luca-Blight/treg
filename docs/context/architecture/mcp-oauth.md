@@ -171,6 +171,9 @@ the old resource URL as its audience for its whole lifetime, because refresh rei
 that was consented to (`row.resource`); validating against the canonical URL alone would 401 every
 pre-move grant with refresh unable to recover. The transport validates via `read_access_token_any`,
 and `/oauth/token` treats the two names as the same resource (`api._same_mcp_resource`).
+Slash-variant spellings are healed by `normalize_resource()` at every store/mint/compare site:
+authorize accepts `…/mcp` via a forgiving compare, and a token whose audience kept that spelling
+would fail the exact audience match forever.
 
 ## Two doors in, one row out
 

@@ -55,14 +55,15 @@ async def test_a_session_holder_is_never_bounced_off_their_cookies(raw_client):
             "treg.to" not in r.headers.get("location", ""), path
 
 
-async def test_oauth_login_entries_redirect_even_with_a_session(raw_client):
-    # The state cookie must be minted on the host the provider calls back to (public_url), or the
-    # callback sees no cookie and fails with "Bad state" — so these redirect unconditionally.
-    for path in ("/auth/github", "/auth/google"):
+async def test_auth_entries_redirect_even_with_a_session(raw_client):
+    # The login entries' CSRF state cookie — and anonymous /oauth/authorize's continuation cookie —
+    # must be minted on the host the flow continues on (public_url), so these redirect
+    # unconditionally, and TEMPORARILY (302): their URLs carry one-shot OAuth parameters.
+    for path in ("/auth/github", "/auth/google", "/oauth/authorize"):
         for cookies in ({}, {sess.COOKIE: "any-value"}):
-            r = await raw_client.get(path, headers=LEGACY, cookies=cookies)
-            assert r.status_code == 301, path
-            assert r.headers["location"] == f"https://treg.to{path}", path
+            r = await raw_client.get(f"{path}?client_id=c&state=s", headers=LEGACY, cookies=cookies)
+            assert r.status_code == 302, path
+            assert r.headers["location"] == f"https://treg.to{path}?client_id=c&state=s", path
 
 
 async def test_api_and_agent_surfaces_are_served_in_place_on_the_legacy_host(raw_client):
@@ -101,6 +102,10 @@ async def test_legacy_mcp_host_and_oauth_audience_stay_valid():
     from treg import mcp, mcp_oauth
     assert "treg.superdesign.dev" in mcp._allowed_hosts()
     assert "https://treg.superdesign.dev" in mcp._allowed_origins()
+    # The SDK compares exactly, and `host:443` is a valid spelling of the https default —
+    # both names must allow it, for Host and for Origin.
+    assert "treg.superdesign.dev:443" in mcp._allowed_hosts()
+    assert "https://treg.superdesign.dev:443" in mcp._allowed_origins()
     assert "https://treg.superdesign.dev/mcp/" in mcp_oauth.mcp_resource_audiences()
     # A pre-move access token — audience = the legacy resource URL — must still validate, and so
     # must the canonical one; a token minted for someone else's server must not.
@@ -110,3 +115,8 @@ async def test_legacy_mcp_host_and_oauth_audience_stay_valid():
     foreign = mcp_oauth.make_access_token(user_id=1, org_id=1, scope="treg:read", token_version=0,
                                           audience="https://evil.example/mcp/")
     assert mcp_oauth.read_access_token_any(foreign) is None
+    # Slash-variant spellings of OUR resource normalize onto the canonical member — a grant row
+    # stored as `…/mcp` (accepted by the forgiving authorize compare) must mint a live token.
+    for ours in ("https://treg.superdesign.dev/mcp", "https://treg.superdesign.dev/mcp/"):
+        assert mcp_oauth.normalize_resource(ours) == "https://treg.superdesign.dev/mcp/"
+    assert mcp_oauth.normalize_resource("https://evil.example/mcp") == "https://evil.example/mcp"

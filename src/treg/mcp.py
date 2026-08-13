@@ -612,6 +612,9 @@ def _allowed_hosts() -> list[str]:
     # The pre-move hostnames answer forever: an old .mcp.json reaching /mcp/ on the legacy domain
     # would otherwise 421 — a breakage invisible until the first tool call after cutover.
     hosts += list(LEGACY_PUBLIC_HOSTS)
+    # The SDK compares Host values EXACTLY, and `example.com:443` is a valid spelling of the
+    # default-port form some clients send — so every bare https hostname also allows its :443 twin.
+    hosts += [f"{h}:443" for h in hosts if ":" not in h and h not in ("localhost", "127.0.0.1")]
     hosts += ["localhost", "127.0.0.1", "treg.internal"]
     hosts += [h.strip() for h in os.environ.get("TREG_MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
     # a bare host and host:port are different header values, so allow the common local ports too
@@ -636,6 +639,9 @@ def _allowed_origins() -> list[str]:
     if public:
         origins.append(public)
     origins += [f"https://{h}" for h in LEGACY_PUBLIC_HOSTS]
+    # Exact comparison again: allow the explicit-default-port spelling of every https origin.
+    origins += [f"{o}:443" for o in origins
+                if o.startswith("https://") and ":" not in o.removeprefix("https://")]
     origins += [f"http://localhost:{p}" for p in ("8000", "18790")]
     origins += [f"http://127.0.0.1:{p}" for p in ("8000", "18790")]
     origins += ["http://localhost", "http://127.0.0.1"]

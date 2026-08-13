@@ -422,9 +422,11 @@ surfaced by `GET /tools` / `/bundles/{id}`).
 - **Legacy-host redirect:** `_legacy_host_redirect` 301s GET/HEAD marketing pages (`_REDIRECT_PATHS`)
   from the legacy hosts (`config.LEGACY_PUBLIC_HOSTS`) to the canonical `public_url` host (`treg.to`)
   — but only for **anonymous** visitors: a `treg_session` cookie is host-scoped, so a signed-in
-  browser (e.g. the invite flow landing on `/?invite_org=…`) is served in place. The OAuth login
-  entries `/auth/github` + `/auth/google` (`_REDIRECT_ALWAYS`) redirect unconditionally — their
-  state cookie must be minted on the host the provider calls back to. Everything else is served in
+  browser (e.g. the invite flow landing on `/?invite_org=…`) is served in place. The auth entries
+  `/auth/github`, `/auth/google` and GET `/oauth/authorize` (`_REDIRECT_ALWAYS`) redirect
+  unconditionally and with a **302** (one-shot OAuth params must not be cached as permanent) —
+  each parks a host-scoped cookie (CSRF state / `treg_oauth_return`) that the flow's continuation
+  on `public_url` must be able to read. Everything else is served in
   place on BOTH hosts, forever: installed CLIs/skills hold tokens pointed at the legacy host, HTTP
   clients strip `Authorization` on a cross-host redirect, `/vendor-listing` is fetched by agents,
   and `curl {BASE}/install.sh | sh` runs without `-L`. The legacy names also stay in MCP's
