@@ -120,3 +120,34 @@ async def test_legacy_mcp_host_and_oauth_audience_stay_valid():
     for ours in ("https://treg.superdesign.dev/mcp", "https://treg.superdesign.dev/mcp/"):
         assert mcp_oauth.normalize_resource(ours) == "https://treg.superdesign.dev/mcp/"
     assert mcp_oauth.normalize_resource("https://evil.example/mcp") == "https://evil.example/mcp"
+
+
+async def test_canonical_and_legacy_resources_are_the_same_server(raw_client):
+    # A grant consented on one name must stay exchangeable/refreshable by a client re-based onto
+    # the other — in BOTH directions, and regardless of slash spelling. (Round-2's refactor of
+    # this helper silently dropped the cross-name rule; round-3 review caught it.)
+    from treg.api import _same_mcp_resource
+    canon, legacy = "https://treg.to/mcp/", "https://treg.superdesign.dev/mcp/"
+    assert _same_mcp_resource(canon, legacy)
+    assert _same_mcp_resource(legacy, canon)
+    assert _same_mcp_resource(legacy.rstrip("/"), canon)
+    assert not _same_mcp_resource(canon, "https://evil.example/mcp/")
+    assert _same_mcp_resource("https://evil.example/mcp/", "https://evil.example/mcp/")
+
+
+async def test_login_round_trip_is_anchored_to_the_host_it_started_on(raw_client):
+    # The provider compares the exchange's redirect_uri byte-for-byte with the authorization
+    # request's. A login in flight across the cutover deploy lives entirely on the legacy host —
+    # its callback exchange must keep naming that host, not public_url.
+    from starlette.requests import Request as StarletteRequest
+
+    from treg.api import _login_callback_base
+
+    def req(host: str) -> StarletteRequest:
+        return StarletteRequest({"type": "http", "method": "GET", "path": "/",
+                                 "headers": [(b"host", host.encode())], "query_string": b""})
+
+    assert _login_callback_base(req("treg.superdesign.dev")) == "https://treg.superdesign.dev"
+    assert _login_callback_base(req("treg.superdesign.dev:443")) == "https://treg.superdesign.dev"
+    assert _login_callback_base(req("treg.to")) == "https://treg.to"
+    assert _login_callback_base(req("anything.else")) == "https://treg.to"

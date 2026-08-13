@@ -180,6 +180,18 @@ _REDIRECT_PATHS = {"/", "/login", "/terms", "/privacy", "/support", "/contact", 
 _REDIRECT_ALWAYS = {"/auth/github", "/auth/google", "/oauth/authorize"}
 
 
+def _login_callback_base(request: Request) -> str:
+    """The base URL a GitHub/Google login round-trip is anchored to. Normally `public_url` — but
+    the provider compares the exchange's `redirect_uri` byte-for-byte against the one the
+    authorization request named, so a flow living on a legacy host (a login in flight across the
+    cutover deploy, with its state cookie and provider registration both on the old name) must
+    keep building the OLD host's callback. A recognized legacy Host therefore wins."""
+    host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
+    if host in _LEGACY_HOSTS:
+        return f"https://{host}"
+    return get_settings().public_url.rstrip("/")
+
+
 @app.middleware("http")
 async def _legacy_host_redirect(request: Request, call_next):
     """Redirect marketing pages (301) and auth entries (302) from a legacy host to the canonical
@@ -662,7 +674,7 @@ async def auth_github(request: Request, cli: str = ""):
     s = get_settings()
     if not s.github_client_id:
         raise HTTPException(status_code=503, detail="GitHub login not configured")
-    redirect = f"{s.public_url.rstrip('/')}/auth/github/callback"
+    redirect = f"{_login_callback_base(request)}/auth/github/callback"
     state = crypto.new_token()
     if cli:  # this is a `treg login` handshake, not a browser session
         _prune_handshakes()  # evict abandoned handshakes so this map can't grow unbounded
@@ -739,7 +751,7 @@ async def auth_github_callback(
         tok = (await client.post(
             s.github_token_url, headers={"Accept": "application/json"},
             data={"client_id": s.github_client_id, "client_secret": s.github_client_secret,
-                  "code": code, "redirect_uri": f"{s.public_url.rstrip('/')}/auth/github/callback"},
+                  "code": code, "redirect_uri": f"{_login_callback_base(request)}/auth/github/callback"},
         )).json()
         access = tok.get("access_token")
         if not access:
@@ -773,7 +785,7 @@ async def auth_google(request: Request, cli: str = ""):
     s = get_settings()
     if not s.google_client_id:
         raise HTTPException(status_code=503, detail="Google login not configured")
-    redirect = f"{s.public_url.rstrip('/')}/auth/google/callback"
+    redirect = f"{_login_callback_base(request)}/auth/google/callback"
     state = crypto.new_token()
     if cli:  # a `treg login` handshake, not a browser session
         _prune_handshakes()
@@ -800,7 +812,7 @@ async def auth_google_callback(
             s.google_token_url, headers={"Accept": "application/json"},
             data={"client_id": s.google_client_id, "client_secret": s.google_client_secret,
                   "code": code, "grant_type": "authorization_code",
-                  "redirect_uri": f"{s.public_url.rstrip('/')}/auth/google/callback"},
+                  "redirect_uri": f"{_login_callback_base(request)}/auth/google/callback"},
         )).json()
         access = tok.get("access_token")
         if not access:
@@ -1877,12 +1889,17 @@ def _wrong_resource(resource: str) -> str | None:
 
 
 def _same_mcp_resource(a: str, b: str) -> bool:
-    """Whether two `resource` values name this same MCP server. Exact match, or both are members of
-    the canonical+legacy audience set (the domain move renamed the resource without changing it —
-    a grant consented on one name must stay exchangeable by a client re-based onto the other)."""
+    """Whether two `resource` values name this same MCP server. Exact match, slash-variant match,
+    or BOTH normalize into the canonical+legacy audience set — the domain move renamed the
+    resource without changing it, so a grant consented on one name must stay exchangeable and
+    refreshable by a client re-based onto the other (in either direction)."""
     from . import mcp_oauth
 
-    return a == b or mcp_oauth.normalize_resource(a) == mcp_oauth.normalize_resource(b)
+    na, nb = mcp_oauth.normalize_resource(a), mcp_oauth.normalize_resource(b)
+    if a == b or na == nb:
+        return True
+    auds = mcp_oauth.mcp_resource_audiences()
+    return na in auds and nb in auds
 
 
 def _oauth_error(redirect_uri: str, state: str, error: str, desc: str = ""):
