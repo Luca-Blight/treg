@@ -666,11 +666,20 @@ sample size** per endpoint from `CallRecord` — which has recorded `endpoint_id
 `/catalog/endpoints/{id}`, attached to the endpoint **and every sibling**, because the choice is made
 on that page and an agent will not make a second round-trip to compare reliability.
 
-Four rules worth keeping:
+Five rules worth keeping:
 
 - **A 4xx never counts against the provider.** It usually means the caller sent bad parameters;
   counting it would let one agent's mistake make a healthy endpoint look broken to everyone. Only
   2xx versus 5xx decides the rate.
+- **A treg refusal is not evidence about the endpoint.** Rows with `refused_by` set (a paywall 402,
+  a daily-cap 429 — see the data-model fragment) never reached the provider; they are excluded even
+  from `samples`, or a burst of refused calls dresses itself up as traffic. The 2026-08-12 Hunter
+  incident — 309 refusals next to 488 real calls — is why.
+- **`miss` semantics ride on the endpoint.** Some providers answer "asked and answered: no result"
+  with an error status (PDL 404s a person it has no record of; Hunter's combined-find does the
+  same). Endpoints with evidenced miss behaviour carry a `miss: {status, means}` block in their
+  YAML, surfaced through `endpoint_view` — so an agent reads "404 = no match, don't retry" instead
+  of treating an expected empty answer as a failure. Only annotate what the wire has demonstrated.
 - **Below `MIN_SAMPLES` we publish the count and nothing else.** "100% from two calls" is noise
   dressed as evidence, and on a quiet endpoint a rate could expose one org's activity.
 - **Sample size is always visible**, so `100% (8)` cannot beat `99% (121)` by looking rounder.

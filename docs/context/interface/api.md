@@ -347,7 +347,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   registering; `import_skill_folder` (`POST /skills/import`) scans + `build_payload`s + registers the
   selected ones (`_materialize_skill_files` sandboxes the upload). `list_orgs` now carries `tool_count`.
 - **Audit:** `list_calls` (`GET /calls`, limit clamped 1–500; each row carries its `kind` —
-  `call`/`local_run` — for the Activity + Usage views).
+  `call`/`local_run` — for the Activity + Usage views, and `refused_by` — non-null = treg refused
+  pre-relay; see the data-model fragment — so `treg audit` can tell "the provider failed" from
+  "we said no").
 - **OAuth connect + the provider marketplace:** `oauth_start` (`POST /oauth/start`) creates a
   `PendingOAuth` and returns `consent_url` + `state` + `redirect_uri`; `oauth_callback`
   (`GET /oauth/callback`, open) exchanges the code and creates/updates the oauth secret; `oauth_status`

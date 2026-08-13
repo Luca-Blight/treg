@@ -246,6 +246,19 @@ async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse
     return JSONResponse({"detail": "identifier out of range"}, status_code=404)
 
 
+def _refusal_kind(status_code: int) -> str | None:
+    """Which gate said no, from the status treg chose for it (models.CallRecord.refused_by).
+
+    Statuses map 1:1 because each gate owns its code on `/call/`: the vendor's own 401/404/429
+    never comes through here — a relayed response is a Response, not an HTTPException. 5xx maps
+    to None: a 502 is the upstream failing to answer, which is a fact about the provider, and
+    must not be counted as a treg refusal."""
+    if status_code >= 500:
+        return None
+    return {401: "auth", 402: "balance", 403: "policy", 404: "resolution",
+            429: "cap"}.get(status_code, "request")
+
+
 @app.exception_handler(StarletteHTTPException)
 async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     """Tag treg's OWN refusals on `/call/` with `X-Treg-Error`, then answer exactly as before.
@@ -258,6 +271,17 @@ async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     resp = await http_exception_handler(request, exc)
     if request.url.path.startswith("/call/"):
         resp.headers["X-Treg-Error"] = "1"
+        # Refusals that raised before the handler's own audit ran (bad token, unknown tool, ACL,
+        # deny rule, daily cap) would otherwise leave NO row — the funnel's early friction was
+        # invisible until this. Identity comes from request.state (stashed at handler entry); a
+        # bad-token 401 never had one, and an anonymous row is still the fact that someone knocked.
+        if not getattr(request.state, "call_audited", False):
+            org_id, email = getattr(request.state, "call_identity", (None, ""))
+            rest = request.url.path[len("/call/"):]
+            audit.record_call(
+                org_id=org_id, user_email=email, tool_name=rest.split("/", 1)[0] or "—",
+                method=request.method, path=request.url.path, status_code=exc.status_code,
+                client=_client_of(request), refused_by=_refusal_kind(exc.status_code))
         # A failed call must not keep its idempotency label. The claim is taken before the upstream
         # call, and a request that dies anywhere after that — a bad parameter, a deny rule, an empty
         # balance — would otherwise hold the label for the whole window and answer every retry with
@@ -5530,6 +5554,9 @@ async def list_calls(
             "duration_ms": c.duration_ms,
             "response_bytes": c.response_bytes,
             "params_hash": c.params_hash,
+            # non-null = treg said no before anything went upstream (see models.CallRecord) — the
+            # one field that tells "the provider failed" apart from "we refused" in `treg audit`.
+            "refused_by": c.refused_by,
             "created_at": c.created_at.isoformat(),
         }
         for c in rows
@@ -7419,6 +7446,10 @@ async def call_tool(
     caller: Caller = Depends(require_member),
     db: AsyncSession = Depends(get_session),
 ):
+    # Identity for the refusal fallback in `_mark_treg_own_errors`: a raise anywhere below (unknown
+    # tool, deny rule, daily cap) leaves this handler without an audit row, and the exception handler
+    # is the one place every such refusal passes through — but it has no Caller of its own.
+    request.state.call_identity = (caller.org_id, caller.email)
     # Faithful-relay: use the RAW request path, not Starlette's decoded path param. Decoding is
     # lossy — an encoded slash (`%2f`) in `rest` would become a real `/` and change the upstream
     # route (npm's scoped publish `PUT /@scope%2fname` 404s as `/@scope/name`). httpx preserves
@@ -7465,10 +7496,11 @@ async def call_tool(
         except HTTPException as mkexc:
             # A malformed marketplace call (wrong method, missing param, no credential, 502) must
             # still leave a trace — it's exactly the row the caller will come asking about.
+            request.state.call_audited = True
             audit.record_call(
                 org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
                 method=request.method, path=rest, status_code=mkexc.status_code,
-                client=_client_of(request),
+                client=_client_of(request), refused_by=_refusal_kind(mkexc.status_code),
                 telemetry={"endpoint_id": ep["id"], "provider": ep.get("provider")})
             analytics.capture(caller.email, "tool_called",
                 {"tool_name": ep["id"], "status_code": mkexc.status_code,
@@ -7492,10 +7524,12 @@ async def call_tool(
     audit_slug = caller.org.slug  # PostHog group key — must match the browser's posthog.group('team', slug)
 
     def _audit(status_code: int, *, observed_micro: int | None = None, charged_micro: int | None = None,
-               duration_ms: int | None = None, response_bytes: int | None = None) -> None:
+               duration_ms: int | None = None, response_bytes: int | None = None,
+               refused_by: str | None = None) -> None:
         # Audit the attempt too — failures are results worth recording. A marketplace call additionally
         # carries its telemetry (which endpoint, which credential tier, what it cost): still
         # fire-and-forget, because the money itself already landed synchronously in the ledger.
+        request.state.call_audited = True  # the refusal fallback in _mark_treg_own_errors stands down
         telemetry = None
         if mk is not None:
             telemetry = {
@@ -7509,7 +7543,7 @@ async def call_tool(
         audit.record_call(
             org_id=audit_org_id, user_email=audit_email, tool_name=audit_tool,
             method=request.method, path=upstream_url, status_code=status_code,
-            client=_client_of(request), telemetry=telemetry,
+            client=_client_of(request), refused_by=refused_by, telemetry=telemetry,
         )
         # Product analytics mirror of the row above. Deliberately excludes params, bodies, and the
         # full upstream URL (hostname only) — per-call detail beyond what a chart needs stays in the DB.
@@ -7561,7 +7595,8 @@ async def call_tool(
         except HTTPException as exc:
             # A call refused for MONEY (402 empty balance / 429 daily cap) is the event the org will
             # ask about first — it must appear in the activity feed, charged 0.
-            _audit(exc.status_code, charged_micro=0)
+            _audit(exc.status_code, charged_micro=0,
+                   refused_by="balance" if exc.status_code == 402 else "cap")
             raise
     started = _now_ms()
     try:
