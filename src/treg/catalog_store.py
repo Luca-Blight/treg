@@ -362,6 +362,10 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         # unmarked endpoint as extended would hide it from the platform view entirely.
         "tier": raw.get("tier") or "core",
         "verified": str(verified) if verified else None,
+        # {status, means} — a status the provider uses for "asked and answered: no result" (PDL
+        # 404s a person it has no record of). Only endpoints with evidenced miss semantics carry
+        # it; for everything else an error status means what it says.
+        "miss": raw.get("miss") or None,
         "docs_url": raw.get("docs_url") or "",
         "example_file": _example_file(raw, directory),
     }
@@ -419,6 +423,9 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # a fact about the row that decides whether the caller needs a credential at all, so it
         # rides on the row rather than being re-derived per client (see `Catalog.platform_eligible`)
         "platform_eligible": cat.platform_eligible(ep) if cat else None,
+        # "no match" semantics, when the endpoint has them — an agent that reads `miss` stops
+        # treating an expected empty answer as a failed call (and stops retrying it).
+        "miss": ep.get("miss"),
         "verified": ep["verified"],
         "docs_url": ep["docs_url"],
         "has_example": bool(ep["example_file"]),

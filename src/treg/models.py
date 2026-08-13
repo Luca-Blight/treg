@@ -203,6 +203,13 @@ class CallRecord(SQLModel, table=True):
     # sha256 of endpoint_id + the canonicalized query + body — an identity for "the same call again".
     # Bodies are NEVER stored; this is the future cache key and the repeat-rate signal (plan phase 5).
     params_hash: str | None = Field(default=None, index=True)
+    # Set when TREG refused the call before a byte went upstream; NULL when the provider answered
+    # (whatever its status). Values: auth (bad/expired token) | policy (ACL/deny rule/suspension) |
+    # balance (402 insufficient prepaid balance) | cap (429 daily caps) | resolution (no such tool
+    # or endpoint) | request (malformed pre-relay: wrong method, missing param, bad body). What
+    # separates "the provider failed" from "we said no" — without it a paywall 402 is
+    # indistinguishable from a provider error, and provider stats absorb our own refusals.
+    refused_by: str | None = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=_now)
 
 
