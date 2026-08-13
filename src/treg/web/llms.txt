@@ -61,6 +61,29 @@ resolves the tool by host and injects the credential:
   `base64+gzip`); treg decodes it server-side, so the upstream still gets the real bytes. The
   `treg` CLI does this automatically on a WAF 403 - you only need it over raw HTTP.
 
+### Retrying a call: `Idempotency-Key`
+
+Agents retry, and a retry must not be paid for twice. Most already cost nothing: a 5xx, a timeout or
+a network error is never billed, and result pricing settles on what the provider actually charged, so
+a lookup that finds nothing is free.
+
+The case that needs a key is narrower — treg reached the provider, the provider charged us, and the
+answer was lost on the way back to you. Send the SAME key when you repeat that call:
+
+    curl "{BASE}/call/tikhub.tiktok.user.profile?uniqueId=tiktok" \
+      -H "X-Treg-Token: $TREG_TOKEN" -H "Idempotency-Key: 4f9c1b2e"
+
+treg returns the stored answer, does not call the provider again, and charges nothing. The reply
+carries `X-Treg-Idempotent-Replay: true` and `X-Treg-Cost-Micro` set to what the original cost.
+
+Use a NEW key, or none, for genuinely new work — even with identical parameters. Repeating a search
+to see what changed is a new call, not a retry, and reusing the key would hand you yesterday's
+answer. Reusing one key for a DIFFERENT request is refused (422) rather than answered.
+
+Keys are yours alone: scoped to the caller, kept 24 hours. Nothing happens without the header, and a
+call that fails frees its key at once. Over MCP the same thing is the `idempotency_key` argument to
+`call`, and a replayed result carries `replayed: true`.
+
 ## The catalog — tools you do not have a key for
 
 Curated endpoints across ~40 providers, grouped by what they DO: keyword and rank tracking,

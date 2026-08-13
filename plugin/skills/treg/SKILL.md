@@ -138,6 +138,17 @@ Rules for spending someone's balance:
     you hold, and treg relays rather than rewrites your request.
 - An endpoint with no published price is refused rather than served free; connect your own key.
 
+## Retrying a call without paying twice
+
+If a call times out or you never see its answer, repeat it with the same `idempotency_key` (over MCP)
+or `Idempotency-Key` header (over HTTP). treg returns the stored answer, does not call the provider
+again, and charges nothing. The result says `replayed: true`.
+
+Only for a genuine retry. Asking the same question again to see what changed is NEW work: use a new
+key or none, or you will get the old answer back. Reusing one key for a different request is refused.
+
+Most retries need none of this — a failed call was never billed.
+
 ## Task — your own tools: call one the team registered
 **You already know the upstream API. Just build the real request and prefix it.** No treg
 vocabulary, no special params — use the API exactly as its own docs say:

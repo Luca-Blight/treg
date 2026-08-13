@@ -42,10 +42,61 @@ Tools reach the rest of treg through `httpx.ASGITransport` against our own app �
 through the real routes, without a socket. That matters because the enforcement rules (deny rules,
 capability pins, per-member tool access, the credential ladder, metering) live in those routes. A
 second path that "just read the database" would be a second implementation of every one of them,
-drifting quietly.
+drifting quietly. The in-process client stamps `X-Treg-Client: mcp` (attribution, never a gate), so
+MCP traffic is distinguishable from unreported CLI traffic in the audit trail and analytics.
 
 The catalog is the one exception: read straight from `catalog_store`, which is already parsed in
 memory, so a search answers in about a millisecond. That is a **speed** choice, not a permission one.
+
+## `call` takes an `idempotency_key`
+
+Optional, and it is the caller's. Pass the same key when repeating a call whose answer never arrived:
+treg replays the stored response, does not reach the provider, and charges nothing, with
+`replayed: true` on the result.
+
+It exists because the feature was built for agents and MCP is the agent path. Without it the whole
+thing was unreachable from the surface it was for.
+
+Deliberately NOT derived server-side from the endpoint and parameters, which was proposed and
+rejected: two identical searches an hour apart are new work, treg cannot tell that from a retry, and
+a server-invented key would quietly serve stale data. The tool description therefore spends its words
+on WHEN to use it, because that is where a mistake costs something. Reuse for a different request is
+refused rather than answered, so the failure is loud.
+
+Full reasoning, storage rules and the concurrency guard: `architecture/money.md`.
+
+## Output schemas: every field optional AND nullable
+
+Each tool declares what it returns (ChatGPT's connector review asks; a model that must guess at
+field names guesses). Two rules, both learned the hard way:
+
+**Every field is optional** (`total=False`). The SDK validates a strict schema on the way out, so a
+required field would turn the first `{"error": "not authenticated"}` into an opaque tool failure
+instead of a recoverable refusal.
+
+**Every field is nullable** (`| None`) — not just the ones that carry data nulls (a tool with no
+description, an endpoint with no price). The SDK serializes each response through the
+TypedDict-derived pydantic model, and that dump fills every **absent** key in as `null` in
+`structuredContent`. So a response that never mentions `next` still ships `"next": null`, and a
+strict client validating against an advertised `type: string` refuses the whole answer with -32602.
+Two independent field reports arrived the same day (issue #93 and one on X) before this was caught:
+FastMCP's own client is lenient, so nothing local ever tripped it. The suite now validates real
+`structuredContent` against the advertised schema with `jsonschema` playing the strict client.
+
+A field whose real payloads vary in shape is `Any`, not a union: `call.body` relays whatever the
+provider sent, and `catalog_get.example_response` is a dict for most endpoints but an ARRAY for
+providers whose response is a list of records (brightdata datasets) — typing it `dict` made the
+server's own outbound validation refuse the whole catalog entry.
+
+## Responses forbid edge transforms
+
+Every `/mcp/` response carries `Cache-Control: no-store, no-transform` (the `NoTransformResponses`
+ASGI wrapper, outermost so 401 challenges carry it too). Production sits behind Render's Cloudflare
+edge — no account or dashboard of ours — which otherwise Brotli-compresses large responses; at least
+one real client stack (httpx + brotlicffi, issue #93) dies mid-decode and then hangs to its own
+timeout, minutes after the upstream answered in seconds. `no-transform` is the origin's standard
+"do not re-encode" (RFC 9111) and Cloudflare honours it; `no-store` rides along because these
+responses are per-caller and priced.
 
 ## Authentication: eager, every request
 

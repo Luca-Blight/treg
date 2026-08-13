@@ -17,6 +17,8 @@ from __future__ import annotations
 import json
 
 import httpx
+from datetime import datetime, timezone
+
 import pytest
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
@@ -610,3 +612,377 @@ def test_brightdata_documented_prices_are_billable(platform_on):
     assert rows, "brightdata is in the catalog"
     eligible = [e["id"] for e in rows if cat.platform_eligible(e)]
     assert len(eligible) >= 20, f"expected the dataset routes to be billable, got {len(eligible)}"
+
+
+# ---- idempotent calls: step 1, the table and its tenant boundary ----------------------------
+
+async def test_the_same_key_can_belong_to_two_different_CALLERS(clients: AsyncClient):
+    """Scoped to the caller, not to the key. Clients choose their own labels, so the same string will
+    be picked twice; scoped by key alone that collision serves one caller's stored response to
+    another, which is the single failure here that leaks data instead of money.
+
+    Per CALLER rather than per team, because two lazily-written agents inside one team will both
+    reach for `retry-1`. Every door resolves to a Membership, so one rule covers a person, an agent,
+    and two agents in the same team."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    # A second AGENT in the SAME team: the exact case this scoping is for. Two agents belonging to
+    # one org, both free to pick the same lazy label.
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    made = await clients.post(f"/orgs/{org_id}/agents", json={"name": "second-agent"})
+    assert made.status_code in (200, 201), made.text
+
+    async with session_maker() as db:
+        members = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).limit(2))).scalars().all()
+        assert len(members) >= 2, "need two callers in ONE team to prove they do not collide"
+        expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        for m in members[:2]:
+            db.add(IdempotentCall(org_id=m.org_id, membership_id=m.id, key="retry-1",
+                                  endpoint_id="x", status="done", expires_at=expiry))
+        await db.commit()      # must NOT raise: same label, different callers
+
+        rows = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "retry-1"))).scalars().all()
+    assert len(rows) == 2, "the same label must be storable once per caller"
+    assert len({r.membership_id for r in rows}) == 2
+
+
+async def test_one_caller_cannot_reuse_a_key_twice(clients: AsyncClient):
+    """Per caller the label is unique, which is what makes the pending row a usable lock: two retries
+    arriving together race on this constraint and only one reaches the provider."""
+    from datetime import timedelta
+
+    import sqlalchemy.exc
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).limit(1))).scalars().one()
+        expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+        db.add(IdempotentCall(org_id=m.org_id, membership_id=m.id, key="dupe-key",
+                              endpoint_id="x", expires_at=expiry))
+        await db.commit()
+        db.add(IdempotentCall(org_id=m.org_id, membership_id=m.id, key="dupe-key",
+                              endpoint_id="x", expires_at=expiry))
+        with pytest.raises(sqlalchemy.exc.IntegrityError):
+            await db.commit()
+
+
+async def test_deleting_a_team_takes_its_remembered_answers(clients: AsyncClient):
+    """A stored response belongs to the team that paid for it. Left behind it is a dangling row
+    holding someone's data after they asked to be gone."""
+    from treg.api import _ORG_SCOPED_MODELS
+    from treg.models import IdempotentCall
+
+    assert IdempotentCall in _ORG_SCOPED_MODELS
+
+
+# ---- idempotency step 2: the lookup and replay (storage still off) ---------------------------
+
+async def _seed_answer(clients: AsyncClient, key: str, *, body: bytes = b'{"seeded":true}',
+                       fingerprint: str = "", status: str = "done", charged: int = 4200,
+                       ttl_s: int = 3600) -> int:
+    """Write a stored answer by hand. Step 2 only READS; storage arrives in step 3, so seeding is
+    how the read path gets exercised at all."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().first()
+        row = IdempotentCall(
+            org_id=org_id, membership_id=m.id, key=key, request_fingerprint=fingerprint,
+            endpoint_id="seeded", status=status, charged_micro=charged,
+            response_status=200 if status == "done" else None,
+            response_body=body if status == "done" else None,
+            response_media_type="application/json",
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=ttl_s))
+        db.add(row)
+        await db.commit()
+        await db.refresh(row)
+        return row.id
+
+
+async def test_no_key_means_nothing_changes(clients: AsyncClient, platform_on):
+    """The header is opt-in. A caller who sends none must see exactly the behaviour they saw before
+    this feature existed, which is what keeps the change safe to ship."""
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200
+    assert "X-Treg-Idempotent-Replay" not in r.headers
+    assert await _balance(clients) == before - EP_MICRO, "an unlabelled call bills normally"
+
+
+async def test_a_labelled_retry_is_answered_WITHOUT_reaching_the_provider(clients: AsyncClient,
+                                                                          platform_on):
+    """The point of the whole feature. The stored answer comes back, the upstream is never called,
+    and the balance does not move: merely skipping the second CHARGE would still pay the provider."""
+    await _seed_answer(clients, "retry-abc", body=b'{"from":"store"}')
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "retry-abc"})
+    assert r.status_code == 200
+    assert r.json() == {"from": "store"}, "the SAVED answer, not a fresh upstream response"
+    assert r.headers.get("X-Treg-Idempotent-Replay") == "true"
+    assert r.headers.get("X-Treg-Cost-Micro") == "4200", "and what it originally cost"
+    assert await _balance(clients) == before, "a replay must not move money"
+
+
+async def test_reusing_a_label_for_a_DIFFERENT_request_is_refused(clients: AsyncClient):
+    """A caller bug, and returning the first answer would hide it — they would be handed a response
+    to a question they did not ask."""
+    await _seed_answer(clients, "reused", fingerprint="a-different-request-entirely")
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "reused"})
+    assert r.status_code == 422
+    assert "already used for a different request" in r.json()["detail"]
+
+
+async def test_a_call_still_in_flight_answers_409_rather_than_duplicating(clients: AsyncClient):
+    """Two retries arriving together. The second is told to wait instead of being let through to the
+    provider, which is the duplicate spend this feature exists to prevent."""
+    await _seed_answer(clients, "inflight", status="pending")
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "inflight"})
+    assert r.status_code == 409
+    assert "still in progress" in r.json()["detail"]
+
+
+async def test_an_expired_label_frees_itself(clients: AsyncClient, platform_on):
+    """Past its window the label means nothing: the call proceeds normally and is billed normally.
+    A stale row must not answer for a request made a day later."""
+    await _seed_answer(clients, "stale", body=b'{"old":true}', ttl_s=-10)
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "stale"})
+    assert r.status_code == 200
+    assert r.json() != {"old": True}, "an expired answer must not be replayed"
+    assert await _balance(clients) == before - EP_MICRO, "and the fresh call bills"
+
+
+async def test_one_callers_label_is_invisible_to_another(clients: AsyncClient, platform_on):
+    """The tenant boundary, exercised through the HTTP path rather than asserted on the schema. A
+    second caller using the same label must reach the provider, not read the first one's answer."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    await _seed_answer(clients, "shared-label", body=b'{"owner":"first"}')
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    made = await clients.post(f"/orgs/{org_id}/agents", json={"name": "other-agent"})
+    assert made.status_code in (200, 201), made.text
+    other_token = made.json().get("token")
+    assert other_token, made.text
+
+    prev = clients.headers.get("X-Treg-Token")
+    clients.headers["X-Treg-Token"] = other_token
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "shared-label"})
+    if prev:
+        clients.headers["X-Treg-Token"] = prev
+    assert r.status_code == 200
+    assert "X-Treg-Idempotent-Replay" not in r.headers, "another caller must not read this answer"
+    assert r.json() != {"owner": "first"}
+
+
+# ---- idempotency step 3: storing the answer --------------------------------------------------
+
+async def test_the_SAME_LABEL_TWICE_bills_once_and_calls_the_provider_once(clients: AsyncClient,
+                                                                           platform_on):
+    """The feature, end to end, and the reason it exists.
+
+    An agent calls, the answer is lost on the way back, the agent retries with the same label. The
+    provider must be reached ONCE and the balance must move ONCE, and the second caller must get the
+    same body the first one would have.
+    """
+    before = await _balance(clients)
+    first = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "same-work"})
+    assert first.status_code == 200, first.text
+    assert "X-Treg-Idempotent-Replay" not in first.headers, "the first call is not a replay"
+    after_first = await _balance(clients)
+    assert after_first == before - EP_MICRO, "the first call bills"
+
+    second = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "same-work"})
+    assert second.status_code == 200, second.text
+    assert second.headers.get("X-Treg-Idempotent-Replay") == "true"
+    assert second.json() == first.json(), "the retry gets the SAME answer"
+    assert await _balance(clients) == after_first, "and the retry bills NOTHING"
+
+
+async def test_an_unmetered_call_is_not_stored(clients: AsyncClient):
+    """A team calling on its OWN key is billed by the provider, not by us. There is nothing to
+    protect, and treg has no business holding their response."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall
+
+    await clients.post("/secrets", json={"name": "tikhub", "value": "OWNKEY"})
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "own-key-call"})
+    assert r.status_code == 200 and r.json()["auth"] == "Bearer OWNKEY"
+    async with session_maker() as db:
+        row = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "own-key-call"))).scalar_one_or_none()
+    assert row is None, "an unmetered call must leave nothing behind, not even a claim"
+
+
+async def test_a_FAILED_call_frees_its_label(clients: AsyncClient, platform_on):
+    """A failure was never billed, so there is nothing to replay — and freezing an error would stop
+    the caller retrying out of it. The label must be usable again immediately."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall
+
+    bad = await clients.get(f"/call/{EP}", headers={"Idempotency-Key": "will-fail"})
+    assert bad.status_code >= 400, bad.text          # missing the required aweme_id
+    async with session_maker() as db:
+        row = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "will-fail"))).scalar_one_or_none()
+    assert row is None, "a failed call must not hold its label"
+
+    good = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "will-fail"})
+    assert good.status_code == 200, "and the same label works straight away"
+
+
+async def test_a_second_call_while_the_first_is_IN_FLIGHT_is_refused(clients: AsyncClient,
+                                                                     platform_on):
+    """The pending row is the lock. Claimed before the upstream call, so a concurrent retry loses the
+    insert on (membership_id, key) rather than duplicating the spend."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().first()
+        db.add(IdempotentCall(
+            org_id=org_id, membership_id=m.id, key="racing", request_fingerprint="",
+            endpoint_id=EP, status="pending",
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)))
+        await db.commit()
+
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "racing"})
+    assert r.status_code == 409
+    assert await _balance(clients) == before, "the loser of the race must not spend"
+
+
+async def test_a_stale_label_reused_later_starts_fresh(clients: AsyncClient, platform_on):
+    """A caller with stable labels (`nightly-report`, say) must be able to call again tomorrow.
+
+    Note what this does NOT prove: the read path already drops an expired row when it looks one up,
+    so this passes with the sweep removed. The sweep is covered separately below — I wrote this one
+    believing it tested the sweep, and only found out by deleting the sweep and watching it pass."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().first()
+        db.add(IdempotentCall(
+            org_id=org_id, membership_id=m.id, key="nightly-report", endpoint_id=EP,
+            status="done", response_status=200, response_body=b'{"yesterday":true}',
+            response_media_type="application/json", charged_micro=999,
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)))
+        await db.commit()
+
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "nightly-report"})
+    assert r.status_code == 200, r.text
+    assert "X-Treg-Idempotent-Replay" not in r.headers, "yesterday's answer must not be served"
+    assert r.json() != {"yesterday": True}
+
+    async with session_maker() as db:
+        rows = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "nightly-report"))).scalars().all()
+    assert len(rows) == 1, "exactly one row: the dead one swept, today's kept"
+    assert rows[0].response_body != b'{"yesterday":true}'
+
+
+async def test_the_sweep_clears_labels_NOBODY_COMES_BACK_FOR(clients: AsyncClient, platform_on):
+    """What the sweep is actually for, and the only thing that covers it.
+
+    A label used once and never again is never looked up, so the read path never sees it and never
+    drops it. Without a sweep those rows accumulate forever, and they hold response BODIES. Any later
+    call by the same caller clears them.
+
+    Lazy and caller-scoped, matching the hold reaper in ledger.py: a background timer would need a
+    scheduler and a leader election on a multi-instance deploy, and would still only run on a timer.
+    """
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        m = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().first()
+        db.add(IdempotentCall(
+            org_id=org_id, membership_id=m.id, key="abandoned-label", endpoint_id=EP,
+            status="done", response_status=200, response_body=b'{"big":"body"}',
+            response_media_type="application/json", charged_micro=500,
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=2)))
+        await db.commit()
+
+    # a call under a DIFFERENT label: the abandoned row is never looked up, only swept
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "unrelated"})
+    assert r.status_code == 200, r.text
+
+    async with session_maker() as db:
+        gone = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "abandoned-label"))).scalar_one_or_none()
+    assert gone is None, "an expired row nobody returns for must still be reclaimed"
+
+
+async def test_the_sweep_leaves_OTHER_callers_rows_alone(clients: AsyncClient, platform_on):
+    """Scoped to the caller doing the work. A sweep that reached across callers would be a caller
+    able to delete another's stored answers by making one call of their own."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import IdempotentCall, Membership
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    made = await clients.post(f"/orgs/{org_id}/agents", json={"name": "bystander"})
+    assert made.status_code in (200, 201), made.text
+
+    async with session_maker() as db:
+        members = (await db.execute(select(Membership).where(
+            Membership.org_id == org_id).order_by(Membership.id))).scalars().all()
+        other = members[-1]
+        db.add(IdempotentCall(
+            org_id=org_id, membership_id=other.id, key="someone-elses", endpoint_id=EP,
+            status="done", response_status=200, response_body=b"{}", charged_micro=1,
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)))
+        await db.commit()
+
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "mine"})
+    assert r.status_code == 200
+
+    async with session_maker() as db:
+        still = (await db.execute(select(IdempotentCall).where(
+            IdempotentCall.key == "someone-elses"))).scalar_one_or_none()
+    assert still is not None, "one caller's sweep must not delete another's rows"

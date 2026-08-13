@@ -15,6 +15,7 @@ import asyncio
 import base64
 import gzip
 import hashlib
+from functools import lru_cache
 import hmac
 import json
 import logging
@@ -29,7 +30,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlsplit
 
-from sqlalchemy import case, func, or_
+from sqlalchemy import case, delete, func, or_
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -46,14 +47,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from . import audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
+from . import analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
-from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold, Invite,
-                     LedgerEntry, Membership, OAuthClient, OAuthCode, OAuthRefresh, Org,
-                     PendingOAuth, Project, RunRecord, Secret, Tool, User)
+from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
+                     IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
+                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User)
 from .proxy import relay
 
 
@@ -150,6 +151,7 @@ async def lifespan(app: FastAPI):
                 yield
     finally:
         await audit.drain()  # flush pending audit writes before tearing down
+        await analytics.drain()  # best-effort flush of queued analytics events
         await app.state.http.aclose()
 
 
@@ -256,11 +258,35 @@ async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     resp = await http_exception_handler(request, exc)
     if request.url.path.startswith("/call/"):
         resp.headers["X-Treg-Error"] = "1"
+        # A failed call must not keep its idempotency label. The claim is taken before the upstream
+        # call, and a request that dies anywhere after that — a bad parameter, a deny rule, an empty
+        # balance — would otherwise hold the label for the whole window and answer every retry with
+        # 409. Worse than the problem this feature exists to solve, and found by the test for it.
+        #
+        # Here because this is the ONE place every refusal passes through; the handler has a dozen
+        # raise points and releasing at each would be a dozen chances to miss one.
+        await _release_idempotent_claim(request)
     return resp
 
 _WEB_DIR = Path(__file__).parent / "web"
 
 _app_version_cache: tuple[float, str] | None = None  # (index.html mtime, content hash)
+
+
+@lru_cache(maxsize=1)
+def _treg_version() -> str:
+    """The released package version, read from installed metadata.
+
+    Read directly rather than through `cli.cli_version`, which does the same thing: importing
+    `treg.cli` here costs ~200ms on first call and pulls the entire CLI into the server process for
+    one string. Cached because package metadata cannot change while the process runs.
+    """
+    try:
+        from importlib.metadata import version
+
+        return version("tools-registry")
+    except Exception:  # noqa: BLE001 — an editable/source run has no installed metadata
+        return "dev"
 
 
 def _app_version() -> str:
@@ -283,10 +309,18 @@ def _app_version() -> str:
 async def meta() -> dict:
     """Open: what the dashboard needs to render correct, shareable snippets — the public proxy URL
     (so copy/paste snippets use the real domain, not whatever origin the browser happens to be on)
-    — plus the bundle version, so an open tab can detect a new deploy and offer a refresh."""
+    — plus the bundle version, so an open tab can detect a new deploy and offer a refresh.
+
+    `treg_version` and `app_version` answer DIFFERENT questions and both are worth having.
+    `app_version` is a hash of index.html: it changes whenever the dashboard bundle does, which is
+    what an open tab compares to offer a refresh. `treg_version` is the released package version,
+    which is what a release check needs — after publishing 0.9.0 there was no way to confirm from the
+    live path which version was actually serving, only the commit id.
+    """
     s = get_settings()
     return {"public_url": s.public_url.rstrip("/"), "github": bool(s.github_client_id),
             "google": bool(s.google_client_id), "app_version": _app_version(),
+            "treg_version": _treg_version(),
             # public ingestion key — only present when this deployment opts in (self-hosters send nothing)
             "posthog_key": s.posthog_key, "posthog_host": s.posthog_host.rstrip("/") if s.posthog_key else ""}
 
@@ -1454,6 +1488,14 @@ async def tutorial_access_md():
     return _serve_md("tutorial-access.md")
 
 
+@app.get("/vendor-listing", include_in_schema=False)
+@app.get("/vendor-listing.md", include_in_schema=False)
+async def vendor_listing_md():
+    """Vendor listing instructions — what a vendor's coding agent reads before raising a PR that
+    adds their API to the catalog. Linked from the dashboard's "List your API" modal."""
+    return _serve_md("vendor-listing.md")
+
+
 @app.get("/skill.md", include_in_schema=False)
 async def skill_md():
     """The OFFICIAL treg Claude skill (3 personas), {BASE}-templated to this server.
@@ -2448,6 +2490,7 @@ _ORG_SCOPED_MODELS = (
     Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project,
     CapabilityPin, LedgerEntry, Hold, CreditBlock,
     OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
+    IdempotentCall,            # a remembered answer belongs to the team that paid for it
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 
@@ -3694,6 +3737,10 @@ async def billing_topup(
         raise HTTPException(status_code=503, detail=str(e))
     except billing.TopupRejected as e:
         raise HTTPException(status_code=422, detail=str(e))
+    # The one place the actual payer's identity exists — the webhook that later credits the
+    # balance is org-scoped, so the started/completed funnel joins on the team group.
+    analytics.capture(caller.email, "topup_started",
+                      {"amount_usd": amount, "org": org.slug}, groups={"team": org.slug})
     return out
 
 
@@ -7008,6 +7055,169 @@ async def _enforce_capability_pin(ep: dict, caller: Caller, db: AsyncSession) ->
     })
 
 
+IDEMPOTENCY_WINDOW_S = 24 * 3600   # retries happen in seconds; a day is generous and easy to reason about
+IDEMPOTENCY_HEADER = "idempotency-key"
+_IDEM_MAX_KEY = 200
+
+
+def _idempotency_key(request: Request) -> str:
+    """The caller's label for this request, or "" when they sent none.
+
+    Only ever the client's. A server-invented key — hashing the URL and body, say — would silently
+    collapse two calls a caller genuinely MEANT to make twice, and "do this again" is a legitimate
+    thing to ask of an API. No header means today's behaviour exactly: no lookup, no storage.
+    """
+    return (request.headers.get(IDEMPOTENCY_HEADER) or "").strip()[:_IDEM_MAX_KEY]
+
+
+def _request_fingerprint(method: str, rest: str, body: bytes) -> str:
+    """What the label was used FOR, so reusing it on a different request can be caught.
+
+    A client that reuses one label for two different requests has a bug. Quietly returning the first
+    answer would hide it, and the caller would be left wondering why their second call returned
+    somebody else's data. Refusing loudly is the useful behaviour, and it is what Stripe does.
+    """
+    h = hashlib.sha256()
+    h.update(method.upper().encode())
+    h.update(b"\0")
+    h.update(rest.encode())
+    h.update(b"\0")
+    h.update(body or b"")
+    return h.hexdigest()
+
+
+async def _replay_idempotent(key: str, fingerprint: str, caller: Caller,
+                             db: AsyncSession) -> Response | None:
+    """The stored answer for this caller's label, or None if there is nothing to replay.
+
+    Returns a real response, so the provider is never reached and no money moves. That is the whole
+    point: merely skipping the second CHARGE would still make the second upstream call, which means
+    still paying the provider and simply absorbing the double cost ourselves.
+    """
+    row = (await db.execute(select(IdempotentCall).where(
+        IdempotentCall.membership_id == caller.membership.id,
+        IdempotentCall.key == key))).scalar_one_or_none()
+    if row is None:
+        return None
+    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        # Past its window: the label is free again, and the call proceeds normally.
+        await db.delete(row)
+        await db.commit()
+        return None
+    if row.request_fingerprint and row.request_fingerprint != fingerprint:
+        raise HTTPException(status_code=422, detail=(
+            f"Idempotency-Key {key!r} was already used for a different request. Use a new key, or "
+            f"repeat the original request exactly."))
+    if row.status != "done" or row.response_status is None:
+        # Still in flight. The first call is talking to the provider right now; telling the caller to
+        # retry is honest and cheap, and it is what stops the second one duplicating the spend.
+        raise HTTPException(status_code=409, detail=(
+            f"a call with Idempotency-Key {key!r} is still in progress — retry shortly"))
+    return Response(
+        content=row.response_body or b"",
+        status_code=row.response_status,
+        media_type=row.response_media_type or "application/json",
+        headers={"X-Treg-Idempotent-Replay": "true",
+                 "X-Treg-Cost-Micro": str(row.charged_micro)},
+    )
+
+
+async def _release_idempotent_claim(request: Request) -> None:
+    """Drop a claim this request took and never completed, so the label is usable again at once.
+
+    Reads what the handler parked on `request.state`; does nothing when there is no claim, which is
+    every request that sent no key. Never raises: this runs while an error is already being returned.
+    """
+    claim = getattr(request.state, "idem_claim", None)
+    if not claim:
+        return
+    request.state.idem_claim = None
+    membership_id, key = claim
+    try:
+        async with session_maker() as db:
+            row = (await db.execute(select(IdempotentCall).where(
+                IdempotentCall.membership_id == membership_id,
+                IdempotentCall.key == key,
+                IdempotentCall.status == "pending"))).scalar_one_or_none()
+            if row is not None:
+                await db.delete(row)
+                await db.commit()
+    except Exception as exc:  # noqa: BLE001 — an error is already on its way out
+        logging.getLogger("treg.idempotency").error(
+            "could not release idempotency claim %s: %s", key, exc, exc_info=True)
+
+
+async def _claim_idempotent(key: str, fingerprint: str, rest: str, caller: Caller,
+                            db: AsyncSession) -> bool:
+    """Take the label for this caller, or report that somebody else already has it.
+
+    The pending row IS the lock. It goes in before the upstream call, so a concurrent retry loses the
+    insert on `(membership_id, key)` and is told to wait rather than duplicating the spend.
+    """
+    # Sweep this caller's expired labels first. LAZY and caller-scoped, matching the hold reaper in
+    # ledger.py and for the same reasons: a background timer would need a scheduler and a leader
+    # election on a multi-instance deploy, and would still only run on a timer. One indexed DELETE
+    # paid by the caller who benefits from it, and a caller who never calls again leaves rows that
+    # can no longer answer anything, because a replay checks the window before it serves.
+    #
+    # Freeing the label matters as much as reclaiming the space: without this, reusing a label a day
+    # later would hit the old row's unique constraint and be refused rather than starting fresh.
+    await db.execute(delete(IdempotentCall).where(
+        IdempotentCall.membership_id == caller.membership.id,
+        IdempotentCall.expires_at < datetime.now(timezone.utc).replace(tzinfo=None)))
+
+    row = IdempotentCall(
+        org_id=caller.org_id, membership_id=caller.membership.id, key=key,
+        request_fingerprint=fingerprint, endpoint_id=rest[:200], status="pending",
+        expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
+        + timedelta(seconds=IDEMPOTENCY_WINDOW_S))
+    db.add(row)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return False
+    return True
+
+
+async def _store_idempotent(key: str, caller: Caller, *, status_code: int, body: bytes,
+                            media_type: str, charged_micro: int, metered: bool) -> None:
+    """Remember a METERED success so a retry can be answered without paying twice.
+
+    Metered only. A team calling on its OWN key is billed by the provider, not by us, so there is
+    nothing to protect and no reason for treg to hold their response. Successes only, because a
+    failure was never billed — replaying one would freeze an error the caller should be free to
+    retry out of.
+
+    Anything else drops the claim, which frees the label immediately rather than making the caller
+    wait out the window before they can try again.
+
+    Never raises: the caller already has their answer, and a bookkeeping failure must not turn a
+    served call into a 500. Its own session, because the request's may be mid-rollback.
+    """
+    keep = metered and 200 <= status_code < 300
+    try:
+        async with session_maker() as db:
+            row = (await db.execute(select(IdempotentCall).where(
+                IdempotentCall.membership_id == caller.membership.id,
+                IdempotentCall.key == key))).scalar_one_or_none()
+            if row is None:
+                return
+            if not keep:
+                await db.delete(row)
+            else:
+                row.status = "done"
+                row.response_status = status_code
+                row.response_body = body
+                row.response_media_type = media_type or "application/json"
+                row.charged_micro = charged_micro
+                db.add(row)
+            await db.commit()
+    except Exception as exc:  # noqa: BLE001 — loudly, but never into the caller's response
+        logging.getLogger("treg.idempotency").error(
+            "could not record idempotency key %s: %s", key, exc, exc_info=True)
+
+
 async def _resolve_marketplace_call(
     ep: dict, request: Request, caller: Caller, db: AsyncSession
 ) -> MarketplaceCall:
@@ -7365,6 +7575,28 @@ async def call_tool(
         _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
         if sep:
             rest = raw_rest
+    # A retry the caller has labelled: answer it from what we already returned, before resolving
+    # anything or reaching a provider. Nothing happens without the header, so a caller who sends none
+    # sees exactly today's behaviour.
+    idem_key = _idempotency_key(request)
+    idem_fingerprint = ""
+    if idem_key:
+        idem_body = await request.body()
+        idem_fingerprint = _request_fingerprint(request.method, rest, idem_body)
+        replayed = await _replay_idempotent(idem_key, idem_fingerprint, caller, db)
+        if replayed is not None:
+            return replayed
+        # Claim it now, before anything reaches a provider. Two retries can arrive together and both
+        # miss the lookup above; the unique constraint is what makes the loser wait instead of making
+        # a second upstream call. A check-then-act in Python would leave exactly the window this
+        # feature exists to close — the same reasoning as the conditional UPDATE in ledger.reserve.
+        if not await _claim_idempotent(idem_key, idem_fingerprint, rest, caller, db):
+            raise HTTPException(status_code=409, detail=(
+                f"a call with Idempotency-Key {idem_key!r} is already in progress — retry shortly"))
+        # Park it so a failure anywhere below can give the label back. Set AFTER the claim succeeds,
+        # so losing the race above never releases the winner's row.
+        request.state.idem_claim = (caller.membership.id, idem_key)
+
     drop_params: set[str] = set()
     mk: MarketplaceCall | None = None
     try:
@@ -7385,6 +7617,11 @@ async def call_tool(
                 method=request.method, path=rest, status_code=mkexc.status_code,
                 client=_client_of(request),
                 telemetry={"endpoint_id": ep["id"], "provider": ep.get("provider")})
+            analytics.capture(caller.email, "tool_called",
+                {"tool_name": ep["id"], "status_code": mkexc.status_code,
+                 "client": _client_of(request), "method": request.method,
+                 "own_tool": False, "provider": ep.get("provider"), "endpoint_id": ep["id"]},
+                groups={"team": caller.org.slug})
             raise
         tool, upstream_url, drop_params = mk.tool, mk.upstream, mk.consumed
     _require_tool_use(caller, tool)  # per-member tool + project ACL (NULL access = all; admins exempt)
@@ -7399,6 +7636,7 @@ async def call_tool(
     # Snapshot the audit identity NOW: a failed reserve rolls the session back, expiring the ORM
     # instances behind `caller` — reading them inside a later _audit would raise MissingGreenlet.
     audit_org_id, audit_email, audit_tool = caller.org_id, caller.email, tool.name
+    audit_slug = caller.org.slug  # PostHog group key — must match the browser's posthog.group('team', slug)
 
     def _audit(status_code: int, *, observed_micro: int | None = None, charged_micro: int | None = None,
                duration_ms: int | None = None, response_bytes: int | None = None) -> None:
@@ -7423,6 +7661,18 @@ async def call_tool(
             method=request.method, path=upstream_url, status_code=status_code,
             client=_client_of(request), telemetry=telemetry,
         )
+        # Product analytics mirror of the row above. Deliberately excludes params, bodies, and the
+        # full upstream URL (hostname only) — per-call detail beyond what a chart needs stays in the DB.
+        props = {"tool_name": audit_tool, "status_code": status_code,
+                 "client": _client_of(request), "method": request.method,
+                 "own_tool": mk is None, "duration_ms": duration_ms}
+        if mk is not None:
+            props |= {"provider": mk.provider, "endpoint_id": mk.endpoint_id,
+                      "tier": mk.tier, "metered": mk.metered, "cost_type": mk.cost_type,
+                      "charged_micro": charged_micro, "observed_micro": observed_micro}
+        else:
+            props["provider"] = urlsplit(upstream_url).hostname or ""
+        analytics.capture(audit_email, "tool_called", props, groups={"team": audit_slug})
 
     # Landing-page sandbox: never touch the network — EXCEPT the one live wire. A call to the
     # exact seeded stripe tool (fingerprint-matched; see sandbox.is_live_tool) relays to the real
@@ -7532,6 +7782,14 @@ async def call_tool(
         charged, observed = await _platform_settle(mk, response.status_code, body)
         _audit(response.status_code, observed_micro=observed, charged_micro=charged,
                duration_ms=duration_ms, response_bytes=len(body))
+        if idem_key:
+            # Here, and not earlier: this is the first point where BOTH the response and what it
+            # actually cost are known, and a replay has to hand back the real charge rather than the
+            # estimate that was reserved.
+            request.state.idem_claim = None      # dealt with; nothing left to release
+            await _store_idempotent(idem_key, caller, status_code=response.status_code, body=body,
+                                    media_type=response.headers.get("content-type", ""),
+                                    charged_micro=charged, metered=True)
         # Tell the caller what the call actually cost. Both llms.txt and skill.md instruct an agent to
         # report the price it spent, and until now the only way to find out was to read the balance
         # before and after — which races with any other call and cannot attribute a figure to a
@@ -7541,6 +7799,12 @@ async def call_tool(
         return response
     # Fire-and-forget audit — does not block the streaming response (rule #2).
     _audit(response.status_code, duration_ms=duration_ms)
+    if idem_key:
+        # Unmetered: nothing was billed, so there is nothing to protect. Dropping the claim frees the
+        # label at once instead of making the caller wait out the window to reuse it.
+        request.state.idem_claim = None
+        await _store_idempotent(idem_key, caller, status_code=response.status_code, body=b"",
+                                media_type="", charged_micro=0, metered=False)
     return response
 
 

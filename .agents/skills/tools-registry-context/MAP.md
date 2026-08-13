@@ -11,35 +11,50 @@ Regenerate via `scripts/build-map.py`.
 | Source file | Documented in |
 |---|---|
 | `README.md` | foundation/charter.md |
+| `examples/proxy-demo/server.js` | architecture/local-proxy.md |
 | `external:meetings/2026-06-30-jason-tools-registry.md` | foundation/charter.md, reference/glossary.md |
 | `render.yaml` | ops/deploy.md |
 | `src/treg/__main__.py` | ops/deploy.md |
-| `src/treg/api.py` | architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md |
+| `src/treg/agents.py` | interface/cli.md |
+| `src/treg/analytics.py` | architecture/data-model.md |
+| `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
+| `src/treg/billing.py` | architecture/money.md |
+| `src/treg/catalog_store.py` | architecture/catalog.md, interface/api.md |
 | `src/treg/cli.py` | interface/cli.md, interface/onboarding.md, interface/shell.md |
-| `src/treg/config.py` | architecture/super-admin.md, ops/deploy.md |
+| `src/treg/config.py` | architecture/super-admin.md, guides/expanding-a-category.md, ops/deploy.md |
 | `src/treg/convert.py` | interface/cli.md |
 | `src/treg/crypto.py` | architecture/auth-secrets.md |
 | `src/treg/db.py` | architecture/data-model.md, architecture/multi-tenancy.md, ops/deploy.md |
 | `src/treg/demo.py` | interface/onboarding.md |
 | `src/treg/egress.py` | architecture/local-run.md |
 | `src/treg/email.py` | interface/api.md, ops/deploy.md |
+| `src/treg/endpoint_stats.py` | architecture/catalog.md |
 | `src/treg/fsjail.py` | architecture/local-run.md |
 | `src/treg/health.py` | architecture/auth-secrets.md |
 | `src/treg/injectors.py` | architecture/auth-secrets.md |
+| `src/treg/ledger.py` | architecture/money.md |
+| `src/treg/localproxy.py` | architecture/local-proxy.md |
 | `src/treg/localrun.py` | architecture/local-run.md |
+| `src/treg/mcp.py` | architecture/mcp-oauth.md |
+| `src/treg/mcp_oauth.py` | architecture/mcp-oauth.md |
 | `src/treg/models.py` | architecture/data-model.md, architecture/multi-tenancy.md |
 | `src/treg/oauth.py` | architecture/auth-secrets.md |
+| `src/treg/oauth_providers.py` | architecture/auth-secrets.md, guides/expanding-a-category.md |
 | `src/treg/providers.py` | interface/env-import.md |
 | `src/treg/proxy.py` | architecture/proxy-model.md |
+| `src/treg/pubfeed.py` | interface/landing-sandbox.md |
 | `src/treg/ratestore.py` | architecture/data-model.md, interface/api.md |
+| `src/treg/reconcile.py` | architecture/money.md |
 | `src/treg/runner.py` | interface/api.md |
 | `src/treg/sandbox.py` | interface/landing-sandbox.md |
 | `src/treg/session.py` | interface/dashboard.md |
 | `src/treg/shell.py` | interface/shell.md |
 | `src/treg/skills.py` | interface/env-import.md |
+| `src/treg/web/connect-demo.html` | architecture/mcp-oauth.md |
 | `src/treg/web/index.html` | interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md |
 | `src/treg/web/install.sh` | interface/landing-sandbox.md |
+| `src/treg/web/selfhost.sh` | ops/deploy.md |
 | `src/treg/web/skill.md` | interface/skill.md |
 | `src/treg/web/tour/index.html` | interface/dashboard.md |
 | `src/treg/web/tour/tour.js` | interface/dashboard.md |
@@ -50,20 +65,26 @@ Regenerate via `scripts/build-map.py`.
 
 | Fragment | Sources |
 |---|---|
-| `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `health.py` |
-| `architecture/data-model.md` | `models.py`, `db.py`, `audit.py`, `ratestore.py` |
+| `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
+| `architecture/catalog.md` | `catalog_store.py`, `endpoint_stats.py` |
+| `architecture/data-model.md` | `models.py`, `db.py`, `audit.py`, `analytics.py`, `ratestore.py` |
+| `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
+| `architecture/mcp-oauth.md` | `mcp.py`, `mcp_oauth.py`, `connect-demo.html` |
+| `architecture/money.md` | `ledger.py`, `billing.py`, `reconcile.py`, `api.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `db.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
 | `architecture/super-admin.md` | `api.py`, `config.py` |
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |
-| `interface/api.md` | `api.py`, `email.py`, `runner.py`, `ratestore.py` |
-| `interface/cli.md` | `cli.py`, `convert.py` |
+| `guides/expanding-a-category.md` | `oauth_providers.py`, `api.py`, `config.py` |
+| `interface/api.md` | `api.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
+| `interface/catalog-review-proposal.md` | _(no source files — narrative/reference)_ |
+| `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
 | `interface/dashboard.md` | `index.html`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `session.py` |
 | `interface/env-import.md` | `providers.py`, `skills.py` |
-| `interface/landing-sandbox.md` | `sandbox.py`, `api.py`, `index.html`, `install.sh` |
+| `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `demo.py`, `cli.py`, `index.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md` |
-| `ops/deploy.md` | `__main__.py`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |
+| `ops/deploy.md` | `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |
 | `reference/glossary.md` | `2026-06-30-jason-tools-registry.md` |

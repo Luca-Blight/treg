@@ -88,7 +88,9 @@ async def test_dashboard_served_at_root(clients: AsyncClient):
     # `/` is the marketing landing; the SPA (login shell + dashboard) lives at /app.
     r = await clients.get("/")
     assert r.status_code == 200
-    assert "tools-registry" in r.text and "Sign in" in r.text
+    # The product is branded `treg` everywhere since the rename; asserting the old name left main
+    # red and every PR failing CI behind it.
+    assert "treg" in r.text and "Sign in" in r.text
     r = await clients.get("/app")
     assert r.status_code == 200
     # the app root div may carry extra attributes (e.g. v-cloak) — match the id, not the exact tag
@@ -96,3 +98,15 @@ async def test_dashboard_served_at_root(clients: AsyncClient):
     # deep links (invite flows etc.) carry query params and still reach the SPA at /
     r = await clients.get("/?invite=x%40y.z")
     assert r.status_code == 200 and 'id="app"' in r.text
+
+
+async def test_meta_reports_the_released_version(clients: AsyncClient):
+    """`app_version` is a hash of index.html — it answers "has the dashboard bundle changed?", which
+    is what an open tab compares to offer a refresh. It is NOT the release version, and after
+    publishing 0.9.0 there was no way to confirm from the live path which version was serving.
+
+    Both are kept because they answer different questions."""
+    body = (await clients.get("/meta")).json()
+    assert body["treg_version"], "a release check must be able to read the version from outside"
+    assert body["treg_version"] != body["app_version"], "these are different questions"
+    assert body["treg_version"][0].isdigit(), f"expected a version, got {body['treg_version']!r}"

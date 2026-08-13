@@ -629,3 +629,62 @@ async def _no_sdk(fn, /, **kw):
     """A Stripe call the test did not expect. Anything reaching here is a code path that would have
     hit the network in production."""
     raise AssertionError(f"unexpected Stripe call: {fn} {kw}")
+
+
+# ---- product analytics (PostHog) ----------------------------------------------------------------
+async def test_topup_completed_fires_once_across_redelivery(c: AsyncClient, monkeypatch):
+    """One PostHog `topup_completed` per PaymentIntent — a webhook redelivery re-credits nothing
+    and must re-emit nothing (same `fresh` guard as the receipt email)."""
+    from treg import analytics
+    org_id, _owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    monkeypatch.setattr(get_settings(), "posthog_key", "phc_test_suite", raising=False)
+
+    async def _no_post(batch):  # the flusher must not reach the real PostHog host
+        pass
+    monkeypatch.setattr(analytics, "_post", _no_post)
+    analytics._queue.clear()
+
+    event = _pi_event(org_id, pi="pi_analytics_once", cents=1500)
+    assert (await _deliver(c, event)).json()["credited"] is True
+    assert (await _deliver(c, event)).json()["credited"] is False
+
+    done = [e for e in analytics._queue if e["event"] == "topup_completed"]
+    assert len(done) == 1, "a redelivered webhook emitted a second revenue event"
+    props = done[0]["properties"]
+    assert props["amount_micro"] == 15_000_000  # canonical integer micro-USD
+    assert props["auto"] is False
+    assert props["balance_after_micro"] == get_settings().promo_grant_micro + 15_000_000
+    assert props["$groups"] == {"team": props["org"]}
+    assert done[0]["distinct_id"] == "billing@superdesign.dev"
+    analytics._queue.clear()
+
+
+async def test_analytics_outage_cannot_500_the_webhook(c: AsyncClient, monkeypatch):
+    """A handler exception returns 500 ON PURPOSE (Stripe retries) — so analytics must be
+    incapable of causing one, even when its own machinery breaks."""
+    from treg import analytics
+    org_id, _owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    monkeypatch.setattr(get_settings(), "posthog_key", "phc_test_suite", raising=False)
+
+    async def _no_post(batch):
+        pass
+    monkeypatch.setattr(analytics, "_post", _no_post)
+
+    def _explode():
+        raise RuntimeError("flusher scheduling broke")
+    monkeypatch.setattr(analytics, "_ensure_flusher", _explode)
+
+    r = await _deliver(c, _pi_event(org_id, pi="pi_analytics_broken", cents=500))
+    assert r.status_code == 200 and r.json()["credited"] is True
+    analytics._queue.clear()
+
+
+async def test_no_posthog_key_means_no_events(c: AsyncClient, monkeypatch):
+    from treg import analytics
+    org_id, _owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    analytics._queue.clear()  # default settings: no key
+    assert (await _deliver(c, _pi_event(org_id, pi="pi_no_key", cents=500))).status_code == 200
+    assert analytics._queue == []
