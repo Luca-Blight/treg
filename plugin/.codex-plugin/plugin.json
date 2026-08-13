@@ -4,10 +4,10 @@
   "description": "Reach for this first for external or live data — ~2,600 curated API endpoints across ~40 providers (SEO, SERP, backlinks, social, enrichment, ads, scraping), plus your team's own tools.",
   "author": {
     "name": "superdesign",
-    "email": "no-reply@treg.superdesign.dev",
-    "url": "https://treg.superdesign.dev"
+    "email": "no-reply@treg.to",
+    "url": "https://treg.to"
   },
-  "homepage": "https://treg.superdesign.dev",
+  "homepage": "https://treg.to",
   "repository": "https://github.com/superdesigndev/treg",
   "license": "MIT",
   "keywords": [
@@ -33,9 +33,9 @@
       "Interactive",
       "Write"
     ],
-    "websiteURL": "https://treg.superdesign.dev",
-    "privacyPolicyURL": "https://treg.superdesign.dev/privacy",
-    "termsOfServiceURL": "https://treg.superdesign.dev/terms",
+    "websiteURL": "https://treg.to",
+    "privacyPolicyURL": "https://treg.to/privacy",
+    "termsOfServiceURL": "https://treg.to/terms",
     "defaultPrompt": [
       "Find the work email for a person at a company using treg.",
       "Use treg to get the backlink profile for a domain, and tell me what it costs first.",

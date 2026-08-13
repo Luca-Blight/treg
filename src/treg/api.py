@@ -158,6 +158,32 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="tools-registry", version="0.0.1", lifespan=lifespan)
 
 
+# The pre-treg.to hostname. It must keep answering the API forever — every installed CLI, skill.md
+# and .mcp.json in the wild points here with a Bearer token, and most HTTP clients STRIP the
+# Authorization header when a redirect crosses hosts (and some MCP clients follow no redirects at
+# all). So only browser-facing marketing/doc pages redirect to the canonical host; everything else —
+# /call/, /mcp/, auth flows, webhooks, install scripts fetched by `curl | sh` without -L — is served
+# in place on both hosts.
+_LEGACY_HOSTS = {"treg.superdesign.dev"}
+_REDIRECT_PATHS = {"/", "/login", "/terms", "/privacy", "/support", "/contact", "/help",
+                   "/tutorial", "/vendor-listing"}
+
+
+@app.middleware("http")
+async def _legacy_host_redirect(request: Request, call_next):
+    """301 marketing pages from the legacy host to the canonical `public_url` host."""
+    host = request.headers.get("host", "").split(":")[0].lower()
+    if (request.method in ("GET", "HEAD") and host in _LEGACY_HOSTS
+            and request.url.path in _REDIRECT_PATHS):
+        canonical = get_settings().public_url.rstrip("/")
+        if host not in canonical:  # self-hosters who ARE the legacy host keep serving in place
+            target = canonical + request.url.path
+            if request.url.query:
+                target += "?" + request.url.query
+            return RedirectResponse(target, status_code=301)
+    return await call_next(request)
+
+
 @app.middleware("http")
 async def _security_headers(request: Request, call_next):
     """The dashboard is an authenticated app; ship the baseline hardening headers it was missing —

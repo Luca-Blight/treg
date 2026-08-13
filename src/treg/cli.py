@@ -6,7 +6,7 @@ stores a single **identity token** (first login also registers you). Then you wo
 orgs — `treg org ls` / `treg org use <slug>` picks the active one, sent as `X-Treg-Org`. Agents/CI
 can instead `treg login --token <token>` with a per-org token. `treg logout` clears it.
 
-    treg config --base-url https://treg.superdesign.dev
+    treg config --base-url https://treg.to
     treg login                       # GitHub (register-or-login); or: treg login --token <token>
     treg org ls | org use <slug>
     treg secret add / tool add / call / calls / health / skill / admin
@@ -255,7 +255,7 @@ def _as_list(resp: httpx.Response) -> list[dict]:
 def _detail_url(cfg: dict, kind: str, name: str) -> str:
     """The shareable dashboard page for a registered skill/tool. Printed after every registration so
     sharing is just forwarding the link — the page carries the preview + the agent install prompt."""
-    base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    base = (cfg.get("base_url") or "https://treg.to").rstrip("/")
     return f"{base}/app/{'skills' if kind == 'skill' else 'tools'}/{quote(str(name), safe='')}"
 
 
@@ -3353,7 +3353,7 @@ def cmd_mcp_install(args, cfg) -> None:
                  "dashboard), then retry.")
     if who.status_code >= 400:
         sys.exit(f"Token check failed ({who.status_code}): {who.text[:120]} — nothing was written.")
-    base_url = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    base_url = (cfg.get("base_url") or "https://treg.to").rstrip("/")
     name = getattr(args, "name", None) or "treg"
     out = mcp_install.install_mcp(base_url=base_url, token=token, server_name=name)
     ok = 0
@@ -3377,7 +3377,7 @@ def cmd_skill_bootstrap(args, cfg) -> None:
     skills dir, so whatever agent the user runs already knows how to use treg. install.sh calls this
     right after installing the CLI; it's also runnable by hand. Global (per-user) scope by default —
     it runs outside any project — with `--project` to target repo-local dirs instead."""
-    base_url = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    base_url = (cfg.get("base_url") or "https://treg.to").rstrip("/")
     try:
         resp = httpx.get(f"{base_url}/skill.md", timeout=15, follow_redirects=True)
         resp.raise_for_status()
@@ -3630,7 +3630,7 @@ def cmd_version(args, cfg) -> None:
 def cmd_update(args, cfg) -> None:
     """Re-run the server's install.sh to upgrade the CLI in place (uv/pipx/pip, from the git repo)."""
     import subprocess
-    base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+    base = (cfg.get("base_url") or "https://treg.to").rstrip("/")
     print(f"Updating treg from {base}/install.sh …")
     with _client(cfg, auth=False) as c:
         r = c.get("/install.sh")
@@ -3745,7 +3745,7 @@ def cmd_org_invite(args, cfg) -> None:
         r = c.post(f"/orgs/{org_id}/invites", json=body)
         _show(r)
     if landing is not None:  # _show exits on error, so this only prints on success
-        base = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
+        base = (cfg.get("base_url") or "https://treg.to").rstrip("/")
         print(f"↗ share link: {base}{landing}?invite={quote(args.email, safe='')}")
         print("  One click for them: sign in as that email → invite auto-accepts → this page opens."
               "  (The invite email's button does the same.)")
@@ -4666,7 +4666,7 @@ def build_parser() -> argparse.ArgumentParser:
     # ---- setup / auth ----
     c = mk(sub, "config", "Show or set the registry this CLI talks to (base URL).",
            "treg config                                    # show current base URL",
-           "treg config --base-url https://treg.superdesign.dev")
+           "treg config --base-url https://treg.to")
     c.add_argument("--base-url", help="point the CLI at this registry URL")
     c.set_defaults(fn=cmd_config)
 

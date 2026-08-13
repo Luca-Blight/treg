@@ -236,7 +236,7 @@ def _need_token() -> dict:
     return {
         "error": "not authenticated",
         "detail": (
-            "This MCP server needs a treg token. Get one at https://treg.superdesign.dev "
+            "This MCP server needs a treg token. Get one at https://treg.to "
             "(sign in, then Settings -> copy token) and set it as the TREG_TOKEN environment "
             "variable for this server."
         ),
@@ -344,7 +344,7 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
     r = await client.get("/orgs")
     if r.status_code == 401 or me.status_code == 401:
         return None, None, {"error": "not signed in, or this token is invalid or expired",
-                            "hint": "copy a fresh token from https://treg.superdesign.dev"}
+                            "hint": "copy a fresh token from https://treg.to"}
     if r.status_code != 200:
         return None, None, {"error": "could not read the teams for this token"}
     orgs = _body(r) or []

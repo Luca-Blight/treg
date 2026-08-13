@@ -35,12 +35,12 @@ services:
           property: connectionString
       # Public base URL — drives the OAuth callback, /meta, /llms.txt, /install.sh, all {BASE} links.
       - key: TREG_PUBLIC_URL
-        value: https://treg.superdesign.dev
+        value: https://treg.to
       # Never return OTP codes in prod responses (account-takeover vector); email them via Resend.
       - key: TREG_EMAIL_DEV_MODE
         value: "false"
       - key: TREG_EMAIL_FROM
-        value: tools-registry <no-reply@treg.superdesign.dev>
+        value: tools-registry <no-reply@treg.to>   # requires treg.to Verified in Resend before deploy
       - key: PYTHON_VERSION
         value: "3.12.7"
       # Dashboard-managed secrets (paste values in Render; sync:false keeps them out of git).

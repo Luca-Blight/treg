@@ -59,7 +59,7 @@ proxy = [
 treg = "treg.cli:main"
 
 [project.urls]
-Homepage = "https://treg.superdesign.dev"
+Homepage = "https://treg.to"
 Repository = "https://github.com/superdesigndev/treg"
 Issues = "https://github.com/superdesigndev/treg/issues"
 

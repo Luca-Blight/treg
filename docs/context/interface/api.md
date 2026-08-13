@@ -419,6 +419,11 @@ helpers `_secret_view` / `_tool_view` / `_bundle_view` never leak secret values 
 surfaced by `GET /tools` / `/bundles/{id}`).
 
 ## Cross-cutting hardening (bug-hunt)
+- **Legacy-host redirect:** `_legacy_host_redirect` 301s GET/HEAD marketing pages (`_REDIRECT_PATHS`)
+  from `treg.superdesign.dev` (`_LEGACY_HOSTS`) to the canonical `public_url` host (`treg.to`).
+  Everything else is served in place on BOTH hosts, forever: installed CLIs/skills hold tokens
+  pointed at the legacy host, HTTP clients strip `Authorization` on a cross-host redirect, and
+  `curl {BASE}/install.sh | sh` runs without `-L`. Never remove the legacy domain from Render.
 - **Security headers:** a `@app.middleware` adds `X-Content-Type-Options: nosniff`, `X-Frame-Options:
   DENY`, `Referrer-Policy: no-referrer`, and HSTS to every response (`setdefault`, so the `/call`
   proxy's stricter CSP/nosniff wins).

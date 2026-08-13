@@ -162,7 +162,7 @@ class Settings(BaseSettings):
 
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
     # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.
-    public_url: str = "https://treg.superdesign.dev"
+    public_url: str = "https://treg.to"
     # Proof to OpenAI's plugin directory that we control this domain. The portal generates a token
     # and fetches it from /.well-known/openai-apps-challenge; that endpoint must return THAT token
     # and nothing else — not JSON, not a list. Empty (the default) leaves the route 404, which is the
@@ -295,9 +295,10 @@ class Settings(BaseSettings):
 
     # Transactional email via Resend (OTP sign-in codes + team invitations). Empty key = no real
     # send (dev mode still returns the code; prod without a key silently skips the send). From must
-    # be a Resend-verified domain — treg.superdesign.dev is verified (DKIM + SPF).
+    # be a Resend-verified domain — treg.to is verified (DKIM + SPF); treg.superdesign.dev remains
+    # verified as a fallback.
     resend_api_key: str = ""
-    email_from: str = "tools-registry <no-reply@treg.superdesign.dev>"
+    email_from: str = "tools-registry <no-reply@treg.to>"
 
 
 @lru_cache

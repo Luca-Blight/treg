@@ -644,7 +644,7 @@ def test_a_relayed_402_carries_NO_link_out(clients):
     real = {"detail": {
         "error": "insufficient_balance",
         "message": ("akta.companies.enrich would cost ~$0.875 on treg's akta key and this team's "
-                    "balance is $0.5765.\n  add funds:      https://treg.superdesign.dev/app#billing"
+                    "balance is $0.5765.\n  add funds:      https://treg.to/app#billing"
                     "\n  or use your own key: treg connections connect --provider akta"),
         "balance_micro": 576500, "estimated_cost_micro": 875000,
         "topup_url": "/app#billing", "provider": "akta"}}
@@ -662,7 +662,7 @@ def test_stripping_the_link_keeps_the_DIAGNOSIS(clients):
     real = {"detail": {
         "error": "insufficient_balance",
         "message": ("akta.companies.enrich would cost ~$0.875 and this team's balance is $0.5765."
-                    "\n  add funds:      https://treg.superdesign.dev/app#billing"
+                    "\n  add funds:      https://treg.to/app#billing"
                     "\n  or use your own key: treg connections connect --provider akta"),
         "balance_micro": 576500, "estimated_cost_micro": 875000}}
     out = _without_purchase_pointers(real)
