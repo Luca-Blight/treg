@@ -34,16 +34,25 @@ for base in "$OLD" "$NEW"; do
       *)   note FAIL "$base$path → $c" ;;
     esac
   done
-  # /mcp/ must ANSWER (401 without a token proves the transport + host allow-list accept this host;
-  # 421 means the Host allow-list rejected it — the exact pre-cutover breakage class).
+  # /mcp/: 421 = the Host allow-list rejected this domain (the exact pre-cutover breakage class).
+  # A bare 401 proves the transport answered but NOT host acceptance (auth challenges first) — set
+  # TREG_SMOKE_TOKEN to a real token to make this check authoritative (expects 200).
+  auth_args=()
+  [ -n "${TREG_SMOKE_TOKEN:-}" ] && auth_args=(-H "Authorization: Bearer $TREG_SMOKE_TOKEN")
   c=$(code -X POST "$base/mcp/" -H 'Content-Type: application/json' \
-        -H 'Accept: application/json, text/event-stream' \
+        -H 'Accept: application/json, text/event-stream' "${auth_args[@]}" \
+        -H "Origin: $base" \
         -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}')
-  case "$c" in
-    200|401) note PASS "$base/mcp/ initialize → $c (transport alive, host accepted)" ;;
-    421)     note FAIL "$base/mcp/ → 421 Misdirected (host allow-list rejected this domain)" ;;
-    *)       note FAIL "$base/mcp/ → $c" ;;
-  esac
+  if [ -n "${TREG_SMOKE_TOKEN:-}" ]; then
+    [ "$c" = 200 ] && note PASS "$base/mcp/ authed initialize → 200 (host+origin accepted)" \
+                   || note FAIL "$base/mcp/ authed initialize → $c (expected 200)"
+  else
+    case "$c" in
+      200|401) note PASS "$base/mcp/ initialize → $c (transport alive; set TREG_SMOKE_TOKEN for full proof)" ;;
+      421)     note FAIL "$base/mcp/ → 421 Misdirected (host allow-list rejected this domain)" ;;
+      *)       note FAIL "$base/mcp/ → $c" ;;
+    esac
+  fi
 done
 
 # ---- marketing pages: behavior differs by phase --------------------------------------------------
@@ -77,14 +86,20 @@ for path in /auth/github /auth/google /oauth/authorize; do
     case "$c" in 30*) l=$(loc "$OLD$path"); case "$l" in "$NEW"*) note FAIL "pre: $OLD$path → $c $l";; *) note PASS "pre: $OLD$path → $c (same-host)";; esac ;;
                  *) note PASS "pre: $OLD$path → $c (served in place)" ;; esac
   else
-    [ "$c" = 302 ] && note PASS "post: $OLD$path → 302 (temporary, uncached)" \
-                   || note FAIL "post: $OLD$path → $c (expected 302)"
+    if [ "$c" = 302 ]; then
+      l=$(loc "$OLD$path")
+      case "$l" in "$NEW$path"*) note PASS "post: $OLD$path → 302 $l";;
+                   *)            note FAIL "post: $OLD$path 302 to unexpected: $l";; esac
+    else
+      note FAIL "post: $OLD$path → $c (expected 302 to $NEW$path)"
+    fi
   fi
 done
 
 # ---- webhooks stay put --------------------------------------------------------------------------
 c=$(code -X POST "$OLD/billing/stripe/webhook" -d '{}')
 case "$c" in 30*) note FAIL "$OLD/billing/stripe/webhook → $c (webhook must never redirect)";;
+             000) note FAIL "$OLD/billing/stripe/webhook → no connection";;
              *)   note PASS "$OLD/billing/stripe/webhook answers in place ($c)";; esac
 
 echo
