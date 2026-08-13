@@ -403,7 +403,9 @@ async def meta() -> dict:
             "google": bool(s.google_client_id), "app_version": _app_version(),
             "treg_version": _treg_version(),
             # public ingestion key — only present when this deployment opts in (self-hosters send nothing)
-            "posthog_key": s.posthog_key, "posthog_host": s.posthog_host.rstrip("/") if s.posthog_key else ""}
+            "posthog_key": s.posthog_key, "posthog_host": s.posthog_host.rstrip("/") if s.posthog_key else "",
+            # public workspace id — only present when this deployment opts in (self-hosters load no widget)
+            "intercom_app_id": s.intercom_app_id}
 
 
 @app.get("/providers.json", include_in_schema=False)
@@ -1216,6 +1218,16 @@ if(HAS_SESSION)loadOrgs();
 """
 
 
+def _intercom_user_hash(email: str) -> str:
+    """Intercom identity verification: HMAC-SHA256 of the identifier the dashboard boots the
+    Messenger with (the email), keyed by the workspace secret — so a third party who knows an email
+    can't impersonate that user in support chat. Empty when unconfigured (self-hosted: no widget)."""
+    secret = get_settings().intercom_secret
+    if not secret:
+        return ""
+    return hmac.new(secret.encode(), email.encode(), hashlib.sha256).hexdigest()
+
+
 @app.get("/auth/me")
 async def auth_me(
     x_treg_token: str = Header(default=""),
@@ -1238,6 +1250,8 @@ async def auth_me(
         raise HTTPException(status_code=401, detail="no session")
     out = {"email": user.email, "is_superadmin": user.is_superadmin, "onboarded": user.onboarded,
            "github": bool(get_settings().github_client_id)}
+    if (ich := _intercom_user_hash(user.email)):
+        out["intercom_user_hash"] = ich
     if membership is not None:
         # The org this token IS. A machine identity cannot call GET /orgs — `require_identity`
         # refuses it on purpose, since `create_org` hangs off that dependency and an agent could

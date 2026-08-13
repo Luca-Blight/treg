@@ -162,7 +162,13 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
     a no-op where `resource` is unavailable. Deliberately **no** address-space or process-count cap — a
     virtual-memory cap crashes Go CLIs (gh/stripe/doctl) and `RLIMIT_NPROC` is per-uid, shared with the
     server. Full **filesystem/network** isolation needs a container deploy and is a planned follow-up.
-- **Meta:** `meta` (`GET /meta`, open) → `{public_url, github}` for the dashboard.
+- **Meta:** `meta` (`GET /meta`, open) → `{public_url, github, google, app_version, treg_version,
+  posthog_key/posthog_host, intercom_app_id}` for the dashboard. The last three are the opt-in
+  third-party keys (analytics, support chat): empty on a deployment that didn't set them, so
+  self-hosted pages load neither PostHog nor the Intercom Messenger. `intercom_app_id` is paired
+  server-side with `intercom_secret`, which never leaves the server: `_intercom_user_hash` (HMAC-SHA256
+  of the email, keyed by the secret) is added to `GET /auth/me` as `intercom_user_hash` — Intercom
+  identity verification, so a third party who knows an email can't impersonate that user in chat.
 - **Provider catalog:** `providers_catalog` (`GET /providers.json`, open) → `{version, providers}` — the
   catalog `treg upload` uses to detect env keys → tools; served so the CLI can refresh centrally. See
   [env-import](env-import.md).
