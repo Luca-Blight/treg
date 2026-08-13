@@ -7511,6 +7511,10 @@ def _observed_cost_micro(provider: str, body: bytes) -> int | None:
         settle can't disagree with the catalog's price. Akta is the one that NEEDS this: its enrich
         route is priced per SECTION requested and its news route adds a per-article rider, so the
         catalog's single estimate can only be an upper bound — the actual charge lives here.
+      - apollo: DERIVED, not reported. Apollo answers a miss with 2xx (`organization: null` on
+        enrich, an empty `organizations` page on search) and charges nothing for it, so status-based
+        billing alone would bill the caller for a response Apollo gave away. The body says whether
+        the charged thing came back; when it didn't, the call settles at 0.
 
     Everyone else settles at the estimate. This is the same signal the catalog's `observed_cost`
     harvests, which is what lets phase 5's drift detector compare the two numbers directly."""
@@ -7532,6 +7536,17 @@ def _observed_cost_micro(provider: str, body: bytes) -> int | None:
         rate = catalog_store.load().credit_rates.get(provider)
         if isinstance(credits, (int, float)) and not isinstance(credits, bool) and credits >= 0 and rate:
             return int(credits * rate * 1_000_000 + 0.5)
+        return None
+    if provider == "apollo":
+        # Only the shapes whose billing rule is documented and body-decidable: company enrichment
+        # (1 credit per organization returned, null on a miss) and company search (1 credit per
+        # non-empty PAGE). A body carrying neither key — people enrichment's 1-9 credit range
+        # included — falls through to the estimate rather than guessing.
+        rate = catalog_store.load().credit_rates.get("apollo")
+        if rate:
+            for key in ("organization", "organizations"):
+                if key in doc:
+                    return int(rate * 1_000_000 + 0.5) if doc[key] else 0
         return None
     return None
 

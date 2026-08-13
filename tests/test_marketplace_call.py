@@ -427,6 +427,21 @@ def test_observed_cost_only_trusts_a_real_number():
     assert A._observed_cost_micro("akta", b'{"credits_charged": 2}') is None, "wrong field name means we never learned it"
 
 
+def test_apollo_settles_a_2xx_miss_at_zero():
+    """Apollo answers a no-match with 2xx and charges nothing for it — `organization: null` on
+    enrich, an empty `organizations` page on search. Status-based billing would charge the
+    caller the full credit for a response Apollo gave away; the body is what decides. A body
+    carrying neither documented shape (people enrichment's 1-9 credit range) stays at the
+    estimate — deriving is only safe where the rule is flat."""
+    credit = 26_000  # $0.026/credit (fx.yaml, Basic $65/mo / 2,500 credits)
+    assert A._observed_cost_micro("apollo", b'{"organization": {"name": "Apple"}}') == credit
+    assert A._observed_cost_micro("apollo", b'{"organization": null}') == 0, "a 2xx miss is free"
+    assert A._observed_cost_micro("apollo", b'{"organizations": [{"name": "Apple"}], "pagination": {}}') == credit
+    assert A._observed_cost_micro("apollo", b'{"organizations": [], "pagination": {}}') == 0, "an empty page is free"
+    assert A._observed_cost_micro("apollo", b'{"person": {"id": "x"}}') is None, "1-9 credit range: estimate, not a guess"
+    assert A._observed_cost_micro("apollo", b"not json") is None
+
+
 async def test_daily_cap_fails_closed(clients: AsyncClient, platform_on, monkeypatch):
     """The per-org daily ceiling on treg's keys — the blast radius of a runaway agent. Unlike the soft
     per-user call cap, it refuses rather than letting spend through."""
