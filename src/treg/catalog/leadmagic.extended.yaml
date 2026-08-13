@@ -531,7 +531,7 @@ endpoints:
       body:
         company_domain: {type: string, required: false, example: "leadmagic.io"}
         company_name: {type: string, required: false}
-      note: "at least one of company_domain | company_name is required. UNBOUNDED PER-CALL COST: base 1 credit plus 1 credit per ad, 0-50 ads (1-51 credits total, no limit param documented) — the response header X-Credits-Max-Cost shows the reserved amount before committing"
+      note: "at least one of company_domain | company_name is required. Cost is base ~1 credit plus a small per-ad increment (~0.04/ad observed 2026-08-13): a 5-ad response cost 1.20 credits, so a 50-ad response is ~3 credits. The response header X-Credits-Max-Cost shows the reserved amount before committing"
     test_request:
       bodyType: json
       body: {company_domain: "leadmagic.io"}
@@ -543,8 +543,7 @@ endpoints:
       unit: call
       source: docs
       source_url: https://leadmagic.io/pricing
-      checked: '2026-07-28'
-      confidence: inferred
-      note: 1 credit base + 1 credit per ad returned; range 1-51 credits per call (0-50 ads max) — a 24-ad response costs 25 credits total
-    skipped: "unbounded per-call cost (1-51 credits, no limit param) — a single call could alone exhaust the entire 30-credit test budget; clears with a topped-up budget and X-Credits-Max-Cost checked first, not investigation"
+      checked: '2026-08-13'
+      confidence: verified
+      note: 'VERIFIED live 2026-08-13: a 5-ad response cost 1.20 credits total (balance delta 1686.05 -> 1684.85), i.e. ~1 credit base plus ~0.04 per ad — the previously-documented 1-credit-per-ad rate was a large over-estimate (it implied 6 credits for 5 ads, and 51 for 50). A full 50-ad response is ~3 credits. value is the base; the per-ad increment is small. The response header X-Credits-Max-Cost shows the reserved amount before committing.'
     docs_url: https://leadmagic.io/docs/api-reference/b2b-ads-search
