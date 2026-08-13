@@ -9,12 +9,19 @@ from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Hostnames the reference deployment answered to BEFORE the current public_url. treg moved
-# treg.superdesign.dev → treg.to (2026-08); every CLI, skill.md and .mcp.json installed before the
-# move holds a token pointed at the old host, so it must keep working everywhere a host or audience
-# is compared: api.py's redirect middleware (serve in place, don't redirect API paths), mcp.py's
-# transport allow-lists, and mcp_oauth's token audiences. Self-hosters are unaffected: these only
-# ADD accepted names, and none of them resolve to a self-hosted deployment.
+# Every hostname the reference deployment has EVER answered to. treg moved
+# treg.superdesign.dev → treg.to (2026-08); installed CLIs, skill.md files, .mcp.json configs and
+# MCP OAuth grants exist against BOTH names, so both stay valid everywhere a host or audience is
+# recognized — mcp.py's transport allow-lists, mcp_oauth's token audiences, api.py's login-callback
+# anchoring — REGARDLESS of which one `public_url` currently points at. That symmetry is what makes
+# a TREG_PUBLIC_URL revert a complete rollback: grants and logins minted on either name survive the
+# flip in either direction. Self-hosters are unaffected: these only ADD accepted names, and none of
+# them resolve to a self-hosted deployment.
+PUBLIC_HOST_ALIASES: tuple[str, ...] = ("treg.superdesign.dev", "treg.to")
+
+# The subset browsers are REDIRECTED AWAY FROM (marketing pages only; see api.py's middleware).
+# Deliberately one-way — only ever the pre-move name, never treg.to — so a browser that cached the
+# old→new 301 can never meet a new→old redirect and loop, even while a rollback is in effect.
 LEGACY_PUBLIC_HOSTS: tuple[str, ...] = ("treg.superdesign.dev",)
 
 

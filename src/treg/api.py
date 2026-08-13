@@ -50,7 +50,7 @@ from sqlmodel import select
 from . import analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
-from .config import LEGACY_PUBLIC_HOSTS, get_settings, platform_setting_name
+from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
                      IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
@@ -185,9 +185,10 @@ def _login_callback_base(request: Request) -> str:
     the provider compares the exchange's `redirect_uri` byte-for-byte against the one the
     authorization request named, so a flow living on a legacy host (a login in flight across the
     cutover deploy, with its state cookie and provider registration both on the old name) must
-    keep building the OLD host's callback. A recognized legacy Host therefore wins."""
+    keep building the OLD host's callback. Any recognized alias Host therefore wins — in BOTH
+    directions, so a login minted on treg.to also survives a TREG_PUBLIC_URL rollback."""
     host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
-    if host in _LEGACY_HOSTS:
+    if host in PUBLIC_HOST_ALIASES:
         return f"https://{host}"
     return get_settings().public_url.rstrip("/")
 

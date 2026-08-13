@@ -36,8 +36,11 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   Render's `fromDatabase`-injected URL works unedited (the async engine needs the asyncpg driver).
 - `secret_key` — the Fernet key; empty → an ephemeral key is minted at startup (secrets won't survive a
   restart). See [auth-secrets](../architecture/auth-secrets.md).
-- `public_url` — default `https://treg.to` (the reference deployment; `treg.superdesign.dev` is the
-  legacy host — still served in full, marketing pages 301 to the canonical host); self-hosters set
+- `public_url` — default `https://treg.to`; the reference deployment is cut over in STAGES —
+  render.yaml deliberately still sets the OLD domain so the migration code deploys inert, and the
+  flip (then email, then client releases) each land as their own change. Both prod hostnames stay
+  valid forever (`config.PUBLIC_HOST_ALIASES`); marketing pages 301 old→canonical only. Verify each
+  phase with `scripts/smoke-domain.sh pre|post`. Self-hosters set
   `TREG_PUBLIC_URL`. Used to build the OAuth callback URI.
 - `api_token` — a bootstrap caller token (MVP leftover; per-user tokens are the real auth).
 - `admin_token` — the cross-tenant **super-admin** bearer (`TREG_ADMIN_TOKEN`); empty disables the env

@@ -34,13 +34,20 @@ services:
           name: treg-db
           property: connectionString
       # Public base URL — drives the OAuth callback, /meta, /llms.txt, /install.sh, all {BASE} links.
+      # STAGED CUTOVER (treg.superdesign.dev → treg.to): this deliberately still names the OLD
+      # domain so the migration code deploys INERT — behavior byte-identical to pre-migration.
+      # The flip to https://treg.to is its own later one-line PR, and setting this back IS the
+      # complete rollback (PUBLIC_HOST_ALIASES keeps both names valid in both directions).
       - key: TREG_PUBLIC_URL
-        value: https://treg.to
+        value: https://treg.superdesign.dev
       # Never return OTP codes in prod responses (account-takeover vector); email them via Resend.
       - key: TREG_EMAIL_DEV_MODE
         value: "false"
+      # Flips to no-reply@treg.to in its own PR, AFTER the URL flip soaks AND a real canary send
+      # from the Resend-verified treg.to domain — send failures are swallowed by design, so an
+      # unverified sender silently kills OTP login.
       - key: TREG_EMAIL_FROM
-        value: tools-registry <no-reply@treg.to>   # requires treg.to Verified in Resend before deploy
+        value: tools-registry <no-reply@treg.superdesign.dev>
       - key: PYTHON_VERSION
         value: "3.12.7"
       # Dashboard-managed secrets (paste values in Render; sync:false keeps them out of git).

@@ -48,7 +48,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
 from . import catalog_store
-from .config import LEGACY_PUBLIC_HOSTS, get_settings
+from .config import PUBLIC_HOST_ALIASES, get_settings
 
 # Every tool must declare what it can DO, and the review process checks these against real behaviour.
 # Read-only means it changes nothing anywhere; open-world means it can change state visible on the
@@ -609,9 +609,10 @@ def _allowed_hosts() -> list[str]:
     public = urlsplit(get_settings().public_url).netloc
     if public:
         hosts += [public, public.split(":")[0]]
-    # The pre-move hostnames answer forever: an old .mcp.json reaching /mcp/ on the legacy domain
-    # would otherwise 421 — a breakage invisible until the first tool call after cutover.
-    hosts += list(LEGACY_PUBLIC_HOSTS)
+    # Every name the reference deployment has ever answered to, SYMMETRICALLY — a .mcp.json
+    # pointed at either domain keeps working whichever one public_url currently names, which is
+    # what makes an env-var rollback lossless (a treg.to config must survive a revert too).
+    hosts += list(PUBLIC_HOST_ALIASES)
     # The SDK compares Host values EXACTLY, and `example.com:443` is a valid spelling of the
     # default-port form some clients send — so every bare https hostname also allows its :443 twin.
     hosts += [f"{h}:443" for h in hosts if ":" not in h and h not in ("localhost", "127.0.0.1")]
@@ -638,7 +639,7 @@ def _allowed_origins() -> list[str]:
     public = get_settings().public_url.rstrip("/")
     if public:
         origins.append(public)
-    origins += [f"https://{h}" for h in LEGACY_PUBLIC_HOSTS]
+    origins += [f"https://{h}" for h in PUBLIC_HOST_ALIASES]
     # Exact comparison again: allow the explicit-default-port spelling of every https origin.
     origins += [f"{o}:443" for o in origins
                 if o.startswith("https://") and ":" not in o.removeprefix("https://")]

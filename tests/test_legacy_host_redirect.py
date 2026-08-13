@@ -100,12 +100,16 @@ async def test_legacy_mcp_host_and_oauth_audience_stay_valid():
     # The transport allow-list and the token-audience set must both keep honouring the legacy name —
     # every pre-move .mcp.json and OAuth grant depends on it.
     from treg import mcp, mcp_oauth
-    assert "treg.superdesign.dev" in mcp._allowed_hosts()
-    assert "https://treg.superdesign.dev" in mcp._allowed_origins()
+
+    # List MEMBERSHIP (exact strings), not substring checks — .count() keeps CodeQL from reading
+    # these as URL-substring sanitization.
+    hosts, origins = mcp._allowed_hosts(), mcp._allowed_origins()
+    assert hosts.count("treg.superdesign.dev") == 1
+    assert origins.count("https://treg.superdesign.dev") == 1
     # The SDK compares exactly, and `host:443` is a valid spelling of the https default —
     # both names must allow it, for Host and for Origin.
-    assert "treg.superdesign.dev:443" in mcp._allowed_hosts()
-    assert "https://treg.superdesign.dev:443" in mcp._allowed_origins()
+    assert hosts.count("treg.superdesign.dev:443") == 1
+    assert origins.count("https://treg.superdesign.dev:443") == 1
     assert "https://treg.superdesign.dev/mcp/" in mcp_oauth.mcp_resource_audiences()
     # A pre-move access token — audience = the legacy resource URL — must still validate, and so
     # must the canonical one; a token minted for someone else's server must not.
@@ -151,3 +155,31 @@ async def test_login_round_trip_is_anchored_to_the_host_it_started_on(raw_client
     assert _login_callback_base(req("treg.superdesign.dev:443")) == "https://treg.superdesign.dev"
     assert _login_callback_base(req("treg.to")) == "https://treg.to"
     assert _login_callback_base(req("anything.else")) == "https://treg.to"
+
+
+async def test_env_revert_is_a_complete_rollback(monkeypatch):
+    """The staged-rollout contract: with TREG_PUBLIC_URL back on the OLD name, everything minted
+    while treg.to was canonical keeps working (symmetric aliases), and no redirect can loop —
+    treg.to is never a redirect SOURCE, so a browser-cached old→new 301 meets no new→old answer."""
+    from httpx import ASGITransport, AsyncClient
+
+    from treg import mcp, mcp_oauth
+    from treg.api import _login_callback_base, app
+
+    monkeypatch.setenv("TREG_PUBLIC_URL", "https://treg.superdesign.dev")
+    get_settings.cache_clear()
+    try:
+        # Recognition stays symmetric: treg.to tokens/hosts/origins remain valid.
+        tok = mcp_oauth.make_access_token(user_id=1, org_id=1, scope="treg:read", token_version=0,
+                                          audience="https://treg.to/mcp/")
+        assert mcp_oauth.read_access_token_any(tok) is not None
+        assert mcp._allowed_hosts().count("treg.to") == 1
+        assert mcp._allowed_origins().count("https://treg.to") == 1
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
+            # Neither host redirects: canonical == old suppresses the marketing 301s, and treg.to
+            # is not a redirect source by design.
+            for host in ("treg.superdesign.dev", "treg.to"):
+                r = await c.get("/", headers={"host": host})
+                assert r.status_code == 200, host
+    finally:
+        get_settings.cache_clear()
