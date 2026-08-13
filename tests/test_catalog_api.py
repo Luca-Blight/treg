@@ -345,17 +345,22 @@ async def test_call_template_carries_method_and_body_for_a_post(clients: AsyncCl
 
 
 async def test_a_credit_price_is_served_in_usd_per_provider(clients: AsyncClient):
-    """A "credit" is a provider-scoped unit, not a currency: scrapecreators credits carry a
-    published per-credit price and convert, apollo publishes none so its endpoints stay native."""
+    """A "credit" is a provider-scoped unit, not a currency: each provider converts at its OWN
+    fx.yaml rate ($0.00188 on scrapecreators, $0.026 on apollo), and a provider with no rate
+    stays native — "we don't know" must never surface as a dollar figure."""
     priced = (await clients.get("/catalog/endpoints/scrapecreators.x.v1-amazon-shop")).json()["endpoint"]["cost"]
     assert priced["currency"] == "credit" and priced["value"]
     assert priced["usd"] == round(priced["value"] * cs.load().credit_rates["scrapecreators"], 6)
     assert priced["usd"] > 0, "a credit rate exists, so the dashboard gets a comparable number"
 
-    native = (await clients.get("/catalog/endpoints/apollo.people.enrich")).json()["endpoint"]["cost"]
-    assert native["currency"] == "credit" and native["value"]
-    assert cs.load().credit_rates["apollo"] is None
-    assert native["usd"] is None, "no published rate: display credits, never a guessed dollar"
+    apollo = (await clients.get("/catalog/endpoints/apollo.people.enrich")).json()["endpoint"]["cost"]
+    assert apollo["currency"] == "credit" and apollo["value"]
+    assert apollo["usd"] == round(apollo["value"] * cs.load().credit_rates["apollo"], 6)
+    assert apollo["usd"] != priced["usd"] or apollo["value"] != priced["value"], \
+        "two providers' credits are unrelated units, priced by their own rates"
+
+    unrated = cs.load().cost_view({"type": "per_call", "value": 3, "currency": "credit"}, "no-such-provider")
+    assert unrated["usd"] is None, "no published rate: display credits, never a guessed dollar"
 
 
 # ---- cost: units, provenance and platform eligibility ----------------------------------------

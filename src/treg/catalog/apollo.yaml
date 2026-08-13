@@ -16,8 +16,8 @@ source:
 # notices about exactly this. Do not "simplify" the path back.
 #
 # Billing (https://docs.apollo.io/docs/api-pricing): Apollo meters CREDITS, the per-month allowance
-# depends on the plan, and no public $/credit exists — so cost.value is null throughout and the
-# credit rule lives in cost.note. Three rules matter:
+# depends on the plan, and Apollo itself publishes no $/credit — costs below stay in credits and
+# convert through fx.yaml's credit_rates_usd.apollo (Basic-plan rate). Three rules matter:
 #   1. Enrichment charges only when credit-consuming data comes BACK. A miss costs 0.
 #   2. A mobile phone is eight times the price of an email: 1 credit for demographics or an email,
 #      +8 if a mobile is returned, hence Apollo's own "1-9 credits per person". `reveal_phone_number`
