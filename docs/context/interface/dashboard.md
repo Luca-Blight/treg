@@ -103,8 +103,7 @@ open Secrets panel + Activity log too (was showing the previous org's). Copy but
 **Support chat (Intercom):** `initIntercom()` sits next to `initAnalytics()` and follows the same
 opt-in gate — no `meta.intercom_app_id`, no widget. It boots **after** `/auth/me` resolves (not at the
 `/meta` fetch) so the common case boots identified once: `email` + `user_hash` (from `/auth/me`,
-see [api](api.md)) + `company` = the active team slug + a `product: 'treg'` attribute (treg has its
-own workspace, so the attribute is just provenance). Email is **never** sent without `user_hash` (that's the
+see [api](api.md)) + `company` = the active team slug. Email is **never** sent without `user_hash` (that's the
 impersonation vector identity verification closes) — no hash or no login means anonymous visitor
 chat, which is also what `landing.html`/`support.html` do with a tiny `/meta`-gated inline loader.
 `switchOrg`/team-create call `intercomUpdate()` so the company tracks the active team; `logout()`

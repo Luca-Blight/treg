@@ -4639,7 +4639,7 @@ createApp({
       try{ window.Intercom('boot', this.intercomPayload()); }catch(e){}
     },
     intercomPayload(){
-      const p={app_id:this.meta.intercom_app_id, product:'treg'};  // provenance attribute (which product this person came from)
+      const p={app_id:this.meta.intercom_app_id};
       // Never send email without user_hash: an unhashed identify is exactly the impersonation
       // vector identity verification exists to close. No hash (or no login) = anonymous visitor chat.
       if(this.me && this.icHash){ p.email=this.me; p.user_hash=this.icHash;
