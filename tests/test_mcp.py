@@ -966,3 +966,21 @@ async def test_call_refuses_ambiguous_params_plus_explicit_slot(clients):
             "endpoint_id": "echo/x", "method": "GET",
             "params": {"a": "1"}, "query": {"b": "2"}}, token=token)
         assert "`query` OR `params`" in out2.get("error", ""), out2
+
+
+async def test_call_resolves_the_team_for_an_identity_token(clients):
+    """The same production bug `balance` had, on the spending path: an IDENTITY token (`treg
+    login` — what most people hold) belongs to a person who may be in several teams, and /call
+    answers it with a raw "choose an org (send X-Treg-Org)" 400 — a header hint an MCP caller
+    cannot act on. `call` must resolve the team exactly as `balance` does."""
+    r = await clients.post("/users", json={"email": "call-identity@superdesign.dev"})
+    per_org = r.json()["token"]
+    clients.headers["X-Treg-Token"] = per_org
+    identity = (await clients.get("/auth/cli-token")).json()["token"]
+    made = await clients.post("/tools", json={"name": "echo2", "base_url": "http://upstream"})
+    assert made.status_code == 200, made.text
+
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {"endpoint_id": "echo2/ping"}, token=identity)
+    assert out.get("status") == 200, out
+    assert "choose an org" not in json.dumps(out)

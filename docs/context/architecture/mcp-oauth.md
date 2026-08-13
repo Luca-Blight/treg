@@ -65,6 +65,10 @@ each of which was added because a real endpoint needed it:
   URL's query string whenever `params=` is passed, the same gotcha `cmd_call` guards.
 - `params` claiming the same position as an explicit slot is refused loudly, never merged.
 - Multipart file upload stays CLI-only (`treg call --upload`) — MCP callers hold no files.
+- `call` resolves the TEAM the way `balance` does (`_resolve_org`, before anything is spent): a
+  multi-team identity token used to bounce off /call's raw `choose an org (send X-Treg-Org)`
+  400 — a header hint an MCP caller can't act on; now it gets the pinned/active team, or the
+  friendly error that NAMES the teams.
 
 ## `call` takes an `idempotency_key`
 

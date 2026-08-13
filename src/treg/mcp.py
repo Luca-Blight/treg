@@ -546,6 +546,17 @@ async def call(endpoint_id: str, params: dict | list | None = None,
         extra_headers["content-type"] = ctype
 
     async with _api(token) as client:
+        # Resolve the team the same way `balance`/`my_tools` do BEFORE spending anything: a
+        # multi-team identity token otherwise reaches /call and bounces off its raw
+        # "choose an org (send X-Treg-Org)" 400 — a header hint an MCP caller cannot act on.
+        # `_resolve_org` honours the pinned/active team and, when there genuinely is no answer,
+        # NAMES the teams so the agent can ask the human — found live on the first
+        # multi-team dashboard token pasted into an MCP client.
+        _, slug, problem = await _resolve_org(client)
+        if problem:
+            return problem
+        if slug:
+            extra_headers["X-Treg-Org"] = slug
         if idempotency_key:
             # Straight through to the header the API already honours. Deliberately the CALLER's key
             # and never derived from the request: two identical searches an hour apart are new work,
