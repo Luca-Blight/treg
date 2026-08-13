@@ -39,7 +39,7 @@ import json
 import os
 from contextlib import asynccontextmanager
 from typing import Any, TypedDict
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 import httpx
 from mcp.server import MCPServer
@@ -449,13 +449,24 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
         "nothing the second time; the result carries `replayed: true`. Use a NEW key (or none) for "
         "genuinely new work, even when the parameters are identical: repeating a search to see "
         "what changed is a new call, not a retry, and reusing the key would hand you the old answer. "
-        "Reusing one key for a DIFFERENT request is refused rather than answered."
+        "Reusing one key for a DIFFERENT request is refused rather than answered.\n\n"
+        "For requests `params` can't express, the explicit slots mirror the CLI's flags: `query` "
+        "is ALWAYS the query string (a list value expands to repeated keys), `body` is ALWAYS the "
+        "request body (object/array → JSON; a STRING is sent raw, with `content_type` naming what "
+        "it is — sniffed as application/json when it parses as JSON), and `headers` adds upstream "
+        "request headers an endpoint needs per-call (e.g. Google Ads' login-customer-id); "
+        "injected credentials always win over them. Use `query` + `body` together for endpoints "
+        "that split a POST across both (Bright Data's ?dataset_id=… + array body). Giving `body` "
+        "implies POST. Multipart file uploads aren't supported here — run (or tell the human to "
+        "run) the CLI: `treg call <endpoint> --upload name=@/path/to/file`."
     ),
     annotations=_CALLS,
     structured_output=True
 )
 async def call(endpoint_id: str, params: dict | list | None = None,
                method: str | None = None, idempotency_key: str | None = None,
+               query: dict | None = None, body: dict | list | str | None = None,
+               headers: dict | None = None, content_type: str | None = None,
                ctx: Context = None) -> CallOut:  # type: ignore[assignment]
     token = _bearer(ctx) if ctx else ""
     if not token:
@@ -471,13 +482,82 @@ async def call(endpoint_id: str, params: dict | list | None = None,
                 "hint": "use catalog_search for a catalog id, or my_tools then "
                         "'<tool-name>/<path>' for one of this team's own tools"}
 
-    method = (method or (ep.get("method") if ep else None) or "GET").upper()
+    # `body` implies POST — curl's convention, and the CLI's: catalog endpoints reject a method
+    # mismatch, so making `body` just work beats asking the caller to repeat what the catalog knows.
+    method = (method or (ep.get("method") if ep else None)
+              or ("POST" if body is not None else "GET")).upper()
+    reads_query = method in ("GET", "HEAD", "DELETE")
     # A LIST is a legitimate body, not a mistake. DataForSEO — the largest provider in the catalog at
     # 217 endpoints — takes an ARRAY of task objects on every one of its `live` POST routes, so a
     # dict-only signature made all of them uncallable. Found by trying one rather than by reading the
     # type. Query strings still need key/value pairs, so a list is only meaningful as a body.
     args = params if params is not None else {}
+
+    # ---- assemble the real request: query string, body, extra headers ------------------------
+    # `params` keeps its method-based role (query on GET, body on POST); the explicit `query` and
+    # `body` slots express the shapes that role can't — a POST that needs BOTH a body and a query
+    # string (Bright Data's ?dataset_id=… + array body), a raw non-JSON body, an extra upstream
+    # header. When an explicit slot is given, `params` must not also claim the same position —
+    # refused loudly rather than silently merged, because a silent merge sends a wrong request.
+    if body is not None and params is not None and not reads_query:
+        return {"error": "give the request body as `body` OR `params`, not both",
+                "endpoint_id": endpoint_id}
+    if query is not None and params is not None and reads_query:
+        return {"error": "give the query string as `query` OR `params`, not both",
+                "endpoint_id": endpoint_id}
+    if reads_query and isinstance(args, list):
+        return {"error": "this endpoint takes query parameters, so `params` must be an "
+                         "object, not a list", "endpoint_id": endpoint_id}
+
+    # Query pairs as a LIST of tuples so repeated keys (?tag=a&tag=b) survive — a dict keeps only
+    # the last. A list VALUE in `query` expands to repeated keys. And an inline `?a=b` inside a
+    # passthrough URL would be DROPPED by httpx whenever params= is passed — the upstream then
+    # answers with default/wrong data and NO error (the CLI guards the same gotcha) — so it is
+    # pulled out and merged.
+    query_pairs: list[tuple[str, str]] = []
+    if "?" in endpoint_id:
+        endpoint_id, _, inline = endpoint_id.partition("?")
+        query_pairs += parse_qsl(inline, keep_blank_values=True)
+    for src in (args if (reads_query and isinstance(args, dict)) else {}, query or {}):
+        for k, v in src.items():
+            if isinstance(v, (list, tuple)):
+                query_pairs += [(k, str(x)) for x in v]
+            else:
+                query_pairs.append((k, str(v)))
+
+    the_body = body if body is not None else (args if not reads_query else None)
+    # Caller headers relay to the upstream exactly as the CLI's --header does (Google Ads'
+    # login-customer-id is the canonical need) — with treg's own auth/routing headers filtered so
+    # the tool's semantics stay unambiguous: the bearer on the MCP request IS the identity, and
+    # idempotency travels via its own argument. Injected credentials always win server-side.
+    extra_headers = {k: str(v) for k, v in (headers or {}).items()
+                     if k.lower() not in ("x-treg-token", "x-treg-org", "authorization",
+                                          "idempotency-key")}
+    if isinstance(the_body, str):
+        # A raw string body travels as-is. Content-Type: explicit wins, else sniff JSON — the
+        # CLI's rule, because upstreams that require `application/json` reject a JSON body
+        # labelled text/plain.
+        ctype = content_type
+        if ctype is None:
+            try:
+                json.loads(the_body)
+                ctype = "application/json"
+            except ValueError:
+                ctype = "text/plain"
+        extra_headers["content-type"] = ctype
+
     async with _api(token) as client:
+        # Resolve the team the same way `balance`/`my_tools` do BEFORE spending anything: a
+        # multi-team identity token otherwise reaches /call and bounces off its raw
+        # "choose an org (send X-Treg-Org)" 400 — a header hint an MCP caller cannot act on.
+        # `_resolve_org` honours the pinned/active team and, when there genuinely is no answer,
+        # NAMES the teams so the agent can ask the human — found live on the first
+        # multi-team dashboard token pasted into an MCP client.
+        _, slug, problem = await _resolve_org(client)
+        if problem:
+            return problem
+        if slug:
+            extra_headers["X-Treg-Org"] = slug
         if idempotency_key:
             # Straight through to the header the API already honours. Deliberately the CALLER's key
             # and never derived from the request: two identical searches an hour apart are new work,
@@ -485,14 +565,19 @@ async def call(endpoint_id: str, params: dict | list | None = None,
             # cache wearing an idempotency badge.
             client.headers["Idempotency-Key"] = idempotency_key[:200]
         # The SAME route the CLI and the proxy use, so the tool ACL, deny rules, both daily caps,
-        # the balance reserve and the settle all happen exactly once, in one place.
-        if method in ("GET", "HEAD", "DELETE"):
-            if isinstance(args, list):
-                return {"error": "this endpoint takes query parameters, so `params` must be an "
-                                 "object, not a list", "endpoint_id": endpoint_id}
-            r = await client.request(method, f"/call/{endpoint_id}", params=args)
-        else:
-            r = await client.request(method, f"/call/{endpoint_id}", json=args)
+        # the balance reserve and the settle all happen exactly once, in one place. params= is
+        # only passed when there ARE pairs — see the inline-query gotcha above.
+        kw: dict[str, Any] = {}
+        if extra_headers:
+            kw["headers"] = extra_headers
+        if query_pairs:
+            kw["params"] = query_pairs
+        if the_body is not None:
+            if isinstance(the_body, str):
+                kw["content"] = the_body.encode()
+            else:
+                kw["json"] = the_body
+        r = await client.request(method, f"/call/{endpoint_id}", **kw)
 
     out: dict[str, Any] = {"status": r.status_code, "endpoint_id": endpoint_id, "body": _body(r)}
     if r.headers.get("X-Treg-Idempotent-Replay") == "true":

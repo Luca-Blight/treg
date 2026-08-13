@@ -854,3 +854,133 @@ async def test_the_same_key_through_MCP_bills_once(clients, monkeypatch):
     assert second.get("replayed") is True, "the retry must be marked as a replay"
     assert second.get("body") == first.get("body"), "and return the same answer"
     assert await balance() == after_first, "and bill nothing"
+
+
+# ---------------------------------------------------------------------------------------------
+# `call` request-shape parity with the CLI (`treg call`)
+#
+# Every flag on `treg call` exists because a real endpoint needed it — --query alongside --data
+# (Bright Data's ?dataset_id=… + array body), --header (Google Ads' login-customer-id), raw
+# non-JSON bodies, repeated query keys, inline ?a=b in a passthrough URL that httpx silently
+# drops. The MCP tool must express the same shapes or a class of endpoints is CLI-only.
+# The team-tool "echo" relays to the conftest upstream, which reports exactly what arrived.
+# ---------------------------------------------------------------------------------------------
+
+async def _register_echo(clients) -> str:
+    made = await clients.post("/tools", json={"name": "echo", "base_url": "http://upstream"})
+    assert made.status_code == 200, made.text
+    return clients.headers.get("X-Treg-Token")
+
+
+async def test_call_sends_query_AND_body_together(clients):
+    """The Bright Data shape: a POST whose routing lives in the query string and whose input is
+    the body. `params` alone cannot say both — `query` + `body` can."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/trigger", "method": "POST",
+            "query": {"dataset_id": "gd_123", "format": "json"},
+            "body": [{"url": "https://example.com/in/someone"}]}, token=token)
+    assert out.get("status") == 200, out
+    seen = json.loads(out["body"]) if isinstance(out.get("body"), str) else out["body"]
+    assert dict(seen["query_multi"])["dataset_id"] == "gd_123"
+    assert json.loads(seen["body"]) == [{"url": "https://example.com/in/someone"}]
+
+
+async def test_call_relays_extra_headers_but_never_tregs_own(clients):
+    """--header parity (login-customer-id is the canonical need). treg's own auth/routing headers
+    are filtered from the relay: the MCP bearer IS the identity and must not be maskable."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/ads",
+            "headers": {"login-customer-id": "1234567890", "X-Treg-Token": "evil",
+                        "Authorization": "Bearer evil"}}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    assert seen["headers"].get("login-customer-id") == "1234567890"
+    assert seen["headers"].get("x-treg-token") != "evil"
+
+
+async def test_call_sends_a_raw_string_body_with_content_type(clients):
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/xml", "method": "POST",
+            "body": "<xml>hi</xml>", "content_type": "application/xml"}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    assert seen["body"] == "<xml>hi</xml>"
+    assert seen["headers"].get("content-type") == "application/xml"
+
+
+async def test_call_string_body_sniffs_json_and_implies_post(clients):
+    """A string body that parses as JSON travels as application/json (the CLI's sniff rule), and
+    giving a body without a method means POST (curl's convention)."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/j", "body": '{"a": 1}'}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    assert seen["headers"].get("content-type") == "application/json"
+    assert json.loads(seen["body"]) == {"a": 1}
+
+
+async def test_call_repeated_query_keys_survive(clients):
+    """?tag=a&tag=b — a dict keeps only the last; a list value must expand to repeated keys."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/multi", "query": {"tag": ["a", "b"], "one": "x"}}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    tags = [v for k, v in seen["query_multi"] if k == "tag"]
+    assert tags == ["a", "b"]
+
+
+async def test_call_inline_query_in_a_passthrough_path_is_not_dropped(clients):
+    """httpx DROPS a URL's existing query string whenever params= is passed — the upstream then
+    answers with default/wrong data and NO error. The CLI guards this; the MCP tool must too."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/graph/me?fields=id,name", "query": {"limit": "5"}}, token=token)
+    assert out.get("status") == 200, out
+    seen = out["body"] if isinstance(out["body"], dict) else json.loads(out["body"])
+    q = dict(seen["query_multi"])
+    assert q.get("fields") == "id,name", "the inline query must reach the upstream"
+    assert q.get("limit") == "5"
+
+
+async def test_call_refuses_ambiguous_params_plus_explicit_slot(clients):
+    """`params` claiming the same position as an explicit slot is refused loudly — a silent
+    merge is how a wrong request gets sent."""
+    token = await _register_echo(clients)
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {
+            "endpoint_id": "echo/x", "method": "POST",
+            "params": {"a": 1}, "body": {"b": 2}}, token=token)
+        assert "`body` OR `params`" in out.get("error", ""), out
+        out2 = await _call_tool(c, "call", {
+            "endpoint_id": "echo/x", "method": "GET",
+            "params": {"a": "1"}, "query": {"b": "2"}}, token=token)
+        assert "`query` OR `params`" in out2.get("error", ""), out2
+
+
+async def test_call_resolves_the_team_for_an_identity_token(clients):
+    """The same production bug `balance` had, on the spending path: an IDENTITY token (`treg
+    login` — what most people hold) belongs to a person who may be in several teams, and /call
+    answers it with a raw "choose an org (send X-Treg-Org)" 400 — a header hint an MCP caller
+    cannot act on. `call` must resolve the team exactly as `balance` does."""
+    r = await clients.post("/users", json={"email": "call-identity@superdesign.dev"})
+    per_org = r.json()["token"]
+    clients.headers["X-Treg-Token"] = per_org
+    identity = (await clients.get("/auth/cli-token")).json()["token"]
+    made = await clients.post("/tools", json={"name": "echo2", "base_url": "http://upstream"})
+    assert made.status_code == 200, made.text
+
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {"endpoint_id": "echo2/ping"}, token=identity)
+    assert out.get("status") == 200, out
+    assert "choose an org" not in json.dumps(out)
