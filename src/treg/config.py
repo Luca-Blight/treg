@@ -137,9 +137,7 @@ class Settings(BaseSettings):
     platform_key_spyfu: str = ""    # the SpyFu *secret key* alone (?api_key=…), not the id or base64 pair
     platform_key_coresignal: str = ""
     platform_key_thecompaniesapi: str = ""  # raw token — injected as "Basic {secret}" un-encoded
-    platform_key_apollo: str = ""   # raw key (X-Api-Key). Billable only once fx.yaml gets a real
-    #                                 $/credit rate for apollo — it is null today (seat-priced plans),
-    #                                 so platform_eligible refuses every credit-priced endpoint.
+    platform_key_apollo: str = ""   # raw key (X-Api-Key); billed at the Basic-plan $/credit rate in fx.yaml
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the

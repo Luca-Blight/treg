@@ -308,7 +308,7 @@ charges 1 credit per 10 emails (`per: 10, unit: record`), Akta 1.5 credits per 5
 Each `credit_rates_usd` / `unit_rates_usd` entry carries `usd` plus the `basis`/`source`/`checked` that justify it —
 the cheapest PUBLICLY listed tier (plan price ÷ credits included), so the served figure is an upper
 bound on real spend, never an under-estimate. `usd: null` is a deliberate state, not a gap: the
-provider publishes no per-credit price (seat-priced like Apollo, sales-negotiated like PDL, or not
+provider publishes no per-credit price (sales-negotiated like Crunchbase, or not
 credit-priced at all like BrightData). Those endpoints keep `cost.usd = null` and display natively
 ("3 credits/success"), because a guessed dollar figure is worse than an honest credit count. Both
 blocks are hand-maintained and must stay ABOVE `rates_to_usd:` — `catalog_fx_update.py` rewrites the
