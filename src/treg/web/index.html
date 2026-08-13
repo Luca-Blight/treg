@@ -3410,7 +3410,7 @@ createApp({
       detail:null, detailData:null, detailErr:'', detailLoading:false, detailFile:'SKILL.md', detailCopied:'', detailNote:'',
       shareGate:null,  // logged-out arrival at a shared detail link: {kind,name} → focused sign-in page (no sandbox/tour)
       share:{on:false, email:'', role:'viewer', full:true, busy:false, err:'', sent:null, member:null},  // detail-page "Share…" (invite + land on this page)
-      me:'', myOrgs:[], isAdmin:false,
+      me:'', icHash:'', myOrgs:[], isAdmin:false,
       onboarded:true,  // first-run onboarding done (server flag; gates the welcome modal)
       welcome:{on:false, step:0, name:'', agent:'openclaw', moreOpen:false, busy:false, err:''},  // first-run: name your team → pick your agent → setup line
       emptyTab:'agent',
@@ -4544,7 +4544,8 @@ createApp({
         this.skillResults=r.results; await this.loadAll();
         if(r.results.length && r.results.every(x=>x.ok)){ setTimeout(()=>{ this.newSkill=false; }, 1000); } }
       catch(e){ this.skillErr='Import failed: '+(e.detail||e.message||(e.status?('HTTP '+e.status):'request failed - try registering fewer skills at once')); } finally{ this.skillBusy=false; } },
-    logout(){ if(this.sessionMode){ fetch('/auth/logout',{method:'POST',credentials:'include'}).finally(()=>{localStorage.removeItem('treg-active');location.reload();}); } else { this.cfg={active:null,orgs:{}}; this.save(); location.reload(); } },
+    logout(){ try{ if(window.Intercom) window.Intercom('shutdown'); }catch(e){}  // drop the Intercom cookie so the next user on this machine can't read these conversations
+      if(this.sessionMode){ fetch('/auth/logout',{method:'POST',credentials:'include'}).finally(()=>{localStorage.removeItem('treg-active');location.reload();}); } else { this.cfg={active:null,orgs:{}}; this.save(); location.reload(); } },
     dot(s){ return s==='unknown'||s==='-'?'○':'●'; },
     short(e){ return (e||'').split('@')[0]; },
     isPersonal(o){ return !!o && o.name===this.me; },  // personal org = the auto-created one named after your email
@@ -4601,7 +4602,7 @@ createApp({
       try{ const o=await this.api('/orgs',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
         this.onboarded=true; try{ await this.api('/onboard/skip',{method:'POST'}); }catch(e){}  // don't re-prompt
         await this.loadAll(); this.switchOrg({slug:o.org});
-        this.analyticsIdentify(); this.track('onboarding_team_created',{team:o.org});
+        this.analyticsIdentify(); this.intercomUpdate(); this.track('onboarding_team_created',{team:o.org});
         this.welcome.step=1; }  // stay in the modal: pick your agent → get the setup line
       catch(e){ this.welcome.err='Could not create the team: '+(e.detail||e.status); }
       finally{ this.welcome.busy=false; } },
@@ -4626,6 +4627,26 @@ createApp({
     analyticsIdentify(){ if(!window.posthog || !window.posthog.identify || !this.me) return;
       try{ window.posthog.identify(this.me, {email:this.me}); if(this.activeSlugNow) window.posthog.group('team', this.activeSlugNow); }catch(e){} },
     track(name, props){ try{ if(window.posthog && window.posthog.capture) window.posthog.capture(name, props||{}); }catch(e){} },
+    // Support chat (Intercom) — only when this deployment opted in (meta.intercom_app_id present);
+    // self-hosters load nothing. Booted AFTER /auth/me resolves (not at the /meta fetch, like
+    // analytics) so the common case boots identified once instead of anonymous→identified.
+    initIntercom(){
+      const app=this.meta && this.meta.intercom_app_id; if(!app || window.__icInit) return; window.__icInit=true;
+      window.intercomSettings=this.intercomPayload();
+      const s=document.createElement('script'); s.async=true; s.src='https://widget.intercom.io/widget/'+app;
+      const i=function(){i.c(arguments)}; i.q=[]; i.c=function(a){i.q.push(a)}; if(!window.Intercom) window.Intercom=i;
+      document.head.appendChild(s);
+      try{ window.Intercom('boot', this.intercomPayload()); }catch(e){}
+    },
+    intercomPayload(){
+      const p={app_id:this.meta.intercom_app_id, product:'treg'};  // person attribute the shared workspace segments on
+      // Never send email without user_hash: an unhashed identify is exactly the impersonation
+      // vector identity verification exists to close. No hash (or no login) = anonymous visitor chat.
+      if(this.me && this.icHash){ p.email=this.me; p.user_hash=this.icHash;
+        if(this.activeSlugNow) p.company={id:this.activeSlugNow, name:this.activeSlugNow}; }
+      return p;
+    },
+    intercomUpdate(){ try{ if(window.__icInit && window.Intercom) window.Intercom('update', this.intercomPayload()); }catch(e){} },
     async resetDemo(){ try{ await this.api('/onboard/reset',{method:'POST'}); this.onboarded=true; await this.loadAll(); this.orgMsg='Demo teammates removed.'; }
       catch(e){ this.err='Reset failed: '+(e.detail||e.status); } },
     readMore(section){ try{ window.open('/tutorial'+(section?('#'+section):''),'_blank'); }catch(e){} },
@@ -4651,9 +4672,9 @@ createApp({
       }catch(e){ this.loginErr = e.status===401?'Invalid token.':('Error: '+(e.detail||e.status)); }
       finally{ this.busy=false; } },
     switchOrg(o){ this.orgMenu=false;
-      if(this.sessionMode){ this.activeSlug=o.slug; localStorage.setItem('treg-active',o.slug); this.loadAll(); return; }
+      if(this.sessionMode){ this.activeSlug=o.slug; localStorage.setItem('treg-active',o.slug); this.loadAll(); this.intercomUpdate(); return; }
       if(!this.connected(o.slug)){ this.addOrg=true; return; }
-      this.cfg.active=o.slug; this.save(); this.loadAll(); },
+      this.cfg.active=o.slug; this.save(); this.loadAll(); this.intercomUpdate(); },
     copyStart(text, tag){ navigator.clipboard.writeText(text).then(()=>{ this.startCopied=tag; setTimeout(()=>{ if(this.startCopied===tag) this.startCopied=''; },1400); }).catch(()=>{}); },
     // ---- connections (registry OAuth) ----
     async loadConnections(){
@@ -5398,7 +5419,7 @@ createApp({
         if(route||mkRoute) history.replaceState(null,'',stashed);
       } }
     const me = await fetch('/auth/me',{credentials:'include',headers:{'ngrok-skip-browser-warning':'1'}}).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; await this.loadAll(); this.analyticsIdentify();
+    if(me){ this.sessionMode=true; this.me=me.email; this.isAdmin=!!me.is_superadmin; this.onboarded=!!me.onboarded; this.icHash=me.intercom_user_hash||''; await this.loadAll(); this.analyticsIdentify(); this.initIntercom();
       // Share-born arrival (/app/skills/x?invite_org=N from the invite email): accept silently and
       // enter that team — the emailed "Sign in & accept" click was the consent. Otherwise the normal
       // first-run / invite-banner flow.
@@ -5415,7 +5436,7 @@ createApp({
       else { const hv=this.viewFromHash(); if(hv) this.go(hv, true);
         else { this.go('start', true); history.replaceState({view:'start'},'','/app#start'); } }  // no deep link → Getting started is the default landing
       return; }  // GitHub/email session
-    if(this.token){ await this.loadAll();
+    if(this.token){ await this.loadAll(); this.initIntercom();  // token mode: no email/hash → anonymous visitor chat
       const pfTok=this.platformFromHash();
       if(mkRoute) this.openProvider(mkRoute, true); else if(pfTok) this.openPlatform(pfTok, true); else if(route) this.openDetail(route.kind, route.name, true);
       else { const hv=this.viewFromHash(); if(hv) this.go(hv, true);

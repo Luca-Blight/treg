@@ -1194,5 +1194,20 @@ async function emailVerify(){
     <div class="err" id="em-err"></div>
   </div>
 </div>
+<script>
+// Support chat (Intercom), anonymous visitor mode — loads ONLY when this deployment configured an
+// app id (/meta.intercom_app_id); self-hosted instances serve "" and nothing loads. No id is
+// hardcoded here on purpose: the page is the same bytes for every deployment.
+(function(){
+  fetch('/meta').then(function(r){return r.json();}).then(function(m){
+    var app=m&&m.intercom_app_id; if(!app) return;
+    window.intercomSettings={app_id:app, product:'treg'};
+    var i=function(){i.c(arguments)}; i.q=[]; i.c=function(a){i.q.push(a)};
+    if(!window.Intercom) window.Intercom=i;
+    var s=document.createElement('script'); s.async=true;
+    s.src='https://widget.intercom.io/widget/'+app; document.head.appendChild(s);  // loader auto-boots from intercomSettings
+  }).catch(function(){});
+})();
+</script>
 </body>
 </html>

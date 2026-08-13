@@ -100,6 +100,16 @@ enterable; leave/delete forget the active org in both modes. On an org switch, `
 open Secrets panel + Activity log too (was showing the previous org's). Copy buttons fall back to
 `execCommand` and only claim success on success; the app shell has a mobile breakpoint.
 
+**Support chat (Intercom):** `initIntercom()` sits next to `initAnalytics()` and follows the same
+opt-in gate — no `meta.intercom_app_id`, no widget. It boots **after** `/auth/me` resolves (not at the
+`/meta` fetch) so the common case boots identified once: `email` + `user_hash` (from `/auth/me`,
+see [api](api.md)) + `company` = the active team slug + a `product: 'treg'` attribute the shared
+Superdesign workspace segments on. Email is **never** sent without `user_hash` (that's the
+impersonation vector identity verification closes) — no hash or no login means anonymous visitor
+chat, which is also what `landing.html`/`support.html` do with a tiny `/meta`-gated inline loader.
+`switchOrg`/team-create call `intercomUpdate()` so the company tracks the active team; `logout()`
+calls `Intercom('shutdown')` so the next user on the machine can't read the previous conversations.
+
 Server side (`api.py`): `require_identity` (who, from token OR session), `require_member` (a Caller in a
 specific org — token bakes the org in; a session picks it via `X-Treg-Org`), and `require_superadmin`
 (env token, or a token/session whose user `is_superadmin`). Every fetch also sends

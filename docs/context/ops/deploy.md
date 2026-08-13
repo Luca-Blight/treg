@@ -104,6 +104,11 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
 - `proxy_ssrf_check` (`TREG_PROXY_SSRF_CHECK`) — the **call-time SSRF guard** on the proxy: resolve the
   upstream host and refuse an internal/private target. **On by default**; only the test suite disables it
   (its upstream is an in-process ASGI transport, not real DNS).
+- `intercom_app_id` / `intercom_secret` (`TREG_INTERCOM_APP_ID` / `TREG_INTERCOM_SECRET`) — support
+  chat via the **Intercom Messenger** (shared Superdesign workspace; conversations carry a
+  `product: treg` attribute for inbox views). Empty app_id = the widget is OFF everywhere — `/meta`
+  serves `""` and every page's loader stays inert, so self-hosters ship no third-party chat. The
+  app_id is public; the secret signs `user_hash` (identity verification) and never reaches the browser.
 - `resend_api_key` / `email_from` — transactional email via **Resend** (`src/treg/email.py`): the OTP
   sign-in code + team invitations. Empty key = no real send (dev mode still returns the code; prod
   without a key silently skips — best-effort, never breaks the flow). `email_from` **must** be a

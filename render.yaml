@@ -56,6 +56,11 @@ services:
         sync: false
       - key: TREG_RESEND_API_KEY
         sync: false
+      # Support chat (Intercom Messenger, shared Superdesign workspace). Unset = widget off everywhere.
+      - key: TREG_INTERCOM_APP_ID   # public workspace id (visible in page source anyway)
+        sync: false
+      - key: TREG_INTERCOM_SECRET   # identity-verification secret — signs user_hash, never sent to the browser
+        sync: false
       # Landing live-wire demo (optional — unset = sandbox calls all synthesize / webhook 404s).
       - key: TREG_DEMO_STRIPE_KEY       # Stripe sandbox restricted key (Charges only) for the live wire
         sync: false
