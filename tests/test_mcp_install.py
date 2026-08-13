@@ -21,7 +21,7 @@ def test_json_agents_write_user_global_header_config(tmp_path, monkeypatch):
     (cur / "mcp.json").write_text(json.dumps({"mcpServers": {"other": {"url": "http://x"}}}))
     (tmp_path / ".config" / "opencode").mkdir(parents=True)
 
-    out = mcp_install.install_mcp(base_url="https://treg.superdesign.dev", token="TESTKEY",
+    out = mcp_install.install_mcp(base_url="https://treg.to", token="TESTKEY",
                                   only=["cursor", "opencode"])
     got = {d: (s, detail) for d, s, detail in out["results"]}
     assert got["Cursor"][0] == "ok" and got["opencode"][0] == "ok", out
@@ -29,7 +29,7 @@ def test_json_agents_write_user_global_header_config(tmp_path, monkeypatch):
     cursor = json.loads((cur / "mcp.json").read_text())
     assert cursor["mcpServers"]["other"] == {"url": "http://x"}          # untouched
     treg = cursor["mcpServers"]["treg"]
-    assert treg["url"] == "https://treg.superdesign.dev/mcp/"
+    assert treg["url"] == "https://treg.to/mcp/"
     assert treg["headers"]["Authorization"] == "Bearer TESTKEY"
 
     oc = json.loads((tmp_path / ".config" / "opencode" / "opencode.json").read_text())
@@ -37,7 +37,7 @@ def test_json_agents_write_user_global_header_config(tmp_path, monkeypatch):
     assert oc["mcp"]["treg"]["headers"]["Authorization"] == "Bearer TESTKEY"
 
     # idempotent: a second run leaves exactly one entry, still correct
-    mcp_install.install_mcp(base_url="https://treg.superdesign.dev", token="TESTKEY", only=["cursor"])
+    mcp_install.install_mcp(base_url="https://treg.to", token="TESTKEY", only=["cursor"])
     again = json.loads((cur / "mcp.json").read_text())
     assert list(again["mcpServers"].keys()) == ["other", "treg"]
 
@@ -46,7 +46,7 @@ def test_uninstalled_agents_are_skipped_not_written(tmp_path, monkeypatch):
     """No marker dir → the agent isn't touched (no stray config created for something not installed)."""
     monkeypatch.setattr(mcp_install, "HOME", tmp_path)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
-    out = mcp_install.install_mcp(base_url="https://treg.superdesign.dev", token="K",
+    out = mcp_install.install_mcp(base_url="https://treg.to", token="K",
                                   only=["cursor", "opencode"])
     assert out["results"] == []                       # nothing installed → nothing written
     assert not (tmp_path / ".cursor").exists()
@@ -63,8 +63,8 @@ def test_the_mcp_url_carries_the_trailing_slash(tmp_path, monkeypatch):
     guard away from writing outside its sandbox."""
     monkeypatch.setattr(mcp_install, "HOME", tmp_path)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
-    out = mcp_install.install_mcp(base_url="https://treg.superdesign.dev/", token="K", only=[])
-    assert out["mcp_url"] == "https://treg.superdesign.dev/mcp/"
+    out = mcp_install.install_mcp(base_url="https://treg.to/", token="K", only=[])
+    assert out["mcp_url"] == "https://treg.to/mcp/"
 
 
 def test_only_empty_means_NONE_not_all(tmp_path, monkeypatch):
@@ -75,7 +75,7 @@ def test_only_empty_means_NONE_not_all(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
     (tmp_path / ".cursor").mkdir()                       # cursor IS "installed" in this home…
     (tmp_path / ".config" / "opencode").mkdir(parents=True)
-    out = mcp_install.install_mcp(base_url="https://treg.superdesign.dev", token="K", only=[])
+    out = mcp_install.install_mcp(base_url="https://treg.to", token="K", only=[])
     assert out["results"] == [] and out["manual"] == []  # …and still nothing is written
     assert not (tmp_path / ".cursor" / "mcp.json").exists()
     assert not (tmp_path / ".config" / "opencode" / "opencode.json").exists()
@@ -112,6 +112,6 @@ def test_cmd_mcp_install_REFUSES_a_bad_token_before_writing(tmp_path, monkeypatc
 
     with pytest.raises(SystemExit) as e:
         cli.cmd_mcp_install(SimpleNamespace(name=None),
-                            {"token": "K", "base_url": "https://treg.superdesign.dev"})
+                            {"token": "K", "base_url": "https://treg.to"})
     assert "rejected" in str(e.value)
     assert not (tmp_path / ".config" / "opencode" / "opencode.json").exists()  # nothing written

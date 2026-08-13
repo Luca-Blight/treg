@@ -48,7 +48,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
 from . import catalog_store
-from .config import get_settings
+from .config import PUBLIC_HOST_ALIASES, get_settings
 
 # Every tool must declare what it can DO, and the review process checks these against real behaviour.
 # Read-only means it changes nothing anywhere; open-world means it can change state visible on the
@@ -229,14 +229,15 @@ def _oauth_claims(token: str) -> dict | None:
     """
     from . import mcp_oauth
 
-    return mcp_oauth.read_access_token(token, expected_audience=mcp_oauth.mcp_resource_url())
+    return mcp_oauth.read_access_token_any(token)
 
 
 def _need_token() -> dict:
+    base = get_settings().public_url.rstrip("/")
     return {
         "error": "not authenticated",
         "detail": (
-            "This MCP server needs a treg token. Get one at https://treg.superdesign.dev "
+            f"This MCP server needs a treg token. Get one at {base} "
             "(sign in, then Settings -> copy token) and set it as the TREG_TOKEN environment "
             "variable for this server."
         ),
@@ -344,7 +345,7 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
     r = await client.get("/orgs")
     if r.status_code == 401 or me.status_code == 401:
         return None, None, {"error": "not signed in, or this token is invalid or expired",
-                            "hint": "copy a fresh token from https://treg.superdesign.dev"}
+                            "hint": f"copy a fresh token from {get_settings().public_url.rstrip('/')}"}
     if r.status_code != 200:
         return None, None, {"error": "could not read the teams for this token"}
     orgs = _body(r) or []
@@ -608,6 +609,13 @@ def _allowed_hosts() -> list[str]:
     public = urlsplit(get_settings().public_url).netloc
     if public:
         hosts += [public, public.split(":")[0]]
+    # Every name the reference deployment has ever answered to, SYMMETRICALLY — a .mcp.json
+    # pointed at either domain keeps working whichever one public_url currently names, which is
+    # what makes an env-var rollback lossless (a treg.to config must survive a revert too).
+    hosts += list(PUBLIC_HOST_ALIASES)
+    # The SDK compares Host values EXACTLY, and `example.com:443` is a valid spelling of the
+    # default-port form some clients send — so every bare https hostname also allows its :443 twin.
+    hosts += [f"{h}:443" for h in hosts if ":" not in h and h not in ("localhost", "127.0.0.1")]
     hosts += ["localhost", "127.0.0.1", "treg.internal"]
     hosts += [h.strip() for h in os.environ.get("TREG_MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
     # a bare host and host:port are different header values, so allow the common local ports too
@@ -631,6 +639,10 @@ def _allowed_origins() -> list[str]:
     public = get_settings().public_url.rstrip("/")
     if public:
         origins.append(public)
+    origins += [f"https://{h}" for h in PUBLIC_HOST_ALIASES]
+    # Exact comparison again: allow the explicit-default-port spelling of every https origin.
+    origins += [f"{o}:443" for o in origins
+                if o.startswith("https://") and ":" not in o.removeprefix("https://")]
     origins += [f"http://localhost:{p}" for p in ("8000", "18790")]
     origins += [f"http://127.0.0.1:{p}" for p in ("8000", "18790")]
     origins += ["http://localhost", "http://127.0.0.1"]
@@ -729,7 +741,7 @@ class RequireAuthForProtectedTools:
             return "missing"
         from . import mcp_oauth
         if mcp_oauth.looks_like_access_token(token) and \
-                mcp_oauth.read_access_token(token, expected_audience=mcp_oauth.mcp_resource_url()) is None:
+                mcp_oauth.read_access_token_any(token) is None:
             return "invalid"
         return None             # a live access token, or a per-org token the tool validates itself
 

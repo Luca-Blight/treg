@@ -165,6 +165,17 @@ A test asserts that calling without it raises rather than defaulting to permissi
 that is valid, well-formed and silently useless — the failure then surfaces at the first tool call as
 "not signed in", pointing the reader at authentication when the problem was the audience.
 
+**The audience set is canonical + legacy** (`mcp_resource_audiences()`: `public_url` plus
+`config.PUBLIC_HOST_ALIASES` — the treg.superdesign.dev → treg.to move, SYMMETRIC so grants
+minted on either name survive a `TREG_PUBLIC_URL` flip in either direction). A pre-move grant carries
+the old resource URL as its audience for its whole lifetime, because refresh reissues the audience
+that was consented to (`row.resource`); validating against the canonical URL alone would 401 every
+pre-move grant with refresh unable to recover. The transport validates via `read_access_token_any`,
+and `/oauth/token` treats the two names as the same resource (`api._same_mcp_resource`).
+Slash-variant spellings are healed by `normalize_resource()` at every store/mint/compare site:
+authorize accepts `…/mcp` via a forgiving compare, and a token whose audience kept that spelling
+would fail the exact audience match forever.
+
 ## Two doors in, one row out
 
 `OAuthClient` holds both kinds of client:
