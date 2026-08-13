@@ -3336,6 +3336,23 @@ def cmd_mcp_install(args, cfg) -> None:
     token = os.environ.get("TREG_TOKEN") or cfg.get("token")
     if not token:
         sys.exit("no token — run `treg login` first (or `treg login --token <key>`), then retry")
+    # VERIFY before fanning the token out into every agent config on this machine — the same check
+    # `treg login --token` runs. Without it, a garbage token (a stale TREG_TOKEN, a mangled paste)
+    # is written silently into Claude/Cursor/opencode, and the failure surfaces days later inside
+    # whichever agent tries a call — looking like a provider problem, not a setup one. `_client`
+    # applies the same TREG_TOKEN-beats-config precedence used above, so this validates exactly the
+    # token that would be written.
+    try:
+        with _client(cfg) as c:
+            who = c.get("/auth/me")
+    except Exception as exc:  # noqa: BLE001 — network/DNS: report, don't write a maybe-bad token
+        sys.exit(f"Could not reach {cfg['base_url']} to verify the token: {exc}")
+    if who.status_code == 401:
+        sys.exit("That token was rejected (401 invalid token) — nothing was written. It's expired "
+                 "or from a different server; run `treg login` (or copy a fresh token from the "
+                 "dashboard), then retry.")
+    if who.status_code >= 400:
+        sys.exit(f"Token check failed ({who.status_code}): {who.text[:120]} — nothing was written.")
     base_url = (cfg.get("base_url") or "https://treg.superdesign.dev").rstrip("/")
     name = getattr(args, "name", None) or "treg"
     out = mcp_install.install_mcp(base_url=base_url, token=token, server_name=name)

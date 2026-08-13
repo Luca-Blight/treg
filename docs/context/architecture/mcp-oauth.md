@@ -248,6 +248,15 @@ documented JSON (`~/.cursor/mcp.json`, `~/.config/opencode/opencode.json`). Code
 aren't safely expressible from the light CLI (no toml writer, yaml is a server-only dep), so we print
 the exact manual step rather than a config we haven't runtime-verified.
 
+The command **verifies the token against `/auth/me` before writing anything** — the same check
+`treg login --token` runs. Learned the hard way: without it, a garbage token fans out silently into
+every agent on the machine and surfaces days later as per-provider "invalid token" errors inside
+whichever agent tries a call — catalog reads still work (they don't validate the token downstream),
+which makes it look like a provider outage rather than a setup problem. The garbage in question was
+the test suite's own dummy: `install_mcp(only=[])` read an empty list as "no filter" and wrote
+`Bearer K` into the developer's real configs on every suite run — `only=[]` now means *none*, and
+the test isolates HOME.
+
 Why a header works even though treg advertises OAuth: a client only falls back to OAuth discovery on
 a **401**, and treg returns **200** for a valid header — verified against Claude Code, which
 otherwise prefers OAuth (issue #59467). The determinant is "does the server 200 a valid header," not
