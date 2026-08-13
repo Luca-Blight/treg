@@ -402,7 +402,16 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   provider — a bring-your-own bot token (Slack) or an **API key** (Apollo, Hunter, TikHub, Semrush, …) —
   **verifying the credential against the provider's probe before storing** (a header- OR query-param probe,
   an off-host `probe_url`, tolerating a CSV/text body or a 200-with-false-`token_verify_field` reply), then
-  auto-provisioning its tool with a header or query binding. See
+  auto-provisioning its tool with a header or query binding. Two probe subtleties the code handles
+  because upstreams don't cooperate: a `probe_path` may bake in a required `?query` (PDL, Akta,
+  JustOneAPI, SpyFu), and httpx **replaces** a URL's own query when `params=` is passed — so the path's
+  query is parsed out and **merged into params** (the credential wins a key collision) rather than
+  silently dropped; and the body is parsed as JSON **regardless of content-type**, because ScrapeCreators
+  serves real JSON under `text/plain` and gating on `application/json` left `token_verify_field` unread
+  (a genuinely non-JSON balance still throws → empty payload → the `ERROR`-text branch, unchanged). A
+  base64-encode provider (`token_encode`, DataForSEO/Moz) accepts EITHER a raw `login:password` OR the
+  dashboard's ready-made base64 blob — a blob is detected (strict-decodes to printable text with a `:`)
+  and kept as-is instead of being double-encoded. See
   [auth-secrets](../architecture/auth-secrets.md). `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
   the second credential a provider needs when treg does NOT hold it centrally (rare) and finishes the
   tool with BOTH bindings. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and

@@ -28,7 +28,7 @@ import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote, urlsplit
+from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
 
 from sqlalchemy import case, delete, func, or_
 
@@ -6288,10 +6288,22 @@ async def connect_with_token(
     if not token:
         raise HTTPException(status_code=422, detail=f"{provider.token_label or 'Token'} is required")
     # HTTP Basic providers (DataForSEO, Moz) take a pasted `login:password`; store the Base64 blob so
-    # `Basic {secret}` renders the same at connect and on every proxy call.
+    # `Basic {secret}` renders the same at connect and on every proxy call. Both dashboards ALSO hand
+    # out a ready-made Base64 credential, and users paste that at least as often as the raw pair —
+    # encoding it again produced a double-encoded blob the provider 401'd. So: if the paste already IS
+    # Base64 of a printable `login:password`, keep it. A raw pair can never be mistaken for one (":"
+    # is not in the Base64 alphabet, so strict decoding refuses it), and a Base64 blob can never be
+    # a working raw pair (it has no ":"), so the branch is unambiguous either way.
     if provider.token_encode == "base64":
         import base64
-        token = base64.b64encode(token.encode()).decode()
+        already = None
+        try:
+            decoded = base64.b64decode(token, validate=True).decode()
+            if ":" in decoded and decoded.isprintable():
+                already = token
+        except Exception:  # noqa: BLE001 — not Base64, or not text: encode it below
+            pass
+        token = already or base64.b64encode(token.encode()).decode()
 
     # The credential rides in a header (default) or a query param (Semrush: ?key=…). The cheapest
     # check may also live on a different host than base_url, so honor an absolute probe_url override,
@@ -6302,6 +6314,14 @@ async def connect_with_token(
     else:
         headers, params = {provider.token_header: rendered}, {}
     probe_url = provider.probe_url or f"{provider.base_url.rstrip('/')}{provider.probe_path}"
+    # httpx REPLACES a URL's own query string when `params=` is passed, so a probe_path like
+    # `/autocomplete?field=title&text=data` (PDL, Akta, JustOneAPI, SpyFu) silently lost its required
+    # params and the probe 400'd — rejecting a perfectly good key. Merge the path's query into params
+    # ourselves (params, i.e. the credential for a query provider, wins on a key collision).
+    split = urlsplit(probe_url)
+    if split.query:
+        params = {**dict(parse_qsl(split.query, keep_blank_values=True)), **params}
+        probe_url = urlunsplit((split.scheme, split.netloc, split.path, "", split.fragment))
     try:
         resp = await request.app.state.http.request(
             provider.probe_method or "GET", probe_url,
@@ -6309,13 +6329,17 @@ async def connect_with_token(
         )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"could not reach {provider.display_name}: {exc}") from None
-    # Only parse JSON when the response actually is JSON — a key check may answer in CSV/text
-    # (Semrush's balance endpoint), where resp.json() would throw and mask a valid key as unreachable.
+    # Try to parse the body as JSON regardless of the content-type header: ScrapeCreators returns a
+    # real JSON body labelled `text/plain`, and gating on `application/json` left its payload empty so
+    # `token_verify_field` (creditCount) read as false and a valid key was rejected. The parse is
+    # defensive — a genuinely non-JSON key check (Semrush's CSV/number balance) simply throws and
+    # leaves payload empty, falling through to the `text_error` branch exactly as before.
     ctype = resp.headers.get("content-type", "")
     payload: dict = {}
-    if resp.status_code < 500 and ctype.startswith("application/json"):
+    if resp.status_code < 500:
         try:
-            payload = resp.json()
+            parsed = resp.json()
+            payload = parsed if isinstance(parsed, dict) else {}
         except Exception:  # noqa: BLE001
             payload = {}
     # Some providers answer HTTP 200 even for a BAD key and signal validity only in the body: a JSON
