@@ -193,10 +193,9 @@ class Settings(BaseSettings):
     # ingestion key (safe to expose to the browser); host defaults to EU cloud.
     posthog_key: str = ""
     posthog_host: str = "https://eu.i.posthog.com"
-    # Intercom Messenger (support chat; shared Superdesign workspace, conversations segmented by a
-    # `product` attribute). Empty app_id = OFF, so self-hosted instances never load the widget. The
-    # app_id is public (visible in page source); the secret signs user_hash for identity verification
-    # and must never reach the browser.
+    # Intercom Messenger (support chat; treg's own workspace). Empty app_id = OFF, so self-hosted
+    # instances never load the widget. The app_id is public (visible in page source); the secret
+    # signs user_hash for identity verification and must never reach the browser.
     intercom_app_id: str = ""
     intercom_secret: str = ""
     # Registry OAuth apps for the non-Google providers (oauth_providers.py). Empty = that provider

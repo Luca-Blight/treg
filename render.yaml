@@ -56,7 +56,7 @@ services:
         sync: false
       - key: TREG_RESEND_API_KEY
         sync: false
-      # Support chat (Intercom Messenger, shared Superdesign workspace). Unset = widget off everywhere.
+      # Support chat (Intercom Messenger, treg's own workspace). Unset = widget off everywhere.
       - key: TREG_INTERCOM_APP_ID   # public workspace id (visible in page source anyway)
         sync: false
       - key: TREG_INTERCOM_SECRET   # identity-verification secret — signs user_hash, never sent to the browser
