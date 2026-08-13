@@ -54,7 +54,8 @@ from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, plat
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
                      IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
-                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, User)
+                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, ToolRequest,
+                     User)
 from .proxy import relay
 
 
@@ -540,7 +541,9 @@ async def catalog_search(q: str = "", limit: int = 25) -> dict:
     if not q.strip():
         hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
     elif not results:
-        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves"]
+        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves",
+                 "still missing? POST /tool-requests {\"capability\": \"<what you need>\"} — "
+                 "requests steer which provider gets added next"]
     else:
         hints = [f"treg catalog get {results[0]['id']}   # params, cost and an example response",
                  f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
@@ -610,6 +613,73 @@ async def catalog_example(endpoint_id: str) -> Response:
     if path is None or not path.is_file():
         raise HTTPException(status_code=404, detail=f"no example response for {endpoint_id!r}")
     return Response(content=path.read_bytes(), media_type="application/json")
+
+
+# ---- "the catalog doesn't have X" — tool requests -------------------------------------------
+TOOLREQ_HIT_NS = "toolreq"
+TOOLREQ_RATE_MAX = 10          # filings per IP per window
+TOOLREQ_RATE_WINDOW_S = 3600   # 1 hour
+TOOLREQ_SOURCES = {"web", "cli", "mcp", "api"}
+
+
+class ToolRequestIn(BaseModel):
+    capability: str          # what they wanted — "Ahrefs backlinks", "flight prices", a provider name
+    query: str = ""          # the catalog search that came up empty (agents auto-fill this)
+    note: str = ""
+    contact: str = ""        # optional reach-back; free text, unverified
+    source: str = "web"      # web | cli | mcp | api
+
+
+@app.post("/tool-requests", include_in_schema=False)
+async def create_tool_request(
+    body: ToolRequestIn,
+    request: Request,
+    x_treg_token: str = Header(default=""),
+    treg_session: str = Cookie(default=""),
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Open: file a "the catalog doesn't have X" report. No auth on purpose — the filer is most
+    often an agent that just got zero search results and holds no token, and a signup wall here
+    costs exactly the demand signal the catalog team wants. Per-IP rate limiting (ratestore) is
+    the abuse valve, same shape as POST /demo/sandbox; field caps bound the row.
+
+    Identity is attribution, never authorization: when the caller happens to be signed in (token
+    or same-origin session), the row records who asked so they can be told when it lands — a
+    forged cross-origin cookie POST gets stored as anonymous, not rejected, hence the
+    `_same_origin` gate on the cookie path only."""
+    await ratestore.sweep(db, TOOLREQ_HIT_NS)
+    if not await ratestore.rate_check(db, TOOLREQ_HIT_NS,
+                                      [(_client_ip(request), TOOLREQ_RATE_MAX)], TOOLREQ_RATE_WINDOW_S):
+        await db.commit()  # persist the sweep even on reject
+        raise HTTPException(status_code=429, detail="too many tool requests from here — try again later")
+    capability = body.capability.strip()
+    if not capability:
+        raise HTTPException(status_code=422, detail="say what tool/capability you need")
+    if len(capability) > 200:
+        raise HTTPException(status_code=422, detail="capability is a headline — keep it under 200 chars")
+    org_id, user_email = None, ""
+    if x_treg_token:
+        m = await _membership_by_token(x_treg_token, db)
+        user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
+        if user is not None and not user.suspended:
+            org_id, user_email = (m.org_id if m else None), user.email
+    elif treg_session and _same_origin(request):
+        user = await _user_from_session(treg_session, db)
+        if user is not None:
+            user_email = user.email
+    row = ToolRequest(
+        org_id=org_id,
+        user_email=user_email,
+        capability=capability,
+        query=body.query.strip()[:300],
+        note=body.note.strip()[:2000],
+        contact=body.contact.strip()[:200],
+        source=body.source if body.source in TOOLREQ_SOURCES else "api",
+    )
+    db.add(row)
+    await db.commit()
+    return {"id": row.id, "status": "received",
+            "note": "logged — requests steer which provider gets keyed next"}
 
 
 # ---- human login via GitHub OAuth (dashboard sessions) ------------------------------------
@@ -2590,6 +2660,7 @@ _ORG_SCOPED_MODELS = (
     CapabilityPin, LedgerEntry, Hold, CreditBlock,
     OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
     IdempotentCall,            # a remembered answer belongs to the team that paid for it
+    ToolRequest,  # attribution rows go with the team; anonymous filings carry no org_id and stay
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 

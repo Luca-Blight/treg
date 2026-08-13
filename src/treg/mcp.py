@@ -127,6 +127,14 @@ class SearchOut(TypedDict, total=False):
     detail: str | None
 
 
+class RequestOut(TypedDict, total=False):
+    id: int | None
+    status: str | None      # "received"
+    note: str | None
+    error: str | None
+    detail: str | None
+
+
 class CatalogGetOut(TypedDict, total=False):
     endpoint: dict[str, Any] | None        # the full catalog entry: params, cost, observed reliability
     provider: dict[str, Any] | None
@@ -400,11 +408,39 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
     out = {"query": query, "count": len(results), "total_matches": total, "results": results}
     if not results:
         out["hint"] = (
-            f"nothing matches all of {query!r} — drop a word, or try a different way of saying the task"
+            f"nothing matches all of {query!r} — drop a word, or try a different way of saying the task. "
+            "If the catalog genuinely lacks it, file it with catalog_request(capability=...) — "
+            "requests steer which provider gets added next"
         )
     else:
         out["next"] = "catalog_get(endpoint_id) for parameters and the exact price, then call(...)"
     return out
+
+
+@mcp.tool(
+    description=(
+        "The catalog doesn't have what you need? File a tool request — one sentence saying what "
+        "capability or provider is missing. Requests are the demand signal that decides which "
+        "provider gets added next. Use AFTER catalog_search comes up empty, not instead of it."
+    ),
+    # A write, but a harmless one: it files a report on treg itself — nothing upstream, nothing spent.
+    annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, open_world_hint=False,
+                                idempotent_hint=False),
+    structured_output=True
+)
+async def catalog_request(capability: str, ctx: Context, note: str = "") -> RequestOut:
+    """Relays to POST /tool-requests so the rate limiting, field caps and attribution live in one
+    place; the bearer (when the session has one) turns into who-asked on the stored row."""
+    token = _bearer(ctx)
+    # The in-process relay would otherwise collapse every MCP caller into one client IP ("?"),
+    # making the per-IP rate limit a single global bucket — forward the edge's X-Forwarded-For
+    # so the API's limiter sees the real caller.
+    xff = (ctx.headers or {}).get("x-forwarded-for") or (ctx.headers or {}).get("X-Forwarded-For") or ""
+    async with _api(token) as client:
+        r = await client.post("/tool-requests", json={
+            "capability": capability, "note": note, "source": "mcp"},
+            headers={"X-Forwarded-For": xff} if xff else {})
+    return _body(r)
 
 
 @mcp.tool(

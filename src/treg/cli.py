@@ -4204,6 +4204,8 @@ def cmd_catalog(args, cfg) -> None:
             sys.exit("which endpoint? e.g. treg catalog get tikhub.tiktok.video.comments\n"
                      "find one with: treg catalog search <query>")
         return _catalog_get(rest[0], cfg)
+    if args.platform == "request":
+        return _catalog_request(" ".join(rest), cfg)
     if rest:
         sys.exit(f"unexpected argument {rest[0]!r} — did you mean `treg catalog search {args.platform} {' '.join(rest)}`?")
 
@@ -4306,6 +4308,7 @@ def _catalog_search(query: str, args, cfg) -> None:
     if not rows:
         print(f"nothing matches all of \"{query}\"")
         _dim("every word has to match — drop one, or browse the shelves with `treg catalog`")
+        _dim(f"still missing? file it: treg catalog request \"{query}\"   # requests steer what gets added next")
         return
 
     idw = min(max(len(e["id"]) for e in rows), 46)
@@ -4317,6 +4320,21 @@ def _catalog_search(query: str, args, cfg) -> None:
               f"{_clip(_cost_usd(e.get('cost')), 16):<16} {'●' if e['provider'] in connected else ' '}  "
               f"{_clip(e.get('summary', ''), 54)}")
     _dim(f"\ntreg catalog get {rows[0]['id']}   # params, cost, example response")
+
+
+def _catalog_request(text: str, cfg) -> None:
+    """File a "the catalog doesn't have X" report — the demand signal that steers which provider
+    gets keyed next. Open endpoint (rate-limited server-side); a configured token just adds
+    attribution so the filer can be told when it lands."""
+    if not text.strip():
+        sys.exit('request what? e.g. treg catalog request "Ahrefs backlinks"')
+    with _client(cfg) as c:  # token attaches if configured — attribution only, never required
+        r = c.post("/tool-requests", json={"capability": text.strip(), "source": "cli"})
+    if r.status_code != 200 or _JSON_OVERRIDE:
+        _show(r)
+        return
+    print(f'logged: "{text.strip()}"')
+    _dim("requests steer which provider gets added next — the most-asked-for tools land first")
 
 
 def _catalog_get(endpoint_id: str, cfg) -> None:
@@ -5154,10 +5172,12 @@ def build_parser() -> argparse.ArgumentParser:
             "treg catalog                                   # platforms, busiest first",
             "treg catalog tiktok                            # every provider's tiktok endpoints, by capability",
             "treg catalog search tiktok comments            # find an endpoint by what it does",
-            "treg catalog get tikhub.tiktok.video.comments  # params, cost, example response, how to call it")
-    ct.add_argument("platform", nargs="?", metavar="<platform|search|get>",
-                    help="a platform slug (tiktok, web, google, …), or `search <query>` / `get <endpoint-id>`")
-    ct.add_argument("rest", nargs="*", metavar="<args>", help="the search query, or the endpoint id for `get`")
+            "treg catalog get tikhub.tiktok.video.comments  # params, cost, example response, how to call it",
+            "treg catalog request \"Ahrefs backlinks\"        # missing? file it — requests steer what gets added")
+    ct.add_argument("platform", nargs="?", metavar="<platform|search|get|request>",
+                    help="a platform slug (tiktok, web, google, …), or `search <query>` / `get <endpoint-id>` / "
+                         "`request <what's missing>`")
+    ct.add_argument("rest", nargs="*", metavar="<args>", help="the search query, endpoint id, or request text")
     ct.add_argument("--limit", type=int, default=25, help="search: how many results (default: 25, max 100)")
     ct.add_argument("--all", action="store_true", dest="show_all",
                     help="include management endpoints (account/utility CRUD) hidden from the browse by default")

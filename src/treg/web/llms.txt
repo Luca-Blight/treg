@@ -97,6 +97,10 @@ Start from the job, not the vendor:
     treg call tikhub.tiktok.user.profile --query uniqueId=tiktok
     # raw HTTP: GET {BASE}/call/tikhub.tiktok.user.profile?uniqueId=tiktok  + X-Treg-Token
 
+Searched and the catalog genuinely lacks it? File it — requests steer which provider gets added
+next: `treg catalog request "<what you need>"`, or raw HTTP
+`POST {BASE}/tool-requests {"capability": "<what you need>"}` (no token required).
+
 **How a catalogued call is served** — the credential ladder, tried in this order. Note the shape:
 your own credential always beats treg's, so connecting a key you already pay for makes those calls
 free of the balance rather than duplicating them.
