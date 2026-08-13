@@ -36,7 +36,11 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   Render's `fromDatabase`-injected URL works unedited (the async engine needs the asyncpg driver).
 - `secret_key` — the Fernet key; empty → an ephemeral key is minted at startup (secrets won't survive a
   restart). See [auth-secrets](../architecture/auth-secrets.md).
-- `public_url` — default `https://treg.superdesign.dev` (the reference deployment); self-hosters set
+- `public_url` — default `https://treg.to`; the reference deployment is cut over in STAGES —
+  render.yaml deliberately still sets the OLD domain so the migration code deploys inert, and the
+  flip (then email, then client releases) each land as their own change. Both prod hostnames stay
+  valid forever (`config.PUBLIC_HOST_ALIASES`); marketing pages 301 old→canonical only. Verify each
+  phase with `scripts/smoke-domain.sh pre|post`. Self-hosters set
   `TREG_PUBLIC_URL`. Used to build the OAuth callback URI.
 - `api_token` — a bootstrap caller token (MVP leftover; per-user tokens are the real auth).
 - `admin_token` — the cross-tenant **super-admin** bearer (`TREG_ADMIN_TOKEN`); empty disables the env
@@ -107,8 +111,8 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
 - `resend_api_key` / `email_from` — transactional email via **Resend** (`src/treg/email.py`): the OTP
   sign-in code + team invitations. Empty key = no real send (dev mode still returns the code; prod
   without a key silently skips — best-effort, never breaks the flow). `email_from` **must** be a
-  Resend-verified domain — `treg.superdesign.dev` is **verified** (DKIM `resend._domainkey.treg`, SPF
-  MX+TXT on `send.treg`), so the default is `no-reply@treg.superdesign.dev`. **On Render:** set
+  Resend-verified domain — `treg.to` is **verified** (DKIM + SPF records on the treg.to zone;
+  `treg.superdesign.dev` stays verified as a fallback), so the default is `no-reply@treg.to`. **On Render:** set
   `TREG_RESEND_API_KEY`, optionally `TREG_EMAIL_FROM`, and leave `TREG_EMAIL_DEV_MODE` false.
 
 ## Web dashboard
@@ -118,7 +122,8 @@ lives inside the `treg` package (the `packages` inclusion covers non-.py assets)
 [dashboard](../interface/dashboard.md).
 
 ## Current hosting (shipped)
-Deployed on **Render** at `https://treg.superdesign.dev` via the Blueprint below (one web service + a
+Deployed on **Render** at `https://treg.to` (with `treg.superdesign.dev` attached as the legacy
+alias — never remove it: installed CLIs/skills point there with tokens) via the Blueprint below (one web service + a
 managed Postgres). The Fernet key lives only in the service's environment — **back it up**; losing it
 makes every stored secret unrecoverable. For local dev, `scripts/dev-local.sh up` runs the server with
 its own sqlite DB and email dev mode.

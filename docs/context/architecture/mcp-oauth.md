@@ -55,6 +55,28 @@ MCP traffic is distinguishable from unreported CLI traffic in the audit trail an
 The catalog is the one exception: read straight from `catalog_store`, which is already parsed in
 memory, so a search answers in about a millisecond. That is a **speed** choice, not a permission one.
 
+## `call` speaks every request shape the CLI does
+
+`params` keeps its original method-based role (query string on GET, JSON body on POST). The
+explicit slots exist for the shapes that role can't express, mirroring `treg call`'s flags —
+each of which was added because a real endpoint needed it:
+
+- `query` — ALWAYS the query string; a list value expands to repeated keys (`?tag=a&tag=b`,
+  which a dict would collapse). Composable with `body` on a POST — the Bright Data dataset shape
+  (`?dataset_id=…` + array body) was uncallable over MCP without it.
+- `body` — ALWAYS the body. Object/array → JSON; a STRING is sent raw with `content_type` naming
+  it (sniffed as `application/json` when it parses as JSON — the CLI's rule). A body implies POST.
+- `headers` — extra upstream headers (`login-customer-id` is the canonical need). treg's own
+  auth/routing headers are filtered from the relay; injected credentials always win server-side.
+- An inline `?a=b` inside a passthrough URL is pulled out and merged — httpx silently DROPS a
+  URL's query string whenever `params=` is passed, the same gotcha `cmd_call` guards.
+- `params` claiming the same position as an explicit slot is refused loudly, never merged.
+- Multipart file upload stays CLI-only (`treg call --upload`) — MCP callers hold no files.
+- `call` resolves the TEAM the way `balance` does (`_resolve_org`, before anything is spent): a
+  multi-team identity token used to bounce off /call's raw `choose an org (send X-Treg-Org)`
+  400 — a header hint an MCP caller can't act on; now it gets the pinned/active team, or the
+  friendly error that NAMES the teams.
+
 ## `call` takes an `idempotency_key`
 
 Optional, and it is the caller's. Pass the same key when repeating a call whose answer never arrived:
@@ -171,6 +193,17 @@ A test asserts that calling without it raises rather than defaulting to permissi
 `/oauth/authorize` also refuses a `resource` we do not serve, up front. Accepting one mints a token
 that is valid, well-formed and silently useless — the failure then surfaces at the first tool call as
 "not signed in", pointing the reader at authentication when the problem was the audience.
+
+**The audience set is canonical + legacy** (`mcp_resource_audiences()`: `public_url` plus
+`config.PUBLIC_HOST_ALIASES` — the treg.superdesign.dev → treg.to move, SYMMETRIC so grants
+minted on either name survive a `TREG_PUBLIC_URL` flip in either direction). A pre-move grant carries
+the old resource URL as its audience for its whole lifetime, because refresh reissues the audience
+that was consented to (`row.resource`); validating against the canonical URL alone would 401 every
+pre-move grant with refresh unable to recover. The transport validates via `read_access_token_any`,
+and `/oauth/token` treats the two names as the same resource (`api._same_mcp_resource`).
+Slash-variant spellings are healed by `normalize_resource()` at every store/mint/compare site:
+authorize accepts `…/mcp` via a forgiving compare, and a token whose audience kept that spelling
+would fail the exact audience match forever.
 
 ## Two doors in, one row out
 
