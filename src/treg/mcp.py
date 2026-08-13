@@ -457,7 +457,14 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
         "request headers an endpoint needs per-call (e.g. Google Ads' login-customer-id); "
         "injected credentials always win over them. Use `query` + `body` together for endpoints "
         "that split a POST across both (Bright Data's ?dataset_id=… + array body). Giving `body` "
-        "implies POST. File uploads (multipart) are CLI-only: `treg call --upload`."
+        "implies POST.\n\n"
+        "REAL FILE UPLOADS (multipart/form-data — Meta adimages/advideos, S3-style uploads) can't "
+        "travel through this tool: it holds no files, and a base64-in-JSON workaround breaks on "
+        "size limits. When an endpoint needs one, use the treg CLI instead — if you can run shell "
+        "commands, run it yourself: `treg call <endpoint-or-tool/path> --upload name=@/path/to/"
+        "file` (repeatable; plain fields as name=value; same credential injection, same metering). "
+        "No terminal? Tell the human that exact command. Everything else about the request "
+        "(--query, --header) composes with --upload the same way it does here."
     ),
     annotations=_CALLS,
     structured_output=True
