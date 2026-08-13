@@ -425,6 +425,11 @@ def test_observed_cost_only_trusts_a_real_number():
     assert A._observed_cost_micro("akta", b'{"credits_consumed": 0.5}') == 25_000
     assert A._observed_cost_micro("akta", b'{"credits_consumed": 0}') == 0, "a reported zero is honoured"
     assert A._observed_cost_micro("akta", b'{"credits_charged": 2}') is None, "wrong field name means we never learned it"
+    # leadmagic reports `credits_consumed` too — including 0 on a 2xx miss (observed at verify
+    # time) and fractions (email verify = 0.25 credits). $0.025/credit (fx.yaml).
+    assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 1}') == 25_000
+    assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 0}') == 0, "a 2xx miss is free"
+    assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 0.25}') == 6_250
 
 
 def test_apollo_settles_a_2xx_miss_at_zero():

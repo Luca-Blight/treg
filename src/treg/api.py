@@ -7506,11 +7506,14 @@ def _observed_cost_micro(provider: str, body: bytes) -> int | None:
       - dataforseo: a top-level `cost` in USD — including 0 when it decided not to charge (a free
         route, or a request it rejected before metering). That zero is real information and settles the
         call at zero, which is why the test is `>= 0` and not truthiness.
-      - scrapecreators (`credits_charged`) and akta (`credits_consumed`): provider credits, converted
-        through the provider's credit rate (fx.yaml) — the same conversion `cost_view` uses, so a
-        settle can't disagree with the catalog's price. Akta is the one that NEEDS this: its enrich
-        route is priced per SECTION requested and its news route adds a per-article rider, so the
-        catalog's single estimate can only be an upper bound — the actual charge lives here.
+      - scrapecreators (`credits_charged`), akta and leadmagic (`credits_consumed`): provider
+        credits, converted through the provider's credit rate (fx.yaml) — the same conversion
+        `cost_view` uses, so a settle can't disagree with the catalog's price. Akta is the one that
+        NEEDS this: its enrich route is priced per SECTION requested and its news route adds a
+        per-article rider, so the catalog's single estimate can only be an upper bound — the actual
+        charge lives here. LeadMagic answers a miss with 2xx and `credits_consumed: 0` (observed at
+        verify time), so honouring the field is what keeps a free miss from billing the estimate;
+        it also reports fractions (email verify is 0.25).
       - apollo: DERIVED, not reported. Apollo answers a miss with 2xx (`organization: null` on
         enrich, an empty `organizations` page on search) and charges nothing for it, so status-based
         billing alone would bill the caller for a response Apollo gave away. The body says whether
@@ -7531,7 +7534,7 @@ def _observed_cost_micro(provider: str, body: bytes) -> int | None:
         if isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost >= 0:
             return int(cost * 1_000_000 + 0.5)
         return None
-    if provider in ("scrapecreators", "akta"):
+    if provider in ("scrapecreators", "akta", "leadmagic"):
         credits = doc.get("credits_charged" if provider == "scrapecreators" else "credits_consumed")
         rate = catalog_store.load().credit_rates.get(provider)
         if isinstance(credits, (int, float)) and not isinstance(credits, bool) and credits >= 0 and rate:
