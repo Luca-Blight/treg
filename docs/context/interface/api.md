@@ -52,7 +52,10 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   user + an org + owner membership and returns a token **once**; the dashboard/CLI login doors do NOT go
   through it (they create the user only, no auto org). `create_org` (`POST /orgs`, `require_identity` so a
   zero-org user can make their first team) + `list_orgs` (`GET /orgs`,
-  each org carries a `tool_count` — one grouped query — so the dashboard can land on the org with tools);
+  each org carries a `tool_count` — one grouped query — so the dashboard can land on the org with tools;
+  its `active` flag follows `require_member`'s precedence — per-org membership token, else `X-Treg-Org`,
+  else a team-pinned identity token's own `org` claim — so `treg login --token <pinned key>` lands on the
+  baked-in team instead of the caller's first membership);
   invites via `create_invite` (`POST /orgs/{id}/invites`, admin+) → one-time code (**emailed** via
   `email.send_invite`, best-effort, along with a separate inbox-only `email_token` sign-in link — the
   token is never in the JSON response; see the invite sign-in link below), `accept_invite`

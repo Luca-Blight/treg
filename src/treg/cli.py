@@ -83,6 +83,18 @@ def _save_config(cfg: dict) -> None:
     os.replace(tmp, CONFIG_PATH)
 
 
+def _token_org_claim(token: str | None) -> str | None:
+    """The org slug baked into a team-pinned identity token (`<b64url(claims)>.<sig>`), else None.
+    Decoded WITHOUT verifying the signature — it only picks a local default; the server still
+    authorizes every call against the real membership."""
+    try:
+        payload = token.split(".", 1)[0]
+        claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+        return claims.get("org") or None
+    except Exception:
+        return None
+
+
 def _pick_active_org(cfg: dict) -> None:
     """Best-effort: set the active org from GET /orgs. The token is already persisted by the
     caller, so a transient failure here (proxy hiccup, cold restart) must never lose it."""
@@ -91,7 +103,14 @@ def _pick_active_org(cfg: dict) -> None:
             r = c.get("/orgs")
         orgs = r.json() if r.status_code == 200 else []
         if orgs:
-            cfg["active_org"] = next((o for o in orgs if o.get("active")), orgs[0])["slug"]
+            # Server's "active" flag first; then the org baked into a team-pinned identity token
+            # (older servers don't mark those active); only then the first membership — which for a
+            # multi-team user is an arbitrary org, the wrong default whenever anything better exists.
+            claimed = _token_org_claim(cfg.get("token"))
+            cfg["active_org"] = next(
+                (o for o in orgs if o.get("active")),
+                next((o for o in orgs if o.get("slug") == claimed), orgs[0]),
+            )["slug"]
             _save_config(cfg)
     except Exception:
         pass

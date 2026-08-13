@@ -3201,11 +3201,14 @@ async def list_orgs(
 ) -> list[dict]:
     # "active" = the caller's current org — the token's org (token auth) or X-Treg-Org (session).
     current: int | None = None
-    if x_treg_token:
-        m = await _membership_by_token(x_treg_token, db)
-        current = m.org_id if m else None
-    elif x_treg_org:
-        org = await _resolve_org(x_treg_org, db)
+    if x_treg_token and (m := await _membership_by_token(x_treg_token, db)):
+        current = m.org_id
+    else:
+        # Identity token or session: X-Treg-Org wins, then a team-pinned identity token's own org
+        # claim — the same precedence `require_member` uses to authorize the call. Without the claim
+        # fallback, no org is marked active for a team-pinned token and clients guess (badly).
+        ref = x_treg_org or ((sess.read_claims(x_treg_token) or {}).get("org", "") if x_treg_token else "")
+        org = await _resolve_org(ref, db)
         current = org.id if org else None
     memberships = (
         await db.execute(select(Membership).where(Membership.user_id == user.id))
