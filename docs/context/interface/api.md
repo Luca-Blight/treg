@@ -203,6 +203,12 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   behind `/catalog/examples`, and `call_template` is a paste-ready `treg call …` line built from the
   endpoint's `test_request` (the request the verifier actually ran) falling back to documented examples.
   `hints` on both routes carries the next command, since finding an endpoint is never the goal.
+  A zero-result search additionally points at **`POST /tool-requests`** (open, per-IP rate-limited,
+  fields capped): file what the catalog is missing — stored as a `ToolRequest` row (see
+  [data-model](../architecture/data-model.md)) with identity attached only when the caller happens
+  to be signed in (token, or same-origin session; a cross-origin cookie POST stores anonymously
+  rather than being rejected). The zero-result caller is exactly the demand signal the catalog team
+  wants, so no signup wall.
 - **Auth — three identity doors** (all resolve to a user via the shared `_find_or_create_user`, so
   first-proof = registration — the **user only, no auto personal org**; a brand-new user lands with zero
   teams and names their first via the mandatory welcome / `treg org create`): **GitHub** — `auth_github` (`GET /auth/github`,

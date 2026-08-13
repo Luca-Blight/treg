@@ -88,8 +88,8 @@ async def mcp_session(client: AsyncClient):
             yield mc
 
 
-async def test_the_server_lists_exactly_the_five_tools(clients):
-    """Five tools, not 2,600. The catalog is DATA reached through a tool, never a tool per endpoint —
+async def test_the_server_lists_exactly_the_six_tools(clients):
+    """Six tools, not 2,600. The catalog is DATA reached through a tool, never a tool per endpoint —
     2,600 schemas would bury the model's context and make the catalog unusable."""
     token = (await clients.post("/users", json={"email": "lister@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
@@ -97,7 +97,7 @@ async def test_the_server_lists_exactly_the_five_tools(clients):
                                      "clientInfo": {"name": "t", "version": "1"}}, token)
         r = await _rpc(c, "tools/list", token=token)
         names = {t["name"] for t in r.json()["result"]["tools"]}
-    assert names == {"catalog_search", "catalog_get", "call", "balance", "my_tools"}
+    assert names == {"catalog_search", "catalog_get", "call", "balance", "my_tools", "catalog_request"}
 
 
 async def test_catalog_search_returns_priced_results(clients):
@@ -128,7 +128,27 @@ async def test_search_says_so_when_nothing_matches(clients):
     async with mcp_session(clients) as c:
         out = await _call_tool(c, "catalog_search", {"query": "zzzz-no-such-capability"}, token=token)
     assert out["count"] == 0
-    assert "hint" in out
+    assert "catalog_request" in out.get("hint", "")  # the empty result names the way to file the gap
+
+
+async def test_catalog_request_files_the_gap_with_attribution(clients):
+    """The zero-result hint's payoff: the agent can file the missing capability in the same session,
+    and the stored row says who asked (the bearer), not just that someone did."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import ToolRequest
+
+    token = (await clients.post("/users", json={"email": "wisher@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "catalog_request",
+                               {"capability": "Ahrefs backlinks", "note": "for SEO audits"}, token=token)
+    assert out.get("status") == "received", out
+    async with session_maker() as s:
+        (row,) = (await s.execute(select(ToolRequest))).scalars()
+    assert row.capability == "Ahrefs backlinks"
+    assert row.source == "mcp"
+    assert row.user_email == "wisher@superdesign.dev"
 
 
 # ---- the half that matters: no token means no data, no spending ----------------------------
@@ -294,7 +314,8 @@ async def test_every_tool_declares_what_it_can_do(clients):
     from treg.mcp import mcp as server
 
     ann = {t.name: t.annotations for t in await server.list_tools()}
-    assert set(ann) == {"catalog_search", "catalog_get", "call", "balance", "my_tools"}
+    assert set(ann) == {"catalog_search", "catalog_get", "call", "balance", "my_tools",
+                        "catalog_request"}
     for name in ("catalog_search", "catalog_get", "balance", "my_tools"):
         a = ann[name]
         assert a and a.read_only_hint is True, name
@@ -302,6 +323,10 @@ async def test_every_tool_declares_what_it_can_do(clients):
     a = ann["call"]
     assert a.read_only_hint is False
     assert a.destructive_hint is True and a.open_world_hint is True
+    # catalog_request writes (a row on treg itself) but touches nothing upstream and spends nothing.
+    a = ann["catalog_request"]
+    assert a.read_only_hint is False
+    assert a.destructive_hint is False and a.open_world_hint is False
 
 
 async def test_the_domain_challenge_is_404_until_configured(clients):

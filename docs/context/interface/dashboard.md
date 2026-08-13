@@ -278,7 +278,11 @@ mount `_LOGO_DIR` (`src/treg/web/logos/`). `connCount` labels how many accounts 
 The tab bar itself is `v-if`'d on `plats.list.length` and `mkTabActive` collapses to `'platform'` when
 the catalog is absent, so a build that predates `/catalog` renders exactly the old marketplace.
 
-The catalog page's header carries a **List as vendor** button (`vendorAsk` modal): a vendor pastes the
+The catalog page's header carries a **Request a tool** button (`reqAsk` modal): a short form —
+what's missing, an optional note, a contact field only when signed out (`!me`) — POSTed to
+`/tool-requests` with `source: web`; the capability input pre-fills from the live search box `q`,
+because the button is most often pressed right after a search found nothing. Next to it sits
+**List as vendor** (`vendorAsk` modal): a vendor pastes the
 two-sentence prompt (`vendorPromptText`, built on `proxy` = the server's public URL) into their own
 coding agent, which follows the hosted `GET /vendor-listing` instructions and raises the listing PR —
 including the vendor's contact email, which is how a test credential gets arranged.

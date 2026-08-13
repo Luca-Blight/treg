@@ -331,7 +331,11 @@ Bare **`treg connections`** now lists (the subparser is `required=False` with a 
   don't know which shelf it sits on (`GET /catalog/search`). A compact ranked table: endpoint id,
   platform, provider, cost, `✓`/`·` verified, tier, clipped summary — footer hint `treg catalog get <id>`.
   Cost prints in **USD** (`_cost_usd`, 3 significant digits) rather than `_cost_label`'s source currency:
-  the column is only worth reading if CNY and USD rows compare.
+  the column is only worth reading if CNY and USD rows compare. The no-match message names
+  `treg catalog request "<query>"` — the empty search is the moment the filer exists.
+- **`catalog request <what's missing…>`** (`_catalog_request`) — file a "the catalog doesn't have X"
+  report (`POST /tool-requests`, `source: cli`). Open endpoint, rate-limited server-side; a configured
+  token rides along as attribution only, never a requirement.
 - **`catalog get <endpoint-id>`** (`_catalog_get`) — the last stop before `treg call`
   (`GET /catalog/endpoints/{id}`): summary, provider + limits/pricing_url, cost in USD *and* the original
   currency with its note, verified date, the capability with a **siblings** table (same job, other

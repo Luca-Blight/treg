@@ -1331,7 +1331,7 @@ a:hover{text-decoration-color:var(--muted)}
           <div class="tut-head">
             <div><h1>2,600+ tools for agents</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
             <!-- (The balance pill lives in the side nav, above the account block.) -->
-            <div class="tut-actions"><button class="btn sm" @click="vendorAsk=true" title="Sell an API? Get it listed in this catalog">List as vendor</button></div>
+            <div class="tut-actions"><button class="btn sm" @click="openToolRequest()" title="Missing a tool or provider? Tell us — requests steer what gets added next">Request a tool</button><button class="btn sm" @click="vendorAsk=true" title="Sell an API? Get it listed in this catalog">List as vendor</button></div>
           </div>
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
           <div v-for="c in needSecondCred" :key="'n'+c.id" class="banner" style="margin-top:12px">
@@ -3154,6 +3154,25 @@ a:hover{text-decoration-color:var(--muted)}
         </div></div>
     </div>
 
+    <!-- REQUEST A TOOL (a "the catalog doesn't have X" report — saved server-side, steers what gets keyed next) -->
+    <div class="scrim" role="dialog" aria-modal="true" v-if="reqAsk" @click.self="reqAsk=false;reqErr=''">
+      <div class="modal" style="width:min(520px,95vw)"><div class="hd"><b>Request a tool</b><button class="btn sm ico" @click="reqAsk=false;reqErr=''" aria-label="Close">✕</button></div>
+        <div style="padding:16px 18px">
+          <template v-if="!reqDone">
+            <p class="explain">Missing a provider or capability? Requests go straight to the catalog team and steer which provider gets added next.</p>
+            <div class="frow"><label>What's missing</label><input v-model="reqForm.capability" maxlength="200" placeholder="e.g. Ahrefs backlinks, flight prices, HN comments" @keyup.enter="submitToolRequest"/></div>
+            <div class="frow"><label>Details</label><textarea v-model="reqForm.note" maxlength="2000" rows="3" placeholder="what you'd use it for, a docs link, anything that helps (optional)" style="flex:1;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:var(--rb);padding:7px 10px;font-family:var(--mono);font-size:12.5px;resize:vertical"></textarea></div>
+            <div class="frow" v-if="!me"><label>Contact</label><input v-model="reqForm.contact" maxlength="200" placeholder="email or handle, if you want to hear when it lands (optional)"/></div>
+            <div v-if="reqErr" class="banner">{{reqErr}}</div>
+            <button class="btn primary" style="margin-top:6px" @click="submitToolRequest" :disabled="reqBusy">{{reqBusy?'Sending…':'Send request'}}</button>
+          </template>
+          <template v-else>
+            <p class="explain" style="margin-bottom:6px"><b>Got it — thanks.</b> Requests are reviewed as they come in; the most-asked-for tools get keyed first.</p>
+            <button class="btn" @click="reqAsk=false">Close</button>
+          </template>
+        </div></div>
+    </div>
+
     <!-- SHARE A DETAIL PAGE (invite someone new; they land right here after sign-in) -->
     <div class="scrim" role="dialog" aria-modal="true" v-if="share.on && detail" @click.self="share.on=false">
       <div class="modal" style="width:min(560px,95vw)"><div class="hd"><b>Share “{{detail.name}}”</b><button class="btn sm ico" @click="share.on=false" aria-label="Close">✕</button></div>
@@ -3423,6 +3442,7 @@ createApp({
       startCopied:'', startTab:'access', startAgentOpen:false, startTokenShow:false, mdMenu:false, llmsCopied:false, myToken:null, _myTokenOrg:null, tokenCopied:false,
       agentGuide:null, agentGuideCopied:false, agentRowCopied:null,
       vendorAsk:false, vendorCopied:false,
+      reqAsk:false, reqDone:false, reqBusy:false, reqErr:'', reqForm:{capability:'', note:'', contact:''},
       demo:{
         token:null, org_slug:'', ttl:60, busy:false, err:'', copied:'', signin:false,
         view:'endpoints', secrets:[], tools:[], maxSecrets:3, maxTools:3,
@@ -3931,7 +3951,7 @@ createApp({
     // a11y (WCAG 2.4.3): when a dialog/drawer opens, move focus INTO it (was left on the trigger)
     newTool(v){ this.focusOverlay(v); }, newSkill(v){ this.focusOverlay(v); }, newOrg(v){ this.focusOverlay(v); },
     showJoin(v){ this.focusOverlay(v); }, addOrg(v){ this.focusOverlay(v); }, copyTool(v){ this.focusOverlay(v); },
-    tryTool(v){ this.focusOverlay(v); }, 'welcome.on'(v){ this.focusOverlay(v); },
+    tryTool(v){ this.focusOverlay(v); }, 'welcome.on'(v){ this.focusOverlay(v); }, reqAsk(v){ this.focusOverlay(v); },
   },
   methods:{
     focusOverlay(open){ if(!open) return; this.$nextTick(()=>{ const el=document.querySelector('.scrim input,.scrim textarea,.scrim button,.drawer input,.drawer button'); el&&el.focus(); }); },
@@ -4807,6 +4827,15 @@ createApp({
     },
     async copyAgentPrompt(){ if(!(await this.toClipboard(this.agentPromptText))) return; this.agentGuideCopied=true; setTimeout(()=>this.agentGuideCopied=false,1500); },
     async copyVendorPrompt(){ if(!(await this.toClipboard(this.vendorPromptText))) return; this.vendorCopied=true; setTimeout(()=>this.vendorCopied=false,1500); },
+    openToolRequest(){ this.reqDone=false; this.reqErr=''; this.reqForm.capability=(this.q||'').trim(); this.reqAsk=true; },  // pre-fill with the search that came up short
+    async submitToolRequest(){ const cap=(this.reqForm.capability||'').trim();
+      if(!cap){ this.reqErr='Say what tool or capability you need.'; return; }
+      this.reqBusy=true; this.reqErr='';
+      try{ await this.api('/tool-requests',{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({capability:cap, query:(this.q||'').trim(), note:this.reqForm.note, contact:this.reqForm.contact, source:'web'})});
+        this.reqDone=true; this.reqForm={capability:'', note:'', contact:''}; }
+      catch(e){ this.reqErr = e.status===429?'Too many requests from here — try again later.':('Could not send: '+(e.detail||e.status)); }
+      finally{ this.reqBusy=false; } },
     async copyAgentGuide(kind){ if(!(await this.toClipboard(this.buildAgentPrompt(kind, true)))) return; this.agentRowCopied=kind; setTimeout(()=>{ if(this.agentRowCopied===kind) this.agentRowCopied=null; },1500); },
     switchTo(o){ this.switchOrg(o); },  // dropdown "Switch" button - just switch, stay where you are
     orgSettings(o){ this.orgMenu=false;  // dropdown ⚙ - go INTO that team, then open its settings

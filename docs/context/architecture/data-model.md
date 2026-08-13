@@ -85,6 +85,13 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   refusal passes through — using the identity stashed in `request.state` (a bad-token 401 records
   anonymously). It is what tells "the provider failed" apart from "we said no": a paywall 402 must not read
   as a provider error, and `endpoint_stats` excludes refused rows entirely.
+- **`ToolRequest`** — a "the catalog doesn't have X" report (`POST /tool-requests`, open + per-IP
+  rate-limited): `capability` (the headline, ≤200 chars), `query` (the search that came up empty —
+  auto-filled by agents, the dedup/priority signal), `note`, `contact`, `source` (`web` | `cli` |
+  `mcp` | `api`), `status` (`open` | `done` | `dismissed`, flipped by hand), and **nullable**
+  `org_id`/`user_email` — identity is attribution when the caller happens to have one, never a
+  requirement, because the usual filer is an agent with zero results and no token. Reviewed by
+  querying the table; a Slack notifier may hang off the insert later, but the row is the record.
 - **`RunRecord`** — the **server-side run** audit row (a `treg run --server` CLI execution — the "kind"
   `server_run` in usage rollups): `org_id`, `user_email`, `bundle_name` (holds the **tool** name since the
   tool-side run unification; column name is historical), `argv` (JSON — never carries a secret value;
