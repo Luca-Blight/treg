@@ -7260,13 +7260,21 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
 def _platform_billable(status_code: int, cost_type: str) -> bool:
     """Does a response with this status cost us money? (plan §2.2)
       2xx                        → yes, the provider served it.
-      4xx                        → only under `per_call`: the provider charges for accepting the
+      429                        → never. A rate-limit rejection is capacity refusing the request,
+                                   not the caller's bad input — and on a SHARED plan key it is
+                                   treg's own saturation, so billing it would charge teams for our
+                                   congestion. No vendor bills a request it refused to accept, so
+                                   this is also correct for per_call credit providers, where the
+                                   old rule quietly charged for upstream 429s.
+      other 4xx                  → only under `per_call`: the provider charges for accepting the
                                    request, so a caller's own bad input is on the caller. Under
                                    `per_result`/`per_success` a rejected request produced nothing.
       5xx / 3xx / network error  → no. An upstream failure is never billed to the caller.
     """
     if 200 <= status_code < 300:
         return True
+    if status_code == 429:
+        return False
     if 400 <= status_code < 500:
         return cost_type == "per_call"
     return False

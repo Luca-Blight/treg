@@ -964,3 +964,40 @@ async def test_the_sweep_leaves_OTHER_callers_rows_alone(clients: AsyncClient, p
         still = (await db.execute(select(IdempotentCall).where(
             IdempotentCall.key == "someone-elses"))).scalar_one_or_none()
     assert still is not None, "one caller's sweep must not delete another's rows"
+
+
+# ---- 429 is never billable (shared-plan pricing, step 2) ------------------------------------
+
+def test_the_billability_truth_table():
+    """The exact contract of `_platform_billable`, pinned row by row so a future edit changes it on
+    purpose or not at all.
+
+    The 429 row is the shared-plan fix: a rate-limit rejection is capacity refusing the request. On a
+    shared plan key it is treg's own saturation, and billing it would charge teams for our
+    congestion. It also corrects an existing wrong: under `per_call` the old rule billed upstream
+    429s, and no vendor bills a request it refused to accept."""
+    cases = [
+        (200, "per_success", True), (200, "per_call", True),
+        (429, "per_call", False), (429, "per_success", False), (429, "per_result", False),
+        (400, "per_call", True), (400, "per_success", False), (400, "per_result", False),
+        (402, "per_call", True),        # an upstream 402 is the provider billing for acceptance
+        (503, "per_call", False), (503, "per_success", False),
+        (302, "per_call", False),
+    ]
+    for status, cost_type, expected in cases:
+        got = A._platform_billable(status, cost_type)
+        assert got is expected, f"({status}, {cost_type}) -> {got}, expected {expected}"
+
+
+async def test_an_upstream_429_releases_the_hold(clients: AsyncClient, platform_on, monkeypatch):
+    """End to end: the provider rate-limits, the balance ends exactly where it started, and the
+    activity feed shows $0.00 charged."""
+    monkeypatch.setattr(A, "relay", _fake_relay(429, b'{"error":"rate limited"}'))
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 429
+    assert await _balance(clients) == before, "a 429 must not move money"
+    kinds = [e["kind"] for e in await _entries(clients)]
+    assert kinds[:2] == ["release", "reserve"], kinds
+    row = await _telemetry(clients)
+    assert row["cost_charged_micro"] == 0
