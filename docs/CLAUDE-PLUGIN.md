@@ -93,11 +93,37 @@ The live path is the npm CLI:
 
 ```bash
 npm i -g clawhub
-clawhub login                                   # GitHub account must be ≥1 week old
-clawhub skill publish ./skills/treg --dry-run   # always dry-run first
-clawhub skill publish ./skills/treg --slug treg --name "treg" \
-  --version 0.11.0 --changelog "..." --tags latest
+clawhub login                     # device flow; opens a browser (--no-browser prints a URL + code)
+clawhub whoami                    # confirm before publishing
+
+clawhub skill publish "$PWD/skills/treg" \
+  --slug treg --name "treg" --version 0.11.0 \
+  --changelog "..." \
+  --topics "api,seo,serp,backlinks,enrichment,scraping,agent-tools,web-search" \
+  --source-repo superdesigndev/treg \
+  --source-commit "$(git rev-parse HEAD)" \
+  --source-ref main --source-path skills/treg \
+  --dry-run                       # drop --dry-run to publish for real
 ```
+
+Verified against clawhub CLI **v0.23.3** — the published docs are thinner than the real `--help`,
+so read the CLI:
+
+- **Pass an ABSOLUTE path.** A relative `./skills/treg` fails with `Path must be a folder`, because
+  paths resolve against `--workdir` + `--dir` (which defaults to `skills`), so it looks for
+  `skills/skills/treg`. `"$PWD/skills/treg"` is the reliable form.
+- **The `--source-*` flags are worth filling in.** They link the listing back to a GitHub repo,
+  commit and path. That is the one provenance signal available on a registry whose own vetting
+  history is the reason Hermes marks every ClawHub skill `community` trust.
+- **`--categories` takes slugs the public API does not enumerate** (`/api/v1/categories` 404s and
+  listings come back with empty `categories`). Do not invent one — use `--topics`, which is
+  free-form, until a real category slug can be read off a live listing.
+- `--dry-run --json` prints the resolved slug, version, file count and fingerprint without
+  publishing. `latestVersion: null` means the slug is unclaimed.
+- Publishing is not irreversible: `clawhub delete` soft-deletes a skill or withdraws one version,
+  and `clawhub hide` / `undelete` exist too. Ownership can move later with
+  `--owner <handle> --migrate-owner`, so publishing under a personal handle now does not lock the
+  skill out of a `superdesigndev` org later.
 
 Requirements the generated skill already satisfies: frontmatter `name` + `description` + semver
 `version`, with `name` matching the parent directory (`treg`). A security scan runs post-publish;
