@@ -86,7 +86,17 @@ Nothing to submit. Merging to `main` publishes it; the install lines above start
 Bump `version` in `pyproject.toml` and both manifests together — `test_plugin_version_tracks_the_package`
 pins all of them to one value.
 
-### 2. ClawHub (clawhub.ai) — self-serve, CLI-based
+### 2. ClawHub (clawhub.ai) — ✅ LIVE, self-serve, CLI-based
+
+**Published 2026-08-14: [clawhub.ai/superdesigndev](https://clawhub.ai/superdesigndev) · `treg@0.11.0`
+· owner `@superdesigndev` · MIT-0.** Verified by installing it back out of the registry into a scratch
+dir — the delivered `SKILL.md` is byte-identical to `skills/treg/SKILL.md` in this repo.
+
+The publisher org was created with
+`clawhub publisher create superdesigndev --display-name "Superdesign dev, Inc."`. Publishing under a
+personal handle would also have worked — `--owner <handle> --migrate-owner` moves a skill later — but
+a company handle reads as a product listing rather than a side project.
+
 
 `https://clawhub.ai/submit` **404s** (Hermes' CLI still points there; its `--to clawhub` is a stub).
 The live path is the npm CLI:
@@ -104,7 +114,32 @@ clawhub skill publish "$PWD/skills/treg" \
   --source-commit "$(git rev-parse HEAD)" \
   --source-ref main --source-path skills/treg \
   --dry-run                       # drop --dry-run to publish for real
+
+# Publishing is TWO PHASES. The command above only SUBMITS — the version sits at
+# `pending.publication`, invisible on every public surface, until a scan is attached to it:
+clawhub scan --slug treg --version 0.11.0 --update    # took ~37 minutes; let it run
 ```
+
+**Do not skip that second command, and do not conclude the publish failed while it runs.** This is
+the single least obvious thing about ClawHub and it is not in their docs. `clawhub skill publish`
+reports `"status": "pending-publication"` and exits; nothing else happens on its own. `scan --update`
+("write published scan results back to the selected version") is not a convenience — it is the step
+that completes publication. Watch the moderation record flip:
+
+```bash
+curl -s -H "Authorization: Bearer $(clawhub token)" \
+  https://clawhub.ai/api/v1/skills/treg/moderation
+```
+
+| | before `scan --update` | after |
+|---|---|---|
+| `legacyReason` | `pending.publication` | `scanner.llm.review` |
+| `reasonCodes` | `[]` | `["review.llm_review"]` |
+| public `GET /api/v1/skills/treg` | 403, hidden | returns the skill |
+
+Note `package publish` has a `--wait` flag that polls to a definitive state; **`skill publish` does
+not**, and `/api/v1/publish/attempts/<attemptId>` 404s for skill attempts. So for skills there is no
+progress indicator at all — run `scan --update` and wait it out.
 
 Verified against clawhub CLI **v0.23.3** — the published docs are thinner than the real `--help`,
 so read the CLI:
@@ -138,6 +173,31 @@ server code.
 Listing here also feeds Hermes' Skills Hub automatically. Note Hermes hard-codes every ClawHub skill
 to `community` trust after the Feb 2026 "ClawHavoc" incident (341 malicious skills), so this is a
 discovery channel, not a trust signal.
+
+#### Two verdicts, and only one of them gates visibility
+
+Do not confuse these — one costs a day if you do:
+
+- **Moderation** (`/api/v1/skills/treg/moderation`) is what hides or shows a skill. Ours is
+  `verdict: "clean"`, `isSuspicious: false`, `isMalwareBlocked: false`, empty `reasonCodes`. Reading
+  the CLI source: `isSuspicious` only prints an install-time warning that `--force` bypasses; only
+  `isMalwareBlocked` hard-blocks.
+- **`clawscan`** (`clawhub scan`) is an LLM review published as an **advisory on the listing**. It
+  rated treg `suspicious` — and that changed nothing about visibility.
+
+The v0.11.0 advisory raised four findings against `SKILL.md`. Three restate deliberate product
+decisions; **one is worth weighing on its own merits, independent of ClawHub**:
+
+| id | sev | what it says |
+|---|---|---|
+| `PE3` | **HIGH** | `cli_auth` consumes material from a CLI's keychain and relays it — "expands the agent's credential-access surface … without a strong, explicit consent boundary". Remediation suggested: per-tool opt-in before using keychain-derived credentials, and prefer scoped service tokens. |
+| `SQP-1` | MEDIUM | the frontmatter `description` is broad enough to get the skill selected for loosely-related tasks |
+| `SQP-2` | MEDIUM | `curl … \| sh` executes remote code with no checksum or signature |
+| `EA2` | MEDIUM | the "ask once, not per command" guidance discourages per-command approval |
+
+`EA2` and `SQP-2` are the trade-offs treg made knowingly. **`PE3` is a real description of a real
+feature** and deserves a decision rather than a dismissal — see `docs/context/architecture/` for how
+`cli_auth` binds. Static analysis and VirusTotal both came back clean.
 
 ### 3. aiskillstore/marketplace + skills.sh
 
