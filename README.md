@@ -69,6 +69,17 @@ treg balance                                     # exactly what that cost
 Your token identifies you on every call (`X-Treg-Token` header) and is the same for all tools.
 Discover what your team has shared: `treg tool ls` · check credential health: `treg health`.
 
+### Or install it as a Claude Code plugin
+
+```
+/plugin marketplace add superdesigndev/treg
+/plugin install treg@treg
+```
+
+Skills-only — no connector and no token to configure up front. The skill loads as `treg:treg` and
+walks your agent through installing the CLI on its first run. Other agents:
+`npx skills add superdesigndev/treg`. See [docs/CLAUDE-PLUGIN.md](docs/CLAUDE-PLUGIN.md).
+
 ## Call a tool you don't have a key for
 
 The catalog is grouped by what endpoints **do**: keyword and rank tracking, backlinks and authority,

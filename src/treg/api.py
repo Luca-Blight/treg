@@ -2355,6 +2355,46 @@ async def openai_apps_challenge():
     return PlainTextResponse(token, headers={"Cache-Control": "no-store"})
 
 
+def _skill_frontmatter() -> dict[str, str]:
+    """The bundled skill's frontmatter, read at request time rather than duplicated in code — the
+    description is what drives discovery in every registry, and a second copy of it would drift."""
+    f = _WEB_DIR / "skill.md"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="skill.md not bundled")
+    text = f.read_text(encoding="utf-8")
+    if not text.startswith("---"):
+        raise HTTPException(status_code=404, detail="skill.md has no frontmatter")
+    out: dict[str, str] = {}
+    for line in text.split("---", 2)[1].strip().splitlines():
+        key, _, value = line.partition(":")
+        out[key.strip()] = value.strip()
+    return out
+
+
+@app.get("/.well-known/skills/index.json", include_in_schema=False)
+async def well_known_skills_index():
+    """Advertise treg's own skill under the agentskills.io well-known convention.
+
+    This makes THIS host a first-class skill source: an agent that supports the standard can install
+    treg from treg.to directly, with no directory, no review queue and no third party in the middle
+    — the same skill the plugins ship and `install.sh` drops, reached by whoever asks the domain.
+    """
+    fm = _skill_frontmatter()
+    return JSONResponse({"skills": [{
+        "name": fm.get("name", "treg"),
+        "description": fm.get("description", ""),
+        "files": ["SKILL.md"],
+    }]})
+
+
+@app.get("/.well-known/skills/treg/SKILL.md", include_in_schema=False)
+async def well_known_skill_md():
+    """The skill itself, at the path `index.json` promises. Deliberately the same `_serve_md` the
+    canonical `/skill.md` uses, so `{BASE}` is templated to the serving host here too — a self-hosted
+    registry advertises ITSELF, not treg.to."""
+    return _serve_md("skill.md")
+
+
 @app.get("/connect-demo", include_in_schema=False)
 async def connect_demo_page():
     """A page that PRETENDS to be someone else's app, so the OAuth flow can be seen end to end.

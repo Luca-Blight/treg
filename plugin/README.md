@@ -4,6 +4,12 @@ A **distribution wrapper**, not a second product. It ships the same skill that
 `treg skill bootstrap` already installs into `~/.codex/skills/`, packaged so people find treg by
 searching the plugin directory that ChatGPT and Codex share.
 
+> **One of two plugins.** The Claude Code plugin lives at the **repo root**
+> (`.claude-plugin/` + `skills/treg/`) and is **skills-only** — it declares no connector, so nothing
+> about it waits on a review queue. Both are rendered by the same `scripts/build_plugin.py` from the
+> same source; they differ only in the prepended bootstrap. See
+> [`docs/CLAUDE-PLUGIN.md`](../docs/CLAUDE-PLUGIN.md).
+
     plugin/
     ├── .codex-plugin/plugin.json     the manifest + the listing copy
     ├── skills/treg/        GENERATED — do not edit by hand
@@ -15,8 +21,8 @@ searching the plugin directory that ChatGPT and Codex share.
 `treg skill bootstrap`, and rendered into this plugin by:
 
 ```bash
-python3 scripts/build_plugin.py            # regenerate
-python3 scripts/build_plugin.py --check    # fail if stale (also a test)
+python3 scripts/build_plugin.py            # regenerate BOTH plugins
+python3 scripts/build_plugin.py --check    # fail if either is stale (also a test)
 ```
 
 Two things differ from the served copy, both because a plugin arrives where the server does not:
