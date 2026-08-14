@@ -119,6 +119,36 @@ allowed to fail, and it must fail silently, because a raise here would 500 the h
 retry a payment that already credited. Amounts travel as canonical integer `amount_micro`; the
 `amount_usd` on the event is display-only.
 
+**Invoices exist on the manual path only.** The top-up Checkout sets `invoice_creation`, so a
+one-off purchase produces a real Stripe Invoice — number, PDF, billing address, tax ID — which is the
+document a finance team accepts; Stripe's card receipt is not. Auto-top-up charges a bare off-session
+PaymentIntent and therefore has **no** invoice, only a receipt: attaching one would mean rebuilding
+the automatic charge as InvoiceItem + Invoice paid off-session, rewriting the money path and its
+idempotency guarantees for the minority of payments. Say "invoice" only about the manual path.
+
+Turning `invoice_creation` on makes Stripe emit `invoice.created` / `invoice.paid` for every top-up.
+`handle_webhook_event` drops them, deliberately: crediting on an invoice event as well as on the
+PaymentIntent would be a second door onto the same money. The invoice is a document; the
+PaymentIntent is the payment. Note also that `invoice_creation` on one-time Checkout is **priced
+separately** by Stripe, and invoice emails only go out with Customer emails → Successful payments
+enabled in the dashboard.
+
+**`list_payments` reads rows from us and documents from Stripe.** The payment list is built from our
+own `CreditBlock` rows — the same table the balance is computed from, so the history can never show a
+payment the balance disagrees with, and amounts and dates need no network call. Stripe is asked only
+for the links, in two list calls (`Charge.list` + `Invoice.list`, joined in memory) rather than two
+per row; a failure degrades to rows without links and reports `stripe_ok: false`, because a Stripe
+hiccup should cost the payer a download button, not their payment history. Both Stripe windows cap at
+100 payments, so a very old top-up on a busy account comes back link-less — the portal is the
+unbounded archive.
+
+**`create_portal_session` is the self-serve surface** for card, billing address, tax ID and the full
+invoice archive: hosted, because every one of those is a form we would otherwise own and the tax-ID
+rules go stale per country. It requires a portal configuration saved in the Stripe dashboard, and it
+refuses an org with no `stripe_customer_id` rather than minting one — a customer exists once someone
+has paid, and an empty portal has nothing to show. `billing_state.portal` is the flag the UI hides
+the button on, so a new team never sees a button that would 422.
+
 **Auto-top-up is guarded in depth**, because it is the part that can go wrong expensively: recorded
 consent (the PSD2/SCA mandate, a compliance requirement rather than a checkbox), a monthly cap, a
 cooldown stamped in the DB *before* the charge so a second web worker sees it, a consecutive-failure
@@ -126,8 +156,8 @@ limit, and an idempotency key derived from the threshold crossing — so a burst
 that all notice the low balance produces exactly ONE charge.
 
 Authorization splits by WHAT, not by who. `_billing_org` (the `/billing/*` routes — cards, top-ups,
-auto-top-up policy) requires **admin or owner**: a card and a spend policy are the org's money, not a
-member's preference.
+auto-top-up policy, payment history, the portal) requires **admin or owner**: a card, a spend policy
+and an invoice archive are the org's money, not a member's preference.
 
 `GET /orgs/{id}/balance` is different, and deliberately so. Any **member** sees the figure and the
 in-flight holds; the **funding detail** (credit blocks, the ledger) stays admin+. It used to be

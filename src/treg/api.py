@@ -3966,6 +3966,39 @@ async def billing_autotopup(
     return state
 
 
+@app.get("/billing/history")
+async def billing_history(
+    limit: int = Query(24, ge=1, le=100),
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """This team's completed top-ups, newest first, each with its invoice PDF or card receipt.
+
+    Read-only in both directions: it moves no money, and the amounts come from our own credit blocks
+    rather than from Stripe, so the history can never contradict the balance. Stripe is asked only for
+    the document links, and `stripe_ok: false` says they were unavailable — the payments listed are
+    still correct.
+    """
+    org = _billing_org(caller)
+    return await billing.list_payments(db, org, limit=limit)
+
+
+@app.post("/billing/portal")
+async def billing_portal(
+    request: Request,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """A one-time link into Stripe's hosted billing portal — card, billing address, tax ID, and the
+    full invoice archive. 422 until the team has a Stripe customer, which it gets on its first
+    payment; `billing_state`'s `portal` flag is what the UI hides the button on."""
+    org = _billing_org(caller)
+    try:
+        return await billing.create_portal_session(db, org, return_base=_return_base(request))
+    except billing.BillingNotConfigured as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except billing.TopupRejected as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
 @app.post("/billing/stripe/webhook", include_in_schema=False)
 async def billing_stripe_webhook(request: Request, db: AsyncSession = Depends(get_session)) -> dict:
     """Stripe → treg: the ONLY door through which a payment becomes balance.

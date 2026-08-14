@@ -2325,10 +2325,18 @@ a:hover{text-decoration-color:var(--muted)}
             <template v-if="canAdmin && orgTab==='billing'">
               <div v-if="billing" style="margin-top:4px">
                 <div class="card" style="padding:16px">
-                  <div>
-                    <div class="lbl">Balance</div>
-                    <div style="font-size:28px;font-weight:700;color:var(--accent);font-family:var(--mono)">{{money(billing.balance_micro)}}</div>
-                    <p class="sub" style="margin:4px 0 0">Prepaid credit. Calls draw from it - <code>treg balance</code> shows the ledger.</p>
+                  <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+                    <div style="flex:1;min-width:220px">
+                      <div class="lbl">Balance</div>
+                      <div style="font-size:28px;font-weight:700;color:var(--accent);font-family:var(--mono)">{{money(billing.balance_micro)}}</div>
+                      <p class="sub" style="margin:4px 0 0">Prepaid credit. Calls draw from it - <code>treg balance</code> shows the ledger.</p>
+                    </div>
+                    <!-- Stripe's hosted portal: card, billing address, tax ID and the invoice archive.
+                         Hidden until the team has a Stripe customer, which its first payment creates. -->
+                    <button v-if="billing.portal" class="btn sm" :disabled="billingBusy" @click="openPortal()"
+                            title="Update your card, billing address and tax ID, and download past invoices">
+                      {{billingBusy?'Opening…':'Manage billing'}}
+                    </button>
                   </div>
                   <p v-if="!billing.configured" class="sub" style="margin:12px 0 0">Top-ups aren't configured on this deployment.</p>
 
@@ -2373,6 +2381,28 @@ a:hover{text-decoration-color:var(--muted)}
                           <button class="btn primary" :disabled="!autoConsent||billingBusy" @click="setAuto(true)">{{billingBusy?'…':'Turn on auto top-up'}}</button>
                         </div>
                       </div>
+                    </div>
+
+                    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
+                      <div class="lbl">Payment history</div>
+                      <p v-if="bhist.loading" class="sub" style="margin:8px 0 0">Loading…</p>
+                      <p v-else-if="!bhist.items.length" class="sub" style="margin:8px 0 0">No top-ups yet. Once you add funds, every payment shows up here with its invoice.</p>
+                      <template v-else>
+                        <!-- Amounts come from our own ledger, so this list always agrees with the
+                             balance above. Only the links come from Stripe — hence the notice below. -->
+                        <table style="width:100%;margin-top:8px;border-collapse:collapse;max-width:560px">
+                          <tr v-for="i in bhist.items" :key="i.payment_intent" style="border-top:1px solid var(--line)">
+                            <td style="padding:8px 10px 8px 0;white-space:nowrap">{{bhistDate(i.created_at)}}</td>
+                            <td style="padding:8px 10px 8px 0;font-family:var(--mono);white-space:nowrap">{{money(i.amount_micro)}}</td>
+                            <td style="padding:8px 10px 8px 0" class="sub">{{i.auto?'auto':''}}</td>
+                            <td style="padding:8px 0;text-align:right;white-space:nowrap">
+                              <a v-if="bhistLink(i)" :href="bhistLink(i)" target="_blank" rel="noopener">{{bhistLabel(i)}}</a>
+                              <span v-else class="muted">—</span>
+                            </td>
+                          </tr>
+                        </table>
+                        <p v-if="!bhist.ok" class="sub" style="margin:8px 0 0">Invoice links are temporarily unavailable — the amounts above are correct. Try again shortly, or use <b>Manage billing</b> for the full archive.</p>
+                      </template>
                     </div>
                   </template>
                 </div>
@@ -3455,6 +3485,7 @@ createApp({
       // Billing (Stripe top-ups). `billing` null = not loaded / not an admin; billing.configured
       // false = this deployment sells no balance, so the whole block stays hidden.
       billing:null, billingBusy:false, topupAmount:10, autoAmount:10, autoThreshold:5, autoConsent:false, autoOpen:false,
+      bhist:{items:[],loading:false,ok:true},   // past top-ups + their invoice/receipt links; ok=false means Stripe was unreachable, amounts are still right
       confirmDel:'', confirmLeave:false, confirmRemove:null,
       showJoin:false, joinCode:'', joinBusy:false, joinErr:'',
       secrets:[], showSecrets:false, secretRows:[{name:'',value:'',kind:'env'}], secretBusy:false, secretErr:'', runNote:'',
@@ -4355,7 +4386,27 @@ createApp({
       this.billing=await this.api('/billing').catch(()=>null);
       if(this.billing){ this.topupAmount=this.billing.topup.default_usd;
         this.autoAmount=Math.round(this.billing.autotopup.amount_usd);
-        this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd); } },
+        this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd);
+        this.loadBillingHistory(); } },
+    // Amounts come from our own credit blocks, so this list can never disagree with the balance above
+    // it; Stripe supplies only the document links, and bhist.ok===false means those were unavailable.
+    async loadBillingHistory(){ if(!this.canAdmin || !this.billing || !this.billing.configured){ this.bhist={items:[],loading:false,ok:true}; return; }
+      this.bhist={items:[],loading:true,ok:true};
+      const out=await this.api('/billing/history').catch(()=>null);
+      this.bhist={items:(out&&out.items)||[], loading:false, ok:!out||out.stripe_ok!==false}; },
+    async openPortal(){ this.billingBusy=true; this.err='';
+      try{ const out=await this.api('/billing/portal',{method:'POST'});
+        // Stripe's hosted portal owns card, billing address, tax ID and the full invoice archive. Its
+        // return_url comes back to #billing, so the same tab is right here as it is for Checkout.
+        window.location.href=out.url; }
+      catch(e){ this.err='Could not open the billing portal: '+(e.detail||e.status); this.billingBusy=false; } },
+    bhistLink(i){ return i.invoice_pdf || i.hosted_invoice_url || i.receipt_url || ''; },
+    bhistLabel(i){ return (i.invoice_pdf||i.hosted_invoice_url) ? 'Invoice' : (i.receipt_url ? 'Receipt' : ''); },
+    // created_at is naive UTC (the models._now convention), so it needs the Z that isoformat omits —
+    // without it the browser reads it as local time and a late-evening top-up shows the wrong day.
+    bhistDate(iso){ if(!iso) return '';
+      const d=new Date(/(Z|[+-]\d{2}:?\d{2})$/.test(iso) ? iso : iso+'Z');
+      return isNaN(d)?'':d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); },
     async addFunds(amount){ this.billingBusy=true; this.topupAmount=amount; this.err='';
       // Named differently from the server's topup_started (same click, two vantage points —
       // a shared name would double-count in trends); this one exists to link session replays.
