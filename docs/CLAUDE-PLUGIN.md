@@ -199,12 +199,36 @@ decisions; **one is worth weighing on its own merits, independent of ClawHub**:
 feature** and deserves a decision rather than a dismissal — see `docs/context/architecture/` for how
 `cli_auth` binds. Static analysis and VirusTotal both came back clean.
 
-### 3. aiskillstore/marketplace + skills.sh
+### 3. Skill Store (aiskillstore/marketplace) + skills.sh
 
-`aiskillstore/marketplace` is one of only two repos in Hermes' `KNOWN_MARKETPLACES`, so a PR there is
-the cheapest route into Hermes' `claude-marketplace` source. For skills.sh, verify on a scratch
-machine that `npx skills add superdesigndev/treg` resolves `skills/treg/` — that one command covers
-70+ coding agents beyond Claude Code.
+**Do NOT open a pull request against `aiskillstore/marketplace`.** Its README is explicit — *"PRs
+adding skills will be closed"*; the repo is written to by the platform's own review pipeline, not by
+contributors. Submit through the form instead:
+
+> <https://skillstore.io/submit> — one required field, and it accepts a **directory**, so give it:
+> `https://github.com/superdesigndev/treg/tree/main/skills/treg`
+
+GitHub auth is optional (it only adds review notifications); anonymous submissions are allowed. The
+audit there is **report-only** — a risk finding does not block publication. This is still worth doing
+because `aiskillstore/marketplace` is one of only two repos in Hermes' `KNOWN_MARKETPLACES`, so it is
+the cheapest route into Hermes' `claude-marketplace` source. Note `npx skillstore` is install-only —
+there is no CLI submit path.
+
+**skills.sh / `npx skills` — pass `-s treg`, always:**
+
+```bash
+npx skills add superdesigndev/treg -s treg     # ✅ just the treg skill
+npx skills add superdesigndev/treg             # ❌ installs NINE skills
+```
+
+Verified on a scratch machine: the bare form scans the whole repo, finds `.agents/skills/*` as well
+as `skills/treg/`, and installs this repo's **internal development skills** (`dev-local`,
+`tools-registry-context`, `write-provider-skill`, `add-oauth-provider`, `vendor-listing`, the three
+Google-provider skills) into the user's agent alongside treg. That is our layout leaking into a
+product install. `skills.sh.json` does not prevent it — it only supplies category labels.
+
+`-s treg` scopes it to one skill and is what every install line we publish must carry. With it, that
+one command still covers 70+ coding agents beyond Claude Code.
 
 ### 4. anthropics/claude-plugins-official — the queue
 
