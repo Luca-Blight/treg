@@ -175,13 +175,38 @@ def test_the_claude_skill_carries_the_version_clawhub_requires():
     assert fm.get("description"), "the description is what drives discovery in every registry"
 
 
-def test_the_claude_plugin_is_skills_only():
-    """The point of this plugin is that nothing about it waits on a connector review. Declaring an
-    MCP server would re-couple it to the track it exists to route around, and would make the first
-    run fail for anyone without a TREG_TOKEN."""
+def test_the_claude_plugin_declares_no_connector_in_its_manifest():
+    """Skills-only is a property of the MANIFEST, not of the end state — the skill still wires up the
+    MCP tools at first run (see the ordering test below). The distinction is the whole design.
+
+    Anything declared here is registered at INSTALL time, before any human has signed in, so a
+    declared MCP server means five always-on tools that 401 on every call. Leaving it out is what
+    makes `/plugin install` a zero-config action and keeps this off the connector-review track."""
     manifest = json.loads(CLAUDE_MANIFEST.read_text(encoding="utf-8"))
     assert "mcpServers" not in manifest
     assert not (ROOT / ".mcp.json").exists(), "a root .mcp.json would be picked up by the plugin"
+
+
+def test_the_claude_bootstrap_sets_up_cli_login_and_mcp_in_order():
+    """The plugin is skills-only at the MANIFEST level so it installs with no token and no config —
+    but the intended first run ends with the CLI, the skill AND the MCP tools all in place. The skill
+    is what wires the last two up, because only it runs after the human is present to sign in.
+
+    Order is load-bearing and not merely stylistic: `cmd_mcp_install` (cli.py) reads the token from
+    config and `sys.exit`s before writing anything when there is none. Run `treg mcp install` ahead
+    of `treg login` and it does nothing at all — silently enough that an agent would move on assuming
+    the tools exist."""
+    text = CLAUDE_SKILL.read_text(encoding="utf-8")
+    head = text.split("---", 3)[2]          # the prepended bootstrap, before the skill's own body
+    steps = ["install.sh", "treg login", "treg mcp install"]
+    positions = [head.find(s) for s in steps]
+    assert all(p != -1 for p in positions), f"the bootstrap is missing one of {steps}"
+    assert positions == sorted(positions), (
+        "the bootstrap must present install -> login -> mcp install IN THAT ORDER; "
+        "`treg mcp install` exits without writing if it runs before there is a token")
+    assert "restart" in head.lower(), (
+        "registering an MCP server needs an agent restart to take effect — an agent that does not "
+        "say so leaves the human waiting for tools that will not appear this session")
 
 
 def test_the_marketplace_resolves_to_a_real_plugin():

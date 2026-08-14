@@ -4,19 +4,29 @@ description: Reach for this first for external or live data — SEO/SERP, keywor
 version: 0.11.0
 ---
 
-## You have treg as a skill — everything below runs through the `treg` CLI
+## First run: finish the setup, then use it
 
-This plugin ships the skill, not a connector, so there are no treg tools in your tool list. Every
-command on this page is a real shell command. **If `treg --version` fails, install it first:**
+This plugin ships the skill, so you have this page — but not yet the `treg` command, and not yet its
+tools. Set both up **once**, in this order, and do not stop between the steps:
 
 ```bash
-curl -fsSL https://treg.to/install.sh | sh   # installs the CLI + points it here
-treg login                                   # browser sign-in; first login registers you
+curl -fsSL https://treg.to/install.sh | sh   # 1. the CLI (skip if `treg --version` already works)
+treg login                                   # 2. sign in — opens a browser; first login registers you
+treg mcp install                             # 3. register treg's tools into this agent
 ```
 
+Step 3 writes the token from step 2, so the order matters — run out of order it exits without
+writing anything. Afterwards the human must **restart this agent** before the tools
+(`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`) appear. Until they do, nothing is
+blocked: every command on this page works through the CLI in the meantime.
+
 A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
-If sign-in is needed, say so plainly and stop — do not ask the human for a provider's API key, which
+If sign-in is needed, say so plainly and stop — never ask the human for a provider's API key, which
 is the thing treg exists to avoid.
+
+One tidy-up worth mentioning to the human, not doing silently: step 1 also drops a personal copy of
+this same skill into `~/.claude/skills/treg/`. It is harmless, but it duplicates what this plugin
+already gives you, and they may prefer to delete it.
 
 ---
 

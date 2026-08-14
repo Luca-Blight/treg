@@ -51,10 +51,14 @@ served**, because a second copy of the product's most-read page is a copy that r
 `scripts/build_plugin.py` renders both plugin copies from the one source and `--check` fails if
 either is stale (`tests/test_plugin.py`). The two variants differ **only** in their prepended
 bootstrap, because they arrive in opposite worlds: the Codex plugin ships an MCP connector, so its
-bootstrap says *use the tools, not the terminal*; the Claude plugin is **skills-only by design** — so
-that nothing about it waits on a directory review — and its bootstrap says the opposite, *install the
-CLI first*. The Claude copy also gets a `version:` stamped into its frontmatter, which ClawHub
-requires and Claude Code ignores; that stamp is what lets one file satisfy both registries.
+bootstrap says *use the tools, not the terminal*; the Claude plugin declares **no connector in its
+manifest** — so it installs with no token and nothing waits on a directory review — and its bootstrap
+does the opposite, walking the agent through `install.sh` → `treg login` → `treg mcp install` so the
+first run ends with the CLI *and* the tools. Skills-only is a property of the manifest, not of the
+end state; the order in that bootstrap is load-bearing, because `treg mcp install` exits without
+writing when it runs before there is a token. The Claude copy also gets a `version:` stamped into its
+frontmatter, which ClawHub requires and Claude Code ignores; that stamp is what lets one file satisfy
+both registries.
 
 The Claude variant sits at the **repo root**, not under `plugin/`, because that single path is
 simultaneously what Claude Code's loader auto-discovers, what `npx skills add` resolves, and what

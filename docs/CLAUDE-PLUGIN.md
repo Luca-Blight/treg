@@ -12,10 +12,44 @@ from this repo as its own marketplace — live the moment it merges, with no rev
 /plugin install treg@treg
 ```
 
-The skill then loads as `treg:treg`. Nothing else is required: the plugin declares **no MCP server**,
-so there is no token to set before it works. Its bootstrap tells the agent to run
-`curl -fsSL https://treg.to/install.sh | sh` if `treg --version` fails, and a new team starts with
-$1.00 of free balance.
+The skill loads as `treg:treg`, and the install itself needs **no token and no configuration** —
+that is the point of shipping a skills-only manifest.
+
+### Skills-only manifest, full setup at first run
+
+These are two different questions, and conflating them is the easy mistake here.
+
+The **manifest** declares no MCP server, because anything it declared would be registered at install
+time, before any human has signed in — five always-on tools that 401 on every call. Keeping it out is
+what makes `/plugin install` a zero-config action.
+
+The **skill** then completes the setup on first use, when a human *is* present to sign in. Its
+bootstrap walks three steps in a fixed order:
+
+```bash
+curl -fsSL https://treg.to/install.sh | sh   # 1. the CLI (skipped if treg --version works)
+treg login                                   # 2. sign in — the token
+treg mcp install                             # 3. the tools, header-authed with that token
+```
+
+So the intended end state is CLI **and** skill **and** MCP tools — reached by the skill, not by the
+manifest.
+
+**The order is load-bearing.** `cmd_mcp_install` (`src/treg/cli.py`) reads the token from config and
+`sys.exit`s *before writing anything* when there is none — and again on a 401, with "nothing was
+written". Run step 3 before step 2 and it is a no-op, quiet enough that an agent moves on believing
+the tools exist. `test_the_claude_bootstrap_sets_up_cli_login_and_mcp_in_order` pins the sequence,
+and pins the restart note too: `claude mcp add` does not take effect until the agent restarts.
+
+Two consequences worth remembering:
+
+- **`install.sh` always runs `treg skill bootstrap`** — there is no flag to suppress it — so step 1
+  drops a *second* copy of this same skill into `~/.claude/skills/treg/`. Harmless, but redundant
+  with the plugin. The bootstrap tells the agent to mention it to the human rather than delete it
+  silently; deleting files under `$HOME` is not a skill's call to make.
+- **The token branch of `install.sh` does all three steps at once**
+  (`… | sh -s -- --token <key>`). That is the right path for CI or a machine handed a team token —
+  but not for a plugin user, who has no token until step 2.
 
 ## What is where
 
