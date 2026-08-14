@@ -521,3 +521,48 @@ Over MCP the same thing is the optional `idempotency_key` argument to the `call`
 result carries `replayed: true`.
 
 Reasoning, storage rules and the concurrency guard: `architecture/money.md`.
+
+## Caller tags, budgets and per-tag usage
+
+For a builder embedding treg in their own product and billing their own users. Design and rationale:
+[money](../architecture/money.md).
+
+**Tag a call.** Set the header from your backend — never from a model, which will eventually omit it:
+
+```
+X-Treg-Meta: customer=cust_8123, workspace=ws_9, feature=email-finder
+```
+
+Up to 5 pairs; keys `[a-z0-9_]{1,32}`, values ≤128 chars, whole header ≤512 bytes. Any violation is a
+**422 before anything is relayed** (so a malformed bag costs nothing and does not burn an
+`Idempotency-Key`). Values containing `@` are refused: tags land in an append-only ledger.
+
+Every response carries **`X-Treg-Call-Id`**, the join key for your own records. Metered responses also
+carry `X-Treg-Cost-Micro`.
+
+| Route | Does |
+|---|---|
+| `GET /calls?days=&before_id=&limit=` | this team's calls, windowed and pageable. Analytics — **not** an invoice source |
+| `GET /calls/{call_ref}` | one call by its `X-Treg-Call-Id`, plus the ledger entries for it |
+| `GET /orgs/{id}/usage/by-tag?key=&days=` | per-value spend for one tag key. **Money from the ledger**; admin+ |
+| `GET/PUT/DELETE /orgs/{id}/budgets[/{dim}/{val}]` | per-tag limits and blocking; admin+ |
+| `GET/PATCH /orgs/{id}/settings` | the team's daily spend cap, budget dimensions and primary dimension |
+
+`PUT /orgs/{id}/budgets/{dim}/{val}` is an upsert that leaves unsent fields alone — a PUT that only
+sets `status` does not wipe the caps. Body: `daily_cap_micro`, `monthly_cap_micro`, `calls_per_day`,
+`status` (`active`|`blocked`), `note`.
+
+**Refusals a builder may show their own user.** These deliberately carry nothing about your team — no
+balance, slug, platform cap or top-up link:
+
+- `403 {error: "tag_blocked", dim, val, message}`
+- `429 {error: "tag_spend_cap_reached", dim, val, spent_micro, cap_micro, period, estimated_cost_micro, message}`
+- `429 {error: "tag_call_cap_reached", dim, val, used_today, calls_per_day, message}`
+
+Caps are **advisory**: concurrent calls can overshoot slightly. Your balance is the hard limit.
+
+**`usage/by-tag` reconciles.** `attributed_micro + unattributed_micro == total_micro`, for every key.
+Untagged traffic shows up as `unattributed_micro` rather than being dropped.
+
+**Isolation.** `treg org agent-new <name> --pin customer=cust_A` mints a token pinned to one tag value;
+the pin beats the header and a mismatch is a 403. Rule of thumb: **tag for counting, token for control.**

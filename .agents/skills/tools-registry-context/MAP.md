@@ -38,7 +38,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/localrun.py` | architecture/local-run.md |
 | `src/treg/mcp.py` | architecture/mcp-oauth.md |
 | `src/treg/mcp_oauth.py` | architecture/mcp-oauth.md |
-| `src/treg/models.py` | architecture/data-model.md, architecture/multi-tenancy.md |
+| `src/treg/models.py` | architecture/data-model.md, architecture/money.md, architecture/multi-tenancy.md |
 | `src/treg/oauth.py` | architecture/auth-secrets.md |
 | `src/treg/oauth_providers.py` | architecture/auth-secrets.md, guides/expanding-a-category.md |
 | `src/treg/providers.py` | interface/env-import.md |
@@ -71,7 +71,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `mcp.py`, `mcp_oauth.py`, `connect-demo.html` |
-| `architecture/money.md` | `ledger.py`, `billing.py`, `reconcile.py`, `api.py` |
+| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `reconcile.py`, `api.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `db.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
 | `architecture/super-admin.md` | `api.py`, `config.py` |
