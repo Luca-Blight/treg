@@ -67,6 +67,12 @@ class Catalog:
     # Credits are PROVIDER-scoped, never a currency: one scrapecreators credit and one lusha credit
     # are unrelated, so this cannot live in `fx` alongside CNY.
     credit_rates: dict[str, float | None] = field(default_factory=dict)
+    # service -> {"usd", "fee_usd_month"} for rates TREG SET (fx.yaml `kind: treg_shared_plan`).
+    # Kept separately because two consumers need the distinction: the reconcile recovery report
+    # computes fee-vs-collected from it, and any surface explaining provenance must say whose price
+    # this is. The rate itself still lives in `credit_rates` like any other — pricing machinery
+    # neither knows nor cares that the rate is ours.
+    shared_plans: dict[str, dict] = field(default_factory=dict)
     # provider service -> meter name -> USD per one unit of that meter (fx.yaml `unit_rates_usd`).
     # Providers that bill in a proprietary meter (Semrush API units, Majestic's three pools, Moz's
     # row quota) get one rate per meter — a provider can have several, and they do not convert
@@ -223,6 +229,11 @@ def _parse(directory: Path) -> Catalog:
         str(service): (v.get("usd") if isinstance(v, dict) else v)
         for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
     }
+    shared_plans = {
+        str(service): {"usd": v.get("usd"), "fee_usd_month": v.get("fee_usd_month")}
+        for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
+        if isinstance(v, dict) and v.get("kind") == "treg_shared_plan"
+    }
     # Same shape one level deeper: service -> meter -> {usd, basis, source, checked}. A provider
     # bills in several meters at once (Majestic has three), so the meter name is part of the key.
     unit_rates = {
@@ -230,7 +241,8 @@ def _parse(directory: Path) -> Catalog:
                        for meter, v in (meters or {}).items()}
         for service, meters in (fx_doc.get("unit_rates_usd") or {}).items()
     }
-    return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates, platforms=platforms,
+    return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates,
+                   shared_plans=shared_plans, platforms=platforms,
                    capabilities=capabilities, endpoints=endpoints, by_id=by_id,
                    provider_meta=provider_meta)
 

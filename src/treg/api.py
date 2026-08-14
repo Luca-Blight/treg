@@ -6591,6 +6591,17 @@ async def admin_reconcile_spend(
             **await reconcile.provider_spend(db, since)}
 
 
+@app.get("/admin/reconcile/shared-plans")
+async def admin_reconcile_shared_plans(
+    since_days: int = 30, _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Fee vs collected for every rate treg set (fx.yaml `kind: treg_shared_plan`) — the monthly
+    review's input. Reports only; the price change is a hand edit to fx.yaml."""
+    since = reconcile.window_start(since_days)
+    return {"since": since.isoformat(), "since_days": since_days,
+            **await reconcile.shared_plan_recovery(db, since)}
+
+
 @app.get("/admin/reconcile/repeats")
 async def admin_reconcile_repeats(
     since_days: int = 30, top: int = 10,

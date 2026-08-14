@@ -220,6 +220,11 @@ def check_fx(errors: list[str]) -> None:
             fail(errors, where, "basis must state 'break-even at N calls/mo'")
         if not entry.get("source") or not entry.get("checked"):
             fail(errors, where, "source and checked are required on a treg-set rate")
+        fee = entry.get("fee_usd_month")
+        if not isinstance(fee, (int, float)) or fee <= 0:
+            fail(errors, where, "fee_usd_month is required on a treg_shared_plan entry — the "
+                                "recovery report computes fee vs collected from it, and a fee that "
+                                "lives only in prose cannot be computed against")
 
 
 def main(argv: list[str]) -> int:
