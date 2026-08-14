@@ -1300,6 +1300,42 @@ LEADMAGIC = OAuthProvider(
 
 # ---- Advertising API-key providers (ad intelligence) -----------------------------------------
 
+# ---- Market data API-key providers -------------------------------------------------------------
+# The first category added under the shared-plan pricing ladder (docs/SHARED-PLAN-PRICING-PLAN.md);
+# provider selection: docs/MARKET-DATA-CATEGORY-RESEARCH.md. CoinGecko leads because it is the one
+# true credit-priced provider in the sector — its fx.yaml entry divides like Hunter's.
+
+COINGECKO = OAuthProvider(
+    service="coingecko",
+    display_name="CoinGecko",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your CoinGecko Pro API key",
+    token_header="x-cg-pro-api-key",
+    token_format="{secret}",  # raw key, no Bearer prefix
+    setup_url="https://www.coingecko.com/en/developers/dashboard",
+    setup_action_label="Get your CoinGecko API key",
+    setup_steps=(
+        "Sign up for a CoinGecko API plan (Basic and up) and open the developer dashboard.",
+        "Create an API key and copy it.",
+    ),
+    # The distinction that will bite users: free "demo" keys ride a DIFFERENT host
+    # (api.coingecko.com) with a different header, and that host answers 200 to anything — so a demo
+    # key can never be verified here. Saying so up front beats a confusing rejection.
+    setup_note="Needs a paid (Pro) key. Free demo keys use a different host and will not verify.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Crypto prices, market caps, volume and history across 17,000+ coins and 1,000+ exchanges.",
+    base_url="https://pro-api.coingecko.com/api/v3",
+    docs_url="https://docs.coingecko.com/reference/authentication",
+    # Free probe; validity is the HTTP status. Verified live 2026-08-14: a bogus key answers 401
+    # {"status":{"error_code":10002,...}} on the pro host, so the default reject-on-status works.
+    probe_path="/ping",
+)
+
+
 SPYFU = OAuthProvider(
     service="spyfu",
     display_name="SpyFu",
@@ -1497,6 +1533,8 @@ REGISTRY: dict[str, OAuthProvider] = {
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers
         LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC,
+        # Market data API-key providers
+        COINGECKO,
         # Advertising: API-key ad intelligence + unconfigured OAuth ad platforms
         SPYFU, APIFY, META_AD_LIBRARY, SERPAPI,
         MICROSOFT_ADS, SNAPCHAT_ADS, TIKTOK_ADS, PINTEREST_ADS,
@@ -1507,7 +1545,7 @@ DEFAULT_CAPABILITY = "read"
 
 # Shelf order in the marketplace. Anything carrying a category not named here sorts last, so a
 # provider added without one is visible rather than lost between the shelves.
-CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Community", "Other")
+CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Market data", "Community", "Other")
 
 
 def get(service: str) -> OAuthProvider | None:
