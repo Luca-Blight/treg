@@ -11,7 +11,7 @@ agent without the credential ever leaving the server.
 **Ask for the task, not the tool.** You do not need to know which vendor sells backlink data, or to
 hold an account with them. Search for what you want to do, read the price, call it.
 
-Built for the Superdesign team, live at [treg.superdesign.dev](https://treg.superdesign.dev) — anyone can self-host.
+Built for the Superdesign team, live at [treg.to](https://treg.to) — anyone can self-host.
 
 ## Why it exists
 
@@ -44,7 +44,7 @@ The vocabulary for the second half:
 
 # Part 1 · Using the registry
 
-Visit [**treg.superdesign.dev**](https://treg.superdesign.dev) (hosted on Render) — the dashboard,
+Visit [**treg.to**](https://treg.to) (hosted on Render) — the dashboard,
 sign-in, and every URL below live there.
 
 ## Quickstart
@@ -53,7 +53,7 @@ Same flow as the dashboard's **Getting started** guide:
 
 ```bash
 # 1. install the CLI — also points it at the registry
-curl -fsSL https://treg.superdesign.dev/install.sh | sh
+curl -fsSL https://treg.to/install.sh | sh
 
 # 2. sign in (GitHub default · --email for a one-time code · --token for agents/CI)
 treg login
@@ -132,7 +132,7 @@ treg resolves the tool by host, injects the credential, and relays everything el
 
 ```
 Real request:   GET https://api.intercom.io/conversations?per_page=5
-Through treg:   GET https://treg.superdesign.dev/call/https://api.intercom.io/conversations?per_page=5
+Through treg:   GET https://treg.to/call/https://api.intercom.io/conversations?per_page=5
                     header:  X-Treg-Token: <your token>
 ```
 
@@ -212,9 +212,9 @@ treg org access <member> --tools a,b          # per-member tool access (admin+)
 ## Going deeper
 
 - [`USAGE.md`](USAGE.md) — the full `treg` CLI reference.
-- [`/llms.txt`](https://treg.superdesign.dev/llms.txt) — the agent-onboarding file: call
+- [`/llms.txt`](https://treg.to/llms.txt) — the agent-onboarding file: call
 protocol, discovery, auth, CLI, skills. One fetch teaches an agent the whole registry.
-- **The dashboard** at [treg.superdesign.dev](https://treg.superdesign.dev) — full CRUD, a guided
+- **The dashboard** at [treg.to](https://treg.to) — full CRUD, a guided
 tutorial (Help → Tutorial), and copyable setup instructions for your agents.
 - **The API** — everything the CLI does is plain HTTP; interactive OpenAPI docs live at `/docs`.
 The proxy endpoint is `/call/{...}`; all endpoints take the `X-Treg-Token` header.
@@ -253,7 +253,7 @@ uv run python -m treg keygen   # print a fresh Fernet key for TREG_SECRET_KEY
 > database drivers, and encryption. `pip install tools-registry` alone gives just the `treg` command for
 > talking to an existing registry.
 
-The team instance is hosted on **Render** (web service + Postgres) at `treg.superdesign.dev`.
+The team instance is hosted on **Render** (web service + Postgres) at `treg.to`.
 
 ## Configuration
 
@@ -264,7 +264,7 @@ Environment variables (prefix `TREG_`, read from `.env`):
 | ----------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TREG_DATABASE_URL`                       | `sqlite+aiosqlite:///./treg.db` | DB URL (SQLite for dev, Postgres in prod)                                                                                                                                  |
 | `TREG_SECRET_KEY`                         | *(empty)*                       | Fernet key for secrets-at-rest; empty → an ephemeral key is minted (secrets won't survive a restart)                                                                       |
-| `TREG_PUBLIC_URL`                         | `https://treg.superdesign.dev`  | treg's public base, used to build the OAuth callback URI                                                                                                                   |
+| `TREG_PUBLIC_URL`                         | `https://treg.to`  | treg's public base, used to build the OAuth callback URI                                                                                                                   |
 | `TREG_SESSION_SECRET`                     | *(empty)*                       | signs the dashboard session cookie; falls back to `TREG_SECRET_KEY`. Set a real value in prod                                                                              |
 | `TREG_GITHUB_CLIENT_ID` / `_SECRET`       | *(empty)*                       | GitHub OAuth sign-in (callback `<public_url>/auth/github/callback`); empty hides the button                                                                                |
 | `TREG_GOOGLE_CLIENT_ID` / `_SECRET`       | *(empty)*                       | Google OAuth sign-in (redirect `<public_url>/auth/google/callback`); empty hides the button                                                                                |

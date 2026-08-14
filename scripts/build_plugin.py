@@ -32,7 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "src" / "treg" / "web" / "skill.md"
 TARGET = ROOT / "plugin" / "skills" / "treg" / "SKILL.md"
-PUBLIC_BASE = "https://treg.superdesign.dev"
+PUBLIC_BASE = "https://treg.to"
 
 BOOTSTRAP = """
 ## You already have treg — use the tools, not the terminal

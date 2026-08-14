@@ -112,6 +112,13 @@ returns 500 **on purpose**: that is how Stripe is told to retry.
 The Stripe SDK is synchronous, so every call goes through `_sdk()` onto a worker thread — a blocking
 network call on the event loop would stall every in-flight request, including the proxy's hot path.
 
+`_credit` also emits the `topup_completed` product-analytics event (`analytics.capture`, PostHog),
+riding the same `fresh` flag as the receipt email so a redelivery re-emits nothing. `capture` is
+synchronous and swallowing by construction — analytics is the one side effect in the webhook that is
+allowed to fail, and it must fail silently, because a raise here would 500 the handler and make Stripe
+retry a payment that already credited. Amounts travel as canonical integer `amount_micro`; the
+`amount_usd` on the event is display-only.
+
 **Auto-top-up is guarded in depth**, because it is the part that can go wrong expensively: recorded
 consent (the PSD2/SCA mandate, a compliance requirement rather than a checkbox), a monthly cap, a
 cooldown stamped in the DB *before* the charge so a second web worker sees it, a consecutive-failure

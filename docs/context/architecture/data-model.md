@@ -5,6 +5,7 @@ sources:
   - src/treg/models.py
   - src/treg/db.py
   - src/treg/audit.py
+  - src/treg/analytics.py
   - src/treg/ratestore.py
 related:
   - architecture/proxy-model.md
@@ -75,7 +76,22 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   `replaces_secret_id` (which existing connection this consent REPLACES — null = add a new one, so the
   callback no longer has to blanket-replace by provider).
 - **`CallRecord`** — the proxied-call audit row: `org_id`, `user_email`, `tool_name`, `method`, `path`,
-  `status_code`, `kind` (**`call`** = proxy `/call`, **`local_run`** = `/tools/{name}/grant`), `created_at`.
+  `status_code`, `kind` (**`call`** = proxy `/call`, **`local_run`** = `/tools/{name}/grant`), `created_at`,
+  and `refused_by` (migration A29, nullable): set when **treg itself refused the call before anything went
+  upstream** — `auth` | `policy` | `balance` | `cap` | `resolution` | `request` — and NULL whenever the
+  provider actually answered. Every `/call/` refusal now leaves a row: the in-handler audits stamp their own
+  kind, and refusals that raise **before** the handler's audit exists (bad token, unknown tool, ACL, deny
+  rule, daily cap) are recorded by a fallback in the `X-Treg-Error` exception handler — the one place every
+  refusal passes through — using the identity stashed in `request.state` (a bad-token 401 records
+  anonymously). It is what tells "the provider failed" apart from "we said no": a paywall 402 must not read
+  as a provider error, and `endpoint_stats` excludes refused rows entirely.
+- **`ToolRequest`** — a "the catalog doesn't have X" report (`POST /tool-requests`, open + per-IP
+  rate-limited): `capability` (the headline, ≤200 chars), `query` (the search that came up empty —
+  auto-filled by agents, the dedup/priority signal), `note`, `contact`, `source` (`web` | `cli` |
+  `mcp` | `api`), `status` (`open` | `done` | `dismissed`, flipped by hand), and **nullable**
+  `org_id`/`user_email` — identity is attribution when the caller happens to have one, never a
+  requirement, because the usual filer is an agent with zero results and no token. Reviewed by
+  querying the table; a Slack notifier may hang off the insert later, but the row is the record.
 - **`RunRecord`** — the **server-side run** audit row (a `treg run --server` CLI execution — the "kind"
   `server_run` in usage rollups): `org_id`, `user_email`, `bundle_name` (holds the **tool** name since the
   tool-side run unification; column name is historical), `argv` (JSON — never carries a secret value;
@@ -138,7 +154,21 @@ the small pool shared with the request path, so a loop-bound semaphore caps conc
 `_MAX_CONCURRENT_WRITES`, and under an extreme burst `_schedule` **sheds** load — it drops any row past
 `_MAX_PENDING` rather than grow unbounded — so best-effort logging can never starve real calls. `drain()`
 **loops until quiescent** (a call finishing during shutdown enqueues a new task
-after a one-shot snapshot would have gathered) on shutdown and in tests. The engine adds Postgres pool
+after a one-shot snapshot would have gathered) on shutdown and in tests.
+
+## Product analytics writer (`analytics.py`)
+The same lossy discipline as `audit.py`, but the sink is PostHog's `/batch/` endpoint, not the DB.
+`capture(distinct_id, event, properties, groups=)` is synchronous and **never raises** (call sites sit
+inside the Stripe webhook, where an exception would 500 and trigger a retry of an already-credited
+payment); it queues up to `_MAX_PENDING` events (drop-newest past the bound) and one flusher task
+micro-batches them (`_BATCH_MAX` per POST, at most every `_FLUSH_INTERVAL_S`) via a per-flush httpx
+client — no semaphore, because HTTP to PostHog never touches the DB pool. **Empty `posthog_key` = the
+module is off** (self-hosters and the test suite send nothing). `$groups: {team: org_slug}` mirrors the
+browser's `posthog.group('team', slug)` and `distinct_id` is the user email, so server events join the
+same PostHog person/group the SPA identifies. Emitters: `call_tool`'s `_audit` funnel (`tool_called`,
+with the catalog `provider` as vendor or the upstream host for own tools), `billing_topup`
+(`topup_started`), and `billing._credit` (`topup_completed`, gated on `fresh`). Drained in the lifespan
+`finally` after `audit.drain()`. The engine adds Postgres pool
 hygiene (`pool_pre_ping`/`pool_recycle`/sizing) for non-SQLite URLs, and `init_db` refuses to start with
 no `TREG_SECRET_KEY` on a real DB (an ephemeral key would lose every stored secret on restart).
 
