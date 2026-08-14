@@ -78,7 +78,8 @@ Discover what your team has shared: `treg tool ls` · check credential health: `
 
 Installs with no token and no configuration. The skill loads as `treg:treg` and, on its first run,
 walks your agent through the rest — the CLI, sign-in, then `treg mcp install` — so you end up with
-the command line **and** treg's tools. Other agents: `npx skills add superdesigndev/treg`.
+the command line **and** treg's tools. Other agents: `npx skills add superdesigndev/treg -s treg`
+(the `-s` matters — without it you also get this repo's internal dev skills).
 See [docs/CLAUDE-PLUGIN.md](docs/CLAUDE-PLUGIN.md).
 
 ## Call a tool you don't have a key for
