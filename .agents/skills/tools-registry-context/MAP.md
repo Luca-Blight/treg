@@ -16,6 +16,9 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/__main__.py` | ops/deploy.md |
 | `src/treg/api.py` | architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, architecture/money.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md |
 | `src/treg/mcp.py` | architecture/mcp-oauth.md |
+| `src/treg/reconcile.py` | architecture/money.md |
+| `src/treg/catalog_store.py` | architecture/catalog.md |
+| `src/treg/catalog/fx.yaml` | architecture/catalog.md, architecture/money.md |
 | `src/treg/mcp_oauth.py` | architecture/mcp-oauth.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/cli.py` | interface/cli.md, interface/onboarding.md, interface/shell.md |
@@ -57,6 +60,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `db.py` |
 | `architecture/mcp-oauth.md` | `mcp.py`, `mcp_oauth.py`, `connect-demo.html` |
+| `architecture/catalog.md` | `catalog_store.py`, `endpoint_stats.py`, `fx.yaml` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
 | `architecture/super-admin.md` | `api.py`, `config.py` |
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |
