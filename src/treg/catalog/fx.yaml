@@ -12,6 +12,19 @@
 # means the provider publishes no per-credit price (seat-based, negotiated, or not credit
 # priced at all); those endpoints display credits instead of dollars, never a guessed USD.
 # Hand-maintained: re-check the source URLs periodically and bump `checked`.
+#
+# `kind: treg_shared_plan` marks a rate TREG SET, not one the vendor published. It exists for
+# flat-fee providers (a monthly subscription with a rate limit or unlimited calls), where no
+# per-call vendor price can exist. The full pricing ladder, the honesty rules and the monthly
+# review live in docs/SHARED-PLAN-PRICING-PLAN.md; the short form:
+#   real credits -> divide (the normal entries above). monthly request cap -> fee / cap, also a
+#   normal entry. rate limit only -> fee / theoretical max is the FLOOR, the rate sits above it
+#   at a stated break-even. unlimited -> a treg rate with the break-even printed.
+# A shared-plan entry MUST: have a non-null usd, start its basis with "treg shared-plan rate"
+# (the basis travels to every surface that shows provenance, so its first words say whose price
+# this is), name the vendor fee ($X/mo), and name "break-even at N calls/mo". The validator and
+# tests/test_catalog_api.py enforce all four. Reviewed monthly against audited volume; the price
+# is edited BY HAND from the reconcile recovery report, never auto-adjusted.
 # NOTE: this block must stay ABOVE `rates_to_usd:` -- catalog_fx_update.py rewrites the file
 # from the text before that key, so anything below it is discarded on the next FX refresh.
 credit_rates_usd:
@@ -29,6 +42,7 @@ credit_rates_usd:
   brightdata: {usd: null, basis: "not credit-priced", note: "billing is per record / per GB / per 1,000 results per product, with no cross-product credit unit, so costs stay in the provider's own units", source: "https://brightdata.com/pricing", checked: "2026-07-28"}
   seranking: {usd: 0.000179, basis: "credits are sold annually: 12M for $2,148/yr on the entry tier = $0.000179/credit (the 120M tier is $10,200/yr = $0.000085)", source: "https://seranking.com/pricing.html", checked: "2026-07-28"}
   serpstat: {usd: 0.00050, basis: "Team plan $100/mo (annual billing) includes 200K API credits/mo; 100/200,000. Monthly billing is $129 -> $0.000645; the 250K/mo export-rows allowance is a SEPARATE pool", source: "https://serpstat.com/page/pricing-plans/", checked: "2026-07-31"}
+  alphavantage: {usd: 0.001, kind: treg_shared_plan, fee_usd_month: 49.99, basis: "treg shared-plan rate. Vendor sells flat $49.99/mo at 75 req/min (= 3.24M calls/mo capacity; floor $0.0000154/call); no per-call vendor price exists. Rate set for break-even at 50,000 calls/mo (1.5% utilization); reviewed monthly against audited volume", source: "https://www.alphavantage.co/premium/", checked: "2026-08-14"}
 
 # Proprietary METERING units -> USD, for providers that bill in something that is neither a currency
 # nor a credit. Same rule as credits, one level deeper: a meter is scoped to its provider AND to

@@ -181,6 +181,41 @@ being released for) and **never raises** — the caller already has their answer
 must not turn a served call into a 500. A hold that fails to close is not lost money either: the
 reaper releases it, which errs in the org's favour.
 
+## Shared-plan pricing: flat-fee providers, and the rate treg sets
+
+A flat-fee provider (a monthly subscription with a rate limit or unlimited calls) has no per-call
+vendor price, which kept every one of them out of the catalog. The ladder that admits them:
+
+| The provider sells | The price of one call |
+|---|---|
+| real credits | vendor price ÷ credits (the normal fx entry) |
+| a monthly request cap | fee ÷ cap — same arithmetic |
+| a rate limit only | fee ÷ theoretical max is the FLOOR; the rate sits above it at a stated break-even |
+| unlimited | a treg-set rate with the break-even printed |
+
+The honesty rule that makes the last two rungs defensible: **we never claim these are vendor
+prices.** What treg sells there is its own service — subscription custody, the key, a share of the
+rate limit — at a published rate whose fee and break-even are printed beside it (fx.yaml
+`kind: treg_shared_plan`; `check_fx` makes the marker impossible to carry dishonestly). The price is
+also congestion control: at $0, one looping agent exhausts a shared rate limit for every team at
+once.
+
+Mechanically a shared-plan provider is just a credit provider whose credit is "one call on treg's
+shared plan" — `cost_view`, holds, caps and settlement needed zero changes. What is new:
+
+- **A 429 is never billable**, under any cost type. Capacity refusing a request is not the caller's
+  bad input, and on a shared key it is treg's own saturation. This also fixed a pre-existing wrong:
+  `per_call` used to bill upstream 429s, and no vendor bills a request it refused to accept.
+- **`shared_plan_recovery`** (`GET /admin/reconcile/shared-plans`): fee versus collected per
+  treg-set rate, with `suggested_usd = fee ÷ measured calls` and an action at ±50% thresholds. It
+  REPORTS; a human edits fx.yaml monthly. An auto-adjusting price would move under an agent's feet,
+  and a rate card that moves on its own is not a rate card. The fee is scaled to the report's
+  window, so a 7-day report compares against a quarter of the fee.
+- **`price_drift` never sees these providers** — drift compares our estimate against the provider's
+  own reported charge, and a flat-fee provider never reports one. Pinned by a test that fires if an
+  observed-cost parser is ever added for one, because at that point the drift report would be
+  policing a price treg itself set.
+
 ## Retries: a call must not be paid for twice
 
 Prompted by a public question — *"how does result pricing handle retries, agents need idempotent

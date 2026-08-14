@@ -305,6 +305,15 @@ charges 1 credit per 10 emails (`per: 10, unit: record`), Akta 1.5 credits per 5
   providers' credits do, so each gets its own row. Before this existed, Moz's `quota_rows` blocks
   carried no `currency` at all, defaulted to USD, and served every Moz route as costing $1.00.
 
+A `credit_rates_usd` entry may carry **`kind: treg_shared_plan`**: a rate TREG SET for a flat-fee
+provider (a subscription with a rate limit or unlimited calls), where no per-call vendor price can
+exist. The credit is then "one call on treg's shared plan" and the machinery is unchanged — the
+honesty lives in the entry: the basis must start with "treg shared-plan rate", name the vendor fee,
+and state the break-even volume, and `fee_usd_month` must be present as data (the validator's
+`check_fx` enforces all of it). The rate is reviewed monthly against `reconcile.shared_plan_recovery`
+and edited by hand. The full ladder: docs/SHARED-PLAN-PRICING-PLAN.md; the billing side (429 never
+billable, the recovery report): architecture/money.md.
+
 Each `credit_rates_usd` / `unit_rates_usd` entry carries `usd` plus the `basis`/`source`/`checked` that justify it —
 the cheapest PUBLICLY listed tier (plan price ÷ credits included), so the served figure is an upper
 bound on real spend, never an under-estimate. `usd: null` is a deliberate state, not a gap: the

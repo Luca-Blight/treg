@@ -536,6 +536,11 @@ endpoints:
     test_request:
       bodyType: json
       body: {company_domain: "leadmagic.io"}
+    # The route-level stamp PR #118 verified the cost with but forgot to write. The example was
+    # captured live 2026-08-14 (5 ads, 1.2 credits consumed — an exact fit to the verified
+    # 0.2 x (ads+1) formula, a fourth confirmation of it), redaction-scanned, $0.03 charged.
+    verified: 2026-08-14
+    example_response: examples/leadmagic.x.b2b-ads-search.json
     cost:
       type: per_call
       value: 5
