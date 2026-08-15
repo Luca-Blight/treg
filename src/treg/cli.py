@@ -114,6 +114,37 @@ def _pick_active_org(cfg: dict) -> None:
             _save_config(cfg)
     except Exception:
         pass
+    # Bake the chosen team into the token so it also works OUTSIDE the CLI (curl, MCP, an agent env),
+    # where no X-Treg-Org header travels.
+    _pin_token_to_active_org(cfg)
+
+
+def _pin_token_to_active_org(cfg: dict) -> None:
+    """Re-mint the stored identity token with the ACTIVE ORG baked into its claim.
+
+    A plain identity token names a person, not a team, so treg cannot know which team to bill and
+    answers `choose an org (send X-Treg-Org)`. The CLI hides that by sending the header itself — but
+    the token is the thing people copy OUT of the CLI: into curl, into an MCP client's Authorization,
+    into an agent's env. There it fails, confusingly, and the fix is invisible.
+
+    `GET /auth/cli-token` with `X-Treg-Org` returns the same identity token with the org pinned, which
+    is exactly how the dashboard's "your API key" works as a bare bearer. Switching teams still works:
+    an explicit `X-Treg-Org` header always beats the claim, and `treg org use` re-pins.
+
+    Best-effort by design — the caller has already persisted a working token, and an older server
+    without this route must not turn a successful login into a failure.
+    """
+    org = cfg.get("active_org")
+    if not org or not cfg.get("identity"):
+        return
+    try:
+        with _client(cfg) as c:
+            r = c.get("/auth/cli-token", headers={"X-Treg-Org": org})
+        if r.status_code == 200 and r.json().get("org") == org:
+            cfg["token"] = r.json()["token"]
+            _save_config(cfg)
+    except Exception:  # noqa: BLE001 — a pin is an upgrade, never a reason to lose the session
+        pass
 
 
 def _effective_org(cfg: dict) -> str | None:
@@ -375,7 +406,12 @@ def cmd_login(args, cfg) -> None:
                 cfg["active_org"] = d["active_org"]  # the team the user picked in the browser
             _save_config(cfg)  # persist first; the login_id is single-use, don't risk losing it
             if not cfg.get("active_org"):
-                _pick_active_org(cfg)  # older server (no picker) — fall back to guessing
+                _pick_active_org(cfg)  # older server (no picker) — falls back to guessing, and pins
+            else:
+                # The browser picker already named the team, so `_pick_active_org` is skipped — and
+                # with it the pin. Pin here too, or the token this path stores works only inside the
+                # CLI (which supplies X-Treg-Org itself) and fails everywhere it gets pasted.
+                _pin_token_to_active_org(cfg)
             print(f"✓ Logged in as {cfg['email']}. Active org: {cfg.get('active_org')}")
             _maybe_offer_onboarding(cfg)
             return
@@ -3703,6 +3739,7 @@ def cmd_org_use(args, cfg) -> None:
         print("warning: could not verify the team against the registry", file=sys.stderr)
     cfg["active_org"] = args.slug
     _save_config(cfg)
+    _pin_token_to_active_org(cfg)  # re-pin, so the copyable token follows the switch
     print(f"active org: {args.slug}")
 
 
@@ -3843,7 +3880,107 @@ def cmd_org_agent_new(args, cfg) -> None:
             body["project_access"] = None
         elif getattr(args, "projects", None):
             body["project_access"] = [p.strip() for p in args.projects.split(",") if p.strip()]
+        # Same rule: only send it when asked, so a rotate does not silently UNPIN a scoped token.
+        if getattr(args, "pin", None):
+            pins = {}
+            for item in args.pin:
+                dim, sep, val = item.partition("=")
+                if not sep or not dim.strip() or not val.strip():
+                    sys.exit(f"--pin wants dim=value, got {item!r}")
+                pins[dim.strip().lower()] = val.strip()
+            body["pinned_tags"] = pins
         _show(c.post(f"/orgs/{org_id}/agents", json=body))
+
+
+def cmd_org_budgets(args, cfg) -> None:
+    """List the per-tag limits this team has set on ITS OWN customers (admin+)."""
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        r = c.get(f"/orgs/{org_id}/budgets", params={"dim": args.dim} if args.dim else None)
+    if _JSON_OVERRIDE or r.status_code >= 400:
+        _show(r)
+        return
+    rows = r.json()
+    if not rows:
+        print(f"\n  {_M}no budgets set — every tag is unlimited until you set one.{_R}")
+        print(f"  {_M}e.g. treg org budget set customer cust_8123 --daily 5.00{_R}\n")
+        return
+    print(f"\n  {_A}Per-tag budgets{_R}")
+    for b in rows:
+        daily = _usd(b["daily_cap_micro"]) if b["daily_cap_micro"] is not None else "-"
+        monthly = _usd(b["monthly_cap_micro"]) if b["monthly_cap_micro"] is not None else "-"
+        flag = f"  {_AM}BLOCKED{_R}" if b["status"] == "blocked" else ""
+        calls = "" if b["calls_per_day"] < 0 else f"  {_M}{b['calls_per_day']}/day{_R}"
+        print(f"    {b['dim']}={b['val']:<24} {daily:>10}/day  {monthly:>10}/mo{calls}{flag}")
+        if b.get("note"):
+            print(f"      {_M}{b['note']}{_R}")
+    print(f"\n  {_M}caps are advisory: concurrent calls can overshoot slightly. Your balance is the "
+          f"hard limit.{_R}\n")
+
+
+def cmd_org_budget_set(args, cfg) -> None:
+    """Set (or update) one tag's limit. Unsent fields are left alone, so `--block` keeps the caps."""
+    body: dict = {}
+    if args.daily is not None:
+        body["daily_cap_micro"] = int(round(args.daily * 1_000_000))
+    if args.monthly is not None:
+        body["monthly_cap_micro"] = int(round(args.monthly * 1_000_000))
+    if args.calls is not None:
+        body["calls_per_day"] = args.calls
+    if args.block:
+        body["status"] = "blocked"
+    if args.unblock:
+        body["status"] = "active"
+    if args.note is not None:
+        body["note"] = args.note
+    if not body:
+        sys.exit("nothing to set — pass --daily / --monthly / --calls / --block / --unblock / --note")
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.put(f"/orgs/{org_id}/budgets/{args.dim}/{args.value}", json=body))
+
+
+def cmd_org_budget_rm(args, cfg) -> None:
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        _show(c.delete(f"/orgs/{org_id}/budgets/{args.dim}/{args.value}"))
+
+
+def cmd_usage_by_tag(args, cfg) -> None:
+    """What each value of one caller tag consumed — the numbers a reselling builder invoices from.
+
+    Money here comes from the LEDGER, not the audit table, so it is complete even when audit rows
+    were shed under load. `unattributed` is shown rather than dropped: spend you cannot attribute is
+    the first thing that makes two sets of books disagree.
+    """
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        params = {"days": args.days}
+        if args.by:
+            params["key"] = args.by
+        r = c.get(f"/orgs/{org_id}/usage/by-tag", params=params)
+    if _JSON_OVERRIDE or r.status_code >= 400:
+        _show(r)
+        return
+    d = r.json()
+    print(f"\n  {_A}Usage by {d['key']}{_R}  {_M}last {d['days']} days{_R}")
+    for row in d["rows"]:
+        n = row["calls"]
+        print(f"    {row['value']:<28} {_usd(row['charged_micro']):>10}  "
+              f"{_M}{n} call{'' if n == 1 else 's'}{_R}")
+    if not d["rows"]:
+        print(f"    {_M}nothing tagged {d['key']!r} in this window.{_R}")
+    if d["unattributed_micro"]:
+        print(f"    {_M}{'(unattributed)':<28} {_usd(d['unattributed_micro']):>10}{_R}")
+    print(f"\n    {'total':<28} {_G}{_usd(d['total_micro']):>10}{_R}\n")
 
 
 def cmd_org_agents(args, cfg) -> None:
@@ -4798,10 +4935,39 @@ def build_parser() -> argparse.ArgumentParser:
     oan.add_argument("--projects", help="comma-separated project slugs/ids this agent is scoped to")
     oan.add_argument("--all-projects", dest="all_projects", action="store_true",
                      help="scope to every project (the default for a new agent)")
+    oan.add_argument("--pin", action="append", metavar="DIM=VALUE",
+                     help="pin this token to a caller tag (repeatable), e.g. --pin customer=cust_A. "
+                          "The pin beats whatever X-Treg-Meta the holder sends, so a token handed to "
+                          "one customer cannot bill another.")
     oan.set_defaults(fn=cmd_org_agent_new)
     mk(og, "agents", "List this team's agent identities and their limits (admin+). "
                      "(Different from `treg agents`, which lists coding agents for skill install.)",
        "treg org agents").set_defaults(fn=cmd_org_agents)
+    # ---- per-tag budgets: what a team reselling treg sets on ITS OWN customers -------------------
+    obs = mk(og, "budgets", "Per-tag spend limits you've set on your own customers (admin+).",
+             "treg org budgets", "treg org budgets --dim workspace")
+    obs.add_argument("--dim", help="only show budgets on this tag key (e.g. customer)")
+    obs.set_defaults(fn=cmd_org_budgets)
+    obset = mk(og, "budget-set",
+               "Cap or block one tag value. Unsent limits are left alone, so --block keeps the caps. "
+               "Caps are ADVISORY — concurrent calls can overshoot; your balance is the hard limit.",
+               "treg org budget-set customer cust_8123 --daily 5",
+               "treg org budget-set workspace ws_9 --daily 50",
+               "treg org budget-set customer cust_8123 --block")
+    obset.add_argument("dim", help="the tag key, e.g. customer")
+    obset.add_argument("value", help="the tag value, e.g. cust_8123")
+    obset.add_argument("--daily", type=float, help="daily cap in USD")
+    obset.add_argument("--monthly", type=float, help="monthly cap in USD (calendar month, UTC)")
+    obset.add_argument("--calls", type=int, help="max billable calls per day (-1 = unlimited)")
+    obset.add_argument("--block", action="store_true", help="refuse this tag's calls outright")
+    obset.add_argument("--unblock", action="store_true", help="lift a block")
+    obset.add_argument("--note", help="a note to yourself (shown in `treg org budgets`)")
+    obset.set_defaults(fn=cmd_org_budget_set)
+    obrm = mk(og, "budget-rm", "Drop a tag's limit. Its usage keeps being recorded and invoiced.",
+              "treg org budget-rm customer cust_8123")
+    obrm.add_argument("dim")
+    obrm.add_argument("value")
+    obrm.set_defaults(fn=cmd_org_budget_rm)
     oar = mk(og, "agent-rm", "Revoke an agent — its token stops working immediately.",
              "treg org agent-rm 7")
     oar.add_argument("user_id", type=int, help="the agent's user id (from `org agents`)")
@@ -5162,6 +5328,16 @@ def build_parser() -> argparse.ArgumentParser:
              "treg balance", "treg balance --limit 50", "treg balance --json    # micro-USD integers")
     bal.add_argument("--limit", type=int, default=20, help="how many recent ledger rows (default: 20)")
     bal.set_defaults(fn=cmd_balance)
+
+    usg = mk(sub, "usage", "What each of your caller tags consumed — what you invoice your own users "
+                           "from. Money comes from the ledger, so it is complete even when audit rows "
+                           "were shed under load.",
+             "treg usage                       # by your primary tag (default: customer)",
+             "treg usage --by workspace",
+             "treg usage --by customer --days 7")
+    usg.add_argument("--by", help="which caller tag to group by (default: your team's primary one)")
+    usg.add_argument("--days", type=int, default=30, help="window in days (default: 30, max 365)")
+    usg.set_defaults(fn=cmd_usage_by_tag)
 
     tu = mk(sub, "topup", "Add funds to your team's balance, or set up automatic top-ups.",
             "treg topup                                     # a Checkout link for the default amount",

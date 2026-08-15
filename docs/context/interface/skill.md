@@ -64,3 +64,27 @@ The Claude variant sits at the **repo root**, not under `plugin/`, because that 
 simultaneously what Claude Code's loader auto-discovers, what `npx skills add` resolves, and what
 `clawhub skill publish` takes. See [docs/CLAUDE-PLUGIN.md](../../CLAUDE-PLUGIN.md) for the
 per-registry submission runbook.
+## `/integrate.md` — the BUILDER skill
+
+A second, separate skill for the other side of the relationship. `skill.md` teaches an agent to **use**
+treg; `integrate.md` is pasted into a builder's own repo and pointed at their coding agent so they can
+**embed** treg and bill their own customers for it.
+
+It leads with the per-customer billing model rather than the call syntax, deliberately: tagging has to
+happen at the one place your backend already sets `Authorization`, and a builder who writes the
+plumbing first writes it in a shape that has to be torn out.
+
+The things it insists on, each because getting them wrong is expensive and silent:
+
+- **Tag from the backend, never as a model-supplied argument** — a model omits it mid-chain and the
+  spend leaves the invoice.
+- **Invoice from `usage/by-tag` (the ledger), never from `/calls`** — audit rows are shed under load.
+- **Assert `attributed + unattributed == total`**, and drive `unattributed_micro` to zero; anything
+  left is a call site that forgot to tag.
+- **Branch on `X-Treg-Error`, not the status code** — a provider's own 4xx is relayed verbatim.
+- **Never forward a team-level 402/429 to an end user** — those carry the builder's balance and a
+  top-up link. The tag-scoped refusals are safe to surface and carry nothing about the team.
+- **Per-customer caps are advisory**, so they must not be sold to end users as exact.
+
+`tests/test_tag_billing.py` pins the header and route names the skill teaches, so a rename that would
+silently turn it into wrong instructions fails the suite instead.

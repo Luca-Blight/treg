@@ -150,3 +150,17 @@ also rejects numeric IP encodings — decimal/hex/octal/short forms like `213070
 (A narrow resolve-vs-connect race remains; pinning the resolved IP would need a custom transport.)
 
 > Why relay instead of modeling the upstream: [foundation/charter.md](../foundation/charter.md).
+
+## treg's own headers never reach the upstream — by PREFIX, not by name
+
+`proxy._DROP_REQUEST` used to enumerate our control headers, and the enumeration had already failed:
+`x-treg-client` was never in it, so every provider we relay to had been receiving the caller's runtime
+name. Adding `x-treg-meta` (which carries a reselling builder's customer ids) to that list would have
+repeated the defect one header later.
+
+So the rule is structural: **any request header whose lowercased name starts with `x-treg-` is
+dropped** before relay (`proxy._is_dropped_request_header`). `_CONTROL` remains for the non-prefixed
+infra names — `ngrok-…`, `x-forwarded-*`, `via` — which have no shared prefix to key on.
+
+The test asserts an *invented* header (`X-Treg-Future`) is dropped too, so the guarantee is about the
+prefix rather than about today's list.

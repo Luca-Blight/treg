@@ -25,6 +25,7 @@ import secrets as _secrets
 import shutil
 import tempfile
 import time
+import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -54,8 +55,8 @@ from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, plat
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
                      IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
-                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, Tool, ToolRequest,
-                     User)
+                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, TagBudget, TagSpend, Tool,
+                     ToolRequest, User)
 from .proxy import relay
 
 
@@ -1660,6 +1661,17 @@ async def vendor_listing_md():
     return _serve_md("vendor-listing.md")
 
 
+@app.get("/integrate.md", include_in_schema=False)
+async def integrate_md():
+    """The BUILDER skill: how to put treg inside your own product and bill your own customers for it.
+
+    Distinct from `skill.md`, which teaches an agent to USE treg. This one is pasted into a builder's
+    repo and pointed at their coding agent, so it leads with the per-customer billing model — the
+    part that changes how the plumbing is written, and therefore has to be read before any of it is.
+    """
+    return _serve_md("integrate.md")
+
+
 @app.get("/skill.md", include_in_schema=False)
 async def skill_md():
     """The OFFICIAL treg Claude skill (3 personas), {BASE}-templated to this server.
@@ -2711,7 +2723,10 @@ async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
 # Order matters: LedgerEntry references a CreditBlock, so it goes first.
 _ORG_SCOPED_MODELS = (
     Tool, Secret, Bundle, PendingOAuth, CallRecord, RunRecord, Invite, DenyRule, Project,
-    CapabilityPin, LedgerEntry, Hold, CreditBlock,
+    CapabilityPin,
+    TagBudget,
+    TagSpend,  # before the money tables it attributes: its rows reference a Hold that is about to go
+    LedgerEntry, Hold, CreditBlock,
     OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
     IdempotentCall,            # a remembered answer belongs to the team that paid for it
     ToolRequest,  # attribution rows go with the team; anonymous filings carry no org_id and stay
@@ -3900,6 +3915,249 @@ async def org_balance(
     }
 
 
+@app.get("/orgs/{org_id}/tag-keys")
+async def list_tag_keys(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Every tag key this team has actually SENT, plus the ones it may budget on.
+
+    Two different questions that had been given one answer. Reporting works on ANY key — the money
+    for an undeclared one is folded in Python — while ENFORCEMENT only works on a declared key,
+    because it needs an index. Feeding a reporting picker the declared list hid `feature=` and
+    friends from the dashboard even though the API served them fine.
+    """
+    _require_admin_of(org_id, caller)
+    seen = (await db.execute(
+        select(TagSpend.dim).where(TagSpend.org_id == org_id).distinct())).scalars().all()
+    declared = _budget_dims_of(caller.org)
+    return {"seen": sorted(set(seen)), "budgetable": declared,
+            "primary": _primary_dim_of(caller)}
+
+
+@app.get("/orgs/{org_id}/usage/by-tag")
+async def usage_by_tag(
+    org_id: int, key: str | None = None, days: int = 30,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """What each value of one tag consumed — the numbers a reselling builder invoices from.
+
+    MONEY COMES FROM THE LEDGER, never from `CallRecord`. Audit rows are fire-and-forget and the queue
+    sheds them under load, which is precisely the traffic a successful builder generates; an invoice
+    built on them would under-bill silently and unrecoverably. Call COUNTS come from the audit table,
+    where losing a row costs a slightly low count and nothing else.
+
+    `unattributed` is reported explicitly rather than dropped. A builder reconciling this against their
+    own ledger has to see the spend they cannot attribute to anyone — silently omitting it is how the
+    two sets of books stop agreeing without anybody noticing.
+    """
+    _require_admin_of(org_id, caller)
+    days = max(1, min(days, 365))
+    since = _day_start_utc() - timedelta(days=days - 1)
+    dim = (key or _primary_dim_of(caller)).strip().lower()
+
+    by_value = await ledger.spend_by_tag(db, org_id, dim, since)
+    org_total = (await ledger.spend_since(db, org_id, since))["spend_micro"]
+    # Counts come from the tag rows too. `CallRecord` holds only the primary dimension, so counting
+    # there reported 0 for every non-primary key while the money column was correct — a report that
+    # disagrees with itself is worse than one that admits its grain.
+    counts = await ledger.calls_by_tag(db, org_id, dim, since)
+    rows = [{"value": val, "charged_micro": micro, "charged_usd": ledger.usd(micro),
+             "calls": int(counts.get(val, 0))}
+            for val, micro in sorted(by_value.items(), key=lambda kv: -kv[1])]
+    attributed = sum(by_value.values())
+    return {
+        "key": dim, "days": days, "since": since.isoformat(),
+        "rows": rows,
+        # The identity a builder's invoice rests on: these three reconcile against the team's own
+        # settled spend for the window, whichever dimension they slice by.
+        "attributed_micro": attributed,
+        "unattributed_micro": org_total - attributed,
+        "total_micro": org_total, "total_usd": ledger.usd(org_total),
+    }
+
+
+# ---- team settings: the spend ceiling and the tag dimensions ---------------------------------
+class OrgSettingsIn(BaseModel):
+    daily_cap_micro: int | None = None
+    budget_dims: list[str] | None = None
+    primary_dim: str | None = None
+
+
+@app.get("/orgs/{org_id}/settings")
+async def get_org_settings(
+    org_id: int, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """The team's spend ceiling and tag configuration. Readable by any member — a limit nobody can see
+    is a limit that turns into a support ticket the first time an agent trips it."""
+    if caller.org_id != org_id:
+        raise HTTPException(status_code=403, detail="not your org")
+    org = caller.org
+    return {"daily_cap_micro": _effective_daily_cap(org),
+            "daily_cap_set_by_team": int(org.daily_cap_micro or 0) or None,
+            "platform_ceiling_micro": get_settings().platform_daily_cap_micro,
+            "budget_dims": _budget_dims_of(org), "primary_dim": _primary_dim_of(caller)}
+
+
+@app.patch("/orgs/{org_id}/settings")
+async def set_org_settings(
+    org_id: int, body: OrgSettingsIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Set the team's own spend ceiling and which tag keys carry budgets. Admin+.
+
+    A team may LOWER its ceiling freely; raising it past the platform ceiling is refused rather than
+    silently clamped, because a builder who thinks they set $500/day and actually got $5 discovers it
+    as an outage in the middle of their launch.
+    """
+    _require_admin_of(org_id, caller)
+    org = caller.org
+    sent = body.model_fields_set
+    if "daily_cap_micro" in sent and body.daily_cap_micro is not None:
+        ceiling = get_settings().platform_daily_cap_micro
+        if body.daily_cap_micro < 0:
+            raise HTTPException(status_code=422, detail="daily_cap_micro must be 0 or more")
+        if body.daily_cap_micro > ceiling:
+            raise HTTPException(status_code=403, detail={
+                "error": "above_platform_ceiling", "requested_micro": body.daily_cap_micro,
+                "ceiling_micro": ceiling,
+                "message": (f"${ledger.usd(ceiling):g}/day is the ceiling we allow for a team. Ask us "
+                            f"to raise it — reselling volume is a conversation, not a setting."),
+            })
+        org.daily_cap_micro = body.daily_cap_micro
+    if "budget_dims" in sent and body.budget_dims is not None:
+        dims = [d.strip().lower() for d in body.budget_dims if d and d.strip()]
+        if len(dims) > _MAX_BUDGET_DIMS:
+            raise HTTPException(status_code=422, detail=(
+                f"at most {_MAX_BUDGET_DIMS} budget dimensions — each one is an indexed lookup on "
+                f"every call and a row per distinct value"))
+        for d in dims:
+            if not _META_KEY_RE.match(d):
+                raise HTTPException(status_code=422, detail=f"{d!r} is not a valid tag key")
+        org.budget_dims = dims or None
+    if "primary_dim" in sent and body.primary_dim:
+        if not _META_KEY_RE.match(body.primary_dim):
+            raise HTTPException(status_code=422, detail=f"{body.primary_dim!r} is not a valid tag key")
+        org.primary_dim = body.primary_dim
+    await db.commit()
+    return await get_org_settings(org_id, caller, db)
+
+
+# ---- per-tag budgets: what a reselling builder sets on THEIR users ---------------------------
+class TagBudgetIn(BaseModel):
+    daily_cap_micro: int | None = None
+    monthly_cap_micro: int | None = None
+    calls_per_day: int | None = None
+    status: str | None = None
+    note: str | None = None
+
+
+def _tag_budget_view(row: TagBudget) -> dict:
+    return {"dim": row.dim, "val": row.val, "is_default": row.val == TAG_DEFAULT,
+            "daily_cap_micro": row.daily_cap_micro,
+            "monthly_cap_micro": row.monthly_cap_micro, "calls_per_day": row.calls_per_day,
+            "status": row.status, "note": row.note,
+            "updated_at": row.updated_at.isoformat() if row.updated_at else None}
+
+
+@app.get("/orgs/{org_id}/budgets")
+async def list_tag_budgets(
+    org_id: int, dim: str | None = None,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    """Every per-tag limit this team has SET — the per-dimension defaults plus the overrides.
+
+    Registry rows are excluded. One is created per distinct value so the cardinality check stays a
+    cheap lookup, and listing them made a table of eight rows in which six limited nothing: the
+    bookkeeping was being presented as if it were policy.
+
+    Admin+, because a budget names the team's customers.
+    """
+    _require_admin_of(org_id, caller)
+    q = select(TagBudget).where(TagBudget.org_id == org_id, TagBudget.auto.is_(False))
+    if dim:
+        q = q.where(TagBudget.dim == dim)
+    rows = (await db.execute(q.order_by(TagBudget.dim, TagBudget.val))).scalars().all()
+    # Defaults first within each dimension — they are what everything else is an exception to.
+    rows.sort(key=lambda r: (r.dim, r.val != TAG_DEFAULT, r.val))
+    return [_tag_budget_view(r) for r in rows]
+
+
+@app.put("/orgs/{org_id}/budgets/{dim}")
+async def set_tag_default(
+    org_id: int, dim: str, body: TagBudgetIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Set the DEFAULT limit for a whole dimension — what every value inherits without an override.
+
+    Unlimited until this is set: a team that never calls it behaves exactly as before. Changing it
+    takes effect on the next call for everyone without an override, since resolution happens per
+    call — so lowering a default is a live change across the whole customer base.
+    """
+    return await set_tag_budget(org_id, dim, TAG_DEFAULT, body, caller, db)
+
+
+@app.put("/orgs/{org_id}/budgets/{dim}/{val}")
+async def set_tag_budget(
+    org_id: int, dim: str, val: str, body: TagBudgetIn,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Set (or update) one limit — `PUT /orgs/1/budgets/customer/cust_8123 {"daily_cap_micro": 5000000}`.
+
+    An UPSERT that leaves unsent fields alone, the same `model_fields_set` shape `create_agent` uses:
+    a PUT that only flips `status` must not silently wipe the caps someone set last week.
+    """
+    _require_admin_of(org_id, caller)
+    if not _META_KEY_RE.match(dim):
+        raise HTTPException(status_code=422, detail=f"{dim!r} is not a valid tag key")
+    if val != TAG_DEFAULT:
+        _validate_tag_pair(dim, val)  # same rule as the call path — this value becomes a storage key
+    declared = _budget_dims_of(caller.org)
+    if dim not in declared:
+        # Setting a limit IS the declaration. Requiring a separate PATCH first made the common path a
+        # hidden two-step: the tag shows up in usage reports, so a person reasonably expects to be
+        # able to cap it, and got a 422 telling them to go configure something else first.
+        #
+        # The BOUND still holds, because it is what keeps the call path cheap — each declared
+        # dimension is another indexed lookup on every proxied call and another row per value. Past
+        # the limit, refuse and say which ones are in use, since only the team knows which to drop.
+        if len(declared) >= _MAX_BUDGET_DIMS:
+            raise HTTPException(status_code=422, detail={
+                "error": "too_many_budget_dimensions", "dim": dim, "declared": declared,
+                "limit": _MAX_BUDGET_DIMS,
+                "message": (f"budgets are already set up on {', '.join(declared)} — {_MAX_BUDGET_DIMS} "
+                            f"is the limit, because each one is checked on every call. Remove one "
+                            f"first if you want to budget on {dim!r} instead."),
+            })
+        caller.org.budget_dims = [*declared, dim]
+        declared = caller.org.budget_dims
+    if body.status is not None and body.status not in ("active", "blocked"):
+        raise HTTPException(status_code=422, detail="status must be 'active' or 'blocked'")
+    row = await _tag_budget(db, org_id, dim, val, create=True)
+    row.auto = False  # a human set this: it is policy now, not registry bookkeeping
+    sent = body.model_fields_set
+    for field in ("daily_cap_micro", "monthly_cap_micro", "calls_per_day", "status", "note"):
+        if field in sent:
+            setattr(row, field, getattr(body, field))
+    row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    await db.commit()
+    return _tag_budget_view(row)
+
+
+@app.delete("/orgs/{org_id}/budgets/{dim}/{val}")
+async def delete_tag_budget(
+    org_id: int, dim: str, val: str,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Drop a limit. The tag keeps being recorded and invoiced — only the ceiling goes away."""
+    _require_admin_of(org_id, caller)
+    row = await _tag_budget(db, org_id, dim, val)
+    if row is None:
+        raise HTTPException(status_code=404, detail="no budget for that tag")
+    await db.delete(row)
+    await db.commit()
+    return {"deleted": {"dim": dim, "val": val}}
+
+
 # ---- billing: Stripe top-ups (see billing.py) -----------------------------------------------
 class TopupIn(BaseModel):
     amount_usd: float | None = None
@@ -4338,6 +4596,9 @@ class AgentIn(BaseModel):
     # agent replaces, so the detected roster can drop it while the agent lives.
     promoted_member: str | None = None
     promoted_client: str | None = None
+    # Pin this token to one tag value — {"customer": "cust_A"} — for a token that will run on
+    # that customer's own machine. The pin then WINS over whatever header the holder sends.
+    pinned_tags: dict | None = None
 
 
 @app.post("/orgs/{org_id}/agents")
@@ -4401,11 +4662,22 @@ async def create_agent(
         client = _norm_client(body.promoted_client or "")
         membership.promoted_from = f"{member}|{client}" if member and client else ""
     membership.local_run_enabled = _keep("local_run_enabled", membership.local_run_enabled)
+    pins = _keep("pinned_tags", membership.pinned_tags)
+    if pins:
+        if len(pins) > _META_MAX_KEYS:
+            raise HTTPException(status_code=422, detail=(
+                f"a token may be pinned to at most {_META_MAX_KEYS} tags"))
+        # Same validation the header path applies. A pin is written straight into the tag bag by
+        # `_parse_call_meta`, so an unvalidated one would reach the idempotency scope and the money
+        # rows without ever passing the parser.
+        pins = dict(_validate_tag_pair(k, v) for k, v in pins.items())
+    membership.pinned_tags = pins or None
     await db.commit()
     return {"token": token, "name": name, "email": email, "org": caller.org.slug, "user_id": user.id,
             "role": membership.role, "daily_call_cap": membership.daily_call_cap,
             "tool_access": membership.tool_access, "project_access": membership.project_access,
             "local_run_enabled": membership.local_run_enabled,
+            "pinned_tags": membership.pinned_tags,
             "note": "save this token now — it is shown once; POST the same name again to rotate it"}
 
 
@@ -4436,7 +4708,8 @@ async def list_agents(
                     "email": user.email, "role": m.role, "daily_call_cap": m.daily_call_cap,
                     "used_today": used.get(user.email, 0), "tool_access": m.tool_access,
                     "project_access": m.project_access,  # the dashboard renders this column
-                    "local_run_enabled": m.local_run_enabled, "created_at": m.created_at,
+                    "local_run_enabled": m.local_run_enabled, "pinned_tags": m.pinned_tags,
+                    "created_at": m.created_at,
                     "created_by": m.created_by, "promoted_from": m.promoted_from,
                     "connected": user.email in seen})
     return out
@@ -5758,17 +6031,22 @@ async def delete_bundle(
 # ---- audit read ---------------------------------------------------------------------------
 @app.get("/calls")
 async def list_calls(
-    limit: int = 50, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+    limit: int = 50, days: int | None = None, before_id: int | None = None,
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> list[dict]:
+    """This team's recent calls. `days` windows it and `before_id` pages backwards — a builder
+    reconciling a month cannot do it through a newest-first limit alone.
+
+    Analytics, NOT an invoice: these rows are written fire-and-forget and the queue sheds them under
+    load. Money comes from `/orgs/{id}/usage/by-tag`, which reads the ledger.
+    """
     limit = max(1, min(limit, 500))
-    rows = (
-        await db.execute(
-            select(CallRecord)
-            .where(CallRecord.org_id == caller.org_id)
-            .order_by(CallRecord.id.desc())
-            .limit(limit)
-        )
-    ).scalars().all()
+    q = select(CallRecord).where(CallRecord.org_id == caller.org_id)
+    if days is not None:
+        q = q.where(CallRecord.created_at >= _day_start_utc() - timedelta(days=max(1, min(days, 365)) - 1))
+    if before_id is not None:
+        q = q.where(CallRecord.id < before_id)
+    rows = (await db.execute(q.order_by(CallRecord.id.desc()).limit(limit))).scalars().all()
     return [
         {
             "id": c.id,
@@ -5793,10 +6071,57 @@ async def list_calls(
             # non-null = treg said no before anything went upstream (see models.CallRecord) — the
             # one field that tells "the provider failed" apart from "we refused" in `treg audit`.
             "refused_by": c.refused_by,
+            # The caller's own tags (X-Treg-Meta), for a builder reconciling this row against their
+            # records. Money is NOT invoiced from here — see the ledger-backed usage endpoint.
+            "call_ref": c.call_ref,
+            "budget_dim": c.budget_dim,
+            "budget_val": c.budget_val,
+            "tags": c.tags,
             "created_at": c.created_at.isoformat(),
         }
         for c in rows
     ]
+
+
+@app.get("/calls/{call_ref}")
+async def get_call(
+    call_ref: str, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """One call by the `X-Treg-Call-Id` it returned — the join key for a builder's own records.
+
+    Also reports the LEDGER's view of the same reference, because that is the durable one: the audit
+    row is fire-and-forget and may have been shed, while the money entries were written synchronously.
+    A 404 here therefore means "no audit row", not "this call never happened" — check `ledger` in the
+    body before concluding anything about money.
+    """
+    row = (await db.execute(select(CallRecord).where(
+        CallRecord.org_id == caller.org_id, CallRecord.call_ref == call_ref))).scalars().first()
+    entries = (await db.execute(select(LedgerEntry).where(
+        LedgerEntry.org_id == caller.org_id, LedgerEntry.call_id == call_ref)
+        .order_by(LedgerEntry.created_at))).scalars().all()
+    if row is None and not entries:
+        raise HTTPException(status_code=404, detail="no call with that id")
+    view = None
+    if row is not None:
+        view = {"id": row.id, "call_ref": row.call_ref, "user_email": row.user_email,
+                "tool_name": row.tool_name, "method": row.method, "path": row.path,
+                "status_code": row.status_code, "kind": row.kind, "client": row.client,
+                "endpoint_id": row.endpoint_id, "provider": row.provider,
+                "credential_tier": row.credential_tier,
+                "cost_estimated_micro": row.cost_estimated_micro,
+                "cost_observed_micro": row.cost_observed_micro,
+                "cost_charged_micro": row.cost_charged_micro,
+                "duration_ms": row.duration_ms, "response_bytes": row.response_bytes,
+                "refused_by": row.refused_by, "budget_dim": row.budget_dim,
+                "budget_val": row.budget_val, "tags": row.tags,
+                "created_at": row.created_at.isoformat() if row.created_at else None}
+    return {
+        "call": view,
+        "ledger": [{"kind": e.kind, "amount_micro": e.amount_micro, "endpoint_id": e.endpoint_id,
+                    "created_at": e.created_at.isoformat() if e.created_at else None}
+                   for e in entries],
+        "charged_micro": sum(-e.amount_micro for e in entries if e.kind == "settle"),
+    }
 
 
 @app.get("/runs")
@@ -6891,17 +7216,6 @@ async def admin_reconcile_spend(
             **await reconcile.provider_spend(db, since)}
 
 
-@app.get("/admin/reconcile/shared-plans")
-async def admin_reconcile_shared_plans(
-    since_days: int = 30, _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
-) -> dict:
-    """Fee vs collected for every rate treg set (fx.yaml `kind: treg_shared_plan`) — the monthly
-    review's input. Reports only; the price change is a hand edit to fx.yaml."""
-    since = reconcile.window_start(since_days)
-    return {"since": since.isoformat(), "since_days": since_days,
-            **await reconcile.shared_plan_recovery(db, since)}
-
-
 @app.get("/admin/reconcile/repeats")
 async def admin_reconcile_repeats(
     since_days: int = 30, top: int = 10,
@@ -7239,6 +7553,156 @@ IDEMPOTENCY_WINDOW_S = 24 * 3600   # retries happen in seconds; a day is generou
 IDEMPOTENCY_HEADER = "idempotency-key"
 _IDEM_MAX_KEY = 200
 
+# ---- caller tags (X-Treg-Meta) -----------------------------------------------------------------
+# A builder reselling treg through one token stamps their OWN ids on each call —
+# `X-Treg-Meta: customer=cust_8123, workspace=ws_9` — so they can attribute, budget and invoice their
+# users. Deliberately a HEADER and not a tool argument: a model asked to pass an id drops it somewhere
+# in a chain, and a figure you cannot reconcile is worse than no figure. The builder's backend already
+# sets Authorization on this request; this is the same call site.
+META_HEADER = "x-treg-meta"
+_META_MAX_KEYS = 5
+_META_MAX_HEADER = 512
+_META_MAX_VALUE = 128
+_META_KEY_RE = re.compile(r"^[a-z0-9_]{1,32}$")
+# Tag VALUES become storage keys (the idempotency scope, a TagBudget row, a TagSpend row), so the
+# charset is an allowlist rather than a length check. See the collision note in `_parse_call_meta`.
+_META_VALUE_RE = re.compile(r"^[A-Za-z0-9._:-]{1,%d}$" % _META_MAX_VALUE)
+# The dimension that scopes idempotency and defaults reports, for a team that never declared one.
+DEFAULT_PRIMARY_DIM = "customer"
+_MAX_BUDGET_DIMS = 3        # each declared dimension = one indexed lookup per call + a row per value
+_MAX_TAG_VALUES = 10_000    # distinct values per dimension per org, bounded at WRITE (see _tag_budget)
+
+
+@dataclass(frozen=True)
+class CallMeta:
+    """The parsed tag bag for one call. Built ONCE per request (see call_tool) and read by everyone —
+    idempotency scope, budgets, the ledger and the audit row. A second parse site would be a second
+    chance to disagree about who pays."""
+
+    tags: dict[str, str]
+    primary_dim: str = DEFAULT_PRIMARY_DIM
+
+    @property
+    def primary_val(self) -> str:
+        return self.tags.get(self.primary_dim, "")
+
+
+_NO_META = CallMeta(tags={})
+
+
+def _tag_telemetry(meta: CallMeta) -> dict:
+    """The tag columns of an audit row, built the one way — the refusal path and the success path
+    both write them and had drifted apart once already.
+
+    `budget_dim` stays blank unless the PRIMARY dimension actually carries a value: a call tagged
+    only on some other key must not claim a primary it never had, or a report grouped by the indexed
+    column would attribute it to the empty value.
+    """
+    return {"budget_dim": meta.primary_dim if meta.primary_val else "",
+            "budget_val": meta.primary_val,
+            "tags": dict(meta.tags) or None}
+
+
+def _validate_tag_pair(key: str, value: str, *, where: str = "tag") -> tuple[str, str]:
+    """One `dim=val` pair, validated the SAME way wherever it enters treg. THE only rule.
+
+    Both doors have to agree, because a tag value becomes a storage key — the idempotency scope, a
+    `TagBudget` row, a `TagSpend` row. `pinned_tags` arrives as JSON on the agent-mint endpoint and
+    never passes the header parser, so validating only there would leave the identical hole open one
+    route over (it did, until this function existed). `_parse_call_meta` therefore delegates here
+    rather than repeating the checks: two copies of a storage-key rule is two chances to drift.
+
+    `where` only names the source in the message ("X-Treg-Meta value" vs "tag value"); the rules
+    themselves are identical by construction, which is the entire point.
+    """
+    key = (key or "").strip().lower()
+    value = (value or "").strip()
+    if not _META_KEY_RE.match(key):
+        raise HTTPException(status_code=422, detail=(
+            f"{key!r} is not a valid tag key — 1-32 chars of [a-z0-9_]"))
+    if not value or len(value) > _META_MAX_VALUE:
+        raise HTTPException(status_code=422, detail=(
+            f"{where} value for {key!r} must be 1-{_META_MAX_VALUE} characters"))
+    if "@" in value:
+        # The ledger is append-only, so a tag written today cannot be erased later. An email here
+        # is a permanent record of a person, which is not a thing we can undo on request.
+        raise HTTPException(status_code=422, detail=(
+            f"{where} value for {key!r} looks like an email — use an opaque id: these tags are "
+            f"written to an append-only ledger and cannot be deleted afterwards"))
+    if not _META_VALUE_RE.match(value):
+        # An ALLOWLIST, not a blocklist, and the reason is `_scoped_idempotency_key`: the primary
+        # value is joined to the caller's Idempotency-Key with \x1f, so a value permitted to
+        # contain that separator lets `customer="A", key="B\x1fC"` collide with
+        # `customer="A\x1fB", key="C"` — one of a builder's users reading another's cached
+        # response. Do not narrow this to "reject \x1f": the header parser is not a security
+        # boundary we control, and the next separator would reopen it.
+        raise HTTPException(status_code=422, detail=(
+            f"{where} value for {key!r} may only contain letters, digits and . _ - : "
+            f"(these ids are used as storage keys)"))
+    return key, value
+
+
+def _parse_call_meta(request: Request, caller: Caller | None = None) -> CallMeta:
+    """`X-Treg-Meta: k=v, k=v` → a validated bag. No header means today's behaviour exactly.
+
+    REFUSES rather than repairs. A tag that is silently dropped or truncated is usage that leaves the
+    builder's invoice without anyone noticing, and a truncated id can merge two of their users into one
+    line — so an oversized value is a 422, never a `[:128]`.
+
+    A PINNED token (Membership.pinned_tags) wins over the header for the dimensions it names: a token
+    handed to one customer's machine must not be able to bill another customer. Naming a different
+    value for a pinned dimension is a 403 rather than a silent override — a builder debugging their
+    integration needs to see the disagreement, not discover it in a month of misattributed invoices.
+    """
+    pinned = (caller.membership.pinned_tags if caller is not None else None) or {}
+    raw = (request.headers.get(META_HEADER) or "").strip()
+    if not raw:
+        # An unpinned caller with no header is untagged; a pinned one still attributes to its pin, so
+        # a builder can hand out a scoped token and never touch the header at all.
+        return CallMeta(tags=dict(pinned), primary_dim=_primary_dim_of(caller)) if pinned else _NO_META
+    if len(raw.encode()) > _META_MAX_HEADER:
+        raise HTTPException(status_code=422, detail=(
+            f"X-Treg-Meta is limited to {_META_MAX_HEADER} bytes"))
+    tags: dict[str, str] = {}
+    for segment in raw.split(","):
+        raw_key, sep, raw_value = segment.partition("=")
+        if not sep or not _META_KEY_RE.match(raw_key.strip().lower()):
+            # The SHAPE of the segment, which only this parser can report — everything past here is
+            # the shared storage-key rule.
+            raise HTTPException(status_code=422, detail=(
+                f"X-Treg-Meta must be `key=value` pairs; keys are 1-32 chars of [a-z0-9_] "
+                f"(got {segment.strip()!r})"))
+        key, value = _validate_tag_pair(raw_key, raw_value, where="X-Treg-Meta")
+        if key in tags:
+            raise HTTPException(status_code=422, detail=f"X-Treg-Meta names {key!r} twice")
+        tags[key] = value
+    if len(tags) > _META_MAX_KEYS:
+        raise HTTPException(status_code=422, detail=(
+            f"X-Treg-Meta is limited to {_META_MAX_KEYS} keys (got {len(tags)})"))
+    for dim, pinned_val in pinned.items():
+        if tags.get(dim, pinned_val) != pinned_val:
+            raise HTTPException(status_code=403, detail=(
+                f"this token is pinned to {dim}={pinned_val!r} and cannot bill {tags[dim]!r}"))
+        tags[dim] = pinned_val
+    return CallMeta(tags=tags, primary_dim=_primary_dim_of(caller))
+
+
+def _primary_dim_of(caller: Caller | None) -> str:
+    """The tag key that scopes idempotency for this team. Per-org so a builder whose billing unit is a
+    workspace is not forced to call it "customer"."""
+    if caller is None:
+        return DEFAULT_PRIMARY_DIM
+    return (getattr(caller.org, "primary_dim", "") or DEFAULT_PRIMARY_DIM)
+
+
+def _budget_dims_of(org: Org) -> list[str]:
+    """The keys this team may set budgets on — declared, because each one costs an indexed lookup on
+    every call and a row per value. Bounded at `_MAX_BUDGET_DIMS`."""
+    declared = getattr(org, "budget_dims", None)
+    if not declared:
+        return [getattr(org, "primary_dim", "") or DEFAULT_PRIMARY_DIM]
+    return [str(d) for d in declared][:_MAX_BUDGET_DIMS]
+
 
 def _idempotency_key(request: Request) -> str:
     """The caller's label for this request, or "" when they sent none.
@@ -7250,17 +7714,54 @@ def _idempotency_key(request: Request) -> str:
     return (request.headers.get(IDEMPOTENCY_HEADER) or "").strip()[:_IDEM_MAX_KEY]
 
 
-def _request_fingerprint(method: str, rest: str, body: bytes) -> str:
+_IDEM_SCOPE_SEP = "\x1f"
+
+
+def _scoped_idempotency_key(key: str, meta: CallMeta) -> str:
+    """The caller's label, PARTITIONED by the primary tag.
+
+    A reselling builder runs every one of their users through one token, so two of them will both
+    reach for `retry-1` — and `IdempotentCall` is unique on (membership_id, key), which would serve
+    the second user the FIRST one's stored response body. That is the cross-tenant leak the table was
+    built to prevent, reappearing one level down.
+
+    Folding the value into the stored key partitions retries exactly as widening the unique constraint
+    would, with no migration: `uq_idem_caller_key` is declared in `__table_args__`, so SQLAlchemy emits
+    it as a table CONSTRAINT inside CREATE TABLE — Postgres could drop it, sqlite could not without
+    rebuilding the table. Every access site keeps querying by (membership_id, key) and simply receives
+    this value.
+
+    Only the PRIMARY dimension partitions. Retry scoping cannot generalize the way budgets do: a call
+    tagged `customer=a, workspace=b` has no principled answer for which of them owns the key.
+    """
+    if not key:
+        return key
+    return f"{meta.primary_val}{_IDEM_SCOPE_SEP}{key}" if meta.primary_val else key
+
+
+def _idem_display(key: str) -> str:
+    """The label as the CALLER wrote it — error messages must not echo our internal scoping."""
+    return key.rsplit(_IDEM_SCOPE_SEP, 1)[-1]
+
+
+def _request_fingerprint(method: str, rest: str, body: bytes, query: str = "") -> str:
     """What the label was used FOR, so reusing it on a different request can be caught.
 
     A client that reuses one label for two different requests has a bug. Quietly returning the first
     answer would hide it, and the caller would be left wondering why their second call returned
     somebody else's data. Refusing loudly is the useful behaviour, and it is what Stripe does.
+
+    The QUERY STRING is part of the request. It was missing here at first, and since most catalog
+    calls are GETs that carry all their arguments in the query, that made the check almost inert: two
+    genuinely different lookups under one label matched, and the second was answered with the first
+    one's data instead of the 422 this function exists to raise.
     """
     h = hashlib.sha256()
     h.update(method.upper().encode())
     h.update(b"\0")
     h.update(rest.encode())
+    h.update(b"\0")
+    h.update((query or "").encode())
     h.update(b"\0")
     h.update(body or b"")
     return h.hexdigest()
@@ -7286,19 +7787,22 @@ async def _replay_idempotent(key: str, fingerprint: str, caller: Caller,
         return None
     if row.request_fingerprint and row.request_fingerprint != fingerprint:
         raise HTTPException(status_code=422, detail=(
-            f"Idempotency-Key {key!r} was already used for a different request. Use a new key, or "
+            f"Idempotency-Key {_idem_display(key)!r} was already used for a different request. Use a new key, or "
             f"repeat the original request exactly."))
     if row.status != "done" or row.response_status is None:
         # Still in flight. The first call is talking to the provider right now; telling the caller to
         # retry is honest and cheap, and it is what stops the second one duplicating the spend.
         raise HTTPException(status_code=409, detail=(
-            f"a call with Idempotency-Key {key!r} is still in progress — retry shortly"))
+            f"a call with Idempotency-Key {_idem_display(key)!r} is still in progress — retry shortly"))
     return Response(
         content=row.response_body or b"",
         status_code=row.response_status,
         media_type=row.response_media_type or "application/json",
         headers={"X-Treg-Idempotent-Replay": "true",
-                 "X-Treg-Cost-Micro": str(row.charged_micro)},
+                 "X-Treg-Cost-Micro": str(row.charged_micro),
+                 # The ORIGINAL call's id: a retry must resolve to the row that actually holds the
+                 # money, not to a fresh reference for work that never happened.
+                 **({"X-Treg-Call-Id": row.call_ref} if row.call_ref else {})},
     )
 
 
@@ -7361,7 +7865,8 @@ async def _claim_idempotent(key: str, fingerprint: str, rest: str, caller: Calle
 
 
 async def _store_idempotent(key: str, caller: Caller, *, status_code: int, body: bytes,
-                            media_type: str, charged_micro: int, metered: bool) -> None:
+                            media_type: str, charged_micro: int, metered: bool,
+                            call_ref: str = "") -> None:
     """Remember a METERED success so a retry can be answered without paying twice.
 
     Metered only. A team calling on its OWN key is billed by the provider, not by us, so there is
@@ -7391,6 +7896,7 @@ async def _store_idempotent(key: str, caller: Caller, *, status_code: int, body:
                 row.response_body = body
                 row.response_media_type = media_type or "application/json"
                 row.charged_micro = charged_micro
+                row.call_ref = call_ref
                 db.add(row)
             await db.commit()
     except Exception as exc:  # noqa: BLE001 — loudly, but never into the caller's response
@@ -7516,12 +8022,28 @@ async def catalog_endpoint_access(
 
 
 # ---- tier-4 metering: reserve → relay → settle/release ------------------------------------------
+def _effective_daily_cap(org: Org) -> int:
+    """This team's ceiling on daily tier-4 spend: the LOWER of what they set and what we allow.
+
+    Two masters, which is why it is two numbers. The team's own figure protects them from a runaway
+    agent draining a balance that auto-top-up keeps refilling. The platform ceiling protects US from a
+    catalog mispricing, and only we can raise it — so onboarding a high-volume builder is a
+    conversation rather than an env-var edit that lifts the blast-radius rail for every team at once.
+
+    0 means "never set one", which follows the deployment default rather than freezing the team at
+    whatever that default happened to be the day they signed up.
+    """
+    ceiling = get_settings().platform_daily_cap_micro
+    own = int(getattr(org, "daily_cap_micro", 0) or 0)
+    return min(own, ceiling) if own > 0 else ceiling
+
+
 async def _enforce_platform_daily_cap(caller: Caller, add_micro: int, db: AsyncSession) -> None:
     """Per-org, per-UTC-day ceiling on tier-4 spend. FAIL-CLOSED, unlike `_enforce_daily_cap`: that one
     meters calls and may let a few extra through under load, this one meters OUR money, so a query that
     cannot answer refuses the call. The cap is the blast radius of a runaway agent (and of a pricing
     mistake in the catalog) — the balance alone is not enough, because auto-top-up can refill it."""
-    cap = get_settings().platform_daily_cap_micro
+    cap = _effective_daily_cap(caller.org)
     try:
         spent = await ledger.spent_today(db, caller.org_id)
     except Exception as exc:  # noqa: BLE001 — cannot verify the ceiling ⇒ do not spend
@@ -7541,14 +8063,160 @@ async def _enforce_platform_daily_cap(caller: Caller, add_micro: int, db: AsyncS
         })
 
 
-async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSession) -> None:
+def _month_start_utc() -> datetime:
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+# The reserved value standing for "every value of this dimension". Safe forever because the tag
+# value charset (`_META_VALUE_RE`) excludes `*`, so no caller can send a value that collides with it.
+TAG_DEFAULT = "*"
+
+
+async def _resolve_tag_budget(db: AsyncSession, org_id: int, dim: str, val: str) -> TagBudget | None:
+    """The limit in force for one tag value: its own override, else the dimension's default, else
+    none (unlimited — the shipped state, until a team sets a default).
+
+    ONE indexed query for both, so adding defaults costs the call path nothing. A registry row
+    (`auto`) is skipped: it exists to make the cardinality check cheap, and treating it as an override
+    would mean the default never applied to anything that had ever been called.
+    """
+    rows = (await db.execute(select(TagBudget).where(
+        TagBudget.org_id == org_id, TagBudget.dim == dim,
+        TagBudget.val.in_([val, TAG_DEFAULT])))).scalars().all()
+    own = next((r for r in rows if r.val == val and not r.auto), None)
+    return own or next((r for r in rows if r.val == TAG_DEFAULT), None)
+
+
+async def _tag_budget(db: AsyncSession, org_id: int, dim: str, val: str,
+                      create: bool = False) -> TagBudget | None:
+    """This team's budget row for one tag value, creating it on first sighting when asked.
+
+    Auto-created, so a builder never pre-registers a user before their first call can carry an id.
+    The row also BOUNDS cardinality: the count runs only on the miss path, so steady state stays one
+    indexed lookup. Bounding has to happen at the write — a limit checked when a report is run is
+    checked after the rows already exist.
+    """
+    row = (await db.execute(select(TagBudget).where(
+        TagBudget.org_id == org_id, TagBudget.dim == dim, TagBudget.val == val))).scalar_one_or_none()
+    if row is not None or not create:
+        return row
+    seen = (await db.execute(select(func.count()).select_from(TagBudget).where(
+        TagBudget.org_id == org_id, TagBudget.dim == dim))).scalar() or 0
+    if seen >= _MAX_TAG_VALUES:
+        raise HTTPException(status_code=429, detail={
+            "error": "tag_cardinality_exceeded", "dim": dim,
+            "message": (f"this team has already used {seen} distinct {dim!r} values, the limit. A tag "
+                        f"that changes every call (a session or request id) is not a budget "
+                        f"dimension — tag by the unit you bill."),
+        })
+    row = TagBudget(org_id=org_id, dim=dim, val=val, auto=True)
+    db.add(row)
+    await db.commit()
+    return row
+
+
+async def _enforce_tag_budgets(caller: Caller, meta: CallMeta, db: AsyncSession,
+                               add_micro: int | None = None) -> None:
+    """Refuse a call that breaches a builder-set limit on one of its tags.
+
+    Two passes, called from two places. `add_micro is None` is the PRE-FLIGHT pass (blocked status and
+    the daily call count), which runs before the idempotency replay so a blocked user can neither take
+    a lock nor be served an answer cached before they were blocked. `add_micro` set is the SPEND pass,
+    which needs the estimate and therefore runs inside `_platform_reserve`.
+
+    Every declared dimension is evaluated and the FIRST breach in declaration order refuses, so the
+    outcome is deterministic when budgets stack.
+
+    THE CAPS ARE SOFT — advisory, not a gate. `ledger.reserve` is exact because the balance is a
+    materialized column, so its check and its debit are one conditional UPDATE. A per-tag total is an
+    aggregate over rows, so N concurrent calls can each read a compliant figure and together exceed
+    the cap; the overshoot is bounded by concurrency × per-call estimate. That is acceptable ONLY
+    because the hard gates sit behind this one: the org balance and the platform daily cap. Making it
+    exact would need a second materialized authority on spend, reset daily, decremented on release and
+    corrected on settle divergence — four new ways to disagree with ledger.py, which is the one module
+    allowed to move money. Never document these caps to builders as hard limits.
+    """
+    if not meta.tags:
+        return
+    dims = _budget_dims_of(caller.org)
+    for dim in dims:
+        val = meta.tags.get(dim)
+        if not val:
+            continue
+        try:
+            # Registering the value (cardinality bound) happens on the pre-flight pass only; both
+            # passes then resolve override → default.
+            if add_micro is None:
+                await _tag_budget(db, caller.org_id, dim, val, create=True)
+            row = await _resolve_tag_budget(db, caller.org_id, dim, val)
+        except HTTPException:
+            raise
+        except Exception as exc:  # noqa: BLE001 — cannot verify a ceiling ⇒ do not spend
+            logging.getLogger("treg.ledger").warning(
+                "tag budget check failed for org %s (%s=%s): %s", caller.org_id, dim, val, exc)
+            raise HTTPException(status_code=429, detail={
+                "error": "tag_budget_unavailable", "dim": dim, "val": val,
+                "message": "cannot verify this budget right now — retry shortly",
+            })
+        if row is None:
+            continue
+        if add_micro is None:
+            if row.status == "blocked":
+                raise HTTPException(status_code=403, detail={
+                    "error": "tag_blocked", "dim": dim, "val": val,
+                    "message": f"{dim} {val!r} is blocked",
+                })
+            if row.calls_per_day is not None and row.calls_per_day >= 0:
+                # From the LEDGER's tag rows, never CallRecord: audit rows are shed under load, so a
+                # count cap would let a burst through exactly when it matters — and CallRecord only
+                # carries the PRIMARY dimension, so a cap on any other declared key matched nothing
+                # and never fired at all.
+                used = await ledger.tag_calls_since(
+                    db, caller.org_id, dim, val, _day_start_utc())
+                if used >= row.calls_per_day:
+                    raise HTTPException(status_code=429, detail={
+                        "error": "tag_call_cap_reached", "dim": dim, "val": val,
+                        "used_today": int(used), "calls_per_day": row.calls_per_day,
+                        "message": f"{dim} {val!r} has used its {row.calls_per_day} calls for today",
+                    })
+            continue
+        for cap, since, period in ((row.daily_cap_micro, _day_start_utc(), "day"),
+                                   (row.monthly_cap_micro, _month_start_utc(), "month")):
+            if cap is None:
+                continue
+            spent = await ledger.tag_spent_since(db, caller.org_id, dim, val, since)
+            if spent + add_micro > cap:
+                # Deliberately NOT the org-level 402/429 shape: that one carries the team's balance and
+                # a top-up link, and this response is the one a builder renders to their own end user.
+                raise HTTPException(status_code=429, detail={
+                    "error": "tag_spend_cap_reached", "dim": dim, "val": val,
+                    "spent_micro": spent, "cap_micro": cap, "period": period,
+                    "estimated_cost_micro": add_micro,
+                    "message": (f"{dim} {val!r} has reached its spend limit for this {period} "
+                                f"(${ledger.usd(spent):g} of ${ledger.usd(cap):g})"),
+                })
+
+
+async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSession,
+                            meta: CallMeta = _NO_META,
+                            call_ref: str | None = None) -> None:
     """Withhold this call's estimated cost BEFORE a byte goes upstream, and record the hold on `mk`.
-    Insufficient balance is a 402 whose body an agent can act on without reading prose."""
+    Insufficient balance is a 402 whose body an agent can act on without reading prose.
+
+    `meta` is the caller's parsed X-Treg-Meta bag, passed explicitly rather than hung off `mk`:
+    attribution decides who a reselling builder bills, and it belongs to the request, not to the
+    endpoint match. The already-parsed object travels, never a bare dict — re-deriving the primary
+    dimension here would be a second place that could disagree about who pays."""
+    # The builder's own per-tag ceilings first: a refusal that belongs to ONE of their users must
+    # not surface as the team-wide balance error, which names the builder's private numbers.
+    await _enforce_tag_budgets(caller, meta, db, add_micro=mk.estimate_micro)
     await _enforce_platform_daily_cap(caller, mk.estimate_micro, db)
     try:
         mk.call_id = await ledger.reserve(
             db, caller.org_id, mk.endpoint_id, mk.estimate_micro,
-            meta={"tier": "platform", "provider": mk.provider, "cost_type": mk.cost_type})
+            meta={"tier": "platform", "provider": mk.provider, "cost_type": mk.cost_type},
+            tags=meta.tags, call_id=call_ref)
         # reserve moves balance via a raw conditional UPDATE, so the ORM instance is stale — refresh
         # before the threshold check or a crossing goes unnoticed until some later request.
         await db.refresh(caller.org)
@@ -7568,26 +8236,33 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
         })
 
 
+# 4xx statuses that mean "the provider did not serve this, and it is NOT the caller's input" — our
+# credential was rejected, exhausted, throttled, or the request timed out. The provider bills nothing
+# for these, so neither may we: charging here would pass OUR expired or over-quota platform key on to
+# a team as real spend, and for a builder reselling treg it would land on their end customers' bills.
+# 403 is deliberately included even though some providers use it for a genuinely caller-driven
+# "resource not accessible": when it is unclear whether the provider charged us, the safe direction
+# is not to charge. Absorbing a rare few micro-USD is recoverable; over-billing out of an append-only
+# ledger is not.
+_NOT_THE_CALLERS_FAULT = frozenset({401, 402, 403, 407, 408, 429})
+
+
 def _platform_billable(status_code: int, cost_type: str) -> bool:
     """Does a response with this status cost us money? (plan §2.2)
       2xx                        → yes, the provider served it.
-      429                        → never. A rate-limit rejection is capacity refusing the request,
-                                   not the caller's bad input — and on a SHARED plan key it is
-                                   treg's own saturation, so billing it would charge teams for our
-                                   congestion. No vendor bills a request it refused to accept, so
-                                   this is also correct for per_call credit providers, where the
-                                   old rule quietly charged for upstream 429s.
-      other 4xx                  → only under `per_call`: the provider charges for accepting the
-                                   request, so a caller's own bad input is on the caller. Under
+      4xx                        → only under `per_call`, and only when the rejection is about the
+                                   CALLER'S INPUT (400/404/422 …): the provider charges for accepting
+                                   such a request, so it is on the caller. A credential/quota refusal
+                                   (`_NOT_THE_CALLERS_FAULT`) is on us and is never billed — a 429
+                                   doubly so on a SHARED-plan key, where it is treg's own saturation
+                                   and billing it would charge teams for our congestion. Under
                                    `per_result`/`per_success` a rejected request produced nothing.
       5xx / 3xx / network error  → no. An upstream failure is never billed to the caller.
     """
     if 200 <= status_code < 300:
         return True
-    if status_code == 429:
-        return False
     if 400 <= status_code < 500:
-        return cost_type == "per_call"
+        return cost_type == "per_call" and status_code not in _NOT_THE_CALLERS_FAULT
     return False
 
 
@@ -7766,14 +8441,28 @@ async def call_tool(
         _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
         if sep:
             rest = raw_rest
+    # The caller's tags, parsed ONCE and read by everything below — the budgets, the ledger, the
+    # idempotency scope and the audit row. Before the idempotency block on purpose: a malformed bag
+    # must not burn the caller's label on its way to a 422.
+    meta = _parse_call_meta(request, caller)
+    # ONE id for this call, minted before anything can spend: it becomes the ledger's call_id on a
+    # metered call, lands on the audit row, and goes back as X-Treg-Call-Id — so a builder can join
+    # our records to theirs on a single value.
+    call_ref = uuid.uuid4().hex
+    # Blocked status and the per-tag call count, BEFORE the replay below: a blocked user must neither
+    # take an idempotency lock nor be handed an answer this team cached before they were blocked.
+    await _enforce_tag_budgets(caller, meta, db)
     # A retry the caller has labelled: answer it from what we already returned, before resolving
     # anything or reaching a provider. Nothing happens without the header, so a caller who sends none
     # sees exactly today's behaviour.
-    idem_key = _idempotency_key(request)
+    # Scoped by the primary tag: two of a builder's users WILL both send `retry-1`, and without
+    # this the second would be served the first's stored response.
+    idem_key = _scoped_idempotency_key(_idempotency_key(request), meta)
     idem_fingerprint = ""
     if idem_key:
         idem_body = await request.body()
-        idem_fingerprint = _request_fingerprint(request.method, rest, idem_body)
+        idem_fingerprint = _request_fingerprint(
+            request.method, rest, idem_body, request.url.query or "")
         replayed = await _replay_idempotent(idem_key, idem_fingerprint, caller, db)
         if replayed is not None:
             return replayed
@@ -7783,7 +8472,7 @@ async def call_tool(
         # feature exists to close — the same reasoning as the conditional UPDATE in ledger.reserve.
         if not await _claim_idempotent(idem_key, idem_fingerprint, rest, caller, db):
             raise HTTPException(status_code=409, detail=(
-                f"a call with Idempotency-Key {idem_key!r} is already in progress — retry shortly"))
+                f"a call with Idempotency-Key {_idem_display(idem_key)!r} is already in progress — retry shortly"))
         # Park it so a failure anywhere below can give the label back. Set AFTER the claim succeeds,
         # so losing the race above never releases the winner's row.
         request.state.idem_claim = (caller.membership.id, idem_key)
@@ -7808,7 +8497,8 @@ async def call_tool(
                 org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
                 method=request.method, path=rest, status_code=mkexc.status_code,
                 client=_client_of(request), refused_by=_refusal_kind(mkexc.status_code),
-                telemetry={"endpoint_id": ep["id"], "provider": ep.get("provider")})
+                telemetry={"endpoint_id": ep["id"], "provider": ep.get("provider"),
+                           **_tag_telemetry(meta)})
             analytics.capture(caller.email, "tool_called",
                 {"tool_name": ep["id"], "status_code": mkexc.status_code,
                  "client": _client_of(request), "method": request.method,
@@ -7837,9 +8527,13 @@ async def call_tool(
         # carries its telemetry (which endpoint, which credential tier, what it cost): still
         # fire-and-forget, because the money itself already landed synchronously in the ledger.
         request.state.call_audited = True  # the refusal fallback in _mark_treg_own_errors stands down
-        telemetry = None
+        telemetry: dict = {"call_ref": call_ref}
+        if meta.tags:
+            # Own-tool calls carry tags too: a builder's usage report has to account for every call
+            # their user made, not only the ones that spent treg's money.
+            telemetry |= _tag_telemetry(meta)
         if mk is not None:
-            telemetry = {
+            telemetry |= {
                 "endpoint_id": mk.endpoint_id, "provider": mk.provider, "credential_tier": mk.tier,
                 "cost_estimated_micro": mk.estimate_micro or None,  # informational on tiers 1/2
                 "cost_observed_micro": observed_micro,
@@ -7898,7 +8592,7 @@ async def call_tool(
     # refused call must not leave a hold behind for the reaper to clean up.
     if mk is not None and mk.metered:
         try:
-            await _platform_reserve(mk, caller, db)
+            await _platform_reserve(mk, caller, db, meta=meta, call_ref=call_ref)
         except HTTPException as exc:
             # A call refused for MONEY (402 empty balance / 429 daily cap) is the event the org will
             # ask about first — it must appear in the activity feed, charged 0.
@@ -7960,13 +8654,14 @@ async def call_tool(
             request.state.idem_claim = None      # dealt with; nothing left to release
             await _store_idempotent(idem_key, caller, status_code=response.status_code, body=body,
                                     media_type=response.headers.get("content-type", ""),
-                                    charged_micro=charged, metered=True)
+                                    charged_micro=charged, metered=True, call_ref=call_ref)
         # Tell the caller what the call actually cost. Both llms.txt and skill.md instruct an agent to
         # report the price it spent, and until now the only way to find out was to read the balance
         # before and after — which races with any other call and cannot attribute a figure to a
         # request. The header is set only on a METERED call: a team's own key is never charged, and a
         # `0` there would read as "free" rather than "not applicable".
         response.headers["X-Treg-Cost-Micro"] = str(charged)
+        response.headers["X-Treg-Call-Id"] = call_ref
         return response
     # Fire-and-forget audit — does not block the streaming response (rule #2).
     _audit(response.status_code, duration_ms=duration_ms)
@@ -7976,6 +8671,7 @@ async def call_tool(
         request.state.idem_claim = None
         await _store_idempotent(idem_key, caller, status_code=response.status_code, body=b"",
                                 media_type="", charged_micro=0, metered=False)
+    response.headers["X-Treg-Call-Id"] = call_ref
     return response
 
 

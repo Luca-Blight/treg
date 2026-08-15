@@ -566,9 +566,12 @@ async def call(endpoint_id: str, params: dict | list | None = None,
     # login-customer-id is the canonical need) — with treg's own auth/routing headers filtered so
     # the tool's semantics stay unambiguous: the bearer on the MCP request IS the identity, and
     # idempotency travels via its own argument. Injected credentials always win server-side.
+    # `x-treg-meta` joins the filtered set: caller tags decide who gets billed and budgeted, so they
+    # must come from the TRANSPORT (the builder's backend, below) and never from a tool argument the
+    # model fills in — a model that omits it mid-chain drops that spend out of its user's invoice.
     extra_headers = {k: str(v) for k, v in (headers or {}).items()
                      if k.lower() not in ("x-treg-token", "x-treg-org", "authorization",
-                                          "idempotency-key")}
+                                          "idempotency-key", "x-treg-meta")}
     if isinstance(the_body, str):
         # A raw string body travels as-is. Content-Type: explicit wins, else sniff JSON — the
         # CLI's rule, because upstreams that require `application/json` reject a JSON body
@@ -594,6 +597,12 @@ async def call(endpoint_id: str, params: dict | list | None = None,
             return problem
         if slug:
             extra_headers["X-Treg-Org"] = slug
+        # Relay the caller tags off the MCP transport, the same way catalog_request forwards
+        # X-Forwarded-For. A builder proxying MCP sets this header once per session on their own HTTP
+        # client; the model never sees it, so it cannot be forgotten or invented.
+        inbound_meta = (ctx.headers or {}).get("x-treg-meta") or (ctx.headers or {}).get("X-Treg-Meta")
+        if inbound_meta:
+            extra_headers["X-Treg-Meta"] = str(inbound_meta)
         if idempotency_key:
             # Straight through to the header the API already honours. Deliberately the CALLER's key
             # and never derived from the request: two identical searches an hour apart are new work,

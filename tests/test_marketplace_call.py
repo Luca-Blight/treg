@@ -1002,11 +1002,19 @@ def test_the_billability_truth_table():
     shared plan key it is treg's own saturation, and billing it would charge teams for our
     congestion. It also corrects an existing wrong: under `per_call` the old rule billed upstream
     429s, and no vendor bills a request it refused to accept."""
+    # The contract widened in PR #122 and the old table was WRONG about one row: it asserted an
+    # upstream 402 under per_call bills the caller ("the provider billing for acceptance"). A 402 is
+    # the provider REFUSING — usually because OUR platform key ran out of quota — and no vendor
+    # charges for a refusal. The caller pays only for rejections about their own input.
     cases = [
         (200, "per_success", True), (200, "per_call", True),
+        # not the caller's fault: credential, payment, quota, timeout, rate limit — never billed
+        (401, "per_call", False), (402, "per_call", False), (403, "per_call", False),
+        (407, "per_call", False), (408, "per_call", False),
         (429, "per_call", False), (429, "per_success", False), (429, "per_result", False),
-        (400, "per_call", True), (400, "per_success", False), (400, "per_result", False),
-        (402, "per_call", True),        # an upstream 402 is the provider billing for acceptance
+        # the caller's own input: billed under per_call only
+        (400, "per_call", True), (404, "per_call", True), (422, "per_call", True),
+        (400, "per_success", False), (400, "per_result", False),
         (503, "per_call", False), (503, "per_success", False),
         (302, "per_call", False),
     ]
@@ -1027,3 +1035,20 @@ async def test_an_upstream_429_releases_the_hold(clients: AsyncClient, platform_
     assert kinds[:2] == ["release", "reserve"], kinds
     row = await _telemetry(clients)
     assert row["cost_charged_micro"] == 0
+
+
+async def test_the_SAME_KEY_with_a_DIFFERENT_QUERY_is_refused_end_to_end(clients: AsyncClient,
+                                                                         platform_on):
+    """PR #122's fingerprint fix, wired. The function-level test passes the query EXPLICITLY, so it
+    cannot notice the call site failing to pass it — and `query` has a "" default, so a missed call
+    site silently reverts the fix while every function test stays green. (The same shape as the
+    purchase-pointer strip that was tested as a helper while production kept the link.)
+
+    Through the real path: same label, different query string → 422, never the stored answer."""
+    first = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "q-fp"})
+    assert first.status_code == 200, first.text
+    second = await clients.get(f"/call/{EP}?aweme_id=8", headers={"Idempotency-Key": "q-fp"})
+    assert second.status_code == 422, (
+        f"a DIFFERENT query under the same key must be refused, got {second.status_code}: "
+        f"{second.text[:120]}")
+    assert "different request" in second.json()["detail"]

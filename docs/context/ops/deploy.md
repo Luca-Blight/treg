@@ -180,3 +180,18 @@ past `_MAX_PENDING` rather than let the pending set grow without bound. Audit mu
 server.
 
 The proxy is thin and IO-bound (a relay, low CPU/memory), so cheap machines scale it.
+
+## The per-org daily spend cap
+
+`TREG_PLATFORM_DAILY_CAP_USD` (default **$100**) is the per-org, per-UTC-day ceiling on tier-4 spend
+*and* the ceiling a team may raise its own `Org.daily_cap_micro` to. The effective cap is the lower of
+the two (`api._effective_daily_cap`).
+
+It was $5, which is a sane blast radius for one team and fatal for a platform running its whole
+customer base through a single org — they hit it on day one. Raising it per-team is now a `PATCH
+/orgs/{id}/settings` a team can make itself up to the ceiling, so onboarding a high-volume builder is
+a conversation rather than an env-var edit that lifts the rail for every team at once.
+
+It is a **blast-radius limit**, not a billing control: it exists because auto-top-up refills the
+balance, so the balance alone is not a ceiling against a runaway agent or a mispriced catalog entry.
+Enforced fail-closed.

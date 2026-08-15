@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Column, UniqueConstraint
+from sqlalchemy import JSON, Column, Index, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 # Role ordering for gates (owner > admin > member > viewer).
@@ -75,6 +75,20 @@ class Org(SQLModel, table=True):
     # on-session "finish this payment" link instead of starting a fresh charge the bank will re-decline.
     autotopup_recovery_pi: str | None = Field(default=None)
 
+    # ---- caller tags & spend ceiling (see api._parse_call_meta, api._enforce_tag_budgets) --------
+    # Which keys of the X-Treg-Meta bag this team may set budgets on. DECLARED rather than arbitrary
+    # because each one is an indexed lookup on every proxied call and a row per value per call —
+    # a team budgeting on `session` would write an aggregate row per conversation. Bounded at 3.
+    budget_dims: list | None = Field(default=None, sa_column=Column("budget_dims", JSON, nullable=True))
+    # The ONE dimension that scopes idempotency. Retry partitioning cannot generalize: a call tagged
+    # `customer=a, workspace=b` has no principled answer for which of them partitions its keys.
+    primary_dim: str = Field(default="customer")
+    # This team's own ceiling on daily spend from treg's keys, in micro-USD. 0 = use the deployment
+    # default. The EFFECTIVE cap is min(this, the platform ceiling): a team may lower it freely, and
+    # raising it past the ceiling is refused — which makes that a conversation with us rather than an
+    # env-var edit that lifts the blast-radius rail for every team at once.
+    daily_cap_micro: int = Field(default=0)
+
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -129,6 +143,11 @@ class Membership(SQLModel, table=True):
     project_access: list | None = Field(default=None, sa_column=Column("project_access", JSON, nullable=True))
     # May this member use the LOCAL run tier (`treg run --local`, the grant)? False → server runs only.
     local_run_enabled: bool = Field(default=True)
+    # A token minted for ONE tag value — `{"customer": "cust_A"}` — typically because it runs on that
+    # customer's own machine. The pin WINS over the request header for the dimensions it names (see
+    # api._parse_call_meta): otherwise whoever holds the token could retag their calls and walk straight out
+    # of their own budget, which is the entire point of giving them a scoped token. NULL = unpinned.
+    pinned_tags: dict | None = Field(default=None, sa_column=Column("pinned_tags", JSON, nullable=True))
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -210,6 +229,18 @@ class CallRecord(SQLModel, table=True):
     # separates "the provider failed" from "we said no" — without it a paywall 402 is
     # indistinguishable from a provider error, and provider stats absorb our own refusals.
     refused_by: str | None = Field(default=None, index=True)
+    # ---- caller tags (X-Treg-Meta) -------------------------------------------------------------
+    # A builder reselling treg tags each call with their OWN ids ("customer=cust_8123,
+    # workspace=ws_9") so they can attribute, budget and invoice their users. `tags` is the whole
+    # bag; `budget_dim`/`budget_val` are the indexed copy of the org's PRIMARY dimension, which is
+    # what a per-tag report groups by without folding JSON (see ledger.TagSpend for the money side).
+    # "" — never NULL — because NULLs are distinct in a unique index on both engines.
+    # Echoed to the caller as X-Treg-Call-Id and used as the ledger call_id on a metered call, so a
+    # builder can join this row, the money rows and their OWN records on one value.
+    call_ref: str = Field(default="", index=True)
+    budget_dim: str = Field(default="")
+    budget_val: str = Field(default="", index=True)
+    tags: dict | None = Field(default=None, sa_column=Column("tags", JSON, nullable=True))
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -528,6 +559,86 @@ class Hold(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now, index=True)
 
 
+class TagSpend(SQLModel, table=True):
+    """What one call cost, attributed to ONE of its caller tags. Written by `ledger.py` only, inside
+    the same transaction as the money movement — never through `audit.py`, which drops rows.
+
+    A builder reselling treg tags each call (`customer=cust_8123, workspace=ws_9`) and needs two
+    things this table provides and JSON cannot: a per-call budget check that is an INDEXED aggregate
+    (a Python fold over a day of ledger rows, per request, is the first thing that melts under a
+    successful builder), and an invoice they can defend. `reconcile.py` checks these sums against the
+    ledger so a divergence is caught rather than discovered on a customer's bill.
+
+    ONE ROW PER TAG, each carrying the FULL call amount — the same dollar appears under `customer`
+    and under `workspace`, exactly like cloud cost-allocation tags. So summing WITHIN a dimension
+    reconciles to the org total, and summing ACROSS dimensions deliberately double-counts.
+
+    `amount_micro` tracks the hold: the estimate while in flight, rewritten to the consumed figure at
+    settle, and the row is deleted on release. A cap therefore counts in-flight work at its estimate
+    and errs toward refusing, which is the right direction for money.
+    """
+
+    __table_args__ = (Index("ix_tagspend_org_dim_val_created", "org_id", "dim", "val", "created_at"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int = Field(foreign_key="org.id", index=True)
+    dim: str  # the tag key, e.g. "customer"
+    val: str  # the tag value, e.g. "cust_8123"
+    # The hold this belongs to (== call_id). Kept after settle so a row can be traced back to its call.
+    hold_id: str = Field(index=True)
+    # False while the hold is open (amount is the ESTIMATE), True once settled (amount is CONSUMED).
+    # An invoice reads settled rows only: an open hold is not spend, and billing it double-counts when
+    # it settles. A cap reads both.
+    settled: bool = Field(default=False)
+    amount_micro: int = Field(default=0)
+    created_at: datetime = Field(default_factory=_now, index=True)
+
+
+class TagBudget(SQLModel, table=True):
+    """One builder-set limit on one tag value — `customer/cust_8123 = $5/day`.
+
+    Keyed by (dim, val), so a call tagged `customer=cust_8123, workspace=ws_9` is checked against BOTH
+    rows and budgets stack: a $50/day workspace and a $5/day user inside it are two rows, not a
+    special case. The refusal names which one breached, because a builder running stacked budgets
+    otherwise cannot tell them apart.
+
+    Doubles as the REGISTRY that bounds cardinality. A row appears on first sighting of a pair, and
+    only that miss path counts rows against the per-dimension limit — steady state is one indexed
+    lookup. Builders never pre-register: no row means unlimited. Bounding at write is the only place
+    it can be done, because a limit checked at report time is checked after the rows already exist.
+
+    NOT a balance. One org, one balance; this table sets ceilings on a shared pot and never holds
+    money of its own.
+    """
+
+    __table_args__ = (UniqueConstraint("org_id", "dim", "val", name="uq_tagbudget_org_dim_val"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int = Field(foreign_key="org.id", index=True)
+    dim: str
+    # The tag value this row governs, or `*` for the DIMENSION'S DEFAULT — the limit every value of
+    # `dim` inherits unless it has an override. `*` can never collide with a real tag: the value
+    # charset is [A-Za-z0-9._:-], so no caller can ever send it.
+    val: str
+    # True for a row the REGISTRY created on first sighting of a value (which is what keeps the
+    # cardinality check a cheap lookup). Such a row is bookkeeping, not a decision: resolution skips
+    # it so the dimension's default still applies, and the budgets list hides it. Setting any limit
+    # on it flips this to False and makes it a real override.
+    auto: bool = Field(default=False)
+    # NULL = no ceiling on this axis. Caps are SOFT (see api._enforce_tag_budgets): the figure they
+    # test is an aggregate, not a materialized column, so concurrent calls can overshoot slightly.
+    daily_cap_micro: int | None = Field(default=None)
+    monthly_cap_micro: int | None = Field(default=None)
+    calls_per_day: int = Field(default=-1)  # -1 = unlimited, mirroring Membership.daily_call_cap
+    # "active" | "blocked". Blocking is the soft form of revocation — it needs no token management,
+    # and it is checked before the idempotency replay so a blocked user cannot be served a cached
+    # answer from before they were blocked.
+    status: str = Field(default="active")
+    note: str = Field(default="")
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
 class Project(SQLModel, table=True):
     """An optional sub-scope INSIDE an org — "one team roster, several projects".
 
@@ -708,6 +819,9 @@ class IdempotentCall(SQLModel, table=True):
     key: str = Field(index=True)
     request_fingerprint: str = Field(default="")
     endpoint_id: str = Field(default="")
+    # The X-Treg-Call-Id the FIRST call returned. A replay hands this back rather than a fresh
+    # reference, so a retry resolves to the row that actually holds the money.
+    call_ref: str = Field(default="")
     status: str = Field(default="pending")     # "pending" | "done"
     # Only ever set for a METERED success. A team calling on its own key is billed by the provider,
     # not by us, and storing those responses would hold someone's data for a reason that helps nobody.
