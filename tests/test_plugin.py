@@ -237,14 +237,22 @@ def test_the_marketplace_resolves_to_a_real_plugin():
 
 
 def test_one_product_one_sentence():
-    """The positioning is hand-maintained in three places across two stores. Two listings that
-    describe the same product differently is the drift nobody notices until a user reads both."""
+    """The positioning is hand-maintained across two stores, and two listings describing the same
+    product differently is drift nobody notices until a user reads both."""
     claude = json.loads(CLAUDE_MANIFEST.read_text(encoding="utf-8"))
     market = json.loads(CLAUDE_MARKETPLACE.read_text(encoding="utf-8"))
-    codex = json.loads(MANIFEST.read_text(encoding="utf-8"))
     assert claude["description"] == POSITIONING
     assert market["description"] == POSITIONING
-    assert codex["interface"]["shortDescription"] == POSITIONING
+
+
+def test_the_codex_subtitle_fits_the_field():
+    """Codex renders `shortDescription` as the listing SUBTITLE, and the upload form rejects
+    anything over 30 characters — so it cannot carry the full positioning sentence the way the
+    Claude manifest's `description` does. It keeps the front half, which is the half that
+    identifies the product."""
+    subtitle = json.loads(MANIFEST.read_text(encoding="utf-8"))["interface"]["shortDescription"]
+    assert len(subtitle) <= 30, f"subtitle is {len(subtitle)} chars, the field allows 30"
+    assert subtitle.split()[0] in POSITIONING
 
 
 def test_the_listings_agree_on_the_licence():

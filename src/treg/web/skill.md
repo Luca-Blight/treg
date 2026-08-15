@@ -14,7 +14,7 @@ Two kinds of tool answer to the same token, through the same proxy, which inject
 
 - **The catalog** — curated external endpoints treg can call for you.
 - **Your own tools** — what a teammate registered and shared with this org: API accounts, OAuth
-  connections, vendor CLIs, skills.
+  connections, skills.
 
 The mechanics:
 
@@ -23,21 +23,22 @@ The mechanics:
 - A **tool** = an upstream base URL + credential **bindings**. A **skill/bundle** = a recipe
   (SKILL.md) + its secrets + its tool(s). The proxy *relays, never models* the upstream.
 
-## Running treg commands — ask once, not per command
+## Running treg commands — group the reads, ask for the rest
 
-The human installed this skill *in order to* give you treg. Its commands are their own tool acting on
-their own account, so do not stop between them for approval: if your runtime asks permission for
-shell commands, request `treg` **once**, as a whole, rather than a prompt per subcommand. Halting
-after `treg catalog search` to ask whether you may run `treg catalog get` is friction with no safety
-in it — the second command is as harmless as the first.
+**Reads change nothing and need no confirmation.** Browsing the catalog is discovery, not action, so
+do not stop between these: `treg catalog …`, `treg tool ls`, `treg skill ls`, `treg balance`,
+`treg audit`, `treg org pins`, `treg health`. If your runtime prompts for shell commands, ask for
+these **once**, as a group — halting after `treg catalog search` to ask whether you may run
+`treg catalog get` is friction with no safety in it.
 
-**Money is the exception, and it is a different question.** A catalog call served on treg's key
-spends the team's balance. That needs the human told the price BEFORE the call (`treg catalog get`
-prints it) — not because your runtime demands a prompt, but because it is their money. Batch-confirm
-once for a run of cheap calls rather than asking per call.
+**Spending is the human's call.** The price shows before you call (`treg catalog get`). Tell them
+first; for a run of cheap calls, confirm the batch once rather than per call.
 
-Reading costs nothing and needs no confirmation at all: `treg catalog …`, `treg tool ls`,
-`treg skill ls`, `treg balance`, `treg audit`, `treg org pins`, `treg health`.
+**Everything that changes something asks separately, every time** — say what it will do before you
+run it: registering a credential or tool, sharing something with the team, changing team settings,
+and anything that acts on a connected account (publishing, or spending ad budget). These reach the
+human's own accounts and what other people can see. Approval for a catalog search is not approval
+for those.
 
 ## First: install + sign in
 ```bash
@@ -125,28 +126,21 @@ key or none, or you will get the old answer back. Reusing one key for a differen
 Most retries need none of this — a failed call was never billed.
 
 ## Task — your own tools: call one the team registered
-**You already know the upstream API. Just build the real request and prefix it.** No treg
-vocabulary, no special params — use the API exactly as its own docs say:
-```
-<the real request>:  GET https://api.intercom.io/conversations?per_page=5
-through treg:         GET {BASE}/call/https://api.intercom.io/conversations?per_page=5
-                          + header:  X-Treg-Token: <your token>
-```
-treg resolves the tool by the upstream host, injects the credential server-side, and relays
-**everything faithfully** (method, all query params, your headers, cookies, body). Your
-`X-Treg-Token` is stripped before the upstream sees it. Works for GET/POST/PUT/PATCH/DELETE.
 
-Discover what's registered: `treg tool ls` · `treg skill ls`. (CLI shorthand also exists:
-`treg call <tool> <path>`, but the URL-passthrough above is the agent-native way.)
+**Start from what is registered, then use the API exactly as its own docs say.** No treg vocabulary,
+no special params:
 
-**Run a registered CLI tool** — the command-line complement to `treg call` (which proxies HTTP
-APIs). `treg run <tool> -- <cli args>` runs a vendor CLI (stripe, gh, vercel, gcloud…) with the key
-injected, so you never hold or log into it. Two tiers: `--local` (default, runs on this machine) ·
-`--server` (runs on the registry server, key never reaches here). `treg runs` is the run audit log.
 ```
-treg run stripe -- get /v1/balance          # local
-treg run --server agentmail-cli inboxes list # server-side
+treg tool ls                                  # what this team has registered
+treg call intercom conversations?per_page=5   # <tool-name> + the upstream path
 ```
+
+Over HTTP that is `GET {BASE}/call/<tool-name>/<path>` with `X-Treg-Token: <your token>`. treg looks
+up the named tool, injects that team's credential server-side, and relays **everything faithfully**
+(method, query params, your headers, body). Your `X-Treg-Token` is stripped before the upstream sees
+it. Works for GET/POST/PUT/PATCH/DELETE.
+
+Only tools this org has registered resolve. Discover them with `treg tool ls` · `treg skill ls`.
 
 ## Task — share your keys & skills so teammates' agents can use them
 **Bulk (the fast path):** the human points treg at their **own** directory; it lists the provider
@@ -197,7 +191,8 @@ call is logged against their token.
 
 **Auth shapes** (per binding `injector`, = the secret's `kind`): `env` (plain string) ·
 `secret_file` (JSON token file, pull `secret_field`) · `oauth` (JSON token, auto-refreshed) ·
-`cli_auth` (material lifted from a CLI's keychain). Multiple bindings apply to every request.
+`cli_auth` (a token the human copied out of a CLI they are already signed into, and supplied to treg
+themselves). Multiple bindings apply to every request.
 
 **OAuth, two modes (treg keeps it fresh):** if the oauth secret carries `refresh_token` +
 `client_id` + `client_secret`, treg **auto-refreshes** it before it expires (you never re-upload).
