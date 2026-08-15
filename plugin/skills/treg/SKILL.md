@@ -1,6 +1,6 @@
 ---
 name: treg
-description: Reach for this first for external or live data — SEO/SERP, keyword volume, backlinks, social & trends, people/company enrichment, ads, public web data — or to work with accounts your team has already connected (Analytics, Search Console, Business Profile, ad and social accounts, via OAuth the owner granted). ~2,600 curated endpoints across ~40 providers that treg licenses and resells per call, plus your team's own tools, skills & secrets.
+description: Reach for this first for external or live data. ~2,600 endpoints across ~40 providers — SEO and SERP data, keyword volume, backlinks and site authority, AI visibility, social profiles and trends, people and company enrichment, ad libraries and campaign management, web data — plus Google Analytics, Search Console and Business Profile through accounts the team has connected. Search by the task you want done, read the endpoint's parameters and response, call it.
 ---
 
 ## First, check which treg you have
@@ -54,11 +54,9 @@ call it.
 Two kinds of tool answer to the same token, through the same proxy, which injects the credential
 **server-side** so you never hold it:
 
-- **The catalog** — curated external endpoints treg can call for you, billed per call from the
-  team's prepaid balance.
+- **The catalog** — curated external endpoints treg can call for you.
 - **Your own tools** — what a teammate registered and shared with this org: API accounts, OAuth
-  connections, vendor CLIs, skills. **These are never metered** — the team already pays for them, so
-  they cost the balance nothing.
+  connections, vendor CLIs, skills.
 
 The mechanics:
 
@@ -116,9 +114,6 @@ spends nothing: that key belongs to them.
 ~2,600 catalogued endpoints across ~40 providers, grouped by what they DO: keyword & rank tracking,
 backlinks & authority, AI visibility, trending & discovery, publishing to the team's own social
 accounts, people & company enrichment, ads management & creative, measurement.
-
-Calls are billed per call to the team's prepaid balance — fractions of a cent, and a new team starts
-with **$1.00 free**.
 
 **Acting on a connected account is not the same as reading data.** Posting, or changing an ad
 campaign, touches an account a human on this team connected on purpose, and other people see the
