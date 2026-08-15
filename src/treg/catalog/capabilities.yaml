@@ -113,6 +113,9 @@ platforms:
   yelp: {label: "Yelp", category: "Reviews & Apps", summary: "Business listings and reviews from Yelp."}
   account: {label: "The provider account itself — usage, quota, balance (not a content platform)", category: "Other"}
 
+  # --- Market data: prices & financial markets --------------------------------------------------
+  crypto: {label: "Crypto Market Data", category: "Market data", featured: 1, summary: "Live and historical prices, market caps, trends and exchanges across 17,000+ coins."}
+
 capabilities:
   # --- SEO / search -----------------------------------------------------------------------------
   google.serp.organic: "Get organic search results for a keyword"
@@ -1169,3 +1172,15 @@ capabilities:
   yelp.business.profile: "Get a business's profile"
   yelp.business.reviews: "List a business's reviews"
   yelp.business.search: "Search businesses by keyword and location"
+
+  # --- Market data -------------------------------------------------------------------------------
+  crypto.price.current: "Live crypto prices in any currency"
+  crypto.price.currencies: "Quote currencies you can price against"
+  crypto.market.rankings: "Top coins by market cap, with market data"
+  crypto.coin.profile: "Full profile and market stats for one coin"
+  crypto.price.history: "Historical prices and volumes for a coin"
+  crypto.price.ohlc: "OHLC candles for a coin"
+  crypto.search: "Search coins, exchanges and categories"
+  crypto.market.trending: "Coins trending right now"
+  crypto.market.global: "Global crypto market statistics"
+  crypto.exchanges.list: "Crypto exchanges with volume and trust score"

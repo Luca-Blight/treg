@@ -116,6 +116,21 @@ quote data to a garbage key, and even premium endpoints answer 200 with an upsel
 key can never be validated (the ScrapeCreators rule). Its shared-plan pilot rate in fx.yaml stands —
 platform-tier serving uses our own subscribed key, which needs no connect verify.
 
+## Subscriptions — CONFIRMED from the dashboards (2026-08-15, SuperDesign Wise card)
+
+| Provider | Plan held | License (vendor's own page) | Role |
+|---|---|---|---|
+| CoinGecko | **Basic $29/mo billed yearly** — 100,000 call credits/mo, 300 req/min | **Commercial** | platform serving. True credit rate: $29 / 100k = $0.00029 |
+| Marketstack | **Basic $9.99/mo** — 10,000 requests/mo, overage $0.0039996/call | **Commercial Use ✓** | platform serving. Cap rung: $9.99 / 10k = $0.000999/call |
+| Polygon / Massive | **Stocks Starter $29/mo** — unlimited calls, 15-min delayed, 5y history | **"Individual Use"** | OWN-KEY-ONLY: individual license does not cover serving other teams. Decide whether the subscription stays |
+| Finnhub | free ($0, 60/min) | Personal Use | verification only; own-key-only (their All-In-One is $3,500/mo, sales) |
+| Twelve Data | free Basic (800/day) | Individual pricing is "personal, internal, non-commercial" | verification only; own-key-only |
+| EODHD | free (20/day) | Personal use; commercial = separate rate card | verification only; own-key-only |
+| Tiingo | free Starter (1,000/day) | Individual tab; business tier is separate | verification only; own-key-only |
+| FMP | free Basic key only (subscription cancelled — their commercial tier is sales-gated Enterprise) | Personal / Commercial split at checkout | own-key-only |
+
+Keys live in the deployment env, never in this repo.
+
 ## Rejected, with reasons
 
 - **Alpha Vantage** — accepts ANY key (verified live 2026-08-14: `apikey=bogus123` returned the IBM
