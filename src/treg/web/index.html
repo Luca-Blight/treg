@@ -1315,7 +1315,6 @@ a:hover{text-decoration-color:var(--muted)}
           <button v-if="canRegister" class="nav" :class="{active:view==='connections'}" @click="go('connections')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Catalog</button>
           <button class="nav" :class="{active:view==='tools'||view==='secrets'}" @click="go('tools')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Your vault</button>
           <button class="nav" :class="{active:view==='activity'}" @click="go('activity')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
-          <button v-if="canAdmin" class="nav" :class="{active:view==='usage'}" @click="go('usage')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Usage</button>
           <button class="nav" :class="{active:view==='orgs'}" @click="go('orgs')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team</button>
           <div v-if="isAdmin"><div class="grp">Platform</div><button class="nav" :class="{active:view==='admin'}" @click="go('admin')" style="gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Admin</button></div>
           <div class="grp" style="margin-top:auto">Help</div>
@@ -2375,6 +2374,7 @@ a:hover{text-decoration-color:var(--muted)}
                       </div>
                     </div>
                   </template>
+
                 </div>
               </div>
               <p v-else class="sub">Loading…</p>
@@ -2475,6 +2475,89 @@ a:hover{text-decoration-color:var(--muted)}
             <!-- TEAM SETTINGS: just the danger zone (new/join/switch team live in the sidebar
                  picker). Visible to every role — leaving a team is self-service, not admin. -->
             <template v-if="orgTab==='danger'">
+            <!-- DAILY SPEND CAP. A team-level setting, so it lives here rather than under Billing.
+                 It was invisible entirely before this, which meant a team first met it as an
+                 unexplained 429; and it matters MOST when auto top-up is on, because a balance that
+                 refills itself is no longer a ceiling and this becomes the only thing bounding a
+                 runaway agent. `capCfg` is loaded by loadBilling(), which runs on every Team-page
+                 load — NOT per tab — so it is populated by the time this renders.
+                 NB the name: `orgSettings` is already a METHOD on this component (the ⚙ in the team
+                 picker), and data and methods share one namespace. -->
+            <div v-if="capCfg" style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+                  <span class="lbl" style="margin:0">Daily spend limit</span>
+                  <p class="sub" style="margin:4px 0 8px;font-size:12px">
+                    The most this team can spend per day on treg's keys. Resets at 00:00 UTC. It's the
+                    blast radius of a runaway agent — worth keeping even with auto top-up on, since a
+                    balance that refills itself can't stop one.
+                  </p>
+                  <div class="field" style="max-width:560px">
+                    <input v-model="capUsd" type="number" min="0" step="0.5" style="max-width:140px"/>
+                    <button class="btn primary" :disabled="capBusy" @click="saveCap">{{capBusy?'…':'Save'}}</button>
+                    <span class="sub" style="margin:0">
+                      USD/day · now {{money(capCfg.daily_cap_micro)}}<template v-if="!capCfg.daily_cap_set_by_team"> (our default)</template>
+                    </span>
+                  </div>
+                  <p v-if="capErr" class="banner" style="margin:10px 0 0">{{capErr}}</p>
+                  <p class="muted" style="font-size:12px;margin-top:8px">
+                    You can lower this freely. Raising it past {{money(capCfg.platform_ceiling_micro)}}/day needs a word with us — that's the ceiling we allow a team.
+                  </p>
+                </div>
+
+                <!-- PER-TAG BUDGETS. What a team reselling treg sets on ITS OWN customers. Only
+                     DECLARED dimensions are enforced on the call path, so the key is a picker over
+                     those rather than a free-text box — the API refuses a limit on anything else
+                     precisely because a stored-but-unenforced budget looks like protection and isn't. -->
+                <div v-if="capCfg" style="margin-top:22px;border-top:1px solid var(--line);padding-top:14px">
+                  <span class="lbl" style="margin:0">Per-customer limits</span>
+                  <p class="sub" style="margin:4px 0 8px;font-size:12px">
+                    Cap or block one of your own customers by the tags your calls carry
+                    (<code>X-Treg-Meta</code>). Limits <b>stack</b> — a workspace ceiling and a
+                    per-customer ceiling both apply, and a refusal names which one hit. They are
+                    <b>advisory</b>: concurrent calls can overshoot slightly, and your balance is the
+                    hard limit.
+                  </p>
+                  <div class="field" style="max-width:680px;flex-wrap:wrap">
+                    <!-- Every tag the team SENDS, not only the ones already budgeted. Setting a
+                         limit declares the dimension, so offering only the declared list made the
+                         common path a hidden two-step: you can see `feature` in Usage, so you expect
+                         to be able to cap it. -->
+                    <select class="msel" v-model="budDim" style="max-width:160px">
+                      <option v-for="k in budDims" :key="k" :value="k">{{k}}</option>
+                    </select>
+                    <input v-model="budVal" placeholder="cust_8123 — blank = default for all" style="max-width:230px"/>
+                    <input v-model="budDaily" type="number" min="0" step="0.5" placeholder="USD/day" style="max-width:120px"/>
+                    <button class="btn primary" :disabled="budBusy" @click="saveBudget()">{{budBusy?'…':(budVal?'Set limit':'Set default')}}</button>
+                  </div>
+                  <p v-if="budErr" class="banner" style="margin:10px 0 0">{{budErr}}</p>
+                  <template v-for="dim in (capCfg.budget_dims||[])" :key="dim">
+                    <table style="margin-top:10px">
+                      <tr><th>{{dim}}</th><th style="text-align:right">Daily limit</th><th>Status</th><th></th></tr>
+                      <!-- The default first: everything under it is an exception to it. Rendered even
+                           when unset, so "no limit" is something you can SEE rather than infer from
+                           an empty table. -->
+                      <tr>
+                        <td><b>every {{dim}}</b> <span class="muted">(default)</span></td>
+                        <td style="text-align:right">{{defaultFor(dim)?fmtCap(defaultFor(dim)):'no limit'}}</td>
+                        <td><span class="muted">—</span></td>
+                        <td style="text-align:right"><button v-if="defaultFor(dim)" class="btn sm" @click="removeBudget(defaultFor(dim))">Clear</button></td>
+                      </tr>
+                      <tr v-for="b in overridesFor(dim)" :key="b.val">
+                        <td style="padding-left:22px"><span class="chip">{{b.val}}</span></td>
+                        <!-- EFFECTIVE, never a dash: an override with no cap really is unlimited, and
+                             showing "—" would hide that it is exempt from the default. -->
+                        <td style="text-align:right">{{fmtCap(b)}}</td>
+                        <td><span class="badge" :class="b.status==='blocked'?'invalid':'ok'">{{b.status}}</span></td>
+                        <td style="text-align:right;white-space:nowrap">
+                          <button class="btn sm" @click="toggleBlock(b)">{{b.status==='blocked'?'Unblock':'Block'}}</button>
+                          <button class="btn sm" @click="removeBudget(b)">Remove</button>
+                        </td>
+                      </tr>
+                      <tr v-if="!overridesFor(dim).length"><td colspan="4" class="muted" style="font-size:12px">no exceptions — every {{dim}} follows the default</td></tr>
+                    </table>
+                  </template>
+                </div>
+
+
             <template v-if="!isPersonal(activeOrg)">
             <div class="lbl" style="margin-top:14px;color:var(--red)">Danger zone</div>
             <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
@@ -2496,17 +2579,24 @@ a:hover{text-decoration-color:var(--muted)}
         <!-- ACTIVITY -->
         <template v-if="view==='activity'">
           <h1>Activity - {{activeName}}</h1>
-          <p class="sub">Every proxy call and server CLI run in this org.</p>
-          <table><tr><th>When</th><th>Who</th><th>Tool</th><th>Action</th><th>Status</th><th style="text-align:right">Cost</th></tr>
-            <tr v-for="a in activityRows" :key="a.kind+'-'+a.id"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span></td><td style="text-align:right;white-space:nowrap" class="muted" :title="a.tier==='platform'?'charged to team balance':(a.cost!=null?'estimated — billed to your own provider key':'')">{{a.cost!=null?money(a.cost):'—'}}</td></tr></table>
-          <p v-if="!loading && !activityRows.length" class="sub">No activity yet.</p>
-        </template>
+          <!-- One page, two readings of the same traffic: the RAW FEED (every call, newest first)
+               and the ROLLUPS (who/what/when, and spend per caller tag). They were separate sidebar
+               entries, which made you leave one to answer a question about the other. -->
+          <div class="tabs" style="margin:10px 0 4px">
+            <button :class="{active:actTab==='feed'}" @click="actTab='feed'">Activity</button>
+            <button v-if="canAdmin" :class="{active:actTab==='usage'}" @click="actTab='usage'; loadUsage()">Usage</button>
+          </div>
 
-        <!-- USAGE (admin/owner) -->
-        <template v-if="view==='usage'">
+          <template v-if="actTab==='feed'">
+          <p class="sub">Every proxy call and server CLI run in this org.</p>
+          <table><tr><th>When</th><th>Who</th><th v-if="anyTagged">Tagged</th><th>Tool</th><th>Action</th><th>Status</th><th style="text-align:right">Cost</th></tr>
+            <tr v-for="a in activityRows" :key="a.kind+'-'+a.id"><td class="muted">{{when(a.created_at)}}</td><td>{{short(a.user_email)}}<span v-if="a.client && a.client!=='cli'" class="chip" style="margin-left:6px" :title="'reported by the runtime — attribution, not authentication'">via {{a.client}}</span></td><td v-if="anyTagged"><template v-if="a.tags"><span v-for="(v,k) in a.tags" :key="k" class="chip" style="margin-right:4px" :title="'X-Treg-Meta '+k+'='+v">{{k}}={{v}}</span></template><span v-else class="muted">—</span></td><td>{{a.tool}}</td><td><span v-if="a.kind==='run'" class="chip" style="margin-right:6px" :title="a.where==='local'?'ran on this member\'s machine':'ran on the registry server'">{{a.where||'run'}}</span>{{a.action}}</td><td><span class="badge" :class="a.ok?'ok':'invalid'">{{a.status}}</span></td><td style="text-align:right;white-space:nowrap" class="muted" :title="a.tier==='platform'?'charged to team balance':(a.cost!=null?'estimated — billed to your own provider key':'')">{{a.cost!=null?money(a.cost):'—'}}</td></tr></table>
+          <p v-if="!loading && !activityRows.length" class="sub">No activity yet.</p>
+          </template>
+
+          <template v-if="canAdmin && actTab==='usage'">
           <div class="tut-head" style="align-items:flex-end">
-            <div><h1>Usage - {{activeName}}</h1>
-              <p class="sub" style="margin:0">Calls &amp; runs per member over the last {{usageDays}} days. Counts only - no request or response content is stored.</p></div>
+            <div><p class="sub" style="margin:0">Calls &amp; runs per member over the last {{usageDays}} days. Counts only - no request or response content is stored.</p></div>
             <select class="msel" :value="usageDays" @change="usageDays=+$event.target.value; loadUsage()"><option :value="7">7 days</option><option :value="30">30 days</option><option :value="90">90 days</option></select>
           </div>
 
@@ -2537,8 +2627,42 @@ a:hover{text-decoration-color:var(--muted)}
               <tr><th>Day</th><th style="text-align:right">Events</th></tr>
               <tr v-for="d in usage.by_day" :key="d.day"><td class="muted">{{d.day}}</td><td style="text-align:right">{{d.total}}</td></tr>
             </table>
+          <!-- SPEND BY CALLER TAG — one section per key the team has ACTUALLY SENT, not a picker.
+               A dropdown hides the other dimensions behind an interaction, and the whole point of
+               tagging by both customer and workspace is seeing them side by side. The list comes from
+               /tag-keys (observed), so a team that never tags sees nothing here at all.
+
+               Money here comes from the LEDGER, unlike the per-member/tool/day counts below, which
+               come from the audit table and are allowed to lose rows. This is what a reselling team
+               invoices from, so it has to be complete. -->
+          <template v-for="key in tagKeys" :key="key">
+            <div v-if="tagUsage[key]" style="margin-top:20px">
+              <div class="lbl" style="margin:0">By {{key}} <span class="chip" style="margin-left:6px" title="a caller tag from X-Treg-Meta">X-Treg-Meta</span></div>
+              <p class="sub" style="margin:4px 0 8px;font-size:12px">
+                What each <b>{{key}}</b> spent, from the ledger. A call is credited in full to every
+                tag it carries, so these sections are different slices of the same money — never add
+                two of them together.
+              </p>
+              <table v-if="tagUsage[key].rows.length">
+                <tr><th>{{key}}</th><th style="text-align:right">Calls</th><th style="text-align:right">Spend</th></tr>
+                <tr v-for="r in tagUsage[key].rows" :key="r.value">
+                  <td><span class="chip">{{r.value}}</span></td>
+                  <td style="text-align:right" class="muted">{{r.calls}}</td>
+                  <td style="text-align:right"><b>{{money(r.charged_micro)}}</b></td>
+                </tr>
+                <tr v-if="tagUsage[key].unattributed_micro">
+                  <td class="muted" title="calls carrying no value for this tag — shown, never dropped">untagged</td>
+                  <td style="text-align:right" class="muted">—</td>
+                  <td style="text-align:right" class="muted">{{money(tagUsage[key].unattributed_micro)}}</td>
+                </tr>
+              </table>
+              <p v-else class="sub">Nothing tagged <b>{{key}}</b> in this window.</p>
+            </div>
+          </template>
+
           </div>
           <p v-else class="sub">Loading…</p>
+          </template>
         </template>
 
         <!-- ADMIN -->
@@ -2638,6 +2762,37 @@ a:hover{text-decoration-color:var(--muted)}
                   <button v-for="p in g.items" :key="p.s" type="button" class="prov-chip" @click="track('tryit_oauth_clicked',{service:p.s,group:g.label,from:'getting_started'}); openProvider(p.s)"><img :src="'/logos/'+p.s+'.svg'" alt=""/>{{p.n}}</button>
                   <span v-if="g.soon.length" class="soon-note" :data-tip="g.soon.map(p=>p.n).join(', ')">{{g.soon.length}} coming soon</span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BUILD ON TREG — deliberately NOT a numbered step. Steps 1-2 are the one path every
+               new user walks; these two are optional and belong to different people (a vendor with an
+               API to list, a platform embedding treg). Numbering them implied everyone had three
+               things to do. Tabs, because nobody needs both. -->
+          <div style="margin-top:34px;border-top:1px solid var(--line);padding-top:22px">
+            <h2 style="margin:0 0 4px;font-size:17px">Build on treg</h2>
+            <p class="sub" style="margin:0 0 12px">Optional, for two other kinds of user. Each is a skill file — paste the line into your coding agent, in your own repo, and it implements the rest.</p>
+            <div class="seg">
+              <button :class="{on:buildTab==='vendor'}" @click="buildTab='vendor'">List as vendor</button>
+              <button :class="{on:buildTab==='platform'}" @click="buildTab='platform'">Integrate into your platform</button>
+            </div>
+
+            <div v-show="buildTab==='vendor'" style="max-width:720px">
+              <p class="sub">Put your API in front of every treg agent. Your agent reads the guide, writes the catalog entry for your endpoints and prices, and opens the PR.</p>
+              <div class="lc-codewrap" style="margin-top:8px">
+                <button class="lc-cp" @click="copyStart('Read '+proxy+'/vendor-listing.md and add our API to the treg catalog, then open a PR.','vend')">{{startCopied==='vend'?'✓ copied':'copy'}}</button>
+                <pre>Read <span class="hl-str">{{proxy}}/vendor-listing.md</span> and add our API to the
+treg catalog, then open a PR.</pre>
+              </div>
+            </div>
+
+            <div v-show="buildTab==='platform'" style="max-width:720px">
+              <p class="sub">Give <i>your</i> users 2,600+ tools without owning the keys — and bill each of your customers for what they used. Covers the call methods (HTTP, MCP, CLI), per-customer tagging, spend limits and invoicing.</p>
+              <div class="lc-codewrap" style="margin-top:8px">
+                <button class="lc-cp" @click="copyStart('Read '+proxy+'/integrate.md and integrate treg into our product, including per-customer usage tracking and billing.','intg')">{{startCopied==='intg'?'✓ copied':'copy'}}</button>
+                <pre>Read <span class="hl-str">{{proxy}}/integrate.md</span> and integrate treg into our
+product, including per-customer usage tracking and billing.</pre>
               </div>
             </div>
           </div>
@@ -3451,10 +3606,14 @@ createApp({
       editProj:null, projToolDraft:{}, projToolBusy:false,
       denyRules:[], denyForm:{host:'',path_prefix:'',method:'',user_id:null,project_id:null,note:''}, denyBusy:false, confirmDeny:null, cliDeny:[],
       bootVersion:'', newVersion:false,
-      usage:null, usageDays:30, myUsage:null,  // usage-metering: rollups + the member's own used/cap
+      usage:null, usageDays:30, myUsage:null, actTab:'feed', buildTab:'vendor',  // Activity page: 'feed' | 'usage'
+      tagUsage:{}, tagKeys:[],   // spend per X-Treg-Meta key: {customer:{…}, workspace:{…}}
+  // usage-metering: rollups + the member's own used/cap
       // Billing (Stripe top-ups). `billing` null = not loaded / not an admin; billing.configured
       // false = this deployment sells no balance, so the whole block stays hidden.
       billing:null, billingBusy:false, topupAmount:10, autoAmount:10, autoThreshold:5, autoConsent:false, autoOpen:false,
+      capCfg:null, capUsd:0, capBusy:false, capErr:'',
+      budgets:[], budDims:[], budDim:'', budVal:'', budDaily:'', budBusy:false, budErr:'',
       confirmDel:'', confirmLeave:false, confirmRemove:null,
       showJoin:false, joinCode:'', joinBusy:false, joinErr:'',
       secrets:[], showSecrets:false, secretRows:[{name:'',value:'',kind:'env'}], secretBusy:false, secretErr:'', runNote:'',
@@ -3743,9 +3902,12 @@ createApp({
       // Cost precedence: what was CHARGED (settle amount; 0 on a release — the estimate alone would
       // over-report a refunded call as spend), else observed, else the estimate (old rows / own-key).
       const calls=(this.calls||[]).filter(c=>c.kind!=='local_run').map(c=>({kind:'call', id:c.id, created_at:c.created_at, user_email:c.user_email, client:c.client, tool:c.tool_name, action:c.method, status:c.status_code, ok:c.status_code<400,
-        cost:(c.cost_charged_micro!=null?c.cost_charged_micro:(c.cost_observed_micro!=null?c.cost_observed_micro:c.cost_estimated_micro)), tier:c.credential_tier}));
+        cost:(c.cost_charged_micro!=null?c.cost_charged_micro:(c.cost_observed_micro!=null?c.cost_observed_micro:c.cost_estimated_micro)), tier:c.credential_tier, tags:c.tags}));
       const runs=(this.runs||[]).map(r=>({kind:'run', where:r.where, id:r.id, created_at:r.created_at, user_email:r.user_email, client:r.client, tool:r.tool, action:(r.argv||[]).join(' ').slice(0,48)||'-', status:(r.where==='local'?'local run':'exit '+r.exit_code), ok:(r.where==='local'?true:r.exit_code===0)}));
       return calls.concat(runs).sort((a,b)=>a.created_at<b.created_at?1:-1);
+    },
+    anyTagged(){  // hide the column entirely for teams that never send X-Treg-Meta
+      return (this.calls||[]).some(c=>c.tags && Object.keys(c.tags).length);
     },
     sbxTourSteps(){ return [
       {spot:'vault', view:'endpoints', title:"Hi, I'm treg 👋",
@@ -4342,7 +4504,28 @@ createApp({
       this.confirmDeny=null; await this.loadOrgAdmin(); },
     async loadUsage(){ if(!this.canAdmin || !this.activeOrgId) return; this.usage=null;
       try{ this.usage=await this.api('/orgs/'+this.activeOrgId+'/usage?days='+this.usageDays); }
-      catch(e){ this.err='Failed to load usage: '+(e.detail||e.status); } },
+      catch(e){ this.err='Failed to load usage: '+(e.detail||e.status); }
+      await this.loadTagUsage(); },
+    async loadTagUsage(){ if(!this.canAdmin || !this.activeOrgId) return;
+      this.tagUsage={};
+      try{
+        // What the team has actually SENT. Reporting works on any key, unlike enforcement, which
+        // needs a declared one — so this is deliberately NOT the budgetable list, which hid
+        // `feature=` and friends from the dashboard even though the API served them fine.
+        const k=await this.api('/orgs/'+this.activeOrgId+'/tag-keys');
+        const primary=k.primary;
+        const keys=[...new Set([...(k.seen||[]), ...(k.budgetable||[])].filter(Boolean))];
+        // Primary first — it is the one a reselling team bills on; the rest alphabetically.
+        keys.sort((a,b)=> a===primary ? -1 : b===primary ? 1 : a.localeCompare(b));
+        this.tagKeys=keys;
+        // One request per key. Bounded by the 5-key cap on the header, and they run together.
+        const got=await Promise.all(keys.map(key=>
+          this.api('/orgs/'+this.activeOrgId+'/usage/by-tag?key='+encodeURIComponent(key)+
+                   '&days='+this.usageDays).catch(()=>null)));
+        const out={};
+        keys.forEach((key,i)=>{ if(got[i]) out[key]=got[i]; });
+        this.tagUsage=out;
+      }catch(e){ this.tagUsage={}; this.tagKeys=[]; } },
     // micro-USD -> a money string, EXACT. Cents round a $0.0006 charge to $0.00 and a $9.999 balance
     // to "$10.00"; a fixed 4 decimals rounds $0.00015 to $0.0001 (float: 0.00015 is stored just
     // under). So: whole-cent amounts render as normal cents, everything else renders all 6 micro
@@ -4355,7 +4538,61 @@ createApp({
       this.billing=await this.api('/billing').catch(()=>null);
       if(this.billing){ this.topupAmount=this.billing.topup.default_usd;
         this.autoAmount=Math.round(this.billing.autotopup.amount_usd);
-        this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd); } },
+        this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd); }
+      // The daily cap lives beside the balance for the user even though it is an org setting.
+      this.capCfg=await this.api(`/orgs/${this.activeOrgId}/settings`).catch(()=>null);
+      if(this.capCfg){ this.capUsd=(this.capCfg.daily_cap_micro/1e6).toFixed(2);
+        const k=await this.api(`/orgs/${this.activeOrgId}/tag-keys`).catch(()=>null);
+        this.budDims=[...new Set([...((k&&k.seen)||[]), ...(this.capCfg.budget_dims||[])])];
+        if(!this.budDims.length) this.budDims=['customer'];
+        this.budDim=this.budDim||this.budDims[0];
+        this.budgets=await this.api(`/orgs/${this.activeOrgId}/budgets`).catch(()=>[]); } },
+    defaultFor(dim){ return (this.budgets||[]).find(b=>b.dim===dim && b.is_default) || null; },
+    overridesFor(dim){ return (this.budgets||[]).filter(b=>b.dim===dim && !b.is_default); },
+    fmtCap(b){ return b.daily_cap_micro==null ? 'no limit' : this.money(b.daily_cap_micro)+'/day'; },
+    // The server's own words when it has any. Every budget refusal is one a builder must be able to
+    // act on — "above_platform_ceiling" carries the ceiling, "too_many_budget_dimensions" names the
+    // dimensions in use — so the generic fallback is the last resort, never the first.
+    _errMsg(e, fallback){ return (e&&e.detail&&e.detail.message) || (e&&typeof e.detail==='string'&&e.detail)
+      || (e&&e.message) || fallback; },
+    // Blank `val` addresses the DIMENSION'S DEFAULT — `PUT /budgets/{dim}`, the route with no value.
+    _budgetUrl(dim, val){ const base=`/orgs/${this.activeOrgId}/budgets/${encodeURIComponent(dim)}`;
+      return val ? `${base}/${encodeURIComponent(val)}` : base; },
+    async _putBudget(dim, val, body){
+      return this.api(this._budgetUrl(dim, val),
+        {method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
+    },
+    async _reloadBudgets(){ this.budgets=await this.api(`/orgs/${this.activeOrgId}/budgets`).catch(()=>this.budgets); },
+    async saveBudget(){ this.budBusy=true; this.budErr='';
+      try{
+        const body={};
+        if(this.budDaily!=='') body.daily_cap_micro=Math.round(parseFloat(this.budDaily)*1e6);
+        await this._putBudget(this.budDim, this.budVal.trim(), body);
+        this.budVal=''; this.budDaily='';
+        await this.loadBilling();   // re-reads settings: a first limit DECLARES the dimension
+        await this._reloadBudgets();
+      }catch(e){ this.budErr=this._errMsg(e, 'could not save that limit'); }
+      finally{ this.budBusy=false; } },
+    async toggleBlock(b){ this.budErr='';
+      // A PARTIAL put: only `status` travels, so caps set earlier survive being blocked/unblocked.
+      try{ await this._putBudget(b.dim, b.val, {status: b.status==='blocked'?'active':'blocked'});
+        await this._reloadBudgets();
+      }catch(e){ this.budErr=this._errMsg(e, 'could not change that'); } },
+    async removeBudget(b){ this.budErr='';
+      try{ await this.api(this._budgetUrl(b.dim, b.val), {method:'DELETE'}); await this._reloadBudgets();
+      }catch(e){ this.budErr=this._errMsg(e, 'could not remove that'); } },
+    async saveCap(){ this.capBusy=true; this.capErr='';
+      try{
+        const micro=Math.round(parseFloat(this.capUsd||'0')*1e6);
+        this.capCfg=await this.api(`/orgs/${this.activeOrgId}/settings`,
+          {method:'PATCH', headers:{'content-type':'application/json'},
+           body:JSON.stringify({daily_cap_micro:micro})});
+        this.capUsd=(this.capCfg.daily_cap_micro/1e6).toFixed(2);
+      }catch(e){
+        // The server REFUSES a raise past the ceiling rather than clamping it, so say which it was —
+        // a silently clamped limit is discovered as an outage mid-launch.
+        this.capErr=this._errMsg(e, 'could not save that limit');
+      }finally{ this.capBusy=false; } },
     async addFunds(amount){ this.billingBusy=true; this.topupAmount=amount; this.err='';
       // Named differently from the server's topup_started (same click, two vantage points —
       // a shared name would double-count in trends); this one exists to link session replays.
@@ -4960,6 +5197,10 @@ createApp({
       this.go('orgs'); },
     resetConfirms(){ this.confirmDelTool=null; this.confirmDelSecret=null; this.confirmDelBundle=null; this.confirmRemove=null; this.confirmLeave=false; this.confirmDel=''; this.confirmAdmUser=null; this.confirmAdmOrg=null; },
     go(v, fromPop){ this.resetConfirms();  // stale inline "Confirm" states must not survive a view switch (accidental-delete risk)
+      // `usage` is a TAB of the activity page now, not a view of its own — keep the old route
+      // working so an existing /app#usage link, and the balance card's deep link, still land right.
+      if(v==='usage'){ this.actTab='usage'; v='activity'; this.loadUsage(); }
+      else if(v==='activity'){ this.actTab='feed'; }
       this.detail=null; this.view=v; if(v==='activity')this.loadCalls(); if(v==='admin')this.loadAdmin(); if(v==='orgs'){this.loadOrgAdmin(); this.loadMyUsage(); this.loadBilling();} if(v==='usage')this.loadUsage(); if(v==='secrets'){this.loadSecrets(); if(!this.providers.length)this.loadConnections();} if(v==='connections')this.loadConnections();
       // push history so browser Back navigates BETWEEN views instead of leaving the app; the '/app'
       // pathname also walks back from a /app/skills/<x> detail URL so reload doesn't reopen the detail
@@ -5359,8 +5600,9 @@ createApp({
         // every load/switch for the 99% of users who aren't super-admins (console-error noise + wasted request).
         this.loadBilling();  // fire-and-forget, self-guards on canAdmin — feeds the sidebar balance card on every load/switch
         if(this.view==='orgs'){ this.loadOrgAdmin(); this.loadMyUsage(); }  // refresh team panel after a switch
-        if(this.view==='usage') this.loadUsage();  // …the usage rollup (org-scoped)
-        if(this.view==='activity') this.loadCalls();  // …and the org-scoped call log (was showing the previous org's)
+        // Activity is one view with two tabs now, so a team switch has to refresh whichever is open
+        // — both are org-scoped and would otherwise keep showing the previous team's numbers.
+        if(this.view==='activity'){ this.loadCalls(); if(this.actTab==='usage') this.loadUsage(); }
         if(this.view==='secrets') this.loadSecrets();  // …and the Secrets view (was showing the previous org's)
       }catch(e){ this.err='Failed to load: '+(e.detail||e.status); }
       finally{ this.loading=false; } },

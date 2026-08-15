@@ -143,9 +143,12 @@ class Settings(BaseSettings):
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
     # Render dashboard turns the whole feature off without a redeploy.
     platform_providers: str = ""
-    # Per-org, per-UTC-day ceiling on tier-4 spend. Enforced FAIL-CLOSED (unlike the soft per-user call
-    # cap): a query error refuses the call rather than letting an unbounded amount of our money out.
-    platform_daily_cap_usd: float = 5.0
+    # Per-org, per-UTC-day ceiling on tier-4 spend, and the CEILING a team may raise its own
+    # `Org.daily_cap_micro` to. Enforced FAIL-CLOSED (unlike the soft per-user call cap): a query
+    # error refuses the call rather than letting an unbounded amount of our money out. It is a
+    # blast-radius limit on a runaway agent or a mispriced catalog entry, not a billing control —
+    # the balance is what a team actually spends against.
+    platform_daily_cap_usd: float = 100.0
 
     # ---- Stripe top-ups (billing.py) -----------------------------------------------------------
     # OUR billing account's keys. Deliberately NOT the `demo_stripe_*` pair above: that one belongs to

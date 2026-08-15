@@ -81,6 +81,40 @@ Keys are yours alone: scoped to the caller, kept 24 hours. Nothing happens witho
 call that fails frees its key at once. Over MCP the same thing is the `idempotency_key` argument to
 `call`, and a replayed result carries `replayed: true`.
 
+### Reselling treg inside your own product
+
+If you are a platform billing your own users, run one team, one balance, one token, and tag each call
+with your ids. Set the header from YOUR BACKEND — not from the model, which will eventually drop it
+mid-chain, and a figure you cannot reconcile is worse than none:
+
+    curl "{BASE}/call/tikhub.tiktok.user.profile?uniqueId=tiktok" \
+      -H "X-Treg-Token: $TREG_TOKEN" \
+      -H "X-Treg-Meta: customer=cust_8123, workspace=ws_9"
+
+Up to 5 `key=value` pairs. Anything malformed is a 422 before the call is relayed, so it costs you
+nothing — treg refuses rather than truncating, because a shortened id merges two of your users onto
+one invoice line.
+
+Every response returns `X-Treg-Call-Id`: the key to join our records to yours. `GET /calls/{id}` reads
+one back with its ledger entries.
+
+- **Invoice from** `GET /orgs/{id}/usage/by-tag?key=customer&days=30`. Money comes from the ledger, and
+  `attributed_micro + unattributed_micro == total_micro` for every key, so nothing goes missing.
+- **Limit a user** with `PUT /orgs/{id}/budgets/customer/cust_8123 {"daily_cap_micro": 5000000}`, or
+  `{"status": "blocked"}` to cut them off. Budgets stack: a workspace ceiling and a per-user ceiling
+  both apply, and the refusal names which one hit. These caps are advisory — your balance is the hard
+  limit — so do not sell them to your users as exact.
+- **Declare** which keys carry budgets at `PATCH /orgs/{id}/settings` (up to 3).
+- **Isolate** the few who need it: `treg org agent-new bot --pin customer=cust_A` mints a token that
+  can only ever bill `cust_A`. Tag for counting, token for control.
+
+Embedding the hosted service in a product you sell needs a written agreement with us — talk to us
+first.
+
+**Building this?** Point your coding agent at **{BASE}/integrate.md** — the full integration skill:
+the three call methods, tagging from your backend, per-customer limits, and invoicing from the
+ledger.
+
 ## The catalog — tools you do not have a key for
 
 Curated endpoints across ~40 providers, grouped by what they DO: keyword and rank tracking,

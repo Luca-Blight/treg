@@ -203,3 +203,30 @@ Three tables, all added with the MCP front door. See `architecture/mcp-oauth.md`
 `OAuthCode` and `OAuthRefresh` are org-scoped and therefore listed in `_ORG_SCOPED_MODELS`: a pending
 grant naming a deleted team is a dangling row. `OAuthClient` is not — a client is global, and nothing
 about it belongs to one team.
+
+## Caller tags (`X-Treg-Meta`)
+
+Two new tables and a handful of columns carry a reselling builder's attribution. The design rationale
+lives in [money](money.md); this is the shape.
+
+| Table | Row means | Written by |
+|---|---|---|
+| `TagSpend` | what one call cost, attributed to ONE of its tags | `ledger.py` only, in the money transaction |
+| `TagBudget` | one builder-set limit on one `(dim, val)`, and the registry entry that bounds cardinality | `api.py` (auto-created on first sighting) |
+
+`CallRecord` gains `call_ref` (the `X-Treg-Call-Id` echoed to the caller and used as the ledger's
+`call_id` on a metered call — one value joins the audit row, the money rows and the builder's own
+records), `budget_dim`/`budget_val` (the indexed copy of the primary pair) and `tags` (the whole bag).
+
+> `audit.record_call` splats its `telemetry` dict as `**kwargs` into `CallRecord()`, and `audit._write`
+> swallows every exception. **A telemetry key without a matching column silently kills every audit
+> write** — the table goes dark with no error anywhere. Columns and telemetry keys must land together.
+
+`Org` gains `budget_dims` (which keys may carry budgets, ≤3), `primary_dim` (the one that scopes
+idempotency) and `daily_cap_micro` (the team's own spend ceiling, 0 = follow the deployment default).
+`Membership` gains `pinned_tags`.
+
+Migrations `A30`-`A32` in `db.py` add the columns, guarded as usual; `TagSpend` and `TagBudget` are new
+tables and need no DDL. Note `A31` also required adding the two new NOT NULL `org` columns to the raw
+`INSERT INTO org` in the legacy `(B)` backfill: a column `create_all` builds from a SQLModel default is
+NOT NULL with **no server default**, so raw SQL must supply it (ops/deploy.md §migration portability).

@@ -3,6 +3,7 @@ title: Money — prepaid balance, the ledger, Stripe, and the reports that check
 status: shipped
 sources:
   - src/treg/ledger.py
+  - src/treg/models.py
   - src/treg/billing.py
   - src/treg/reconcile.py
   - src/treg/api.py
@@ -285,3 +286,105 @@ handler has a dozen raise points and releasing at each would be a dozen chances 
 
 Expired rows are swept lazily at claim time, scoped to the calling caller, exactly like the hold
 reaper: no scheduler, no leader election on a multi-instance deploy.
+
+## Tag-based billing — a builder reselling treg to their own users
+
+A builder embeds treg in their product and bills their own users. treg's job is exactly three things:
+**attribution**, **enforcement**, **export**. treg never bills their end user, never holds their card
+and never sets their price; margin stays 0%.
+
+They run one org, one balance, one token, and tag each call with their own ids:
+
+```
+X-Treg-Meta: customer=cust_8123, workspace=ws_9, feature=email-finder
+```
+
+Up to 5 pairs. It is a **header, never a tool argument** — a model asked to pass an id drops it
+somewhere in a chain, and a figure you cannot reconcile is worse than no figure. The builder's backend
+already sets `Authorization` on the request; this is the same call site. `api._parse_call_meta` parses
+it **once** per request, before the idempotency block, and everything downstream reads that one
+object. A second parse site would be a second chance to disagree about who pays.
+
+Validation refuses rather than repairs: an oversized value is a 422, never a `[:128]`. A truncated id
+merges two of their users into one invoice line, and a dropped tag is usage nobody bills. Values
+containing `@` are refused outright — the ledger is append-only, so an email written today cannot be
+erased on request tomorrow.
+
+### Any tag can be reported; declared tags can be enforced
+
+The split is **reporting versus per-call enforcement**, not money versus counts.
+
+Reporting groups by any key with real money attached, because an invoice query runs occasionally over
+a bounded window at admin scale — the same reason `reconcile.provider_spend` folds in Python.
+Enforcement is different: it runs on *every* proxied call and must be an indexed aggregate, so a key
+only becomes budgetable when the team **declares** it (`Org.budget_dims`, capped at 3). Declaring a
+key is what buys it an index. The cap exists because each declared dimension is another row written
+per call and another place settle-vs-reserve correction can go wrong; a team budgeting on `session`
+would write an aggregate row per conversation.
+
+**Budgets stack.** `workspace=ws_9` at $50/day and `customer=cust_8123` at $5/day are two `TagBudget`
+rows and both apply to a call carrying both tags. Every declared dimension is evaluated and the first
+breach in declaration order refuses, so the outcome is deterministic. The refusal **names the
+dimension** — a builder running stacked budgets otherwise cannot tell a workspace breach from a
+per-user one.
+
+### `TagSpend` — why the money side is a table, not a JSON key
+
+`ledger.reserve` writes one `TagSpend` row per tag, in the same transaction as the balance movement.
+Each row carries the **full** call amount, so the same dollar appears under `customer` and under
+`workspace` — cost-allocation-tag semantics. Summing *within* a dimension reconciles to the org total;
+summing *across* dimensions deliberately double-counts, which is why every report names its key.
+
+`amount_micro` tracks the hold: the estimate while in flight, rewritten to the consumed figure at
+settle, and deleted on release. So a cap counts in-flight work at its estimate and errs toward
+refusing — the right direction for money — while an invoice reads settled rows only, because an open
+hold is not spend and billing it would charge again when it settles. Hence two deliberately separate
+reads, `tag_spent_since` (cap) and `tag_invoice_since` (invoice), named so nobody "deduplicates" them.
+
+### The caps are SOFT, and must never be sold as hard
+
+`ledger.reserve` is exact because the balance is a materialized column: its check and its debit are
+one conditional UPDATE. A per-tag total is an aggregate over rows, so N concurrent calls can each read
+a compliant figure and together exceed the cap. Overshoot is bounded by `concurrency × per-call
+estimate`, and that is acceptable **only** because the hard gates sit behind it — the org balance and
+the per-org daily cap.
+
+Making it exact would need a second materialized authority on spend: reset daily, decremented on
+release, corrected on settle divergence. Four new ways to disagree with `ledger.py`, which is the one
+module allowed to move money. Not worth it. Never document these caps to builders as hard limits.
+
+### Refusal bodies are not the org's
+
+A tag refusal is the response a builder renders **to their own end user**. It shares no code with the
+org-level 402, which carries `balance_micro` and a top-up URL — the builder's private numbers. Shape:
+`{error, dim, val, spent_micro, cap_micro, period, estimated_cost_micro, message}`, and the checks are
+ordered so a tag refusal can never fall through to the org 402.
+
+### Invoices read the ledger. Always.
+
+`GET /orgs/{id}/usage/by-tag` takes **money from the ledger** and call counts from `CallRecord`. Audit
+rows are fire-and-forget and the queue sheds them under exactly the load a successful builder
+generates; an invoice built on them would under-bill silently and unrecoverably. The money query lives
+in `ledger.py`, not `api.py`, so a later edit cannot casually reach for `CallRecord`.
+
+The response reports **`unattributed_micro`** explicitly rather than dropping it. The identity a
+builder's books rest on is `attributed + unattributed == the org's settled spend for the window`, and
+it must hold whichever dimension they slice by.
+
+### Tag for counting, token for control
+
+A tag is a **label, not a boundary** — anyone holding the token can send any tag. That is fine when
+the only budgets and reports it touches are the builder's own. When a token will run on an end user's
+*own machine*, the builder mints an agent token pinned to that user (`Membership.pinned_tags`,
+`treg org agent-new --pin customer=cust_A`). The pin **beats the header**: naming a different value is
+a 403, because otherwise the holder could retag their calls and walk out of their own budget, which is
+the entire point of giving them a scoped token.
+
+### The per-org daily cap has two owners
+
+`Org.daily_cap_micro` is the team's own ceiling; `platform_daily_cap_usd` is ours. The effective cap is
+`min(the two)` (`api._effective_daily_cap`). A team may lower theirs freely and see it at
+`GET /orgs/{id}/settings` — a limit nobody can see becomes a support ticket the first time an agent
+trips it. Raising past our ceiling is **refused, not clamped**: a builder who thinks they set $500/day
+and silently got the platform default discovers it as an outage mid-launch. That refusal is the commercial conversation,
+and it replaces editing one env var that would lift the blast-radius rail for every team at once.

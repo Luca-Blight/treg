@@ -218,3 +218,29 @@ step at all for the same new-table reason.
 
 > Health (`run_all`) takes an `org_id` filter so `/health/run` never leaks other orgs' credentials, and
 > alerts resolve the owner's per-org membership webhook. See [auth-secrets](auth-secrets.md).
+
+## Caller tags are a label, not a tenancy boundary
+
+A builder reselling treg tags each call with their own ids (`X-Treg-Meta: customer=cust_8123,
+workspace=ws_9`) so they can attribute, budget and invoice their users. Those tags drive real money
+decisions — see [money](money.md) — but they change nothing about isolation.
+
+**The org remains the only hard boundary.** A tag is caller-asserted: anyone holding the token can
+send any value, exactly like `X-Treg-Client`. That is acceptable because every budget and every report
+a tag touches belongs to the team that sent it, so the only party who can mis-tag is the one who owns
+the consequences. It is *not* acceptable as a wall between mutually distrusting parties, and nothing
+in the codebase treats it as one.
+
+The rule to give builders: **tag for counting, token for control.** Start everyone on tags; mint a
+scoped agent token for the few who need real separation — different tool access, or a credential that
+runs on the end user's own machine. A pinned token (`Membership.pinned_tags`) is the one case where a
+tag stops being caller-asserted: the pin beats the header and a mismatch is a 403, because a token
+handed to one user must not be able to bill another.
+
+Two consequences worth stating plainly:
+
+- **`TagBudget` never grows a balance column.** One org, one balance. Budgets are ceilings on a shared
+  pot, not sub-accounts; per-user balances would be a second money authority and are out of scope.
+- **`TagSpend` and `TagBudget` are org-scoped** and registered in `api._ORG_SCOPED_MODELS`, `TagSpend`
+  ahead of `LedgerEntry`/`Hold` because it references them. `tests/test_orgs.py` walks the models and
+  fails if a new `org_id` table is missed.

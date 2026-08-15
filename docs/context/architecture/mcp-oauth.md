@@ -314,3 +314,14 @@ otherwise prefers OAuth (issue #59467). The determinant is "does the server 200 
 "API key" (see [dashboard](../interface/dashboard.md)), so it carries the team and needs no second
 header. `curl {BASE}/install.sh | sh -s -- --token <key>` runs the whole thing — install, sign in,
 `treg mcp install` — in one paste.
+
+## Caller tags over MCP
+
+`X-Treg-Meta` (see [money](money.md)) is read off the MCP **transport** in `mcp.call()` and forwarded
+on the internal request, the same way `catalog_request` forwards `X-Forwarded-For`. It is deliberately
+**not** a tool argument: a model asked to pass a customer id will omit it somewhere in a chain, and a
+billing figure you cannot reconcile is worse than no figure. `x-treg-meta` is therefore also in the
+`call` tool's extra-header filter, so a model-supplied value can never contradict the transport one.
+
+A builder proxying MCP sets the header once per session on their own HTTP client; the model never sees
+it.
