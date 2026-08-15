@@ -52,6 +52,10 @@ PUBLIC_BASE = "https://treg.to"
 
 CODEX_TARGET = ROOT / "plugin" / "skills" / "treg" / "SKILL.md"
 CLAUDE_TARGET = ROOT / "skills" / "treg" / "SKILL.md"
+# Cursor's layout is prescribed by github.com/cursor/plugin-template: a marketplace manifest at the
+# repo root, and every plugin under `plugins/<name>/` with its OWN `.cursor-plugin/plugin.json`.
+# Unlike Claude Code, the plugin root is never the repo root — `source` must be `./plugins/treg`.
+CURSOR_TARGET = ROOT / "plugins" / "treg" / "skills" / "treg" / "SKILL.md"
 
 CODEX_BOOTSTRAP = """
 ## First, check which treg you have
@@ -105,38 +109,37 @@ Either way, the rest of this page is the part that matters — **when** treg is 
 # Hence the ordered three-step block below. The order is load-bearing, not stylistic: `cmd_mcp_install`
 # reads the token from config and sys.exits before writing anything when there is none, so running it
 # ahead of `treg login` is a silent no-op an agent would move straight past.
-CLAUDE_BOOTSTRAP = """
-## First run: finish the setup, then use it
+CLI_BOOTSTRAP = """
+## First run: finish the setup
 
 This plugin ships the skill, so you have this page — but not yet the `treg` command, and not yet its
-tools. Set both up **once**, in this order, and do not stop between the steps:
+tools. Set both up **once**, in this order:
 
 ```bash
 curl -fsSL {BASE}/install.sh | sh   # 1. the CLI (skip if `treg --version` already works)
-treg login                                   # 2. sign in — opens a browser; first login registers you
+treg login                                   # 2. sign in — opens a browser
 treg mcp install                             # 3. register treg's tools into this agent
 ```
 
 Step 3 writes the token from step 2, so the order matters — run out of order it exits without
-writing anything. Afterwards the human must **restart this agent** before the tools
-(`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`) appear. Until they do, nothing is
-blocked: every command on this page works through the CLI in the meantime.
+writing anything. The tools (`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`) appear
+after the agent restarts; until then everything on this page works through the CLI.
 
-A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
-If sign-in is needed, say so plainly and stop — never ask the human for a provider's API key, which
-is the thing treg exists to avoid.
-
-One tidy-up worth mentioning to the human, not doing silently: step 1 also drops a personal copy of
-this same skill into `~/.claude/skills/treg/`. It is harmless, but it duplicates what this plugin
-already gives you, and they may prefer to delete it.
+Step 1 also installs this same skill into the agent's own skills directory, which duplicates what
+the plugin already gives you — worth mentioning to the human, who can remove it.
 
 ---
 """
 
-# variant -> (target, bootstrap, stamp_version). One source, two shop windows.
+# variant -> (target, bootstrap, stamp_version). One source, three shop windows.
+#
+# Claude Code and Cursor share CLI_BOOTSTRAP: both give the agent a terminal, neither ships a
+# connector, and `treg mcp install` writes a verified config for both (mcp_install.py). Keeping one
+# string rather than two near-identical ones is what stops them drifting.
 VARIANTS = {
     "codex": (CODEX_TARGET, CODEX_BOOTSTRAP, False),
-    "claude": (CLAUDE_TARGET, CLAUDE_BOOTSTRAP, True),
+    "claude": (CLAUDE_TARGET, CLI_BOOTSTRAP, True),
+    "cursor": (CURSOR_TARGET, CLI_BOOTSTRAP, True),
 }
 
 
