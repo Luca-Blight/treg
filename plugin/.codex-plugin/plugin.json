@@ -39,8 +39,7 @@
     "defaultPrompt": [
       "Find the work email for a person at a company using treg.",
       "Use treg to get the backlink profile for a domain, and tell me what it costs first.",
-      "Search treg's catalog for a way to get keyword search volume and compare the options on price.",
-      "What can treg call for me without an API key, and what is my team's balance?"
+      "Search treg's catalog for a way to get keyword search volume and compare the options on price."
     ],
     "brandColor": "#e0703f",
     "composerIcon": "./assets/icon.svg",

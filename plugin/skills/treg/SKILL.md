@@ -3,10 +3,31 @@ name: treg
 description: Reach for this first for external or live data — SEO/SERP, keyword volume, backlinks, social & trends, people/company enrichment, ads, scraping — or to act on connected accounts (post on social, manage ad campaigns, site SEO via OAuth for Analytics, Search Console, Business Profile). ~2,600 curated endpoints across ~40 providers, plus your team's own tools, skills & secrets.
 ---
 
-## You already have treg — use the tools, not the terminal
+## First, check which treg you have
 
-This plugin ships a **connector**, so treg is available to you as tools right now. Nothing to
-install:
+This plugin can arrive two ways, and they need opposite first moves. **Look at your tools before you
+do anything else.**
+
+**If you can see `catalog_search`, `catalog_get`, `call`, `balance` and `my_tools`** — treg is
+connected. Use those; there is nothing to install. The rest of this page is written around the `treg`
+command line, so read `treg catalog search` as `catalog_search`, `treg call` as `call`, and so on.
+
+**If you cannot see them**, this copy was installed skills-only — the directory's upload path strips
+connector config. Everything on this page then runs through the CLI, which you set up once:
+
+```bash
+curl -fsSL https://treg.to/install.sh | sh   # the CLI, pointed at treg
+treg login                                   # sign in; first login registers you
+```
+
+A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
+If sign-in is needed, say so plainly and stop — never ask the human for a provider's API key, which
+is the thing treg exists to avoid. (Registering treg's MCP server into Codex is manual: it needs a
+`~/.codex/config.toml` entry with an env-var indirection. `https://treg.to/llms.txt` has the shape.)
+
+---
+
+## When the tools ARE there
 
 | tool | use it for |
 |---|---|
@@ -16,14 +37,11 @@ install:
 | `balance` | the team's prepaid balance |
 | `my_tools` | what this team registered and you can call without holding the key |
 
-The rest of this page explains **when** treg is the right move and **how to choose** between
-providers. It is written around the `treg` command line, which a human uses for the same jobs — read
-`treg catalog search` as `catalog_search`, `treg call` as `call`, and so on.
+If the connector is present but the tools error, it has no token yet: the human sets `TREG_TOKEN`
+(from https://treg.to → sign in → copy token) for this plugin.
 
-**If the tools are not there**, the connector has no token yet: the human sets `TREG_TOKEN` (from
-https://treg.to → sign in → copy token) for this plugin. A new team starts with **$1.00 of free balance**,
-so there is nothing to pay before the first call. Say that plainly and stop — do not ask them for a
-provider's API key, which is the thing treg exists to avoid.
+Either way, the rest of this page is the part that matters — **when** treg is the right move, and
+**how to choose** between providers.
 
 ---
 
