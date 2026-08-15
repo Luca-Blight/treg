@@ -4569,7 +4569,8 @@ createApp({
       this.billing=await this.api('/billing').catch(()=>null);
       if(this.billing){ this.topupAmount=this.billing.topup.default_usd;
         this.autoAmount=Math.round(this.billing.autotopup.amount_usd);
-        this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd); }
+        this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd);
+        this.loadBillingHistory(); }
       // The daily cap lives beside the balance for the user even though it is an org setting.
       this.capCfg=await this.api(`/orgs/${this.activeOrgId}/settings`).catch(()=>null);
       if(this.capCfg){ this.capUsd=(this.capCfg.daily_cap_micro/1e6).toFixed(2);
@@ -4624,8 +4625,6 @@ createApp({
         // a silently clamped limit is discovered as an outage mid-launch.
         this.capErr=this._errMsg(e, 'could not save that limit');
       }finally{ this.capBusy=false; } },
-        this.autoThreshold=Math.round(this.billing.autotopup.threshold_usd);
-        this.loadBillingHistory(); } },
     // Amounts come from our own credit blocks, so this list can never disagree with the balance above
     // it; Stripe supplies only the document links, and bhist.ok===false means those were unavailable.
     async loadBillingHistory(){ if(!this.canAdmin || !this.billing || !this.billing.configured){ this.bhist={items:[],loading:false,ok:true}; return; }
