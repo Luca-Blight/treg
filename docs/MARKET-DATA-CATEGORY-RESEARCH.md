@@ -103,7 +103,23 @@ to have picked one.
 
 ---
 
+## Status update (2026-08-14): eight added, one dropped
+
+All of tier 1 and 2 went through the fast path with LIVE bogus-key verification: coingecko, polygon,
+finnhub, twelvedata, fmp, eodhd, marketstack, tiingo are registered under the new "Market data"
+shelf, each entry recording its verified bad-key behaviour. Two traps found and dodged on the way:
+CoinGecko's demo host and Tiingo's /api/test both answer 200 to garbage, so both entries pin the
+path that genuinely rejects.
+
+**Alpha Vantage moved to the rejects below.** The connect entry cannot exist: the API served real
+quote data to a garbage key, and even premium endpoints answer 200 with an upsell note, so a pasted
+key can never be validated (the ScrapeCreators rule). Its shared-plan pilot rate in fx.yaml stands —
+platform-tier serving uses our own subscribed key, which needs no connect verify.
+
 ## Rejected, with reasons
+
+- **Alpha Vantage** — accepts ANY key (verified live 2026-08-14: `apikey=bogus123` returned the IBM
+  quote). A key provider whose key cannot be checked cannot be shipped.
 
 - **Yahoo Finance** — no official API. Every wrapper is unofficial and has been broken or
   legally pressured before. Same class of risk as Proxycurl, which the guide says to reject on sight.

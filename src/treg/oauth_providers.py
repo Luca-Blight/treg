@@ -1300,6 +1300,235 @@ LEADMAGIC = OAuthProvider(
 
 # ---- Advertising API-key providers (ad intelligence) -----------------------------------------
 
+# ---- Market data API-key providers -------------------------------------------------------------
+# The first category added under the shared-plan pricing ladder (docs/SHARED-PLAN-PRICING-PLAN.md);
+# provider selection: docs/MARKET-DATA-CATEGORY-RESEARCH.md. CoinGecko leads because it is the one
+# true credit-priced provider in the sector — its fx.yaml entry divides like Hunter's.
+
+COINGECKO = OAuthProvider(
+    service="coingecko",
+    display_name="CoinGecko",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your CoinGecko Pro API key",
+    token_header="x-cg-pro-api-key",
+    token_format="{secret}",  # raw key, no Bearer prefix
+    setup_url="https://www.coingecko.com/en/developers/dashboard",
+    setup_action_label="Get your CoinGecko API key",
+    setup_steps=(
+        "Sign up for a CoinGecko API plan (Basic and up) and open the developer dashboard.",
+        "Create an API key and copy it.",
+    ),
+    # The distinction that will bite users: free "demo" keys ride a DIFFERENT host
+    # (api.coingecko.com) with a different header, and that host answers 200 to anything — so a demo
+    # key can never be verified here. Saying so up front beats a confusing rejection.
+    setup_note="Needs a paid (Pro) key. Free demo keys use a different host and will not verify.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Crypto prices, market caps, volume and history across 17,000+ coins and 1,000+ exchanges.",
+    base_url="https://pro-api.coingecko.com/api/v3",
+    docs_url="https://docs.coingecko.com/reference/authentication",
+    # Free probe; validity is the HTTP status. Verified live 2026-08-14: a bogus key answers 401
+    # {"status":{"error_code":10002,...}} on the pro host, so the default reject-on-status works.
+    probe_path="/ping",
+)
+
+
+POLYGON = OAuthProvider(
+    service="polygon",
+    display_name="Polygon.io",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Polygon API key",
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://polygon.io/dashboard/keys",
+    setup_action_label="Get your Polygon API key",
+    setup_steps=(
+        "Sign up at polygon.io (rebranding to Massive) and open Dashboard → API Keys.",
+        "Copy the default key, or create one per environment.",
+    ),
+    setup_note="The free tier is 5 requests/min with 15-minute delayed data — fine for verifying.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="US stocks, options, indices, forex and crypto — real-time and deep history, tick-level.",
+    base_url="https://api.polygon.io",
+    docs_url="https://polygon.io/docs",
+    # Free-tier listable reference call; a bogus key answers 401 "Unknown API Key" (verified live
+    # 2026-08-14), so the default reject-on-status works.
+    probe_path="/v3/reference/tickers?limit=1",
+)
+
+FINNHUB = OAuthProvider(
+    service="finnhub",
+    display_name="Finnhub",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Finnhub API key",
+    token_header="X-Finnhub-Token",
+    token_format="{secret}",
+    setup_url="https://finnhub.io/dashboard",
+    setup_action_label="Get your Finnhub API key",
+    setup_steps=(
+        "Register at finnhub.io (no card needed) and open the dashboard.",
+        "Copy the API key shown at the top.",
+    ),
+    # Their free tier's terms, said before it bites: personal use only.
+    setup_note="Free-tier keys are licensed for personal, non-commercial use — a product needs a paid plan.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Real-time quotes, company fundamentals, earnings, and news sentiment.",
+    base_url="https://finnhub.io/api/v1",
+    docs_url="https://finnhub.io/docs/api",
+    # One free-tier quote; a bogus key answers 401 {"error":"Invalid API key."} (verified live 2026-08-14).
+    probe_path="/quote?symbol=AAPL",
+)
+
+TWELVEDATA = OAuthProvider(
+    service="twelvedata",
+    display_name="Twelve Data",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Twelve Data API key",
+    token_location="query",
+    token_param="apikey",
+    token_format="{secret}",
+    setup_url="https://twelvedata.com/account/api-keys",
+    setup_action_label="Get your Twelve Data API key",
+    setup_steps=(
+        "Create a Twelve Data account (free Basic plan: 800 requests/day).",
+        "Open Account → API keys and copy the key.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Equities, forex and crypto quotes and time series across global exchanges.",
+    base_url="https://api.twelvedata.com",
+    docs_url="https://twelvedata.com/docs",
+    # One-credit quote; a bogus key answers 401 {"code":401,...} (verified live 2026-08-14).
+    probe_path="/quote?symbol=AAPL",
+)
+
+FMP = OAuthProvider(
+    service="fmp",
+    display_name="Financial Modeling Prep",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your FMP API key",
+    token_location="query",
+    token_param="apikey",
+    token_format="{secret}",
+    setup_url="https://site.financialmodelingprep.com/developer/docs/dashboard",
+    setup_action_label="Get your FMP API key",
+    setup_steps=(
+        "Create an FMP account (free tier: 250 requests/day).",
+        "Open the developer dashboard and copy the API key.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Company fundamentals: statements, ratios, profiles, earnings and institutional data.",
+    base_url="https://financialmodelingprep.com/api/v3",
+    docs_url="https://site.financialmodelingprep.com/developer/docs",
+    # Free-tier profile call; a bogus key answers 401 {"Error Message": ...} (verified live 2026-08-14).
+    probe_path="/profile/AAPL",
+)
+
+EODHD = OAuthProvider(
+    service="eodhd",
+    display_name="EODHD",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your EODHD API token",
+    token_location="query",
+    token_param="api_token",
+    token_format="{secret}",
+    setup_url="https://eodhd.com/cp/settings",
+    setup_action_label="Get your EODHD API token",
+    setup_steps=(
+        "Register at eodhd.com and open Settings.",
+        "Copy the API token.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="End-of-day and historical prices across 70+ global exchanges, plus fundamentals.",
+    base_url="https://eodhd.com/api",
+    docs_url="https://eodhd.com/financial-apis/",
+    # A bogus key answers 401 with a PLAIN-TEXT body ("Unauthenticated") — fine, the connect verify
+    # only JSON-parses JSON responses and rejects on status (verified live 2026-08-14).
+    probe_path="/eod/AAPL.US?fmt=json",
+)
+
+MARKETSTACK = OAuthProvider(
+    service="marketstack",
+    display_name="Marketstack",
+    auth_kind="key",
+    token_label="API access key",
+    token_placeholder="your Marketstack access key",
+    token_location="query",
+    token_param="access_key",
+    token_format="{secret}",
+    setup_url="https://marketstack.com/dashboard",
+    setup_action_label="Get your Marketstack access key",
+    setup_steps=(
+        "Sign up at marketstack.com (free plan available).",
+        "Copy the API access key from the dashboard.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Global end-of-day and intraday stock prices — simple, cheap, 70+ exchanges.",
+    base_url="https://api.marketstack.com/v1",
+    docs_url="https://marketstack.com/documentation",
+    # A bogus key answers 401 {"error":{"code":"invalid_access_key",...}} (verified live 2026-08-14).
+    probe_path="/eod?symbols=AAPL",
+)
+
+TIINGO = OAuthProvider(
+    service="tiingo",
+    display_name="Tiingo",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Tiingo API token",
+    token_header="Authorization",
+    token_format="Token {secret}",
+    setup_url="https://www.tiingo.com/account/api/token",
+    setup_action_label="Get your Tiingo API token",
+    setup_steps=(
+        "Create a Tiingo account and open Account → API.",
+        "Copy the API token.",
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Market data",
+    summary="Equities with 30+ years of history, plus curated news and fundamentals.",
+    base_url="https://api.tiingo.com",
+    docs_url="https://www.tiingo.com/documentation/general/overview",
+    # NOT /api/test — that endpoint answers 200 with prose for a BAD key ("Auth Token was not
+    # correct"), the Apollo trap. The daily-metadata endpoint 403s cleanly {"detail":"Invalid
+    # token."} (verified live 2026-08-14), so reject-on-status works with this probe instead.
+    probe_path="/tiingo/daily/aapl",
+)
+
+
+# Alpha Vantage is DELIBERATELY absent. Its API served real quote data to a garbage key (verified
+# live 2026-08-14: bogus key -> HTTP 200 with the IBM quote; even premium endpoints answer 200 with
+# an upsell note), so a pasted key can never be validated at connect — the ScrapeCreators rule:
+# never ship a key provider whose key cannot be checked. Its fx.yaml shared-plan pilot rate is
+# unaffected (platform-tier serving uses OUR OWN subscribed key, which needs no connect verify).
+
 SPYFU = OAuthProvider(
     service="spyfu",
     display_name="SpyFu",
@@ -1497,6 +1726,8 @@ REGISTRY: dict[str, OAuthProvider] = {
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers
         LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC,
+        # Market data API-key providers
+        COINGECKO, POLYGON, FINNHUB, TWELVEDATA, FMP, EODHD, MARKETSTACK, TIINGO,
         # Advertising: API-key ad intelligence + unconfigured OAuth ad platforms
         SPYFU, APIFY, META_AD_LIBRARY, SERPAPI,
         MICROSOFT_ADS, SNAPCHAT_ADS, TIKTOK_ADS, PINTEREST_ADS,
@@ -1507,7 +1738,7 @@ DEFAULT_CAPABILITY = "read"
 
 # Shelf order in the marketplace. Anything carrying a category not named here sorts last, so a
 # provider added without one is visible rather than lost between the shelves.
-CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Community", "Other")
+CATEGORY_ORDER = ("SEO", "Advertising", "Social media", "Enrichment", "Market data", "Community", "Other")
 
 
 def get(service: str) -> OAuthProvider | None:
