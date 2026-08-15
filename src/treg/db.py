@@ -24,7 +24,12 @@ from .config import get_settings
 _db_url = get_settings().database_url
 _engine_kwargs: dict = {"future": True}
 if "sqlite" not in _db_url:
-    _engine_kwargs.update(pool_pre_ping=True, pool_recycle=300, pool_size=20, max_overflow=40)
+    # 5+10, not the 20+40 this shipped with. The pool is PER INSTANCE, and a rolling deploy runs two
+    # instances against one Postgres — 60 each meant 120 potential connections against a basic-plan
+    # ceiling of ~100, so a deploy could starve the database with no bug anywhere. 15 is generous for
+    # an async app on this plan; saturation now surfaces as our own pool queueing (visible, bounded)
+    # rather than Postgres refusing connections for everyone (the 2026-08-15 outage).
+    _engine_kwargs.update(pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=10)
 _engine = create_async_engine(_db_url, **_engine_kwargs)
 # Public: the audit writer opens its own session here (off the request path — rule #2).
 session_maker = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
@@ -54,6 +59,16 @@ async def init_db() -> None:
 
     async with _engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+        # Fail FAST if a migration cannot get its lock, instead of stopping the world. An ALTER on a
+        # hot table (callrecord is written by every call) needs an ACCESS EXCLUSIVE lock; without a
+        # lock_timeout it queues behind live traffic, and every NEW query then queues behind the
+        # waiting ALTER — both instances starve, the health check fails, and the shared database is
+        # left wedged for the instance that was healthy (the 2026-08-15 outage, root cause).
+        # With the timeout, a contended deploy FAILS CLEANLY in seconds: prod keeps serving on the
+        # old code, nothing is wedged, and the deploy is simply retried at a quieter moment.
+        if _engine.dialect.name == "postgresql":
+            await conn.execute(text("SET lock_timeout = '5s'"))
+            await conn.execute(text("SET statement_timeout = '120s'"))
         await conn.run_sync(_migrate_to_orgs)
 
 
