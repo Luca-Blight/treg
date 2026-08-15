@@ -14,7 +14,23 @@ searching the plugin directory that ChatGPT and Codex share.
     plugin/
     ├── .codex-plugin/plugin.json     the manifest + the listing copy
     ├── skills/treg/        GENERATED — do not edit by hand
-    └── assets/                       icon + logo (▚ in clay #e0703f)
+    └── assets/                       icon + logo (▚, black & white)
+
+## The assets
+
+`logo.png` (1024×1024) and `icon.png` (512×512) are the `▚` mark in **pure black and white** — white
+quadrants on a black rounded square. They are rendered from the geometry in
+`assets/brand/twitter/avatar-dark.svg`, scaled rather than upscaled, so re-rendering at any size is
+exact:
+
+    viewBox 512  ·  outer rx 112  ·  quadrants 140.5² at (111,111) and (260.5,260.5), rx 20
+
+`icon.svg` is deliberately the **filled** variant, not the transparent `mark-white.svg`: a white mark
+on transparency vanishes on a light background, and `composerIcon` renders in a host UI whose
+backdrop we do not control.
+
+Note `interface.brandColor` is still clay `#e0703f` — the product colour on treg.to. That is an
+accent beside a monochrome mark, not a conflict, but change both together if the brand moves.
 
 ## The skill is generated
 

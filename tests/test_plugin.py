@@ -134,6 +134,14 @@ def test_manifest_declares_what_the_directory_reads(manifest):
         assert iface.get(field), f"plugin.json interface is missing `{field}`"
 
 
+def test_at_most_three_default_prompts(manifest):
+    """OpenAI's upload form rejects the bundle outright: "`interface.defaultPrompt` must contain at
+    most three prompts." Nothing local surfaced that — it cost an upload round-trip to find, which is
+    exactly the kind of limit worth pinning rather than rediscovering."""
+    prompts = manifest["interface"]["defaultPrompt"]
+    assert 1 <= len(prompts) <= 3, f"the directory allows at most 3 default prompts, found {len(prompts)}"
+
+
 def test_every_declared_path_exists(manifest):
     """A path that resolves on the author's machine and nowhere else is the classic packaging bug."""
     paths = [manifest["skills"], manifest["interface"]["composerIcon"], manifest["interface"]["logo"]]
