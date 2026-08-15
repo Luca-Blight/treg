@@ -115,6 +115,7 @@ platforms:
 
   # --- Market data: prices & financial markets --------------------------------------------------
   crypto: {label: "Crypto Market Data", category: "Market data", featured: 1, summary: "Live and historical prices, market caps, trends and exchanges across 17,000+ coins."}
+  stocks: {label: "Stock Market Data", category: "Market data", featured: 2, summary: "End-of-day and intraday stock prices, tickers, splits and dividends across global exchanges."}
 
 capabilities:
   # --- SEO / search -----------------------------------------------------------------------------
@@ -1184,3 +1185,10 @@ capabilities:
   crypto.market.trending: "Coins trending right now"
   crypto.market.global: "Global crypto market statistics"
   crypto.exchanges.list: "Crypto exchanges with volume and trust score"
+  stocks.eod.history: "End-of-day price history for a ticker"
+  stocks.eod.latest: "Latest end-of-day prices"
+  stocks.intraday: "Intraday prices for a ticker"
+  stocks.tickers.search: "Find tickers and the exchanges they trade on"
+  stocks.exchanges.list: "Stock exchange directory"
+  stocks.actions.splits: "Stock split history"
+  stocks.actions.dividends: "Dividend history"
