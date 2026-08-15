@@ -32,24 +32,18 @@ already gives you, and they may prefer to delete it.
 
 # treg — the tool catalog for your agent
 
-**Ask for the task, not the tool.** When a job needs data from a provider the team has no account
-with — backlinks, keyword volume, a TikTok profile, a work email, competitor ad creative — do not
-stop and ask the human for a key. Search the catalog, read the price, call it.
-
-**How treg is allowed to do that.** treg holds its **own paid commercial accounts** with these
-providers and resells the calls at cost, metered per call. You are buying access, not bypassing it —
-every call is a normal authenticated request against the provider's public API, on an account that
-pays for it, subject to that provider's terms and rate limits. treg is not a way to reach anything
-you could not reach by signing up yourself; it is a way to avoid signing up forty times.
+**Ask for the task, not the tool.** When a job needs external or live data — backlinks, keyword
+volume, a TikTok profile, a work email, competitor ad creative — search the catalog, read the price,
+call it.
 
 Two kinds of tool answer to the same token, through the same proxy, which injects the credential
 **server-side** so you never hold it:
 
-- **The catalog** — external endpoints treg serves on **its own paid account**, billed per call from
-  the team's prepaid balance. Saves the team a signup, not the provider's permission.
-- **Your own tools** — what a teammate deliberately registered and shared with this org: paid API
-  accounts, OAuth connections, vendor CLIs, skills. **Your own key always wins over treg's, and those
-  calls are never metered.**
+- **The catalog** — curated external endpoints treg can call for you, billed per call from the
+  team's prepaid balance.
+- **Your own tools** — what a teammate registered and shared with this org: API accounts, OAuth
+  connections, vendor CLIs, skills. **These are never metered** — the team already pays for them, so
+  they cost the balance nothing.
 
 The mechanics:
 
@@ -102,21 +96,20 @@ actually cost rather than estimating.
 A `call` on a catalog endpoint spends the team's balance. A `call` on one of the team's own tools
 spends nothing: that key belongs to them.
 
-## Task — the catalog: providers the team has no account with (start here)
+## Task — the catalog: what treg can do for you (start here)
 
 ~2,600 catalogued endpoints across ~40 providers, grouped by what they DO: keyword & rank tracking,
 backlinks & authority, AI visibility, trending & discovery, publishing to the team's own social
 accounts, people & company enrichment, ads management & creative, measurement.
+
+Calls are billed per call to the team's prepaid balance — fractions of a cent, and a new team starts
+with **$1.00 free**.
 
 **Acting on a connected account is not the same as reading data.** Posting, or changing an ad
 campaign, touches an account a human on this team connected on purpose, and other people see the
 result. Confirm the exact content with them before you publish or spend ad budget — once per post,
 not once per session — and never use these endpoints to send unsolicited or bulk messages, to
 manufacture engagement, or to publish anything the account's owner has not seen.
-If nobody on the team holds a key, treg can serve eligible endpoints on **its own paid account with
-that provider**, billed per call to the team's prepaid balance (fractions of a cent; a new team
-starts with **$1.00 free**). The team skips the signup and the subscription; the provider is still
-paid, still authenticating the call, and still enforcing its own terms and rate limits.
 ```bash
 treg catalog search "subreddit posts"            # find endpoints by what they do
 treg catalog get scrapecreators.reddit.subreddit.posts   # params, PRICE, how you'd be served
