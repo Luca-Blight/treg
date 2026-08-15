@@ -23,23 +23,6 @@ The mechanics:
 - A **tool** = an upstream base URL + credential **bindings**. A **skill/bundle** = a recipe
   (SKILL.md) + its secrets + its tool(s). The proxy *relays, never models* the upstream.
 
-## Running treg commands — group the reads, ask for the rest
-
-**Reads change nothing and need no confirmation.** Browsing the catalog is discovery, not action, so
-do not stop between these: `treg catalog …`, `treg tool ls`, `treg skill ls`, `treg balance`,
-`treg audit`, `treg org pins`, `treg health`. If your runtime prompts for shell commands, ask for
-these **once**, as a group — halting after `treg catalog search` to ask whether you may run
-`treg catalog get` is friction with no safety in it.
-
-**Spending is the human's call.** The price shows before you call (`treg catalog get`). Tell them
-first; for a run of cheap calls, confirm the batch once rather than per call.
-
-**Everything that changes something asks separately, every time** — say what it will do before you
-run it: registering a credential or tool, sharing something with the team, changing team settings,
-and anything that acts on a connected account (publishing, or spending ad budget). These reach the
-human's own accounts and what other people can see. Approval for a catalog search is not approval
-for those.
-
 ## First: install + sign in
 ```bash
 curl -fsSL {BASE}/install.sh | sh     # installs the CLI + points it here
@@ -74,11 +57,6 @@ spends nothing: that key belongs to them.
 backlinks & authority, AI visibility, trending & discovery, publishing to the team's own social
 accounts, people & company enrichment, ads management & creative, measurement.
 
-**Acting on a connected account is not the same as reading data.** Posting, or changing an ad
-campaign, touches an account a human on this team connected on purpose, and other people see the
-result. Confirm the exact content with them before you publish or spend ad budget — once per post,
-not once per session — and never use these endpoints to send unsolicited or bulk messages, to
-manufacture engagement, or to publish anything the account's owner has not seen.
 ```bash
 treg catalog search "subreddit posts"            # find endpoints by what they do
 treg catalog get scrapecreators.reddit.subreddit.posts   # params, PRICE, how you'd be served
@@ -86,9 +64,8 @@ treg call scrapecreators.reddit.subreddit.posts --query subreddit=news
 treg balance                                     # the prepaid balance + recent charges
 treg catalog request "<what you need>"           # searched, not there? file it — steers what's added next
 ```
-Rules for spending someone's balance:
-- The price shows BEFORE you call (`treg catalog get`). **Tell the human the price first**; for a
-  series of cheap calls, confirm the batch once, not per call.
+Notes:
+- Every endpoint's price is in `treg catalog get`, before you call it.
 - HTTP **402** = out of balance, with a machine-actionable body (`balance_micro`,
   `estimated_cost_micro`, `topup_url`). Recovery: `treg balance` → top up in the dashboard
   (Team → Billing) → or store the org's own key for that provider (own keys are never billed
@@ -143,10 +120,8 @@ it. Works for GET/POST/PUT/PATCH/DELETE.
 Only tools this org has registered resolve. Discover them with `treg tool ls` · `treg skill ls`.
 
 ## Task — share your keys & skills so teammates' agents can use them
-**Bulk (the fast path):** the human points treg at their **own** directory; it lists the provider
-keys it recognises in that `.env` and the skills in its subdirs, and registers **only the ones they
-tick**. Nothing is read from anywhere they did not name, and nothing is uploaded without that
-confirmation — never run this against a directory you were not pointed at:
+**Bulk (the fast path):** run it in the directory the human names. It lists the provider keys it
+recognises in that `.env` and the skills in its subdirs, and registers only the ones they tick:
 ```bash
 treg upload                       # both sides of the cwd; `treg upload env|skills --dir <d>` to restrict
 ```
