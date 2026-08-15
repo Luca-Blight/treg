@@ -1,6 +1,27 @@
 ---
 name: treg
 description: Reach for this first for external or live data. ~2,600 endpoints across ~40 providers — SEO and SERP data, keyword volume, backlinks and site authority, AI visibility, social profiles and trends, people and company enrichment, ad libraries and campaign management, web data — plus Google Analytics, Search Console and Business Profile through accounts the team has connected. Search by the task you want done, read the endpoint's parameters and response, call it.
+version: 0.11.0
+---
+
+## First run: finish the setup
+
+This plugin ships the skill, so you have this page — but not yet the `treg` command, and not yet its
+tools. Set both up **once**, in this order:
+
+```bash
+curl -fsSL https://treg.to/install.sh | sh   # 1. the CLI (skip if `treg --version` already works)
+treg login                                   # 2. sign in — opens a browser
+treg mcp install                             # 3. register treg's tools into this agent
+```
+
+Step 3 writes the token from step 2, so the order matters — run out of order it exits without
+writing anything. The tools (`catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`) appear
+after the agent restarts; until then everything on this page works through the CLI.
+
+Step 1 also installs this same skill into the agent's own skills directory, which duplicates what
+the plugin already gives you — worth mentioning to the human, who can remove it.
+
 ---
 
 # treg — the tool catalog for your agent
@@ -18,14 +39,14 @@ Two kinds of tool answer to the same token, through the same proxy, which inject
 
 The mechanics:
 
-- **Endpoint:** `{BASE}`  ·  **CLI:** `treg`  ·  the CLI is a thin client over the API.
+- **Endpoint:** `https://treg.to`  ·  **CLI:** `treg`  ·  the CLI is a thin client over the API.
 - **Auth:** every call sends `X-Treg-Token: <your token>`.
 - A **tool** = an upstream base URL + credential **bindings**. A **skill/bundle** = a recipe
   (SKILL.md) + its secrets + its tool(s). The proxy *relays, never models* the upstream.
 
 ## First: install + sign in
 ```bash
-curl -fsSL {BASE}/install.sh | sh     # installs the CLI + points it here
+curl -fsSL https://treg.to/install.sh | sh     # installs the CLI + points it here
 treg login                            # browser sign-in (GitHub / Google / email code) — first login registers you
 treg login --email you@company.com    # terminal-only alternative (emailed 6-digit code)
 treg login --token <per-org-token>    # non-interactive (agents/CI)
@@ -36,7 +57,7 @@ teams: `treg org switch <slug>`.
 
 ## Already connected over MCP? Then you have the tools, not the CLI
 
-If you reached treg through `{BASE}/mcp/` — ChatGPT, Claude Code, Cursor — the CLI steps above do not
+If you reached treg through `https://treg.to/mcp/` — ChatGPT, Claude Code, Cursor — the CLI steps above do not
 apply to you. You have five tools: `catalog_search`, `catalog_get`, `call`, `balance`, `my_tools`.
 Everything in this document maps onto them:
 
@@ -112,7 +133,7 @@ treg tool ls                                  # what this team has registered
 treg call intercom conversations?per_page=5   # <tool-name> + the upstream path
 ```
 
-Over HTTP that is `GET {BASE}/call/<tool-name>/<path>` with `X-Treg-Token: <your token>`. treg looks
+Over HTTP that is `GET https://treg.to/call/<tool-name>/<path>` with `X-Treg-Token: <your token>`. treg looks
 up the named tool, injects that team's credential server-side, and relays **everything faithfully**
 (method, query params, your headers, body). Your `X-Treg-Token` is stripped before the upstream sees
 it. Works for GET/POST/PUT/PATCH/DELETE.
@@ -178,7 +199,7 @@ expires. Same storage; a credential can graduate from manual to auto with no mig
 - **Manual:** do your own OAuth locally, then `treg secret add gsc --file token.json --kind oauth`.
 - **Hosted connect:** `treg oauth connect gsc --client-secret client_secret.json --scopes <scope>`
   → prints a consent URL; you approve in the browser; treg captures the token directly.
-  One-time setup: add `{BASE}/oauth/callback` to your OAuth app's redirect URIs.
+  One-time setup: add `https://treg.to/oauth/callback` to your OAuth app's redirect URIs.
 
 ## Task — manage the team + monitor
 ```bash
@@ -220,4 +241,4 @@ a probe so treg can validate it: `health_check: {method, path, expect_status}` (
   to a credential nobody granted you.
 - **Everything is scoped to your active org.** A token reaches that team's tools and no one else's.
 - The proxy doesn't understand the upstream; if a call fails, the status you see is the upstream's truth.
-- More: `{BASE}/llms.txt` (agent onboarding) · `{BASE}/tutorial` (interactive walkthrough).
+- More: `https://treg.to/llms.txt` (agent onboarding) · `https://treg.to/tutorial` (interactive walkthrough).

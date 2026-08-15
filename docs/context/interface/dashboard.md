@@ -152,7 +152,7 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
   Providers are loaded on entering the view (`go('secrets')` also fires `loadConnections` when the
   list is empty) so the suggestions exist on a cold deep link.
 - **Team** (`view==='orgs'`) — the active team, now split into **tabs** (`orgTab`):
-  **Members · Projects · Policy · Team settings**. (The former **My teams** tab is gone — it
+  **Members · Projects · Policy · Billing · Team settings**. (The former **My teams** tab is gone — it
   duplicated the sidebar picker; its New team / Join by code / Paste token actions live in Team
   settings now.) Header reads `Team: {activeName} — you are {activeRole}` and points at the sidebar
   picker for switching.
@@ -174,6 +174,14 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
     argv deny patterns with their source (skill vs catalog), under a line naming all three deny
     layers — HTTP rules, argv patterns, OS sandbox — so the whole "what is blocked" picture is one
     screen.
+  - **Billing** (admin+) — balance, the top-up presets, the auto-top-up toggle with its verbatim
+    PSD2/SCA mandate text, and below them **Payment history**: date, amount, an `auto` marker, and one
+    link per row — *Invoice* when Stripe issued one (manual top-ups do; automatic ones can't), else
+    *Receipt*, else an em dash. Amounts come from our own ledger and the links from Stripe, so when
+    Stripe is unreachable the table still renders and a line under it says the links, not the numbers,
+    are missing. A **Manage billing** button opens Stripe's hosted portal (card, billing address, tax
+    ID, the full invoice archive); it is hidden until `billing.portal` is true, which needs a Stripe
+    customer, which a team gets on its first payment — so a new team never sees a button that errors.
   - **Team settings** — deliberately JUST the **Danger zone** (leave / delete), visible to EVERY role
     (leaving is self-service, and `loadOrgAdmin` lands a non-admin here). New team / Join by code /
     Paste token live only in the sidebar picker — cut from this tab on founder review; a personal

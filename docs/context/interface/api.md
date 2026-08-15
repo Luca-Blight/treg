@@ -305,6 +305,13 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `web/llms.txt` as `text/plain` with `{BASE}` templated from `public_url` — the [llms.txt](https://llmstxt.org)
   agent-onboarding file (call protocol + discovery + auth + CLI + skills + doc links). See [dashboard](dashboard.md).
   `install_sh` (`GET /install.sh`, `{BASE}`-templated) serves the CLI installer (`web/install.sh`).
+  `well_known_skills_index` (`GET /.well-known/skills/index.json`) + `well_known_skill_md`
+  (`GET /.well-known/skills/treg/SKILL.md`) advertise treg's own skill under the agentskills.io
+  convention, making **this host** a skill source with no registry in between (Hermes reads it
+  directly). The index's `description` comes from the skill's frontmatter at request time via
+  `_skill_frontmatter()` — never a second copy — and the SKILL.md route is the same `_serve_md` as
+  `/skill.md`, so `{BASE}` templates to the **serving** host and a self-hosted registry advertises
+  itself. See [skill.md](skill.md) for the other three distribution doors.
   `terms_page` (`GET /terms`) + `privacy_page` (`GET /privacy`) serve the hosted registry's legal pages
   (`_legal_page`, no-cache) with `legal_css` (`GET /legal.css`) as the shared skin — `/privacy` is also
   the URL given to OAuth providers at app-verification time, so don't rename it. Provider brand marks are
