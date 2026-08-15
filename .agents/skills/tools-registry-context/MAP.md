@@ -10,10 +10,18 @@ Regenerate via `scripts/build-map.py`.
 
 | Source file | Documented in |
 |---|---|
+| `.claude-plugin/marketplace.json` | interface/skill.md |
+| `.claude-plugin/plugin.json` | interface/skill.md |
 | `README.md` | foundation/charter.md |
+| `dsh/cordis.patch.yml` | interface/skill.md |
+| `dsh/index.js` | interface/skill.md |
 | `examples/proxy-demo/server.js` | architecture/local-proxy.md |
 | `external:meetings/2026-06-30-jason-tools-registry.md` | foundation/charter.md, reference/glossary.md |
+| `package.json` | interface/skill.md |
+| `plugin/.codex-plugin/plugin.json` | interface/skill.md |
+| `plugins/treg/.cursor-plugin/plugin.json` | interface/skill.md |
 | `render.yaml` | ops/deploy.md |
+| `scripts/build_plugin.py` | interface/skill.md |
 | `src/treg/__main__.py` | ops/deploy.md |
 | `src/treg/agents.py` | interface/cli.md |
 | `src/treg/analytics.py` | architecture/data-model.md |
@@ -21,7 +29,6 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
 | `src/treg/catalog_store.py` | architecture/catalog.md, interface/api.md |
-| `src/treg/catalog/fx.yaml` | architecture/catalog.md, architecture/money.md |
 | `src/treg/cli.py` | interface/cli.md, interface/onboarding.md, interface/shell.md |
 | `src/treg/config.py` | architecture/super-admin.md, guides/expanding-a-category.md, ops/deploy.md |
 | `src/treg/convert.py` | interface/cli.md |
@@ -38,6 +45,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/localproxy.py` | architecture/local-proxy.md |
 | `src/treg/localrun.py` | architecture/local-run.md |
 | `src/treg/mcp.py` | architecture/mcp-oauth.md |
+| `src/treg/mcp_install.py` | interface/skill.md |
 | `src/treg/mcp_oauth.py` | architecture/mcp-oauth.md |
 | `src/treg/models.py` | architecture/data-model.md, architecture/money.md, architecture/multi-tenancy.md |
 | `src/treg/oauth.py` | architecture/auth-secrets.md |
@@ -67,7 +75,7 @@ Regenerate via `scripts/build-map.py`.
 | Fragment | Sources |
 |---|---|
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
-| `architecture/catalog.md` | `catalog_store.py`, `endpoint_stats.py`, `fx.yaml` |
+| `architecture/catalog.md` | `catalog_store.py`, `endpoint_stats.py` |
 | `architecture/data-model.md` | `models.py`, `db.py`, `audit.py`, `analytics.py`, `ratestore.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
@@ -86,6 +94,6 @@ Regenerate via `scripts/build-map.py`.
 | `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `demo.py`, `cli.py`, `index.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
-| `interface/skill.md` | `skill.md` |
+| `interface/skill.md` | `skill.md`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js` |
 | `ops/deploy.md` | `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |
 | `reference/glossary.md` | `2026-06-30-jason-tools-registry.md` |
