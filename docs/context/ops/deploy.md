@@ -195,3 +195,19 @@ a conversation rather than an env-var edit that lifts the rail for every team at
 It is a **blast-radius limit**, not a billing control: it exists because auto-top-up refills the
 balance, so the balance alone is not a ceiling against a runaway agent or a mispriced catalog entry.
 Enforced fail-closed.
+
+## A db.py change needs a Postgres-shaped deploy plan
+
+SQLite cannot catch this class: it has no connection pool and no lock queue. Two rules, both from the
+2026-08-15 outage (an ALTER on `callrecord` queued behind live traffic, every new query queued behind
+the ALTER, both instances starved, and the shared Postgres stayed wedged until a database restart):
+
+- Startup migrations run with `lock_timeout = 5s` (set in `init_db`, postgres only). A contended
+  deploy therefore FAILS CLEANLY — prod keeps serving the old code — and the right response is to
+  redeploy at a quieter moment, not to raise the timeout.
+- The pool is per instance and a rolling deploy runs two: keep `pool_size + max_overflow` such that
+  DOUBLE it stays under the database plan's connection ceiling. A guard test pins this.
+
+If a deploy fails with a lock timeout in the logs, that is the mechanism working. If the database
+itself stops accepting connections, restart the POSTGRES resource, not the web service — an app
+restart cannot release server-side slots (learned the hard way).
