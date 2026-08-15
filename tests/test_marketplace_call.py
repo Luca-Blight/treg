@@ -1035,3 +1035,20 @@ async def test_an_upstream_429_releases_the_hold(clients: AsyncClient, platform_
     assert kinds[:2] == ["release", "reserve"], kinds
     row = await _telemetry(clients)
     assert row["cost_charged_micro"] == 0
+
+
+async def test_the_SAME_KEY_with_a_DIFFERENT_QUERY_is_refused_end_to_end(clients: AsyncClient,
+                                                                         platform_on):
+    """PR #122's fingerprint fix, wired. The function-level test passes the query EXPLICITLY, so it
+    cannot notice the call site failing to pass it — and `query` has a "" default, so a missed call
+    site silently reverts the fix while every function test stays green. (The same shape as the
+    purchase-pointer strip that was tested as a helper while production kept the link.)
+
+    Through the real path: same label, different query string → 422, never the stored answer."""
+    first = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "q-fp"})
+    assert first.status_code == 200, first.text
+    second = await clients.get(f"/call/{EP}?aweme_id=8", headers={"Idempotency-Key": "q-fp"})
+    assert second.status_code == 422, (
+        f"a DIFFERENT query under the same key must be refused, got {second.status_code}: "
+        f"{second.text[:120]}")
+    assert "different request" in second.json()["detail"]
