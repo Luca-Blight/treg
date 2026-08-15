@@ -127,6 +127,18 @@ PaymentIntent and therefore has **no** invoice, only a receipt: attaching one wo
 the automatic charge as InvoiceItem + Invoice paid off-session, rewriting the money path and its
 idempotency guarantees for the minority of payments. Say "invoice" only about the manual path.
 
+The address on that invoice comes from `billing_address_collection="required"` **plus**
+`customer_update={"address": "auto", "name": "auto"}` on the same session. Both are needed: the first
+asks, the second persists the answer onto the Customer so the next top-up and the portal's invoice
+archive already have it. Collecting without `customer_update` looks like it works and stores nothing.
+
+**A promotion code discounts the price, it does not bonus the balance.** `allow_promotion_codes=True`
+puts the code field on the top-up Checkout (codes are created in the Stripe dashboard, so a campaign
+needs no deploy). Because the webhook credits `amount_total` — what Stripe actually collected — 20%
+off means $40 paid and $40 credited. "Pay $40, get $50" would be a `ledger.grant` on top and is not
+built. A 100%-off code collects nothing, so the session credits nothing: `_on_checkout_completed`
+drops it as `zero amount`. Grant free balance through `ledger.grant`, never through a Stripe coupon.
+
 Turning `invoice_creation` on makes Stripe emit `invoice.created` / `invoice.paid` for every top-up.
 `handle_webhook_event` drops them, deliberately: crediting on an invoice event as well as on the
 PaymentIntent would be a second door onto the same money. The invoice is a document; the

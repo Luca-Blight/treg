@@ -266,6 +266,17 @@ async def create_topup_checkout(
     which is what a finance team actually accepts. It is post-purchase — the invoice appears once the
     payment succeeds, not when the session opens — so nothing here changes what the payer sees.
 
+    `billing_address_collection` + `customer_update` are what put a real address on that invoice. The
+    address is asked for on the Checkout page and written back to the Customer, so the NEXT top-up —
+    and every portal-rendered invoice — already has it. Without `customer_update` Stripe collects the
+    address for the payment and then throws it away, which is the failure mode that looks like it
+    works.
+
+    `allow_promotion_codes` shows the "Add promotion code" field. Note what a discount does downstream:
+    the webhook credits `amount_total`, i.e. what Stripe actually collected, so 20% off means the payer
+    pays $40 and is credited $40 of balance — a discount on the price, NOT a bonus on the balance. A
+    "pay $40, get $50" promotion is a different mechanism (`ledger.grant`) and is not built.
+
     Currency is pinned to USD explicitly — the Stripe account's own default is AUD, and inheriting it
     would charge a number the ledger would then credit as dollars.
     """
@@ -307,6 +318,14 @@ async def create_topup_checkout(
                 "metadata": {"treg_org_id": str(org.id), "treg_kind": "topup"},
             },
         },
+        # Billing identity for that invoice (see docstring). "required" asks every payer, not only the
+        # ones whose payment method forces it; `customer_update` is what persists the answer onto the
+        # Customer instead of onto this one payment.
+        billing_address_collection="required",
+        customer_update={"address": "auto", "name": "auto"},
+        # The promotion-code field. Codes themselves are created in the Stripe dashboard, so a campaign
+        # needs no deploy here.
+        allow_promotion_codes=True,
         # Idempotent per (org, amount, minute): a double-clicked "Add funds" reuses the same session
         # instead of opening a second one the payer might also complete.
         metadata={"treg_org_id": str(org.id), "treg_kind": "topup"},
