@@ -3,10 +3,15 @@ title: The shippable tools-registry skill (3 personas)
 status: shipped
 sources:
   - src/treg/web/skill.md
+  - src/treg/mcp_install.py
   - scripts/build_plugin.py
   - .claude-plugin/plugin.json
   - .claude-plugin/marketplace.json
   - plugin/.codex-plugin/plugin.json
+  - plugins/treg/.cursor-plugin/plugin.json
+  - package.json
+  - dsh/cordis.patch.yml
+  - dsh/index.js
 related:
   - interface/cli.md
   - interface/api.md
@@ -38,7 +43,7 @@ keep the three in sync when the API/CLI change.
 
 ## Four doors, one source
 
-The same file reaches agents four ways. Only the first is hand-written; the rest are **generated or
+The same file reaches agents six ways. Only the first is hand-written; the rest are **generated or
 served**, because a second copy of the product's most-read page is a copy that rots.
 
 | door | artifact | who reaches it |
@@ -46,11 +51,12 @@ served**, because a second copy of the product's most-read page is a copy that r
 | the installer | `install.sh` → `treg skill bootstrap` → every detected agent's skills dir | people who ran the curl one-liner |
 | Claude Code plugin | `.claude-plugin/` + generated `skills/treg/SKILL.md` (repo root) | `/plugin marketplace add superdesigndev/treg` |
 | Codex/ChatGPT plugin | `plugin/.codex-plugin/` + generated `plugin/skills/treg/SKILL.md` | the directory ChatGPT and Codex share |
+| Cursor plugin | `.cursor-plugin/marketplace.json` + generated `plugins/treg/skills/treg/SKILL.md` | the Cursor marketplace (plugin root is never the repo root) |
+| DeepSeek Harness bundle | root `package.json` (`dsh.bundle`) + `dsh/cordis.patch.yml` + generated `dsh/skills/treg/SKILL.md` | `dsh plugin --profile <name> add github:superdesigndev/treg` |
 | the domain itself | `GET /.well-known/skills/index.json` + `/.well-known/skills/treg/SKILL.md` | anything speaking the agentskills.io convention (Hermes reads this directly) |
 
-`scripts/build_plugin.py` renders both plugin copies from the one source and `--check` fails if
-either is stale (`tests/test_plugin.py`). The two variants differ **only** in their prepended
-bootstrap, because they arrive in opposite worlds: the Codex plugin ships an MCP connector, so its
+`scripts/build_plugin.py` renders every plugin copy from the one source and `--check` fails if any is
+stale (`tests/test_plugin.py`). The variants differ **only** in their prepended bootstrap, because they arrive in opposite worlds: the Codex plugin ships an MCP connector, so its
 bootstrap says *use the tools, not the terminal*; the Claude plugin declares **no connector in its
 manifest** — so it installs with no token and nothing waits on a directory review — and its bootstrap
 does the opposite, walking the agent through `install.sh` → `treg login` → `treg mcp install` so the
@@ -59,6 +65,17 @@ end state; the order in that bootstrap is load-bearing, because `treg mcp instal
 writing when it runs before there is a token. The Claude copy also gets a `version:` stamped into its
 frontmatter, which ClawHub requires and Claude Code ignores; that stamp is what lets one file satisfy
 both registries.
+
+**DeepSeek Harness** is the odd one out, and the only door that ships the connector *and* the CLI
+path in one zero-config install. dsh reads no manifest: it installs an npm package whose
+`package.json` declares `dsh.bundle`, pointing at a config layer that composes into the user's
+profile. That layer carries a treg MCP row whose `disabled` expression is evaluated at boot, so it
+stays off until `TREG_TOKEN` is in the environment — the same "no always-on tools that 401" stance as
+the Claude manifest, but expressible as a row rather than an omission. Its bootstrap is its own for
+two reasons the others do not have: the tools are namespaced (`mcp__treg__call`, not `call`), and
+`treg mcp install` cannot help here (it writes Claude Code / Cursor / opencode configs, never a dsh
+profile), so `mcp_install.py` reports dsh as a MANUAL agent pointing at the bundle. See
+[docs/DSH-PLUGIN.md](../../DSH-PLUGIN.md).
 
 The Claude variant sits at the **repo root**, not under `plugin/`, because that single path is
 simultaneously what Claude Code's loader auto-discovers, what `npx skills add` resolves, and what
