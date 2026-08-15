@@ -1192,3 +1192,8 @@ capabilities:
   stocks.exchanges.list: "Stock exchange directory"
   stocks.actions.splits: "Stock split history"
   stocks.actions.dividends: "Dividend history"
+  stocks.quote.live: "Current quote for a ticker (live or delayed per plan)"
+  stocks.company.profile: "Company profile behind a ticker"
+  stocks.company.news: "News for a specific company"
+  stocks.fundamentals.metrics: "Fundamental metrics and ratios for a ticker"
+  stocks.market.status: "Is the market open right now"
