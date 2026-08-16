@@ -19,6 +19,14 @@ A catalogued endpoint can be served on **treg's own key** — no provider signup
 means treg pays the provider and bills the team. That needs a balance, a way to top it up, and a way
 to prove afterwards that the numbers were real. Three modules, one job each:
 
+Two wallets of treg's spend through this machinery, and only these two: **tier-4 platform keys**
+(`TREG_PLATFORM_KEY_*`) and **oauth-billed apps** — providers like X whose upstream bills the app
+owner per use, so even a call on the org's *own* connection spends treg's prepaid credits
+(`MarketplaceCall.billed_oauth`; detection and rates live in
+[auth-secrets](auth-secrets.md)). Both run the same reserve→relay→settle path in `api.py`, share the
+fail-closed daily cap, and are distinguished in ledger meta by `tier: platform` vs `tier: oauth`.
+An org's own key/credential on any *other* provider is never metered — there the org's account pays.
+
 | Module | Job | May it write money? |
 |---|---|---|
 | `ledger.py` | the only code path that moves money | **yes — exclusively** |

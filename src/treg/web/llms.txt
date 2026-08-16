@@ -24,7 +24,10 @@ Two kinds of tool answer to the same token, through the same `/call/`:
   subscription.
 - **Your own tools** — anything a teammate registered: an internal service, a paid API account, an
   OAuth connection, a vendor CLI, a SKILL.md. Callable by the whole team, with the credential held
-  server-side. **Your own key always wins over treg's, and those calls are never metered.**
+  server-side. **Your own key always wins over treg's, and those calls are never metered.** One
+  carve-out: an X (Twitter) connection made through treg's own app is metered per call — X bills
+  the app owner per use, whoever's account consented. A connection made with your own X developer
+  app (BYO OAuth) stays unmetered.
 
 Multi-tenant: a token = a (user, org) membership; resources are org-scoped.
 
@@ -197,7 +200,9 @@ Money notes for agents:
 
 The catalog is the public half; this half is yours. Anything a teammate registered — an internal
 service, a paid API account, an OAuth connection, a vendor CLI — is callable by the whole team with
-the credential held server-side, and never metered. Discover what is there:
+the credential held server-side, and never metered (the one exception: X connections through treg's
+app — X bills the app owner per use, so those calls are priced like catalog calls and return the
+cost the same way). Discover what is there:
 
 - CLI: `treg tool ls` - names, hosts, bindings (which credential is injected where).
 - API: `GET {BASE}/tools` with your token → JSON list of `{name, base_url, host, bindings}`.
@@ -322,7 +327,9 @@ life of the grant — a person in several teams is asked rather than guessed at.
 team's balance, because that is the question that actually matters there.
 
 A `call` on a CATALOG endpoint spends the team's balance and returns `cost_usd`. A `call` on one of
-the team's OWN tools is unmetered and carries no cost — the key is theirs, not ours to bill.
+the team's OWN tools is unmetered and carries no cost — the key is theirs, not ours to bill. (X
+connections through treg's app are the exception: X bills the app owner per use, so those calls
+spend the balance and report a cost like catalog calls.)
 
 Clients that register dynamically (RFC 7591) and clients that present a client-id metadata document
 are both supported; you do not need to pre-arrange anything with us.
