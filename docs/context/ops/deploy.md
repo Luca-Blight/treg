@@ -196,6 +196,18 @@ It is a **blast-radius limit**, not a billing control: it exists because auto-to
 balance, so the balance alone is not a ceiling against a runaway agent or a mispriced catalog entry.
 Enforced fail-closed.
 
+## Market data platform keys (2026-08-16)
+
+Five more `TREG_PLATFORM_KEY_*` env vars beside the originals, and the providers must ALSO be in
+`TREG_PLATFORM_PROVIDERS` (both halves, or tier 4 refuses):
+
+- `TREG_PLATFORM_KEY_COINGECKO` — PRO key; billed $0.00029/credit
+- `TREG_PLATFORM_KEY_MARKETSTACK` — billed $0.000999/call against a 10,000/mo vendor cap
+- `TREG_PLATFORM_KEY_FINNHUB`, `_TWELVEDATA`, `_TIINGO` — FREE-tier keys serving $0 trial pools,
+  capped per team per day from fx.yaml (`treg_trial`). These are free accounts: if one is
+  terminated, the pool dies gracefully (calls refuse, nothing bills) — replace the key or demote
+  the provider to own-key-only by removing it from the allow-list.
+
 ## A db.py change needs a Postgres-shaped deploy plan
 
 SQLite cannot catch this class: it has no connection pool and no lock queue. Two rules, both from the
