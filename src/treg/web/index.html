@@ -4,6 +4,9 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>treg</title>
+<!-- The dashboard is an authenticated app: every view needs a session and its routes are hash
+     fragments. Nothing here is indexable, and a crawler that got in would index a sign-in prompt. -->
+<meta name="robots" content="noindex, follow"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

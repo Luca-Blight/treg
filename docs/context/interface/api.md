@@ -175,7 +175,8 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
 - **Provider catalog:** `providers_catalog` (`GET /providers.json`, open) → `{version, providers}` — the
   catalog `treg upload` uses to detect env keys → tools; served so the CLI can refresh centrally. See
   [env-import](env-import.md).
-- **Endpoint catalog** (open, `include_in_schema=False`, read via `catalog_store`): the operations layer
+- **Endpoint catalog** (open, and now **in** the OpenAPI schema — these four are the public read API,
+  so they are documented rather than hidden; read via `catalog_store`): the operations layer
   — what a connected provider can DO. `catalog_platforms` (`GET /catalog/platforms`) → `{platforms:
   [{slug, label, capabilities, endpoints, verified, providers[]}], generated_from: "catalog"}`, endpoint
   count desc, platforms nobody implements omitted. `catalog_platform` (`GET /catalog/platforms/{slug}`,
@@ -489,6 +490,12 @@ surfaced by `GET /tools` / `/bundles/{id}`).
   misconfigured `email_dev_mode` can't leak the code and enable an unauth takeover in prod.
 
 Full endpoint list + the running server's OpenAPI: `README.md` and `/docs`. CLI-level usage: `USAGE.md`.
+
+`/docs` is **ours** — a server-rendered reference built from `app.openapi()`, not Swagger. FastAPI's
+console moved to `/docs/api` (ReDoc is off), and `/openapi.json` is unchanged. The `/catalog`,
+`/catalog/<slug>` and `/robots.txt` + `/sitemap.xml` surfaces live alongside it; see
+[seo](seo.md), which also explains why HEAD is widened onto every GET route after registration and
+why that widening must be kept out of the schema.
 
 ## OAuth + MCP routes
 

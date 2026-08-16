@@ -38,6 +38,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Import — scan a .env AND/OR a skills dir, auto-register as tools + bundles](interface/env-import.md) | in-progress | providers.py, skills.py |
 | [Landing sandbox studio — anonymous try-it, hosted skills, CLI installer](interface/landing-sandbox.md) | shipped | sandbox.py, pubfeed.py, api.py, index.html, … |
 | [Onboarding — the first-run demo team (dashboard + CLI)](interface/onboarding.md) | shipped | demo.py, cli.py, index.html |
+| [Search surfaces — robots, sitemap, the crawlable catalog, and the social card](interface/seo.md) | shipped | api.py, robots.txt, catalog.css, landing.html, … |
 | [Shell mode (treg shell) — transparent CLI interception](interface/shell.md) | shipped | shell.py, cli.py |
 | [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md, mcp_install.py, build_plugin.py, plugin.json, … |
 

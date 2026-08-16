@@ -356,6 +356,13 @@ be callable (e.g. Google Ads' developer token — surfaced by the `needSecondCre
 page (Connect looked dead).
 
 ## Endpoint catalog — the platform axis of the marketplace (`view==='platform'`)
+
+> This is the **signed-in** browse surface, and it is a hash route (`/app#platform/<slug>`), so none
+> of it is reachable by a crawler. The same catalog is now also served as plain HTML at `/catalog`
+> and `/catalog/<slug>` from the same `GET /catalog/platforms` data — see [seo](seo.md). The two
+> render from one shared row builder (`_platform_rows` in `api.py`) so they cannot disagree.
+> `index.html` itself carries `robots: noindex`: every view here needs a session.
+
 The marketplace's second browse surface answers "what data can I actually pull?" rather than "whose
 account can I attach?" — see `architecture/catalog.md` for the data behind it, and it is the marketplace's
 **default** view. `loadPlatforms` reads **`GET /catalog/platforms`** (once per session; cached on
