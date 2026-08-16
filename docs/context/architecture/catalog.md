@@ -314,6 +314,13 @@ and state the break-even volume, and `fee_usd_month` must be present as data (th
 and edited by hand. The full ladder: docs/SHARED-PLAN-PRICING-PLAN.md; the billing side (429 never
 billable, the recovery report): architecture/money.md.
 
+A second treg-set kind, **`kind: treg_trial`**, prices a provider at exactly **$0** with a
+`trial_calls_per_team_day` allowance as data beside the zero: a capped taste served on treg's own
+FREE-tier key. The allowance is what makes $0 honest — at zero the price gives no brake, so the cap
+is the congestion control (`api._enforce_trial_allowance`, per team per UTC day, successes only,
+fail-closed). `cost_view` attaches the allowance to every $0 it serves, because a bare $0.00 reads
+as unlimited. The validator refuses a non-zero "trial" and a zero with no allowance.
+
 Each `credit_rates_usd` / `unit_rates_usd` entry carries `usd` plus the `basis`/`source`/`checked` that justify it —
 the cheapest PUBLICLY listed tier (plan price ÷ credits included), so the served figure is an upper
 bound on real spend, never an under-estimate. `usd: null` is a deliberate state, not a gap: the

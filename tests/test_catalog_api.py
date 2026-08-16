@@ -687,3 +687,47 @@ def test_a_shared_plan_rate_converts_like_any_credit():
     c = cs.load()
     out = c.cost_view({"type": "per_call", "value": 1, "currency": "credit"}, "alphavantage")
     assert out["usd"] == 0.001
+
+
+def test_the_trial_kind_check_actually_BITES(tmp_path):
+    """Every dishonest treg_trial shape refused by the REAL check: a non-zero 'trial', a zero with
+    no allowance (the congestion-control gap), a basis that does not say whose $0 it is, and prose
+    claiming a trial without the marker."""
+    cv = _load_validator()
+    bad = """
+credit_rates_usd:
+  nonzero:  {usd: 0.001, kind: treg_trial, trial_calls_per_team_day: 20, basis: "treg trial rate. x", source: "x", checked: "2026-08-15"}
+  no_cap:   {usd: 0, kind: treg_trial, basis: "treg trial rate. x", source: "x", checked: "2026-08-15"}
+  bad_cap:  {usd: 0, kind: treg_trial, trial_calls_per_team_day: 0, basis: "treg trial rate. x", source: "x", checked: "2026-08-15"}
+  wrong_basis: {usd: 0, kind: treg_trial, trial_calls_per_team_day: 20, basis: "free on our key", source: "x", checked: "2026-08-15"}
+  fine_trial: {usd: 0, kind: treg_trial, trial_calls_per_team_day: 20, basis: "treg trial rate. Served at $0 on treg's free key", source: "x", checked: "2026-08-15"}
+"""
+    (tmp_path / "fx.yaml").write_text(bad)
+    original = cv.CATALOG
+    try:
+        cv.CATALOG = tmp_path
+        errors: list[str] = []
+        cv.check_fx(errors)
+    finally:
+        cv.CATALOG = original
+    blob = "\n".join(errors)
+    for name in ("nonzero", "no_cap", "bad_cap", "wrong_basis"):
+        assert name in blob, f"{name} should have been refused:\n{blob}"
+    assert "fine_trial" not in blob, "a compliant trial entry must pass"
+
+
+def test_trial_pools_flow_from_fx_to_eligibility_and_display():
+    """The real file's three pools, end to end through the loader: a $0 price that is platform
+    eligible AND carries its allowance wherever the cost is shown — a bare $0.00 would read as
+    unlimited."""
+    from treg import catalog_store as cs
+
+    c = cs.load()
+    assert c.trial_pools == {"finnhub": 50, "twelvedata": 20, "tiingo": 20}
+    ep = c.by_id["finnhub.quote"]
+    assert c.platform_eligible(ep)
+    cost = c.cost_view(ep["cost"], "finnhub")
+    assert cost["usd"] == 0.0 and cost["trial_calls_per_team_day"] == 50
+    # and the two NON-trial own-key providers stay ineligible — the license boundary holds
+    assert not c.platform_eligible(c.by_id["polygon.prev-close"])
+    assert not c.platform_eligible(c.by_id["eodhd.eod"])

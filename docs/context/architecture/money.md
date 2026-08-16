@@ -259,6 +259,17 @@ shared plan" — `cost_view`, holds, caps and settlement needed zero changes. Wh
   observed-cost parser is ever added for one, because at that point the drift report would be
   policing a price treg itself set.
 
+### Trial pools: the $0 rung
+
+A third treg-set rate, `kind: treg_trial` (fx.yaml): a provider served on treg's own FREE-tier key
+at exactly $0, capped per team per day (`trial_calls_per_team_day`, enforced by
+`api._enforce_trial_allowance` — successes only, fail-closed, refusal 429 `trial_allowance_reached`
+with a connect-your-own-key hint). The strategy: the pool is the demand probe — a hot pool is the
+buy signal for the provider's commercial tier, negotiated with real volume numbers. Failed calls
+never burn allowance (the same line billability draws), and another org's usage never touches this
+org's pool (tested). At $0 the allowance is the only brake, so the validator refuses a trial entry
+without one.
+
 ## Retries: a call must not be paid for twice
 
 Prompted by a public question — *"how does result pricing handle retries, agents need idempotent

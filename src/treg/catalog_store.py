@@ -73,6 +73,11 @@ class Catalog:
     # this is. The rate itself still lives in `credit_rates` like any other — pricing machinery
     # neither knows nor cares that the rate is ours.
     shared_plans: dict[str, dict] = field(default_factory=dict)
+    # service -> calls/team/day for rates treg set to ZERO (fx.yaml `kind: treg_trial`): a capped
+    # free taste served on treg's own free-tier key. The allowance lives beside the zero because at
+    # $0 the price gives no brake — the cap is the only congestion control, so an entry without one
+    # is invalid (check_fx). api._enforce_trial_allowance reads this.
+    trial_pools: dict[str, int] = field(default_factory=dict)
     # provider service -> meter name -> USD per one unit of that meter (fx.yaml `unit_rates_usd`).
     # Providers that bill in a proprietary meter (Semrush API units, Majestic's three pools, Moz's
     # row quota) get one rate per meter — a provider can have several, and they do not convert
@@ -123,7 +128,12 @@ class Catalog:
         # zero would turn a real charge into "free" for anything reading `usd` as money.
         usd = (round(value * rate / per, 9)
                if isinstance(value, (int, float)) and rate is not None and per > 0 else None)
-        return {**cost, "usd": usd}
+        out = {**cost, "usd": usd}
+        # A $0 trial price travels with its allowance, so every surface showing the price can also
+        # say how much of it a team gets — a bare $0.00 would read as unlimited.
+        if provider in self.trial_pools and usd == 0:
+            out["trial_calls_per_team_day"] = self.trial_pools[provider]
+        return out
 
     def platform_eligible(self, endpoint: dict) -> bool:
         """May treg serve this endpoint with a PLATFORM key, billed to the caller's balance?
@@ -234,6 +244,11 @@ def _parse(directory: Path) -> Catalog:
         for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
         if isinstance(v, dict) and v.get("kind") == "treg_shared_plan"
     }
+    trial_pools = {
+        str(service): int(v.get("trial_calls_per_team_day") or 0)
+        for service, v in (fx_doc.get("credit_rates_usd") or {}).items()
+        if isinstance(v, dict) and v.get("kind") == "treg_trial"
+    }
     # Same shape one level deeper: service -> meter -> {usd, basis, source, checked}. A provider
     # bills in several meters at once (Majestic has three), so the meter name is part of the key.
     unit_rates = {
@@ -242,7 +257,7 @@ def _parse(directory: Path) -> Catalog:
         for service, meters in (fx_doc.get("unit_rates_usd") or {}).items()
     }
     return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates,
-                   shared_plans=shared_plans, platforms=platforms,
+                   shared_plans=shared_plans, trial_pools=trial_pools, platforms=platforms,
                    capabilities=capabilities, endpoints=endpoints, by_id=by_id,
                    provider_meta=provider_meta)
 

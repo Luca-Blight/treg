@@ -1052,3 +1052,77 @@ async def test_the_SAME_KEY_with_a_DIFFERENT_QUERY_is_refused_end_to_end(clients
         f"a DIFFERENT query under the same key must be refused, got {second.status_code}: "
         f"{second.text[:120]}")
     assert "different request" in second.json()["detail"]
+
+
+# ---- trial pools: $0 on treg's key, capped per team per day (fx.yaml kind: treg_trial) -------
+
+@pytest.fixture()
+def trial_on(monkeypatch):
+    """Tier 4 for a TRIAL provider: treg's free-tier key in the env, provider allow-listed."""
+    monkeypatch.setenv("TREG_PLATFORM_KEY_FINNHUB", "trial-pool-test-key")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,finnhub")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+async def test_a_trial_call_is_served_keyless_and_charges_NOTHING(clients: AsyncClient, trial_on,
+                                                                  monkeypatch):
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"c": 231.5, "pc": 230.1}'))
+    before = await _balance(clients)
+    r = await clients.get("/call/finnhub.quote?symbol=AAPL")
+    assert r.status_code == 200, r.text
+    assert await _balance(clients) == before, "a $0 trial call must not move money"
+
+
+async def test_the_trial_allowance_bites_at_the_fx_number(clients: AsyncClient, trial_on,
+                                                          monkeypatch):
+    """Seed today's audit at the allowance (50 for finnhub, from fx.yaml) — the next call must be
+    refused with the connect-your-own-key hint, unbilled. Failed calls are seeded too and must NOT
+    count: a 4xx produced nothing, the same line billability draws."""
+    from treg.models import CallRecord
+
+    async with session_maker() as db:
+        for i in range(50):
+            db.add(CallRecord(org_id=1, user_email="u@example.com", tool_name="finnhub.quote",
+                              method="GET", path="/quote", status_code=200))
+        for i in range(10):  # failures do not consume the allowance
+            db.add(CallRecord(org_id=1, user_email="u@example.com", tool_name="finnhub.quote",
+                              method="GET", path="/quote", status_code=502))
+        await db.commit()
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"c": 1}'))
+    before = await _balance(clients)
+    r = await clients.get("/call/finnhub.quote?symbol=AAPL")
+    assert r.status_code == 429, r.text
+    d = r.json()["detail"]
+    assert d["error"] == "trial_allowance_reached" and d["allowance_per_day"] == 50
+    assert "connect" in d["message"]
+    assert await _balance(clients) == before
+
+
+async def test_failures_alone_never_exhaust_a_trial(clients: AsyncClient, trial_on, monkeypatch):
+    from treg.models import CallRecord
+
+    async with session_maker() as db:
+        for i in range(60):
+            db.add(CallRecord(org_id=1, user_email="u@example.com", tool_name="finnhub.quote",
+                              method="GET", path="/quote", status_code=429))
+        await db.commit()
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"c": 1}'))
+    assert (await clients.get("/call/finnhub.quote?symbol=AAPL")).status_code == 200
+
+
+async def test_another_orgs_usage_never_burns_MY_trial(clients: AsyncClient, trial_on, monkeypatch):
+    """The allowance is per TEAM. Another org's fifty calls must not touch this org's pool — the
+    multi-tenancy assertion, and the one failure here that would be unfair rather than merely
+    wrong."""
+    from treg.models import CallRecord
+
+    async with session_maker() as db:
+        for i in range(50):
+            db.add(CallRecord(org_id=424242, user_email="other@example.com",
+                              tool_name="finnhub.quote", method="GET", path="/quote",
+                              status_code=200))
+        await db.commit()
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"c": 1}'))
+    assert (await clients.get("/call/finnhub.quote?symbol=AAPL")).status_code == 200
