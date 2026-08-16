@@ -797,9 +797,15 @@ def test_the_run_actions_lead_the_expansion_tab_bar():
     Try-it is the primary (ink-fill) CTA for a key/token provider — trying on treg's key is what most
     visitors want — with the own-key path demoted to a secondary "Bring your own key". For an OAuth
     provider treg can't serve on its own key, so Connect is the primary instead and Try-it is
-    secondary. The green Connected state replaces the connect button once an account exists."""
+    secondary. The green Connected state replaces the connect button once an account exists.
+
+    The signed-out branch (`publicCatalog`) sits alongside these: on a public /catalog URL, calling
+    needs a team, so Try-it becomes a link to sign-up and Connect/BYOK drop out. The member markup
+    asserted below is what must survive that."""
     block = _ledger()
-    bar = block[block.index('<span class="ltabs-r">') :][:2400]
+    # Sized to the whole action group, not a round number — the window has already been outgrown
+    # once (by the public-catalog branch) and silently cut the last assertion out of range.
+    bar = block[block.index('<span class="ltabs-r">') :][:3400]
     # Try-it: primary UNLESS the provider is OAuth
     assert 'openEpTry(e)' in bar and ':class="{primary:!mkOauth(e.provider)}"' in bar
     # OAuth → Connect is the ink-fill primary

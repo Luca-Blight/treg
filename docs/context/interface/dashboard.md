@@ -357,11 +357,13 @@ page (Connect looked dead).
 
 ## Endpoint catalog — the platform axis of the marketplace (`view==='platform'`)
 
-> This is the **signed-in** browse surface, and it is a hash route (`/app#platform/<slug>`), so none
-> of it is reachable by a crawler. The same catalog is now also served as plain HTML at `/catalog`
-> and `/catalog/<slug>` from the same `GET /catalog/platforms` data — see [seo](seo.md). The two
-> render from one shared row builder (`_platform_rows` in `api.py`) so they cannot disagree.
-> `index.html` itself carries `robots: noindex`: every view here needs a session.
+> **This view is also the public catalog.** `/catalog` and `/catalog/<slug>` serve this same
+> `index.html`, and everything below renders for a signed-out visitor too — the catalog API needs no
+> session. `publicCatalog` (set in the boot from `catalogFromPath()`) hides what does: the org
+> switcher, vault, activity, team, the "not connected" badge, Try-it and the connect/BYOK buttons.
+> There is no second implementation of any of this; see [seo](seo.md) for why, and for the `#prerender`
+> fallback that carries the text to crawlers that run no scripts. `index.html`'s own `robots: noindex`
+> is stripped on those two URLs only.
 
 The marketplace's second browse surface answers "what data can I actually pull?" rather than "whose
 account can I attach?" — see `architecture/catalog.md` for the data behind it, and it is the marketplace's

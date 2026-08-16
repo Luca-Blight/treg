@@ -151,20 +151,60 @@ async def test_the_markdown_twin_of_vendor_listing_is_noindex(clients: AsyncClie
 
 # ------------------------------------------------------------------- catalog pages & structured data
 
-async def test_the_catalog_index_lists_shelves_as_real_html(clients: AsyncClient):
-    """The whole point: 80 shelves that previously existed only as hash routes behind a login."""
+async def test_catalog_urls_serve_the_dashboard_spa(clients: AsyncClient):
+    """The public catalog is not a second implementation — it IS the marketplace. /catalog hands
+    back index.html so Vue renders the same platform views a member sees; if this ever stops being
+    true, the two UIs have forked and will drift."""
+    for path in ("/catalog", "/catalog/google"):
+        body = (await clients.get(path)).text
+        assert '<div id="app"' in body, path
+        assert "vue" in body.lower(), path
+
+
+async def test_the_catalog_index_lists_shelves_without_javascript(clients: AsyncClient):
+    """The Vue app is the UI; #prerender is what a crawler that runs no scripts reads. It has to
+    carry the text — 80 shelves that previously existed only as hash routes behind a login."""
     r = await clients.get("/catalog")
     assert r.status_code == 200
-    assert r.text.count('class="pcard"') > 50
-    assert 'href="/catalog/google"' in r.text
+    pre = re.search(r'<div id="prerender">(.*?)</div>\s*<div id="app"', r.text, re.S)
+    assert pre, "no server-rendered fallback"
+    assert pre.group(1).count('href="/catalog/') > 50
+    assert 'href="/catalog/google"' in pre.group(1)
 
 
 @pytest.mark.parametrize("slug", ["google", "web", "tiktok"])
 async def test_a_platform_page_renders_its_endpoints_as_text(clients: AsyncClient, slug: str):
     r = await clients.get(f"/catalog/{slug}")
     assert r.status_code == 200
-    assert 'class="ep"' in r.text          # endpoint rows, not an empty shell
-    assert "treg call" in r.text           # the call template is on the page
+    pre = re.search(r'<div id="prerender">(.*?)</div>\s*<div id="app"', r.text, re.S)
+    assert pre, slug
+    assert pre.group(1).count("<li>") > 5, "endpoint names should be in the fallback"
+
+
+async def test_the_prerender_is_a_sibling_of_the_vue_root(clients: AsyncClient):
+    """Vue compiles #app's own innerHTML as its template, so prerendered markup inside it would be
+    parsed as a template (and blow up on the first stray moustache). It must sit outside."""
+    body = (await clients.get("/catalog")).text
+    assert body.index('id="prerender"') < body.index('id="app"')
+    app_html = body[body.index('<div id="app"'):]
+    assert 'id="prerender"' not in app_html
+
+
+async def test_catalog_urls_are_indexable_despite_the_spa_default(clients: AsyncClient):
+    """index.html carries `robots: noindex` for the authenticated app. These URLs are public, and
+    shipping both tags would leave a crawler obeying the wrong one."""
+    body = (await clients.get("/catalog/google")).text
+    assert "content=\"noindex" not in body
+    assert 'content="index, follow"' in body
+    assert (await clients.get("/app")).text.count('content="noindex') == 1
+
+
+async def test_a_shelf_page_counts_the_same_endpoints_the_app_does(clients: AsyncClient):
+    """The SPA asks for ?include_hidden=1. The page must ask for the same population, or the two
+    numbers on one URL — the fallback's and the app's — disagree in front of the reader."""
+    full = (await clients.get("/catalog/platforms/web?include_hidden=1")).json()
+    total = sum(len(c["endpoints"]) for c in full["capabilities"]) + len(full["extended"])
+    assert f"{total} endpoints" in (await clients.get("/catalog/web")).text
 
 
 async def test_the_json_catalog_routes_still_answer_json(clients: AsyncClient):

@@ -759,9 +759,97 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
 </html>""", headers={"Cache-Control": "public, max-age=600"})
 
 
+def _spa_catalog_page(title: str, description: str, path: str, ld: list[dict],
+                      prerender: str) -> HTMLResponse:
+    """Serve the dashboard SPA at a PUBLIC catalog URL, with the head a crawler needs.
+
+    The public catalog is not a second implementation of the marketplace — it IS the marketplace.
+    `/catalog` and `/catalog/<slug>` hand back `index.html`, and the Vue app renders the same
+    platform views a member sees (its catalog API is unauthenticated, so it works signed out; see
+    `publicCatalog` in index.html). That is the whole point: one UI, so the two can never drift
+    apart visually the way a hand-built copy would.
+
+    Two things have to be added on the way out:
+
+    1. **The head.** The SPA ships one bare `<title>treg</title>`. Every catalog URL needs its own
+       title, description, canonical, og/twitter card and JSON-LD, so they are substituted in here —
+       the same trick `_spa_with_og` uses for shared skill/tool links.
+    2. **A no-JS fallback.** Vue compiles `#app`'s own innerHTML as its template, so prerendered
+       markup cannot go inside it. `#prerender` is therefore a SIBLING, removed by the app on boot.
+       It is deliberately plainer than the Vue view — the ledger's row-merging is a chain of
+       client-side computeds, and reproducing it server-side would recreate exactly the duplicate
+       implementation this design avoids. It carries the TEXT (names, summaries, providers, prices),
+       which is what a crawler that does not run scripts is here for.
+    """
+    index = _WEB_DIR / "index.html"
+    if not index.exists():
+        return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
+    base = get_settings().public_url.rstrip("/")
+    t, d = _esc_html(title), _esc_html(description)
+    url = base + path
+    blocks = "\n".join(
+        '<script type="application/ld+json">'
+        + json.dumps(b, separators=(",", ":")).replace("<", "\\u003c") + "</script>"
+        for b in ld)
+    meta = (
+        f"<title>{t}</title>\n"
+        f'<meta name="description" content="{d}"/>\n'
+        f'<link rel="canonical" href="{url}"/>\n'
+        f'<meta name="robots" content="index, follow"/>\n'   # index.html defaults to noindex
+        f'<meta property="og:type" content="website"/>\n'
+        f'<meta property="og:site_name" content="treg"/>\n'
+        f'<meta property="og:url" content="{url}"/>\n'
+        f'<meta property="og:title" content="{t}"/>\n'
+        f'<meta property="og:description" content="{d}"/>\n'
+        f'<meta property="og:image" content="{base}/media/og.png"/>\n'
+        f'<meta property="og:image:width" content="1200"/>\n'
+        f'<meta property="og:image:height" content="630"/>\n'
+        f'<meta name="twitter:card" content="summary_large_image"/>\n'
+        f'<meta name="twitter:title" content="{t}"/>\n'
+        f'<meta name="twitter:description" content="{d}"/>\n'
+        f'<meta name="twitter:image" content="{base}/media/og.png"/>\n'
+        + blocks
+    )
+    html = index.read_text(encoding="utf-8")
+    # Match whatever title the page carries, not one exact string — a rename in the dashboard must
+    # not be able to switch every catalog page's head off without a word (the same failure
+    # `_spa_with_og` was written to survive).
+    html, hits = re.subn(r"<title>.*?</title>", lambda _m: meta, html, count=1,
+                         flags=re.IGNORECASE | re.DOTALL)
+    if not hits:
+        html = html.replace("<head>", "<head>\n" + meta, 1)
+    # index.html carries `robots: noindex` for the authenticated app; these URLs are public, and the
+    # `index, follow` above only wins if the noindex is gone.
+    html = re.sub(r'<meta name="robots" content="noindex[^>]*>\s*', "", html, count=1)
+    marker = '<div id="app"'
+    if marker in html:
+        html = html.replace(marker, f'<div id="prerender">{prerender}</div>\n{marker}', 1)
+    return HTMLResponse(html, headers={"Cache-Control": "public, max-age=600"})
+
+
+# The fallback's own skin. Scoped to #prerender and written against the dashboard's OWN tokens
+# (already defined in index.html), so it reads as the same product for the moment it is on screen.
+_PRERENDER_CSS = """<style>
+#prerender{max-width:1100px;margin:0 auto;padding:38px 26px 60px;font-family:var(--sans,system-ui);
+  color:var(--ink,#1a1a1a)}
+#prerender h1{font-size:30px;letter-spacing:-.01em;margin:0 0 8px}
+#prerender .lede{color:var(--muted,#7c7c7c);margin:0 0 20px;max-width:64ch}
+#prerender h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--muted2,#989898);margin:26px 0 10px;padding-bottom:8px;
+  border-bottom:1px solid var(--line,#26262322)}
+#prerender ul{list-style:none;margin:0;padding:0}
+#prerender li{padding:9px 0;border-bottom:1px solid var(--line,#26262322)}
+#prerender li b{font-weight:600}
+#prerender li i{font-style:normal;color:var(--muted,#7c7c7c);display:block;font-size:13.5px}
+#prerender .m{font-family:var(--mono,ui-monospace);font-size:11.5px;
+  color:var(--muted2,#989898);margin-top:3px;display:block}
+#prerender a{color:var(--teal,#1a7da6);text-decoration:none}
+</style>"""
+
+
 @app.get("/catalog", include_in_schema=False)
 async def catalog_index():
-    """Every platform shelf, grouped by category — the crawlable index of what an agent can call."""
+    """The catalog index — the marketplace's Catalog view, on a public, indexable URL."""
     base = get_settings().public_url.rstrip("/")
     rows = _platform_rows()
     # The WHOLE catalog, not the sum of the tiles: a tile counts only its browse surface, so the
@@ -771,44 +859,29 @@ async def catalog_index():
     total_eps = len(cat.endpoints)
     providers = sorted({e["provider"] for e in cat.endpoints})
 
-    # Categories in the order the busiest shelf in each appears, so the page opens on the deepest
-    # inventory rather than on whichever category sorts first alphabetically.
     cats: dict[str, list[dict]] = {}
     for row in rows:
         cats.setdefault(row["category"], []).append(row)
-
     sections = []
-    for cat, items in cats.items():
-        cards = []
+    for name, items in cats.items():
+        lis = []
         for r in items:
             price = _price_label(r["price_from"])
             vendors = ", ".join(_provider_display(p) for p in r["providers"])
-            cards.append(
-                f'<a class="pcard" href="/catalog/{_esc_html(r["slug"])}">'
-                f'<h3>{_esc_html(r["label"])}</h3>'
-                f'<p>{_esc_html(r["summary"])}</p>'
-                f'<div class="meta"><b>{r["endpoints"]}</b>&nbsp;endpoints'
-                f'<span class="dot">·</span><b>{r["capabilities"]}</b>&nbsp;capabilities</div>'
-                + (f'<div class="from">from {_esc_html(price)}</div>' if price else "")
-                + f'<div class="vendors">{_esc_html(vendors)}</div></a>')
-        sections.append(f'<h2>{_esc_html(cat)}</h2><div class="grid">{"".join(cards)}</div>')
+            lis.append(
+                f'<li><b><a href="/catalog/{_esc_html(r["slug"])}">{_esc_html(r["label"])}</a></b>'
+                f'<i>{_esc_html(r["summary"])}</i>'
+                f'<span class="m">{r["endpoints"]} endpoints · {r["capabilities"]} capabilities'
+                + (f" · from {_esc_html(price)}" if price else "")
+                + f" · {_esc_html(vendors)}</span></li>")
+        sections.append(f"<h2>{_esc_html(name)}</h2><ul>{''.join(lis)}</ul>")
 
-    body = f"""<main class="wrap">
-<div class="phead">
-  <span class="kicker">{total_eps:,} endpoints · {len(providers)} providers · <a href="{_GH}" target="_blank" rel="noopener">open source ↗</a></span>
-  <h1>The tool catalog</h1>
-  <p class="lede">Every endpoint your agent can call through one key — priced up front, billed per
-  call, no provider signup. Pick a shelf to see what is on it and what each call costs.</p>
-  <div class="facts">
-    <span><b>{len(rows)}</b> platforms</span>
-    <span><b>{total_eps:,}</b> endpoints</span>
-    <span><b>{len(providers)}</b> providers</span>
-    <span><b>$1.00</b> free on every new team</span>
-    <span><b>0%</b> markup</span>
-  </div>
-</div>
-<section class="cat">{"".join(sections)}</section>
-</main>"""
+    prerender = (_PRERENDER_CSS
+                 + "<h1>The tool catalog</h1>"
+                 + f'<p class="lede">{total_eps:,} endpoints across {len(rows)} platforms and '
+                   f"{len(providers)} providers — every tool your agent can call through one key, "
+                   "priced up front and billed per call, with no provider signup.</p>"
+                 + "".join(sections))
 
     ld = [
         {"@context": "https://schema.org", "@type": "ItemList",
@@ -823,19 +896,23 @@ async def catalog_index():
             {"@type": "ListItem", "position": 1, "name": "treg", "item": base + "/"},
             {"@type": "ListItem", "position": 2, "name": "Catalog", "item": base + "/catalog"}]},
     ]
-    return _page(
+    return _spa_catalog_page(
         f"Tool catalog — {total_eps:,} API endpoints your agent can call | treg",
         f"Browse {total_eps:,} endpoints across {len(rows)} platforms and {len(providers)} providers "
         "— SEO, social, enrichment, ads and scraping data. One key, priced per call, no provider signup.",
-        "/catalog", body, ld, nav_current="/catalog")
+        "/catalog", ld, prerender)
 
 
 @app.get("/catalog/{slug}", include_in_schema=False)
 async def catalog_page(slug: str):
-    """One platform shelf, rendered. Every capability, every endpoint, every price as real text."""
+    """One platform shelf — the marketplace's platform view, on a public, indexable URL."""
     if slug in _CATALOG_RESERVED:
         raise HTTPException(status_code=404, detail=f"unknown platform {slug!r}")
-    detail = await catalog_platform(slug)          # 404s for an unknown slug, same as the JSON route
+    # include_hidden=1, exactly as the SPA asks for it (see `loadPlatform`): the account/utility
+    # endpoints are real inventory and the page files them in their own section rather than hiding
+    # them. Asking for a different population than the view that is about to replace this would put
+    # two different endpoint counts on one URL.
+    detail = await catalog_platform(slug, include_hidden=1)
     base = get_settings().public_url.rstrip("/")
     plat = detail["platform"]
     label, category = plat["label"], plat["category"]
@@ -844,60 +921,35 @@ async def catalog_page(slug: str):
     caps = detail["capabilities"]
     eps = [e for cap in caps for e in cap["endpoints"]] + detail["extended"]
     prices = [c["usd"] for e in eps if isinstance(c := e.get("cost"), dict) and c.get("usd")]
-    verified = len([e for e in eps if e.get("verified")])
+    cheapest = _usd_short(min(prices)) if prices else ""
 
     blocks = []
     for cap in caps:
-        rows_html = []
+        lis = []
         for e in cap["endpoints"]:
             price = _price_label(e.get("cost"))
-            tags = [f'<span class="tag">{_esc_html(e["provider_display"])}</span>']
+            bits = [_esc_html(e["provider_display"])]
             if e.get("verified"):
-                tags.append('<span class="tag ok">live-verified</span>')
-            tags.append(f'<code class="id">{_esc_html(e["id"])}</code>')
-            rows_html.append(
-                f'<div class="ep"><div class="eph"><span class="name">{_esc_html(e["name"])}</span>'
-                + (f'<span class="price">{_esc_html(price)}</span>' if price else "")
-                + f'</div><p>{_esc_html(e.get("summary") or "")}</p>'
-                f'<div class="tags">{"".join(tags)}</div>'
-                + (f'<pre class="call">{_esc_html(e["call_template"])}</pre>'
-                   if e.get("call_template") else "")
-                + "</div>")
-        blocks.append(
-            f'<div class="cap"><h3>{_esc_html(cap["description"] or cap["id"])}'
-            f'<code>{_esc_html(cap["id"])}</code></h3>'
-            + "".join(rows_html) + "</div>")
+                bits.append("live-verified")
+            if price:
+                bits.append(_esc_html(price))
+            bits.append(_esc_html(e["id"]))
+            lis.append(f'<li><b>{_esc_html(e["name"])}</b>'
+                       f'<i>{_esc_html(e.get("summary") or "")}</i>'
+                       f'<span class="m">{" · ".join(bits)}</span></li>')
+        blocks.append(f'<h2>{_esc_html(cap["description"] or cap["id"])}</h2><ul>{"".join(lis)}</ul>')
 
-    provs = "".join(
-        f'<div class="prov"><b>{_esc_html(p["display_name"])}</b>'
-        + (f'<p>{_esc_html(p["note"])}</p>' if p.get("note") else "")
-        + "</div>"
-        for p in detail["providers"].values())
-
-    cheapest = _usd_short(min(prices)) if prices else ""
-    body = f"""<main class="wrap">
-<div class="phead">
-  <div class="crumbs"><a href="/">treg</a> / <a href="/catalog">catalog</a> / {_esc_html(category)}</div>
-  <h1>{_esc_html(label)}</h1>
-  <p class="lede">{_esc_html(summary)}</p>
-  <div class="facts">
-    <span><b>{len(eps)}</b> endpoints</span>
-    <span><b>{len(caps)}</b> capabilities</span>
-    <span><b>{len(detail["providers"])}</b> providers</span>
-    {f"<span>from <b>{_esc_html(cheapest)}</b> per call</span>" if cheapest else ""}
-    {f"<span><b>{verified}</b> live-verified</span>" if verified else ""}
-  </div>
-</div>
-<section class="cat">
-  {"".join(blocks)}
-  <h2>Providers on this shelf</h2>
-  <div class="provs">{provs}</div>
-  <p class="lede" style="margin-top:22px">Several providers can do the same job here. treg shows
-  them side by side with measured success rates, speed and price — <b>choosing is yours</b>; there
-  is no automatic routing or failover. <a href="/app#platform/{_esc_html(slug)}">Open this shelf in
-  the dashboard</a> or <a href="/tutorial">see how a call works</a>.</p>
-</section>
-</main>"""
+    provs = ", ".join(p["display_name"] for p in detail["providers"].values())
+    prerender = (_PRERENDER_CSS
+                 + f'<p class="m"><a href="/catalog">← Catalog</a> · {_esc_html(category)}</p>'
+                 + f"<h1>{_esc_html(label)}</h1>"
+                 + f'<p class="lede">{_esc_html(summary)} {len(eps)} endpoints from '
+                   f"{_esc_html(provs)}"
+                 + (f", from {_esc_html(cheapest)} per call" if cheapest else "")
+                 + ". Jobs that several providers do sit on one row, so you can compare price and "
+                   "coverage before you spend a call — <b>choosing is yours</b>; treg does not route "
+                   "between providers automatically.</p>"
+                 + "".join(blocks))
 
     desc = (f"{len(eps)} {label.lower()} API endpoints from "
             f"{', '.join(p['display_name'] for p in list(detail['providers'].values())[:3])}"
@@ -908,8 +960,7 @@ async def catalog_page(slug: str):
          "name": f"{label} — API endpoints on treg",
          "numberOfItems": len(caps),
          "itemListElement": [
-             {"@type": "ListItem", "position": i,
-              "name": cap["description"] or cap["id"],
+             {"@type": "ListItem", "position": i, "name": cap["description"] or cap["id"],
               "url": f"{base}/catalog/{slug}#{cap['id']}"}
              for i, cap in enumerate(caps, 1)]},
         {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
@@ -917,9 +968,8 @@ async def catalog_page(slug: str):
             {"@type": "ListItem", "position": 2, "name": "Catalog", "item": base + "/catalog"},
             {"@type": "ListItem", "position": 3, "name": label, "item": f"{base}/catalog/{slug}"}]},
     ]
-    return _page(f"{label} API — {len(eps)} endpoints, priced per call | treg",
-                 desc[:300], f"/catalog/{slug}", body, ld, nav_current="/catalog")
-
+    return _spa_catalog_page(f"{label} API — {len(eps)} endpoints, priced per call | treg",
+                             desc[:300], f"/catalog/{slug}", ld, prerender)
 
 @app.get("/catalog.css", include_in_schema=False)
 async def catalog_css():
