@@ -138,6 +138,13 @@ class Settings(BaseSettings):
     platform_key_coresignal: str = ""
     platform_key_thecompaniesapi: str = ""  # raw token — injected as "Basic {secret}" un-encoded
     platform_key_apollo: str = ""   # raw key (X-Api-Key); billed at the Basic-plan $/credit rate in fx.yaml
+    # ---- Market data (2026-08-15). Two PAID plans billed per call, three FREE-tier keys serving
+    # capped trial pools at $0 (fx.yaml kind: treg_trial — api._enforce_trial_allowance is the brake).
+    platform_key_coingecko: str = ""    # PRO key (x-cg-pro-api-key); Basic $29/mo, $0.00029/credit
+    platform_key_marketstack: str = ""  # access_key; Basic $9.99/mo, $0.000999/call vs the 10k/mo cap
+    platform_key_finnhub: str = ""      # FREE-tier key — trial pool, 50 calls/team/day
+    platform_key_twelvedata: str = ""   # FREE Basic key (800/day TOTAL) — trial pool, 20 calls/team/day
+    platform_key_tiingo: str = ""       # FREE Starter key (1,000/day total) — trial pool, 20 calls/team/day
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the

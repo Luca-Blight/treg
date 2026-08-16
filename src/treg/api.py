@@ -8038,6 +8038,50 @@ def _effective_daily_cap(org: Org) -> int:
     return min(own, ceiling) if own > 0 else ceiling
 
 
+async def _enforce_trial_allowance(caller: Caller, provider: str, db: AsyncSession) -> None:
+    """Per-team, per-UTC-day call allowance for TRIAL-POOL providers (fx.yaml `kind: treg_trial`).
+
+    A trial provider is served on treg's own FREE-tier key at a $0 price, so the price gives no
+    brake at all — one looping agent would drain the shared vendor quota for every team at once.
+    The allowance is the brake, and it lives in the same fx entry as the zero (catalog.trial_pools).
+
+    Counted from audit rows: successful (2xx) calls only, because a failed call produced nothing —
+    the same line billability draws. `tool_name` is the endpoint id, so the provider is its prefix.
+    The audit is written fire-and-forget, so the count can lag a call or two under load; for a free
+    trial that slack is acceptable and bounded. Own-key (tier 2) calls never reach this check — a
+    team with its own key is never throttled by the trial it does not use.
+
+    FAIL-CLOSED like the platform cap: the quota being protected is the shared vendor key, and
+    serving blind when the count cannot be read is how the pool dies for everyone."""
+    allowance = catalog_store.load().trial_pools.get(provider)
+    if not allowance:
+        return
+    day_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0,
+                                                   tzinfo=None)
+    try:
+        used = (await db.execute(
+            select(func.count(CallRecord.id)).where(
+                CallRecord.org_id == caller.org_id,
+                CallRecord.tool_name.like(f"{provider}.%"),  # type: ignore[union-attr]
+                CallRecord.status_code >= 200, CallRecord.status_code < 300,
+                CallRecord.created_at >= day_start))).scalar_one()
+    except Exception as exc:  # noqa: BLE001 — cannot verify the pool ⇒ do not drain it
+        logging.getLogger("treg.ledger").warning(
+            "trial-allowance check failed for org %s / %s: %s", caller.org_id, provider, exc)
+        raise HTTPException(status_code=429, detail=(
+            f"cannot verify today's {provider} trial usage right now — retry shortly, or use "
+            "your own key: treg connections connect"))
+    if used >= allowance:
+        raise HTTPException(status_code=429, detail={
+            "error": "trial_allowance_reached", "provider": provider,
+            "allowance_per_day": allowance, "used_today": int(used),
+            "message": (f"this team has used its free {provider} trial for today "
+                        f"({used}/{allowance} calls). It resets at 00:00 UTC — or connect your "
+                        f"own {provider} key for unmetered calls at your plan's limits: "
+                        "treg connections connect"),
+        })
+
+
 async def _enforce_platform_daily_cap(caller: Caller, add_micro: int, db: AsyncSession) -> None:
     """Per-org, per-UTC-day ceiling on tier-4 spend. FAIL-CLOSED, unlike `_enforce_daily_cap`: that one
     meters calls and may let a few extra through under load, this one meters OUR money, so a query that
@@ -8212,6 +8256,7 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
     # not surface as the team-wide balance error, which names the builder's private numbers.
     await _enforce_tag_budgets(caller, meta, db, add_micro=mk.estimate_micro)
     await _enforce_platform_daily_cap(caller, mk.estimate_micro, db)
+    await _enforce_trial_allowance(caller, mk.provider, db)
     try:
         mk.call_id = await ledger.reserve(
             db, caller.org_id, mk.endpoint_id, mk.estimate_micro,

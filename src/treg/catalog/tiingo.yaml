@@ -3,7 +3,7 @@ source:
   docs: https://www.tiingo.com/documentation/general/overview
   openapi: null # paths transcribed and live-verified 2026-08-15 (free Starter, 1,000 req/day)
   curated: 2026-08-15
-# OWN-KEY-ONLY: treg holds the free Starter key; Tiingo's individual plans are internal personal use
+# TRIAL POOL + own-key: treg holds the free Starter key; Tiingo's individual plans are internal personal use
 # and even the $50/mo commercial tier is internal-only — redistribution is a sales bundle (research
 # doc, licensing table). No fx rate -> usd null -> platform_eligible FALSE.
 pricing_url: https://www.tiingo.com/about/pricing
@@ -21,7 +21,7 @@ endpoints:
       queryParams:
         ticker: {type: string, required: true, note: "path parameter, lowercase", example: "aapl"}
     test_request: {queryParams: {ticker: "aapl"}}
-    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription or free tier, no per-call price); treg publishes no rate, so this serves own-key only"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://www.tiingo.com/about/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier tiingo key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
     verified: 2026-08-15
     example_response: examples/tiingo.daily.meta.json
     docs_url: https://www.tiingo.com/documentation/end-of-day
@@ -41,7 +41,7 @@ endpoints:
         endDate: {type: string, required: false}
         resampleFreq: {type: string, required: false, note: "daily | weekly | monthly | annually"}
     test_request: {queryParams: {ticker: "aapl", startDate: "2026-08-10"}}
-    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription or free tier, no per-call price); treg publishes no rate, so this serves own-key only"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://www.tiingo.com/about/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier tiingo key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
     verified: 2026-08-15
     example_response: examples/tiingo.daily.prices.json
     docs_url: https://www.tiingo.com/documentation/end-of-day
@@ -58,7 +58,7 @@ endpoints:
       queryParams:
         ticker: {type: string, required: true, note: "path parameter", example: "aapl"}
     test_request: {queryParams: {ticker: "aapl"}}
-    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription or free tier, no per-call price); treg publishes no rate, so this serves own-key only"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://www.tiingo.com/about/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier tiingo key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
     verified: 2026-08-15
     example_response: examples/tiingo.iex.latest.json
     docs_url: https://www.tiingo.com/documentation/iex
@@ -77,7 +77,7 @@ endpoints:
         startDate: {type: string, required: false}
         resampleFreq: {type: string, required: false, note: "1min | 5min | 1hour | 1day", example: "1day"}
     test_request: {queryParams: {tickers: "btcusd", resampleFreq: "1day"}}
-    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, checked: "2026-08-15", note: "included in the subscriber's own plan (flat subscription or free tier, no per-call price); treg publishes no rate, so this serves own-key only"}
+    cost: {type: per_call, value: 1, currency: credit, per: 1, unit: call, source_url: "https://www.tiingo.com/about/pricing", checked: "2026-08-15", confidence: documented, note: "$0 on treg's key: a TRIAL POOL of 20 calls per team per day served on treg's free-tier tiingo key (fx.yaml kind: treg_trial). Past the allowance the call is refused with a connect-your-own-key hint. With your own key: unmetered, your plan's limits"}
     verified: 2026-08-15
     example_response: examples/tiingo.crypto.prices.json
     docs_url: https://www.tiingo.com/documentation/crypto

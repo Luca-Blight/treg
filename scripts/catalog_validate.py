@@ -179,6 +179,7 @@ def check_cost(cost: dict, where: str, errors: list[str], warnings: list[str]) -
 
 
 SHARED_PLAN_KIND = "treg_shared_plan"
+TRIAL_KIND = "treg_trial"
 
 
 def check_fx(errors: list[str]) -> None:
@@ -205,8 +206,26 @@ def check_fx(errors: list[str]) -> None:
                 fail(errors, where, "basis claims a treg shared-plan rate but has no "
                                     f"`kind: {SHARED_PLAN_KIND}` marker")
             continue
+        if kind == TRIAL_KIND:
+            # A ZERO rate treg set: served on treg's own free-tier key as a capped taste. The
+            # allowance is what makes $0 honest — without it the zero reads as unlimited and the
+            # shared free key dies to the first looping agent.
+            if entry.get("usd") not in (0, 0.0):
+                fail(errors, where, "a treg_trial rate must be exactly 0 — a non-zero treg-set "
+                                    "price is a shared plan, not a trial")
+            allowance = entry.get("trial_calls_per_team_day")
+            if not isinstance(allowance, int) or allowance <= 0:
+                fail(errors, where, "trial_calls_per_team_day (a positive integer) is required — "
+                                    "at $0 the allowance is the only congestion control")
+            if not basis.startswith("treg trial rate"):
+                fail(errors, where, "basis must START with 'treg trial rate' so every surface "
+                                    "showing provenance says whose $0 this is")
+            if not entry.get("source") or not entry.get("checked"):
+                fail(errors, where, "source and checked are required on a treg-set rate")
+            continue
         if kind != SHARED_PLAN_KIND:
-            fail(errors, where, f"unknown kind {kind!r} (only {SHARED_PLAN_KIND!r} exists)")
+            fail(errors, where, f"unknown kind {kind!r} (only {SHARED_PLAN_KIND!r} and "
+                                f"{TRIAL_KIND!r} exist)")
             continue
         if not isinstance(entry.get("usd"), (int, float)) or entry["usd"] <= 0:
             fail(errors, where, "a treg_shared_plan rate must carry a positive usd — null means "
