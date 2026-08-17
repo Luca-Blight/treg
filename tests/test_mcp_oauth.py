@@ -1081,21 +1081,50 @@ async def test_a_grant_dies_with_the_membership_it_was_consented_under(clients):
     assert "member" in r.json()["error_description"]
 
 
-async def test_a_refresh_racing_the_move_does_not_drag_the_team_back(clients):
-    """The team rides on every row of the refresh family, so a rotation that copied the org off the
-    row it happened to read could resurrect the old team milliseconds after the user was told the
-    move had succeeded — money going back to the balance they had just moved it off. Rotation reads
-    the team from the family as it stands NOW, not from the row it was handed."""
+async def test_a_rotation_started_before_a_move_cannot_drag_the_team_back(clients):
+    """A rotation that began before a team move must not resurrect the old team when it lands.
+
+    The first version of this test proved nothing: it completed the move and THEN refreshed, which
+    passes whether or not the fix exists, because `set_team` had already rewritten the very row the
+    refresh reads. The race that matters is the other order — a rotation holding a row whose
+    `org_id` still says the OLD team — so this test creates that state directly, by writing the
+    stale team back onto the live row after the move (exactly what an in-flight rotation would have
+    read). Authority lives on the family's OLDEST row, so the stale row must lose."""
     email = "racer@superdesign.dev"
-    body, client_id, _ = await _grant_full(clients, email)
+    body, client_id, original_org_id = await _grant_full(clients, email)
     me = await _as(email)
     other = (await clients.post("/orgs", json={"name": "destination team"}, headers=me)).json()
     grant = (await clients.get("/oauth/grants", headers=me)).json()[0]["grant"]
 
+    # rotate once, so the consent row (the authority) is no longer the live row
+    rotated = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert rotated.status_code == 200
+    body = rotated.json()
+
     assert (await clients.post(f"/oauth/grants/{grant}/team",
                                json={"team": other["org"]}, headers=me)).status_code == 200
 
-    # the client rotates with a refresh token minted BEFORE the move — the stale-row case
+    # The state the race actually leaves behind: a rotation that read the OLD team before the move
+    # commits its replacement AFTER it, so the family's NEWEST row carries the old team while the
+    # oldest — the authority — carries the new one. Reading the newest row (the first attempt at
+    # this fix) reverts the move permanently right here.
+    from sqlmodel import select as _select
+
+    from treg.db import session_maker
+    from treg.models import OAuthRefresh as _RT
+
+    async with session_maker() as db:
+        newest = (await db.execute(_select(_RT).where(_RT.family_id == grant)
+                                   .order_by(_RT.id.desc()).limit(1))).scalars().first()
+        oldest = (await db.execute(_select(_RT).where(_RT.family_id == grant)
+                                   .order_by(_RT.id.asc()).limit(1))).scalars().first()
+        assert newest.id != oldest.id, "the family must have rotated, or newest IS the authority"
+        newest.org_id = original_org_id
+        db.add(newest)
+        await db.commit()
+
     r = await clients.post("/oauth/token", data={
         "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
         "client_id": client_id})

@@ -460,14 +460,33 @@ Three rules it must honour:
 - **Never probe with a real call.** Discovering an HTTP method by sending a GET is how you get
   billed 1400 times (see the quota trap above). TikHub's methods come from an `OPTIONS` request,
   which Starlette answers `405 + allow:` before the handler — and therefore the meter — runs.
-- **The published spec outranks the probe.** A wrong method is not a cosmetic error: treg *enforces*
-  the recorded verb, so the endpoint becomes uncallable from both sides at once — POST is refused
-  here ("… is GET") and GET is refused upstream (405). All twelve `/api/v1/tiktok/ads/*` routes
-  shipped that way and stayed uncallable for weeks. The probe is weaker than it looks: a preflight
-  that answers with a *list* (CORS middleware happily reports `GET` for a POST-only handler) walks
-  the preference order and picks GET, and the vendor docs mirror it — three signals, one mistake.
-  So when the OpenAPI declares exactly one method for a route, that wins; probe and docs are the
-  fallback for routes the spec doesn't describe.
+- **The published spec outranks the probe** (`resolve_method`). A wrong method is not a cosmetic
+  error: treg *enforces* the recorded verb, so the endpoint becomes uncallable from both sides at
+  once — POST refused here ("… is GET"), GET refused upstream (405). The probe is weaker than it
+  looks: a preflight answering with a method *list* walks its preference order and comes out `GET`
+  whatever the handler takes. So when the OpenAPI declares exactly one method, that wins; probe and
+  docs are the fallback for routes the spec doesn't describe.
+- **The verb and the parameter POSITION are one decision, from one document.** TikHub's Apifox docs
+  list every TikTok-Ads parameter under `parameters.query` while its OpenAPI declares the same route
+  POST-with-a-JSON-body. Taking the verb from one and the position from the other yields a POST
+  carrying its arguments in the query string — still uncallable, just differently. When the spec
+  declares a JSON body and the docs gave us none, the documented "query" parameters ARE that body.
+
+### Catalog rot is a category of bug, and it is not the ingester's fault
+
+The 2026-08-17 TikTok-Ads breakage was first written up here as an ingester defect. It was not, and
+the correction matters more than the original claim. Those twelve routes really were `GET` when
+ingested: TikHub's July spec says `get`, and the captured `example_response` is a **real billed 200
+from a GET on 2026-07-27**. TikHub moved them to POST some time after. The catalog did not mis-read
+the provider — it went stale, and **nothing re-checks a provider's spec for drift**.
+
+That reframes the fix. Preferring the spec over the probe is a genuine hardening, but it only helps
+*at re-ingest time*, and only if the cached spec was refreshed — the cache under
+`~/.cache/treg-catalog-ingest` is what an unqualified `catalog_ingest.py <provider>` reads, so a
+re-run against a months-old cache faithfully reproduces months-old truth. A `verified:` stamp is
+evidence about the day it was written and nothing after it. Detecting drift (re-fetching specs and
+diffing method/path against the checked-in tier) is unbuilt; until it exists, an endpoint failing
+`405`/`404` in the wild is the first signal we get.
 - **Platform is the system the data is ABOUT**, not the API family it lives under: DataForSEO's
   `/v3/merchant/amazon/products/live/advanced` is `amazon`, not `merchant`. Anything not tied to
   one system is `web`. Every new slug goes into `capabilities.yaml`'s `platforms` in the same

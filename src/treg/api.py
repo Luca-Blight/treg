@@ -2419,6 +2419,26 @@ AUTH_CODE_TTL_S = 300   # a code is redeemed within seconds; five minutes is gen
 REFRESH_TTL_S = 30 * 24 * 3600   # a connector the user still uses keeps working for a month
 
 
+async def _family_org(family_id: str, db: AsyncSession) -> int | None:
+    """Which team this grant spends from — read from the family's OLDEST row.
+
+    One row has to be the authority or a move cannot be made to stick, and the oldest is the only
+    one that qualifies: it is the row written at consent, rows are retired rather than deleted, and
+    nothing but `set_team` ever changes its `org_id`. Reading the NEWEST row instead (the first
+    attempt at this) hands authority to whichever refresh happened to rotate last — so a rotation
+    that started before a team move and finished after it would write its stale team onto the newest
+    row and permanently revert the move, minutes after the user was told it had succeeded.
+
+    The residual window is the one no design without distributed locking removes: an access token
+    already minted for the old team keeps working until it expires (≤ ACCESS_TTL_SECONDS). The
+    FAMILY, though, converges on the move — the next rotation reads this row and mints for the new
+    team — so the move is never undone, only briefly overlapped.
+    """
+    return (await db.execute(
+        select(OAuthRefresh.org_id).where(OAuthRefresh.family_id == family_id)
+        .order_by(OAuthRefresh.id.asc()).limit(1))).scalar_one_or_none()
+
+
 async def _issue_refresh(*, family_id: str, client_id: str, user_id: int, org_id: int,
                          resource: str, scope: str, db: AsyncSession) -> str:
     """Mint a refresh token and store only its hash — a database copy is a database leak."""
@@ -2821,14 +2841,7 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
     user = await db.get(User, row.user_id)
     if user is None or user.suspended:
         return bad("invalid_grant", "the account behind this grant is no longer active")
-    # Re-read the team off the family rather than trusting the row we were handed. `set_team` can
-    # commit between the SELECT above and this point, and copying the stale `row.org_id` into the
-    # replacement would silently undo a move the user was just told had succeeded — money going
-    # back to the balance they had moved it off. Reading it here shrinks that window to the gap
-    # between this statement and the commit below.
-    live_org_id = (await db.execute(
-        select(OAuthRefresh.org_id).where(OAuthRefresh.family_id == row.family_id)
-        .order_by(OAuthRefresh.id.desc()).limit(1))).scalar_one_or_none() or row.org_id
+    live_org_id = await _family_org(row.family_id, db) or row.org_id
     org = await db.get(Org, live_org_id)
     if org is None or org.suspended:
         return bad("invalid_grant", "the team on this grant is no longer available")
@@ -3934,7 +3947,13 @@ async def oauth_grant_set_team(family_id: str, body: GrantTeamIn,
     if org is None or org.suspended or member is None:
         raise HTTPException(status_code=404, detail=(
             f"no team {body.team!r} on this account — see `treg org ls` for the teams you can use"))
-    for row in rows:
+    # EVERY row of the family, retired ones included — the oldest row is the authority `_family_org`
+    # reads (see there), and it is a retired row on any grant that has ever rotated. Moving only the
+    # live rows would leave the authority pointing at the old team, so the move would appear to
+    # succeed and then evaporate on the next rotation.
+    family = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.family_id == family_id, OAuthRefresh.user_id == user.id))).scalars().all()
+    for row in family:
         row.org_id = org.id
         db.add(row)
     await db.commit()

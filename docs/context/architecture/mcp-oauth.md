@@ -266,10 +266,16 @@ team, and the first signal was spend on a balance nobody had opened. Two halves 
 
   Three things that fall out of putting the team on every row of the family, all found in review:
 
-  - **Rotation reads the team from the family as it stands NOW**, not off the row it was handed.
-    A refresh in flight when the move commits would otherwise copy the stale `org_id` into the
-    replacement and quietly drag the grant back to the old balance — moments after the user was told
-    the move succeeded.
+  - **One row is the authority: the family's OLDEST** (`_family_org`). Some row has to be, or a move
+    cannot be made to stick — and the oldest is the only candidate, because it is written at consent,
+    rows are retired rather than deleted, and nothing but `set_team` ever rewrites its `org_id`.
+    Reading the NEWEST row instead (the first attempt) hands authority to whichever refresh rotated
+    last, so a rotation that began before a move and landed after it wrote its stale team onto the
+    newest row and **permanently reverted the move**. `set_team` therefore updates every row of the
+    family, retired ones included. The residual window is the one no design without distributed
+    locking removes: an access token already minted for the old team keeps working until it expires
+    (≤ `ACCESS_TTL_SECONDS`). The family itself converges — the next rotation reads the anchor — so
+    the move is never undone, only briefly overlapped.
   - **A grant dies with the membership it was consented under.** Refresh checked that the user and
     the org still existed, never that the user was still *in* it. Calls were refused meanwhile
     (`require_member` re-resolves membership every time), but the grant kept minting tokens and would

@@ -774,3 +774,58 @@ async def test_an_id_that_resembles_nothing_is_sent_to_search(clients: AsyncClie
     detail = r.json()["detail"]
     assert detail["did_you_mean"] == []
     assert "catalog search" in detail["hint"]
+
+
+# ---- the GENERATOR, not just its output ---------------------------------------------------------
+def test_the_ingester_puts_a_POST_routes_arguments_in_the_BODY():
+    """The checked-in YAML is machine-generated, so a fix that lives only in the file is undone by
+    the next `catalog_ingest.py` run. These assert the GENERATOR: the tests above inspect the
+    corrected YAML and would pass with the ingester reverted.
+
+    The two decisions have to come from one document. TikHub's Apifox docs list every TikTok-Ads
+    parameter under `parameters.query` while its OpenAPI declares the same route POST-with-a-JSON
+    body, so taking the verb from one and the position from the other produced a POST carrying its
+    arguments in the query string — uncallable, just differently."""
+    import sys
+    sys.path.insert(0, "scripts")
+    from catalog_ingest import tikhub_input_and_test
+
+    doc_op = {"parameters": {"query": [
+        {"name": "keyword", "type": "string", "required": True, "sampleValue": "shoes"},
+        {"name": "limit", "type": "integer", "required": False, "sampleValue": 20},
+    ]}}
+    spec_op = {"post": {"requestBody": {"content": {"application/json": {"schema": {}}}}},
+               "get": {}}
+
+    inp, test, reason = tikhub_input_and_test(doc_op, {}, method="POST", spec_op=spec_op)
+    assert not reason
+    assert "queryParams" not in inp and "keyword" in inp["body"], inp
+    assert inp["bodyType"] == "json"
+    assert "queryParams" not in test and test["body"]["keyword"] == "shoes", test
+
+    # a GET route is untouched — the rule keys off the spec's own body declaration, not the verb alone
+    as_get, get_test, _ = tikhub_input_and_test(doc_op, {}, method="GET", spec_op=spec_op)
+    assert "queryParams" in as_get and "body" not in as_get
+    assert "queryParams" in get_test
+
+    # …and a POST whose spec declares NO json body keeps its query string
+    no_body, _, _ = tikhub_input_and_test(doc_op, {}, method="POST", spec_op={"post": {}})
+    assert "queryParams" in no_body and "body" not in no_body
+
+
+def test_a_published_spec_outranks_the_OPTIONS_probe():
+    """The probe infers a verb from a preflight; the spec is the provider's own contract. When the
+    spec names exactly one method the spec wins, so a re-ingest inherits an upstream verb change
+    instead of re-deriving a stale guess."""
+    import sys
+    sys.path.insert(0, "scripts")
+    from catalog_ingest import resolve_method
+
+    # the case that matters: spec says POST, the probe came back GET
+    assert resolve_method(spec_op={"post": {}}, probed="GET", documented="GET") == "POST"
+    # ambiguous spec (two verbs) → the probe is still the tiebreaker it always was
+    assert resolve_method(spec_op={"get": {}, "post": {}}, probed="POST") == "POST"
+    # no spec at all → probe, then docs, then GET
+    assert resolve_method(spec_op={}, probed="POST") == "POST"
+    assert resolve_method(spec_op={}, probed=None, documented="delete") == "DELETE"
+    assert resolve_method(spec_op={}, probed=None) == "GET"

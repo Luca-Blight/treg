@@ -535,6 +535,27 @@ def domain_rows(pairs: list[tuple[dict, dict]], capabilities: dict[str, str]) ->
 
 
 # ---- near misses -----------------------------------------------------------------------------
+def _id_shape(endpoint_id: str) -> tuple[str, list[str]]:
+    """`(provider, comparable tokens)` for an endpoint id.
+
+    The provider is the FIRST DOT-DELIMITED SEGMENT, kept whole — not the first word of a
+    tokenisation. Ten providers are hyphenated (`google-ads`, `meta-ad-library`,
+    `google-search-console`, …), and splitting on non-alphanumerics turned `google-ads` into
+    `google`, which matches no provider, so every near miss under those ten silently returned
+    nothing at all.
+
+    The `x` tier marker is then stripped only where it can BE a tier marker — the second segment —
+    instead of everywhere. Dropping the token `x` globally erased the name of the provider that is
+    literally called `x` (X/Twitter, 173 endpoints), so even a correct `x.*` id resolved to nothing.
+    Both bugs made the report-#1 fix quietly inert across ~17% of the catalog while its test, which
+    only used single-word providers, went on passing.
+    """
+    head, _, rest = endpoint_id.strip().lower().partition(".")
+    if rest.startswith("x."):
+        rest = rest[2:]
+    return head, [t for t in _SPLIT.split(rest) if t]
+
+
 def near_ids(endpoint_id: str, cat: Catalog, limit: int = 3) -> list[str]:
     """Real ids close to one that doesn't exist — for the answer to an unknown id.
 
@@ -549,10 +570,10 @@ def near_ids(endpoint_id: str, cat: Catalog, limit: int = 3) -> list[str]:
     ignoring the tier marker, then a shared-token overlap ranked by how much of the id matched. No
     edit-distance library, no fuzzy threshold to tune.
     """
-    want = [t for t in _SPLIT.split(endpoint_id.lower()) if t and t != "x"]
+    provider, want = _id_shape(endpoint_id)
     if not want:
         return []
-    provider, want_set = want[0], set(want)
+    want_set = set(want)
     # SAME PROVIDER ONLY. Two reasons, and the second is the load-bearing one. A suggestion is a
     # claim that the caller mistyped, and `apollo.people.email.find` is not a typo for
     # `hunter.people.email.find` — it is a different vendor, a different price and a different
@@ -569,7 +590,7 @@ def near_ids(endpoint_id: str, cat: Catalog, limit: int = 3) -> list[str]:
     for eid, ep in cat.by_id.items():
         if ep.get("provider") != provider:
             continue
-        have = [t for t in _SPLIT.split(eid.lower()) if t and t != "x"]
+        _, have = _id_shape(eid)
         if not have:
             continue
         if have == want:      # the same id but for a tier marker — collect ALL, don't return the
@@ -670,11 +691,15 @@ def rank_band(query: str, cat: Catalog, limit: int) -> tuple[list[tuple[dict, in
     rows, total = search(query, cat, max(limit, 0))
     if not rows or len(rows) >= total:
         return rows, total, False
-    wider, _ = search(query, cat, RERANK_BAND)
+    # One row PAST the ceiling, so "was the group actually cut?" is observed rather than inferred.
+    # Inferring it from `len(kept) >= RERANK_BAND` cried truncation whenever the group happened to
+    # fill the ceiling exactly — telling the caller to narrow a query that had in fact been ranked
+    # in full.
+    wider, _ = search(query, cat, RERANK_BAND + 1)
     edge = rows[-1][1]
-    kept = [r for r in wider if r[1] > edge] + [r for r in wider if r[1] == edge]
-    truncated = len(kept) >= RERANK_BAND and total > RERANK_BAND
-    return kept, total, truncated
+    group = [r for r in wider if r[1] >= edge]
+    kept = group[:RERANK_BAND]
+    return kept, total, len(group) > len(kept)
 
 
 def rerank(rows: list[tuple[dict, int]], stats: dict[str, dict],
@@ -759,7 +784,11 @@ def call_template(ep: dict) -> str:
         parts += ["--query", f"{name}={value}"]
 
     body = test.get("body") if test.get("body") is not None else (_required_examples(inp.get("body")) or None)
-    if body:
+    # `is not None`, not truthiness: `body: {}` is a real stored test request — a POST that takes no
+    # arguments but still requires a JSON body — and dropping `--data '{}'` from the line hands the
+    # reader a command that differs from the one that was tested, on handlers that reject an empty
+    # body outright.
+    if body is not None and (body or ep["method"] != "GET"):
         # single-quoted so the JSON's own quotes survive a paste into any POSIX shell
         parts += ["--data", "'" + json.dumps(body, separators=(",", ":"), ensure_ascii=False) + "'"]
     return " ".join(parts)

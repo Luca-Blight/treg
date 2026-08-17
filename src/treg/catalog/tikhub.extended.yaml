@@ -22215,7 +22215,7 @@ endpoints:
     confidence: verified
   test_request:
     body: {}
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-configure-safety.json
 - id: tikhub.x.tiktok-ads-get-location-list
   tier: extended
@@ -22235,7 +22235,7 @@ endpoints:
     confidence: verified
   test_request:
     body: {}
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-location-list.json
 - id: tikhub.x.tiktok-ads-get-query-suggestions
   tier: extended
@@ -22277,7 +22277,7 @@ endpoints:
   test_request:
     body:
       count: 5
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-query-suggestions.json
 - id: tikhub.x.tiktok-ads-get-trends-hashtag-detail
   tier: extended
@@ -22315,7 +22315,7 @@ endpoints:
   test_request:
     body:
       hashtag_id: '7383227119714238469'
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-trends-hashtag-detail.json
 - id: tikhub.x.tiktok-ads-get-trends-hashtag-list
   tier: extended
@@ -22362,7 +22362,7 @@ endpoints:
   test_request:
     body:
       limit: 5
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-trends-hashtag-list.json
 - id: tikhub.x.tiktok-analytics-detect-fake-views
   tier: extended
@@ -27264,7 +27264,7 @@ endpoints:
   test_request:
     body:
       material_id: '7213258221116751874'
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-ad-interactive-analysis.json
   capability: tiktok-ads.library.ad.analytics
 - id: tikhub.x.tiktok-ads-get-ad-keyframe-analysis
@@ -27298,7 +27298,7 @@ endpoints:
   test_request:
     body:
       material_id: '7213258221116751874'
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-ad-keyframe-analysis.json
   capability: tiktok-ads.library.ad.analytics
 - id: tikhub.x.tiktok-ads-get-ad-percentile
@@ -27337,7 +27337,7 @@ endpoints:
   test_request:
     body:
       material_id: '7213258221116751874'
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-ad-percentile.json
   capability: tiktok-ads.library.ad.analytics
 - id: tikhub.x.tiktok-ads-get-ads-detail
@@ -27366,7 +27366,7 @@ endpoints:
   test_request:
     body:
       ads_id: '7131673574381518849'
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-ads-detail.json
   capability: tiktok-ads.library.ad.detail
 - id: tikhub.x.tiktok-ads-get-recommended-ads
@@ -27405,7 +27405,7 @@ endpoints:
   test_request:
     body:
       material_id: '7213258221116751874'
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-recommended-ads.json
   capability: tiktok-ads.library.top_ads
 - id: tikhub.x.tiktok-ads-get-top-ads-spotlight
@@ -27443,7 +27443,7 @@ endpoints:
   test_request:
     body:
       limit: 5
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-get-top-ads-spotlight.json
   capability: tiktok-ads.library.top_ads
 - id: tikhub.x.tiktok-ads-search-ads
@@ -27525,7 +27525,7 @@ endpoints:
   test_request:
     body:
       limit: 5
-  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
+  unverified: "TikHub MOVED this route from GET to POST between 2026-07-28 and 2026-08-17. Both its own OpenAPI (get -> post for every /api/v1/tiktok/ads/* route) and the live API (405 on GET) show the change; the catalog was right when written and went stale, which is why a caller hit 'treg says GET, provider says 405'. The verified:2026-07-28 stamp was earned by a real billed GET (see the captured example_response, code 200 at 2026-07-27 23:29) but describes a request shape that no longer exists, so it is not carried forward. The example_response likewise predates the change: its BODY shape is still indicative, its request shape is not. Corrected by hand from the live spec; not re-run against the API."
   example_response: examples/tikhub.x.tiktok-ads-search-ads.json
   capability: tiktok-ads.library.search
 - id: tikhub.x.tiktok-app-v3-fetch-shop-home
