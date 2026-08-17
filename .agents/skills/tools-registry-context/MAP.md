@@ -24,6 +24,7 @@ Regenerate via `scripts/build-map.py`.
 | `render.yaml` | ops/deploy.md |
 | `scripts/build_plugin.py` | interface/skill.md |
 | `src/treg/__main__.py` | ops/deploy.md |
+| `src/treg/adsconv.py` | architecture/ads-conversions.md |
 | `src/treg/agents.py` | interface/cli.md |
 | `src/treg/analytics.py` | architecture/data-model.md |
 | `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
@@ -61,6 +62,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/session.py` | interface/dashboard.md |
 | `src/treg/shell.py` | interface/shell.md |
 | `src/treg/skills.py` | interface/env-import.md |
+| `src/treg/web/adtrack.js` | architecture/ads-conversions.md |
 | `src/treg/web/catalog.css` | interface/seo.md |
 | `src/treg/web/connect-demo.html` | architecture/mcp-oauth.md |
 | `src/treg/web/index.html` | interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md, interface/seo.md |
@@ -79,6 +81,7 @@ Regenerate via `scripts/build-map.py`.
 
 | Fragment | Sources |
 |---|---|
+| `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
 | `architecture/catalog.md` | `catalog_store.py`, `endpoint_stats.py` |
 | `architecture/data-model.md` | `models.py`, `db.py`, `audit.py`, `analytics.py`, `ratestore.py` |

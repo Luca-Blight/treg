@@ -7,6 +7,7 @@ sources:
 related:
   - architecture/data-model.md
   - architecture/auth-secrets.md
+  - architecture/ads-conversions.md
   - foundation/charter.md
 ---
 
@@ -53,6 +54,11 @@ developer token is the case that exists. The value never lives in the org's secr
 can't read it or extract it through a local run; a missing setting is a clean `502`
 (`this server has no <setting> configured`). Used by the OAuth-marketplace auto-provisioner for a provider
 that needs a second credential treg holds centrally (see [api](../interface/api.md)).
+
+A separate case that looks similar but is NOT a platform binding: the Google Ads **conversion**
+uploader (`adsconv.py`) also spends treg's own platform connection, but it is not a caller-issued
+`/call/` request at all, so it never reaches `relay()` or `injectors.py` — it reads the platform org's
+stored OAuth secret directly and builds its own headers. See [ads-conversions](ads-conversions.md).
 
 **Accept-Encoding is normalized to `identity`** when the caller sent none. `relay()` streams the upstream
 body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would otherwise add its own

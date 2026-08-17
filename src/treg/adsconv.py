@@ -64,7 +64,10 @@ async def queue(db: AsyncSession, org: Org, action: str, *,
     """Record that `org` owes Google a conversion. Returns True if a row was written.
 
     Call this INSIDE the caller's transaction: the event and its pending conversion must commit
-    together, or a crash between them loses a conversion with no trace.
+    together, or a crash between them loses a conversion with no trace. The `paid` caller
+    (`billing._credit`) cannot honour this — `ledger.topup()` has already committed by the time
+    `_credit` gets here, so that one path is a known, accepted two-commit gap rather than a bug (see
+    `docs/context/architecture/ads-conversions.md`).
 
     A no-op when the team has no click to attribute to, which is most teams. Duplicate fires are
     absorbed by the unique constraint rather than checked for first — the check-then-insert race

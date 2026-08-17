@@ -395,9 +395,15 @@ class AdConversion(SQLModel, table=True):
     """One conversion owed to Google Ads — an OUTBOX row, not a log line.
 
     Written synchronously inside the transaction of the event it describes, so the event and its
-    pending conversion commit or fail together. A background worker uploads it later; until then
-    `uploaded_at` is NULL. The unique constraint on (org_id, action) is what makes every fire site
-    idempotent — a webhook redelivery or a retried signup bounces off it instead of double-counting.
+    pending conversion commit or fail together — true for `signup` (queued before `ledger.grant`,
+    whose own commit lands both) and `first_call` (queued and committed on its own dedicated
+    session). It is NOT true for `paid`: `ledger.topup()` commits internally before `billing._credit`
+    queues the conversion, so a crash between the two commits loses that conversion permanently. This
+    gap is a known, accepted trade-off (2026-08-17) rather than a reason to restructure `ledger.py` —
+    see `docs/context/architecture/ads-conversions.md`. A background worker uploads every row later;
+    until then `uploaded_at` is NULL. The unique constraint on (org_id, action) is what makes every
+    fire site idempotent — a webhook redelivery or a retried signup bounces off it instead of
+    double-counting.
     """
 
     __table_args__ = (UniqueConstraint("org_id", "action", name="uq_adconversion_org_action"),)

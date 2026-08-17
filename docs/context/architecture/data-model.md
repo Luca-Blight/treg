@@ -10,6 +10,7 @@ sources:
 related:
   - architecture/proxy-model.md
   - architecture/auth-secrets.md
+  - architecture/ads-conversions.md
 ---
 
 # Data model
@@ -22,7 +23,11 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   `demo` (a sandbox team seeded by [onboarding](../interface/onboarding.md) — labeled + removable),
   `public_demo` (a team whose member token is PUBLISHED, e.g. on the landing page — non-admin members
   are locked to `/call` + reads and may never act as a user; gated in `api.require_member` /
-  `require_identity`), `created_at`.
+  `require_identity`), `created_at`. **`ad_gclid`/`ad_click_at`/`ad_landing`** (migration A35, all
+  nullable) — set once, at signup, from the first-party `treg_ad` cookie; never overwritten. **
+  `first_call_at`** (same migration) — set once by a guarded UPDATE in the `/call/` handler,
+  deliberately NOT derived from `CallRecord` (which `audit.py` sheds under load, undercounting exactly
+  when traffic is highest). Both feed [ads-conversions](ads-conversions.md).
 - **`User`** — a **global identity** only: `email` (unique), `is_superadmin` + `suspended` (platform
   flags, see [super-admin](super-admin.md)), `token_version` (bump to revoke every session cookie +
   identity token this user holds — the signed token carries the `tv` it was minted at; see `sess.make`
@@ -98,6 +103,12 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   secrets are injected via env, not the command line), `exit_code`, `duration_ms`, `created_at`. Written
   off the request path like `CallRecord`. **Usage metering** (`GET /orgs/{id}/usage`, per-user daily caps)
   counts `CallRecord` + `RunRecord` together — see [the API fragment](../interface/api.md).
+- **`AdConversion`** — the Google Ads conversion outbox: `org_id`, `action` (`signup`|`first_call`|
+  `paid`), `dedupe_key`, `value_usd_micro`, `created_at`, `uploaded_at` (NULL = not yet uploaded),
+  `attempts`, `error`. Unique on `(org_id, action)` — the sole idempotency mechanism, not a
+  check-then-insert. Durable by design (written synchronously in the firing code's transaction,
+  unlike `audit.py`/`analytics.py`, which are droppable); a background worker uploads it later. Full
+  chain and the one non-atomic fire site: [ads-conversions](ads-conversions.md).
 - **`Ephemeral`** — short-lived key/value state that must **survive a restart and stay correct across
   instances**: the emailed OTP code + its brute-force counter, and the auth rate-limit sliding windows.
   Keyed by `(ns, k)` — a namespace (`otp` | `otp_start` | `sandbox_hit`) plus the key within it — with an

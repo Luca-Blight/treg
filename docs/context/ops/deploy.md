@@ -11,6 +11,7 @@ sources:
   - render.yaml
 related:
   - architecture/data-model.md
+  - architecture/ads-conversions.md
   - foundation/charter.md
 ---
 
@@ -58,6 +59,13 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   Advertising OAuth platforms `microsoft_ads_*`, `snapchat_ads_*`, `tiktok_ads_*`, `pinterest_*` (all
   unset by default, so those providers ship **unconfigured** until a deployment registers a dev app).
   Empty for a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
+- **Ad conversion tracking** — `google_ads_customer_id` (which Ads account the uploader reports into)
+  and `ads_conv_org_slug` (which team's `google-ads` OAuth connection the uploader authenticates as —
+  a platform setting, not a per-tenant one, since treg uploads to its OWN ad account). **Both** must be
+  set or the whole feature is off (`adsconv.enabled()`): no capture-side behavior changes either way,
+  but with either empty the background uploader task is never started, so self-hosters and the test
+  suite carry zero ad-conversion machinery by default. See
+  [ads-conversions](../architecture/ads-conversions.md).
 - **Landing live-wire (optional):** `demo_stripe_key` (`TREG_DEMO_STRIPE_KEY`, a Stripe **sandbox
   restricted** key) powers the landing sandbox's ONE real upstream call — a sandbox call to the exact
   seeded `stripe` tool relays for real with this key injected; the key exists in no sandbox org. Empty ⇒
