@@ -3,6 +3,8 @@ title: The web dashboard (Ledger, served from FastAPI)
 status: shipped
 sources:
   - src/treg/web/index.html
+  - src/treg/web/vendor/README.md
+  - src/treg/web/vendor/vue-3.5.41.global.prod.js
   - src/treg/web/tutorial.js
   - src/treg/web/tutorial.html
   - src/treg/web/tour/tour.js
@@ -19,10 +21,32 @@ related:
 
 # Web dashboard (Phase 1)
 
-A single-file Vue 3 (CDN) dashboard in `src/treg/web/index.html`, served **same-origin** by the API
+A single-file Vue 3 dashboard in `src/treg/web/index.html`, served **same-origin** by the API
 (`GET /` → `FileResponse`, `dashboard()` in `api.py`, via `_WEB_DIR`). Same origin = no CORS and it
 ships with the server (Render/Fly). Design language: **Ledger** (warm charcoal + clay accent,
 mono-forward, dark default + light toggle) — see `docs/style-board.html` / `docs/DASHBOARD-PLAN.md`.
+
+### Vue is vendored, not fetched from a CDN
+There is no bundler, so Vue arrives as a plain `<script src>` — but from **`/vendor/`**, served off
+`src/treg/web/vendor/` by an `_ImmutableStatic` mount in `api.py`, never from unpkg. It used to come
+from `unpkg.com/vue@3`, and a visitor whose network could not reach unpkg got a **blank signed-in
+dashboard with no error** ([#137](https://github.com/superdesigndev/treg/issues/137): mainland-China
+`ERR_CONNECTION_CLOSED`, then `Vue is not defined`). The landing has no external scripts at all, so
+the symptom read as "sign-in broke the site" when it was only "the dashboard needs one more origin".
+
+Two rules follow, and both are load-bearing:
+
+- **Pin the version in the filename** (`vue-3.5.41.global.prod.js`) and verify new bytes against a
+  second CDN before committing them — see `src/treg/web/vendor/README.md`. A floating `vue@3` tag is
+  arbitrary future code running in an authenticated session; that is why it is gone.
+- **Nothing in the dashboard's critical path may be third-party.** Still CDN-hosted and *not*
+  critical: the `@lobehub` agent icons (`agentIcon`/`agentIconInv`) and Google Fonts — those degrade
+  to broken images and system fonts rather than a blank page.
+
+A **loader guard** sits right after the script tag. `[v-cloak]{display:none}` hides the un-compiled
+template until Vue mounts, which is precisely what made #137 silent — so the guard checks whether
+`#app` is still cloaked ~1.5s after `load` and, if it is, replaces the blank with a readable message,
+a reload button, and the issues link. Anything that stops Vue mounting now says so on screen.
 
 ## Shell & design system (2026 rework)
 The design tokens are now **shared across every served page** (`index.html`, `tutorial.html`,
