@@ -4,7 +4,8 @@ the ways it can be made to hand out money it shouldn't.
 Covered: the whole loop (link → cookie → signup → top-up → hold → both grants); that NOTHING is
 granted before the hold elapses and exactly one grant lands after, however many times the sweep
 runs; every abuse gate (self-referral, a signup with no top-up, a top-up below the minimum, a second
-top-up, one card claiming twice, a referrer who never paid us, the lifetime cap); the dispute
+top-up, one card claiming twice, the lifetime cap) — and that a FREE-TIER referrer is still
+paid, which is the gate we deliberately removed; the dispute
 clawback and its deliberate limit; and that one user can never see another's referrals — the single
 failure here that leaks data rather than money.
 
@@ -136,7 +137,9 @@ async def _blocks(org_id: int, kind: str) -> list[CreditBlock]:
 
 
 async def _ready_referrer(c: AsyncClient, monkeypatch, email="ann@superdesign.dev") -> tuple[int, str, str]:
-    """A referrer who has paid us once (so they are eligible) and holds a code."""
+    """A referrer holding a code. Also tops up — not because referring requires it (it does not,
+    see test_a_free_tier_referrer_still_earns), but so these tests exercise the ordinary case where
+    the referrer is also a paying team."""
     org_id, token = await _signup(c, email)
     await _topup(c, monkeypatch, org_id, pi="pi_referrer_seed", cents=2000, fingerprint="fp_referrer")
     r = await c.post("/referrals/code", headers=_h(token))
@@ -280,15 +283,26 @@ async def test_one_card_can_only_ever_claim_once(c, monkeypatch):
     assert rows[1].status == "rejected" and rows[1].reject_reason == "card_already_used"
 
 
-async def test_referrer_who_never_paid_us_earns_nothing(c, monkeypatch):
-    """Stops a throwaway account from being a referral source: a genuine referrer is already a
-    customer, so this costs them nothing."""
-    _, token = await _signup(c, "ann@superdesign.dev")
+async def test_a_free_tier_referrer_still_earns(c, monkeypatch):
+    """A referrer who has NEVER topped up is paid in full — deliberately.
+
+    There used to be a gate requiring the referrer to have paid us once. It was removed: a top-up is
+    not a cost to a self-dealer (it converts into credit they keep), so requiring one of the referrer
+    too only added a step that returns its own money — about one extra card per twenty referrals.
+    Against that it hid the link from every free-tier user, who on a product pitched as "$1.00 free,
+    no card" are most users and the likeliest to tell a friend. The card fingerprint is the gate with
+    teeth; this one cost ~90% of legitimate referrers to tax a farm ~5%."""
+    ann_org, token = await _signup(c, "ann@superdesign.dev")
     code = (await c.post("/referrals/code", headers=_h(token))).json()["code"]
     bob_org, _ = await _signup(c, "bob@example.com", ref=code)
     await _topup(c, monkeypatch, bob_org, pi="pi_bob", fingerprint="fp_bob")
     rows = await _referral_rows()
-    assert rows[0].status == "rejected" and rows[0].reject_reason == "referrer_never_topped_up"
+    assert rows[0].status == "qualified", "a free-tier referrer must still qualify"
+    await _age_qualification()
+    async with session_maker() as db:
+        await referrals.sweep(db)
+    s = get_settings()
+    assert [b.amount_micro for b in await _blocks(ann_org, "referral")] == [s.referral_referrer_micro]
 
 
 async def test_second_topup_does_not_qualify_again(c, monkeypatch):
@@ -386,13 +400,14 @@ async def test_referrals_page_requires_a_signed_in_person(c):
     assert (await c.post("/referrals/code")).status_code == 401
 
 
-async def test_eligibility_flips_only_after_the_referrer_pays(c, monkeypatch):
-    """The UI hides the link behind this flag, so a referrer is told to add funds rather than
-    silently earning nothing."""
-    org_id, token = await _signup(c, "ann@superdesign.dev")
-    assert (await c.get("/referrals", headers=_h(token))).json()["eligible"] is False
-    await _topup(c, monkeypatch, org_id, pi="pi_ann", cents=2000, fingerprint="fp_ann")
-    assert (await c.get("/referrals", headers=_h(token))).json()["eligible"] is True
+async def test_a_brand_new_account_gets_a_working_link_immediately(c, monkeypatch):
+    """No payment, no waiting: someone who signed up a minute ago can share their link. This is the
+    whole point of removing the top-up gate — the free-tier user IS the referrer we want."""
+    _, token = await _signup(c, "ann@superdesign.dev")
+    body = (await c.get("/referrals", headers=_h(token))).json()
+    assert body["eligible"] is True
+    assert body["link"].endswith("?ref=" + body["code"]) and body["code"]
+    assert body["credit_org"] is not None, "the reward needs somewhere to land"
 
 
 async def test_admin_report_totals_pending_before_it_is_spent(c, monkeypatch):

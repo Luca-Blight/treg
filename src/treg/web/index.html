@@ -2978,13 +2978,15 @@ product, including per-customer usage tracking and billing.</pre>
 
           <p v-if="ref.loading" class="sub">Loading…</p>
           <template v-else>
-            <!-- Gate 3 (the referrer must have paid us once) made VISIBLE. Unshown, someone shares a
-                 link, converts a friend, and silently earns nothing — the worst possible version. -->
+            <!-- Everyone with a team gets a link — including free-tier users, who on a product
+                 pitched as "$1.00 free, no card" are most users and the likeliest to tell a friend.
+                 This branch is now only the degenerate case (no team to pay the reward into), kept
+                 because the reward has to land SOMEWHERE and a silent zero is the worst version. -->
             <div v-if="!ref.eligible" class="card" style="max-width:620px;margin-top:14px">
-              <div class="lbl">Add funds once to unlock your link</div>
-              <p class="sub" style="margin:6px 0 12px">Referral rewards are for teams who use treg.
-                Add funds to your team and your link turns on.</p>
-              <button class="btn primary sm" @click="orgTab='billing'; go('orgs')">Add funds</button>
+              <div class="lbl">Create a team to unlock your link</div>
+              <p class="sub" style="margin:6px 0 12px">Referral rewards are paid as credit into a
+                team you own, so you'll need one first.</p>
+              <button class="btn primary sm" @click="go('orgs')">Go to teams</button>
             </div>
 
             <template v-else>
@@ -4865,9 +4867,8 @@ createApp({
     // scheduler, so the work rides on a request someone is already making.
     async loadReferrals(){ if(!this.authed) return;
       this.ref={...this.ref, loading:true};
-      // Mint the code first. It's idempotent, and doing it here (rather than at signup) means we
-      // never generate a code for the majority who never open this page.
-      await this.api('/referrals/code',{method:'POST'}).catch(()=>null);
+      // One call: GET mints the code if this is the first visit (asking for the page IS the lazy
+      // trigger), so there is no POST-then-GET round trip and no window where `link` is empty.
       const out=await this.api('/referrals').catch(()=>null);
       if(out) this.ref={...out, loading:false}; else this.ref={...this.ref, loading:false}; },
     async copyRefLink(){ try{ await navigator.clipboard.writeText(this.ref.link); }catch(e){}

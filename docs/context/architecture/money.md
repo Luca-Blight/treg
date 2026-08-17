@@ -493,11 +493,25 @@ would mean a second code path able to drive a balance negative. The clawback tou
 only; it never refunds the top-up, because that has always been a human decision.
 
 **The gates** (`qualify`): first top-up only, at or above the minimum; not a self-referral; the
-referrer has paid us at least once themselves; the paying card's Stripe fingerprint has not already
-claimed a referral; and the referrer is under their lifetime cap. The fingerprint is the load-bearing
-one — an email address is free and a card is not — and it is read via `expand=["payment_method"]` on
-the `PaymentIntent.retrieve` that `_on_checkout_completed` was already making. It is not card data
-and it lives on the `referral` row alone, never on an `Org`.
+paying card's Stripe fingerprint has not already claimed a referral; and the referrer is under their
+lifetime cap. The fingerprint is the load-bearing one — an email address is free and a card is not —
+and it is read via `expand=["payment_method"]` on the `PaymentIntent.retrieve` that
+`_on_checkout_completed` was already making. It is not card data and it lives on the `referral` row
+alone, never on an `Org`.
+
+**There is deliberately no "the referrer must have topped up first" gate.** It was built and then
+removed, and the reasoning is worth keeping because it will be proposed again. A top-up is not a cost
+to a self-dealer — it converts into credit they keep — so the attack it appears to block survives it
+untouched: requiring one of the *referrer* too just adds a step that returns its own money. The cap
+is per-referrer and referrer accounts are free, so a farm's real constraint is CARDS, and the gate
+added roughly one card per twenty referrals: a ~5% tax. Against that it hid the link from every
+free-tier user, who on a product pitched as "$1.00 free, no card" are most of the userbase and the
+likeliest people to tell a friend — a ~90% tax on legitimate referrers. **Before adding any new
+eligibility rule here, price it against cards, not accounts.**
+
+The remaining ceiling to be aware of: because the cap is per-referrer and accounts are free, global
+exposure is bounded only by how many cards an attacker has. A platform-wide monthly payout budget is
+the fix if that ever matters; it is not built.
 
 A refusal is **recorded, not dropped**, and `capped` is deliberately distinct from `rejected`: one is
 "you ran out of self-serve allowance", the other is "a gate said no". "I referred someone and got

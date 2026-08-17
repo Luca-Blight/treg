@@ -5227,6 +5227,13 @@ async def my_referrals(
     whether their reward has landed is the one who makes it land. That is the same lazy,
     caller-pays-for-their-own-cleanup bargain as `ledger.reap_stale_holds`.
     """
+    # Mint the code here too, not only on POST. Asking for this page IS the lazy trigger the code
+    # was always meant to hang off, and every caller needs a usable `link` — a response carrying an
+    # empty one is a footgun for any client that doesn't know to POST first.
+    try:
+        await referrals.ensure_code(db, user)
+    except Exception as exc:  # noqa: BLE001 — a code we couldn't mint is an empty link, not a 500
+        logging.getLogger("treg").warning("referral code mint failed for user %s: %s", user.id, exc)
     try:
         await referrals.sweep(db, referrer_user_id=user.id)
     except Exception as exc:  # noqa: BLE001 — pragma: no cover

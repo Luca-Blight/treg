@@ -893,8 +893,11 @@ def test_referral_page_shows_why_a_referral_paid_nothing():
     assert "Over your limit" in INDEX and "Not eligible" in INDEX
 
 
-def test_referral_link_is_hidden_until_the_referrer_is_eligible():
-    """A referrer who has never topped up earns nothing (referrals.qualify gate 3). Showing them a
-    live link anyway would convert a friend and silently pay zero."""
+def test_the_referral_link_is_not_gated_behind_paying_us():
+    """Every signed-in person gets a link, free tier included — they are most of the userbase on a
+    product pitched as "$1.00 free, no card", and the likeliest to tell a friend. The `!eligible`
+    branch survives only for the degenerate case of having no team to pay a reward into, so it must
+    NOT ask anyone to add funds."""
     assert 'v-if="!ref.eligible"' in INDEX
-    assert "Add funds once to unlock your link" in INDEX
+    assert "Create a team to unlock your link" in INDEX
+    assert "Add funds once to unlock your link" not in INDEX

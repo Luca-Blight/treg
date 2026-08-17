@@ -855,9 +855,13 @@ the balance chip (where someone is already thinking about what treg costs them).
 a RELOAD and a BACK button. Missing either is invisible in review and in clicking around, which is
 precisely the silent failure CLAUDE.md warns about. Pinned by a test that counts both.
 
-**The not-eligible state is a gate made visible.** A referrer who has never topped up earns nothing
-(`referrals.qualify`). Rather than show them a live link that silently pays zero, the link is
-replaced by "Add funds once to unlock your link" and a button into Billing.
+**The link is NOT gated behind paying us.** Every signed-in person gets one, free tier included —
+see [money](../architecture/money.md) for why that gate was removed. The `!eligible` branch survives
+only for the degenerate case of owning no team to pay a reward into, and a test asserts it never
+again asks anyone to add funds.
+
+`GET /referrals` mints the code as well as sweeping, so the page is one call and `link` is never
+empty on a first visit.
 
 **Every status renders a reason** (`refStatus`), including `capped` and `rejected`. "I referred
 someone and got nothing" is the ticket this program generates, and the answer belongs on the page

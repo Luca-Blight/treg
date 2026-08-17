@@ -185,14 +185,18 @@ async def qualify(
     if referrer is None or referrer.suspended:
         return await _refuse("referrer_unavailable")
 
-    # Gate 3 — the referrer must have paid us at least once themselves. This is what a throwaway
-    # account cannot cheaply satisfy, and it costs a genuine referrer nothing: they are, by
-    # construction, already a customer.
-    if not await _has_paid(db, referrer.id):
-        return await _refuse("referrer_never_topped_up")
+    # There is deliberately NO "the referrer must have topped up first" gate. It was built and then
+    # removed, because the attack it appears to stop is unaffected by it: a top-up is not a cost to a
+    # self-dealer, it converts into credit they keep. Requiring one of the REFERRER too just adds a
+    # step that returns its own money — roughly one extra card per twenty referrals, a ~5% tax on a
+    # farm. Against that it hid the link from every free-tier user, who on a product whose pitch is
+    # "$1.00 free, no card" are most users and the likeliest people to tell a friend.
+    #
+    # The gate below is the one with teeth. Keep that asymmetry in mind before adding another
+    # eligibility rule here: the constraint on a farm is CARDS, not accounts.
 
-    # Gate 4 — the same card may fund exactly one referral, ever. An email address is free and a
-    # card is not, so this is the signal that actually survives a determined farm.
+    # The same card may fund exactly one referral, ever. An email address is free and a card is not,
+    # so this is the signal that actually survives a determined farm.
     if fingerprint:
         clash = (await db.execute(
             select(Referral.id).where(
@@ -204,7 +208,7 @@ async def qualify(
         if clash is not None:
             return await _refuse("card_already_used")
 
-    # Gate 5 — the lifetime cap. Kept distinct from `rejected` because it is not an accusation:
+    # Gate 3 — the lifetime cap. Kept distinct from `rejected` because it is not an accusation:
     # this person referred someone real and simply ran out of self-serve allowance.
     paid_count = len((await db.execute(
         select(Referral.id).where(
@@ -235,24 +239,6 @@ async def qualify(
         await db.rollback()
         return (await db.execute(select(Referral).where(Referral.id == row.id))).scalars().first()
     return row
-
-
-async def _has_paid(db: AsyncSession, user_id: int | None) -> bool:
-    """Has this person's money ever reached us — in ANY org they belong to?"""
-    if user_id is None:
-        return False
-    org_ids = (await db.execute(
-        select(Membership.org_id).where(Membership.user_id == user_id)
-    )).scalars().all()
-    if not org_ids:
-        return False
-    found = (await db.execute(
-        select(CreditBlock.id).where(
-            CreditBlock.org_id.in_(org_ids),  # type: ignore[attr-defined]
-            CreditBlock.kind == "purchased",
-        ).limit(1)
-    )).scalars().first()
-    return found is not None
 
 
 # ---- clawback ----------------------------------------------------------------------------------
@@ -429,7 +415,10 @@ async def summary(db: AsyncSession, user: User) -> dict:
         "code": code,
         "link": f"{get_settings().public_url.rstrip('/')}/?ref={code}" if code else "",
         "credit_org": ({"org_id": credit_org.id, "name": credit_org.name} if credit_org else None),
-        "eligible": await _has_paid(db, user.id),
+        # Every signed-in person can refer. Kept in the payload rather than dropped because the
+        # dashboard branches on it, and because a future eligibility rule (a suspension, a fraud
+        # hold) belongs here rather than as a second shape the UI has to learn.
+        "eligible": credit_org is not None,
         "terms": {
             "referrer_micro": int(s.referral_referrer_micro),
             "referred_micro": int(s.referral_referred_micro),
