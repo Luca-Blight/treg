@@ -109,3 +109,13 @@ async def test_signup_without_the_cookie_leaves_attribution_null(clients):
     async with session_maker() as db:
         org = (await db.execute(select(Org).where(Org.id == r.json()["org_id"]))).scalar_one()
         assert org.ad_gclid is None
+
+
+async def test_signup_queues_a_conversion_when_attributed(clients):
+    r = await clients.post("/users", json={"email": "conv@example.com"},
+                              cookies={"treg_ad": "CLICK_SIGNUP|p1"})
+    assert r.status_code == 200, r.text
+    async with session_maker() as db:
+        rows = (await db.execute(select(AdConversion).where(
+            AdConversion.org_id == r.json()["org_id"]))).scalars().all()
+        assert [x.action for x in rows] == [adsconv.ACTION_SIGNUP]

@@ -50,7 +50,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from . import analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
+from . import adsconv, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
@@ -3772,6 +3772,11 @@ async def _grant_signup_promo(db: AsyncSession, org: Org) -> None:
         return
     try:
         await ledger.grant(db, org.id)
+        # Same door, same once-only guarantee: this function is already the single place a brand-new
+        # real team comes into existence. A queue failure must not fail the signup, so it rides the
+        # existing except below rather than getting its own.
+        await adsconv.queue(db, org, adsconv.ACTION_SIGNUP)
+        await db.commit()
     except Exception as exc:  # noqa: BLE001 — the team is already created; don't 500 the signup over credit
         logging.getLogger("treg").warning("promo grant failed for org %s: %s", org.id, exc)
 
