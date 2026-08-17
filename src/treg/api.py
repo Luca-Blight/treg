@@ -31,7 +31,7 @@ import zlib
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, quote_plus, unquote, urlsplit, urlunsplit
 
 from sqlalchemy import case, delete, func, or_, update
 
@@ -7732,10 +7732,15 @@ async def _purge_expired_error_evidence() -> int:
         async with session_maker() as db:
             result = await db.execute(
                 update(CallRecord)
+                # `coalesce`, not a bare `!=`: SQL three-valued logic makes `error_response !=
+                # '<expired>'` UNKNOWN when that column is NULL, so a row carrying request-only
+                # evidence would never age out — excluded by the very predicate meant only to skip
+                # rows already purged.
                 .where(CallRecord.created_at < cutoff,
                        or_(CallRecord.error_request.is_not(None),
                            CallRecord.error_response.is_not(None)),
-                       CallRecord.error_response != _ERROR_EVIDENCE_EXPIRED)
+                       or_(func.coalesce(CallRecord.error_request, "") != _ERROR_EVIDENCE_EXPIRED,
+                           func.coalesce(CallRecord.error_response, "") != _ERROR_EVIDENCE_EXPIRED))
                 .values(error_request=_ERROR_EVIDENCE_EXPIRED,
                         error_response=_ERROR_EVIDENCE_EXPIRED))
             await db.commit()
@@ -9000,12 +9005,28 @@ def _platform_secret_renderings(tool: Tool) -> list[str]:
     shorter than 24 characters, by carrying a `.`/`:`/`+` that breaks a word boundary, or by arriving
     percent-encoded. None of those defeat an exact substring match.
 
-    Three renderings, because treg only ever produces three: the raw value, the value after the
-    binding's `format` (`Bearer {secret}`, `Basic {secret}` — treg injects verbatim and never
-    base64-encodes, so no encoded variant is needed), and percent-encoded for the twelve providers
-    whose key rides in a query parameter and can therefore come back inside an echoed URL.
+    treg injects the value verbatim, but a PROVIDER may hand it back transformed, and a transform it
+    can reverse is one we have to anticipate. Four families, all observed shapes rather than guesses:
+
+    * the raw value, and the value after the binding's `format` (`Bearer {secret}`, `Basic {secret}`);
+    * percent-encoded — twelve providers authenticate by query param, so the key comes back inside an
+      echoed URL. Both cases: `quote()` emits UPPERCASE hex (`%2F`) and plenty of servers echo lower;
+    * JSON-escaped, because a body quoting a URL usually writes `\\/` for `/`;
+    * **the DECODED halves of a Basic credential.** `config.py` states that dataforseo's platform
+      value is already the base64 of `login:password`. A provider that decodes Basic auth and reports
+      `{"received_username": …, "received_password": …}` echoes treg's credential in a form where
+      neither the base64 blob nor `Basic <blob>` appears. dataforseo is the largest provider by
+      spend, so this is the opposite of theoretical.
     """
     out: set[str] = set()
+
+    def add(value: str) -> None:
+        """One secret and every spelling of it a provider might echo back."""
+        if not value or len(value) < 4:
+            return  # too short to mask without redacting half the message
+        enc = quote(value, safe="")
+        out.update({value, enc, enc.lower(), quote_plus(value), value.replace("/", "\\/")})
+
     for binding in tool.bindings or []:
         setting = binding.get("platform_setting")
         if not setting:
@@ -9014,15 +9035,30 @@ def _platform_secret_renderings(tool: Tool) -> list[str]:
         if not isinstance(value, str) or not value.strip():
             continue
         value = value.strip()
-        out.add(value)
-        out.add(quote(value, safe=""))
-        rendered = str(binding.get("format") or "{secret}").format(secret=value)
-        if rendered != value:
-            out.add(rendered)
+        add(value)
+        add(str(binding.get("format") or "{secret}").format(secret=value))
+        for part in _basic_credential_parts(value):  # mask what the provider can DECODE
+            add(part)
     # Longest first so `Bearer abc` is masked as a unit before the bare `abc` inside it turns the
     # line into `Bearer ***` — same result here, but the ordering stops a shorter secret that is a
     # substring of a longer one from fragmenting it into an unmatchable remainder.
     return sorted((s for s in out if len(s) >= 4), key=len, reverse=True)
+
+
+def _basic_credential_parts(value: str) -> list[str]:
+    """`login:password` and its two halves, when `value` is the base64 of a Basic credential.
+
+    Returns [] for anything that is not — an ordinary API key rarely base64-decodes to printable text
+    containing a colon, and a false positive here only costs an extra (harmless) mask.
+    """
+    try:
+        decoded = base64.b64decode(value, validate=True).decode("utf-8")
+    except Exception:  # noqa: BLE001 — not base64, or not text: simply not a Basic credential
+        return []
+    if ":" not in decoded or not decoded.isprintable():
+        return []
+    login, _, password = decoded.partition(":")
+    return [p for p in (decoded, login, password) if p]
 
 
 def _decode_error_body(raw: bytes, content_encoding: str = "", content_type: str = "") -> str:
@@ -9036,13 +9072,15 @@ def _decode_error_body(raw: bytes, content_encoding: str = "", content_type: str
         return ""
     enc = (content_encoding or "").strip().lower()
     if enc and enc != "identity":
+        if enc not in ("gzip", "deflate"):  # br, zstd — no stdlib decoder we can rely on
+            return f"<{enc}-encoded, {len(raw)} bytes, not decoded>"
         try:
-            if enc == "gzip":
-                raw = gzip.decompress(raw)
-            elif enc == "deflate":
-                raw = zlib.decompress(raw, -zlib.MAX_WBITS)
-            else:  # br, zstd — no stdlib decoder we can rely on
-                return f"<{enc}-encoded, {len(raw)} bytes, not decoded>"
+            # INCREMENTAL and capped just past the evidence limit. `gzip.decompress` is unbounded, so
+            # slicing the INPUT to 8KiB does not bound the OUTPUT: 20MB of one repeated byte
+            # compresses to under 20KB, and a bomb would expand to megabytes that four regexes then
+            # walk synchronously on the request path.
+            d = zlib.decompressobj(16 + zlib.MAX_WBITS if enc == "gzip" else -zlib.MAX_WBITS)
+            raw = d.decompress(raw, _ERROR_RESPONSE_MAX * 4)
         except Exception:  # noqa: BLE001 — a truncated slice of a gzip stream is expected to fail
             return f"<{enc}-encoded, {len(raw)} bytes, undecodable>"
     text = raw.decode("utf-8", "replace")
@@ -9092,6 +9130,14 @@ def _redact_snippet(text: str, secrets: list[str], limit: int) -> str:
     text = _QUERY_CRED_RE.sub(r"\1***", text)
     text = _ARGV_SECRET_RE.sub("***", text)
     text = " ".join(text.split())  # collapse newlines/indentation; these are read in a table
+    # Fail closed. Everything above is a list of transforms we thought of; this asks whether a secret
+    # survived one we did not, by re-checking a NORMALISED copy (percent-decoded, JSON-unescaped,
+    # lowercased). If one is still there, drop the whole snippet: losing a debugging message is a bad
+    # day, leaking the credential every tenant shares is a much worse one.
+    if secrets:
+        probe = unquote(text.replace("\\/", "/")).lower()
+        if any(s.lower() in probe for s in secrets):
+            return "<redacted: a platform credential survived masking>"
     if len(text) <= limit:
         return text
     # Truncation can expose a partial token at the seam that was safe only while whole.

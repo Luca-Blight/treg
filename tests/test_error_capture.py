@@ -17,6 +17,7 @@ Three properties are load-bearing here, and each has its own test below:
 from __future__ import annotations
 
 import gzip
+import json
 from datetime import timedelta
 
 import pytest
@@ -205,6 +206,43 @@ async def test_a_callers_own_value_in_the_injected_slot_is_dropped(
     row = await _row(clients)
     assert "CALLERS-OWN-SECRET-VALUE" not in (row["error_request"] or "")
     assert "domain=a.com" in row["error_request"], "the useful params must survive"
+
+
+async def test_a_decoded_basic_credential_never_survives(clients: AsyncClient, platform_on,
+                                                         monkeypatch):
+    """dataforseo's platform value IS the base64 of `login:password` (config.py says so), and it is
+    the largest provider by spend. A provider that decodes Basic auth and reports the two halves
+    echoes treg's credential in a form where neither the base64 blob nor `Basic <blob>` appears —
+    so only decomposing it can catch this."""
+    import base64
+    login, password = "treg-ops@example.com", "pw.7Kq2"
+    monkeypatch.setenv("TREG_PLATFORM_KEY_DATAFORSEO",
+                       base64.b64encode(f"{login}:{password}".encode()).decode())
+    get_settings.cache_clear()
+    monkeypatch.setattr(A, "relay", _fake_relay(
+        401, json.dumps({"error": "auth failed",
+                         "received_username": login,
+                         "received_password": password}).encode()))
+    r = await clients.post(f"/call/{EP_POST}", json=[{"url": "https://example.com"}])
+    assert r.status_code == 401
+    row = await _row(clients)
+    assert login not in row["error_response"], "the Basic login survived"
+    assert password not in row["error_response"], "the Basic password survived"
+
+
+async def test_a_lowercase_percent_encoded_key_never_survives(clients: AsyncClient, platform_on,
+                                                              monkeypatch):
+    """`quote()` emits UPPERCASE hex; plenty of servers echo lowercase. Under a neutral field name
+    the query-shaped rule does not fire either, so the exact mask is the only thing left."""
+    from urllib.parse import quote
+    monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "a/b+c=dQ")
+    get_settings.cache_clear()
+    monkeypatch.setattr(A, "relay", _fake_relay(
+        400, f'{{"error":"bad","echo":"{quote("a/b+c=dQ", safe="").lower()}"}}'.encode()))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 400
+    row = await _row(clients)
+    assert "a%2fb%2bc%3ddq" not in row["error_response"].lower()
 
 
 # ---- awkward bodies -----------------------------------------------------------------------------
