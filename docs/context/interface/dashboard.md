@@ -356,6 +356,15 @@ be callable (e.g. Google Ads' developer token — surfaced by the `needSecondCre
 page (Connect looked dead).
 
 ## Endpoint catalog — the platform axis of the marketplace (`view==='platform'`)
+
+> **This view is also the public catalog.** `/catalog` and `/catalog/<slug>` serve this same
+> `index.html`, and everything below renders for a signed-out visitor too — the catalog API needs no
+> session. `publicCatalog` (set in the boot from `catalogFromPath()`) hides what does: the org
+> switcher, vault, activity, team, the "not connected" badge, Try-it and the connect/BYOK buttons.
+> There is no second implementation of any of this; see [seo](seo.md) for why, and for the `#prerender`
+> fallback that carries the text to crawlers that run no scripts. `index.html`'s own `robots: noindex`
+> is stripped on those two URLs only.
+
 The marketplace's second browse surface answers "what data can I actually pull?" rather than "whose
 account can I attach?" — see `architecture/catalog.md` for the data behind it, and it is the marketplace's
 **default** view. `loadPlatforms` reads **`GET /catalog/platforms`** (once per session; cached on

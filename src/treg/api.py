@@ -15,6 +15,7 @@ import asyncio
 import base64
 import gzip
 import hashlib
+import html as _html
 from functools import lru_cache
 import hmac
 import json
@@ -41,6 +42,7 @@ from pathlib import Path
 from fastapi import Cookie, Depends, FastAPI, Form, Header, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
@@ -157,7 +159,12 @@ async def lifespan(app: FastAPI):
         await app.state.http.aclose()
 
 
-app = FastAPI(title="tools-registry", version="0.0.1", lifespan=lifespan)
+# `/docs` is OURS — a server-rendered reference (see `docs_page`). FastAPI's stock Swagger UI moves
+# to `/docs/api`: it is a 1 KB JavaScript shell to anything that does not run scripts, it was titled
+# "tools-registry - Swagger UI" with FastAPI's own favicon, and it was the only thing we offered a
+# crawler looking for our API. ReDoc is off — two consoles for one schema is one too many.
+app = FastAPI(title="treg", version="0.0.1", lifespan=lifespan,
+              docs_url="/docs/api", redoc_url=None)
 
 
 # The pre-treg.to hostnames must keep answering the API forever — every installed CLI, skill.md
@@ -170,8 +177,12 @@ _LEGACY_HOSTS = set(LEGACY_PUBLIC_HOSTS)
 # Marketing pages — but only for ANONYMOUS visitors. A session cookie is host-scoped, so bouncing a
 # signed-in browser to the canonical host silently logs it out mid-flow (the invite confirmation,
 # for one, sets a legacy-host session and then lands on `/?invite_org=…`).
+# robots.txt and sitemap.xml join them for a search-engine reason rather than a marketing one: the
+# sitemap names canonical `public_url` URLs, and a sitemap whose own address is on a different host
+# than the URLs inside it is cross-submission — a crawler is entitled to ignore the lot. Redirecting
+# both means the legacy name resolves to one crawlable site, not a duplicate of it.
 _REDIRECT_PATHS = {"/", "/login", "/terms", "/privacy", "/support", "/contact", "/help",
-                   "/tutorial"}
+                   "/tutorial", "/robots.txt", "/sitemap.xml", "/catalog"}
 # The auth ENTRY points redirect unconditionally, and that is a correctness fix, not a marketing
 # one: each parks a host-scoped cookie and then continues on `public_url` — started on the legacy
 # host, the continuation never sees the cookie. /auth/github + /auth/google set the CSRF state
@@ -428,9 +439,9 @@ def _provider_display(service: str) -> str:
     return p.display_name if p else service
 
 
-@app.get("/catalog/platforms", include_in_schema=False)
-async def catalog_platforms() -> dict:
-    """Open: the platform shelves of the endpoint catalog, busiest first."""
+def _platform_rows() -> list[dict]:
+    """The platform shelves, busiest first — one builder shared by the JSON route below and the
+    server-rendered /catalog page, so the two can never disagree about what is on the shelf."""
     cat = catalog_store.load()
     rows = []
     for slug, plat in cat.platforms.items():
@@ -464,10 +475,16 @@ async def catalog_platforms() -> dict:
             "providers": sorted({e["provider"] for e in eps}),
         })
     rows.sort(key=lambda r: (-r["endpoints"], r["slug"]))
-    return {"platforms": rows, "generated_from": "catalog"}
+    return rows
 
 
-@app.get("/catalog/platforms/{slug}", include_in_schema=False)
+@app.get("/catalog/platforms")
+async def catalog_platforms() -> dict:
+    """Open: the platform shelves of the endpoint catalog, busiest first."""
+    return {"platforms": _platform_rows(), "generated_from": "catalog"}
+
+
+@app.get("/catalog/platforms/{slug}")
 async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     """Open: one platform's operations, grouped by capability so the same job across providers sits
     on one row — that grouping is what makes comparison (and a future failover router) possible.
@@ -524,7 +541,7 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     }
 
 
-@app.get("/catalog/search", include_in_schema=False)
+@app.get("/catalog/search")
 async def catalog_search(q: str = "", limit: int = 25) -> dict:
     """Open: free-text search across the whole catalog — the DISCOVER half of the loop.
 
@@ -555,7 +572,7 @@ async def catalog_search(q: str = "", limit: int = 25) -> dict:
     return {"query": q, "count": len(results), "total": total, "results": results, "hints": hints}
 
 
-@app.get("/catalog/endpoints/{endpoint_id}", include_in_schema=False)
+@app.get("/catalog/endpoints/{endpoint_id}")
 async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_session)) -> dict:
     """Open: everything about ONE endpoint — the INSPECT half of the loop.
 
@@ -616,6 +633,460 @@ async def catalog_example(endpoint_id: str) -> Response:
     if path is None or not path.is_file():
         raise HTTPException(status_code=404, detail=f"no example response for {endpoint_id!r}")
     return Response(content=path.read_bytes(), media_type="application/json")
+
+
+# ---- the crawlable catalog: /catalog and /catalog/<slug> -------------------------------------
+#
+# The JSON routes above are what agents and the dashboard read. These two render the SAME data as
+# server-side HTML, because until now none of it had a URL: the dashboard browses platforms through
+# hash routes (/app#platform/<slug>) behind a login, so ~2,600 endpoints across 80 shelves were
+# invisible to every crawler and every AI answer engine. No JavaScript here on purpose — the text IS
+# the product surface, and it has to be readable by something that will not run a script or click.
+#
+# `/catalog/<slug>` is registered after the JSON routes so /catalog/platforms, /catalog/search,
+# /catalog/endpoints/… and /catalog/examples/… keep matching first. Registration order alone is a
+# thin guarantee, so the reserved names are also refused explicitly below.
+_CATALOG_RESERVED = {"platforms", "search", "endpoints", "examples"}
+
+_GH = "https://github.com/superdesigndev/treg"
+
+
+def _usd_short(usd: float) -> str:
+    """A dollar figure a person can read. `%g` flips to scientific notation below 1e-4, and a shelf
+    advertising "from $1.2e-07 per call" reads as a bug rather than as a price — so anything under
+    a hundredth of a cent is labelled as such instead."""
+    if not usd:
+        return "free"
+    return "<$0.0001" if usd < 0.0001 else f"${usd:.3g}"
+
+
+def _price_label(cost: dict | None) -> str:
+    """A price in ONE currency, so rows down a page stay comparable. Mirrors `_cost_usd` in cli.py
+    rather than importing it: pulling treg.cli into the server process costs ~200ms and drags the
+    whole CLI in for one string (see `_treg_version`)."""
+    if not isinstance(cost, dict):
+        return ""
+    usd = cost.get("usd")
+    if usd is None:
+        return "own account"     # no rate published — never invent a dollar figure
+    if not usd:
+        return "free"
+    unit = {"per_call": "call", "per_result": "result", "per_success": "success"}.get(
+        cost.get("type"), "call")
+    return f"{_usd_short(usd)}/{unit}"
+
+
+def _css_stamp() -> str:
+    """catalog.css's own mtime, stamped onto its URL. The stylesheet is served with a real max-age
+    (it is static and every page pulls it), so without a stamp an edited skin keeps rendering from
+    the browser's copy until the cache expires — the same trap `/tutorial.js` already guards."""
+    f = _WEB_DIR / "catalog.css"
+    try:
+        return str(int(f.stat().st_mtime))
+    except OSError:
+        return "0"
+
+
+def _page(title: str, description: str, path: str, body: str, ld: list[dict],
+          *, nav_current: str = "") -> HTMLResponse:
+    """The shared shell for every server-rendered page. One place that owns <title>, the meta
+    description, the canonical, the og/twitter card and the JSON-LD, so a new page cannot ship
+    without them — that omission is exactly what left the landing page bare for a year."""
+    base = get_settings().public_url.rstrip("/")
+    t, d = _esc_html(title), _esc_html(description)
+    url = _esc_html(base + path)  # `path` reaches attribute context — escape it like title/description
+    # `<` escaped to its \u form inside the JSON: a catalog label containing "</script>" would
+    # otherwise close the block early and put the rest of the payload into the document as markup.
+    # Still valid JSON, so parsers and Google's validator read it unchanged.
+    blocks = "\n".join(
+        '<script type="application/ld+json">'
+        + json.dumps(b, separators=(",", ":")).replace("<", "\\u003c")
+        + "</script>"
+        for b in ld)
+    def navlink(href: str, label: str, extra: str = "") -> str:
+        cur = ' aria-current="page"' if href == nav_current else ""
+        return f'<a href="{href}"{cur}{extra}>{label}</a>'
+    return HTMLResponse(f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>{t}</title>
+<meta name="description" content="{d}"/>
+<link rel="canonical" href="{url}"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="treg"/>
+<meta property="og:url" content="{url}"/>
+<meta property="og:title" content="{t}"/>
+<meta property="og:description" content="{d}"/>
+<meta property="og:image" content="{base}/media/og.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="treg — one unified key for 2,600+ agent tools, priced per call"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="{t}"/>
+<meta name="twitter:description" content="{d}"/>
+<meta name="twitter:image" content="{base}/media/og.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/catalog.css?v={_css_stamp()}"/>
+{blocks}
+</head>
+<body>
+<div class="navwrap"><nav class="nav">
+  <a class="brand" href="/"><span class="glyph">▚</span> treg</a>
+  <div class="links">
+    {navlink("/catalog", "Catalog")}
+    {navlink("/tutorial", "Tutorial")}
+    {navlink("/docs", "API")}
+    <a class="hidem" href="{_GH}" target="_blank" rel="noopener">GitHub ↗</a>
+    <a class="candy" href="/app">Start free</a>
+  </div>
+</nav></div>
+{body}
+<footer>
+  <div class="foot-in">
+    <div class="brand"><span class="glyph">▚</span> treg</div>
+    <span style="font-family:var(--mono);font-size:12px">— 100% open source</span>
+    <span class="sp"></span>
+    <a href="/catalog">catalog</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a
+    ><a href="{_GH}" target="_blank" rel="noopener">github ↗</a><a href="/docs">api</a
+    ><a href="/terms">terms</a><a href="/privacy">privacy</a>
+  </div>
+</footer>
+</body>
+</html>""", headers={"Cache-Control": "public, max-age=600"})
+
+
+def _spa_catalog_page(title: str, description: str, path: str, ld: list[dict],
+                      prerender: str) -> HTMLResponse:
+    """Serve the dashboard SPA at a PUBLIC catalog URL, with the head a crawler needs.
+
+    The public catalog is not a second implementation of the marketplace — it IS the marketplace.
+    `/catalog` and `/catalog/<slug>` hand back `index.html`, and the Vue app renders the same
+    platform views a member sees (its catalog API is unauthenticated, so it works signed out; see
+    `publicCatalog` in index.html). That is the whole point: one UI, so the two can never drift
+    apart visually the way a hand-built copy would.
+
+    Two things have to be added on the way out:
+
+    1. **The head.** The SPA ships one bare `<title>treg</title>`. Every catalog URL needs its own
+       title, description, canonical, og/twitter card and JSON-LD, so they are substituted in here —
+       the same trick `_spa_with_og` uses for shared skill/tool links.
+    2. **A no-JS fallback.** Vue compiles `#app`'s own innerHTML as its template, so prerendered
+       markup cannot go inside it. `#prerender` is therefore a SIBLING, removed by the app on boot.
+       It is deliberately plainer than the Vue view — the ledger's row-merging is a chain of
+       client-side computeds, and reproducing it server-side would recreate exactly the duplicate
+       implementation this design avoids. It carries the TEXT (names, summaries, providers, prices),
+       which is what a crawler that does not run scripts is here for.
+    """
+    index = _WEB_DIR / "index.html"
+    if not index.exists():
+        return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
+    base = get_settings().public_url.rstrip("/")
+    t, d = _esc_html(title), _esc_html(description)
+    # `path` carries the {slug} from the URL. Today an unknown slug 404s in catalog_platform before
+    # it reaches here, so a quote can't get this far — but that is an upstream lookup's side effect,
+    # not a guarantee this function makes. Escape it where it is used, so a future "slug not found →
+    # suggestions" page cannot turn a canonical tag into a reflected XSS.
+    url = _esc_html(base + path)
+    blocks = "\n".join(
+        '<script type="application/ld+json">'
+        + json.dumps(b, separators=(",", ":")).replace("<", "\\u003c") + "</script>"
+        for b in ld)
+    meta = (
+        f"<title>{t}</title>\n"
+        f'<meta name="description" content="{d}"/>\n'
+        f'<link rel="canonical" href="{url}"/>\n'
+        f'<meta name="robots" content="index, follow"/>\n'   # index.html defaults to noindex
+        f'<meta property="og:type" content="website"/>\n'
+        f'<meta property="og:site_name" content="treg"/>\n'
+        f'<meta property="og:url" content="{url}"/>\n'
+        f'<meta property="og:title" content="{t}"/>\n'
+        f'<meta property="og:description" content="{d}"/>\n'
+        f'<meta property="og:image" content="{base}/media/og.png"/>\n'
+        f'<meta property="og:image:width" content="1200"/>\n'
+        f'<meta property="og:image:height" content="630"/>\n'
+        f'<meta name="twitter:card" content="summary_large_image"/>\n'
+        f'<meta name="twitter:title" content="{t}"/>\n'
+        f'<meta name="twitter:description" content="{d}"/>\n'
+        f'<meta name="twitter:image" content="{base}/media/og.png"/>\n'
+        + blocks
+    )
+    html = index.read_text(encoding="utf-8")
+    # index.html carries `robots: noindex` for the authenticated app; these URLs are public, and the
+    # `index, follow` in `meta` only wins if the noindex is gone. Stripped BEFORE `meta` is spliced
+    # in, so this scan only ever runs over the static bundle — never over a string carrying a
+    # caller-supplied title, which is what made it a ReDoS candidate rather than a fixed-cost pass.
+    html = re.sub(r'<meta name="robots" content="noindex[^>]*>\s*', "", html, count=1)
+    # Match whatever title the page carries, not one exact string — a rename in the dashboard must
+    # not be able to switch every catalog page's head off without a word (the same failure
+    # `_spa_with_og` was written to survive).
+    html, hits = re.subn(r"<title>.*?</title>", lambda _m: meta, html, count=1,
+                         flags=re.IGNORECASE | re.DOTALL)
+    if not hits:
+        html = html.replace("<head>", "<head>\n" + meta, 1)
+    marker = '<div id="app"'
+    if marker in html:
+        html = html.replace(marker, f'<div id="prerender">{prerender}</div>\n{marker}', 1)
+    return HTMLResponse(html, headers={"Cache-Control": "public, max-age=600"})
+
+
+# The fallback's own skin. Scoped to #prerender and written against the dashboard's OWN tokens
+# (already defined in index.html), so it reads as the same product for the moment it is on screen.
+_PRERENDER_CSS = """<style>
+#prerender{max-width:1100px;margin:0 auto;padding:38px 26px 60px;font-family:var(--sans,system-ui);
+  color:var(--ink,#1a1a1a)}
+#prerender h1{font-size:30px;letter-spacing:-.01em;margin:0 0 8px}
+#prerender .lede{color:var(--muted,#7c7c7c);margin:0 0 20px;max-width:64ch}
+#prerender h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--muted2,#989898);margin:26px 0 10px;padding-bottom:8px;
+  border-bottom:1px solid var(--line,#26262322)}
+#prerender ul{list-style:none;margin:0;padding:0}
+#prerender li{padding:9px 0;border-bottom:1px solid var(--line,#26262322)}
+#prerender li b{font-weight:600}
+#prerender li i{font-style:normal;color:var(--muted,#7c7c7c);display:block;font-size:13.5px}
+#prerender .m{font-family:var(--mono,ui-monospace);font-size:11.5px;
+  color:var(--muted2,#989898);margin-top:3px;display:block}
+#prerender a{color:var(--teal,#1a7da6);text-decoration:none}
+</style>"""
+
+
+@app.get("/catalog", include_in_schema=False)
+async def catalog_index():
+    """The catalog index — the marketplace's Catalog view, on a public, indexable URL."""
+    base = get_settings().public_url.rstrip("/")
+    rows = _platform_rows()
+    # The WHOLE catalog, not the sum of the tiles: a tile counts only its browse surface, so the
+    # account/utility endpoints (real inventory, listed on each shelf page) would go uncounted and
+    # this page would quietly contradict the number on the landing.
+    cat = catalog_store.load()
+    total_eps = len(cat.endpoints)
+    providers = sorted({e["provider"] for e in cat.endpoints})
+
+    cats: dict[str, list[dict]] = {}
+    for row in rows:
+        cats.setdefault(row["category"], []).append(row)
+    sections = []
+    for name, items in cats.items():
+        lis = []
+        for r in items:
+            price = _price_label(r["price_from"])
+            vendors = ", ".join(_provider_display(p) for p in r["providers"])
+            lis.append(
+                f'<li><b><a href="/catalog/{_esc_html(r["slug"])}">{_esc_html(r["label"])}</a></b>'
+                f'<i>{_esc_html(r["summary"])}</i>'
+                f'<span class="m">{r["endpoints"]} endpoints · {r["capabilities"]} capabilities'
+                + (f" · from {_esc_html(price)}" if price else "")
+                + f" · {_esc_html(vendors)}</span></li>")
+        sections.append(f"<h2>{_esc_html(name)}</h2><ul>{''.join(lis)}</ul>")
+
+    prerender = (_PRERENDER_CSS
+                 + "<h1>The tool catalog</h1>"
+                 + f'<p class="lede">{total_eps:,} endpoints across {len(rows)} platforms and '
+                   f"{len(providers)} providers — every tool your agent can call through one key, "
+                   "priced up front and billed per call, with no provider signup.</p>"
+                 + "".join(sections))
+
+    ld = [
+        {"@context": "https://schema.org", "@type": "ItemList",
+         "name": "treg tool catalog",
+         "description": f"{total_eps} API endpoints across {len(rows)} platforms, callable through one key.",
+         "numberOfItems": len(rows),
+         "itemListElement": [
+             {"@type": "ListItem", "position": i, "name": r["label"],
+              "url": f"{base}/catalog/{r['slug']}"}
+             for i, r in enumerate(rows, 1)]},
+        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "treg", "item": base + "/"},
+            {"@type": "ListItem", "position": 2, "name": "Catalog", "item": base + "/catalog"}]},
+    ]
+    return _spa_catalog_page(
+        f"Tool catalog — {total_eps:,} API endpoints your agent can call | treg",
+        f"Browse {total_eps:,} endpoints across {len(rows)} platforms and {len(providers)} providers "
+        "— SEO, social, enrichment, ads and scraping data. One key, priced per call, no provider signup.",
+        "/catalog", ld, prerender)
+
+
+@app.get("/catalog/{slug}", include_in_schema=False)
+async def catalog_page(slug: str):
+    """One platform shelf — the marketplace's platform view, on a public, indexable URL."""
+    if slug in _CATALOG_RESERVED:
+        raise HTTPException(status_code=404, detail=f"unknown platform {slug!r}")
+    # include_hidden=1, exactly as the SPA asks for it (see `loadPlatform`): the account/utility
+    # endpoints are real inventory and the page files them in their own section rather than hiding
+    # them. Asking for a different population than the view that is about to replace this would put
+    # two different endpoint counts on one URL.
+    detail = await catalog_platform(slug, include_hidden=1)
+    base = get_settings().public_url.rstrip("/")
+    plat = detail["platform"]
+    label, category = plat["label"], plat["category"]
+    row = next((r for r in _platform_rows() if r["slug"] == slug), None)
+    summary = (row or {}).get("summary", "")
+    caps = detail["capabilities"]
+    eps = [e for cap in caps for e in cap["endpoints"]] + detail["extended"]
+    prices = [c["usd"] for e in eps if isinstance(c := e.get("cost"), dict) and c.get("usd")]
+    cheapest = _usd_short(min(prices)) if prices else ""
+
+    blocks = []
+    for cap in caps:
+        lis = []
+        for e in cap["endpoints"]:
+            price = _price_label(e.get("cost"))
+            bits = [_esc_html(e["provider_display"])]
+            if e.get("verified"):
+                bits.append("live-verified")
+            if price:
+                bits.append(_esc_html(price))
+            bits.append(_esc_html(e["id"]))
+            lis.append(f'<li><b>{_esc_html(e["name"])}</b>'
+                       f'<i>{_esc_html(e.get("summary") or "")}</i>'
+                       f'<span class="m">{" · ".join(bits)}</span></li>')
+        blocks.append(f'<h2>{_esc_html(cap["description"] or cap["id"])}</h2><ul>{"".join(lis)}</ul>')
+
+    provs = ", ".join(p["display_name"] for p in detail["providers"].values())
+    prerender = (_PRERENDER_CSS
+                 + f'<p class="m"><a href="/catalog">← Catalog</a> · {_esc_html(category)}</p>'
+                 + f"<h1>{_esc_html(label)}</h1>"
+                 + f'<p class="lede">{_esc_html(summary)} {len(eps)} endpoints from '
+                   f"{_esc_html(provs)}"
+                 + (f", from {_esc_html(cheapest)} per call" if cheapest else "")
+                 + ". Jobs that several providers do sit on one row, so you can compare price and "
+                   "coverage before you spend a call — <b>choosing is yours</b>; treg does not route "
+                   "between providers automatically.</p>"
+                 + "".join(blocks))
+
+    desc = (f"{len(eps)} {label.lower()} API endpoints from "
+            f"{', '.join(p['display_name'] for p in list(detail['providers'].values())[:3])}"
+            + (f", from {cheapest} per call" if cheapest else "")
+            + ". Call them through one treg key — no provider signup.")
+    ld = [
+        {"@context": "https://schema.org", "@type": "ItemList",
+         "name": f"{label} — API endpoints on treg",
+         "numberOfItems": len(caps),
+         "itemListElement": [
+             {"@type": "ListItem", "position": i, "name": cap["description"] or cap["id"],
+              "url": f"{base}/catalog/{slug}#{cap['id']}"}
+             for i, cap in enumerate(caps, 1)]},
+        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "treg", "item": base + "/"},
+            {"@type": "ListItem", "position": 2, "name": "Catalog", "item": base + "/catalog"},
+            {"@type": "ListItem", "position": 3, "name": label, "item": f"{base}/catalog/{slug}"}]},
+    ]
+    return _spa_catalog_page(f"{label} API — {len(eps)} endpoints, priced per call | treg",
+                             desc[:300], f"/catalog/{slug}", ld, prerender)
+
+@app.get("/catalog.css", include_in_schema=False)
+async def catalog_css():
+    """The shared skin for /catalog, /catalog/<slug> and /docs — the landing's tokens, one copy."""
+    f = _WEB_DIR / "catalog.css"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="catalog.css not bundled")
+    return FileResponse(f, media_type="text/css", headers={"Cache-Control": "public, max-age=600"})
+
+
+# ---- the API reference ------------------------------------------------------------------------
+# Prose first, because the schema cannot say the load-bearing part: what /call/ actually does. Kept
+# short and factual — the tutorial teaches, this page is the reference a reader lands on from search.
+_DOCS_INTRO = """
+<h2>How a call works</h2>
+<p>You make the <b>real upstream request</b> — the provider's own path, its own parameters, its own
+response. treg injects the credential server-side and relays the answer verbatim. Nothing here
+models a provider's API, which is why an upstream change does not break us and why the caller never
+holds a secret.</p>
+<pre class="call">curl -H "Authorization: Bearer $TREG_TOKEN" \\
+  "{BASE}/call/moz.web.url.metrics"</pre>
+<p>Prefix any catalogued endpoint id with <code>/call/</code>. If your team has its own key for that
+provider, treg uses it and the call is <b>not metered</b>; otherwise eligible endpoints are served on
+treg's key and metered against your prepaid balance at the provider's own rate.</p>
+
+<h2>Finding an endpoint</h2>
+<p>Search by what you want to <i>do</i>, not by vendor: <code>GET /catalog/search?q=backlinks</code>.
+When several providers can do the same job, <code>/catalog/platforms/{slug}</code> lists them side by
+side with measured success rate, speed and price. <b>Choosing is yours</b> — treg compares, but it
+does not route between providers automatically and does not fail over.</p>
+<p>The whole catalog is also browsable as pages: <a href="/catalog">/catalog</a>.</p>
+
+<h2>Other ways in</h2>
+<p><a href="/llms.txt">/llms.txt</a> is the file to point a coding agent at — it teaches the whole
+protocol in one fetch. <code>curl -fsSL {BASE}/install.sh | sh</code> installs the CLI. The MCP
+endpoint is at <code>{BASE}/mcp</code>. An interactive console for everything below lives at
+<a href="/docs/api">/docs/api</a>.</p>
+
+<h2>Endpoints</h2>
+<p>Authenticated requests carry <code>Authorization: Bearer &lt;token&gt;</code> (or
+<code>X-Treg-Token</code>). The catalog routes are open and need no token.</p>
+"""
+
+
+@app.get("/docs", include_in_schema=False)
+async def docs_page():
+    """The API reference, rendered server-side from the OpenAPI schema.
+
+    Replaces the stock Swagger UI at this path (now /docs/api), which was a script shell — the
+    landing page linked "api" here and a crawler that followed it found an empty document.
+    """
+    base = get_settings().public_url.rstrip("/")
+    schema = app.openapi()
+
+    def rank(path: str) -> tuple:
+        """The proxy first, then the catalog, then the rest alphabetically. Sorting purely by path
+        opened the reference on /admin/* — super-admin plumbing, and the worst possible first
+        impression of the API on a page built to be someone's search result."""
+        return (0 if path.startswith("/call/") else 1 if path.startswith("/catalog") else 2, path)
+
+    # Auth travels the same way on every route; naming it on all 135 rows is noise, and the page
+    # says it once above. `/admin/*` is super-admin only — still in openapi.json, not advertised here.
+    _PLUMBING = {"x-treg-token", "treg_session", "authorization"}
+    ops = []
+    for path in sorted(schema.get("paths", {}), key=rank):
+        if path.startswith("/admin"):
+            continue
+        for method, op in sorted(schema["paths"][path].items()):
+            if method.lower() == "head":     # implied by GET; see `_openapi_without_head`
+                continue
+            params = ", ".join(p["name"] for p in op.get("parameters", []) or []
+                               if p["name"].lower() not in _PLUMBING)
+            summary = op.get("summary") or ""
+            # FastAPI takes the description from the docstring; only the first paragraph belongs on
+            # a reference index, and the rest is written for maintainers rather than callers.
+            desc = (op.get("description") or "").strip().split("\n\n")[0].replace("\n", " ")
+            ops.append(
+                f'<div class="op"><div class="sig"><span class="verb">{_esc_html(method.upper())}</span>'
+                f'<code>{_esc_html(path)}</code></div>'
+                + (f"<p>{_esc_html(summary or desc)}</p>" if (summary or desc) else "")
+                + (f'<div class="params">{_esc_html(params)}</div>' if params else "")
+                + "</div>")
+
+    body = f"""<main class="wrap">
+<div class="phead">
+  <div class="crumbs"><a href="/">treg</a> / api</div>
+  <h1>API reference</h1>
+  <p class="lede">One base URL, one token. Call any of {len(ops)} documented operations, or proxy a
+  real request to any of 2,630 catalogued provider endpoints through <code>/call/</code>.</p>
+  <div class="facts">
+    <span>base <b>{_esc_html(base)}</b></span>
+    <span><b>Bearer</b> token auth</span>
+    <span><a href="/openapi.json">openapi.json</a></span>
+    <span><a href="/docs/api">interactive console</a></span>
+  </div>
+</div>
+<section class="cat">
+  <div class="prose">{_DOCS_INTRO.replace("{BASE}", _esc_html(base))}</div>
+  {"".join(ops)}
+</section>
+</main>"""
+    ld = [{"@context": "https://schema.org", "@type": "TechArticle",
+           "headline": "treg API reference",
+           "description": "How to call 2,630 provider API endpoints through one treg token.",
+           "url": f"{base}/docs"}]
+    return _page("API reference — call any tool through one endpoint | treg",
+                 "The treg HTTP API: proxy a real request to any of 2,630 catalogued provider "
+                 "endpoints through /call/, with the credential injected server-side. Plus the "
+                 "catalog, org, billing and tool-management routes.",
+                 "/docs", body, ld, nav_current="/docs")
 
 
 # ---- "the catalog doesn't have X" — tool requests -------------------------------------------
@@ -1473,8 +1944,14 @@ async def auth_invite_signin_confirm(request: Request, db: AsyncSession = Depend
 
 
 def _esc_html(s: str) -> str:
-    return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            .replace('"', "&quot;"))
+    """The stdlib escaper, not a hand-rolled replace() chain.
+
+    Same four substitutions as before plus `'` -> `&#x27;`, so every call site is at least as safe.
+    The reason to delegate is not correctness but legibility to tooling: static analysis models
+    `html.escape` as an XSS sanitizer and cannot know that a private chain of `.replace()` calls is
+    one, so every escaped value stayed 'tainted' and the real sinks were buried in false positives.
+    """
+    return _html.escape(str(s), quote=True)
 
 
 @app.get("/", include_in_schema=False)
@@ -1488,7 +1965,12 @@ async def landing(request: Request, treg_session: str = Cookie(default=""),
     if page.exists() and not request.query_params:
         if treg_session and await _user_from_session(treg_session, db):
             return RedirectResponse("/app", status_code=302)
-        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+        # Read-and-substitute rather than a bare FileResponse: the canonical, og:url and og:image
+        # are `{BASE}`-templated so they name the serving host. Hardcoded, a self-hosted registry
+        # would tell crawlers its front page really lives on treg.to.
+        html = page.read_text(encoding="utf-8").replace(
+            "{BASE}", get_settings().public_url.rstrip("/"))
+        return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
     return await dashboard(request, treg_session, db)
 
 
@@ -1589,6 +2071,85 @@ async def llms_txt():
     return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base), media_type="text/plain; charset=utf-8")
 
 
+@app.get("/robots.txt", include_in_schema=False)
+async def robots_txt():
+    """Crawler policy. `{BASE}`-templated like llms.txt, so a self-hosted registry advertises its own
+    sitemap rather than treg.to's."""
+    f = _WEB_DIR / "robots.txt"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="robots.txt not bundled")
+    base = get_settings().public_url.rstrip("/")
+    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base),
+                             media_type="text/plain; charset=utf-8",
+                             headers={"Cache-Control": "max-age=3600"})
+
+
+# The pages a crawler should know about. Everything here must answer 200 to a GET — a sitemap that
+# lists a redirect or a 404 is worse than no sitemap, so `tests/test_seo.py` walks every entry.
+# Deliberately absent: /contact and /help (alias URLs for the one support.html), /vendor-listing.md
+# (the text/plain twin of /vendor-listing), /login (302s to /app), /app* (authenticated SPA),
+# /connect-demo (noindex by design), and the shell installers.
+_SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
+    # (path, source file for lastmod — "" means use the catalog's, priority)
+    ("/", "landing.html", "1.0"),
+    ("/catalog", "", "0.9"),
+    ("/tutorial", "tutorial.html", "0.8"),
+    ("/docs", "", "0.7"),
+    ("/vendor-listing", "vendor-listing.md", "0.5"),
+    ("/support", "support.html", "0.4"),
+    ("/terms", "terms.html", "0.2"),
+    ("/privacy", "privacy.html", "0.2"),
+)
+
+
+@lru_cache(maxsize=1)
+def _catalog_mtime() -> str:
+    """The newest mtime under the catalog directory, as a sitemap `lastmod` date. The catalog is
+    read-only and changes only on deploy, so one scan per process is enough."""
+    newest = 0.0
+    for f in (Path(catalog_store.__file__).parent / "catalog").rglob("*.yaml"):
+        try:
+            newest = max(newest, f.stat().st_mtime)
+        except OSError:  # noqa: PERF203 -- a file vanishing mid-scan is not worth failing the sitemap
+            continue
+    return _iso_day(newest)
+
+
+def _iso_day(ts: float) -> str:
+    return datetime.fromtimestamp(ts, tz=timezone.utc).date().isoformat() if ts else ""
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def sitemap_xml():
+    """Generated, not bundled: 80 of its URLs are the catalog's platform shelves, which move with the
+    catalog rather than with a checked-in file. Every URL is absolute on `public_url` so a self-host
+    publishes its own pages, and so the copy served on a legacy host still names the canonical one."""
+    base = get_settings().public_url.rstrip("/")
+    cat_day = _catalog_mtime()
+    out = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+
+    def add(path: str, lastmod: str, priority: str) -> None:
+        out.append("<url>")
+        out.append(f"<loc>{_esc_html(base + path)}</loc>")
+        if lastmod:
+            out.append(f"<lastmod>{lastmod}</lastmod>")
+        out.append(f"<priority>{priority}</priority>")
+        out.append("</url>")
+
+    for path, src, priority in _SITEMAP_PAGES:
+        day = cat_day
+        if src:
+            f = _WEB_DIR / src
+            day = _iso_day(f.stat().st_mtime) if f.exists() else ""
+        add(path, day, priority)
+    for row in _platform_rows():
+        add(f"/catalog/{row['slug']}", cat_day, "0.6")
+    out.append("</urlset>")
+    return Response("\n".join(out), media_type="application/xml; charset=utf-8",
+                    headers={"Cache-Control": "max-age=3600"})
+
+
 @app.get("/install.sh", include_in_schema=False)
 async def install_sh():
     """`curl -fsSL {BASE}/install.sh | sh` — installs the treg CLI and points it at this server.
@@ -1655,10 +2216,16 @@ async def tutorial_access_md():
 
 @app.get("/vendor-listing", include_in_schema=False)
 @app.get("/vendor-listing.md", include_in_schema=False)
-async def vendor_listing_md():
+async def vendor_listing_md(request: Request):
     """Vendor listing instructions — what a vendor's coding agent reads before raising a PR that
     adds their API to the catalog. Linked from the dashboard's "List your API" modal."""
-    return _serve_md("vendor-listing.md")
+    resp = _serve_md("vendor-listing.md")
+    # Two URLs, one document. `text/plain` cannot carry a <link rel=canonical>, so the duplicate is
+    # suppressed with the header equivalent: /vendor-listing is the indexed one (it is what the
+    # sitemap lists), /vendor-listing.md keeps serving agents and stays out of the index.
+    if request.url.path.endswith(".md"):
+        resp.headers["X-Robots-Tag"] = "noindex"
+    return resp
 
 
 @app.get("/integrate.md", include_in_schema=False)
@@ -1712,12 +2279,17 @@ async def legal_css():
     return FileResponse(f, media_type="text/css", headers={"Cache-Control": "no-cache"})
 
 
-def _legal_page(name: str) -> FileResponse:
+def _legal_page(name: str) -> HTMLResponse:
     page = _WEB_DIR / name
     if not page.exists():
         raise HTTPException(status_code=404, detail=f"{name} not bundled")
+    # `{BASE}`-substituted rather than sent as a plain FileResponse, so each page's canonical and
+    # og:url name the host actually serving it. A hardcoded treg.to would tell a self-hosted
+    # registry's crawler that the real page lives on someone else's domain.
+    base = get_settings().public_url.rstrip("/")
+    html = page.read_text(encoding="utf-8").replace("{BASE}", base)
     # no-cache: a legal page must not be served stale after we publish an update.
-    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/terms", include_in_schema=False)
@@ -2449,6 +3021,7 @@ async def tutorial_page():
     stamp = int(js.stat().st_mtime) if js.exists() else 0   # tutorial.js's OWN mtime: _app_version()
     html = page.read_text(encoding="utf-8").replace(       # hashes index.html and would not move
         'src="/tutorial.js"', f'src="/tutorial.js?v={stamp}"')
+    html = html.replace("{BASE}", get_settings().public_url.rstrip("/"))  # canonical + og:url
     return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
 
 
@@ -8825,6 +9398,52 @@ async def _bundle_view(bundle_id: int, db: AsyncSession) -> dict:
         "tools": [_tool_view(t) for t in tools],
         "secrets": [_secret_view(s) for s in secrets],
     }
+
+
+# ---------------------------------------------------------------------------------------------
+# HEAD, everywhere GET is answered
+# ---------------------------------------------------------------------------------------------
+# FastAPI's APIRoute pins `methods` to {"GET"} and, unlike Starlette's plain Route, never adds HEAD
+# (fastapi/routing.py: `if methods is None: methods = ["GET"]`). So every page on the site answered
+# 405 to the HEAD probe that crawlers, link unfurlers and uptime checks send first — including `/`.
+# Widened once, here, rather than by editing ~120 decorators: this runs after every route is
+# registered, and only touches routes that are GET-only (a POST route keeps refusing HEAD, rightly).
+#
+# Sending the body is not a concern: ASGI servers drop it for HEAD per RFC 9110, and Starlette's
+# FileResponse already checks the scope method and sends headers only.
+_HEAD_WIDENED: list[APIRoute] = []
+for _route in app.routes:
+    if isinstance(_route, APIRoute) and _route.methods == {"GET"}:
+        _route.methods = {"GET", "HEAD"}
+        _HEAD_WIDENED.append(_route)
+
+
+_fastapi_openapi = app.openapi
+
+
+def _openapi_without_head():
+    """The generated schema, minus the HEAD the loop above just added to every GET route.
+
+    Without this the widening leaks into a PUBLIC artifact: FastAPI derives one operation per
+    (path, method), so /openapi.json grew 58 duplicate HEAD entries — each warning "Duplicate
+    Operation ID" at generation and each doubling its operation on the /docs page. HEAD is a
+    transport detail that HTTP already implies wherever GET is answered; it is not an API operation
+    anyone reads about. So the routes are narrowed for the duration of generation and put back.
+    Routes that declared HEAD themselves (the /call proxy) are untouched and still documented.
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+    for r in _HEAD_WIDENED:
+        r.methods = {"GET"}
+    try:
+        app.openapi_schema = _fastapi_openapi()
+    finally:
+        for r in _HEAD_WIDENED:
+            r.methods = {"GET", "HEAD"}
+    return app.openapi_schema
+
+
+app.openapi = _openapi_without_head
 
 
 # ---------------------------------------------------------------------------------------------

@@ -80,7 +80,7 @@ class OAuthProvider:
     base_url: str = ""  # upstream API root, so a successful connect can auto-provision the tool
     # Copy-paste sample calls stamped onto the provisioned tool's `examples`, surfaced by
     # `tool ls`. The single most useful thing to carry here is the API VERSION: Google's REST APIs
-    # version the URL path (v21/...) and a wrong guess returns an HTML 404, not a hint — agents
+    # version the URL path (v25/...) and a wrong guess returns an HTML 404, not a hint — agents
     # otherwise burn calls guessing. `{resource}` is a placeholder the agent substitutes.
     examples: tuple[dict, ...] = ()
     docs_url: str = ""
@@ -403,11 +403,12 @@ GOOGLE_ADS = OAuthProvider(
     base_url="https://googleads.googleapis.com",
     docs_url="https://developers.google.com/google-ads/api/docs/start",
     examples=(
-        {"method": "POST", "path": "v21/customers/{customer_id}/googleAds:search",
-         "note": "GAQL read. API version v21 (verified 2026-07-22); a wrong version 404s as HTML. "
+        {"method": "POST", "path": "v25/customers/{customer_id}/googleAds:search",
+         "note": "GAQL read. API version v25 (released 2026-07-22, sunsets ~Aug 2027). A version "
+                 "that never existed 404s as HTML; a SUNSET one 400s with UNSUPPORTED_VERSION. "
                  "Body: {\"query\":\"SELECT campaign.name, metrics.cost_micros FROM campaign "
                  "WHERE segments.date DURING LAST_30_DAYS\"}"},
-        {"method": "POST", "path": "v21/customers/{customer_id}/campaignBudgets:mutate",
+        {"method": "POST", "path": "v25/customers/{customer_id}/campaignBudgets:mutate",
          "note": "Mutate. Add \"validateOnly\":true first to dry-run. amountMicros: $1 = 1000000."},
     ),
     # Every Ads request carries TWO credentials: the user's OAuth bearer AND a `developer-token`
@@ -425,10 +426,10 @@ GOOGLE_ADS = OAuthProvider(
     # Which ad account should this connection act on? listAccessibleCustomers returns the accounts
     # the CONNECTED USER can reach — never ours.
     resource_label="account",
-    probe_path="/v21/customers:listAccessibleCustomers",
-    discover_path="/v21/customers:listAccessibleCustomers",
+    probe_path="/v25/customers:listAccessibleCustomers",
+    discover_path="/v25/customers:listAccessibleCustomers",
     discover_key="resourceNames",
-    enrich_path="/v21/customers/{id}/googleAds:search",
+    enrich_path="/v25/customers/{id}/googleAds:search",
     enrich_body={"query": "SELECT customer.descriptive_name FROM customer LIMIT 1"},
     enrich_label_path="results.0.customer.descriptiveName",
     enrich_header_name="login-customer-id",

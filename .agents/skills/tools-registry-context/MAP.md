@@ -13,6 +13,7 @@ Regenerate via `scripts/build-map.py`.
 | `.claude-plugin/marketplace.json` | interface/skill.md |
 | `.claude-plugin/plugin.json` | interface/skill.md |
 | `README.md` | foundation/charter.md |
+| `assets/brand/og-card.html` | interface/seo.md |
 | `dsh/cordis.patch.yml` | interface/skill.md |
 | `dsh/index.js` | interface/skill.md |
 | `examples/proxy-demo/server.js` | architecture/local-proxy.md |
@@ -25,7 +26,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/__main__.py` | ops/deploy.md |
 | `src/treg/agents.py` | interface/cli.md |
 | `src/treg/analytics.py` | architecture/data-model.md |
-| `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md |
+| `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
 | `src/treg/catalog_store.py` | architecture/catalog.md, interface/api.md |
@@ -60,11 +61,15 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/session.py` | interface/dashboard.md |
 | `src/treg/shell.py` | interface/shell.md |
 | `src/treg/skills.py` | interface/env-import.md |
+| `src/treg/web/catalog.css` | interface/seo.md |
 | `src/treg/web/connect-demo.html` | architecture/mcp-oauth.md |
-| `src/treg/web/index.html` | interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md |
+| `src/treg/web/index.html` | interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md, interface/seo.md |
 | `src/treg/web/install.sh` | interface/landing-sandbox.md |
+| `src/treg/web/landing.html` | interface/seo.md |
+| `src/treg/web/robots.txt` | interface/seo.md |
 | `src/treg/web/selfhost.sh` | ops/deploy.md |
 | `src/treg/web/skill.md` | interface/skill.md |
+| `src/treg/web/support.html` | interface/seo.md |
 | `src/treg/web/tour/index.html` | interface/dashboard.md |
 | `src/treg/web/tour/tour.js` | interface/dashboard.md |
 | `src/treg/web/tutorial.html` | interface/dashboard.md |
@@ -93,6 +98,7 @@ Regenerate via `scripts/build-map.py`.
 | `interface/env-import.md` | `providers.py`, `skills.py` |
 | `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `demo.py`, `cli.py`, `index.html` |
+| `interface/seo.md` | `api.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js` |
 | `ops/deploy.md` | `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |

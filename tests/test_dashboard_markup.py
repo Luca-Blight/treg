@@ -797,9 +797,15 @@ def test_the_run_actions_lead_the_expansion_tab_bar():
     Try-it is the primary (ink-fill) CTA for a key/token provider — trying on treg's key is what most
     visitors want — with the own-key path demoted to a secondary "Bring your own key". For an OAuth
     provider treg can't serve on its own key, so Connect is the primary instead and Try-it is
-    secondary. The green Connected state replaces the connect button once an account exists."""
+    secondary. The green Connected state replaces the connect button once an account exists.
+
+    Each action is ONE button whose handler forks on `publicCatalog` — signed out, all three open
+    the sign-in modal instead, because calling needs a team. The member half of every fork is what
+    is asserted below; it must keep its shape when someone edits the public half."""
     block = _ledger()
-    bar = block[block.index('<span class="ltabs-r">') :][:2400]
+    # Sized to the whole action group, not a round number — the window has been outgrown once
+    # already (by the publicCatalog forks) and silently cut the last assertions out of range.
+    bar = block[block.index('<span class="ltabs-r">') :][:3400]
     # Try-it: primary UNLESS the provider is OAuth
     assert 'openEpTry(e)' in bar and ':class="{primary:!mkOauth(e.provider)}"' in bar
     # OAuth → Connect is the ink-fill primary
