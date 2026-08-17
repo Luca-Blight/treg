@@ -36,6 +36,7 @@ not initialized". `api.py` must compose this module's lifespan with its own; see
 from __future__ import annotations
 
 import json
+import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Any, TypedDict
@@ -114,6 +115,9 @@ class SearchResult(TypedDict, total=False):
     usd_per_call: float | None
     no_key_needed: bool | None
     score: int | None
+    works: float | None          # measured success rate, or null when there isn't enough evidence
+    samples: int | None          # how many real calls that rate stands on
+    never_worked: bool | None    # called, and not one of those calls came back 2xx
 
 
 class SearchOut(TypedDict, total=False):
@@ -143,6 +147,7 @@ class CatalogGetOut(TypedDict, total=False):
     example_response: Any                  # a dict for most endpoints, an ARRAY for providers whose
                                            # response is a list of records (brightdata datasets)
     hints: list[str] | None
+    did_you_mean: list[str] | None         # real ids close to one that missed
     error: str | None
     detail: str | None
 
@@ -155,12 +160,15 @@ class CallOut(TypedDict, total=False):
     cost_usd: float | None
     whose_error: str | None         # "treg" or "provider" — who to blame, and whether to retry
     hint: str | None
+    did_you_mean: list[str] | None  # real ids close to one that missed
     error: str | None
     detail: str | None
 
 
 class BalanceOut(TypedDict, total=False):
     team: str | None
+    team_name: str | None           # the display name — a slug alone can't be recognised as wrong
+    identity: str | None            # WHOSE grant this is; the answer to "wrong team? whose login?"
     balance_usd: float | None
     balance_micro: int | None
     holds_micro: int | None
@@ -178,6 +186,8 @@ class TeamTool(TypedDict, total=False):
 
 class MyToolsOut(TypedDict, total=False):
     team: str | None
+    team_name: str | None
+    identity: str | None
     count: int | None
     tools: list[TeamTool] | None
     error: str | None
@@ -225,6 +235,47 @@ def _without_purchase_pointers(body: Any) -> Any:
         return v
 
     return scrub(body)
+
+
+def _qs_value(v: Any) -> str:
+    """One query-string value, spelled the way the WIRE spells it — not the way Python does.
+
+    `str(True)` is `"True"`, and an upstream that documents a boolean flag rejects that:
+    thecompaniesapi answers `{"rule": "boolean", "message": "The value must be a boolean"}`. The
+    caller did nothing wrong — JSON booleans are what an MCP client sends, and they arrived here as
+    real `bool`s — so the conversion is ours to get right. It bit hardest where it cost money:
+    `simplified=true` is that endpoint's FREE preview mode, so a silently-mangled flag pushed the
+    caller onto the paid path for a query they had asked to see for nothing.
+
+    Nested objects/arrays go as compact JSON rather than Python's `repr` (`{'a': 1}` with single
+    quotes is not JSON and no upstream parses it). `None` never reaches here — an unset parameter is
+    omitted from the query string entirely, which is what "no value" means over HTTP.
+    """
+    if isinstance(v, bool):          # before int — bool IS an int in Python
+        return "true" if v else "false"
+    if isinstance(v, (dict, list, tuple)):
+        return json.dumps(v, separators=(",", ":"), ensure_ascii=False)
+    return str(v)
+
+
+async def _observed_stats(endpoint_ids: list[str]) -> dict[str, dict]:
+    """What treg has measured across real calls to these endpoints — `{}` if it can't be read.
+
+    Its own session rather than the caller's client: this is a read of pooled, aggregate telemetry
+    that belongs to no org, and search must keep working when the query does not (the ranking then
+    falls back to the deterministic score order, which is what it always was).
+    """
+    if not endpoint_ids:
+        return {}
+    try:
+        from . import endpoint_stats
+        from .db import session_maker
+
+        async with session_maker() as db:
+            return await endpoint_stats.observed(db, endpoint_ids)
+    except Exception:  # noqa: BLE001 — telemetry must never take search down
+        logging.getLogger("treg.mcp").warning("endpoint stats unavailable", exc_info=True)
+        return {}
 
 
 def _oauth_claims(token: str) -> dict | None:
@@ -371,6 +422,44 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
     return int(chosen["org_id"]), chosen.get("slug"), None
 
 
+async def _whose_grant(client: httpx.AsyncClient, slug: str | None) -> dict:
+    """`{team, team_name, identity, hint}` — enough for a human to spot the WRONG team.
+
+    A slug on its own cannot be sanity-checked. `superdesign-7` looks like a plausible team to an
+    agent and to the person reading over its shoulder, and neither of them can tell it apart from
+    the team they meant; the first signal that anything was wrong was money missing from a balance
+    nobody had opened. The display name and the account the grant belongs to are what make the
+    mismatch legible — most of the time it is the OTHER half that differs, an OAuth consent given by
+    one login while the CLI is signed in as another, which is exactly why `treg org ls` did not list
+    the team the connector was spending from.
+
+    Best-effort by construction: this is a label on an answer that is already correct, so a failure
+    to read the display name must never cost the caller their balance.
+    """
+    out: dict[str, Any] = {"team": slug}
+    try:
+        me = _body(await client.get("/auth/me"))
+        if isinstance(me, dict) and me.get("email"):
+            out["identity"] = me["email"]
+        orgs = _body(await client.get("/orgs"))
+        for o in orgs if isinstance(orgs, list) else []:
+            if o.get("slug") == slug:
+                out["team_name"] = o.get("name")
+                break
+        else:
+            # The grant names a team this identity's own list does not — worth saying out loud
+            # rather than leaving as a silent blank.
+            if slug and isinstance(orgs, list):
+                out["hint"] = (f"this connection spends from {slug!r}, which is not among this "
+                               f"account's teams — check who authorised it")
+    except Exception:  # noqa: BLE001 — a label, never a gate
+        logging.getLogger("treg.mcp").warning("could not label the grant's team", exc_info=True)
+    out.setdefault("hint", "to spend from a different team, the human who authorised this "
+                           "connection runs `treg mcp grants` then `treg mcp use-team "
+                           "<grant> <team>` — no need to reconnect")
+    return out
+
+
 # --------------------------------------------------------------------------------------------
 # The catalog — read straight from memory. Still credentialed: the transport challenges first.
 # --------------------------------------------------------------------------------------------
@@ -388,9 +477,17 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
 )
 async def catalog_search(query: str, limit: int = 8) -> SearchOut:
     cat = catalog_store.load()
-    ranked, total = catalog_store.search(query, cat, max(1, min(limit, 25)))
+    limit = max(1, min(limit, 25))
+    # Score, then let the evidence break the ties. Token scoring produces ties by the dozen — every
+    # one of the 24 "ad library" matches scores 6 — so with a default limit of 8 the rows an agent
+    # actually sees were decided by file order. That handed back seven tikhub rows (one of them
+    # uncallable) and hid the cheapest endpoint with a perfect measured record.
+    ranked, total = catalog_store.search(query, cat, catalog_store.band_limit(limit))
+    stats = await _observed_stats([ep["id"] for ep, _ in ranked])
+    ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
     results = []
     for ep, score in ranked:
+        obs = stats.get(ep["id"]) or {}
         cost = cat.cost_view(ep.get("cost"), ep.get("provider")) or {}
         results.append({
             "endpoint_id": ep["id"],
@@ -404,6 +501,12 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
             "no_key_needed": cat.platform_eligible(ep)
                              and bool(get_settings().platform_key_for(ep.get("provider"))),
             "score": score,
+            # The measured half of the answer, at the step where the agent is choosing. Without it
+            # the "your agent picks on evidence" story only came true at catalog_get — one endpoint
+            # at a time, after the shortlist had already been cut blind.
+            "works": obs.get("ok_rate"),
+            "samples": obs.get("samples") or 0,
+            "never_worked": bool(obs.get("samples")) and not obs.get("any_ok", True),
         })
     out = {"query": query, "count": len(results), "total_matches": total, "results": results}
     if not results:
@@ -460,8 +563,14 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
     async with _api(token) as client:
         r = await client.get(f"/catalog/endpoints/{endpoint_id}")
     if r.status_code == 404:
+        cat = catalog_store.load()
         return {"error": f"unknown endpoint {endpoint_id!r}",
-                "hint": "use catalog_search to find the right id"}
+                # Naming the near miss, not just the tool to go back to. An id one segment off is
+                # the common failure — and the loop breaks at its FIRST step, so an agent that only
+                # hears "search again" re-runs the same search and re-derives the same wrong id.
+                "hints": [catalog_store.unknown_id_hint(endpoint_id, cat),
+                          "or use catalog_search to find the right id"],
+                "did_you_mean": catalog_store.near_ids(endpoint_id, cat)}
     return _body(r)
 
 
@@ -512,11 +621,15 @@ async def call(endpoint_id: str, params: dict | list | None = None,
     # first and falls back to a catalog id, so an org tool always wins over the catalog. Pre-checking
     # the catalog and refusing anything absent would have made `my_tools` a list of things the agent
     # could see and never call — which is how this gap was found.
-    ep = catalog_store.load().by_id.get(endpoint_id)
+    cat = catalog_store.load()
+    ep = cat.by_id.get(endpoint_id)
     if ep is None and "/" not in endpoint_id:
+        near = catalog_store.near_ids(endpoint_id, cat)
         return {"error": f"unknown endpoint {endpoint_id!r}",
-                "hint": "use catalog_search for a catalog id, or my_tools then "
-                        "'<tool-name>/<path>' for one of this team's own tools"}
+                "hint": ("did you mean " + ", ".join(near) + "?" if near else
+                         "use catalog_search for a catalog id, or my_tools then "
+                         "'<tool-name>/<path>' for one of this team's own tools"),
+                "did_you_mean": near}
 
     # `body` implies POST — curl's convention, and the CLI's: catalog endpoints reject a method
     # mismatch, so making `body` just work beats asking the caller to repeat what the catalog knows.
@@ -557,9 +670,9 @@ async def call(endpoint_id: str, params: dict | list | None = None,
     for src in (args if (reads_query and isinstance(args, dict)) else {}, query or {}):
         for k, v in src.items():
             if isinstance(v, (list, tuple)):
-                query_pairs += [(k, str(x)) for x in v]
-            else:
-                query_pairs.append((k, str(v)))
+                query_pairs += [(k, _qs_value(x)) for x in v if x is not None]
+            elif v is not None:
+                query_pairs.append((k, _qs_value(v)))
 
     the_body = body if body is not None else (args if not reads_query else None)
     # Caller headers relay to the upstream exactly as the CLI's --header does (Google Ads'
@@ -676,11 +789,12 @@ async def balance(ctx: Context) -> BalanceOut:
         if problem:
             return problem
         r = await client.get(f"/orgs/{org_id}/balance", headers={"X-Treg-Org": slug or ""})
+        whose = await _whose_grant(client, slug)
     body = _body(r)
     if r.status_code != 200:
         return {"error": "could not read the balance", "detail": body}
     return {
-        "team": slug,
+        **whose,
         "balance_usd": round((body.get("balance_micro") or 0) / 1_000_000, 6),
         "balance_micro": body.get("balance_micro"),
         "holds_micro": body.get("holds_micro"),
@@ -705,12 +819,13 @@ async def my_tools(ctx: Context) -> MyToolsOut:
         if problem:
             return problem
         r = await client.get("/tools", headers={"X-Treg-Org": slug or ""})
+        whose = await _whose_grant(client, slug)
     body = _body(r)
     if r.status_code != 200:
         return {"error": "could not list the team's tools", "detail": body}
     tools = body if isinstance(body, list) else body.get("tools", [])
     return {
-        "team": slug,
+        **whose,
         "count": len(tools),
         "tools": [{"name": t.get("name"), "base_url": t.get("base_url"),
                    "description": t.get("description")} for t in tools],

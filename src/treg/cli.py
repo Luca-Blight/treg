@@ -3382,6 +3382,43 @@ def cmd_skill_install(args, cfg) -> None:
         print(f"  {_M}Overwrites local edits — confirm before you --force.{_R}")
 
 
+def cmd_mcp_grants(args, cfg) -> None:
+    """Which MCP connections this account has authorised, and whose balance each one spends.
+
+    The team on an OAuth grant is picked once at a consent screen and then never shown again: the
+    agent reports a slug, `treg org ls` lists the teams of whoever is logged in HERE, and those can
+    be two different accounts. Somebody spent real money out of a team that appeared in neither
+    list before anyone noticed.
+    """
+    with _client(cfg) as c:
+        r = c.get("/oauth/grants")
+    if r.status_code != 200 or _JSON_OVERRIDE:
+        _show(r)
+        return
+    rows = r.json()
+    if not rows:
+        print("no MCP connections authorised by this account")
+        _dim("connections made while signed in as somebody else are listed under THAT account")
+        return
+    print(f"  {'GRANT':<14} {'CLIENT':<24} {'TEAM':<20} {'GRANTED':<20}")
+    for g in rows:
+        print(f"  {_clip(g['grant'], 14):<14} {_clip(g.get('client') or '', 24):<24} "
+              f"{_clip(g.get('team') or '?', 20):<20} {(g.get('granted') or '')[:19]:<20}")
+    _dim("  point one at another team: treg mcp use-team <grant> <team-slug>")
+
+
+def cmd_mcp_use_team(args, cfg) -> None:
+    """Re-point a live MCP grant at another of your teams, without reconnecting the client."""
+    with _client(cfg) as c:
+        r = c.post(f"/oauth/grants/{args.grant}/team", json={"team": args.team})
+    if r.status_code != 200 or _JSON_OVERRIDE:
+        _show(r)
+        sys.exit(0 if r.status_code == 200 else 1)
+    body = r.json()
+    print(f"{body['grant']} now spends from {_B}{body['team']}{_R} ({body.get('team_name') or ''})")
+    _dim(f"  {body.get('note', '')}")
+
+
 def cmd_mcp_install(args, cfg) -> None:
     """Register the treg MCP server into every supported agent on this machine, header-authed with
     the logged-in token (which bakes in the team, so no org to pass). The MCP sibling of
@@ -4300,7 +4337,14 @@ def _observed_cell(obs: dict | None) -> str:
     than no rate, because it reads as evidence."""
     if not obs or obs.get("ok_rate") is None:
         n = (obs or {}).get("samples") or 0
-        return f"{_M}— ({n}){_R}" if n else f"{_M}—{_R}"
+        if not n:
+            return f"{_M}—{_R}"
+        # Below the floor there is still one thing worth saying, and it is the one a reader most
+        # needs: whether it has EVER answered. `— (7)` next to a fresh LAST OK read as "fine, just
+        # new" on an endpoint that had failed all seven times.
+        if not obs.get("any_ok", True):
+            return f"{_A}✗{_R} {_M}({n}){_R}"
+        return f"{_M}— ({n}){_R}"
     pct = obs["ok_rate"] * 100
     colour = _G if pct >= 99 else (_AM if pct >= 90 else _A)
     return f"{colour}{pct:.0f}%{_R} {_M}({obs['samples']}){_R}"
@@ -4502,7 +4546,19 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
         return
     if r.status_code == 404:
         print(f"no endpoint {endpoint_id!r} in the catalog")
-        _dim(f"find one with: treg catalog search {endpoint_id.split('.')[-1]}")
+        # The server names the near misses — an id one segment off is the usual miss, and a search
+        # hint sends the reader back to the step that produced the wrong id in the first place.
+        try:      # an older server answers with a plain-string detail, and any server may not be JSON
+            detail = (r.json() or {}).get("detail")
+            near = detail.get("did_you_mean") or [] if isinstance(detail, dict) else []
+        except ValueError:
+            near = []
+        if near:
+            for eid in near:
+                print(f"  did you mean: {_B}{eid}{_R}")
+            _dim(f"  treg catalog get {near[0]}")
+        else:
+            _dim(f"find one with: treg catalog search {endpoint_id.split('.')[-1]}")
         sys.exit(1)
     if r.status_code != 200:
         _show(r)
@@ -5265,6 +5321,13 @@ def build_parser() -> argparse.ArgumentParser:
              "treg mcp install")
     mci.add_argument("--name", default="treg", help="the MCP server name to register (default: treg)")
     mci.set_defaults(fn=cmd_mcp_install)
+    mk(mc, "grants", "List the MCP connections you've authorised and which team each one spends from.",
+       "treg mcp grants").set_defaults(fn=cmd_mcp_grants)
+    mcu = mk(mc, "use-team", "Point an authorised MCP connection at another of your teams (no reconnect).",
+             "treg mcp use-team a1b2c3d4 superdesign")
+    mcu.add_argument("grant", help="the grant id from `treg mcp grants`")
+    mcu.add_argument("team", help="the team slug to spend from")
+    mcu.set_defaults(fn=cmd_mcp_use_team)
 
     # ---- agents (which coding agents treg installs skills for) ----
     ag = mk(sub, "agents", "List the coding agents treg can install skills for (and which are detected here).",

@@ -731,3 +731,46 @@ def test_trial_pools_flow_from_fx_to_eligibility_and_display():
     # and the two NON-trial own-key providers stay ineligible — the license boundary holds
     assert not c.platform_eligible(c.by_id["polygon.prev-close"])
     assert not c.platform_eligible(c.by_id["eodhd.eod"])
+
+
+# ---- method metadata: an endpoint treg enforces the wrong verb on cannot be called at all -------
+def test_no_tikhub_ads_route_is_recorded_as_a_GET():
+    """treg enforces the recorded method, so a wrong one is not a cosmetic error — it makes the
+    endpoint uncallable from every direction at once: POST is refused here ("… is GET"), and GET is
+    refused upstream (405). All twelve `/api/v1/tiktok/ads/*` routes shipped that way, because the
+    ingester's OPTIONS probe answers with a list and its preference order picked GET."""
+    cat = cs.load()
+    ads = [e for e in cat.endpoints if e["path"].startswith("/api/v1/tiktok/ads/")]
+    assert len(ads) >= 12
+    assert [e["id"] for e in ads if e["method"] != "POST"] == []
+
+
+def test_an_endpoint_whose_input_is_a_body_does_not_advertise_query_params():
+    """The verb and the parameter position are one decision. Correcting the method and leaving the
+    params under `queryParams` would hand callers a POST with its arguments in the wrong half of the
+    request — still uncallable, just for a new reason."""
+    cat = cs.load()
+    ep = cat.by_id["tikhub.x.tiktok-ads-search-ads"]
+    assert ep["method"] == "POST"
+    assert "queryParams" not in (ep.get("input") or {})
+    assert "keyword" in ((ep.get("input") or {}).get("body") or {})
+
+
+# ---- an id that misses -------------------------------------------------------------------------
+async def test_an_unknown_id_names_the_ids_it_nearly_matched(clients: AsyncClient):
+    """An id is not free text. An agent holding one that misses by a segment has hit a dead end
+    mid-plan, and the usual next move is to invent another and fail again."""
+    r = await clients.get("/catalog/endpoints/lusha.companies-signals")
+    assert r.status_code == 404
+    detail = r.json()["detail"]
+    assert detail["did_you_mean"] == ["lusha.x.companies-signals"]
+    assert "lusha.x.companies-signals" in detail["hint"]
+
+
+async def test_an_id_that_resembles_nothing_is_sent_to_search(clients: AsyncClient):
+    """No near miss must not become a WRONG suggestion — a confidently wrong id is worse than none."""
+    r = await clients.get("/catalog/endpoints/acme.does-not-exist")
+    assert r.status_code == 404
+    detail = r.json()["detail"]
+    assert detail["did_you_mean"] == []
+    assert "catalog search" in detail["hint"]

@@ -534,6 +534,49 @@ def domain_rows(pairs: list[tuple[dict, dict]], capabilities: dict[str, str]) ->
     return [{"domain": d, "rows": sections[d]} for d in order]
 
 
+# ---- near misses -----------------------------------------------------------------------------
+def near_ids(endpoint_id: str, cat: Catalog, limit: int = 3) -> list[str]:
+    """Real ids close to one that doesn't exist — for the answer to an unknown id.
+
+    An id is not free text: an agent that has one and is told only "no endpoint 'x'" has hit a dead
+    end mid-plan, and the usual next move is to invent another id and fail again. Almost every real
+    miss is one of three shapes — a dropped tier segment (`lusha.companies-signals` for
+    `lusha.x.companies-signals`, which is what a model does when it relays an id through a summary),
+    a singular/plural slip, or a stale id we retired — and all three are one comparison away from
+    the right answer.
+
+    Deliberately cheap and predictable, in this order: same provider and the same remaining segments
+    ignoring the tier marker, then a shared-token overlap ranked by how much of the id matched. No
+    edit-distance library, no fuzzy threshold to tune.
+    """
+    want = [t for t in _SPLIT.split(endpoint_id.lower()) if t and t != "x"]
+    if not want:
+        return []
+    provider, want_set = want[0], set(want)
+    scored: list[tuple[int, int, str]] = []
+    for eid in cat.by_id:
+        have = [t for t in _SPLIT.split(eid.lower()) if t and t != "x"]
+        if not have:
+            continue
+        if have == want:                      # the same id but for a tier marker — an exact hit
+            return [eid]
+        overlap = len(want_set & set(have))
+        if not overlap or overlap < len(want_set) - 1:
+            continue
+        scored.append((-overlap, len(set(have) - want_set), eid))
+    scored.sort(key=lambda r: (r[0], r[1], r[2] != provider, r[2]))
+    return [eid for _, _, eid in scored[:limit]]
+
+
+def unknown_id_hint(endpoint_id: str, cat: Catalog) -> str:
+    """The one-line "so what do I do now" for an id that isn't in the catalog."""
+    near = near_ids(endpoint_id, cat)
+    if near:
+        return "did you mean " + ", ".join(near) + "?"
+    tail = endpoint_id.split(".")[-1].replace("-", " ").replace("_", " ")
+    return f"search for it instead: treg catalog search {tail!r}"
+
+
 # ---- search ----------------------------------------------------------------------------------
 # Deliberately plain: token containment over a few weighted fields. The catalog is ~2k endpoints of
 # curated English, so an embedding index would add a dependency and a build step to beat "tiktok
@@ -584,6 +627,54 @@ def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, 
             scored.append((ep, score))
     scored.sort(key=lambda row: (-row[1], row[0]["tier"] != "core", not row[0]["verified"], row[0]["id"]))
     return scored[:max(limit, 0)], len(scored)
+
+
+# How many equal-scoring rows to pull before the observed-evidence sort decides the cut. Scoring is
+# token containment over three fields, so ties are the NORM, not the exception: "ad library" scores
+# every one of its 24 matches a 6, and the answer to "which 8 do I show?" was then file order.
+RERANK_BAND = 60
+
+
+def band_limit(limit: int) -> int:
+    return max(min(RERANK_BAND, 6 * max(limit, 1)), limit)
+
+
+def rerank(rows: list[tuple[dict, int]], stats: dict[str, dict],
+           cat: Catalog | None = None) -> list[tuple[dict, int]]:
+    """Re-order equal-scoring rows by what treg has MEASURED, then by price.
+
+    Relevance still decides first — a cheap reliable endpoint that doesn't do the job is not the
+    answer. But below that, treg is the only party that can rank on evidence, and until this existed
+    it collected WORKS/SPEED/COST and then spent none of it at the step where the agent actually
+    chooses. `catalog_search "ad library"` returned seven tikhub rows — one of them uncallable — and
+    dropped `scrapecreators…ad-library-search`, which is cheaper and had answered 16 of 16.
+
+    Buckets, not a formula: an ok_rate and a price are different units, and a weighted sum of the two
+    is a number nobody can predict or argue with. Unmeasured sits ABOVE measured-poor and below
+    measured-good — a new endpoint is an unknown, not a suspect.
+    """
+    def bucket(ep: dict) -> int:
+        obs = stats.get(ep["id"]) or {}
+        rate, samples = obs.get("ok_rate"), obs.get("samples") or 0
+        if samples and not obs.get("any_ok", rate is not None and rate > 0):
+            return 3        # called, never once answered — the broken-metadata case
+        if rate is None:
+            return 1        # no evidence either way (or too few samples to publish one)
+        return 0 if rate >= 0.9 else 2
+
+    def price(ep: dict) -> float:
+        cost = (cat.cost_view(ep.get("cost"), ep.get("provider")) if cat else ep.get("cost")) or {}
+        usd = cost.get("usd")
+        return float(usd) if isinstance(usd, (int, float)) else float("inf")
+
+    # Evidence outranks curation — a core row that has never once answered is not the better
+    # suggestion — but curation outranks PRICE. `core` is the hand-picked route for a job and
+    # `extended` the bulk-ingested long tail, so letting a tenth of a cent promote the long tail
+    # over the curated answer trades relevance for change: "tiktok comments" would lead with
+    # douyin danmaku because it is cheap.
+    return sorted(rows, key=lambda row: (
+        -row[1], bucket(row[0]), row[0]["tier"] != "core", price(row[0]),
+        not row[0]["verified"], row[0]["id"]))
 
 
 # ---- call template ---------------------------------------------------------------------------

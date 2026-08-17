@@ -541,21 +541,40 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     }
 
 
+async def _observed_or_empty(db: AsyncSession, endpoint_ids: list[str]) -> dict[str, dict]:
+    """What the served calls say about these endpoints — or `{}` if that query is unavailable.
+
+    Telemetry must never take the catalog down: the catalog answers signed-out readers and is the
+    step every agent starts from, while these numbers are an enrichment on top of it.
+    """
+    try:
+        return await endpoint_stats.observed(db, endpoint_ids)
+    except Exception:  # noqa: BLE001
+        logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
+        return {}
+
+
 @app.get("/catalog/search")
-async def catalog_search(q: str = "", limit: int = 25) -> dict:
+async def catalog_search(q: str = "", limit: int = 25,
+                         db: AsyncSession = Depends(get_session)) -> dict:
     """Open: free-text search across the whole catalog — the DISCOVER half of the loop.
 
     An agent that knows what it wants ("tiktok comments") shouldn't have to guess which platform
     shelf hides it. Ranking is plain token matching (see `catalog_store.search`) so results are
-    reproducible and explainable; `hints` carries the next command, since finding the endpoint is
-    never the goal — inspecting or calling it is."""
+    reproducible and explainable; equal scores — the common case, not the edge — then break on what
+    treg has MEASURED and on price, so the cut stops being file order. `hints` carries the next
+    command, since finding the endpoint is never the goal — inspecting or calling it is."""
     cat = catalog_store.load()
     limit = max(1, min(limit, 100))
-    ranked, total = catalog_store.search(q, cat, limit)
+    ranked, total = catalog_store.search(q, cat, catalog_store.band_limit(limit))
+    stats = await _observed_or_empty(db, [ep["id"] for ep, _ in ranked])
+    ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
     results = [
         catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
         | catalog_store.endpoint_context(ep, cat)
-        | {"score": score}
+        # The evidence that decided the order, shown rather than merely applied: a caller comparing
+        # two rows should be able to see WHY one is above the other.
+        | {"score": score, "observed": stats.get(ep["id"])}
         for ep, score in ranked
     ]
     if not q.strip():
@@ -583,7 +602,12 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
     cat = catalog_store.load()
     ep = cat.by_id.get(endpoint_id)
     if ep is None:
-        raise HTTPException(status_code=404, detail=f"unknown endpoint {endpoint_id!r}")
+        # Name the near misses. An id that is one segment off is the common miss, and a bare 404
+        # ends the search → get → call loop at its first step with nothing to try next.
+        raise HTTPException(status_code=404, detail={
+            "error": f"unknown endpoint {endpoint_id!r}",
+            "hint": catalog_store.unknown_id_hint(endpoint_id, cat),
+            "did_you_mean": catalog_store.near_ids(endpoint_id, cat)})
     view = (catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
             | catalog_store.endpoint_context(ep, cat))
     siblings = [
@@ -602,11 +626,7 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
     # of "compare providers" that only treg can answer (see endpoint_stats + CAPABILITY-CHOICE-PLAN).
     # Attached to the SAME response because the choice is made here; a second round-trip to compare
     # reliability is a round-trip an agent will skip.
-    try:
-        stats = await endpoint_stats.observed(db, [endpoint_id] + [s["id"] for s in siblings])
-    except Exception:  # noqa: BLE001 — telemetry must never take the catalog down
-        logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
-        stats = {}
+    stats = await _observed_or_empty(db, [endpoint_id] + [s["id"] for s in siblings])
     view = view | {"observed": stats.get(endpoint_id)}
     siblings = [s | {"observed": stats.get(s["id"])} for s in siblings]
 
@@ -3818,6 +3838,84 @@ async def create_org(
         raise HTTPException(status_code=409, detail="could not allocate a unique org slug — retry")
     await _grant_signup_promo(db, org)
     return {"org": org.slug, "org_id": org.id, "name": org.name, "role": "owner", "token": token}
+
+
+class GrantTeamIn(BaseModel):
+    team: str = ""          # the slug (or numeric id) of a team the signed-in user belongs to
+
+
+@app.get("/oauth/grants", include_in_schema=False)
+async def oauth_grants(user: User = Depends(require_identity),
+                       db: AsyncSession = Depends(get_session)) -> list[dict]:
+    """The MCP connections this account has granted, and which team each one spends from.
+
+    The team on a grant was chosen once, on a consent screen, and after that it was invisible from
+    every side: the client reports a slug, the CLI lists the teams of whichever identity is logged
+    in THERE, and the two need not be the same account at all. Somebody spent from a team they could
+    not see listed anywhere and had no way to recognise as wrong.
+    """
+    rows = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.user_id == user.id, OAuthRefresh.retired_at.is_(None)
+    ).order_by(OAuthRefresh.created_at.desc()))).scalars().all()
+    seen: set[str] = set()
+    out: list[dict] = []
+    for row in rows:                      # one entry per GRANT, not per rotation of its token
+        if row.family_id in seen:
+            continue
+        seen.add(row.family_id)
+        org = await db.get(Org, row.org_id)
+        client = (await db.execute(select(OAuthClient).where(
+            OAuthClient.client_id == row.client_id))).scalar_one_or_none()
+        out.append({
+            "grant": row.family_id,
+            "client": (client.client_name if client else "") or row.client_id,
+            "team": org.slug if org else None,
+            "team_name": org.name if org else None,
+            "granted": row.created_at.isoformat(timespec="seconds"),
+        })
+    return out
+
+
+@app.post("/oauth/grants/{family_id}/team", include_in_schema=False)
+async def oauth_grant_set_team(family_id: str, body: GrantTeamIn,
+                               user: User = Depends(require_identity),
+                               db: AsyncSession = Depends(get_session)) -> dict:
+    """Re-point a live grant at another of the user's teams — without re-doing the OAuth dance.
+
+    The team is stored on the refresh family rather than only inside the issued access token, so
+    moving it is a row update and the next refresh picks it up. Re-consenting works too, but it
+    means disconnecting a working connector in whatever client holds it, and "the only way to fix
+    which balance this spends is to tear the connection down" is not an answer for the person who
+    just found out they were spending from the wrong one.
+
+    Only the GRANT'S OWN user may move it, and only to a team THEY are a member of — a grant must
+    never become a way to reach a team the consent screen would not have offered.
+    """
+    from . import mcp_oauth
+
+    rows = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.family_id == family_id, OAuthRefresh.user_id == user.id,
+        OAuthRefresh.retired_at.is_(None)))).scalars().all()
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"no live grant {family_id!r} on this account")
+    org = await _resolve_org(body.team, db)
+    if org is None or org.suspended:
+        raise HTTPException(status_code=404, detail=f"no team {body.team!r}")
+    member = (await db.execute(select(Membership).where(
+        Membership.user_id == user.id, Membership.org_id == org.id))).scalar_one_or_none()
+    if member is None:
+        raise HTTPException(status_code=403, detail=f"you are not a member of {org.slug!r}")
+    for row in rows:
+        row.org_id = org.id
+        db.add(row)
+    await db.commit()
+    return {
+        "grant": family_id, "team": org.slug, "team_name": org.name,
+        # Access tokens live an hour and carry the old team until the client refreshes. Saying so
+        # is the difference between "it didn't work" and "it hasn't taken effect yet".
+        "note": (f"new calls spend from {org.slug!r} once the client refreshes its access token "
+                 f"(within {mcp_oauth.ACCESS_TTL_SECONDS // 60} minutes)"),
+    }
 
 
 @app.get("/orgs")
@@ -7874,10 +7972,20 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         await db.execute(select(Tool).where(Tool.name == name, Tool.org_id == org_id))
     ).scalar_one_or_none()
     if tool is None:
+        cat = catalog_store.load()
+        # A DOTTED name that reached here was meant to be a catalog endpoint id and missed — a
+        # near-miss id, most often one segment off. Answering "no tool 'lusha.companies-signals' in
+        # this org" describes the wrong half of treg and leaves the caller nothing to try; naming
+        # the real id turns the dead end back into the next call.
+        if "." in name and not path and (near := catalog_store.near_ids(name, cat)):
+            raise HTTPException(status_code=404, detail={
+                "error": f"no endpoint {name!r} in the catalog",
+                "hint": "did you mean " + ", ".join(near) + "?",
+                "did_you_mean": near})
         detail = f"no tool {name!r} in this org"
         # A bare provider name (`treg call tikhub /path`) stays a miss, but points at the
         # marketplace form instead of dead-ending — its endpoints are callable without a tool.
-        if oauth_providers.get(name) is not None or name in catalog_store.load().provider_meta:
+        if oauth_providers.get(name) is not None or name in cat.provider_meta:
             detail += (f" — but {name!r} is a marketplace provider; call its endpoints directly: "
                        f"treg catalog search <what you need> → treg call <endpoint-id>")
         raise HTTPException(status_code=404, detail=detail)

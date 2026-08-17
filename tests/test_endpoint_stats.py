@@ -110,7 +110,9 @@ async def test_aggregates_pool_across_orgs_but_carry_nothing_identifying(clients
         await _record(EP, 200, org_id=2)
     got = (await _observed([EP]))[EP]
     assert got["samples"] == 6                                   # pooled across tenants
-    assert set(got) == {"samples", "ok_rate", "p50_ms", "p95_ms", "last_ok_days"}
+    # `any_ok` is a pooled yes/no like the rest — it says whether ANY caller ever got a 2xx, which
+    # is the one thing a below-the-floor sample can still support without publishing a rate.
+    assert set(got) == {"samples", "ok_rate", "any_ok", "p50_ms", "p95_ms", "last_ok_days"}
     assert not any(k in got for k in ("org_id", "user_email", "params_hash", "client"))
 
 
@@ -149,3 +151,33 @@ def test_last_ok_says_nothing_when_it_knows_nothing():
 def test_a_call_today_reads_as_today():
     from treg import cli
     assert cli._last_ok_cell({"observed": {"last_ok_days": 0}}) == "today"
+
+
+async def test_last_ok_means_the_last_SUCCESS_not_the_last_attempt(clients: AsyncClient):
+    """An endpoint whose metadata is wrong fails every call, and `max(created_at)` over ALL rows
+    then dated it as freshly working. `tikhub.x.tiktok-ads-search-ads` read `WORKS — (7)` next to
+    `LAST OK: today` while every one of those seven calls had been refused 405 by the provider —
+    which reads as "fine, just new" and is the opposite of the truth."""
+    await _record(EP, 200, days_ago=9)                # the last time it really answered
+    for _ in range(7):
+        await _record(EP, 500, days_ago=0)            # today's failures must not date it
+    got = (await _observed([EP]))[EP]
+    assert got["last_ok_days"] == 9
+
+
+async def test_below_the_floor_we_still_say_whether_it_EVER_answered(clients: AsyncClient):
+    """The floor exists so a rate isn't published on noise — but "has this ever worked at all?" is a
+    yes/no, not a rate, and it survives any sample size. Without it a row that has never once
+    answered is indistinguishable from one nobody has tried."""
+    for _ in range(3):
+        await _record(EP, 500)
+    never = (await _observed([EP]))[EP]
+    assert never["ok_rate"] is None and never["samples"] == 3    # still no rate published
+    assert never["any_ok"] is False
+
+    await _record("other.ep", 200)
+    tried = (await _observed(["other.ep"]))["other.ep"]
+    assert tried["ok_rate"] is None and tried["any_ok"] is True
+
+    untouched = (await _observed(["nobody.called.this"]))["nobody.called.this"]
+    assert untouched["samples"] == 0 and untouched["any_ok"] is False

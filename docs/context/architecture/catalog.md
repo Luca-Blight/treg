@@ -460,6 +460,14 @@ Three rules it must honour:
 - **Never probe with a real call.** Discovering an HTTP method by sending a GET is how you get
   billed 1400 times (see the quota trap above). TikHub's methods come from an `OPTIONS` request,
   which Starlette answers `405 + allow:` before the handler — and therefore the meter — runs.
+- **The published spec outranks the probe.** A wrong method is not a cosmetic error: treg *enforces*
+  the recorded verb, so the endpoint becomes uncallable from both sides at once — POST is refused
+  here ("… is GET") and GET is refused upstream (405). All twelve `/api/v1/tiktok/ads/*` routes
+  shipped that way and stayed uncallable for weeks. The probe is weaker than it looks: a preflight
+  that answers with a *list* (CORS middleware happily reports `GET` for a POST-only handler) walks
+  the preference order and picks GET, and the vendor docs mirror it — three signals, one mistake.
+  So when the OpenAPI declares exactly one method for a route, that wins; probe and docs are the
+  fallback for routes the spec doesn't describe.
 - **Platform is the system the data is ABOUT**, not the API family it lives under: DataForSEO's
   `/v3/merchant/amazon/products/live/advanced` is `amazon`, not `merchant`. Anything not tied to
   one system is `web`. Every new slug goes into `capabilities.yaml`'s `platforms` in the same
@@ -709,6 +717,31 @@ Five rules worth keeping:
   call produced it and a **`✓` age** when it came from the catalog's `verified:` stamp — the same
   discipline `confidence:` already applies to price. The stamp is the cold-start answer: it covers
   1,380 of 1,810 eligible endpoints for free, which is why the column is useful on day one.
+- **`last_ok` means the last SUCCESS.** It was `max(created_at)` over every row, success or not, so
+  an endpoint that had been called seven times today and failed all seven read `WORKS — (7)` next
+  to `LAST OK: today` — which is how `tikhub.x.tiktok-ads-search-ads` passed for a merely new row
+  while being uncallable (2026-08-17).
+- **Below the floor, "has it EVER answered?" is still publishable.** `any_ok` is a yes/no, not a
+  rate: it survives any sample size, carries no more than `samples` already does, and without it a
+  row that has never once worked is indistinguishable from one nobody has tried. The CLI prints
+  `✗ (7)` for that case instead of the neutral `— (7)`.
+
+### The evidence decides the ORDER, not just the detail page
+
+Token scoring ties by the dozen — all 24 `"ad library"` matches score 6 — so "which 8 do I show?"
+was answered by file order. That returned seven near-duplicate tikhub rows (one of them the
+uncallable one above) and cut off `scrapecreators.x.v1-tiktok-ad-library-search`, cheaper and 17 for
+17 measured. `catalog_store.rerank()` now settles equal scores over a `band_limit()` slice, on
+buckets rather than a weighted formula (an ok_rate and a price are different units, and a blended
+score is one nobody can predict or argue with):
+
+**relevance → measured (good · unknown · poor · never-worked) → core before extended → price**
+
+Two orderings there are deliberate. Evidence outranks curation, because a core row that has never
+answered is not the better suggestion. Curation outranks **price**, because `core` is the hand-picked
+route and `extended` the bulk-ingested long tail — letting a tenth of a cent promote the tail made
+`"tiktok comments"` lead with douyin danmaku. Unmeasured sits above measured-poor: a new endpoint is
+an unknown, not a suspect.
 
 Team policy sits on top: `CapabilityPin` (see [data-model](data-model.md)) lets an org fix a
 capability to one provider, enforced in `_resolve_marketplace_call` before anything is reserved.

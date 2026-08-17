@@ -22200,7 +22200,7 @@ endpoints:
   kind: utility
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_configure_safety
   summary: Get search modules config
   cost:
@@ -22214,13 +22214,13 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   test_request:
-    queryParams: {}
-  verified: '2026-07-28'
+    body: {}
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-configure-safety.json
 - id: tikhub.x.tiktok-ads-get-location-list
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_location_list
   summary: Get supported location list
   cost:
@@ -22234,13 +22234,13 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   test_request:
-    queryParams: {}
-  verified: '2026-07-28'
+    body: {}
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-location-list.json
 - id: tikhub.x.tiktok-ads-get-query-suggestions
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_query_suggestions
   summary: Get query suggestions
   cost:
@@ -22254,7 +22254,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       query:
         type: string
         required: false
@@ -22275,14 +22275,14 @@ endpoints:
         note: Country code
         example: US
   test_request:
-    queryParams:
+    body:
       count: 5
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-query-suggestions.json
 - id: tikhub.x.tiktok-ads-get-trends-hashtag-detail
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_trends_hashtag_detail
   summary: Get trending hashtag detail
   cost:
@@ -22296,7 +22296,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       hashtag_id:
         type: string
         required: true
@@ -22313,14 +22313,14 @@ endpoints:
         note: Country code
         example: US
   test_request:
-    queryParams:
+    body:
       hashtag_id: '7383227119714238469'
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-trends-hashtag-detail.json
 - id: tikhub.x.tiktok-ads-get-trends-hashtag-list
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_trends_hashtag_list
   summary: Get trending hashtag list
   cost:
@@ -22334,7 +22334,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       time_range:
         type: integer
         required: false
@@ -22360,9 +22360,9 @@ endpoints:
         required: false
         note: First-level industry ID (optional)
   test_request:
-    queryParams:
+    body:
       limit: 5
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-trends-hashtag-list.json
 - id: tikhub.x.tiktok-analytics-detect-fake-views
   tier: extended
@@ -27231,7 +27231,7 @@ endpoints:
 - id: tikhub.x.tiktok-ads-get-ad-interactive-analysis
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_ad_interactive_analysis
   summary: Get ad interactive analysis
   cost:
@@ -27245,7 +27245,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       material_id:
         type: string
         required: true
@@ -27262,15 +27262,15 @@ endpoints:
         note: Period type (days)
         example: 180
   test_request:
-    queryParams:
+    body:
       material_id: '7213258221116751874'
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-ad-interactive-analysis.json
   capability: tiktok-ads.library.ad.analytics
 - id: tikhub.x.tiktok-ads-get-ad-keyframe-analysis
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_ad_keyframe_analysis
   summary: Get ad keyframe analysis
   cost:
@@ -27284,7 +27284,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       material_id:
         type: string
         required: true
@@ -27296,15 +27296,15 @@ endpoints:
         note: Analysis metric (retain_ctr, retain_cvr, click_cnt, convert_cnt, play_retain_cnt)
         example: retain_ctr
   test_request:
-    queryParams:
+    body:
       material_id: '7213258221116751874'
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-ad-keyframe-analysis.json
   capability: tiktok-ads.library.ad.analytics
 - id: tikhub.x.tiktok-ads-get-ad-percentile
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_ad_percentile
   summary: Get ad percentile data
   cost:
@@ -27318,7 +27318,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       material_id:
         type: string
         required: true
@@ -27335,15 +27335,15 @@ endpoints:
         note: Time period (days)
         example: 180
   test_request:
-    queryParams:
+    body:
       material_id: '7213258221116751874'
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-ad-percentile.json
   capability: tiktok-ads.library.ad.analytics
 - id: tikhub.x.tiktok-ads-get-ads-detail
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_ads_detail
   summary: Get single ad detail
   cost:
@@ -27357,22 +27357,22 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       ads_id:
         type: string
         required: true
         note: Ad ID
         example: '7131673574381518849'
   test_request:
-    queryParams:
+    body:
       ads_id: '7131673574381518849'
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-ads-detail.json
   capability: tiktok-ads.library.ad.detail
 - id: tikhub.x.tiktok-ads-get-recommended-ads
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_recommended_ads
   summary: Get recommended ads
   cost:
@@ -27386,7 +27386,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       material_id:
         type: string
         required: true
@@ -27403,15 +27403,15 @@ endpoints:
         note: Country code
         example: US
   test_request:
-    queryParams:
+    body:
       material_id: '7213258221116751874'
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-recommended-ads.json
   capability: tiktok-ads.library.top_ads
 - id: tikhub.x.tiktok-ads-get-top-ads-spotlight
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/get_top_ads_spotlight
   summary: Get top ads spotlight
   cost:
@@ -27425,7 +27425,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       industry:
         type: string
         required: false
@@ -27441,15 +27441,15 @@ endpoints:
         note: Items per page
         example: 20
   test_request:
-    queryParams:
+    body:
       limit: 5
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-get-top-ads-spotlight.json
   capability: tiktok-ads.library.top_ads
 - id: tikhub.x.tiktok-ads-search-ads
   tier: extended
   platform: tiktok-ads
-  method: GET
+  method: POST
   path: /api/v1/tiktok/ads/search_ads
   name: Search ads
   summary: 'Tiktok: Search ads'
@@ -27464,7 +27464,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: verified
   input:
-    queryParams:
+    body:
       objective:
         type: integer
         required: false
@@ -27523,9 +27523,9 @@ endpoints:
         required: false
         note: Search ID (optional)
   test_request:
-    queryParams:
+    body:
       limit: 5
-  verified: '2026-07-28'
+  unverified: "method corrected GET->POST on 2026-08-17 from TikHub's published OpenAPI (api.tikhub.io/openapi.json): every /api/v1/tiktok/ads/* route is POST-only, and a GET answers 405. The old verified:'2026-07-28' stamp came from an OPTIONS probe that missed and fell back to the GET default, so no successful call ever stood behind it. Not re-run live since the correction."
   example_response: examples/tikhub.x.tiktok-ads-search-ads.json
   capability: tiktok-ads.library.search
 - id: tikhub.x.tiktok-app-v3-fetch-shop-home

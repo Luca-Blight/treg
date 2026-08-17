@@ -71,6 +71,13 @@ each of which was added because a real endpoint needed it:
 - An inline `?a=b` inside a passthrough URL is pulled out and merged — httpx silently DROPS a
   URL's query string whenever `params=` is passed, the same gotcha `cmd_call` guards.
 - `params` claiming the same position as an explicit slot is refused loudly, never merged.
+- **Query values are spelled the way the WIRE spells them, not the way Python does.** `str(True)`
+  is `"True"`, which any upstream documenting a boolean rejects (`{"rule": "boolean"}`). The caller
+  did nothing wrong — JSON booleans are what an MCP client sends — so the conversion is ours:
+  `true`/`false`, nested values as compact JSON (never a single-quoted `repr`), and `None` omitted
+  entirely, because that is what "no value" means over HTTP. It bit hardest where it cost money:
+  `simplified=true` is thecompaniesapi's FREE preview mode, so the mangled flag silently pushed
+  callers onto the paid path.
 - Multipart file upload stays CLI-only (`treg call --upload`) — MCP callers hold no files.
 - `call` resolves the TEAM the way `balance` does (`_resolve_org`, before anything is spent): a
   multi-team identity token used to bounce off /call's raw `choose an org (send X-Treg-Org)`
@@ -232,9 +239,28 @@ scopes. It warns when a client registered itself, because DCR is open and anyone
 name.
 
 It carries the **team picker**, and each option shows that team's balance. Which team a client spends
-from is decided here, once, and fixed on the token for the life of the grant: a person in several
-teams is asked rather than guessed at. Showing the balance is not decoration — picking a $0.00 team
-is the failure this screen exists to prevent, and it happened before the balances were added.
+from is decided here, once: a person in several teams is asked rather than guessed at. Showing the
+balance is not decoration — picking a $0.00 team is the failure this screen exists to prevent, and it
+happened before the balances were added.
+
+### …but the choice must stay visible and reversible afterwards
+
+Decided-once became **invisible and permanent**, and that combination cost a user real money
+(2026-08-17). `balance` reported the slug `superdesign-7`; `treg org ls` on their machine listed
+`superdesign` and `ai-jason` and nothing else, because the CLI was signed in as a *different account*
+from the one that had clicked Allow. Nothing in the agent could tell a plausible slug from the wrong
+team, and the first signal was spend on a balance nobody had opened. Two halves to the fix:
+
+- **`balance` and `my_tools` label the grant**: `team_name` (a slug alone cannot be sanity-checked)
+  and `identity` — the account the grant belongs to, which is usually the half that differs. If the
+  grant names a team that identity's own `/orgs` does not list, the answer says so outright.
+- **The team can be moved without re-consenting.** It lives on the refresh family
+  (`OAuthRefresh.org_id`), not only inside the issued access token, so `GET /oauth/grants` +
+  `POST /oauth/grants/{family}/team` (`treg mcp grants`, `treg mcp use-team`) is a row update the
+  next refresh picks up, within the access token's hour. Guarded on both sides: only the grant's own
+  user may move it, and only to a team they belong to — a grant must never reach further than the
+  consent screen would have offered. A *refresh* still cannot change teams; that is not a second
+  chance to pick, it is a deliberate action by the person who made the first one.
 
 Approval is a POST (a GET that granted access could be triggered by any page that can navigate),
 same-origin, and the page inherits `X-Frame-Options: DENY`.

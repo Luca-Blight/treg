@@ -1009,3 +1009,75 @@ async def test_call_resolves_the_team_for_an_identity_token(clients):
         out = await _call_tool(c, "call", {"endpoint_id": "echo2/ping"}, token=identity)
     assert out.get("status") == 200, out
     assert "choose an org" not in json.dumps(out)
+
+
+# ---- the bug reports of 2026-08-17: a day of real calls, five things that cost the caller -------
+async def test_an_id_that_misses_by_one_segment_names_the_real_one(clients):
+    """`lusha.companies-signals` for `lusha.x.companies-signals` — what a model produces relaying an
+    id through a summary. It broke search → get → call at its FIRST step, and "use catalog_search"
+    sends the agent back to the step that produced the wrong id in the first place."""
+    token = (await clients.post("/users", json={"email": "nearmiss@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        got = await _call_tool(c, "catalog_get", {"endpoint_id": "lusha.companies-signals"}, token=token)
+        called = await _call_tool(c, "call", {"endpoint_id": "lusha.companies-signals"}, token=token)
+    assert got["did_you_mean"] == ["lusha.x.companies-signals"]
+    assert called["did_you_mean"] == ["lusha.x.companies-signals"]
+    assert "lusha.x.companies-signals" in called["hint"]
+
+
+async def test_a_boolean_query_param_goes_on_the_wire_as_a_boolean(clients):
+    """`str(True)` is `"True"`, which every upstream that documents a boolean rejects. It bit
+    hardest where it cost money: `simplified=true` is thecompaniesapi's FREE mode, so the mangled
+    flag pushed callers onto the paid path for a query they had asked to preview for nothing."""
+    from treg import mcp as _mcp
+    assert _mcp._qs_value(True) == "true"
+    assert _mcp._qs_value(False) == "false"
+    assert _mcp._qs_value(1) == "1" and _mcp._qs_value("x") == "x"
+    assert _mcp._qs_value({"a": 1}) == '{"a":1}'      # never Python's single-quoted repr
+
+
+async def test_an_unset_query_param_is_omitted_rather_than_sent_as_None(clients):
+    """`None` means "no value", and `?limit=None` is not that — it is a string an upstream parses."""
+    assert (await clients.post("/tools", json={"name": "echo", "base_url": "http://upstream"})).status_code == 200
+    token = clients.headers.get("X-Treg-Token")
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "call", {"endpoint_id": "echo/anything",
+                                           "params": {"kept": True, "off": False,
+                                                      "dropped": None}}, token=token)
+    sent = (out.get("body") or {}).get("query") or {}
+    assert sent == {"kept": "true", "off": "false"}
+
+
+async def test_search_breaks_ties_on_what_treg_has_MEASURED(clients):
+    """Token scoring ties by the dozen — every "ad library" match scores 6 — so with a default limit
+    of 8 the rows an agent saw were decided by file order: seven tikhub rows, one of them
+    uncallable, and the cheapest endpoint with a perfect record cut off below the fold."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    ranked, _ = cs.search("ad library", cat, cs.band_limit(8))
+    ids = [ep["id"] for ep, _ in ranked]
+    good, broken = "scrapecreators.x.v1-tiktok-ad-library-search", "tikhub.x.tiktok-ads-search-ads"
+    assert {good, broken} <= set(ids), "both are in the band before any evidence is applied"
+
+    stats = {good: {"samples": 16, "ok_rate": 1.0, "any_ok": True},
+             broken: {"samples": 7, "ok_rate": None, "any_ok": False}}
+    reranked = cs.rerank(ranked, stats, cat)
+    out = [ep["id"] for ep, _ in reranked]
+    assert out[0] == good, "a perfect measured record wins its score group outright"
+    # …and the one that has never once answered sinks to the bottom of that group. Not to the bottom
+    # of the whole list: relevance still ranks above evidence, so a less relevant row stays below a
+    # broken-but-more-relevant one rather than being promoted past it by a failure count.
+    broken_score = next(s for ep, s in reranked if ep["id"] == broken)
+    assert [ep["id"] for ep, s in reranked if s == broken_score][-1] == broken
+
+
+async def test_balance_says_WHOSE_grant_and_which_team_by_name(clients):
+    """A slug alone cannot be sanity-checked: `superdesign-7` looks plausible to the agent and to
+    the human reading over its shoulder. The display name and the account that authorised the
+    connection are what make a wrong team legible before the spending is noticed."""
+    token = (await clients.post("/users", json={"email": "whose@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=token)
+    assert out["team"] and out["team_name"]
+    assert out["identity"] == "whose@superdesign.dev"
+    assert "use-team" in (out.get("hint") or ""), "and how to move it, without reconnecting"

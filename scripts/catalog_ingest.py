@@ -550,9 +550,18 @@ def ingest_tikhub(refresh: bool) -> tuple[Path, dict]:
         platform = TIKHUB_PLATFORM.get(family, family.replace("_", "-"))
         op = spec_paths.get(uri) or {}
         doc_op = docs_apis.get(uri)
-        method = (methods.get(uri)
-                  or (doc_op or {}).get("method", "").upper()
-                  or next((m.upper() for m in ("get", "post") if m in op), "GET"))
+        # The SPEC decides whenever it declares exactly one method for the route — it is TikHub's
+        # own published contract, and it was wrong to rank it last. The OPTIONS probe below is a
+        # weaker signal than it looks: when a route answers the preflight with a list (CORS
+        # middleware happily reports `GET` for a POST-only handler), the probe's preference order
+        # picks GET, and the docs mirror it. That is how all 12 `/api/v1/tiktok/ads/*` routes
+        # shipped as GET when every one of them is POST-only upstream — treg then enforced GET and
+        # the provider answered 405, so the endpoints could not be called at all, by anyone.
+        spec_methods = [m.upper() for m in ("get", "post", "put", "patch", "delete") if m in op]
+        method = (spec_methods[0] if len(spec_methods) == 1 else "") or (
+            methods.get(uri)
+            or (doc_op or {}).get("method", "").upper()
+            or (spec_methods[0] if spec_methods else "GET"))
         if (method, uri) in skip:
             continue
         label = titlecase(family)

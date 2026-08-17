@@ -79,7 +79,11 @@ async def observed(
             func.count().label("n"),
             func.sum(case((CallRecord.status_code < 300, 1), else_=0)).label("ok"),
             func.sum(case((CallRecord.status_code >= 500, 1), else_=0)).label("bad"),
-            func.max(CallRecord.created_at).label("last"),
+            # LAST OK means last SUCCESS. This was `max(created_at)` over every row, success or
+            # not — so an endpoint that had been called seven times today and failed every one
+            # read "LAST OK: today", which is the opposite of the truth and exactly how a broken
+            # row passes for a merely new one.
+            func.max(case((CallRecord.status_code < 300, CallRecord.created_at))).label("last_ok"),
         )
         .where(CallRecord.endpoint_id.in_(ids), CallRecord.created_at >= since,
                # treg's own refusals (paywall 402s, caps, bad requests never relayed) are facts
@@ -100,23 +104,28 @@ async def observed(
         by_id.setdefault(ep_id, []).append(int(ms))
 
     out: dict[str, dict] = {}
-    for ep_id, n, ok, bad, last in rows:
+    for ep_id, n, ok, bad, last_ok in rows:
         n, ok, bad = int(n or 0), int(ok or 0), int(bad or 0)
         if n < MIN_SAMPLES:
-            # Honest emptiness: say how thin the evidence is, claim nothing from it.
-            out[ep_id] = {"samples": n, "ok_rate": None, "p50_ms": None, "p95_ms": None,
-                          "last_ok_days": None}
+            # Honest emptiness: say how thin the evidence is, claim nothing from it — except the
+            # one thing thinness can still support. "Has this EVER answered?" is a yes/no, not a
+            # rate: three of three failures is not a 0% success rate worth publishing, but
+            # `any_ok: false` is a fact that survives any sample size, and without it a row that
+            # has never once worked is indistinguishable from a row nobody has tried.
+            out[ep_id] = {"samples": n, "ok_rate": None, "any_ok": ok > 0,
+                          "p50_ms": None, "p95_ms": None, "last_ok_days": None}
             continue
         decided = ok + bad          # 4xx excluded — the caller's fault, not the provider's
         ms = sorted(by_id.get(ep_id, []))
         out[ep_id] = {
             "samples": n,
             "ok_rate": round(ok / decided, 4) if decided else None,
+            "any_ok": ok > 0,
             "p50_ms": _pct(ms, 0.50),
             "p95_ms": _pct(ms, 0.95),
-            "last_ok_days": (_now() - last).days if last else None,
+            "last_ok_days": (_now() - last_ok).days if last_ok else None,
         }
     for ep_id in ids:                # an endpoint nobody has called says so, rather than vanishing
-        out.setdefault(ep_id, {"samples": 0, "ok_rate": None, "p50_ms": None, "p95_ms": None,
-                               "last_ok_days": None})
+        out.setdefault(ep_id, {"samples": 0, "ok_rate": None, "any_ok": False,
+                               "p50_ms": None, "p95_ms": None, "last_ok_days": None})
     return out

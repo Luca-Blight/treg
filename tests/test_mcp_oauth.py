@@ -932,3 +932,74 @@ async def test_a_team_with_no_balance_is_labelled_not_hidden(clients):
         "code_challenge": challenge, "code_challenge_method": "S256"})).text
     assert "no balance" in page
     assert f'value="{org_id}"' in page, "the team must still be selectable"
+
+
+# ---- moving a live grant to another team --------------------------------------------------------
+async def _as(email: str) -> dict:
+    """Headers that act as a given user — an identity token, minted the way `treg login` does."""
+    from sqlmodel import select
+
+    from treg import session as _sess
+    from treg.db import session_maker
+    from treg.models import User
+
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one()
+    return {"X-Treg-Token": _sess.make(user.id, token_version=user.token_version)}
+
+
+async def test_the_team_on_a_grant_can_be_moved_without_reconnecting(clients):
+    """The consent screen's choice was invisible and permanent: an agent reported a slug, `treg org
+    ls` listed the teams of whoever was logged in THERE, and those need not be the same account.
+    Money left a team nobody had opened. The team lives on the refresh family, so moving it is a row
+    update the next refresh picks up — no tearing down a working connector to fix which balance it
+    spends."""
+    email = "mover@superdesign.dev"
+    body, client_id, org_id = await _grant_full(clients, email)
+    # As the person who authorised it — the whole point of the bug is that this is NOT necessarily
+    # whoever the CLI on some other machine happens to be signed in as.
+    me = await _as(email)
+    other = (await clients.post("/orgs", json={"name": "the other team"}, headers=me)).json()
+
+    grants = (await clients.get("/oauth/grants", headers=me)).json()
+    assert len(grants) == 1 and grants[0]["team_name"], "and named, not just slugged"
+    grant = grants[0]["grant"]
+
+    moved = await clients.post(f"/oauth/grants/{grant}/team", json={"team": other["org"]}, headers=me)
+    assert moved.status_code == 200, moved.text
+    assert moved.json()["team"] == other["org"]
+
+    r = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert r.status_code == 200
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=r.json()["access_token"])
+    assert out["team"] == other["org"], "the client's very next refresh spends from the new team"
+
+
+async def test_a_grant_cannot_be_moved_to_a_team_you_are_not_in(clients):
+    """Moving a grant must not reach further than the consent screen would have offered — otherwise
+    it becomes a way into a team the human was never able to pick."""
+    body, _, _ = await _grant_full(clients, "insider@superdesign.dev")
+    me = await _as("insider@superdesign.dev")
+    grant = (await clients.get("/oauth/grants", headers=me)).json()[0]["grant"]
+
+    outsider = (await clients.post("/users", json={"email": "outsider@superdesign.dev"})).json()
+    theirs = (await clients.get("/orgs", headers={"X-Treg-Token": outsider["token"]})).json()[0]
+
+    r = await clients.post(f"/oauth/grants/{grant}/team", json={"team": theirs["slug"]}, headers=me)
+    assert r.status_code == 403
+
+
+async def test_only_the_grants_own_user_can_move_it(clients):
+    """The grant belongs to the person who authorised it, not to anyone holding its id."""
+    await _grant_full(clients, "owner@superdesign.dev")
+    grant = (await clients.get("/oauth/grants",
+                               headers=await _as("owner@superdesign.dev"))).json()[0]["grant"]
+
+    stranger = (await clients.post("/users", json={"email": "stranger@superdesign.dev"})).json()
+    theirs = (await clients.get("/orgs", headers={"X-Treg-Token": stranger["token"]})).json()[0]
+    r = await clients.post(f"/oauth/grants/{grant}/team", json={"team": theirs["slug"]},
+                           headers={"X-Treg-Token": stranger["token"]})
+    assert r.status_code == 404, "and it must not confirm the grant exists"
