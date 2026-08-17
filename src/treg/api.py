@@ -3776,9 +3776,15 @@ async def _grant_signup_promo(db: AsyncSession, org: Org) -> None:
         # BOTH rows in one transaction — the event and its conversion must land together (see
         # adsconv.queue's docstring). Reordering this silently reintroduces a two-transaction gap.
         # Same door, same once-only guarantee: this function is already the single place a brand-new
-        # real team comes into existence. A queue failure must not fail the signup, so it rides the
-        # existing except below rather than getting its own.
-        await adsconv.queue(db, org, adsconv.ACTION_SIGNUP)
+        # real team comes into existence.
+        try:
+            await adsconv.queue(db, org, adsconv.ACTION_SIGNUP)
+        except Exception as exc:  # noqa: BLE001 — its OWN guard, deliberately, not the outer one
+            # Because the queue now runs FIRST, sharing the outer except would mean an unexpected
+            # failure here (anything but the IntegrityError queue() already absorbs) skips the grant
+            # entirely and costs the team its $1 promotional credit. A marketing metric must not be
+            # able to take away a product benefit: swallow it here so the grant still runs.
+            logging.getLogger("treg").warning("ad conversion queue failed for org %s: %s", org.id, exc)
         await ledger.grant(db, org.id)  # commits — absorbs the queued conversion row too
     except Exception as exc:  # noqa: BLE001 — the team is already created; don't 500 the signup over credit
         logging.getLogger("treg").warning("promo grant failed for org %s: %s", org.id, exc)
