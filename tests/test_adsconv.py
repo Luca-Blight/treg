@@ -1,3 +1,5 @@
+import json
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -6,10 +8,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from conftest import make_upstream
-from treg import adsconv
+from treg import adsconv, crypto
 from treg.api import app
+from treg.config import get_settings
 from treg.db import reset_db, session_maker
-from treg.models import AdConversion, Org
+from treg.models import AdConversion, Org, Secret
 
 
 def _h(token: str) -> dict:
@@ -209,3 +212,74 @@ async def test_unattributed_org_records_timestamp_but_no_conversion(callenv):
         rows = (await db.execute(select(AdConversion).where(
             AdConversion.org_id == callenv.org_id))).scalars().all()
         assert rows == []
+
+
+def test_build_payload_converts_currency_and_formats_time():
+    click = datetime(2026, 8, 17, 3, 0, tzinfo=timezone.utc)
+    org = Org(id=1, name="t", slug="t", ad_gclid="CLICK1", ad_click_at=click)
+    row = AdConversion(id=1, org_id=1, action=adsconv.ACTION_PAID,
+                       value_usd_micro=20_000_000,
+                       created_at=click + timedelta(hours=6))
+    payload = adsconv.build_payload([row], {1: org})
+    conv = payload["conversions"][0]
+    assert conv["gclid"] == "CLICK1"
+    assert conv["conversionAction"].endswith("/conversionActions/7723667020")
+    # US$20.00 at the fixed rate -> A$28.571428
+    assert conv["conversionValue"] == pytest.approx(28.571428, rel=1e-6)
+    assert conv["currencyCode"] == "AUD"
+    assert payload["partialFailure"] is True
+
+
+def test_build_payload_omits_value_for_non_revenue_actions():
+    org = Org(id=1, name="t", slug="t", ad_gclid="C", ad_click_at=datetime.now(timezone.utc))
+    row = AdConversion(id=1, org_id=1, action=adsconv.ACTION_SIGNUP, value_usd_micro=0)
+    conv = adsconv.build_payload([row], {1: org})["conversions"][0]
+    assert "conversionValue" not in conv
+
+
+async def test_drain_marks_rows_uploaded_and_skips_young_ones(clients, monkeypatch):
+    """A row younger than the upload delay is left alone; an old one is sent and marked.
+
+    _auth_headers reads a real `google-ads` oauth Secret off the platform org named by
+    `ads_conv_org_slug` (see adsconv.py) — it is not mocked away, so this sets that org up for
+    real: a slug settings can point at, and a MANUAL-mode oauth blob (no refresh_token) so
+    oauth.ensure_fresh no-ops rather than trying to hit a real token endpoint through FakeClient.
+    """
+    monkeypatch.setattr(adsconv, "enabled", lambda: True)
+    monkeypatch.setattr(get_settings(), "google_ads_developer_token", "dev-tok-test", raising=False)
+    sent = []
+
+    class FakeResp:
+        status_code = 200
+        def json(self): return {"results": [{}]}
+        text = "{}"
+
+    class FakeClient:
+        async def post(self, url, **kw):
+            sent.append((url, kw.get("json")))
+            return FakeResp()
+
+    async with session_maker() as db:
+        org = Org(name="t", slug="t-drain", ad_gclid="C",
+                  ad_click_at=datetime.now(timezone.utc) - timedelta(days=1))
+        db.add(org)
+        await db.commit()
+        await db.refresh(org)
+        monkeypatch.setattr(get_settings(), "ads_conv_org_slug", org.slug, raising=False)
+        # No refresh_token/client_id/client_secret -> oauth.is_refreshable() is False -> ensure_fresh
+        # no-ops instead of calling FakeClient.post against a real token endpoint.
+        db.add(Secret(org_id=org.id, name="google-ads", kind="oauth", provider="google-ads",
+                      value=crypto.encrypt(json.dumps({"access_token": "tok-test"}))))
+        old = AdConversion(org_id=org.id, action=adsconv.ACTION_SIGNUP,
+                           created_at=datetime.now(timezone.utc) - timedelta(hours=12))
+        young = AdConversion(org_id=org.id, action=adsconv.ACTION_PAID,
+                             created_at=datetime.now(timezone.utc))
+        db.add(old); db.add(young)
+        await db.commit()
+
+        await adsconv.drain_once(db, FakeClient())
+
+        await db.refresh(old); await db.refresh(young)
+        assert old.uploaded_at is not None
+        assert young.uploaded_at is None
+        assert len(sent) == 1

@@ -144,6 +144,10 @@ async def lifespan(app: FastAPI):
     # TCP+TLS connections across requests — the single biggest latency win for a relay.
     limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
     app.state.http = httpx.AsyncClient(limits=limits, timeout=httpx.Timeout(float(get_settings().call_timeout_s)))
+    # Off unless configured (adsconv.enabled() gates on google_ads_customer_id + ads_conv_org_slug)
+    # — keeps the test suite and self-hosted instances from starting a task that only ever no-ops.
+    ads_task = asyncio.create_task(adsconv.worker(session_maker, app.state.http)) \
+        if adsconv.enabled() else None
     try:
         if _mcp is None:
             yield
@@ -154,6 +158,8 @@ async def lifespan(app: FastAPI):
             async with _mcp.mcp_lifespan():
                 yield
     finally:
+        if ads_task is not None:
+            ads_task.cancel()
         await audit.drain()  # flush pending audit writes before tearing down
         await analytics.drain()  # best-effort flush of queued analytics events
         await app.state.http.aclose()
