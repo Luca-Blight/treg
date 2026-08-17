@@ -54,8 +54,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
 - **Users / orgs:** `register_user` (`POST /users`, open, legacy — used by the test fixture) creates the
   user + an org + owner membership and returns a token **once**; the dashboard/CLI login doors do NOT go
   through it (they create the user only, no auto org). Both this door and `create_org` read the
-  first-party `treg_ad` cookie (`_ad_attribution_from`) and stamp `Org.ad_gclid`/`ad_landing`/
-  `ad_click_at` on the new org when present — see [ads-conversions](../architecture/ads-conversions.md).
+  first-party `treg_ad` cookie (`_ad_attribution_from`) and, when conversion tracking is enabled,
+  stamp `Org.ad_gclid`/`ad_click_id_type`/`ad_landing`/`ad_click_at` on the new org when present — see
+  [ads-conversions](../architecture/ads-conversions.md).
   `create_org` (`POST /orgs`, `require_identity` so a
   zero-org user can make their first team) + `list_orgs` (`GET /orgs`,
   each org carries a `tool_count` — one grouped query — so the dashboard can land on the org with tools;
@@ -313,7 +314,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   agent-onboarding file (call protocol + discovery + auth + CLI + skills + doc links). See [dashboard](dashboard.md).
   `install_sh` (`GET /install.sh`, `{BASE}`-templated) serves the CLI installer (`web/install.sh`).
   `adtrack_js` (`GET /adtrack.js`, no-cache) serves the first-party ad-click capture script loaded by
-  `index.html`'s `<script src="/adtrack.js">`; see [ads-conversions](../architecture/ads-conversions.md).
+  `index.html`'s `<script src="/adtrack.js">`; it returns an empty script when conversion tracking is
+  disabled, so unconfigured deployments do not collect advertising cookies. See
+  [ads-conversions](../architecture/ads-conversions.md).
   `well_known_skills_index` (`GET /.well-known/skills/index.json`) + `well_known_skill_md`
   (`GET /.well-known/skills/treg/SKILL.md`) advertise treg's own skill under the agentskills.io
   convention, making **this host** a skill source with no registry in between (Hermes reads it

@@ -359,10 +359,19 @@ def _migrate_to_orgs(conn) -> None:
     # backfill is meaningful — a team that predates the ads work has no click to attribute to.
     if "org" in tables:
         org_cols = {c["name"] for c in insp.get_columns("org")}
-        for col, ddl in (("ad_gclid", "VARCHAR"), ("ad_click_at", "TIMESTAMP"),
+        for col, ddl in (("ad_gclid", "VARCHAR"), ("ad_click_id_type", "VARCHAR"),
+                         ("ad_click_at", "TIMESTAMP"),
                          ("ad_landing", "VARCHAR"), ("first_call_at", "TIMESTAMP")):
             if col not in org_cols:
                 conn.execute(text(f"ALTER TABLE org ADD COLUMN {col} {ddl}"))
+
+    # (A36) additive: durable retry/dead-letter state for the Ads conversion outbox. The table may
+    # already exist from the first conversion-tracking deploy; create_all does not add new columns.
+    if "adconversion" in tables:
+        conv_cols = {c["name"] for c in insp.get_columns("adconversion")}
+        for col in ("next_attempt_at", "failed_at"):
+            if col not in conv_cols:
+                conn.execute(text(f"ALTER TABLE adconversion ADD COLUMN {col} TIMESTAMP"))
 
     # (A28) corrective: creditblock.stripe_payment_intent must be UNIQUE (the top-up idempotency
     # key). It sits HERE, above the (B) block, because (B) returns early on a fresh/new-schema DB —

@@ -144,8 +144,8 @@ async def lifespan(app: FastAPI):
     # TCP+TLS connections across requests — the single biggest latency win for a relay.
     limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
     app.state.http = httpx.AsyncClient(limits=limits, timeout=httpx.Timeout(float(get_settings().call_timeout_s)))
-    # Off unless configured (adsconv.enabled() gates on google_ads_customer_id + ads_conv_org_slug)
-    # — keeps the test suite and self-hosted instances from starting a task that only ever no-ops.
+    # Off unless configured (adsconv.enabled() requires the customer id, developer token and OAuth
+    # org slug) — keeps the test suite and self-hosted instances completely inert by default.
     ads_task = asyncio.create_task(adsconv.worker(session_maker, app.state.http)) \
         if adsconv.enabled() else None
     try:
@@ -2339,12 +2339,17 @@ async def privacy_page():
 async def adtrack_js():
     """First-party ad-click capture (see the file itself): sets the `treg_ad` cookie that
     `_ad_attribution_from` reads at signup. No Google script, no third-party request."""
+    headers = {"Cache-Control": "no-cache"}
+    if not adsconv.enabled():
+        # The page keeps one static script include, but an unconfigured/self-hosted deployment must
+        # not collect an advertising cookie at all. A stale cookie is also ignored at signup below.
+        return Response(content="", media_type="application/javascript", headers=headers)
     f = _WEB_DIR / "adtrack.js"
     if not f.exists():
         raise HTTPException(status_code=404, detail="adtrack.js not bundled")
     # no-cache, same reasoning as tutorial.js: served as a bare `<script src="/adtrack.js">` with no
     # version query, so without this header a browser would keep an ad-window-stale copy after a fix.
-    return FileResponse(f, media_type="application/javascript", headers={"Cache-Control": "no-cache"})
+    return FileResponse(f, media_type="application/javascript", headers=headers)
 
 
 @app.get("/resources", include_in_schema=False)
@@ -3822,13 +3827,21 @@ async def _find_or_create_user(db: AsyncSession, email: str) -> User:
     return user
 
 
-def _ad_attribution_from(request: Request) -> tuple[str, str]:
-    """Read the first-party ad cookie set by /adtrack.js. Returns ("", "") when absent."""
+def _ad_attribution_from(request: Request) -> tuple[str, str, str]:
+    """Return (click-id field, click-id, landing), with legacy GCLID-cookie compatibility."""
+    if not adsconv.enabled():
+        return "", "", ""
     raw = request.cookies.get("treg_ad") or ""
     if not raw:
-        return "", ""
-    gclid, _, landing = unquote(raw).partition("|")
-    return gclid.strip()[:255], landing.strip()[:64]
+        return "", "", ""
+    first, separator, rest = unquote(raw).partition("|")
+    if separator and first in ("gclid", "gbraid", "wbraid"):
+        click_id, _, landing = rest.partition("|")
+        click_field = first
+    else:
+        # Old cookies were `CLICK_ID|landing` and always held a GCLID.
+        click_field, click_id, landing = "gclid", first, rest
+    return click_field, click_id.strip()[:255], landing.strip()[:64]
 
 
 # ---- users (open registration; personal org + owner membership; token shown once) ---------
@@ -3849,9 +3862,10 @@ async def register_user(body: UserIn, request: Request, db: AsyncSession = Depen
     org, token = await _make_org_membership(
         db, user, name=email, slug_base=_slugify(email), role="owner", webhook_url=body.webhook_url
     )
-    gclid, landing = _ad_attribution_from(request)
+    click_field, gclid, landing = _ad_attribution_from(request)
     if gclid:
         org.ad_gclid = gclid
+        org.ad_click_id_type = click_field
         org.ad_landing = landing or None
         org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
                                             # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
@@ -3911,7 +3925,7 @@ async def create_org(
             "the demo sandbox can't create a real team — sign in with GitHub, Google, or email to make one"))
     user_id = user.id  # snapshot BEFORE the loop: db.rollback() expires ORM instances, so
     name = body.name   # touching `user` afterwards could trigger a lazy load → MissingGreenlet.
-    gclid, landing = _ad_attribution_from(request)  # this is create_org — the OTHER signup door
+    click_field, gclid, landing = _ad_attribution_from(request)  # the OTHER signup door
     # (browser sign-in → mandatory first-team creation), separate from register_user's /users. A
     # browser visitor who clicked an ad lands here, not there, so attribution must be read in both.
     for _ in range(3):  # a concurrent create can take the slug between _unique_slug and commit — retry
@@ -3922,6 +3936,7 @@ async def create_org(
         db.add(Membership(user_id=user_id, org_id=org.id, role="owner", token_hash=crypto.hash_token(token)))
         if gclid:
             org.ad_gclid = gclid
+            org.ad_click_id_type = click_field
             org.ad_landing = landing or None
             org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
                                                 # TIMESTAMP WITHOUT TIME ZONE column (see models._now).

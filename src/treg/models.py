@@ -93,6 +93,8 @@ class Org(SQLModel, table=True):
     # The click that produced this team, captured as a first-party cookie on landing and persisted
     # here at signup. Kept for the life of the team: a top-up weeks later still attributes to it.
     ad_gclid: str | None = Field(default=None)
+    # Which mutually-exclusive Google click-id field ad_gclid contains. NULL means a legacy GCLID.
+    ad_click_id_type: str | None = Field(default=None)  # gclid | gbraid | wbraid
     ad_click_at: datetime | None = Field(default=None)
     ad_landing: str | None = Field(default=None)  # utm_content — the landing page id (p1…p5)
     # Set ONCE, by a guarded UPDATE in the /call/ handler. Deliberately not derived from CallRecord:
@@ -417,8 +419,12 @@ class AdConversion(SQLModel, table=True):
     # values into naive columns. Use _now (defined above) to stay consistent with other tables.
     created_at: datetime = Field(default_factory=_now)
     uploaded_at: datetime | None = Field(default=None, index=True)
+    # Retryable failures wait here with exponential backoff. Terminal per-row failures keep the
+    # outbox row and error for inspection rather than being mislabeled as uploaded or disappearing.
+    next_attempt_at: datetime | None = Field(default=None, index=True)
+    failed_at: datetime | None = Field(default=None, index=True)
     attempts: int = Field(default=0)
-    error: str = Field(default="")  # last upload error; a permanent failure stops the retries
+    error: str = Field(default="")
 
 
 class Tool(SQLModel, table=True):

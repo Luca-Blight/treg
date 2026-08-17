@@ -238,9 +238,14 @@ class Settings(BaseSettings):
     # can't work without this) rather than silently reusing the wrong client.
     google_ads_client_id: str = ""
     google_ads_client_secret: str = ""
-    # Google Ads conversion upload. Empty customer id = the whole feature is OFF (tests stay inert,
+    # Google Ads conversion upload. This customer id, the developer token above, and the OAuth org
+    # slug below are all required; if any is empty the whole feature is OFF (tests stay inert and
     # self-hosters send nothing) — the same gate shape analytics.py uses for posthog_key.
     google_ads_customer_id: str = ""
+    # Manager (MCC) account used to access google_ads_customer_id. Optional for direct client auth;
+    # when present this is sent as login-customer-id. It cannot be inferred from Secret.resource_ref,
+    # which is the TARGET client account selected in discovery, not its manager.
+    google_ads_login_customer_id: str = ""
     # Which team's google-ads OAuth connection the uploader authenticates as. treg uploads to its
     # OWN ad account, so this is a platform setting, never a per-tenant one.
     ads_conv_org_slug: str = ""

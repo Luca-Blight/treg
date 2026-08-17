@@ -145,7 +145,8 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   test fixture) still creates the user + an org + owner membership via `_make_org_membership` (mints the
   token) — NOT reached by the dashboard/CLI login doors, which no longer auto-make an org. Both this door
   and `create_org` below now also read the first-party ad-click cookie (`api._ad_attribution_from`) and,
-  when present, stamp `Org.ad_gclid`/`ad_landing`/`ad_click_at` on the new org — see
+  when enabled and present, stamp `Org.ad_gclid`/`ad_click_id_type`/`ad_landing`/`ad_click_at` on the
+  new org — preserving whether the click was a GCLID, GBRAID or WBRAID — see
   [ads-conversions](ads-conversions.md). `create_org`
   (`POST /orgs`, `require_identity`),
   `list_orgs` (`GET /orgs`), `create_invite` (`POST /orgs/{id}/invites`, admin+), `accept_invite`

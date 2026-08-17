@@ -878,6 +878,7 @@ async def test_no_posthog_key_means_no_events(c: AsyncClient, monkeypatch):
 # ---- Google Ads conversion tracking: first top-up ------------------------------------------------
 async def test_first_topup_queues_exactly_one_ad_conversion(c, monkeypatch):
     """Stripe delivers at least once; a redelivery must not double-count the conversion."""
+    monkeypatch.setattr(adsconv, "enabled", lambda: True)
     org_id, owner = await _org(c)
     monkeypatch.setattr(billing, "_sdk", _no_sdk)
     async with session_maker() as db:
@@ -901,6 +902,7 @@ async def test_first_topup_queues_exactly_one_ad_conversion(c, monkeypatch):
 
 async def test_a_second_topup_queues_nothing_further(c, monkeypatch):
     """We measure becoming a payer, not revenue — a second, different payment adds no conversion."""
+    monkeypatch.setattr(adsconv, "enabled", lambda: True)
     org_id, owner = await _org(c)
     monkeypatch.setattr(billing, "_sdk", _no_sdk)
     async with session_maker() as db:
@@ -932,6 +934,7 @@ async def test_adsconv_commit_failure_cannot_500_or_break_the_webhook(c, monkeyp
     complete."""
     from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
 
+    monkeypatch.setattr(adsconv, "enabled", lambda: True)
     org_id, owner = await _org(c)
     monkeypatch.setattr(billing, "_sdk", _no_sdk)
     async with session_maker() as db:

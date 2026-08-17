@@ -14,9 +14,10 @@ related:
 
 # Google Ads conversion tracking
 
-Off unless both `google_ads_customer_id` and `ads_conv_org_slug` are set (`adsconv.enabled()`) —
-keeps the test suite and self-hosted instances from starting a task that only ever no-ops. When off,
-nothing is captured, queued or uploaded; the whole feature is additive.
+Off unless `google_ads_customer_id`, `google_ads_developer_token` and `ads_conv_org_slug` are all set
+(`adsconv.enabled()`) — keeps the test suite and self-hosted instances from starting machinery that
+cannot upload. When off, `/adtrack.js` is an empty no-cache response and attribution cookies are
+ignored, so nothing is captured, queued or uploaded; the whole feature is additive.
 
 ## The chain: capture → store → fire → upload
 
@@ -25,12 +26,15 @@ nothing is captured, queued or uploaded; the whole feature is additive.
    them silently drops a large share of mobile conversions — and writes them into a `treg_ad` cookie
    (90 days, the length of Google's click-through attribution window; `SameSite=Lax` so it survives
    the cross-site top-level navigation an ad click is). No third-party request is made from the
-   browser at any point.
+   browser at any point. The cookie records the mutually-exclusive field name as well as its value
+   (`gclid|…`, `gbraid|…`, or `wbraid|…`); the old `CLICK_ID|landing` shape remains readable as a
+   legacy GCLID.
 2. **Store** (`api._ad_attribution_from`, read at BOTH signup doors — `register_user` (`POST /users`)
    and `create_org` (`POST /orgs`), since a browser visitor who clicked an ad can land on either).
-   The cookie is decoded and persisted onto the new `Org`: `ad_gclid`, `ad_landing` (the use-case page
-   slug or `ref`/`utm_content`), `ad_click_at`. Once set, never overwritten — attribution is "first
-   click that led to a signup," not "most recent."
+   The cookie is decoded and persisted onto the new `Org`: `ad_gclid` (the historical column name,
+   now holding any supported click id), `ad_click_id_type`, `ad_landing` (the use-case page slug or
+   `ref`/`utm_content`), `ad_click_at`. Once set, never overwritten — attribution is "first click that
+   led to a signup," not "most recent."
 3. **Fire** — three chokepoints call `adsconv.queue(db, org, action, ...)`, which writes an
    `AdConversion` outbox row inside a `SAVEPOINT` (a nested transaction, not a bare flush or a
    `db.rollback()` — this runs inside the CALLER's transaction, and a plain rollback on a duplicate
@@ -38,15 +42,30 @@ nothing is captured, queued or uploaded; the whole feature is additive.
    - `api._grant_signup_promo` → `ACTION_SIGNUP`, queued BEFORE `ledger.grant()`.
    - `api._record_first_call` → `ACTION_FIRST_CALL`, on the org's first successful `/call/`.
    - `billing._credit` → `ACTION_PAID`, on the org's first credited top-up, carrying `value_usd_micro`.
-   `queue()` no-ops (returns `False`) for an org with no `ad_gclid` — most orgs — so the conversion
-   side stays ad-attributed-only while the product metric it rides alongside (`first_call_at`) is set
-   for every org.
+   `queue()` no-ops (returns `False`) when tracking is disabled or the org has no `ad_gclid` — most
+   orgs — so the conversion side stays ad-attributed-only while the product metric it rides alongside
+   (`first_call_at`) is set for every org.
 4. **Upload** (`adsconv.worker`, started from `lifespan` when `adsconv.enabled()`, drains every 300s).
-   `drain_once` selects due rows — not yet uploaded, older than a 6-hour delay, under 8 attempts — and
-   POSTs one batch to the Google Ads API `uploadClickConversions` with `partialFailure` (one bad row
-   can't reject the batch). The delay exists because a `gclid` is not valid for upload until hours
-   after the click; uploading too early is rejected. A failed row is left for the next pass, never
-   dropped silently, until `_MAX_ATTEMPTS` is hit.
+   `drain_once` selects due rows — neither uploaded nor terminal, older than a 6-hour delay, and past
+   `next_attempt_at` — and POSTs one batch to the Google Ads API `uploadClickConversions` with
+   `partialFailure`. The payload uses the stored click-id field; a braid is never mislabeled as a
+   GCLID. Results are acknowledged per operation index: a successful sibling is marked uploaded, a
+   failed sibling is not. `CLICK_CONVERSION_ALREADY_EXISTS` is also acknowledged because Google has
+   already stored it. HTTP failures, batch/unparseable responses and explicitly transient row errors
+   retry indefinitely with exponential backoff capped at 24 hours. Other indexed per-row errors retry
+   through eight attempts, then retain the row as a visible dead letter (`failed_at` + `error`). The
+   six-hour delay exists because a click id may not be accepted immediately after the click; uploading
+   too early can be rejected.
+
+## Authentication and manager accounts
+
+The uploader decrypts the `google-ads` OAuth `Secret` belonging to `ads_conv_org_slug`, then sends that
+bearer token with the platform `google_ads_developer_token`. `google_ads_customer_id` is the target Ads
+account. When the OAuth identity reaches it through a manager account, configure that manager explicitly
+as `google_ads_login_customer_id`; hyphens are stripped for the request header. Never infer
+`login-customer-id` from `Secret.resource_ref`: discovery stores the selected **target client** there,
+while Google requires the **manager** account in this header. Direct client-account auth leaves the
+header unset.
 
 ## Idempotency: the outbox's unique constraint, not a check-then-insert
 
