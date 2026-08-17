@@ -102,7 +102,7 @@ with c as (
     -- endpoint_id means the call RESOLVED to a catalog endpoint; NULL means it was either a tool
     -- the team registered themselves or a shape treg could not resolve at all.
     (endpoint_id is not null)                     as cataloged,
-    org_id, user_email, status_code, refused_by, credential_tier, path,
+    id, method, org_id, user_email, status_code, refused_by, credential_tier, path,
     error_request, error_response,
     nullif(client,'')                             as client,
     coalesce(cost_charged_micro,0)                as spend,
@@ -157,12 +157,29 @@ QUERIES: dict[str, str] = {
     # `evidence` and `sent` are the provider's own error message and the caller's request, captured
     # for failed PLATFORM calls only (see models.CallRecord.error_response). They are NULL for an
     # own-key call by design, and for anything that failed before the capture shipped — so a blank
-    # column here means "not captured", never "no error". `max()` picks one exemplar per group;
-    # the drill-down shows one message per (endpoint, status), which is what makes it readable.
+    # column here means "not captured", never "no error".
+    #
+    # Both come from ONE row, via the same ORDER BY inside array_agg. They used to be independent
+    # `max()`es, which silently paired one call's request with a DIFFERENT call's response — a
+    # plausible, readable, wrong diagnosis, which is worse than showing nothing. Ordering prefers a
+    # row that actually has evidence, then the newest, and `id` makes it a total order so the two
+    # aggregates cannot disagree.
+    #
+    # `reason` distinguishes three owners, not two: treg refused it, treg could not reach the
+    # provider (a relay 502 — the provider never answered, and calling that "provider answered" is
+    # the same false-diagnosis class), or the provider answered badly.
     "errdetail": BASE + """
-      select ep, cataloged, coalesce(refused_by, '(provider answered)') reason, status_code,
-             count(*) n, count(distinct org_id) orgs, left(min(path), 170) sample,
-             left(max(error_response), 400) evidence, left(max(error_request), 220) sent
+      select ep, cataloged,
+             case when refused_by is not null then refused_by
+                  when error_response like 'treg:%' then '(treg never reached it)'
+                  else '(provider answered)' end reason,
+             status_code, count(*) n, count(distinct org_id) orgs,
+             left(min(path), 170) sample,
+             string_agg(distinct method, '/') methods,
+             left((array_agg(error_response
+                   order by (error_response is not null) desc, id desc))[1], 400) evidence,
+             left((array_agg(error_request
+                   order by (error_response is not null) desc, id desc))[1], 220) sent
       from c where status_code >= 400
       group by 1,2,3,4 order by 1, 5 desc""",
     "providers": BASE + """
@@ -487,9 +504,14 @@ PLAIN = {
     "request":    ("bad request", "wrong method, or a missing/invalid parameter"),
     "resolution": ("not found", "no such endpoint, or treg has no key to call it with"),
     "balance":    ("out of credit", "the org's prepaid balance could not cover it"),
-    "cap":        ("daily cap", "the org hit its own spending cap"),
+    # NOT "the org hit its own spending cap": every 429 maps to `cap`, and that covers a member
+    # call-count cap, a tag call or spend cap, the platform ceiling, a trial allowance and a demo-IP
+    # limit. Naming one of them was a confident wrong answer for the other five.
+    "cap":        ("hit a limit", "some cap or quota — member, tag, org, platform or trial"),
     "auth":       ("bad token", "the caller's token was missing, wrong or expired"),
     "policy":     ("blocked", "an ACL, deny rule or suspension refused it"),
+    "(treg never reached it)": ("treg could not reach the provider",
+                                "timeout, reset, failed injection or SSRF refusal — no answer came"),
 }
 
 
@@ -509,8 +531,12 @@ def _detail_rows(detail: list[dict], cols: int) -> str:
         plain, gloss = PLAIN.get(d["reason"], (d["reason"], ""))
         why = ('<span class="dim">the provider rejected it</span>' if upstream
                else f'<b>{html.escape(plain)}</b> <span class="dim">— {html.escape(gloss)}</span>')
+        # The method is already on every row and costs nothing to show. It IS the diagnosis for a
+        # whole failure class: 47 of apollo.people.enrich's failures were a GET at a POST endpoint,
+        # and without this column the drawer only ever said "bad request".
+        meth = html.escape(d.get("methods") or "")
         rows.append(
-            f'<tr><td>{who}</td><td>{why}</td><td class="num">{d["status_code"]}</td>'
+            f'<tr><td>{who}</td><td>{why}</td><td class="num">{meth} {d["status_code"]}</td>'
             f'<td class="r num">{d["n"]:,}</td><td class="r num">{d["orgs"]}</td>'
             f'<td class="name dim"><code>{html.escape(d["sample"] or "")}</code></td></tr>')
         # The captured evidence, when there is any. Its own full-width row rather than another
@@ -524,6 +550,13 @@ def _detail_rows(detail: list[dict], cols: int) -> str:
             if sent:
                 bits.append(f'<div class="ev"><b>sent</b> <code>{html.escape(sent)}</code></div>')
             rows.append(f'<tr class="evrow"><td></td><td colspan="5">{"".join(bits)}</td></tr>')
+        elif not d.get("cataloged"):
+            # Say WHY there is nothing, rather than letting a blank read as "no detail exists".
+            # Evidence is captured for platform calls only, so a team's own registered tool — which
+            # is the single largest failure group, google-ads at 283 — never has any here.
+            rows.append('<tr class="evrow"><td></td><td colspan="5"><div class="ev dim">'
+                        'not captured — own registered tool, so the request and the provider\'s '
+                        'answer are the team\'s to inspect, not treg\'s</div></td></tr>')
     return (f'<tr class="detail" hidden><td colspan="{cols}">'
             f'<div class="scroll"><table class="inner"><thead><tr>'
             f'<th>Stopped by</th><th>Reason</th><th>Status</th>'

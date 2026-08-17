@@ -252,6 +252,68 @@ async def test_a_lowercase_percent_encoded_key_never_survives(clients: AsyncClie
     assert "bad" in row["error_response"], "the message should survive; only the key is masked"
 
 
+# ---- diagnosability, not just presence ----------------------------------------------------------
+async def test_an_empty_bodied_429_still_says_when_to_retry(clients: AsyncClient, platform_on,
+                                                            monkeypatch):
+    """The real tikhub population is 70 401s and 54 429s. Those bodies are often empty or generic,
+    and the headers are then the entire diagnosis — 'quota gone, back in 60s' versus 'bad key'."""
+    monkeypatch.setattr(A, "relay", _fake_relay(429, b"", headers={
+        "retry-after": "60", "x-ratelimit-remaining": "0", "x-request-id": "req-8f2a4c19"}))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 429
+    row = await _row(clients)
+    assert "retry-after=60" in row["error_response"]
+    assert "x-ratelimit-remaining=0" in row["error_response"]
+    assert "req-8f2a4c19" in row["error_response"], "the provider's request id must survive"
+
+
+async def test_a_401_keeps_the_auth_challenge_and_not_the_credential(clients: AsyncClient,
+                                                                     platform_on, monkeypatch):
+    monkeypatch.setattr(A, "relay", _fake_relay(401, b"", headers={
+        "www-authenticate": 'Bearer realm="api", error="invalid_token"'}))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 401
+    row = await _row(clients)
+    assert "invalid_token" in row["error_response"]
+    assert PLATFORM_KEY not in row["error_response"]
+
+
+async def test_a_provider_correlation_id_survives_redaction(clients: AsyncClient, platform_on,
+                                                            monkeypatch):
+    """The one thing you quote to a provider's support desk. The argv rule masked every 24+ token,
+    so UUIDs, trace ids and request ids were deleted 100% of the time — measured on real bodies, the
+    prose always survived and the correlation field never did."""
+    trace = "11da3d88-e351-4c07-87ea-f5160d76a87d"          # 36 chars: the old rule ate this
+    monkeypatch.setattr(A, "relay", _fake_relay(
+        400, f'{{"message":"bad keyword","request_id":"{trace}"}}'.encode()))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 400
+    row = await _row(clients)
+    assert trace in row["error_response"], "the correlation id must survive"
+    assert "bad keyword" in row["error_response"]
+
+
+async def test_a_real_secret_shape_is_still_masked(clients: AsyncClient, platform_on, monkeypatch):
+    """Relaxing the catch-all must not relax the targeted rules: known prefixes and JWTs still go."""
+    monkeypatch.setattr(A, "relay", _fake_relay(
+        400, b'{"message":"bad token sk_live_ABCDEFGHIJKLMNOP1234 and eyJhbGciOi.JIUzI1NiIsInR5cCI6"}'))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 400
+    row = await _row(clients)
+    assert "sk_live_ABCDEFGHIJKLMNOP1234" not in row["error_response"]
+    assert "eyJhbGciOi.JIUzI1NiIsInR5cCI6" not in row["error_response"]
+
+
+async def test_admin_errors_surfaces_the_method(clients: AsyncClient, platform_on, monkeypatch):
+    """A GET at a POST endpoint IS the diagnosis for 47 real apollo failures."""
+    monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"error":"nope"}'))
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    from treg import audit
+    await audit.drain()
+    errs = (await clients.get("/admin/errors", headers=ADMIN)).json()["errors"]
+    assert errs and errs[0]["method"] == "GET"
+
+
 # ---- awkward bodies -----------------------------------------------------------------------------
 async def test_a_gzipped_error_page_does_not_become_replacement_characters(
         clients: AsyncClient, platform_on, monkeypatch):

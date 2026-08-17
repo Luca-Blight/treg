@@ -7712,8 +7712,11 @@ async def admin_errors(
         "errors": [{
             "id": c.id, "call_ref": c.call_ref, "at": c.created_at.isoformat(),
             "org": omap[c.org_id].slug if c.org_id in omap else None,
+            # `method` is already on the row and is the whole diagnosis for a real failure class:
+            # 47 of apollo.people.enrich's failures were a GET at a POST endpoint. Omitting a field
+            # we already store, in the view built to explain failures, was a free loss.
             "endpoint_id": c.endpoint_id, "provider": c.provider, "status": c.status_code,
-            "refused_by": c.refused_by, "duration_ms": c.duration_ms,
+            "method": c.method, "refused_by": c.refused_by, "duration_ms": c.duration_ms,
             "request": c.error_request, "response": c.error_response,
         } for c in rows],
     }
@@ -8994,6 +8997,28 @@ _QUERY_CRED_RE = re.compile(
     r"|sig|signature)\"?\s*[=:]\s*\"?)[^&\s\"',}]+")
 _URL_USERINFO_RE = re.compile(r"://[^/\s:@]+:[^/\s@]+@")
 
+# `_ARGV_SECRET_RE`'s catch-all masks ANY 24+ run of [A-Za-z0-9_-], which is right for an argv log and
+# wrong here: it deletes 100% of provider correlation identifiers — UUIDs, ULIDs, 32-char trace ids,
+# request ids — which are exactly what you quote to a provider's support desk. Measured on real error
+# bodies: the prose always survived, the correlation field never did. So for evidence we keep the
+# TARGETED half (known key prefixes, JWTs) and drop the catch-all. Platform credentials do not depend
+# on it — they have exact masking plus the fail-closed backstop below — and the owner has accepted
+# that a third-party secret may occasionally survive here.
+_EVIDENCE_SECRET_RE = re.compile(
+    r"\b(?:sk|pk|rk|ghp|gho|ghs|ghu|glpat|AKIA|ASIA|AIza|xox[baprs])[A-Za-z0-9_\-]{6,}\b"
+    r"|eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_.\-]{8,}")
+
+# Response headers worth keeping on a FAILED platform call. An empty-bodied 401 or 429 is otherwise
+# undiagnosable, and these say which of "bad credential" / "wrong scheme" / "quota gone" / "retry in
+# N" it was. Allowlisted, never the whole bag: `authorization` and `set-cookie` live in there too.
+_EVIDENCE_HEADERS = (
+    "retry-after", "www-authenticate",
+    "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset",
+    "ratelimit-limit", "ratelimit-remaining", "ratelimit-reset",
+    "x-request-id", "x-requestid", "request-id", "x-correlation-id", "x-amzn-requestid",
+    "cf-ray", "x-trace-id",
+)
+
 
 def _platform_secret_renderings(tool: Tool) -> list[str]:
     """Every spelling of TREG'S OWN key for this tool, longest first.
@@ -9128,7 +9153,7 @@ def _redact_snippet(text: str, secrets: list[str], limit: int) -> str:
         text = text.replace(secret, "***")
     text = _URL_USERINFO_RE.sub("://***:***@", text)
     text = _QUERY_CRED_RE.sub(r"\1***", text)
-    text = _ARGV_SECRET_RE.sub("***", text)
+    text = _EVIDENCE_SECRET_RE.sub("***", text)
     text = " ".join(text.split())  # collapse newlines/indentation; these are read in a table
     # Fail closed. Everything above is a list of transforms we thought of; this asks whether a secret
     # survived one we did not, by re-checking a NORMALISED copy (percent-decoded, JSON-unescaped,
@@ -9553,7 +9578,13 @@ async def call_tool(
         if response.status_code >= 400:
             _secrets = _platform_secret_renderings(tool)
             err_request = _caller_request_snippet(request, tool, caller_body, _secrets)
+            # Headers first: a 401 or 429 often has an empty or generic body, and `Retry-After` /
+            # `WWW-Authenticate` / the rate-limit trio are then the entire diagnosis — the difference
+            # between a bad credential, the wrong auth scheme, and a quota that returns in 60s.
+            hdrs = " ".join(f"{h}={response.headers[h]}" for h in _EVIDENCE_HEADERS
+                            if response.headers.get(h))
             err_response = _redact_snippet(
+                (f"[{hdrs}] " if hdrs else "") +
                 _decode_error_body(body[:_ERROR_BODY_SLICE],
                                    response.headers.get("content-encoding", ""),
                                    response.headers.get("content-type", "")),
