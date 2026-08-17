@@ -186,7 +186,9 @@ def label_cells(tbl_html):
         return tbl_html
 
     def row(m):
-        cells = re.findall(r"<td[^>]*>.*?</td>", m.group(0), re.S)
+        cells = re.findall(r"<td[^>]*>.*?</td>", m.group(1), re.S)
+        if not cells:                    # the <th> header row — nothing to label
+            return m.group(0)
         out = []
         for i, c in enumerate(cells):
             label = heads[i] if i < len(heads) else ""
@@ -197,7 +199,9 @@ def label_cells(tbl_html):
             out.append(c)
         return "<tr>" + "".join(out) + "</tr>"
 
-    return re.sub(r"<tr>\s*(?:<td.*?</td>\s*)+</tr>", row, tbl_html, flags=re.S)
+    # One lazy group, no nested quantifier. The previous `(?:<td.*?</td>\s*)+` put a lazy wildcard
+    # inside a repeated group, which backtracks exponentially on a long row (CodeQL py/redos).
+    return re.sub(r"<tr>(.*?)</tr>", row, tbl_html, flags=re.S)
 
 
 def add_logos(tbl_html):
