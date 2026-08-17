@@ -8989,9 +8989,10 @@ _ERROR_REQUEST_MAX = 1000
 # regex-scanned on the request path. Every limit above is characters; this one is bytes.
 _ERROR_BODY_SLICE = 8192
 
-# Third-party secret shapes. `_ARGV_SECRET_RE` (see `_redact_argv`) covers values; these two cover
-# the places a value hides in a URL or a JSON body, which `_CRED_FLAG_EQ_RE` misses because it
-# requires a leading dash (it was written for argv, where `--token=x` is the only shape).
+# Third-party secret shapes. `_EVIDENCE_SECRET_RE` below covers values that LOOK like a key; these
+# two cover the places a value hides by its NAME instead — in a URL or a JSON body — which
+# `_CRED_FLAG_EQ_RE` misses because it requires a leading dash (it was written for argv, where
+# `--token=x` is the only shape).
 _QUERY_CRED_RE = re.compile(
     r"(?i)((?:api[-_]?key|apikey|key|token|secret|password|passwd|pwd|auth|access[-_]?token"
     r"|sig|signature)\"?\s*[=:]\s*\"?)[^&\s\"',}]+")
@@ -9026,9 +9027,10 @@ def _platform_secret_renderings(tool: Tool) -> list[str]:
     This is the primary defence and the only deterministic one: for a platform call the credential is
     a named setting, so it can be matched exactly instead of guessed at. That matters because
     providers routinely quote the offending request back inside a 400/401 body — the header they
-    received, or the full URL including the query — and a key can survive `_ARGV_SECRET_RE` by being
-    shorter than 24 characters, by carrying a `.`/`:`/`+` that breaks a word boundary, or by arriving
-    percent-encoded. None of those defeat an exact substring match.
+    received, or the full URL including the query — and a key can survive `_EVIDENCE_SECRET_RE` by
+    simply not looking like a known key shape: no recognised prefix, not a JWT. None of that defeats
+    an exact substring match, which is why the deterministic layer carries the weight here and the
+    pattern layer is only a net for third-party secrets.
 
     treg injects the value verbatim, but a PROVIDER may hand it back transformed, and a transform it
     can reverse is one we have to anticipate. Four families, all observed shapes rather than guesses:
