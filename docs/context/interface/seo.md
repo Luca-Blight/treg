@@ -160,6 +160,14 @@ asserted to appear in its body. Edit one, edit the other, same commit.
 
 **The catalog page and the app must ask for the same population.** See `include_hidden` above.
 
+**A promo banner on `index.html` is a catalog-page edit.** `/catalog` and `/catalog/<slug>` render
+from `index.html`, so anything added to that file lands on all ~80 crawlable shelves unless it is
+gated. The Product Hunt strip (`.phb`, see `interface/dashboard.md`) is inside the Vue app behind
+`v-if="ph && !publicCatalog"` for exactly this reason, and `tests/test_ph_banner.py` asserts the
+catalog's `#prerender` block never carries it. Note also that `landing.html` **is** `{BASE}`-substituted
+and `index.html` **is not** (`dashboard()` returns a plain `FileResponse`), so a placeholder that is
+safe in one half ships literally in the other — hardcode absolute URLs on the app side.
+
 **Prices need `_usd_short`, not `%g`.** `%g` flips to scientific notation below `1e-4`, and a shelf
 advertising "from $1.2e-07 per call" reads as a bug. Anything under a hundredth of a cent renders as
 `<$0.0001` — which then has to be HTML-escaped at every use site, because that `<` is real markup.

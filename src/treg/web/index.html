@@ -785,6 +785,31 @@ th{background:none;color:var(--muted2);font-weight:450;border-bottom:1px solid v
    which turns every accent FILL into rows.gg's inverse button and every accent TEXT
    into ink. Status tokens (--green/--amber/--red/--teal) are untouched. */
 :root,[data-theme=light]{--accent:var(--ink);--onAccent:var(--bg)}
+/* PRODUCT HUNT LAUNCH — delete this block, the `--phb-h` offsets below §3.7, the .phb markup and
+   dismissPh()/phbSyncHeight() when the launch ends.
+   It STICKS at the top, above the workspace chrome. That chrome pins itself with hardcoded offsets
+   (.top top:0, .side top:57px, --lbar-top/--lsec-top), every one of which would slide *underneath*
+   a sticky strip — so the strip publishes its own height as `--phb-h` and each offset adds it. The
+   height is MEASURED at runtime (phbSyncHeight + a ResizeObserver), not hardcoded: the strip is
+   shorter on mobile and taller if the copy ever wraps, and a stale number here shows up as the top
+   bar overlapping the sidebar. `--phb-h` is 0 whenever the strip is absent, which is what makes
+   every one of those `calc()`s a no-op on /catalog and after a dismiss.
+   Colours are hardcoded PH orange/white — not tokens — so it reads the same in both themes and
+   leaves with the block. Declared here, after the restyle, so it outranks the older sheet. */
+.phb{display:flex;align-items:center;justify-content:center;gap:12px;position:sticky;top:0;z-index:40;
+  padding:9px 44px 9px 20px;background:#da552f;color:#fff;font-size:13.5px;font-weight:450}
+.phb .phmark{display:block;width:17px;height:17px;flex:none}
+.phb a{color:#fff}
+.phb .phcta{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#da552f;
+  border-radius:8px;padding:3px 11px;font-size:12.5px;font-weight:600;white-space:nowrap;text-decoration:none}
+.phb .phcta:hover{box-shadow:0 2px 8px #0000002e}
+.phb .phlink{font-size:12.5px;font-weight:500;text-decoration:underline;text-underline-offset:2px;
+  white-space:nowrap;opacity:.92}
+.phb .phlink:hover{opacity:1}
+.phb .phx{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:0;
+  color:#fff;opacity:.72;font-size:15px;line-height:1;padding:6px;cursor:pointer}
+.phb .phx:hover{opacity:1}
+@media(max-width:760px){.phb{padding:8px 40px 8px 12px;gap:9px}.phb .phtext{display:none}}
 /* Syntax highlighting is the one place colour is not status and not decoration:
    it is how a long command stays readable. It keeps its own ramp — see 3.8, where the
    ramp is themed, because a ramp drawn for a dark block is invisible on a light one. */
@@ -898,6 +923,15 @@ a:hover{text-decoration-color:var(--muted)}
    bar plus the bar's own height, and the bar's height is fixed by scrolling its chips instead of
    wrapping them. */
 :root{--lbar-top:57px;--lsec-top:107px}
+/* PRODUCT HUNT LAUNCH — every sticky offset, shifted down by the strip's measured height. This has
+   to sit AFTER the --lbar-top/--lsec-top declaration above (same specificity, later wins) and after
+   .side's own rule; putting it up with the rest of the .phb block silently loses to both.
+   --phb-h is 0px unless phbSyncHeight() has measured a visible strip, so these are inert without it. */
+:root{--phb-h:0px}
+:root{--lbar-top:calc(57px + var(--phb-h));--lsec-top:calc(107px + var(--phb-h))}
+.top{top:var(--phb-h)}
+.side{top:calc(57px + var(--phb-h));height:calc(100vh - 57px - var(--phb-h))}
+.lp-nav{top:var(--phb-h)}   /* the logged-out in-app landing has its own sticky header */
 .lbar{position:sticky;top:var(--lbar-top);z-index:6;background:var(--bg);
   display:flex;align-items:center;gap:8px;padding:12px 0 9px;margin-top:8px}
 .lchips{display:flex;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;
@@ -1068,6 +1102,21 @@ a:hover{text-decoration-color:var(--muted)}
 </head>
 <body>
 <div id="app" v-cloak>
+  <!-- PRODUCT HUNT LAUNCH — inside the app, not a sibling of #app, because /catalog is served from
+       THIS file too: the !publicCatalog gate is what keeps the strip off the crawlable catalog pages.
+       Delete with its CSS block and dismissPh() when the launch ends. -->
+  <div class="phb" v-if="ph && !publicCatalog">
+    <a href="https://www.producthunt.com/products/treg-openrouter-for-tools?launch=treg" target="_blank" rel="noopener" aria-label="treg on Product Hunt">
+      <svg class="phmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="10.6"/>
+        <path d="M10 7v10M10 7h3.1a2.85 2.85 0 0 1 0 5.7H10" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <span class="phtext">We’re live on Product Hunt — upvote and we’ll add $5 in credit.</span>
+    <a class="phcta" href="https://www.producthunt.com/products/treg-openrouter-for-tools?launch=treg" target="_blank" rel="noopener">▲ Upvote treg</a>
+    <a class="phlink" href="https://docs.google.com/forms/d/e/1FAIpQLSehMyOXRxHXpJ0eUSMogJkQklviaag5rvnquo8aEciEgpPm1g/viewform" target="_blank" rel="noopener">Claim $5 →</a>
+    <button class="phx" type="button" @click="dismissPh()" aria-label="Dismiss">✕</button>
+  </div>
   <!-- LANDING (logged-out) -->
   <div v-if="!authed && !publicCatalog" class="lp">
     <!-- SHARE-LINK GATE: a /app/skills|tools/<name> deep link while logged out gets a focused
@@ -3663,11 +3712,42 @@ treg login</pre></div>
 <script>
 const { createApp } = Vue;
 const LS='treg-dash';
+
+// PRODUCT HUNT LAUNCH — publish the sticky strip's real height as --phb-h so every sticky offset in
+// the workspace chrome (.top, .side, --lbar-top, --lsec-top, .lp-nav) can add it. Measured rather
+// than hardcoded because the strip is shorter on mobile, and a wrong number reads as the top bar
+// overlapping the sidebar. Module scope, not instance state: a ResizeObserver on the Vue instance
+// would be reactive for no reason. Delete with the .phb blocks.
+// Driven by a MutationObserver on #app's child list, NOT by Vue watchers or `updated()`. Both of
+// those were tried and both lost the same race: a signed-in member on a /catalog URL has
+// publicCatalog flipped true→false mid-boot, and the strip ended up 43px tall on screen while
+// --phb-h still read 0px — so the top bar sat underneath it. The strip is a direct child of #app, so
+// watching that one child list catches it appearing and disappearing whatever the reason, with no
+// dependence on when Vue chooses to run a hook.
+let phbRO=null, phbSeen=null;
+// Re-queries the strip every time ON PURPOSE. The first version closed over the element and reused
+// one ResizeObserver, so after v-if swapped the strip the observer still measured the DETACHED node
+// (offsetHeight 0) and stamped --phb-h back to 0px right after the correct value was written.
+function phbApplyHeight(){
+  const el=document.querySelector('.phb');
+  document.documentElement.style.setProperty('--phb-h',(el?el.offsetHeight:0)+'px');
+}
+function phbSyncHeight(force){
+  const el=document.querySelector('.phb');
+  if(!force && !!el===phbSeen) return;
+  phbSeen=!!el;
+  phbApplyHeight();
+  if(phbRO) phbRO.disconnect();
+  if(el && window.ResizeObserver){ (phbRO=phbRO||new ResizeObserver(phbApplyHeight)).observe(el); }
+}
 createApp({
   data(){
     let cfg={active:null,orgs:{}}; try{ cfg=JSON.parse(localStorage.getItem(LS))||cfg; }catch(e){}
     return {
       theme: localStorage.getItem('treg-theme')||'light',
+      // PRODUCT HUNT LAUNCH banner. Same 'treg-ph' key landing.html writes, so dismissing it on
+      // the marketing page also clears it here. Delete with the .phb block.
+      ph: (()=>{ try{ return localStorage.getItem('treg-ph')!=='1'; }catch(e){ return true; } })(),
       // True when this load is a PUBLIC catalog URL (/catalog, /catalog/<slug>). The catalog API is
       // unauthenticated, so the same marketplace views render for a signed-out visitor — that is
       // what makes the catalog indexable without maintaining a second copy of the UI. Everything
@@ -4311,6 +4391,7 @@ createApp({
     save(){ localStorage.setItem(LS, JSON.stringify(this.cfg)); },
     connected(slug){ return this.sessionMode || !!this.cfg.orgs[slug]; },
     toggleTheme(){ this.theme=this.theme==='dark'?'light':'dark'; document.documentElement.dataset.theme=this.theme; localStorage.setItem('treg-theme',this.theme); },
+    dismissPh(){ this.ph=false; try{ localStorage.setItem('treg-ph','1'); }catch(e){} },  // PRODUCT HUNT LAUNCH
     _stashNext(){  // OAuth callbacks land on /app, losing a /app/skills/<x> deep link — stash it to restore after boot
       const d=this.routeFromPath(location.pathname)||this.mkFromPath(location.pathname);
       if(d) localStorage.setItem('treg-next', location.pathname); },
@@ -5883,6 +5964,9 @@ createApp({
   },
   async mounted(){
     document.documentElement.dataset.theme=this.theme;
+    this.$nextTick(()=>phbSyncHeight(true));               // PRODUCT HUNT LAUNCH — first measure…
+    addEventListener('resize', ()=>phbSyncHeight(true));   // …then these two keep --phb-h true
+    new MutationObserver(()=>phbSyncHeight()).observe(document.getElementById('app'),{childList:true});
     document.addEventListener('click', ()=>{ if(this.mdMenu) this.mdMenu=false; });  // outside-click closes the copy-markdown menu
     document.addEventListener('keydown', e=>{
       // Escape closes any open modal/drawer (a universal expectation the modals didn't honour)
