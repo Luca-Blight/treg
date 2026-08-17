@@ -693,7 +693,7 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     without them — that omission is exactly what left the landing page bare for a year."""
     base = get_settings().public_url.rstrip("/")
     t, d = _esc_html(title), _esc_html(description)
-    url = base + path
+    url = _esc_html(base + path)  # `path` reaches attribute context — escape it like title/description
     # `<` escaped to its \u form inside the JSON: a catalog label containing "</script>" would
     # otherwise close the block early and put the rest of the payload into the document as markup.
     # Still valid JSON, so parsers and Google's validator read it unchanged.
@@ -786,7 +786,11 @@ def _spa_catalog_page(title: str, description: str, path: str, ld: list[dict],
         return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
     base = get_settings().public_url.rstrip("/")
     t, d = _esc_html(title), _esc_html(description)
-    url = base + path
+    # `path` carries the {slug} from the URL. Today an unknown slug 404s in catalog_platform before
+    # it reaches here, so a quote can't get this far — but that is an upstream lookup's side effect,
+    # not a guarantee this function makes. Escape it where it is used, so a future "slug not found →
+    # suggestions" page cannot turn a canonical tag into a reflected XSS.
+    url = _esc_html(base + path)
     blocks = "\n".join(
         '<script type="application/ld+json">'
         + json.dumps(b, separators=(",", ":")).replace("<", "\\u003c") + "</script>"
@@ -811,6 +815,11 @@ def _spa_catalog_page(title: str, description: str, path: str, ld: list[dict],
         + blocks
     )
     html = index.read_text(encoding="utf-8")
+    # index.html carries `robots: noindex` for the authenticated app; these URLs are public, and the
+    # `index, follow` in `meta` only wins if the noindex is gone. Stripped BEFORE `meta` is spliced
+    # in, so this scan only ever runs over the static bundle — never over a string carrying a
+    # caller-supplied title, which is what made it a ReDoS candidate rather than a fixed-cost pass.
+    html = re.sub(r'<meta name="robots" content="noindex[^>]*>\s*', "", html, count=1)
     # Match whatever title the page carries, not one exact string — a rename in the dashboard must
     # not be able to switch every catalog page's head off without a word (the same failure
     # `_spa_with_og` was written to survive).
@@ -818,9 +827,6 @@ def _spa_catalog_page(title: str, description: str, path: str, ld: list[dict],
                          flags=re.IGNORECASE | re.DOTALL)
     if not hits:
         html = html.replace("<head>", "<head>\n" + meta, 1)
-    # index.html carries `robots: noindex` for the authenticated app; these URLs are public, and the
-    # `index, follow` above only wins if the noindex is gone.
-    html = re.sub(r'<meta name="robots" content="noindex[^>]*>\s*', "", html, count=1)
     marker = '<div id="app"'
     if marker in html:
         html = html.replace(marker, f'<div id="prerender">{prerender}</div>\n{marker}', 1)
