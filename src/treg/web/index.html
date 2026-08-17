@@ -259,6 +259,16 @@
      tab strip) stretch the track past the viewport, putting a horizontal scrollbar on the PAGE
      instead of inside the strip's own overflow-x container. */
   .layout{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 57px)}
+  /* Public catalog: no sidebar, so the main column takes the whole width. */
+  .layout.solo{grid-template-columns:minmax(0,1fr)}
+  .pubnav{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:22px;
+    padding:11px 22px;background:color-mix(in srgb,var(--bg) 86%,transparent);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .pubnav .brand{font-family:var(--mono);font-weight:600;font-size:16px;color:var(--ink);text-decoration:none}
+  .pubnav-links{margin-left:auto;display:flex;align-items:center;gap:20px;font-size:14px}
+  .pubnav-links a{color:var(--muted);font-weight:500;text-decoration:none;cursor:pointer}
+  .pubnav-links a:hover,.pubnav-links a[aria-current]{color:var(--ink)}
+  @media(max-width:640px){ .pubnav{gap:12px;padding:10px 14px} .pubnav-links{gap:13px} .pubnav-links .hidem{display:none} }
   .side{border-right:1px solid var(--line);padding:12px 10px;background:var(--panel);display:flex;flex-direction:column}
   .side .nav{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:9px 11px;border-radius:var(--rb);font-size:13.5px}
   .side .nav:hover{background:var(--panel2)} .side .nav.active{background:var(--panel2);color:var(--accent);font-weight:600}
@@ -1246,46 +1256,33 @@ a:hover{text-decoration-color:var(--muted)}
     <footer class="lp-foot">treg · a credential-injecting proxy · <a href="/tutorial">tutorial</a> · <a href="/llms.txt">llms.txt</a></footer>
     </template>
 
-    <!-- SIGN-IN MODAL (shared by the landing and the share-link gate) -->
-    <div class="lc-scrim" :class="{open:demo.signin}" @click.self="demo.signin=false">
-      <div class="lc-modal" role="dialog" aria-modal="true" aria-label="Sign in">
-        <button class="cls" @click="demo.signin=false" aria-label="Close">✕</button>
-        <div style="font-size:26px">▚</div>
-        <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{invitePrefill?'Accept your invite':(shareGate?'Sign in to view it':'Make it yours')}}</h2>
-        <p v-if="invitePrefill" class="sub">Sign in with <b>{{invitePrefill}}</b> and you'll drop straight into the team.</p>
-        <p v-else-if="shareGate" class="sub">You'll land on “{{shareGate.name}}” right after.</p>
-        <p v-else class="sub">Bring the sandbox into a real account.</p>
-        <button v-if="meta.github" class="btn primary" style="width:100%;padding:11px;margin-bottom:8px" @click="githubLogin">Continue with GitHub</button>
-        <button v-if="meta.google" class="btn" style="width:100%;padding:11px;margin-bottom:8px" @click="googleLogin">Continue with Google</button>
-        <div v-if="!emailStage">
-          <div class="field"><input v-model="emailInput" type="email" placeholder="you@work.com" @keyup.enter="emailStart"/></div>
-          <button class="btn" style="width:100%" @click="emailStart" :disabled="busy">{{busy?'Sending…':'Email me a sign-in code'}}</button>
-        </div>
-        <div v-else>
-          <p class="sub" style="font-size:11px;margin:2px 0 8px">Code sent to <b>{{emailInput}}</b><span v-if="devCode"> · dev code <b class="mono">{{devCode}}</b></span> · <a href="#" @click.prevent="emailStage=false">change</a></p>
-          <div class="field"><input v-model="codeInput" inputmode="numeric" placeholder="6-digit code" @keyup.enter="emailVerify"/></div>
-          <button class="btn primary" style="width:100%" @click="emailVerify" :disabled="busy">{{busy?'Verifying…':'Sign in'}}</button>
-        </div>
-        <details style="margin-top:12px;text-align:left">
-          <summary class="sub" style="cursor:pointer;text-align:center">or paste an org token (agents &amp; CLI)</summary>
-          <div class="field" style="margin-top:8px"><input v-model="tokenInput" type="password" placeholder="X-Treg-Token" @keyup.enter="addToken(tokenInput)"/></div>
-          <button class="btn" style="width:100%" @click="addToken(tokenInput)" :disabled="busy">{{busy?'Checking…':'Sign in with token'}}</button>
-        </details>
-        <div v-if="loginErr" class="banner" style="margin-top:12px">{{loginErr}}</div>
-      </div>
-    </div>
   </div>
 
   <template v-else>
     <a href="#maincontent" class="skip">Skip to content</a>
-    <div class="top" role="banner">
+    <!-- A public catalog visitor is reading a WEBSITE, not operating an app: the workspace chrome
+         (org switcher, global tool search, member nav) is furniture for a job they have not started.
+         They get the marketing site's nav instead, so /catalog reads as part of treg.to rather than
+         as a dashboard someone forgot to lock. -->
+    <div class="pubnav" v-if="publicCatalog">
+      <a class="brand" href="/">▚ treg</a>
+      <nav class="pubnav-links">
+        <a href="/catalog" aria-current="page">Catalog</a>
+        <a href="/tutorial">Tutorial</a>
+        <a href="/docs">API</a>
+        <a class="hidem" href="https://github.com/superdesigndev/treg" target="_blank" rel="noopener">GitHub ↗</a>
+        <a @click="openSignin()">Sign in</a>
+        <button class="btn primary sm" @click="openSignin()">Start free</button>
+      </nav>
+    </div>
+    <div class="top" role="banner" v-else>
       <div class="brand">▚ treg</div>
       <div class="search"><span class="muted">/</span><input ref="search" v-model="q" :placeholder="view==='connections'?'search the catalog…':'search tools…'" aria-label="Search"/></div>
       <div class="spacer"></div>
     </div>
 
-    <div class="layout">
-      <nav class="side">
+    <div class="layout" :class="{solo:publicCatalog}">
+      <nav class="side" v-if="!publicCatalog">
         <!-- ORG (top): name → settings · ▾ → switch -->
         <div class="orgblock" v-if="authed">
           <div class="orgmain" ref="orgmain" @click="toggleOrgMenu" role="button" tabindex="0" @keydown.enter="toggleOrgMenu" aria-haspopup="true" :aria-expanded="orgMenu" aria-label="Teams">
@@ -1335,7 +1332,7 @@ a:hover{text-decoration-color:var(--muted)}
         <!-- PUBLIC (bottom): a signed-out catalog visitor gets the way in, where a member's
              account block would be. The catalog is readable without an account; calling is not. -->
         <div v-if="!authed" class="side-acct" style="gap:8px">
-          <button class="btn primary sm" style="flex:1" @click="location.href='/app'">Start free</button>
+          <button class="btn primary sm" style="flex:1" @click="openSignin()">Start free</button>
           <button class="iconbtn" @click="toggleTheme" :aria-label="theme==='dark'?'Switch to light theme':'Switch to dark theme'" title="Theme">{{theme==='dark'?'◐':'◑'}}</button>
         </div>
         <!-- ACCOUNT (bottom) -->
@@ -1367,7 +1364,7 @@ a:hover{text-decoration-color:var(--muted)}
               <button class="btn sm" @click="vendorAsk=true" title="Sell an API? Get it listed in this catalog"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>List as vendor</button>
               <!-- The one header action a paying visitor is actually looking for: where do I put MY
                    key. It only switches tabs, but naming it makes the Platform tab findable. -->
-              <button class="btn sm primary" @click="publicCatalog ? location.href='/app' : goByok()" title="Register your own provider key — your key wins over treg's and those calls are never metered"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Bring your own key</button>
+              <button class="btn sm primary" @click="publicCatalog ? openSignin() : goByok()" title="Register your own provider key — your key wins over treg's and those calls are never metered"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Bring your own key</button>
             </div>
           </div>
           <div v-if="connErr" class="banner" style="margin-top:12px">{{connErr}}</div>
@@ -1651,16 +1648,10 @@ a:hover{text-decoration-color:var(--muted)}
               <span class="plat-provs-l">Providers</span>
               <!-- Signed out, both destinations (a provider's marketplace page, the vault) need an
                    account, so the chips state who supplies the shelf and the last one is the way in. -->
-              <template v-if="publicCatalog">
-                <span v-for="s in platProviders" :key="s" class="btn sm" style="cursor:default">{{provName(s)}}</span>
-                <a class="btn sm" href="/app"
-                   title="Register your own provider key — your key wins over treg's and those calls are never metered">🔑 Bring your own key</a>
-              </template>
-              <template v-else>
-                <button v-for="s in platProviders" :key="s" class="btn sm" @click="openProvider(s)">{{provName(s)}} →</button>
-                <button class="btn sm" @click="goByok(platProviders.length===1 ? platProviders[0] : null)"
-                        title="Register your own provider key — your key wins over treg's and those calls are never metered">🔑 Bring your own key</button>
-              </template>
+              <button v-for="s in platProviders" :key="s" class="btn sm"
+                      @click="publicCatalog ? openSignin() : openProvider(s)">{{provName(s)}}{{publicCatalog?'':' \u2192'}}</button>
+              <button class="btn sm" @click="publicCatalog ? openSignin() : goByok(platProviders.length===1 ? platProviders[0] : null)"
+                      title="Register your own provider key — your key wins over treg's and those calls are never metered">🔑 Bring your own key</button>
             </div>
           </div>
 
@@ -1818,20 +1809,16 @@ a:hover{text-decoration-color:var(--muted)}
                                  way in rather than a button that can only 401. Everything else in
                                  the expander — parameters, limits, rate card, the copyable command
                                  — is open, and is the part worth reading before you sign up. -->
-                            <a v-if="publicCatalog" class="btn sm primary" href="/app" @click.stop
-                               title="Create a free team to call this — $1.00 of credit, no card">▶ Try it</a>
-                            <template v-else>
-                            <button class="btn sm" :class="{primary:!mkOauth(e.provider)}" @click.stop="openEpTry(e)"
-                                    title="Call it now, or copy the agent / CLI / API way to run it">▶ Try it</button>
+                            <button class="btn sm" :class="{primary:!mkOauth(e.provider)}" @click.stop="publicCatalog ? openSignin() : openEpTry(e)"
+                                    :title="publicCatalog ? 'Create a free team to call this — $1.00 of credit, no card' : 'Call it now, or copy the agent / CLI / API way to run it'">▶ Try it</button>
                             <span v-if="catConnected(e.provider)" class="chip go" title="You already have a connected account that can call this"><span class="godot"></span>Connected</span>
-                            <button v-else-if="mkOauth(e.provider)" class="btn sm primary" @click.stop="openProvider(e.provider)"
+                            <button v-else-if="mkOauth(e.provider)" class="btn sm primary" @click.stop="publicCatalog ? openSignin() : openProvider(e.provider)"
                                     :title="'Connect '+(e.provider_display||e.provider)+' — one-click OAuth, calls act as your account'">Connect {{e.provider_display||e.provider}}</button>
                             <!-- Lands on the Catalog's Platform tab focused on this provider — the
                                  whole key shelf in view, not a dead-end detail page — so the user
                                  sees where their key lives among the rest before they paste it. -->
-                            <button v-else-if="mkKnown(e.provider)" class="btn sm" @click.stop="goByok(e.provider)"
+                            <button v-else-if="mkKnown(e.provider)" class="btn sm" @click.stop="publicCatalog ? openSignin() : goByok(e.provider)"
                                     :title="'Register your own '+(e.provider_display||e.provider)+' key — your key wins over treg\'s and those calls are never metered'">Bring your own key</button>
-                            </template>
                           </span>
                         </div>
                         <div v-show="epTabOf(e)==='req'">
@@ -3637,6 +3624,40 @@ treg login</pre></div>
       <div style="margin-top:8px;display:flex;gap:8px"><button class="btn sm" @click="go('org')">Open Team</button><button class="btn sm" @click="accessNote=''">Dismiss</button></div>
     </div>
   </template>
+
+  <!-- SIGN-IN MODAL — a SIBLING of both branches. It used to live inside the logged-out
+       landing, which meant the public catalog (which renders the app shell, not that branch)
+       had no way to sign anyone in and every CTA had to navigate away to find one. -->
+  <div class="lc-scrim" :class="{open:demo.signin}" @click.self="demo.signin=false">
+    <div class="lc-modal" role="dialog" aria-modal="true" aria-label="Sign in">
+      <button class="cls" @click="demo.signin=false" aria-label="Close">✕</button>
+      <div style="font-size:26px">▚</div>
+      <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{invitePrefill?'Accept your invite':(shareGate?'Sign in to view it':(publicCatalog?'Start calling':'Make it yours'))}}</h2>
+      <p v-if="invitePrefill" class="sub">Sign in with <b>{{invitePrefill}}</b> and you'll drop straight into the team.</p>
+      <p v-else-if="shareGate" class="sub">You'll land on “{{shareGate.name}}” right after.</p>
+      <!-- The default line is the SANDBOX's ("bring it into a real account"), which is nonsense to
+           someone who arrived on a catalog page from a search result and has no sandbox. -->
+      <p v-else-if="publicCatalog" class="sub">Create a free team and call any of these — <b>$1.00 of credit</b>, no card.</p>
+      <p v-else class="sub">Bring the sandbox into a real account.</p>
+      <button v-if="meta.github" class="btn primary" style="width:100%;padding:11px;margin-bottom:8px" @click="githubLogin">Continue with GitHub</button>
+      <button v-if="meta.google" class="btn" style="width:100%;padding:11px;margin-bottom:8px" @click="googleLogin">Continue with Google</button>
+      <div v-if="!emailStage">
+        <div class="field"><input v-model="emailInput" type="email" placeholder="you@work.com" @keyup.enter="emailStart"/></div>
+        <button class="btn" style="width:100%" @click="emailStart" :disabled="busy">{{busy?'Sending…':'Email me a sign-in code'}}</button>
+      </div>
+      <div v-else>
+        <p class="sub" style="font-size:11px;margin:2px 0 8px">Code sent to <b>{{emailInput}}</b><span v-if="devCode"> · dev code <b class="mono">{{devCode}}</b></span> · <a href="#" @click.prevent="emailStage=false">change</a></p>
+        <div class="field"><input v-model="codeInput" inputmode="numeric" placeholder="6-digit code" @keyup.enter="emailVerify"/></div>
+        <button class="btn primary" style="width:100%" @click="emailVerify" :disabled="busy">{{busy?'Verifying…':'Sign in'}}</button>
+      </div>
+      <details style="margin-top:12px;text-align:left">
+        <summary class="sub" style="cursor:pointer;text-align:center">or paste an org token (agents &amp; CLI)</summary>
+        <div class="field" style="margin-top:8px"><input v-model="tokenInput" type="password" placeholder="X-Treg-Token" @keyup.enter="addToken(tokenInput)"/></div>
+        <button class="btn" style="width:100%" @click="addToken(tokenInput)" :disabled="busy">{{busy?'Checking…':'Sign in with token'}}</button>
+      </details>
+      <div v-if="loginErr" class="banner" style="margin-top:12px">{{loginErr}}</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -5527,7 +5548,12 @@ createApp({
       if(c.type==='free') return 'free';
       if(c.value==null) return 'credit-priced';
       return this.costLabel(c); },
-    mkKnown(service){ return this.providers.some(p=>p.service===service); },
+    // `providers` needs a session. Publicly, "is this a provider treg knows" is answered by the
+    // open catalog response instead — otherwise the whole action chain collapses and a signed-out
+    // reader sees no way to bring their own key. `mkOauth` stays false without the registry, so the
+    // public branch offers BYOK (which is true for every provider) rather than guessing Connect.
+    mkKnown(service){ return this.providers.some(p=>p.service===service)
+      || (this.publicCatalog && !!((this.platData&&this.platData.providers||{})[service])); },
     mkOauth(service){ const p=this.providers.find(x=>x.service===service); return !!p && p.auth_kind==='oauth'; },
     // `providers` comes from /connections, which needs a session. On a public catalog URL there is
     // none, so fall back to the display name the OPEN catalog response already carries — otherwise
@@ -5730,7 +5756,7 @@ createApp({
       return ({'httpbin.org':'headers','postman-echo.com':'get',
         'api.intercom.io':'me','api.stripe.com':'balance','api.render.com':'services?limit=1',
         'api.vercel.com':'v2/user','app.posthog.com':'api/projects/@current','eu.posthog.com':'api/projects/@current',
-        'searchconsole.googleapis.com':'webmasters/v3/sites','googleads.googleapis.com':'v21/customers:listAccessibleCustomers',
+        'searchconsole.googleapis.com':'webmasters/v3/sites','googleads.googleapis.com':'v25/customers:listAccessibleCustomers',
         // part=snippet rather than the probe's part=id: same 1 quota unit, but it returns the channel
         // title, so the panel shows something a human recognises instead of an opaque UC… id.
         'youtube.googleapis.com':'youtube/v3/channels?part=snippet&mine=true',

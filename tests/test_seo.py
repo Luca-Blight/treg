@@ -313,6 +313,51 @@ async def test_widening_head_did_not_leak_into_the_public_schema(clients: AsyncC
     assert with_head == ["/call/{rest}"], with_head
 
 
+# -------------------------------------------------------------------- public-mode chrome & CTAs
+# Markup assertions rather than behaviour: these live in index.html's Vue template, which the test
+# suite reads as text (see tests/test_dashboard_markup.py). Both were reported from the browser.
+
+def _spa() -> str:
+    from treg.api import _WEB_DIR
+    return (_WEB_DIR / "index.html").read_text(encoding="utf-8")
+
+
+def test_public_catalog_drops_the_workspace_chrome():
+    """A catalog visitor is reading a website, not operating an app. The org switcher, the global
+    tool search and the member nav are furniture for a job they have not started."""
+    spa = _spa()
+    assert '<div class="pubnav" v-if="publicCatalog">' in spa      # marketing nav instead
+    assert '<div class="top" role="banner" v-else>' in spa          # app bar only for members
+    assert '<nav class="side" v-if="!publicCatalog">' in spa        # no sidebar in public mode
+    assert '.layout.solo{grid-template-columns:minmax(0,1fr)}' in spa   # main spans the full width
+
+
+def test_no_public_cta_navigates_to_a_page_that_bounces():
+    """/app sends a logged-out visitor straight back to the landing (`location.replace('/')`), so a
+    CTA pointing there is a dead end that loses the page they were reading. Every one of them opens
+    the sign-in modal in place instead."""
+    spa = _spa()
+    assert "location.href='/app'" not in spa
+    assert spa.count("publicCatalog ? openSignin()") >= 5   # try-it, connect, byok ×3, chips
+
+
+def test_the_signin_modal_is_reachable_from_public_mode():
+    """It used to live inside the logged-out landing branch, which public mode does not render —
+    so there was nothing for a CTA to open."""
+    spa = _spa()
+    lp = spa.index('class="lp"')
+    modal = spa.index('<div class="lc-scrim"')
+    shell = spa.index("<template v-else>")
+    assert not (lp < modal < shell), "the modal is trapped inside the logged-out landing branch"
+
+
+def test_the_modal_does_not_talk_about_a_sandbox_on_the_catalog():
+    """Default copy is the sandbox's ('bring it into a real account') — nonsense to someone who
+    arrived from a search result."""
+    spa = _spa()
+    assert 'v-else-if="publicCatalog" class="sub">Create a free team' in spa
+
+
 async def test_no_page_ships_an_unsubstituted_base(clients: AsyncClient):
     """`{BASE}` reaching a browser means a canonical or og:url is pointing at nothing."""
     for path in ("/", "/support", "/terms", "/privacy", "/tutorial", "/catalog"):

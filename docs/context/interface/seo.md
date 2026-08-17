@@ -64,20 +64,32 @@ What public mode changes, and why each one:
 
 | Hidden / swapped | Because |
 |---|---|
+| The app top bar (global tool search) and the whole sidebar → a marketing-style `.pubnav` | a catalog visitor is reading a **website**, not operating an app; the workspace chrome is furniture for a job they have not started. `.layout.solo` gives the main column the full width |
 | Org switcher, Getting started, Your vault, Activity, Team | every one needs a session |
 | The "not connected" badge on all 80 tiles | connection state is a member fact; publicly it is 80 red herrings |
-| Provider chips become static; BYOK links to `/app` | both destinations are member views |
-| Try-it becomes a sign-up link | calling costs money and needs a team |
-| Account block becomes "Start free" | the way in, where a member's account would be |
+| Try-it, Connect, BYOK, the provider chips, "Start free" | all open the **sign-in modal in place** |
+| Modal subtitle | the default is the sandbox's ("bring it into a real account") — nonsense to someone who arrived from a search result |
 
-`platProviders` and `provName` fall back to the open catalog response's own `providers` map, since
-their normal source (`/connections`) needs a session — without the fallback every provider on a
-public shelf renders as its bare slug.
+**Never point a public CTA at `/app`.** A logged-out visit to `/app` hits
+`location.replace('/')` in the boot and lands on the marketing landing with no modal open — so the
+CTA loses the page the visitor was reading and offers them nothing. That was the first cut and it
+was a dead end at every one of six call sites. They call `openSignin()` instead.
 
-**Do not turn the member markup into a `v-else-if` chain off `publicCatalog`.** The public branch is
-a separate `v-if` with the member chain intact inside a `<template v-else>`, because
-`tests/test_dashboard_markup.py` asserts that chain's exact shape — and more importantly, the member
-path is the one that must not change meaning when someone edits the public one.
+For that to work the sign-in modal had to move: it lived **inside** the logged-out landing branch,
+which public mode does not render. It is now a sibling of both branches, near the end of `#app`.
+`.lc-scrim` is `position:fixed` and unscoped, so the move needed no CSS change.
+
+`platProviders`, `provName` and `mkKnown` fall back to the open catalog response's own `providers`
+map, since their normal source (`/connections`) needs a session. Without the fallback every provider
+on a public shelf renders as its bare slug and the whole action chain collapses to nothing.
+`mkOauth` has no public fallback — the open response carries no `auth_kind` — so the public branch
+offers BYOK, which is true for every provider, rather than guessing Connect.
+
+**Each action is ONE button whose handler forks on `publicCatalog`**, not a duplicated public
+template. `tests/test_dashboard_markup.py` asserts the member chain's exact shape
+(`v-else-if="mkOauth(e.provider)" class="btn sm primary"`, `openProvider(e.provider)`, …), and a
+fork keeps those substrings intact where a parallel branch drifts. That test reads a fixed-size
+window of the markup and has already been outgrown once by these forks.
 
 ### The no-JS fallback
 

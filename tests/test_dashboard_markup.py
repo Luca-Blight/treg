@@ -799,12 +799,12 @@ def test_the_run_actions_lead_the_expansion_tab_bar():
     provider treg can't serve on its own key, so Connect is the primary instead and Try-it is
     secondary. The green Connected state replaces the connect button once an account exists.
 
-    The signed-out branch (`publicCatalog`) sits alongside these: on a public /catalog URL, calling
-    needs a team, so Try-it becomes a link to sign-up and Connect/BYOK drop out. The member markup
-    asserted below is what must survive that."""
+    Each action is ONE button whose handler forks on `publicCatalog` — signed out, all three open
+    the sign-in modal instead, because calling needs a team. The member half of every fork is what
+    is asserted below; it must keep its shape when someone edits the public half."""
     block = _ledger()
-    # Sized to the whole action group, not a round number — the window has already been outgrown
-    # once (by the public-catalog branch) and silently cut the last assertion out of range.
+    # Sized to the whole action group, not a round number — the window has been outgrown once
+    # already (by the publicCatalog forks) and silently cut the last assertions out of range.
     bar = block[block.index('<span class="ltabs-r">') :][:3400]
     # Try-it: primary UNLESS the provider is OAuth
     assert 'openEpTry(e)' in bar and ':class="{primary:!mkOauth(e.provider)}"' in bar
