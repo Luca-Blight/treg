@@ -88,8 +88,20 @@ the project does not use Alembic.
 - **First top-up** → `_credit()` in `billing.py`, on the existing branch that distinguishes "this
   delivery moved money" from a webhook redelivery.
 
-Each writes its outbox row **in the same transaction as the event**, so the event and its pending
-conversion commit or fail together.
+Signup and first-call write their outbox row **in the same transaction as the event**, so the event
+and its pending conversion commit or fail together.
+
+**The paid path is the exception, and it is not atomic.** `ledger.topup()` commits internally
+(`ledger.py:36`) before `_credit()` reaches the conversion code, so the credit and the conversion are
+two separate commits. If the process dies between them the conversion is lost permanently — a Stripe
+redelivery finds the payment already credited, `fresh` is False, and the fire site never runs again.
+No error is raised and nothing detects it.
+
+This is accepted, deliberately (2026-08-17). The window is sub-millisecond, the blast radius is one
+missing conversion rather than lost money or a failed webhook, and closing it properly would mean
+restructuring `ledger.py` — the only code path that moves money — to serve a marketing feature. A
+reconciliation sweep (find orgs with a credited payment and a `gclid` but no `paid` row, backfill it)
+is the cheap fix if this ever proves to matter in practice.
 
 ### 4. Upload — a durable outbox, never fire-and-forget
 
