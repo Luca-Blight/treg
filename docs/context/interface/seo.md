@@ -106,6 +106,30 @@ here for. Google executes JS and sees the real view; the ones that don't still g
 `loadPlatform`. Requesting a different population than the view about to replace it would put two
 different endpoint counts on one URL.
 
+## Adding a platform, changing the UI
+
+**New catalog data appears on both sides with no code change.** Everything — the app's tile grid,
+the shelf pages, the `#prerender` fallback and the sitemap — reads one `catalog_store.load()`. Drop
+the YAML in, restart (the catalog is parsed once per process and changes only on deploy), and the
+new shelf is live and indexable.
+
+One gate: give the platform a `platforms:` entry in `capabilities.yaml`. Without one,
+`catalog_store` auto-registers it as `category: "Other"`, and the dashboard's `platCategories`
+skips `Other` outright — so the sitemap would publish `/catalog/<slug>` while the app's own grid
+links to nothing. `test_no_shelf_is_published_that_the_app_grid_hides` fails the build if that
+happens.
+
+**UI changes to the shared views reach the public pages automatically** — it is the same
+`index.html`. Three things do NOT follow along:
+
+1. **Anything reading member-only state.** `providers`, `connCount`, `billing` and `sessionMode` are
+   all empty without a session, so a new element built on them renders blank publicly. Three helpers
+   already needed public fallbacks for exactly this (`platProviders`, `provName`, `mkKnown`).
+2. **New member-only actions leak.** Public mode hides things by naming them; a new button is
+   visible to signed-out visitors until it is gated on `authed` or forked on `publicCatalog`.
+3. **The `#prerender` fallback and the SEO head are server-built** (`_spa_catalog_page`), so a
+   change to what the page *says* needs the fallback and the meta description updated too.
+
 ## Things that will bite you
 
 **`{BASE}`, never a hardcoded `treg.to`.** Every page is also served by self-hosted registries. A
