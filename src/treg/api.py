@@ -7717,7 +7717,12 @@ async def admin_errors(
             # we already store, in the view built to explain failures, was a free loss.
             "endpoint_id": c.endpoint_id, "provider": c.provider, "status": c.status_code,
             "method": c.method, "refused_by": c.refused_by, "duration_ms": c.duration_ms,
-            "request": c.error_request, "response": c.error_response,
+            # An aged-out row holds the sentinel, which is a STATE, not content. Returning it as the
+            # request/response would have a reader treat the word `<expired>` as the provider's
+            # answer; `expired` says the same thing without pretending to be evidence.
+            "request": None if c.error_request == _ERROR_EVIDENCE_EXPIRED else c.error_request,
+            "response": None if c.error_response == _ERROR_EVIDENCE_EXPIRED else c.error_response,
+            "expired": c.error_response == _ERROR_EVIDENCE_EXPIRED,
         } for c in rows],
     }
 
@@ -9522,8 +9527,14 @@ async def call_tool(
             # covers a member call cap, a tag call or spend cap, the platform ceiling, a trial
             # allowance and a demo-IP limit. WHICH one is in `exc.detail` and was being discarded —
             # 878 refusals in a week that could not be told apart afterwards. This branch is inside
-            # `mk.metered`, so it stays platform-only like every other capture site, and the detail
-            # is treg's own text about the caller's org: no provider content, no third-party data.
+            # `mk.metered`, so it stays platform-only like every other capture site, and it runs
+            # BEFORE relay, so no provider content can reach it.
+            #
+            # It is NOT free of caller data, though: a tag-cap detail carries the tag's `val` — an
+            # end-customer id the builder supplied. That is the caller's own identifier, in the
+            # caller's own row, and it is also the thing that makes the refusal diagnosable ("which
+            # customer hit the cap"). It is strictly less than the request bodies this feature
+            # already retains, and it is bounded by the same redaction and 14-day retention.
             _audit(exc.status_code, charged_micro=0,
                    refused_by="balance" if exc.status_code == 402 else "cap",
                    error_response=_redact_snippet(f"treg: {exc.detail}",
@@ -9601,6 +9612,13 @@ async def call_tool(
                                    response.headers.get("content-encoding", ""),
                                    response.headers.get("content-type", "")),
                 _secrets, _ERROR_RESPONSE_MAX)
+            # A failed platform call must ALWAYS leave evidence, even when there is nothing to say.
+            # A bodyless 4xx with none of the allowlisted headers produced "" for both snippets, and
+            # `_audit` only records evidence when one is truthy — so the row dropped out of
+            # `/admin/errors` entirely and the failure looked like it had never been captured.
+            # "Nothing came back" is itself the finding; silence must not be indistinguishable from
+            # the feature not running.
+            err_response = err_response or "<no response body or headers>"
         _audit(response.status_code, observed_micro=observed, charged_micro=charged,
                duration_ms=duration_ms, response_bytes=len(body),
                error_request=err_request, error_response=err_response)

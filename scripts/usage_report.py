@@ -170,8 +170,16 @@ QUERIES: dict[str, str] = {
     # the same false-diagnosis class), or the provider answered badly.
     "errdetail": BASE + """
       select ep, cataloged,
+             -- Four cases, not three. Deriving "who failed" from the evidence TEXT is only sound
+             -- while the text is there: before migration (A35) deploys it is NULL, and after 14 days
+             -- it is '<expired>'. Both used to fall through to "provider answered", which quietly
+             -- re-attributed treg's own 502s to the provider — the same false-diagnosis class this
+             -- report was just fixed for, reappearing whenever evidence is absent. When we cannot
+             -- tell, say so.
              case when refused_by is not null then refused_by
                   when error_response like 'treg:%' then '(treg never reached it)'
+                  when error_response is null or error_response = '<expired>'
+                       then '(evidence not captured)'
                   else '(provider answered)' end reason,
              status_code, count(*) n, count(distinct org_id) orgs,
              left(min(path), 170) sample,
@@ -262,10 +270,15 @@ async def collect(since: dt.datetime, unit: str = "day") -> dict:
                       "will be empty until migration (A35) deploys", file=sys.stderr)
             ev_cols = ("error_request, error_response," if has_evidence
                        else "null::text error_request, null::text error_response,")
-            ev_agg = ("""left((array_agg(error_response
-                            order by (error_response is not null) desc, id desc))[1], 400) evidence,
-                         left((array_agg(error_request
-                            order by (error_response is not null) desc, id desc))[1], 220) sent"""
+            # `nullif(..., '<expired>')` so an aged-out row reads as "no evidence" rather than as
+            # evidence whose content is the word `<expired>` — otherwise the drawer prints
+            # "said <expired>" and the exemplar picker prefers an expired row over a newer real one.
+            ev_agg = ("""left((array_agg(nullif(error_response, '<expired>')
+                            order by (nullif(error_response, '<expired>') is not null) desc,
+                                     id desc))[1], 400) evidence,
+                         left((array_agg(nullif(error_request, '<expired>')
+                            order by (nullif(error_response, '<expired>') is not null) desc,
+                                     id desc))[1], 220) sent"""
                       if has_evidence else "null::text evidence, null::text sent")
 
             out = {}

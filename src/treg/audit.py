@@ -83,9 +83,24 @@ def record_run(
     ))
 
 
+_shed = 0  # audit rows dropped by back-pressure this process; only ever grows
+
+
 def _schedule(coro) -> None:
     if len(_pending) >= _MAX_PENDING:  # shed load — audit is best-effort, never OOM the server
         coro.close()
+        # Say so. Shedding bypasses `_write` entirely, so the warning there never fires for it, and
+        # a shed row is invisible: the audit table simply has less in it. For a table whose job is
+        # to record what happened, "quiet" and "quietly broken" must not look identical — and the
+        # failure-evidence columns ride this same path, so a burst silently loses exactly the errors
+        # someone would go looking for. Logged on the first drop and then every 1,000th, so a long
+        # incident cannot itself flood the log.
+        global _shed
+        _shed += 1
+        if _shed == 1 or _shed % 1000 == 0:
+            logging.getLogger("treg.audit").warning(
+                "audit back-pressure: %d row(s) dropped this process (pending at %d)",
+                _shed, _MAX_PENDING)
         return
     task = asyncio.create_task(coro)
     _pending.add(task)

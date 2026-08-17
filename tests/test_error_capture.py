@@ -304,6 +304,40 @@ async def test_a_real_secret_shape_is_still_masked(clients: AsyncClient, platfor
     assert "eyJhbGciOi.JIUzI1NiIsInR5cCI6" not in row["error_response"]
 
 
+async def test_a_bodyless_failure_still_leaves_a_row(clients: AsyncClient, platform_on, monkeypatch):
+    """A 4xx with no body and none of the allowlisted headers used to produce "" for both snippets,
+    and `_audit` only stores evidence when one is truthy — so the row vanished from /admin/errors and
+    the failure looked like capture had never run. "Nothing came back" is itself the finding."""
+    monkeypatch.setattr(A, "relay", _fake_relay(500, b""))
+    # The required param has to be present or treg refuses before relay — the empty half under test
+    # is the RESPONSE, which is what a bodyless provider 5xx actually looks like.
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 500
+    row = await _row(clients)
+    assert row["error_response"] == "<no response body or headers>"
+    errs = (await clients.get("/admin/errors", headers=ADMIN)).json()["errors"]
+    assert errs, "and it must be visible in the view built to show failures"
+
+
+async def test_expired_evidence_is_a_state_not_content(clients: AsyncClient, platform_on,
+                                                       monkeypatch):
+    """The sentinel must never be served as though it were the provider's answer."""
+    monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"error":"aged out later"}'))
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    from treg import audit
+    await audit.drain()
+    async with session_maker() as db:
+        row = (await db.execute(
+            select(CallRecord).order_by(CallRecord.id.desc()).limit(1))).scalars().first()
+        row.created_at = row.created_at - timedelta(days=A._ERROR_EVIDENCE_TTL_DAYS + 1)
+        db.add(row)
+        await db.commit()
+    d = (await clients.get("/admin/errors?days=30", headers=ADMIN)).json()
+    aged = [e for e in d["errors"] if e["expired"]]
+    assert aged, "the row is still listed as a failure"
+    assert aged[0]["response"] is None, "but its evidence is absent, not the literal sentinel"
+
+
 async def test_a_cap_refusal_says_WHICH_cap(clients: AsyncClient, platform_on, monkeypatch):
     """`refused_by='cap'` is an aggregation bucket, not a diagnosis: every 429 lands in it, covering
     member call caps, tag caps, the platform ceiling, trial allowances and demo-IP limits. Which one
