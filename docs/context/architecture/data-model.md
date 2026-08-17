@@ -96,7 +96,15 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   Redaction is exact-match-first (treg's own platform credential, resolved from the binding's
   `platform_setting`) and only then pattern-based, because a provider quoting the received key back
   in a 401 can defeat any regex; masking happens **before** truncation, since truncating first can
-  leave a partial key that no longer matches. Aged out to `'<expired>'` after 14 days by
+  leave a partial key that no longer matches. The exact match covers every spelling a provider can
+  echo, not only what treg sent: percent-encoded in **both** cases (`quote()` emits uppercase, servers
+  echo lower), `quote_plus`, JSON slash-escaped, and — for the Basic-auth providers whose platform
+  value is *itself* the base64 of `login:password` (dataforseo, moz; see `config.py`) — the **decoded
+  credential and each half**, since a provider that decodes Basic and reports
+  `received_username`/`received_password` echoes the key in a form containing neither the blob nor
+  `Basic <blob>`. Behind all of it sits a **fail-closed** check: after masking, a normalised copy
+  (percent-decoded, JSON-unescaped, lowercased) is re-scanned, and if a secret survived a transform
+  nobody anticipated the whole snippet is replaced. Losing a message beats leaking the shared key. Aged out to `'<expired>'` after 14 days by
   `GET /admin/errors` — not on the request path, because `get_session` never commits and a lazy
   marker written there would roll back, leaving the purge to run on every failed call.
 - **`ToolRequest`** — a "the catalog doesn't have X" report (`POST /tool-requests`, open + per-IP
