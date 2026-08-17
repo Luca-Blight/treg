@@ -179,9 +179,10 @@ pre-seed through series C+.
 > The cost structure absorbs this: both misses were free, so testing coverage on your own list costs
 > nothing until it works. Test before you build a workflow on it.
 
-**Still not proven:** Lusha's company activity signals could not be called — the endpoint id returned by
-catalog search does not resolve (reported to the treg.to team). **Do not claim hiring or activity signals
-on this page until that is fixed and a call succeeds.** Funding is proven; "buying signals" broadly is not.
+**What this page does not cover.** Activity and hiring signals are a different job from the one above,
+and this workflow does not do them — everything shown here is company search, funding, headcount and
+leadership. If your work depends on hiring or intent signals, check the catalog for what serves that
+capability before you build on it.
 
 ---
 
