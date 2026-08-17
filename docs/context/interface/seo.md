@@ -36,6 +36,7 @@ FastAPI's stock Swagger shell — a kilobyte of JavaScript to anything that does
 |---|---|
 | `/robots.txt` | Bundled file, `{BASE}`-templated. Disallows `/app`, `/login`, auth and OAuth flows, `/call/`, `/mcp`, `/admin`, `/docs/api`. Names the sitemap. |
 | `/sitemap.xml` | **Generated**, not bundled — 80 of its URLs come from the catalog. Static pages take `lastmod` from their file's mtime, shelves from the newest mtime under `src/treg/catalog/`. |
+| `/resources` + `/use-cases/<slug>` | The outcome pages and their hub. Their sitemap rows are spread from `_USE_CASES` rather than listed by hand, so routing a new page lists it — see below. |
 | `/catalog` | The dashboard SPA, in public mode — the marketplace's Catalog view on an indexable URL. |
 | `/catalog/<slug>` | The same SPA, on the platform view for one shelf. |
 | `/docs` | Server-rendered API reference built from `app.openapi()`. |
@@ -162,6 +163,18 @@ asserted to appear in its body. Edit one, edit the other, same commit.
 **Prices need `_usd_short`, not `%g`.** `%g` flips to scientific notation below `1e-4`, and a shelf
 advertising "from $1.2e-07 per call" reads as a bug. Anything under a hundredth of a cent renders as
 `<$0.0001` — which then has to be HTML-escaped at every use site, because that `<` is real markup.
+
+## The outcome pages are listed from the route map, not by hand
+
+`_SITEMAP_PAGES` spreads `_USE_CASES` rather than repeating its five slugs, which is why `_USE_CASES`
+is defined **above** the sitemap block instead of next to its route — a page cannot be routed and
+then forgotten by the sitemap. Two details are load-bearing:
+
+- **No trailing slash.** `/use-cases/<slug>/` 307s to the bare form, and the comment above
+  `_SITEMAP_PAGES` is explicit that listing a redirect is worse than listing nothing. The pages'
+  `<link rel="canonical">` matches the bare form for the same reason.
+- **The hub is what makes them crawlable at all.** Before `/resources` existed, nothing on the site
+  linked to them; the sitemap alone would have been the only path in.
 
 **The sitemap is walked, not spot-checked.** `test_every_sitemap_url_answers_200` fetches what it
 publishes. Rename a route and the sitemap silently starts serving 404s to Google with nothing else

@@ -327,7 +327,21 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   itself. See [skill.md](skill.md) for the other three distribution doors.
   `terms_page` (`GET /terms`) + `privacy_page` (`GET /privacy`) serve the hosted registry's legal pages
   (`_legal_page`, no-cache) with `legal_css` (`GET /legal.css`) as the shared skin — `/privacy` is also
-  the URL given to OAuth providers at app-verification time, so don't rename it. Provider brand marks are
+  the URL given to OAuth providers at app-verification time, so don't rename it.
+  `resources_page` (`GET /resources`) is the hub for the outcome pages and the **only** thing linking to
+  them: the landing footer and each page's own footer carry one `resources` link rather than five that grow
+  with the cluster, and without the hub every `/use-cases/*` page is an orphan no crawler reaches.
+  `resources.html` is generated alongside them, so a new page appears on the hub automatically.
+  `use_case_page` (`GET /use-cases/{slug}`) serves the per-vertical **outcome landing pages** — the
+  destinations for search ads and the organic `/use-cases/` cluster — off the `_USE_CASES` slug map, with
+  `usecase_css` (`GET /usecase.css`) as their shared skin, the same split as the legal pages. Two
+  deliberate differences from `/`: an unknown slug is a **404 rather than a fall-through** to the SPA (a
+  typo in a live ad should be visible, not silently swallowed), and a signed-in visitor is **not**
+  redirected to `/app` — bouncing a returning user off the page an ad paid to reach would make the
+  campaign data unreadable. The HTML in `web/usecase-*.html` is **generated** from
+  `marketing/landing/*.md` by that directory's `build.py` + `build_html.py`; never hand-edit it, and note
+  the generator refuses to emit anything past the ad-kit heading so bid and negative keywords cannot
+  reach a public page. Provider brand marks are
   mounted at `/logos` (`StaticFiles` over `web/logos/`, resolved by convention `logos/<service>.svg`).
   `dashboard_marketplace` (`GET /app/marketplace/{service}`) serves the plain SPA (a connect page is only
   meaningful to a signed-in member, so no OG meta).
