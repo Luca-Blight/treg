@@ -52,3 +52,6 @@ docs/context/interface/*-audit-*.md
 docs/assets/restyle-*.png
 docs/context/interface/*-proposal.md
 .codegraph/
+
+# Generated usage dashboards — regenerate with scripts/usage_report.py, never commit.
+/reports/
