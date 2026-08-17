@@ -1330,7 +1330,7 @@ def ingest_youtube(refresh: bool) -> tuple[Path, dict]:
 # forty entries pointing at the same path, each documenting one thing you can query. That is what
 # an agent actually needs: it already knows how to POST a query, it does not know that
 # `search_term_view` is where the actual user searches live.
-GADS_VERSION = "v21"  # must track OAuthProvider.examples / core google-ads.yaml
+GADS_VERSION = "v25"  # must track OAuthProvider.examples / core google-ads.yaml
 GADS_RESOURCES: list[tuple[str, str]] = [
     ("campaign", "Campaigns — name, status, budget, bidding strategy, start/end dates and all campaign-level metrics"),
     ("ad_group", "Ad groups — name, status, type, CPC bid and ad-group-level metrics"),

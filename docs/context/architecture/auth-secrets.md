@@ -138,6 +138,17 @@ module symbols:
   (`supports_enrichment`, `enrich_*` — Google Ads returns bare ids, so a per-row lookup fills the human name),
   and **identity** (`has_identity`, `identity_*` — providers with nothing to pick, like LinkedIn/X/TikTok,
   capture who consented instead). A `probe_path` gives registry tools a real health check.
+- **A versioned path expires on a calendar, not on a deploy.** Google Ads puts its API version in the
+  URL, so `probe_path`, `discover_path`, `enrich_path` and `examples` all hard-code one. Google sunsets
+  each major after ~12 months: v21 died on 2026-08-05 and every Ads call — including the connect-time
+  account listing — failed until the pin moved to v25 on 2026-08-17. Nothing in the codebase can catch
+  this. No commit changed, no test failed (nothing in the suite makes a live call), and the two failure
+  modes read differently: a version that **never existed** returns an HTML 404, a **sunset** one returns
+  a JSON 400 `UNSUPPORTED_VERSION`. `POST /health/run` would surface it on the day it breaks — it probes
+  every credential through the same versioned `probe_path` — but nothing schedules it; `render.yaml`
+  carries only Render's own `healthCheckPath: /meta`. Bump the version in all four places together:
+  `oauth_providers.GOOGLE_ADS`, `catalog/google-ads.yaml`, `catalog/google-ads.extended.yaml`, and
+  `scripts/catalog_ingest.py:GADS_VERSION`.
 
 ## Credential health (`health.py`)
 `run_all(db, client, org_id=None)` iterates tools (filtered to `org_id` when set, so `/health/run` never
