@@ -10,7 +10,8 @@
 
 ## Global Constraints
 
-- Branch is `feat/ads-conversion-tracking`. **Commit with `git commit -- <paths>` (path-scoped)** — there is unrelated staged work in `src/treg/api.py`, `docs/context/interface/api.md` and `src/treg/web/landing.html` that must never enter a commit.
+- Branch is `feat/ads-conversion-tracking`. **Commit with `git commit -- <paths>` (path-scoped)** — there is unrelated staged work in `src/treg/api.py`, `docs/context/interface/api.md` and `src/treg/web/landing.html` that must never enter a commit. A plain `git commit` takes the whole index and would sweep that work in.
+- **A path-scoped commit cannot see an untracked file.** For any file this plan *creates*, run `git add <path>` first, then `git commit -- <path>`. The `add` stages only that path; the path-scoped commit still ignores everything else in the index. Skipping the `add` fails with `pathspec … did not match any file(s) known to git`.
 - **Always `uv run --frozen`.** Never run `uv lock` or `uv sync` — on an older uv it rewrites `uv.lock` into an older format, a ~650-line diff changing no versions. Hand-add dependencies to the lock instead.
 - **No new dependencies.** `httpx` and SQLModel are already present.
 - **Never import a heavy dependency at the top of a CLI-path module** (`cli.py`, `convert.py`, `skills.py`, `providers.py`, `localrun.py`, `shell.py`, `agents.py`, `egress.py`, `fsjail.py`). Nothing in this plan touches those.
@@ -370,12 +371,15 @@ async def queue(db: AsyncSession, org: Org, action: str, *,
     """
     if not org.ad_gclid:
         return False
-    db.add(AdConversion(org_id=org.id, action=action, dedupe_key=dedupe_key,
-                        value_usd_micro=value_usd_micro))
     try:
-        await db.flush()
+        # A SAVEPOINT, not a bare flush: this runs inside the CALLER's transaction (the signup
+        # grant, the Stripe credit), and a plain `db.rollback()` on the duplicate would roll back
+        # THEIR work too — a redelivered webhook would undo a credit. The nested block confines the
+        # rollback to this insert.
+        async with db.begin_nested():
+            db.add(AdConversion(org_id=org.id, action=action, dedupe_key=dedupe_key,
+                                value_usd_micro=value_usd_micro))
     except IntegrityError:
-        await db.rollback()
         return False
     return True
 ```
