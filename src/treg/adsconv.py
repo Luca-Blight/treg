@@ -31,5 +31,9 @@ def usd_micro_to_aud_micro(usd_micro: int) -> int:
 
     Integer-only, per the money-code rule: a float here would round differently on
     different platforms and the value is uploaded as a monetary amount.
+
+    Note: // floors toward negative infinity, so negative amounts round away from zero
+    while positive amounts round toward zero. Real inputs are always positive
+    (top-ups); the negative case is defensive only.
     """
     return usd_micro * AUD_PER_USD_NUM // AUD_PER_USD_DEN
