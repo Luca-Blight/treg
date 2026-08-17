@@ -106,6 +106,11 @@ class User(SQLModel, table=True):
     token_version: int = Field(default=0)
     onboarded: bool = Field(default=False)  # has completed OR skipped first-run onboarding (don't re-offer)
     demo: bool = Field(default=False)  # a fake teammate seeded into a demo team (can't log in; excluded from stats)
+    # This person's referral code (`treg.to/?ref=<code>`). On the USER, not the Org, because a person
+    # refers a friend — and because anyone may create unlimited orgs, so a per-org code would hand the
+    # same human unlimited codes to farm with. NULL until they open the Referrals page; minted lazily
+    # so we never generate codes for the majority who never look. See referrals.py.
+    referral_code: str | None = Field(default=None, index=True, unique=True)
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -653,6 +658,64 @@ class TagBudget(SQLModel, table=True):
     note: str = Field(default="")
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
+
+
+class Referral(SQLModel, table=True):
+    """One person invited another, and what we owe for it. See referrals.py and
+    docs/context/architecture/money.md.
+
+    THE ROW IS THE IDEMPOTENCY GUARD, not `ledger.grant`. `grant(once=True)` checks
+    `(org_id, kind)` with a SELECT and no backing unique index, so two concurrent redemptions
+    can both miss it — fine for a signup promo that is retried, wrong for money owed to a third
+    party. So referrals.py calls `grant(..., once=False)` and lets these two UNIQUE columns
+    arbitrate instead, the same way `CreditBlock.stripe_payment_intent` arbitrates a topup and
+    the conditional UPDATE arbitrates a reserve. Where two paths can read before either writes,
+    the database has to be the one that says no.
+
+    Status is a one-way ladder, and every terminal state is kept rather than deleted — a referral
+    we refused is the record of WHY someone was not paid, which is the first thing asked when a
+    user emails about a missing reward:
+
+        pending    attributed at signup; the friend has not topped up yet. Owes nothing.
+        qualified  the friend made their first paid top-up. Owes both bonuses, AFTER the hold.
+        paid       both grants landed. `referrer_block_id` / `referred_block_id` name them.
+        capped     qualified, but the referrer is already at their lifetime cap. Pays nothing.
+        rejected   an abuse gate said no, or the funding payment was disputed/refunded inside
+                   the hold window. `reject_reason` says which.
+    """
+
+    __table_args__ = (
+        # An org can be referred exactly once, ever. This is what stops a second signup door, a
+        # retried request, or two concurrent redemptions from paying the same bounty twice.
+        UniqueConstraint("referred_org_id", name="uq_referral_referred_org"),
+        # And one payment can fund at most one qualification, for the same reason `topup` keys on
+        # the PaymentIntent: Stripe delivers at least once and prod runs more than one instance.
+        UniqueConstraint("qualifying_payment_intent", name="uq_referral_qualifying_pi"),
+        Index("ix_referral_status_qualified", "status", "qualified_at"),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    code: str = Field(index=True)  # the code as typed, kept even if the referrer later changes theirs
+    referrer_user_id: int = Field(foreign_key="user.id", index=True)
+    referred_user_id: int = Field(foreign_key="user.id", index=True)
+    referred_org_id: int = Field(foreign_key="org.id")  # unique — see __table_args__
+    status: str = Field(default="pending", index=True)
+    reject_reason: str = Field(default="")
+    # The payment that qualified this referral. NULL while pending — and NULL is exempt from a
+    # unique index, so any number of pending rows coexist happily.
+    qualifying_payment_intent: str | None = Field(default=None)
+    # Stripe's stable per-card id (`pm.card.fingerprint`). NOT card data — an opaque token that only
+    # means anything inside our own Stripe account. It is the one signal that survives a fresh email
+    # address, which is exactly the abuse this program invites. Stored here and nowhere else.
+    card_fingerprint: str | None = Field(default=None, index=True)
+    # The blocks the two grants created, so a payout can be traced back into the ledger by id.
+    referrer_block_id: str | None = Field(default=None)
+    referred_block_id: str | None = Field(default=None)
+    referrer_reward_micro: int = Field(default=0)  # what was actually granted, not what was promised
+    referred_reward_micro: int = Field(default=0)
+    qualified_at: datetime | None = Field(default=None)
+    paid_at: datetime | None = Field(default=None)
+    created_at: datetime = Field(default_factory=_now, index=True)
 
 
 class Project(SQLModel, table=True):

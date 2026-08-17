@@ -6,6 +6,7 @@ sources:
   - src/treg/models.py
   - src/treg/billing.py
   - src/treg/reconcile.py
+  - src/treg/referrals.py
   - src/treg/api.py
 related:
   - architecture/catalog.md
@@ -445,3 +446,69 @@ the entire point of giving them a scoped token.
 trips it. Raising past our ceiling is **refused, not clamped**: a builder who thinks they set $500/day
 and silently got the platform default discovers it as an outage mid-launch. That refusal is the commercial conversation,
 and it replaces editing one env var that would lift the blast-radius rail for every team at once.
+
+## Referrals — paying for growth out of the one margin we have
+
+`referrals.py` decides; `ledger.py` moves. The only crossing is `ledger.grant(...)`, exactly as
+`billing.py`'s only crossing is `ledger.topup(...)`.
+
+**Why a flat bounty and not a percentage.** `platform_margin` is 0.0 and "we add no markup" is a
+public promise (terms §08, landing 04), so there is no gross margin on a catalog call to share. The
+only thing treg actually keeps is the gap between what a team tops up and what it consumes. A
+percentage of top-ups would therefore be a permanent share of pass-through GMV — and, worse, it
+scales the reward with effort, which is the definition of a farmable incentive. Flat figures ($10 to
+the referrer, $5 to the friend, `config.referral_*`) are budgetable as CAC, bounded by construction,
+and not worth building a fake-account farm for.
+
+**The qualifying event is the friend's FIRST PAID TOP-UP, never their signup.** `promo_grant_micro`
+is granted per ORG and nothing caps orgs per user, so a signup-triggered bounty is a faucet pointed
+at itself. The minimum top-up sits deliberately above both bounties combined: below it, buying your
+own bonus with your own card turns a profit.
+
+**Referral credit burns first.** `_KIND_ORDER` gives `referral` the same rank as `promotional`,
+because both are marketing spend we can never be asked to return, and spending them first keeps the
+refundable/disputable purchased pool as small as possible. This is not cosmetic: an unrecognised
+kind sorts LAST (`.get(kind, 99)`), so omitting the entry would have made the bonus burn *after*
+money someone actually paid us. Pinned by a test.
+
+**The `Referral` row is the idempotency guard, not `grant(once=True)`.** `grant`'s `once` check is a
+SELECT with no backing unique index — fine for a signup promo that is merely retried, wrong for
+money owed to a third party, where two concurrent redemptions can both miss it. So every referral
+grant passes `once=False`, and two UNIQUE columns arbitrate instead: `referred_org_id` (an org is
+referred once, ever) and `qualifying_payment_intent` (one payment funds one qualification). Same
+reasoning as the conditional UPDATE in `reserve` and the unique `stripe_payment_intent` in `topup` —
+where two paths can read before either writes, the database has to be the one that says no.
+
+`_pay` **claims before it grants**: the row flips to `paid` in its own committed statement, and only
+then does credit move. The opposite order would mean the loser of a race had already granted. The
+cost is the mirror failure — a crash between claim and grant pays nobody and says otherwise — which
+is the right way round for money, is visible in `/admin/referrals` as a paid row with a null block
+id, and errs toward paying once rather than twice.
+
+**The hold is the only clawback window there is.** Rewards land `referral_hold_days` (7) after
+qualifying. `charge.dispute.created` / `charge.refunded` — the first reversal events treg has ever
+handled — cancel a bonus still inside that window. Anything already granted is **logged for a human,
+never auto-reversed**: referral credit burns first and is usually spent by then, and reversing it
+would mean a second code path able to drive a balance negative. The clawback touches the *bonus*
+only; it never refunds the top-up, because that has always been a human decision.
+
+**The gates** (`qualify`): first top-up only, at or above the minimum; not a self-referral; the
+referrer has paid us at least once themselves; the paying card's Stripe fingerprint has not already
+claimed a referral; and the referrer is under their lifetime cap. The fingerprint is the load-bearing
+one — an email address is free and a card is not — and it is read via `expand=["payment_method"]` on
+the `PaymentIntent.retrieve` that `_on_checkout_completed` was already making. It is not card data
+and it lives on the `referral` row alone, never on an `Org`.
+
+A refusal is **recorded, not dropped**, and `capped` is deliberately distinct from `rejected`: one is
+"you ran out of self-serve allowance", the other is "a gate said no". "I referred someone and got
+nothing" is the ticket this program generates, and the answer has to be on the page.
+
+**No scheduler, as everywhere else.** `sweep()` runs from `billing._credit` (any top-up advances the
+queue) and from `GET /referrals` (someone checking on their reward is the one who makes it land) —
+the same lazy, caller-pays bargain as `reap_stale_holds`. It never raises: its callers are a Stripe
+webhook and a page load, and neither may fail over a bonus.
+
+**Cash payouts are not built.** The self-serve program pays in credit only, and the cap refusal is
+the commercial conversation that replaces an uncapped percentage. When an influencer tier lands, it
+reads `/admin/referrals` — the same table, filtered — and the payout rail (and its W-9/1099
+obligations) is what gets bought rather than built.

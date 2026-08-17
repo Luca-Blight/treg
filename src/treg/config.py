@@ -111,6 +111,26 @@ class Settings(BaseSettings):
     call_timeout_s: int = 180
     hold_grace_s: int = 60
 
+    # ---- referral program (referrals.py) --------------------------------------------------------
+    # Flat bounties, not a percentage of top-ups. At 0% platform margin a percentage would be a
+    # permanent share of pass-through GMV, and — unlike a flat figure — it rewards farming in
+    # proportion to effort. Nobody builds a fake-account farm for $10; plenty would for 15% of an
+    # uncapped balance. All figures are micro-USD (1e-6 USD), like every other amount in the system.
+    referral_referrer_micro: int = 10_000_000   # $10 to the person who shared the link
+    referral_referred_micro: int = 5_000_000    # $5 to the friend who signed up
+    # The friend's first top-up must clear this for anything to be owed. Deliberately well above the
+    # bounties themselves: below it, buying the bonus with your own card is profitable.
+    referral_min_topup_micro: int = 10_000_000  # $10
+    # Days between qualifying and the credit landing. This is the ONLY clawback window that exists:
+    # referral credit is promotional, burns first (ledger._KIND_ORDER) and is typically spent within
+    # days, so once granted it cannot be recovered. Short on purpose — a referral program that pays
+    # in 60 days does not feel like a reward, and the exposure at these amounts is tiny.
+    referral_hold_days: int = 7
+    # Lifetime paid referrals per person. Anyone who wants more is an influencer, and that is a
+    # conversation with a contract and a bank transfer — not a self-serve link. The refusal IS the
+    # commercial conversation, the same posture as raising a daily cap.
+    referral_cap: int = 20
+
     # ---- tier-4 platform keys (api.py credential ladder) ---------------------------------------
     # treg's OWN provider keys, spent on a caller's behalf and metered against their prepaid balance.
     # Read by `proxy.relay` through a `platform_setting` binding (never copied into an org's secrets,

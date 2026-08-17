@@ -380,6 +380,20 @@ def _migrate_to_orgs(conn) -> None:
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE callrecord ADD COLUMN {col} VARCHAR"))
 
+    # (A37) additive: user.referral_code — this person's `?ref=` code (see referrals.py). NULLABLE
+    # with no default: it is minted lazily the first time someone opens the Referrals page, so NULL
+    # ("never asked for one") is the correct and overwhelmingly common state. "user" is QUOTED — a
+    # reserved word in Postgres, and this ALTER runs in place on the live PG database.
+    #
+    # The UNIQUE index is created separately and NOT as a column constraint: `create_all` already
+    # built it on a fresh database, so this branch only runs where the table predates the feature,
+    # and IF NOT EXISTS keeps it idempotent across a restarted deploy. The `referral` table itself
+    # needs nothing here — create_all makes a brand-new table for free.
+    if "user" in tables and "referral_code" not in {c["name"] for c in insp.get_columns("user")}:
+        conn.execute(text('ALTER TABLE "user" ADD COLUMN referral_code VARCHAR'))
+        conn.execute(text(
+            'CREATE UNIQUE INDEX IF NOT EXISTS ix_user_referral_code ON "user" (referral_code)'))
+
     # (A28) corrective: creditblock.stripe_payment_intent must be UNIQUE (the top-up idempotency
     # key). It sits HERE, above the (B) block, because (B) returns early on a fresh/new-schema DB —
     # and a fresh DB created between the ledger landing and this fix is precisely the one that has

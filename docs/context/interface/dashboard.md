@@ -844,3 +844,25 @@ multi-binding + edit, skill bundles, super-admin mutations, OAuth connect, share
 shipped. Packaging: `src/treg/web` lives inside the `treg` package, so the wheel's `packages`
 inclusion ships every asset (incl. `tutorial.js`/`tutorial.html`) — no `force-include` (a redundant
 one double-adds each file and breaks the wheel build).
+
+## The Referrals view
+
+A top-level `<template v-if="view==='referrals'">`, plus a nav button and a second entry point under
+the balance chip (where someone is already thinking about what treg costs them).
+
+**`'referrals'` must appear in BOTH view whitelists** — `viewFromHash()` and the `popstate` handler.
+`go('referrals')` works on click regardless of them; those two lists are what make the view survive
+a RELOAD and a BACK button. Missing either is invisible in review and in clicking around, which is
+precisely the silent failure CLAUDE.md warns about. Pinned by a test that counts both.
+
+**The not-eligible state is a gate made visible.** A referrer who has never topped up earns nothing
+(`referrals.qualify`). Rather than show them a live link that silently pays zero, the link is
+replaced by "Add funds once to unlock your link" and a button into Billing.
+
+**Every status renders a reason** (`refStatus`), including `capped` and `rejected`. "I referred
+someone and got nothing" is the ticket this program generates, and the answer belongs on the page
+rather than in an email to us.
+
+Opening the page **has a side effect**: `GET /referrals` runs the payout sweep, so a user checking
+whether their reward has landed is the one who makes it land. There is no scheduler in treg, so this
+work rides on a request someone is already making.

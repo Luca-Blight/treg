@@ -179,6 +179,11 @@
     <tr><td>Google Fonts</td><td>Your IP address, when you load a treg web page</td><td>Serves the site's typefaces</td><td>USA</td></tr>
     <tr><td>Upstream APIs you connect</td><td>Whatever your call sends them</td><td>The call you asked us to make</td><td>Varies by provider</td></tr>
   </table></div>
+  <p><b>Referrals.</b> If you sign up through someone's referral link, <b>your email address is
+  shown to the person who referred you</b>, along with the date you signed up and whether your team
+  has added funds — that's how they see which of their invitations worked. Nothing else about you or
+  your usage is shared with them. If you'd rather not be visible that way, sign up without using the
+  link.</p>
   <p>We'll also disclose data where legally required, or where necessary to protect the Service or
   its users from a live security threat. If we're ever compelled to hand over data about you, we'll
   tell you unless we're legally barred from doing so.</p>
@@ -187,9 +192,14 @@
   protective.</p>
 
   <h2 class="sec" id="s7"><span class="n">07</span>Cookies</h2>
-  <p>One cookie: <code>treg_session</code>. It's HTTP-only, SameSite=Lax, and secure over HTTPS. It
-  holds a signed session reference and nothing else. It's strictly necessary to keep you signed in,
-  so there's no consent banner and nothing to opt out of short of signing out.</p>
+  <p>The main one is <code>treg_session</code>. It's HTTP-only, SameSite=Lax, and secure over HTTPS.
+  It holds a signed session reference and nothing else. It's strictly necessary to keep you signed
+  in, so there's no consent banner and nothing to opt out of short of signing out.</p>
+  <p>Two others exist only when you've done the thing that sets them, and both are HTTP-only with the
+  same flags: <code>treg_oauth_return</code> holds the page to return you to after a sign-in detour
+  (a few minutes), and <code>treg_ref</code> holds a referral code if you arrived through someone's
+  invite link, so we can credit them when you create a team (30 days). Neither identifies you, and
+  neither is used for advertising.</p>
   <p>There are no analytics, advertising, or third-party tracking cookies anywhere on the Service.</p>
 
   <h2 class="sec" id="s8"><span class="n">08</span>How we protect it</h2>

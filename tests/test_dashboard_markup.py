@@ -868,3 +868,33 @@ def test_dashboard_delete_org_sends_the_confirmation_slug():
     normalization from any deeper org route). The dashboard already makes the human type the slug —
     if this ever stops being sent, Delete org silently 422s for every dashboard user."""
     assert "'/orgs/'+this.activeOrgId+'?confirm='" in INDEX
+
+
+# --- referrals (view==='referrals') -----------------------------------------------------------
+
+
+def test_referrals_is_a_top_level_view():
+    """Nested inside another view it would render nowhere, and the nav button would look dead —
+    the exact silent failure the dialog checks above exist for."""
+    assert _enclosing_views("<template v-if=\"view==='referrals'\">") == []
+
+
+def test_referrals_is_registered_in_BOTH_view_whitelists():
+    """`go('referrals')` works on click regardless; these two lists are what make it survive a
+    RELOAD and a BACK button. One is `viewFromHash` (fresh load / deep link), the other is the
+    popstate handler. Missing either is invisible until someone refreshes the page."""
+    assert INDEX.count("'connections','referrals'") == 2
+
+
+def test_referral_page_shows_why_a_referral_paid_nothing():
+    """"I referred someone and got nothing" is the ticket this program generates. `capped` and
+    `rejected` must render a reason on the page rather than an empty cell."""
+    assert "refStatus(r)" in INDEX
+    assert "Over your limit" in INDEX and "Not eligible" in INDEX
+
+
+def test_referral_link_is_hidden_until_the_referrer_is_eligible():
+    """A referrer who has never topped up earns nothing (referrals.qualify gate 3). Showing them a
+    live link anyway would convert a friend and silently pay zero."""
+    assert 'v-if="!ref.eligible"' in INDEX
+    assert "Add funds once to unlock your link" in INDEX
