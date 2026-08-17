@@ -359,8 +359,8 @@ def _migrate_to_orgs(conn) -> None:
     # backfill is meaningful — a team that predates the ads work has no click to attribute to.
     if "org" in tables:
         org_cols = {c["name"] for c in insp.get_columns("org")}
-        for col, ddl in (("ad_gclid", "VARCHAR"), ("ad_landing", "VARCHAR"),
-                         ("ad_click_at", "TIMESTAMP"), ("first_call_at", "TIMESTAMP")):
+        for col, ddl in (("ad_gclid", "VARCHAR"), ("ad_click_at", "TIMESTAMP"),
+                         ("ad_landing", "VARCHAR"), ("first_call_at", "TIMESTAMP")):
             if col not in org_cols:
                 conn.execute(text(f"ALTER TABLE org ADD COLUMN {col} {ddl}"))
 

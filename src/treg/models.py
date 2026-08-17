@@ -407,7 +407,9 @@ class AdConversion(SQLModel, table=True):
     action: str  # adsconv.ACTION_* — "signup" | "first_call" | "paid"
     dedupe_key: str = Field(default="")  # provenance (e.g. the Stripe PaymentIntent id); not the key
     value_usd_micro: int = Field(default=0)  # converted to AUD at upload time, never stored as AUD
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # Naive UTC (no tzinfo): columns are TIMESTAMP WITHOUT TIME ZONE, and Postgres rejects tz-aware
+    # values into naive columns. Use _now (defined above) to stay consistent with other tables.
+    created_at: datetime = Field(default_factory=_now)
     uploaded_at: datetime | None = Field(default=None, index=True)
     attempts: int = Field(default=0)
     error: str = Field(default="")  # last upload error; a permanent failure stops the retries
