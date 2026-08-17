@@ -90,6 +90,9 @@ async def _row(clients: AsyncClient) -> dict:
 
 
 # ---- the happy path stores nothing --------------------------------------------------------------
+# Absence tests, so they pass trivially if capture were removed altogether. What they DO pin is the
+# `status_code >= 400` gate — flip capture to unconditional and this one goes red (verified). The
+# feature's presence is pinned by the positive tests above it.
 async def test_a_successful_platform_call_stores_no_evidence(clients: AsyncClient, platform_on):
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 200, r.text
@@ -242,7 +245,11 @@ async def test_a_lowercase_percent_encoded_key_never_survives(clients: AsyncClie
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 400
     row = await _row(clients)
-    assert "a%2fb%2bc%3ddq" not in row["error_response"].lower()
+    assert "a%2fb%2bc%3ddq" not in row["error_response"].lower(), "the key leaked"
+    # And it must be MASKED, not swallowed by the fail-closed backstop. Without this the test cannot
+    # tell the good path from the emergency one, and passes even with every encoding variant removed
+    # (verified) — the backstop would simply drop the whole snippet and the key-absence check holds.
+    assert "bad" in row["error_response"], "the message should survive; only the key is masked"
 
 
 # ---- awkward bodies -----------------------------------------------------------------------------
@@ -275,6 +282,35 @@ async def test_a_huge_error_page_is_truncated(clients: AsyncClient, platform_on,
     assert r.status_code == 500
     row = await _row(clients)
     assert len(row["error_response"]) <= A._ERROR_RESPONSE_MAX + 1
+
+
+def test_a_compression_bomb_does_not_expand_without_bound():
+    """Slicing the input to 8KiB bounds the INPUT, not the output: 20MB of one repeated byte
+    compresses to under 20KB, so an unbounded `gzip.decompress` hands megabytes to four regexes
+    synchronously on the request path.
+
+    Asserted against `_decode_error_body` DIRECTLY, not through a call: end to end the later
+    truncation to 2000 chars hides the difference entirely, so the test would pass with the cap
+    removed (verified) and pin nothing but the truncation that already existed. The intermediate is
+    the only place the bound is observable.
+    """
+    bomb = gzip.compress(b"A" * 20_000_000)
+    assert len(bomb) < 32_000, "sanity: the bomb really is small compressed"
+    out = A._decode_error_body(bomb, "gzip")
+    assert len(out) <= A._ERROR_RESPONSE_MAX * 4 + 1, "decompression ran unbounded"
+
+
+def test_unknown_telemetry_costs_a_column_not_the_whole_row():
+    """The pre-existing bug this feature had to fix first: `record_call` splats telemetry into
+    `CallRecord(**fields)`, so ONE key without a column raised inside `_write`, where a bare except
+    swallowed it — and the entire audit row vanished with no trace anywhere."""
+    from treg.audit import _known_fields
+
+    kept = _known_fields(CallRecord, {"provider": "tikhub", "error_response": "boom",
+                                      "not_a_column_at_all": "xyz"})
+    assert kept == {"provider": "tikhub", "error_response": "boom"}
+    assert CallRecord(user_email="a@b.c", tool_name="t", method="GET", path="/x",
+                      status_code=400, **kept).provider == "tikhub"
 
 
 # ---- the customer-facing surface is unchanged ---------------------------------------------------
