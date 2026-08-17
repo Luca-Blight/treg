@@ -6346,7 +6346,12 @@ async def delete_tool(
 # that follows a credential-looking flag (so a SHORT password like `--password hunter2` is masked too).
 _ARGV_SECRET_RE = re.compile(
     r"\b(?:sk|pk|rk|ghp|gho|ghs|ghu|glpat|AKIA|ASIA|AIza|xox[baprs])[A-Za-z0-9_\-]{6,}\b"
-    r"|eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_.\-]{8,}"          # JWT (base64url with dots)
+    # JWT (base64url with dots). `\b` and the POSSESSIVE `++` are load-bearing, not tidying: without
+    # the anchor, input like "eyJeyJeyJ…" offers a fresh start position every three characters and
+    # each one scans forward for a `.`, which is quadratic. Anchoring leaves one start; `++` removes
+    # backtracking within an attempt (it cannot change what matches here — the class excludes `.`,
+    # so the run always ends at the first one). Same shape guards the argv rule below.
+    r"|\beyJ[A-Za-z0-9_\-]++\.[A-Za-z0-9_.\-]{8,}"
     r"|\b[A-Za-z0-9_\-]{24,}\b")  # any 24+ high-entropy run — deliberately over-masks (git SHAs, UUIDs)
                                   # since in an audit log a false mask is harmless but a real key isn't
 _CRED_FLAG = r"--?(?:token|password|passwd|pass|pwd|api[-_]?key|secret|auth|bearer|credential)s?"
@@ -9292,7 +9297,9 @@ _URL_USERINFO_RE = re.compile(r"://[^/\s:@]+:[^/\s@]+@")
 # that a third-party secret may occasionally survive here.
 _EVIDENCE_SECRET_RE = re.compile(
     r"\b(?:sk|pk|rk|ghp|gho|ghs|ghu|glpat|AKIA|ASIA|AIza|xox[baprs])[A-Za-z0-9_\-]{6,}\b"
-    r"|eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_.\-]{8,}")
+    # Anchored + possessive for the same reason as the argv rule above, and it matters MORE here:
+    # this one runs on a PROVIDER's response body, which is uncontrolled input on the request path.
+    r"|\beyJ[A-Za-z0-9_\-]++\.[A-Za-z0-9_.\-]{8,}")
 
 # Response headers worth keeping on a FAILED platform call. An empty-bodied 401 or 429 is otherwise
 # undiagnosable, and these say which of "bad credential" / "wrong scheme" / "quota gone" / "retry in

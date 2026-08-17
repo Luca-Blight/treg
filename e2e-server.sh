@@ -21,10 +21,17 @@ esac
 # Real provider keys, so a real upstream answers with a real error body — the whole point of e2e.
 set -a; . "$HERE/.env"; set +a
 
+# A FRESH Fernet key per run, generated here rather than written into the file. `treg-dev-server`
+# hardcodes one because its database persists and a new key would orphan every stored secret; this
+# harness deletes its database between runs, so it has no such need — and a committed key is a
+# committed key, whatever it unlocks. (gitleaks flagged the hardcoded one, correctly.)
+SECRET_KEY="$(uv run --frozen --directory "$HERE" python -c \
+  'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+
 PORT="$PORT" \
 TREG_E2E_MARKER=1 \
 TREG_DATABASE_URL="sqlite+aiosqlite:///$HERE/e2e.db" \
-TREG_SECRET_KEY="GENERATED-AT-RUNTIME" \
+TREG_SECRET_KEY="$SECRET_KEY" \
 TREG_ADMIN_TOKEN="E2E-ADMIN-TOKEN" \
   nohup uv run --frozen --directory "$HERE" python -m treg > "$LOG" 2>&1 &
 

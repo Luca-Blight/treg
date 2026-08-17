@@ -294,14 +294,22 @@ async def test_a_provider_correlation_id_survives_redaction(clients: AsyncClient
 
 
 async def test_a_real_secret_shape_is_still_masked(clients: AsyncClient, platform_on, monkeypatch):
-    """Relaxing the catch-all must not relax the targeted rules: known prefixes and JWTs still go."""
+    """Relaxing the catch-all must not relax the targeted rules: known prefixes and JWTs still go.
+
+    The fixture is the placeholder `.gitleaks.toml` already allowlists for exactly this purpose
+    ("proves output redaction masks a key") rather than a fresh invented one — a test whose job is
+    to prove secrets get masked should not itself trip the secret scanner, and reusing the existing
+    entry keeps the allowlist from growing one line per test that needs a key-shaped string.
+    """
+    fake_key = "sk_live_ABCDEFGHIJKLMNOP1234"
+    fake_jwt = "eyJhbGciOi.JIUzI1NiIsInR5cCI6"
     monkeypatch.setattr(A, "relay", _fake_relay(
-        400, b'{"message":"bad token sk_live_ABCDEFGHIJKLMNOP1234 and eyJhbGciOi.JIUzI1NiIsInR5cCI6"}'))
+        400, f'{{"message":"bad token {fake_key} and {fake_jwt}"}}'.encode()))
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 400
     row = await _row(clients)
-    assert "sk_live_ABCDEFGHIJKLMNOP1234" not in row["error_response"]
-    assert "eyJhbGciOi.JIUzI1NiIsInR5cCI6" not in row["error_response"]
+    assert fake_key not in row["error_response"]
+    assert fake_jwt not in row["error_response"]
 
 
 async def test_a_bodyless_failure_still_leaves_a_row(clients: AsyncClient, platform_on, monkeypatch):
