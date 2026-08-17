@@ -238,6 +238,12 @@ class Settings(BaseSettings):
     # can't work without this) rather than silently reusing the wrong client.
     google_ads_client_id: str = ""
     google_ads_client_secret: str = ""
+    # Google Ads conversion upload. Empty customer id = the whole feature is OFF (tests stay inert,
+    # self-hosters send nothing) — the same gate shape analytics.py uses for posthog_key.
+    google_ads_customer_id: str = ""
+    # Which team's google-ads OAuth connection the uploader authenticates as. treg uploads to its
+    # OWN ad account, so this is a platform setting, never a per-tenant one.
+    ads_conv_org_slug: str = ""
 
     linkedin_client_id: str = ""
     linkedin_client_secret: str = ""

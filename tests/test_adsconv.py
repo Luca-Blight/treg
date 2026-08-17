@@ -58,3 +58,32 @@ async def test_org_has_ad_attribution_columns(clients):
         assert got.ad_gclid == "ABC123"
         assert got.ad_landing == "p2"
         assert got.first_call_at is None
+
+
+async def test_queue_writes_one_row_and_is_idempotent(clients):
+    async with session_maker() as db:
+        org = Org(name="t", slug="t-queue", ad_gclid="CLICK1")
+        db.add(org)
+        await db.commit()
+        await db.refresh(org)
+
+        assert await adsconv.queue(db, org, adsconv.ACTION_SIGNUP) is True
+        await db.commit()
+        # Second call for the same (org, action) must be a silent no-op, not an error
+        assert await adsconv.queue(db, org, adsconv.ACTION_SIGNUP) is False
+        await db.commit()
+
+        rows = (await db.execute(
+            select(AdConversion).where(AdConversion.org_id == org.id))).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].uploaded_at is None
+
+
+async def test_queue_is_a_noop_without_a_gclid(clients):
+    # Organic signups are the majority; they must not fill the outbox with unattributable rows.
+    async with session_maker() as db:
+        org = Org(name="t", slug="t-noclick")
+        db.add(org)
+        await db.commit()
+        await db.refresh(org)
+        assert await adsconv.queue(db, org, adsconv.ACTION_SIGNUP) is False
