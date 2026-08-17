@@ -107,7 +107,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   skips the count entirely (zero overhead); the sandbox is exempt. **Soft by design** — it counts the
   best-effort `CallRecord`, so under load it fails *open*, never closed.
 - **Super-admin (cross-tenant, `require_superadmin`):** `/admin/stats|orgs|orgs/{id}|users|tools|calls|
-  health` (reads) + `/admin/users/{id}/superadmin|suspend`, `DELETE /admin/users/{id}`,
+  errors|health` (reads — `errors` is failed **platform** calls with the captured request/response
+  evidence, and runs the 14-day retention pass; see [super-admin](../architecture/super-admin.md))
+  + `/admin/users/{id}/superadmin|suspend`, `DELETE /admin/users/{id}`,
   `/admin/orgs/{id}/suspend`, `DELETE /admin/orgs/{id}` (Phase-2). See
   [super-admin](../architecture/super-admin.md).
 - **Secrets:** `create_secret` / `list_secrets` / `update_secret` (re-encrypts on value change) /
@@ -372,7 +374,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
 - **Audit:** `list_calls` (`GET /calls`, limit clamped 1–500; each row carries its `kind` —
   `call`/`local_run` — for the Activity + Usage views, and `refused_by` — non-null = treg refused
   pre-relay; see the data-model fragment — so `treg audit` can tell "the provider failed" from
-  "we said no").
+  "we said no"). It does **not** carry `error_request`/`error_response`, and defers them so they are
+  not even fetched: the captured evidence is admin-only in v1, and putting it on a team's own feed
+  has to be a deliberate edit in two places rather than a column appearing by accident.
 - **OAuth connect + the provider marketplace:** `oauth_start` (`POST /oauth/start`) creates a
   `PendingOAuth` and returns `consent_url` + `state` + `redirect_uri`; `oauth_callback`
   (`GET /oauth/callback`, open) exchanges the code and creates/updates the oauth secret; `oauth_status`
