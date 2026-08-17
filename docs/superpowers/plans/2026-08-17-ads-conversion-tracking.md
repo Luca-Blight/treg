@@ -505,7 +505,9 @@ In **both** `register_user()` and `create_org()`, after the org exists and befor
     if gclid:
         org.ad_gclid = gclid
         org.ad_landing = landing or None
-        org.ad_click_at = datetime.now(timezone.utc)
+        org.ad_click_at = _utcnow_naive()   # naive UTC: asyncpg rejects tz-aware into a
+                                           # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
+                                           # api.py already defines _utcnow_naive (~line 3832).
         db.add(org)
 ```
 
@@ -519,7 +521,8 @@ In `src/treg/web/index.html`, immediately before `</body>`:
 <script src="/adtrack.js"></script>
 ```
 
-Do **not** add it to `usecase-*.html` yet — those files are untracked and out of scope.
+For the five `usecase-*.html` pages and `resources.html`, see the CONTROLLER ADDENDUM at the end of
+this brief — they are now in scope, but are GENERATED and must not be hand-edited.
 
 - [ ] **Step 6: Run the tests**
 
