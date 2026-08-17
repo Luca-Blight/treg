@@ -1,10 +1,42 @@
+from types import SimpleNamespace
+
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
+from conftest import make_upstream
 from treg import adsconv
-from treg.db import session_maker
+from treg.api import app
+from treg.db import reset_db, session_maker
 from treg.models import AdConversion, Org
+
+
+def _h(token: str) -> dict:
+    return {"X-Treg-Token": token}
+
+
+@pytest.fixture
+async def callenv():
+    """An ad-attributed org with one callable HTTP tool pointed at the fake upstream."""
+    await reset_db()
+    app.state.http = AsyncClient(transport=ASGITransport(app=make_upstream()),
+                                 base_url="http://upstream")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
+        r = await c.post("/users", json={"email": "caller@example.com"})
+        assert r.status_code == 200, r.text
+        token, org_id = r.json()["token"], r.json()["org_id"]
+        sid = (await c.post("/secrets", headers=_h(token),
+                            json={"name": "a-key", "value": "v"})).json()["id"]
+        await c.post("/tools", headers=_h(token),
+                     json={"name": "alpha", "base_url": "http://upstream", "secret_id": sid})
+        async with session_maker() as db:            # attribute the org to an ad click
+            org = await db.get(Org, org_id)
+            org.ad_gclid = "CLICK_CALL"
+            db.add(org)
+            await db.commit()
+        yield SimpleNamespace(c=c, token=token, org_id=org_id)
+    await app.state.http.aclose()
 
 
 def test_usd_to_aud_uses_fixed_rate():
@@ -144,3 +176,36 @@ async def test_org_creation_without_the_cookie_leaves_attribution_null(clients):
     async with session_maker() as db:
         org = (await db.execute(select(Org).where(Org.id == r.json()["org_id"]))).scalar_one()
         assert org.ad_gclid is None
+
+
+async def test_first_successful_call_fires_once(callenv):
+    """Two successful calls: one timestamp, one conversion. The second must be a no-op."""
+    r1 = await callenv.c.get("/call/alpha", headers=_h(callenv.token))
+    assert 200 <= r1.status_code < 400, r1.text
+    r2 = await callenv.c.get("/call/alpha", headers=_h(callenv.token))
+    assert 200 <= r2.status_code < 400, r2.text
+
+    async with session_maker() as db:
+        org = await db.get(Org, callenv.org_id)
+        assert org.first_call_at is not None
+        rows = (await db.execute(select(AdConversion).where(
+            AdConversion.org_id == callenv.org_id,
+            AdConversion.action == adsconv.ACTION_FIRST_CALL))).scalars().all()
+        assert len(rows) == 1
+
+
+async def test_unattributed_org_records_timestamp_but_no_conversion(callenv):
+    """first_call_at is a product metric and must be set for every team; only ad-clicked ones queue."""
+    async with session_maker() as db:
+        org = await db.get(Org, callenv.org_id)
+        org.ad_gclid = None
+        db.add(org)
+        await db.commit()
+
+    assert (await callenv.c.get("/call/alpha", headers=_h(callenv.token))).status_code < 400
+    async with session_maker() as db:
+        org = await db.get(Org, callenv.org_id)
+        assert org.first_call_at is not None
+        rows = (await db.execute(select(AdConversion).where(
+            AdConversion.org_id == callenv.org_id))).scalars().all()
+        assert rows == []

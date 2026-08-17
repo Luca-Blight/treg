@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, quote, unquote, urlsplit, urlunsplit
 
-from sqlalchemy import case, delete, func, or_
+from sqlalchemy import case, delete, func, or_, update
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -9120,6 +9120,34 @@ async def _platform_settle(
     return charged, observed
 
 
+async def _record_first_call(org_id: int) -> None:
+    """Set Org.first_call_at once — the metric that decides whether a marketing channel is real (see
+    marketing/landing/_measurement.md). A CONDITIONAL UPDATE, not read-then-write: concurrent first
+    calls would both see NULL and both fire. Set for EVERY org (it is a product metric in its own
+    right); adsconv.queue() itself no-ops for orgs with no ad_gclid, so the conversion side stays
+    ad-attributed-only.
+
+    Runs on its OWN session, same reason as _platform_settle: this fires after the response is built,
+    while the request's `db` may still be mid-settlement (or mid-rollback from one), and a commit or
+    rollback issued here would land on THAT transaction instead of this one. Never raises — a metric
+    write must not turn a working proxied call into a 500."""
+    try:
+        async with session_maker() as db:
+            result = await db.execute(
+                update(Org)
+                .where(Org.id == org_id, Org.first_call_at.is_(None))
+                .values(first_call_at=_utcnow_naive())  # naive UTC — asyncpg rejects tz-aware here
+            )
+            if result.rowcount:
+                org_row = await db.get(Org, org_id)
+                if org_row is not None:
+                    await adsconv.queue(db, org_row, adsconv.ACTION_FIRST_CALL)
+                await db.commit()
+    except Exception:  # noqa: BLE001 — loudly, but never into the caller's response
+        logging.getLogger("treg.adsconv").error(
+            "first_call_at update/queue failed for org %s", org_id, exc_info=True)
+
+
 async def _relay_live_demo(request: Request, upstream_url: str, key: str, visitor: str):
     """The sandbox's ONE real upstream call (the landing live wire). Deliberately narrower than
     relay(): form-encoded only, auth header built here from the env key (never from a sandbox
@@ -9366,6 +9394,13 @@ async def call_tool(
             await _platform_settle(mk, None, reason="call_crashed")
         raise
     duration_ms = _now_ms() - started
+    # First successful call. The common case — an org that already has one — is an in-memory check
+    # against `caller.org` (freshly loaded this request by require_member): zero DB cost on a path
+    # that runs on every proxied call. Only an org's actual first call touches the database, and it
+    # does so via _record_first_call's own session, never the request's `db` (which _platform_settle,
+    # right below, is about to settle/release — see its docstring for why that session is off-limits).
+    if 200 <= response.status_code < 400 and caller.org_id and caller.org.first_call_at is None:
+        await _record_first_call(caller.org_id)
     if mk is not None and mk.metered:
         charged, observed = await _platform_settle(mk, response.status_code, body)
         _audit(response.status_code, observed_micro=observed, charged_micro=charged,
