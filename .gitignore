@@ -63,3 +63,6 @@ e2e.db*
 # in review, meaningless after it merges.
 /.codex-review-prompt.md
 /.codex-review.sh
+
+# Scratch file used to compose commit messages (heredocs are blocked in this harness).
+/.git-commit-msg
