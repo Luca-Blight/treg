@@ -23,14 +23,15 @@ from datetime import datetime, timedelta, timezone
 import pytest
 import stripe
 from httpx import ASGITransport, AsyncClient
+from sqlmodel import select
 
 from conftest import make_upstream
 
-from treg import billing, ledger
+from treg import adsconv, billing, ledger
 from treg.api import app
 from treg.config import get_settings
 from treg.db import reset_db, session_maker
-from treg.models import Org
+from treg.models import AdConversion, Org
 
 WHSEC = "whsec_test_secret_for_the_suite"
 
@@ -872,3 +873,48 @@ async def test_no_posthog_key_means_no_events(c: AsyncClient, monkeypatch):
     analytics._queue.clear()  # default settings: no key
     assert (await _deliver(c, _pi_event(org_id, pi="pi_no_key", cents=500))).status_code == 200
     assert analytics._queue == []
+
+
+# ---- Google Ads conversion tracking: first top-up ------------------------------------------------
+async def test_first_topup_queues_exactly_one_ad_conversion(c, monkeypatch):
+    """Stripe delivers at least once; a redelivery must not double-count the conversion."""
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    async with session_maker() as db:
+        org = await db.get(Org, org_id)
+        org.ad_gclid = "CLICK_PAID"
+        db.add(org)
+        await db.commit()
+
+    event = _pi_event(org_id, pi="pi_ads_once", cents=2000)   # US$20.00
+    assert (await _deliver(c, event)).status_code == 200
+    assert (await _deliver(c, event)).status_code == 200      # the redelivery
+
+    async with session_maker() as db:
+        rows = (await db.execute(select(AdConversion).where(
+            AdConversion.org_id == org_id,
+            AdConversion.action == adsconv.ACTION_PAID))).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].value_usd_micro == 20_000_000
+        assert rows[0].dedupe_key == "pi_ads_once"
+
+
+async def test_a_second_topup_queues_nothing_further(c, monkeypatch):
+    """We measure becoming a payer, not revenue — a second, different payment adds no conversion."""
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    async with session_maker() as db:
+        org = await db.get(Org, org_id)
+        org.ad_gclid = "CLICK_PAID"
+        db.add(org)
+        await db.commit()
+
+    assert (await _deliver(c, _pi_event(org_id, pi="pi_first", cents=2000))).status_code == 200
+    assert (await _deliver(c, _pi_event(org_id, pi="pi_second", cents=5000))).status_code == 200
+
+    async with session_maker() as db:
+        rows = (await db.execute(select(AdConversion).where(
+            AdConversion.org_id == org_id,
+            AdConversion.action == adsconv.ACTION_PAID))).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].dedupe_key == "pi_first"   # the FIRST payment is the one recorded

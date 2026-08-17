@@ -42,6 +42,7 @@ import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from . import adsconv
 from . import analytics
 from . import email as email_mod
 from . import ledger
@@ -802,6 +803,18 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
                            "auto": auto, "balance_after_micro": after,
                            "org": org.slug if org else ""},
                           groups={"team": org.slug if org else ""})
+        # First top-up only: `fresh` is already the "this delivery moved money" branch, and the
+        # outbox's unique (org_id, action) makes a second top-up a silent no-op. We measure becoming
+        # a payer, not revenue — value-based bidding needs volume treg does not have yet. Guarded like
+        # analytics.capture above: an exception here must not 500 the webhook and make Stripe retry an
+        # already-credited payment.
+        if org is not None:
+            try:
+                await adsconv.queue(db, org, adsconv.ACTION_PAID,
+                                    value_usd_micro=amount_micro, dedupe_key=pi_id)
+                await db.commit()
+            except Exception as e:  # noqa: BLE001 — see comment above
+                log.warning("billing: could not queue ad conversion for org %s: %s", org_id, e)
     return {"handled": True, "credited": fresh, "block_id": block.id,
             "amount_micro": amount_micro, "balance_micro": after}
 
