@@ -714,6 +714,15 @@ Five rules worth keeping:
 - **A 4xx never counts against the provider.** It usually means the caller sent bad parameters;
   counting it would let one agent's mistake make a healthy endpoint look broken to everyone. Only
   2xx versus 5xx decides the rate.
+- **405 is the exception, and the rule's own justification is why.** "The caller sent bad
+  parameters" cannot apply to a method the caller was never allowed to choose: `/call/` refuses a
+  catalog call whose method differs from the recorded one with a 400, *before* relaying. So a 405
+  coming back from the provider says the RECORDED METHOD is wrong — a stale contract, which is the
+  one thing this module exists to surface — and it counts as decided against the endpoint. Without
+  it, the seven straight 405s on `tikhub.x.tiktok-ads-search-ads` sat in the excluded bucket and the
+  WORKS column read `— (7)`: indistinguishable from an endpoint nobody had tried. That is the half
+  of the 2026-08-17 report that survived two rounds of review — fixing `LAST OK` stopped the row
+  claiming success, but only this makes it say *failure*.
 - **A treg refusal is not evidence about the endpoint.** Rows with `refused_by` set (a paywall 402,
   a daily-cap 429 — see the data-model fragment) never reached the provider; they are excluded even
   from `samples`, or a burst of refused calls dresses itself up as traffic. The 2026-08-12 Hunter

@@ -695,10 +695,14 @@ def rank_band(query: str, cat: Catalog, limit: int) -> tuple[list[tuple[dict, in
     # Inferring it from `len(kept) >= RERANK_BAND` cried truncation whenever the group happened to
     # fill the ceiling exactly — telling the caller to narrow a query that had in fact been ranked
     # in full.
-    wider, _ = search(query, cat, RERANK_BAND + 1)
+    # The ceiling bounds the EXTRA rows the tie sweep pulls in; it must never return fewer than the
+    # caller asked for. (Shipped surfaces clamp to 100 and 25, so this was unreachable in
+    # production — but a helper that silently under-delivers is a trap for the next call site.)
+    ceiling = max(limit, RERANK_BAND)
+    wider, _ = search(query, cat, ceiling + 1)
     edge = rows[-1][1]
     group = [r for r in wider if r[1] >= edge]
-    kept = group[:RERANK_BAND]
+    kept = group[:ceiling]
     return kept, total, len(group) > len(kept)
 
 

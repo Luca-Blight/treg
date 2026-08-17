@@ -523,8 +523,14 @@ def tikhub_input_and_test(op: dict, defs: dict, *, method: str = "GET",
     # plain re-ingest would silently undo the hand correction of 2026-08-17. When the spec says
     # this method carries a JSON body and Apifox gave us no body of its own, the documented
     # "query" parameters ARE that body's fields.
+    # `not _spec_declares_query`: relocate only where the spec puts EVERYTHING in the body. A route
+    # that genuinely takes both — TikHub's zhihu scholar search is the one live example — keeps its
+    # query string, and moving those params into the body would break a currently-correct endpoint.
+    # Latent rather than live today (that route's docs supply a body, so `body is None` already
+    # blocked it), which is exactly why it is worth closing before it isn't.
     if (method not in ("GET", "HEAD", "DELETE") and body is None
-            and _spec_wants_json_body(spec_op, method) and qs):
+            and _spec_wants_json_body(spec_op, method)
+            and not _spec_declares_query(spec_op, method) and qs):
         inp.pop("queryParams", None)
         inp["bodyType"] = "json"
         inp["body"] = qs
@@ -564,6 +570,12 @@ def _spec_wants_json_body(spec_op: dict | None, method: str) -> bool:
     op = (spec_op or {}).get(method.lower()) or {}
     content = ((op.get("requestBody") or {}).get("content") or {})
     return any(str(k).startswith("application/json") for k in content)
+
+
+def _spec_declares_query(spec_op: dict | None, method: str) -> bool:
+    """…and does it ALSO declare query parameters for that method?"""
+    op = (spec_op or {}).get(method.lower()) or {}
+    return any(p.get("in") == "query" for p in (op.get("parameters") or []) if isinstance(p, dict))
 
 
 def ingest_tikhub(refresh: bool) -> tuple[Path, dict]:

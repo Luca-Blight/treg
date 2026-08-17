@@ -209,3 +209,39 @@ async def test_never_worked_is_read_off_DECIDED_samples_only(clients: AsyncClien
     assert order[-1] == "broken"
     assert order.index("caller-fault") < order.index("broken"), \
         "caller errors must not sink an endpoint the way a real failure does"
+
+
+async def test_a_relayed_405_is_the_CATALOGS_failure_not_the_callers(clients: AsyncClient):
+    """The one 4xx the caller cannot have caused.
+
+    On a catalog call the method is not the caller's to choose: `_resolve_marketplace_call` refuses
+    a mismatch with a 400 before anything is relayed. So a 405 coming back from the provider means
+    the method THIS CATALOG RECORDED was rejected upstream — a stale contract, which is the single
+    thing these numbers exist to surface. Counting it as "the caller sent bad parameters" is what
+    let `tikhub.x.tiktok-ads-search-ads` show `WORKS — (7)` while being uncallable by anyone."""
+    from treg import cli
+    for _ in range(7):
+        await _record(EP, 405)
+    got = (await _observed([EP]))[EP]
+    assert got["samples"] == 7
+    assert got["ok_rate"] == 0.0, "seven straight 405s are decided evidence, not unknown"
+    assert got["last_ok_days"] is None
+    assert "0%" in cli._observed_cell(got), cli._observed_cell(got)
+
+    # …and an ordinary caller error is still excluded, or this trades one wrong reading for another
+    for _ in range(7):
+        await _record("other.endpoint", 422)
+    caller_fault = (await _observed(["other.endpoint"]))["other.endpoint"]
+    assert caller_fault["ok_rate"] is None
+
+
+async def test_a_405_endpoint_sinks_in_the_ranking(clients: AsyncClient):
+    """The payoff for report #4: the row that cannot be called stops being offered first."""
+    from treg import catalog_store as cs
+    for _ in range(7):
+        await _record(EP, 405)
+    stats = {EP: (await _observed([EP]))[EP],
+             "rival": {"samples": 17, "ok_rate": 1.0}}
+    rows = [({"id": EP, "tier": "extended", "verified": None, "cost": None}, 6),
+            ({"id": "rival", "tier": "extended", "verified": None, "cost": None}, 6)]
+    assert [e["id"] for e, _ in cs.rerank(rows, stats)] == ["rival", EP]

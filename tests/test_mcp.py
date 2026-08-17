@@ -1087,7 +1087,7 @@ async def test_balance_says_WHOSE_grant_and_which_team_by_name(clients):
     assert "use-team" not in (out.get("hint") or "")
 
 
-async def test_the_tie_band_covers_the_WHOLE_equal_scoring_group(clients):
+async def test_the_tie_band_covers_the_WHOLE_equal_scoring_group(clients, monkeypatch):
     """Reranking a slice that was already cut mid-tie cannot put back the row the cut dropped. The
     band therefore keeps taking while the score stays equal — and when a query ties so broadly that
     even the ceiling can't hold the group, it SAYS so rather than presenting an unranked tail as a
@@ -1100,6 +1100,17 @@ async def test_the_tie_band_covers_the_WHOLE_equal_scoring_group(clients):
     everything, _ = cs.search("ad library", cat, 10**6)
     assert scores.count(scores[-1]) == sum(1 for _, s in everything if s == scores[-1]), \
         "the group straddling the cut is taken whole, or the cut is still arbitrary"
+
+    # The boundary the "observe, don't infer" fix exists for: a tie group that EXACTLY fills the
+    # ceiling is NOT truncated. Inferring it from `len(kept) >= RERANK_BAND` answered True here and
+    # told the caller to narrow a query that had in fact been ranked in full. "ad library" has a
+    # 17-row group at limit=8, so a ceiling of 17 sits exactly on it and 16 cuts it.
+    band_at = len(rows)
+    monkeypatch.setattr(cs, "RERANK_BAND", band_at)
+    assert cs.rank_band("ad library", cat, 8)[2] is False, "a group that exactly fills is not cut"
+    monkeypatch.setattr(cs, "RERANK_BAND", band_at - 1)
+    assert cs.rank_band("ad library", cat, 8)[2] is True, "one row short of the group IS a cut"
+    monkeypatch.undo()
 
     # a single word ties across hundreds — bounded, and the bound is announced
     wide, wide_total, wide_trunc = cs.rank_band("tiktok", cat, 8)
@@ -1123,6 +1134,16 @@ async def test_a_near_miss_never_suggests_a_DIFFERENT_provider(clients):
         for suggested in cs.near_ids(crossing, cat):
             assert cat.by_id[suggested]["provider"] == crossing.split(".")[0], suggested
 
+    # POSITIVE cases for the two id shapes the same-provider rule silently killed. Without these the
+    # assertion above is vacuous for them — "suggests nothing" trivially satisfies "suggests nothing
+    # cross-provider", which is how a fix that helped no hyphenated provider kept a green test.
+    hyphenated = next(e for e in cat.by_id if e.startswith("google-ads.x."))
+    assert cs.near_ids(hyphenated.replace(".x.", ".", 1), cat) == [hyphenated], \
+        "a provider whose name contains a hyphen must still resolve"
+    x_owned = next(e for e in cat.by_id if e.split(".")[0] == "x")
+    assert x_owned in cs.near_ids(x_owned, cat), \
+        "the provider literally named 'x' must not be erased by stripping the 'x' tier marker"
+
 
 def test_a_header_token_is_not_told_to_run_a_command_that_lists_nothing():
     """`treg mcp grants` only has an answer for an OAuth grant. A header token already carries its
@@ -1140,3 +1161,32 @@ def test_a_header_token_is_not_told_to_run_a_command_that_lists_nothing():
     assert "use-team" not in (plain.get("hint") or "")
     assert "use-team" in granted["hint"]
     assert plain["team"] == "superdesign", "and it still labels the team it does know"
+
+
+async def test_the_SEARCH_TOOL_itself_ranks_on_evidence_not_just_the_helper(clients):
+    """The helpers were tested; the wiring was not. `rerank()` could have been dropped from both
+    call sites and every ranking test would still have passed, because they call the helper
+    directly. This one goes through the MCP tool with real rows in the database."""
+    from treg import endpoint_stats
+    from treg.db import session_maker
+    from treg.models import CallRecord
+
+    good = "scrapecreators.x.v1-tiktok-ad-library-search"
+    broken = "tikhub.x.tiktok-ads-search-ads"
+    async with session_maker() as db:
+        for _ in range(17):
+            db.add(CallRecord(org_id=1, user_email="a@b.c", tool_name=good, method="GET", path="/x",
+                              status_code=200, endpoint_id=good, duration_ms=100))
+        for _ in range(7):      # the uncallable one, failing the way the report saw it
+            db.add(CallRecord(org_id=1, user_email="a@b.c", tool_name=broken, method="POST", path="/x",
+                              status_code=405, endpoint_id=broken, duration_ms=100))
+        await db.commit()
+    assert endpoint_stats.MIN_SAMPLES <= 7
+
+    token = (await clients.post("/users", json={"email": "ranker@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "catalog_search", {"query": "ad library", "limit": 8}, token=token)
+    ids = [r["endpoint_id"] for r in out["results"]]
+    assert ids[0] == good, ids
+    assert broken not in ids, "the endpoint that answers 405 to every call must not be offered"
+    assert out["results"][0]["works"] == 1.0 and out["results"][0]["samples"] == 17

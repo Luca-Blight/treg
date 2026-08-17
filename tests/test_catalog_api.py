@@ -829,3 +829,18 @@ def test_a_published_spec_outranks_the_OPTIONS_probe():
     assert resolve_method(spec_op={}, probed="POST") == "POST"
     assert resolve_method(spec_op={}, probed=None, documented="delete") == "DELETE"
     assert resolve_method(spec_op={}, probed=None) == "GET"
+
+
+def test_a_stored_EMPTY_json_body_survives_into_the_call_template():
+    """`--data '{}'` is not noise: these are POSTs that take no arguments but still require a JSON
+    body, and `if body:` dropped it — printing a command that differs from the one that was tested,
+    against handlers that reject an empty body outright."""
+    cat = cs.load()
+    empties = [e for e in cat.endpoints if (e.get("test_request") or {}).get("body") == {}]
+    assert empties, "the fixture for this rule is the catalog itself; it must not be empty"
+    for ep in empties:
+        line = cs.call_template(ep)
+        assert "--data '{}'" in line, f"{ep['id']}: {line}"
+    # …and a GET is not handed a body it never had
+    gets = [e for e in cat.endpoints if e["method"] == "GET"]
+    assert not any("--data" in cs.call_template(e) for e in gets)

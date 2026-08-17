@@ -67,6 +67,12 @@ async def observed(
     the wrong parameters. It is excluded from `ok_rate` entirely rather than counted against the
     provider, because otherwise one agent's bad query would make a healthy endpoint look broken to
     everybody. Only 2xx (success) and 5xx/timeouts (the provider's fault) decide the rate.
+
+    **405 is the exception**, and it is one the rule's own justification demands. "The caller sent
+    the wrong parameters" cannot apply to a method the caller was never allowed to pick: a catalog
+    call whose method differs from the recorded one is refused with a 400 before it is relayed. So a
+    405 coming back from the provider says the recorded method is wrong — a stale catalog contract,
+    not a bad query — and it is counted as decided against the endpoint.
     """
     ids = [e for e in dict.fromkeys(endpoint_ids) if e]
     if not ids:
@@ -78,7 +84,16 @@ async def observed(
             CallRecord.endpoint_id,
             func.count().label("n"),
             func.sum(case((CallRecord.status_code < 300, 1), else_=0)).label("ok"),
-            func.sum(case((CallRecord.status_code >= 500, 1), else_=0)).label("bad"),
+            # 5xx, plus the one 4xx the caller cannot possibly have caused: 405. On a CATALOG call
+            # the method is not the caller's to choose — `_resolve_marketplace_call` refuses a
+            # mismatch with a 400 BEFORE anything is relayed — so a 405 that came back from the
+            # provider means the method THIS CATALOG RECORDED was rejected upstream. That is
+            # evidence about the catalog being stale, which is the one thing these numbers exist to
+            # surface, and lumping it in with "the caller sent bad parameters" is what let seven
+            # straight 405s keep reading as `WORKS — (7)` — the exact row the 2026-08-17 report
+            # could not interpret.
+            func.sum(case(((CallRecord.status_code >= 500) | (CallRecord.status_code == 405), 1),
+                          else_=0)).label("bad"),
             # LAST OK means last SUCCESS. This was `max(created_at)` over every row, success or
             # not — so an endpoint that had been called seven times today and failed every one
             # read "LAST OK: today", which is the opposite of the truth and exactly how a broken
