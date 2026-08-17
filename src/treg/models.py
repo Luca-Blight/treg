@@ -751,6 +751,23 @@ class OAuthCode(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
+class OAuthGrant(SQLModel, table=True):
+    """Mutable authority for one refresh-token family, separate from token provenance.
+
+    A token row records the team that token was ISSUED under and is immutable after issuance. The
+    family record records the team future tokens should spend from, which the user may change. These
+    used to be one `org_id`, so moving a grant rewrote retired rows and a later reuse-detection audit
+    blamed the destination team for a token that had actually been issued under the source team.
+
+    `granted_at` is the consent time, not a rotation time. Rotation creates token rows; it does not
+    create a new human authorization.
+    """
+
+    family_id: str = Field(primary_key=True)
+    current_org_id: int = Field(foreign_key="org.id", index=True)
+    granted_at: datetime = Field(default_factory=_now)
+
+
 class OAuthRefresh(SQLModel, table=True):
     """A refresh token: the thing that keeps a connector working past the access token's hour.
 
@@ -765,8 +782,8 @@ class OAuthRefresh(SQLModel, table=True):
     reconnects; a thief loses the token. The failure mode is inconvenience on one side and containment
     on the other, which is the right way round.
 
-    `org_id` rides along because it is what the human chose at consent. A refresh must not become a
-    chance to quietly re-pick a team.
+    `org_id` is immutable token provenance: the team this particular token was ISSUED under. Mutable
+    family authority lives in `OAuthGrant.current_org_id`, so moving a grant cannot rewrite history.
     """
 
     __table_args__ = (UniqueConstraint("token_hash", name="uq_oauth_refresh_token"),)

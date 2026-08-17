@@ -85,7 +85,7 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   refusal passes through — using the identity stashed in `request.state` (a bad-token 401 records
   anonymously). It is what tells "the provider failed" apart from "we said no": a paywall 402 must not read
   as a provider error, and `endpoint_stats` excludes refused rows entirely.
-  It also carries **`error_request` / `error_response`** (migration A35, nullable) — the redacted,
+  It also carries **`error_request` / `error_response`** (migration A36, nullable) — the redacted,
   truncated evidence for a **failed PLATFORM-tier call only**, and the one exception to "bodies are
   never stored". Written when `mk.metered` and the call failed, from three places: the settle path
   (the provider's own body, since a relayed non-2xx returns as a `Response` and is never raised, plus
@@ -219,17 +219,22 @@ surface at 3am in an agent's log. See [catalog](catalog.md) and `docs/CAPABILITY
 
 ## OAuth (the MCP authorization server)
 
-Three tables, all added with the MCP front door. See `architecture/mcp-oauth.md` for the reasoning.
+Four tables, all added with the MCP front door. See `architecture/mcp-oauth.md` for the reasoning.
 
 | Table | Holds | Note |
 |---|---|---|
 | `OAuthClient` | a client that may ask for a token | one row shape for both DCR and CIMD, so authorize/consent/token never ask how it arrived |
 | `OAuthCode` | a one-time authorization code | deleted on redemption, not flagged — a used code that still exists is a race |
+| `OAuthGrant` | mutable authority for one refresh family | `current_org_id` is where future tokens spend; `granted_at` is the stable consent time |
 | `OAuthRefresh` | a refresh token, **hashed** | `family_id` groups every descendant of one grant, so a replay can revoke all of them |
 
-`OAuthCode` and `OAuthRefresh` are org-scoped and therefore listed in `_ORG_SCOPED_MODELS`: a pending
-grant naming a deleted team is a dangling row. `OAuthClient` is not — a client is global, and nothing
-about it belongs to one team.
+`OAuthCode` and `OAuthRefresh` are org-scoped and therefore listed in `_ORG_SCOPED_MODELS`; `OAuthGrant`
+is cleared explicitly by `_cascade_delete_org` because its FK is intentionally named `current_org_id`.
+The cascade revokes the union of families that name the deleted team through current authority or
+any historical `OAuthRefresh.org_id`: deleting only a retired provenance row would erase the replay
+evidence while leaving its live descendants usable. `OAuthClient` is not org-scoped — a client is
+global, and nothing about it belongs to one team. Each `OAuthRefresh.org_id` is immutable issue
+provenance; moving a family updates only `OAuthGrant.current_org_id`.
 
 ## Caller tags (`X-Treg-Meta`)
 
@@ -247,7 +252,7 @@ records), `budget_dim`/`budget_val` (the indexed copy of the primary pair) and `
 
 > `audit.record_call` splats its `telemetry` dict as `**kwargs` into `CallRecord()`, and `audit._write`
 > swallows every exception. **A telemetry key without a matching column used to silently kill every
-> audit write** — the table went dark with no error anywhere. Fixed alongside migration A35:
+> audit write** — the table went dark with no error anywhere. Fixed alongside migration A36:
 > `_known_fields` filters telemetry against `CallRecord.model_fields`, so an unknown key now costs one
 > column and logs a warning naming it, and the surviving swallow in `_write` logs instead of passing.
 > Columns and telemetry keys should still land together — the guard makes a mismatch survivable and

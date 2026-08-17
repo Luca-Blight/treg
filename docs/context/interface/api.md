@@ -206,15 +206,27 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   capability_description, platform, platform_label, score}`. Ranking is plain token containment
   (`catalog_store.search`, no deps, no embeddings): **every** query token must match somewhere (AND, so a
   second word narrows), and score sums each token's best field weight — capability id/description +
-  platform label/slug (3) > summary (2) > id/path/provider (1). Ties break core-before-extended, then
-  verified-before-not, then id, so the order is total and reproducible. `catalog_endpoint`
-  (`GET /catalog/endpoints/{endpoint_id}`, 404 unknown) answers everything in ONE round-trip:
+  platform label/slug (3) > summary (2) > id/path/provider (1). Ties — the COMMON case, since token
+  containment scores whole families identically — are then settled by `catalog_store.rerank()` over
+  the band `rank_band()` returns (the whole equal-scoring group at the cut, capped at `RERANK_BAND`
+  with a hint when that cap bites), on **measured reliability, then core-before-extended, then price**, with
+  `verified` and id keeping the order total; each result carries the `observed` block that decided it.
+  See [catalog](../architecture/catalog.md#the-evidence-decides-the-order-not-just-the-detail-page).
+  `catalog_endpoint` (`GET /catalog/endpoints/{endpoint_id}`) answers everything in ONE round-trip:
   `{endpoint, provider:{service, display_name, limits?, pricing_url?, docs?}, siblings[], call_template,
   example_response, hints[]}` — `siblings` are the other providers implementing the same capability (so a
   price/verification comparison needs no second call), `example_response` is inlined rather than left
   behind `/catalog/examples`, and `call_template` is a paste-ready `treg call …` line built from the
   endpoint's `test_request` (the request the verifier actually ran) falling back to documented examples.
   `hints` on both routes carries the next command, since finding an endpoint is never the goal.
+  An unknown id 404s with `{error, hint, did_you_mean[]}` rather than a bare string: an id is not
+  free text, and one that misses by a segment (`lusha.companies-signals` for
+  `lusha.x.companies-signals` — what a model produces relaying an id through a summary) broke the
+  loop at its first step, whereupon the usual next move is to invent another id and fail again.
+  `catalog_store.near_ids()` matches on segment overlap ignoring the tier marker; no near miss means
+  an empty list and a search hint, never a confidently wrong suggestion. `/call/` answers the same
+  way for a dotted target that misses — the branch where money is on the line used to reply "no tool
+  … in this org", describing the wrong half of treg.
   A zero-result search additionally points at **`POST /tool-requests`** (open, per-IP rate-limited,
   fields capped): file what the catalog is missing — stored as a `ToolRequest` row (see
   [data-model](../architecture/data-model.md)) with identity attached only when the caller happens
@@ -317,7 +329,21 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   itself. See [skill.md](skill.md) for the other three distribution doors.
   `terms_page` (`GET /terms`) + `privacy_page` (`GET /privacy`) serve the hosted registry's legal pages
   (`_legal_page`, no-cache) with `legal_css` (`GET /legal.css`) as the shared skin — `/privacy` is also
-  the URL given to OAuth providers at app-verification time, so don't rename it. Provider brand marks are
+  the URL given to OAuth providers at app-verification time, so don't rename it.
+  `resources_page` (`GET /resources`) is the hub for the outcome pages and the **only** thing linking to
+  them: the landing footer and each page's own footer carry one `resources` link rather than five that grow
+  with the cluster, and without the hub every `/use-cases/*` page is an orphan no crawler reaches.
+  `resources.html` is generated alongside them, so a new page appears on the hub automatically.
+  `use_case_page` (`GET /use-cases/{slug}`) serves the per-vertical **outcome landing pages** — the
+  destinations for search ads and the organic `/use-cases/` cluster — off the `_USE_CASES` slug map, with
+  `usecase_css` (`GET /usecase.css`) as their shared skin, the same split as the legal pages. Two
+  deliberate differences from `/`: an unknown slug is a **404 rather than a fall-through** to the SPA (a
+  typo in a live ad should be visible, not silently swallowed), and a signed-in visitor is **not**
+  redirected to `/app` — bouncing a returning user off the page an ad paid to reach would make the
+  campaign data unreadable. The HTML in `web/usecase-*.html` is **generated** from
+  `marketing/landing/*.md` by that directory's `build.py` + `build_html.py`; never hand-edit it, and note
+  the generator refuses to emit anything past the ad-kit heading so bid and negative keywords cannot
+  reach a public page. Provider brand marks are
   mounted at `/logos` (`StaticFiles` over `web/logos/`, resolved by convention `logos/<service>.svg`).
   `dashboard_marketplace` (`GET /app/marketplace/{service}`) serves the plain SPA (a connect page is only
   meaningful to a signed-in member, so no OG meta).
@@ -513,6 +539,8 @@ treg is an OAuth authorization server for its own MCP endpoint. Detail in
     POST /oauth/authorize                           the human's decision — approval is never a GET
     POST /oauth/token                               authorization_code and refresh_token grants
     POST /oauth/revoke                              RFC 7009; ends the whole refresh family, always 200
+    GET  /oauth/grants                              live (non-retired, non-expired) grant families
+    POST /oauth/grants/{family}/team                move family authority to another member team
     POST /mcp/                                      the MCP transport itself
 
     GET  /connect-demo                              a page that pretends to be an MCP client

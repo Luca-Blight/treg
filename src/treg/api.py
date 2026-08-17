@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, quote, quote_plus, unquote, urlsplit, urlunsplit
 
-from sqlalchemy import case, delete, func, or_, update
+from sqlalchemy import case, delete, func, or_, text, update
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -59,7 +59,7 @@ from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, plat
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
                      IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
-                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, TagBudget, TagSpend, Tool,
+                     OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, TagBudget, TagSpend, Tool,
                      ToolRequest, User)
 from .proxy import relay
 
@@ -543,21 +543,40 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     }
 
 
+async def _observed_or_empty(db: AsyncSession, endpoint_ids: list[str]) -> dict[str, dict]:
+    """What the served calls say about these endpoints — or `{}` if that query is unavailable.
+
+    Telemetry must never take the catalog down: the catalog answers signed-out readers and is the
+    step every agent starts from, while these numbers are an enrichment on top of it.
+    """
+    try:
+        return await endpoint_stats.observed(db, endpoint_ids)
+    except Exception:  # noqa: BLE001
+        logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
+        return {}
+
+
 @app.get("/catalog/search")
-async def catalog_search(q: str = "", limit: int = 25) -> dict:
+async def catalog_search(q: str = "", limit: int = 25,
+                         db: AsyncSession = Depends(get_session)) -> dict:
     """Open: free-text search across the whole catalog — the DISCOVER half of the loop.
 
     An agent that knows what it wants ("tiktok comments") shouldn't have to guess which platform
     shelf hides it. Ranking is plain token matching (see `catalog_store.search`) so results are
-    reproducible and explainable; `hints` carries the next command, since finding the endpoint is
-    never the goal — inspecting or calling it is."""
+    reproducible and explainable; equal scores — the common case, not the edge — then break on what
+    treg has MEASURED and on price, so the cut stops being file order. `hints` carries the next
+    command, since finding the endpoint is never the goal — inspecting or calling it is."""
     cat = catalog_store.load()
     limit = max(1, min(limit, 100))
-    ranked, total = catalog_store.search(q, cat, limit)
+    ranked, total, tie_truncated = catalog_store.rank_band(q, cat, limit)
+    stats = await _observed_or_empty(db, [ep["id"] for ep, _ in ranked])
+    ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
     results = [
         catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
         | catalog_store.endpoint_context(ep, cat)
-        | {"score": score}
+        # The evidence that decided the order, shown rather than merely applied: a caller comparing
+        # two rows should be able to see WHY one is above the other.
+        | {"score": score, "observed": stats.get(ep["id"])}
         for ep, score in ranked
     ]
     if not q.strip():
@@ -571,6 +590,12 @@ async def catalog_search(q: str = "", limit: int = 25) -> dict:
                  f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
         if total > len(results):
             hints.append(f"{total - len(results)} more matches — raise limit (max 100)")
+        if tie_truncated:
+            # No silent caps. Every row here scored the same, more of them scored the same than the
+            # evidence sort was allowed to weigh, so the tail of this list is back to being ordered
+            # by nothing in particular — say so instead of letting it read as a ranked answer.
+            hints.append(f"{q!r} matches too broadly to rank on measured reliability past the first "
+                         f"{catalog_store.RERANK_BAND} equally-scoring rows — add a word to narrow it")
     return {"query": q, "count": len(results), "total": total, "results": results, "hints": hints}
 
 
@@ -585,7 +610,12 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
     cat = catalog_store.load()
     ep = cat.by_id.get(endpoint_id)
     if ep is None:
-        raise HTTPException(status_code=404, detail=f"unknown endpoint {endpoint_id!r}")
+        # Name the near misses. An id that is one segment off is the common miss, and a bare 404
+        # ends the search → get → call loop at its first step with nothing to try next.
+        raise HTTPException(status_code=404, detail={
+            "error": f"unknown endpoint {endpoint_id!r}",
+            "hint": catalog_store.unknown_id_hint(endpoint_id, cat),
+            "did_you_mean": catalog_store.near_ids(endpoint_id, cat)})
     view = (catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
             | catalog_store.endpoint_context(ep, cat))
     siblings = [
@@ -604,11 +634,7 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
     # of "compare providers" that only treg can answer (see endpoint_stats + CAPABILITY-CHOICE-PLAN).
     # Attached to the SAME response because the choice is made here; a second round-trip to compare
     # reliability is a round-trip an agent will skip.
-    try:
-        stats = await endpoint_stats.observed(db, [endpoint_id] + [s["id"] for s in siblings])
-    except Exception:  # noqa: BLE001 — telemetry must never take the catalog down
-        logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
-        stats = {}
+    stats = await _observed_or_empty(db, [endpoint_id] + [s["id"] for s in siblings])
     view = view | {"observed": stats.get(endpoint_id)}
     siblings = [s | {"observed": stats.get(s["id"])} for s in siblings]
 
@@ -2086,6 +2112,20 @@ async def robots_txt():
                              headers={"Cache-Control": "max-age=3600"})
 
 
+# The outcome landing pages: one per vertical, the destinations for search ads and the organic
+# `/use-cases/` cluster. Their COPY is generated from marketing/landing/*.md — never hand-edit
+# the HTML in web/, it is overwritten by that build. The slug is the public URL and is quoted in
+# live ad campaigns, so treat this map as an API: add freely, never rename or remove without a
+# redirect.
+_USE_CASES = {
+    "seo-data-for-ai-agents": "usecase-seo.html",
+    "lead-enrichment-for-ai-agents": "usecase-enrichment.html",
+    "social-trend-research-for-ai-agents": "usecase-social.html",
+    "competitor-ad-research-for-ai-agents": "usecase-ads.html",
+    "company-research-for-ai-agents": "usecase-company.html",
+}
+
+
 # The pages a crawler should know about. Everything here must answer 200 to a GET — a sitemap that
 # lists a redirect or a 404 is worse than no sitemap, so `tests/test_seo.py` walks every entry.
 # Deliberately absent: /contact and /help (alias URLs for the one support.html), /vendor-listing.md
@@ -2097,10 +2137,19 @@ _SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
     ("/catalog", "", "0.9"),
     ("/tutorial", "tutorial.html", "0.8"),
     ("/docs", "", "0.7"),
+    ("/resources", "resources.html", "0.8"),
     ("/vendor-listing", "vendor-listing.md", "0.5"),
     ("/support", "support.html", "0.4"),
     ("/terms", "terms.html", "0.2"),
     ("/privacy", "privacy.html", "0.2"),
+    # The outcome pages. Listed WITHOUT a trailing slash on purpose: `/use-cases/<slug>/` 307s to
+    # this form, and a sitemap that lists a redirect is worse than no sitemap. Their canonical tags
+    # match these exactly. `_USE_CASES` is the one source for the set, so a new page is listed the
+    # moment it is routed, and `tests/test_seo.py` will fail if one stops answering 200.
+    *(
+        (f"/use-cases/{slug}", name, "0.8")
+        for slug, name in _USE_CASES.items()
+    ),
 )
 
 
@@ -2308,6 +2357,41 @@ async def privacy_page():
     return _legal_page("privacy.html")
 
 
+@app.get("/resources", include_in_schema=False)
+async def resources_page():
+    """The hub for the outcome pages. It exists for two reasons beyond navigation: without it the
+    `/use-cases/*` pages are orphans that no crawler reaches, and it gives the footer one durable
+    link instead of five that grow every time a page is added."""
+    page = _WEB_DIR / "resources.html"
+    if not page.exists():
+        raise HTTPException(status_code=404, detail="resources.html not bundled")
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/usecase.css", include_in_schema=False)
+async def usecase_css():
+    """The shared skin for /use-cases/* (landing-page tokens, one copy — same deal as legal.css)."""
+    f = _WEB_DIR / "usecase.css"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="usecase.css not bundled")
+    return FileResponse(f, media_type="text/css", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/use-cases/{slug}", include_in_schema=False)
+async def use_case_page(slug: str):
+    """One outcome page. Unlike the root landing this does NOT redirect a signed-in visitor to
+    /app: these are ad destinations, and bouncing a returning user away from the page they paid
+    to reach would make the campaign data unreadable."""
+    name = _USE_CASES.get(slug.strip("/").lower())
+    if not name:
+        raise HTTPException(status_code=404, detail="unknown use case")
+    page = _WEB_DIR / name
+    if not page.exists():
+        raise HTTPException(status_code=404, detail=f"{name} not bundled")
+    # no-cache: these are edited against live campaign data and must never serve stale.
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+
+
 class OAuthClientRegistration(BaseModel):
     """RFC 7591 registration request. Extra fields are ignored rather than refused — clients send
     plenty we do not use, and rejecting an unknown key would break them for no benefit."""
@@ -2395,11 +2479,64 @@ AUTH_CODE_TTL_S = 300   # a code is redeemed within seconds; five minutes is gen
 REFRESH_TTL_S = 30 * 24 * 3600   # a connector the user still uses keeps working for a month
 
 
+async def _ensure_grant(family_id: str, db: AsyncSession) -> OAuthGrant | None:
+    """Return this family's authority row, reconstructing a rolling-deploy gap if necessary.
+
+    A35 backfilled every family that existed when a new instance started, but a rolling deploy runs
+    old and new binaries together. An old instance can therefore issue another OAuthRefresh AFTER
+    the one-time backfill, without the OAuthGrant row it knows nothing about. Listing then showed a
+    null team, team moves answered 404, and the first rotation made the grant look newly consented.
+
+    The oldest refresh row is the only surviving consent-time authority for such a family. The raw
+    upsert is intentional: both supported databases implement this spelling, and ON CONFLICT makes
+    two new instances repairing the same old-binary write converge instead of racing into a unique
+    constraint failure.
+    """
+    grant = await db.get(OAuthGrant, family_id)
+    if grant is not None:
+        return grant
+    oldest = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.family_id == family_id
+    ).order_by(OAuthRefresh.created_at, OAuthRefresh.id).limit(1))).scalars().first()
+    if oldest is None:
+        return None
+    await db.execute(text(
+        "INSERT INTO oauthgrant (family_id, current_org_id, granted_at) "
+        "VALUES (:family_id, :org_id, :granted_at) "
+        "ON CONFLICT (family_id) DO NOTHING"
+    ), {"family_id": family_id, "org_id": oldest.org_id, "granted_at": oldest.created_at})
+    return await db.get(OAuthGrant, family_id)
+
+
+async def _family_org(family_id: str, db: AsyncSession) -> int | None:
+    """Which team future tokens in this grant family spend from.
+
+    Mutable family authority has its own row. Token rows retain the team each token was issued under
+    so a later replay audit keeps its original attribution. The previous oldest-token authority made
+    moves stick across refresh races, but only by rewriting retired history.
+
+    The residual window is the one no design without distributed locking removes: an access token
+    already minted for the old team keeps working until it expires (≤ ACCESS_TTL_SECONDS). The
+    FAMILY, though, converges on the move — the next rotation reads this row and mints for the new
+    team — so the move is never undone, only briefly overlapped.
+    """
+    grant = await _ensure_grant(family_id, db)
+    return grant.current_org_id if grant is not None else None
+
+
+def _refresh_is_live(row: OAuthRefresh, *, now: datetime | None = None) -> bool:
+    """One definition of a usable grant token, shared by refresh, listing and team moves."""
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+    return row.retired_at is None and row.expires_at >= now
+
+
 async def _issue_refresh(*, family_id: str, client_id: str, user_id: int, org_id: int,
                          resource: str, scope: str, db: AsyncSession) -> str:
     """Mint a refresh token and store only its hash — a database copy is a database leak."""
     import secrets as _s
 
+    if await db.get(OAuthGrant, family_id) is None:
+        db.add(OAuthGrant(family_id=family_id, current_org_id=org_id))
     token = _s.token_urlsafe(40)
     db.add(OAuthRefresh(
         token_hash=crypto.hash_token(token), family_id=family_id, client_id=client_id,
@@ -2787,7 +2924,7 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
         return bad("invalid_grant",
                    "this refresh token was already used — the grant has been revoked, sign in again")
 
-    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+    if not _refresh_is_live(row):
         return bad("invalid_grant", "refresh token expired")
     if client_id and client_id != row.client_id:
         return bad("invalid_grant", "refresh token was issued to a different client")
@@ -2797,18 +2934,31 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
     user = await db.get(User, row.user_id)
     if user is None or user.suspended:
         return bad("invalid_grant", "the account behind this grant is no longer active")
-    org = await db.get(Org, row.org_id)
+    live_org_id = await _family_org(row.family_id, db) or row.org_id
+    org = await db.get(Org, live_org_id)
     if org is None or org.suspended:
         return bad("invalid_grant", "the team on this grant is no longer available")
+    # STILL a member? The grant is the user's consent to spend a TEAM's balance, and leaving (or
+    # being removed from) that team ends the standing they consented with. Without this a grant
+    # kept minting tokens forever: every downstream call was refused by `require_member`, so the
+    # damage was bounded, but the grant lay dormant and sprang back to life — with no new consent —
+    # the day the membership was restored.
+    still_in = (await db.execute(select(Membership).where(
+        Membership.user_id == row.user_id, Membership.org_id == live_org_id))).scalar_one_or_none()
+    if still_in is None:
+        await _revoke_refresh_family(row.family_id, "membership ended", db)
+        await db.commit()
+        return bad("invalid_grant",
+                   "the account behind this grant is no longer a member of its team — sign in again")
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     row.retired_at, row.retired_reason = now, "rotated"
     db.add(row)
     replacement = await _issue_refresh(family_id=row.family_id, client_id=row.client_id,
-                                       user_id=row.user_id, org_id=row.org_id,
+                                       user_id=row.user_id, org_id=live_org_id,
                                        resource=row.resource, scope=row.scope, db=db)
     access = mcp_oauth.make_access_token(
-        user_id=row.user_id, org_id=row.org_id, scope=row.scope,
+        user_id=row.user_id, org_id=live_org_id, scope=row.scope,
         audience=mcp_oauth.normalize_resource(row.resource),  # heal pre-normalization spellings
         token_version=user.token_version)
     await db.commit()
@@ -3311,6 +3461,30 @@ _ORG_SCOPED_MODELS = (
 
 async def _cascade_delete_org(org: Org, db: AsyncSession) -> None:
     """Delete every org-scoped row then the org. Shared by owner delete_org + admin force-delete."""
+    # OAuthGrant names its mutable team `current_org_id` to distinguish family authority from the
+    # immutable `OAuthRefresh.org_id` provenance. A family can name this team on EITHER side: after
+    # a move, only a retired provenance row still names the former team. Deleting just that row
+    # destroys the replay evidence while leaving the live family authorised elsewhere, so a stolen
+    # old token becomes "unknown" instead of revoking every descendant. Revoke the union of both
+    # paths; preserving historical provenance across team deletion would need a nullable/soft FK.
+    authority_grants = (await db.execute(select(OAuthGrant).where(
+        OAuthGrant.current_org_id == org.id))).scalars().all()
+    provenance_families = (await db.execute(select(OAuthRefresh.family_id).where(
+        OAuthRefresh.org_id == org.id))).scalars().all()
+    family_ids = {grant.family_id for grant in authority_grants} | set(provenance_families)
+    if family_ids:
+        # Delete the WHOLE family, including rows issued under other teams. Keeping only the live
+        # destination token would be exactly the partial revocation that reuse detection forbids.
+        for token in (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.family_id.in_(family_ids)))).scalars().all():
+            await db.delete(token)
+        grants = (await db.execute(select(OAuthGrant).where(
+            OAuthGrant.family_id.in_(family_ids)))).scalars().all()
+    else:
+        grants = []
+    for grant in grants:
+        await db.delete(grant)
+    await db.flush()
     for model in _ORG_SCOPED_MODELS:
         for r in (await db.execute(select(model).where(model.org_id == org.id))).scalars().all():
             await db.delete(r)
@@ -3820,6 +3994,101 @@ async def create_org(
         raise HTTPException(status_code=409, detail="could not allocate a unique org slug — retry")
     await _grant_signup_promo(db, org)
     return {"org": org.slug, "org_id": org.id, "name": org.name, "role": "owner", "token": token}
+
+
+class GrantTeamIn(BaseModel):
+    team: str = ""          # the slug (or numeric id) of a team the signed-in user belongs to
+
+
+@app.get("/oauth/grants", include_in_schema=False)
+async def oauth_grants(user: User = Depends(require_identity),
+                       db: AsyncSession = Depends(get_session)) -> list[dict]:
+    """The MCP connections this account has granted, and which team each one spends from.
+
+    The team on a grant was chosen once, on a consent screen, and after that it was invisible from
+    every side: the client reports a slug, the CLI lists the teams of whichever identity is logged
+    in THERE, and the two need not be the same account at all. Somebody spent from a team they could
+    not see listed anywhere and had no way to recognise as wrong.
+    """
+    rows = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.user_id == user.id, OAuthRefresh.retired_at.is_(None)
+    ).order_by(OAuthRefresh.created_at.desc()))).scalars().all()
+    rows = [row for row in rows if _refresh_is_live(row)]
+    seen: set[str] = set()
+    out: list[dict] = []
+    for row in rows:                      # one entry per GRANT, not per rotation of its token
+        if row.family_id in seen:
+            continue
+        seen.add(row.family_id)
+        # Listing and refresh must read the SAME family authority. A token row's org_id is immutable
+        # issue provenance and may legitimately name the team used before a later move.
+        grant = await _ensure_grant(row.family_id, db)
+        org_id = grant.current_org_id if grant is not None else None
+        org = await db.get(Org, org_id) if org_id is not None else None
+        client = (await db.execute(select(OAuthClient).where(
+            OAuthClient.client_id == row.client_id))).scalar_one_or_none()
+        out.append({
+            "grant": row.family_id,
+            "client": (client.client_name if client else "") or row.client_id,
+            "team": org.slug if org else None,
+            "team_name": org.name if org else None,
+            "granted": grant.granted_at.isoformat(timespec="seconds") if grant else None,
+        })
+    # GET normally reads only, but repairing a family created by an old rolling-deploy instance is
+    # a durable compatibility backfill. Without this commit the response looks healed once while
+    # the inserted authority row is rolled back when the request session closes.
+    await db.commit()
+    return out
+
+
+@app.post("/oauth/grants/{family_id}/team", include_in_schema=False)
+async def oauth_grant_set_team(family_id: str, body: GrantTeamIn,
+                               user: User = Depends(require_identity),
+                               db: AsyncSession = Depends(get_session)) -> dict:
+    """Re-point a live grant at another of the user's teams — without re-doing the OAuth dance.
+
+    The team is stored on the refresh family rather than only inside the issued access token, so
+    moving it is a row update and the next refresh picks it up. Re-consenting works too, but it
+    means disconnecting a working connector in whatever client holds it, and "the only way to fix
+    which balance this spends is to tear the connection down" is not an answer for the person who
+    just found out they were spending from the wrong one.
+
+    Only the GRANT'S OWN user may move it, and only to a team THEY are a member of — a grant must
+    never become a way to reach a team the consent screen would not have offered.
+    """
+    from . import mcp_oauth
+
+    rows = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.family_id == family_id, OAuthRefresh.user_id == user.id,
+        OAuthRefresh.retired_at.is_(None)))).scalars().all()
+    rows = [row for row in rows if _refresh_is_live(row)]
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"no live grant {family_id!r} on this account")
+    org = await _resolve_org(body.team, db)
+    member = (await db.execute(select(Membership).where(
+        Membership.user_id == user.id, Membership.org_id == org.id))).scalar_one_or_none() if org else None
+    # ONE answer for "no such team" and "a team that isn't yours". Told apart, this route reports
+    # whether an arbitrary slug exists on treg — a slug-existence oracle any signed-in account could
+    # walk. The caller's own teams are already listed to them by `treg org ls`, so the distinction
+    # buys them nothing they cannot see elsewhere.
+    if org is None or org.suspended or member is None:
+        raise HTTPException(status_code=404, detail=(
+            f"no team {body.team!r} on this account — see `treg org ls` for the teams you can use"))
+    # Change only family authority. Token rows are evidence of where each historical bearer was
+    # issued and must stay immutable, especially retired rows kept for reuse detection.
+    grant = await _ensure_grant(family_id, db)
+    if grant is None:  # the live-row check above makes this defensive, not a normal outcome
+        raise HTTPException(status_code=404, detail=f"no live grant {family_id!r} on this account")
+    grant.current_org_id = org.id
+    db.add(grant)
+    await db.commit()
+    return {
+        "grant": family_id, "team": org.slug, "team_name": org.name,
+        # Access tokens live an hour and carry the old team until the client refreshes. Saying so
+        # is the difference between "it didn't work" and "it hasn't taken effect yet".
+        "note": (f"new calls spend from {org.slug!r} once the client refreshes its access token "
+                 f"(within {mcp_oauth.ACCESS_TTL_SECONDS // 60} minutes)"),
+    }
 
 
 @app.get("/orgs")
@@ -7973,10 +8242,20 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         await db.execute(select(Tool).where(Tool.name == name, Tool.org_id == org_id))
     ).scalar_one_or_none()
     if tool is None:
+        cat = catalog_store.load()
+        # A DOTTED name that reached here was meant to be a catalog endpoint id and missed — a
+        # near-miss id, most often one segment off. Answering "no tool 'lusha.companies-signals' in
+        # this org" describes the wrong half of treg and leaves the caller nothing to try; naming
+        # the real id turns the dead end back into the next call.
+        if "." in name and not path and (near := catalog_store.near_ids(name, cat)):
+            raise HTTPException(status_code=404, detail={
+                "error": f"no endpoint {name!r} in the catalog",
+                "hint": "did you mean " + ", ".join(near) + "?",
+                "did_you_mean": near})
         detail = f"no tool {name!r} in this org"
         # A bare provider name (`treg call tikhub /path`) stays a miss, but points at the
         # marketplace form instead of dead-ending — its endpoints are callable without a tool.
-        if oauth_providers.get(name) is not None or name in catalog_store.load().provider_meta:
+        if oauth_providers.get(name) is not None or name in cat.provider_meta:
             detail += (f" — but {name!r} is a marketplace provider; call its endpoints directly: "
                        f"treg catalog search <what you need> → treg call <endpoint-id>")
         raise HTTPException(status_code=404, detail=detail)
@@ -8961,7 +9240,7 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
 # "resource not accessible": when it is unclear whether the provider charged us, the safe direction
 # is not to charge. Absorbing a rare few micro-USD is recoverable; over-billing out of an append-only
 # ledger is not.
-_NOT_THE_CALLERS_FAULT = frozenset({401, 402, 403, 407, 408, 429})
+_NOT_THE_CALLERS_FAULT = frozenset({401, 402, 403, 405, 407, 408, 429})
 
 
 def _platform_billable(status_code: int, cost_type: str) -> bool:
@@ -8970,9 +9249,10 @@ def _platform_billable(status_code: int, cost_type: str) -> bool:
       4xx                        → only under `per_call`, and only when the rejection is about the
                                    CALLER'S INPUT (400/404/422 …): the provider charges for accepting
                                    such a request, so it is on the caller. A credential/quota refusal
-                                   (`_NOT_THE_CALLERS_FAULT`) is on us and is never billed — a 429
-                                   doubly so on a SHARED-plan key, where it is treg's own saturation
-                                   and billing it would charge teams for our congestion. Under
+                                   (`_NOT_THE_CALLERS_FAULT`) is on us and is never billed — a 405
+                                   rejects the method OUR catalog selected, while a 429 on a
+                                   SHARED-plan key is treg's own saturation. Billing either would
+                                   charge teams for our metadata or congestion. Under
                                    `per_result`/`per_success` a rejected request produced nothing.
       5xx / 3xx / network error  → no. An upstream failure is never billed to the caller.
     """
