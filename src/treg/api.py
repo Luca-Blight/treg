@@ -30,7 +30,7 @@ import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, unquote, urlsplit, urlunsplit
 
 from sqlalchemy import case, delete, func, or_
 
@@ -2329,6 +2329,18 @@ async def privacy_page():
     return _legal_page("privacy.html")
 
 
+@app.get("/adtrack.js", include_in_schema=False)
+async def adtrack_js():
+    """First-party ad-click capture (see the file itself): sets the `treg_ad` cookie that
+    `_ad_attribution_from` reads at signup. No Google script, no third-party request."""
+    f = _WEB_DIR / "adtrack.js"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="adtrack.js not bundled")
+    # no-cache, same reasoning as tutorial.js: served as a bare `<script src="/adtrack.js">` with no
+    # version query, so without this header a browser would keep an ad-window-stale copy after a fix.
+    return FileResponse(f, media_type="application/javascript", headers={"Cache-Control": "no-cache"})
+
+
 @app.get("/resources", include_in_schema=False)
 async def resources_page():
     """The hub for the outcome pages. It exists for two reasons beyond navigation: without it the
@@ -3790,9 +3802,18 @@ async def _find_or_create_user(db: AsyncSession, email: str) -> User:
     return user
 
 
+def _ad_attribution_from(request: Request) -> tuple[str, str]:
+    """Read the first-party ad cookie set by /adtrack.js. Returns ("", "") when absent."""
+    raw = request.cookies.get("treg_ad") or ""
+    if not raw:
+        return "", ""
+    gclid, _, landing = unquote(raw).partition("|")
+    return gclid.strip()[:255], landing.strip()[:64]
+
+
 # ---- users (open registration; personal org + owner membership; token shown once) ---------
 @app.post("/users")
-async def register_user(body: UserIn, db: AsyncSession = Depends(get_session)) -> dict:
+async def register_user(body: UserIn, request: Request, db: AsyncSession = Depends(get_session)) -> dict:
     email = _norm_email(body.email)
     # This door creates a User directly (it predates `_find_or_create_user`), so it needs the same
     # machine-domain block — otherwise open registration could squat an agent address.
@@ -3808,6 +3829,13 @@ async def register_user(body: UserIn, db: AsyncSession = Depends(get_session)) -
     org, token = await _make_org_membership(
         db, user, name=email, slug_base=_slugify(email), role="owner", webhook_url=body.webhook_url
     )
+    gclid, landing = _ad_attribution_from(request)
+    if gclid:
+        org.ad_gclid = gclid
+        org.ad_landing = landing or None
+        org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
+                                            # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
+        db.add(org)
     try:
         await db.commit()
     except IntegrityError:
@@ -3852,7 +3880,8 @@ async def _count_owners(org_id: int, db: AsyncSession) -> int:
 
 @app.post("/orgs")
 async def create_org(
-    body: OrgIn, user: User = Depends(require_identity), db: AsyncSession = Depends(get_session)
+    body: OrgIn, request: Request,
+    user: User = Depends(require_identity), db: AsyncSession = Depends(get_session),
 ) -> dict:
     # Any authenticated user spins up a new org and becomes its owner, minting a fresh org-scoped
     # token for it. **require_identity, NOT require_member** — a brand-new user has zero orgs (no auto
@@ -3862,12 +3891,21 @@ async def create_org(
             "the demo sandbox can't create a real team — sign in with GitHub, Google, or email to make one"))
     user_id = user.id  # snapshot BEFORE the loop: db.rollback() expires ORM instances, so
     name = body.name   # touching `user` afterwards could trigger a lazy load → MissingGreenlet.
+    gclid, landing = _ad_attribution_from(request)  # this is create_org — the OTHER signup door
+    # (browser sign-in → mandatory first-team creation), separate from register_user's /users. A
+    # browser visitor who clicked an ad lands here, not there, so attribution must be read in both.
     for _ in range(3):  # a concurrent create can take the slug between _unique_slug and commit — retry
         org = Org(name=name, slug=await _unique_slug(_slugify(name), db))
         db.add(org)
         await db.flush()
         token = crypto.new_token()
         db.add(Membership(user_id=user_id, org_id=org.id, role="owner", token_hash=crypto.hash_token(token)))
+        if gclid:
+            org.ad_gclid = gclid
+            org.ad_landing = landing or None
+            org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
+                                                # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
+            db.add(org)
         try:
             await db.commit()
             break

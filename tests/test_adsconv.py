@@ -87,3 +87,25 @@ async def test_queue_is_a_noop_without_a_gclid(clients):
         await db.commit()
         await db.refresh(org)
         assert await adsconv.queue(db, org, adsconv.ACTION_SIGNUP) is False
+
+
+async def test_signup_persists_the_gclid_cookie(clients):
+    r = await clients.post(
+        "/users",
+        json={"email": "click@example.com"},
+        cookies={"treg_ad": "CLICK_XYZ|p3"},
+    )
+    assert r.status_code == 200, r.text
+    async with session_maker() as db:
+        org = (await db.execute(select(Org).where(Org.id == r.json()["org_id"]))).scalar_one()
+        assert org.ad_gclid == "CLICK_XYZ"
+        assert org.ad_landing == "p3"
+        assert org.ad_click_at is not None
+
+
+async def test_signup_without_the_cookie_leaves_attribution_null(clients):
+    r = await clients.post("/users", json={"email": "organic@example.com"})
+    assert r.status_code == 200, r.text
+    async with session_maker() as db:
+        org = (await db.execute(select(Org).where(Org.id == r.json()["org_id"]))).scalar_one()
+        assert org.ad_gclid is None
