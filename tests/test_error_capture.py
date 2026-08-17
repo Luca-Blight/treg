@@ -32,8 +32,13 @@ from treg.models import CallRecord
 EP = "tikhub.tiktok.video.comments"           # GET, tikhub — header-injected
 EP_SPYFU = "spyfu.google.domain.overview"     # GET, spyfu — QUERY-injected (the harder leak case)
 EP_POST = "dataforseo.web.page.audit"         # POST — the only shape whose params live in the body
-PLATFORM_KEY = "PLATFORM-TIKHUB-KEY-abc123"
-SPYFU_KEY = "PLATFORM-SPYFU-KEY-xyz789"
+# Keys chosen so ONLY the exact-substring mask can catch them. `_ARGV_SECRET_RE` matches known
+# prefixes, JWTs, and any 24+ run of [A-Za-z0-9_-]; a short key containing a '.' matches none of
+# those, because the dot breaks the word boundary. Verified by disabling
+# `_platform_secret_renderings` and watching these tests fail — with a longer key they passed on the
+# regex fallback alone and proved nothing about the defence they exist to cover.
+PLATFORM_KEY = "tk.9f2a-Q1"
+SPYFU_KEY = "sp.4b7c-Z8"
 ADMIN_TOKEN = "ENV-ADMIN-SECRET"
 ADMIN = {"X-Treg-Token": ADMIN_TOKEN}       # /admin/* authenticates with the env token, not a member
 
@@ -133,6 +138,11 @@ async def test_treg_s_own_502_is_explained_too(clients: AsyncClient, platform_on
 
 
 # ---- the tier gate ------------------------------------------------------------------------------
+# The gate is STRUCTURAL: the capture code sits inside `if mk is not None and mk.metered:` in
+# `call_tool`, so a non-platform call cannot reach it at all. The extra `mk.metered` check inside
+# `_audit` is redundant insurance for a future call site, and is therefore NOT pinned by the test
+# below — removing it leaves this test passing (verified). Kept anyway: it costs nothing, and this
+# is the one column set where a mistake would retain a team's own traffic.
 async def test_an_own_key_failure_stores_nothing(clients: AsyncClient, monkeypatch):
     """Tier 2: the org's own credential paid, so the traffic is theirs and treg keeps none of it."""
     await clients.post("/secrets", json={"name": "tikhub", "value": "THEIR-OWN-KEY"})
@@ -173,7 +183,11 @@ async def test_the_platform_key_never_reaches_the_columns_query_injected(
     """spyfu authenticates by QUERY PARAM, so its key can come back inside an echoed URL — including
     percent-encoded, which no word-boundary regex would catch."""
     from urllib.parse import quote
-    echoed = f'{{"error":"denied","url":"https://api.spyfu.com/x?api_key={quote(SPYFU_KEY, safe="")}&domain=a.com"}}'
+    # The key appears TWICE, deliberately: once inside a URL, which the query-shaped rule masks on its
+    # own, and once in prose, where nothing but the exact-substring mask will find it. Without the
+    # second copy this test passes with `_platform_secret_renderings` disabled entirely — verified.
+    echoed = (f'{{"error":"key {SPYFU_KEY} is not valid for this endpoint",'
+              f'"url":"https://api.spyfu.com/x?api_key={quote(SPYFU_KEY, safe="")}&domain=a.com"}}')
     monkeypatch.setattr(A, "relay", _fake_relay(403, echoed.encode()))
     r = await clients.get(f"/call/{EP_SPYFU}?domain=a.com")
     assert r.status_code == 403
