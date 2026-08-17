@@ -15,6 +15,7 @@ import asyncio
 import base64
 import gzip
 import hashlib
+import html as _html
 from functools import lru_cache
 import hmac
 import json
@@ -1943,8 +1944,14 @@ async def auth_invite_signin_confirm(request: Request, db: AsyncSession = Depend
 
 
 def _esc_html(s: str) -> str:
-    return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            .replace('"', "&quot;"))
+    """The stdlib escaper, not a hand-rolled replace() chain.
+
+    Same four substitutions as before plus `'` -> `&#x27;`, so every call site is at least as safe.
+    The reason to delegate is not correctness but legibility to tooling: static analysis models
+    `html.escape` as an XSS sanitizer and cannot know that a private chain of `.replace()` calls is
+    one, so every escaped value stayed 'tainted' and the real sinks were buried in false positives.
+    """
+    return _html.escape(str(s), quote=True)
 
 
 @app.get("/", include_in_schema=False)
