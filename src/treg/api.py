@@ -3771,12 +3771,15 @@ async def _grant_signup_promo(db: AsyncSession, org: Org) -> None:
     if org is None or org.id is None or org.demo or org.public_demo:
         return
     try:
-        await ledger.grant(db, org.id)
+        # Queue BEFORE granting: adsconv.queue() only adds a row inside a SAVEPOINT, it never commits.
+        # ledger.grant() commits internally, so calling it second is what makes its commit durable for
+        # BOTH rows in one transaction — the event and its conversion must land together (see
+        # adsconv.queue's docstring). Reordering this silently reintroduces a two-transaction gap.
         # Same door, same once-only guarantee: this function is already the single place a brand-new
         # real team comes into existence. A queue failure must not fail the signup, so it rides the
         # existing except below rather than getting its own.
         await adsconv.queue(db, org, adsconv.ACTION_SIGNUP)
-        await db.commit()
+        await ledger.grant(db, org.id)  # commits — absorbs the queued conversion row too
     except Exception as exc:  # noqa: BLE001 — the team is already created; don't 500 the signup over credit
         logging.getLogger("treg").warning("promo grant failed for org %s: %s", org.id, exc)
 
