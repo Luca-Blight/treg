@@ -119,3 +119,28 @@ async def test_signup_queues_a_conversion_when_attributed(clients):
         rows = (await db.execute(select(AdConversion).where(
             AdConversion.org_id == r.json()["org_id"]))).scalars().all()
         assert [x.action for x in rows] == [adsconv.ACTION_SIGNUP]
+
+
+async def test_org_creation_persists_the_gclid_cookie(clients):
+    # The OTHER signup door: a signed-in user creating their first team via /orgs (the browser
+    # sign-in path). `clients` is already authenticated (X-Treg-Token from /users registration
+    # in the fixture) — this only adds the ad-click cookie on top, same shape as the /users test.
+    r = await clients.post(
+        "/orgs",
+        json={"name": "ad team"},
+        cookies={"treg_ad": "CLICK_XYZ|p3"},
+    )
+    assert r.status_code == 200, r.text
+    async with session_maker() as db:
+        org = (await db.execute(select(Org).where(Org.id == r.json()["org_id"]))).scalar_one()
+        assert org.ad_gclid == "CLICK_XYZ"
+        assert org.ad_landing == "p3"
+        assert org.ad_click_at is not None
+
+
+async def test_org_creation_without_the_cookie_leaves_attribution_null(clients):
+    r = await clients.post("/orgs", json={"name": "organic team"})
+    assert r.status_code == 200, r.text
+    async with session_maker() as db:
+        org = (await db.execute(select(Org).where(Org.id == r.json()["org_id"]))).scalar_one()
+        assert org.ad_gclid is None
