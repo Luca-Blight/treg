@@ -249,6 +249,10 @@ shared plan" — `cost_view`, holds, caps and settlement needed zero changes. Wh
 - **A 429 is never billable**, under any cost type. Capacity refusing a request is not the caller's
   bad input, and on a shared key it is treg's own saturation. This also fixed a pre-existing wrong:
   `per_call` used to bill upstream 429s, and no vendor bills a request it refused to accept.
+- **A relayed 405 is never billable**, under any cost type. A catalog caller cannot choose a stale
+  method: `_resolve_marketplace_call` rejects a mismatch before relay. The only method the provider
+  can reject is therefore treg's recorded method, so settling a `per_call` hold would charge the
+  team for catalog metadata treg owns. `_NOT_THE_CALLERS_FAULT` makes that path release the hold.
 - **`shared_plan_recovery`** (`GET /admin/reconcile/shared-plans`): fee versus collected per
   treg-set rate, with `suggested_usd = fee ÷ measured calls` and an action at ±50% thresholds. It
   REPORTS; a human edits fx.yaml monthly. An auto-adjusting price would move under an agent's feet,

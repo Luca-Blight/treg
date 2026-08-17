@@ -126,6 +126,8 @@ endpoints:
     summary: "Public TikTok profile by username"  # the provider's own description, kept VERBATIM —
                                     #   `name` is ours to word, `summary` is theirs
     input:                           # split by location — mirrors treg's binding model
+      queryArrayEncoding: json      # optional default for array query params: json | comma |
+                                    # repeated (the compatibility default).
       queryParams:
         uniqueId: {type: string, required: false, note: "username from the profile URL", example: "tiktok"}
         secUid:   {type: string, required: false}
@@ -190,6 +192,15 @@ Rules:
   present it must still be a real cost model (`cost.type` from the same enum as core).
 - `input` / `test_request` appear when the provider publishes enough parameter documentation to
   generate them; both are machine-written and are rewritten on the next ingest.
+- Query arrays carry an explicit wire encoding when the provider does not accept repeated keys:
+  `input.queryArrayEncoding` sets the endpoint-wide format. `catalog_store.query_values()` is shared
+  by MCP request assembly and `call_template()`, so the structured schema and paste-ready command
+  cannot disagree. Complete
+  `name=value` arguments are shell-quoted with `shlex.quote` after canonical boolean/JSON encoding.
+  Endpoint declarations are only valid when every array parameter shares a wire format. Meta Ad
+  Library's array parameters all use JSON; undeclared endpoints retain repeated keys. Pinterest's
+  mixed convention remains a documented catalog gap until a live connection can verify a separate
+  per-parameter extension.
 - `verified` + `example_response` mean a live call was made and passed, and carry exactly the same
   weight as in core — the validator applies one rule to both tiers: verified ⇒ a `test_request` to
   re-verify with and an `example_response` file that exists.
@@ -460,6 +471,33 @@ Three rules it must honour:
 - **Never probe with a real call.** Discovering an HTTP method by sending a GET is how you get
   billed 1400 times (see the quota trap above). TikHub's methods come from an `OPTIONS` request,
   which Starlette answers `405 + allow:` before the handler — and therefore the meter — runs.
+- **The published spec outranks the probe** (`resolve_method`). A wrong method is not a cosmetic
+  error: treg *enforces* the recorded verb, so the endpoint becomes uncallable from both sides at
+  once — POST refused here ("… is GET"), GET refused upstream (405). The probe is weaker than it
+  looks: a preflight answering with a method *list* walks its preference order and comes out `GET`
+  whatever the handler takes. So when the OpenAPI declares exactly one method, that wins; probe and
+  docs are the fallback for routes the spec doesn't describe.
+- **The verb and the parameter POSITION are one decision, from one document.** TikHub's Apifox docs
+  list every TikTok-Ads parameter under `parameters.query` while its OpenAPI declares the same route
+  POST-with-a-JSON-body. Taking the verb from one and the position from the other yields a POST
+  carrying its arguments in the query string — still uncallable, just differently. When the spec
+  declares a JSON body and the docs gave us none, the documented "query" parameters ARE that body.
+
+### Catalog rot is a category of bug, and it is not the ingester's fault
+
+The 2026-08-17 TikTok-Ads breakage was first written up here as an ingester defect. It was not, and
+the correction matters more than the original claim. Those twelve routes really were `GET` when
+ingested: TikHub's July spec says `get`, and the captured `example_response` is a **real billed 200
+from a GET on 2026-07-27**. TikHub moved them to POST some time after. The catalog did not mis-read
+the provider — it went stale, and **nothing re-checks a provider's spec for drift**.
+
+That reframes the fix. Preferring the spec over the probe is a genuine hardening, but it only helps
+*at re-ingest time*, and only if the cached spec was refreshed — the cache under
+`~/.cache/treg-catalog-ingest` is what an unqualified `catalog_ingest.py <provider>` reads, so a
+re-run against a months-old cache faithfully reproduces months-old truth. A `verified:` stamp is
+evidence about the day it was written and nothing after it. Detecting drift (re-fetching specs and
+diffing method/path against the checked-in tier) is unbuilt; until it exists, an endpoint failing
+`405`/`404` in the wild is the first signal we get.
 - **Platform is the system the data is ABOUT**, not the API family it lives under: DataForSEO's
   `/v3/merchant/amazon/products/live/advanced` is `amazon`, not `merchant`. Anything not tied to
   one system is `web`. Every new slug goes into `capabilities.yaml`'s `platforms` in the same
@@ -687,6 +725,15 @@ Five rules worth keeping:
 - **A 4xx never counts against the provider.** It usually means the caller sent bad parameters;
   counting it would let one agent's mistake make a healthy endpoint look broken to everyone. Only
   2xx versus 5xx decides the rate.
+- **405 is the exception, and the rule's own justification is why.** "The caller sent bad
+  parameters" cannot apply to a method the caller was never allowed to choose: `/call/` refuses a
+  catalog call whose method differs from the recorded one with a 400, *before* relaying. So a 405
+  coming back from the provider says the RECORDED METHOD is wrong — a stale contract, which is the
+  one thing this module exists to surface — and it counts as decided against the endpoint. Without
+  it, the seven straight 405s on `tikhub.x.tiktok-ads-search-ads` sat in the excluded bucket and the
+  WORKS column read `— (7)`: indistinguishable from an endpoint nobody had tried. That is the half
+  of the 2026-08-17 report that survived two rounds of review — fixing `LAST OK` stopped the row
+  claiming success, but only this makes it say *failure*.
 - **A treg refusal is not evidence about the endpoint.** Rows with `refused_by` set (a paywall 402,
   a daily-cap 429 — see the data-model fragment) never reached the provider; they are excluded even
   from `samples`, or a burst of refused calls dresses itself up as traffic. The 2026-08-12 Hunter
@@ -697,7 +744,10 @@ Five rules worth keeping:
   YAML, surfaced through `endpoint_view` — so an agent reads "404 = no match, don't retry" instead
   of treating an expected empty answer as a failure. Only annotate what the wire has demonstrated.
 - **Below `MIN_SAMPLES` we publish the count and nothing else.** "100% from two calls" is noise
-  dressed as evidence, and on a quiet endpoint a rate could expose one org's activity.
+  dressed as evidence, and on a quiet endpoint a rate could expose one org's activity. The floor
+  applies to **decided calls** (2xx + provider-fault failures), not total traffic: four caller 422s
+  cannot lift one 200 or 405 into a published rate. Latency has its own floor of successful calls;
+  one success is not both a p50 and p95 merely because enough failures made the rate publishable.
 - **Sample size is always visible**, so `100% (8)` cannot beat `99% (121)` by looking rounder.
 - **"Free" is a price, not a missing one.** `platform_eligible` used to demand
   `confidence in (verified, documented)` for every route, but `confidence` says how much we trust a
@@ -709,6 +759,47 @@ Five rules worth keeping:
   call produced it and a **`✓` age** when it came from the catalog's `verified:` stamp — the same
   discipline `confidence:` already applies to price. The stamp is the cold-start answer: it covers
   1,380 of 1,810 eligible endpoints for free, which is why the column is useful on day one.
+- **`last_ok` means the last SUCCESS.** It was `max(created_at)` over every row, success or not, so
+  an endpoint that had been called seven times today and failed all seven read `WORKS — (7)` next
+  to `LAST OK: today` — which is how `tikhub.x.tiktok-ads-search-ads` passed for a merely new row
+  while being uncallable (2026-08-17).
+- **Below the floor, the outcome stays unpublished — not even a yes/no.** The 2026-08-17 fix first
+  added `any_ok` ("has it EVER answered?") on the argument that a boolean survives any sample size.
+  It did not survive the two rules above. On a quiet endpoint it exposed the *outcome* of one
+  tenant's one call, which is half of why the floor exists; and because `samples` counts 4xx while
+  successes do not, a single caller's malformed 422 published `any_ok: false` and made a healthy
+  endpoint look broken to every other tenant — precisely the failure the 4xx rule prevents. It was
+  removed. "Never worked" is read off `ok_rate == 0`, which is computed from DECIDED samples only,
+  so no volume of caller errors can produce it.
+
+### The evidence decides the ORDER, not just the detail page
+
+Token scoring ties by the dozen — all 24 `"ad library"` matches score 6 — so "which 8 do I show?"
+was answered by file order. That returned seven near-duplicate tikhub rows (one of them the
+uncallable one above) and cut off `scrapecreators.x.v1-tiktok-ad-library-search`, cheaper and 17 for
+17 measured. `catalog_store.rerank()` now settles equal scores over the band `rank_band()` returns, on
+buckets rather than a weighted formula (an ok_rate and a price are different units, and a blended
+score is one nobody can predict or argue with):
+
+**relevance → measured (good · unknown · poor · never-worked) → core before extended → price**
+
+where the measured bucket comes from `ok_rate` alone — `>= 0.9` good, `None` unknown, `0` never
+worked, else poor — so a demotion always rests on calls the provider actually decided.
+
+**The band takes the tie group whole.** A cut made *inside* a group of equally relevant rows is the
+arbitrary cut, and reranking a slice that already dropped the best-measured row cannot put it back —
+so `rank_band()` keeps taking while the score stays equal to the last row kept. That group is 17 rows
+for "ad library" and 24 for "email", but 523 for the bare word "tiktok", and this is an OPEN route:
+taking every group whole would put a 523-id `IN` clause behind every search. So it is bounded at
+`RERANK_BAND` (250) and **says when it truncated** — `ranking_note` over MCP, a hint on the HTTP
+route — because a bounded cut that announces itself is the thing this fix set out to build, and a
+silent one is what it set out to remove.
+
+Two orderings there are deliberate. Evidence outranks curation, because a core row that has never
+answered is not the better suggestion. Curation outranks **price**, because `core` is the hand-picked
+route and `extended` the bulk-ingested long tail — letting a tenth of a cent promote the tail made
+`"tiktok comments"` lead with douyin danmaku. Unmeasured sits above measured-poor: a new endpoint is
+an unknown, not a suspect.
 
 Team policy sits on top: `CapabilityPin` (see [data-model](data-model.md)) lets an org fix a
 capability to one provider, enforced in `_resolve_marketplace_call` before anything is reserved.

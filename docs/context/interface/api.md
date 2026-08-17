@@ -204,15 +204,27 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   capability_description, platform, platform_label, score}`. Ranking is plain token containment
   (`catalog_store.search`, no deps, no embeddings): **every** query token must match somewhere (AND, so a
   second word narrows), and score sums each token's best field weight — capability id/description +
-  platform label/slug (3) > summary (2) > id/path/provider (1). Ties break core-before-extended, then
-  verified-before-not, then id, so the order is total and reproducible. `catalog_endpoint`
-  (`GET /catalog/endpoints/{endpoint_id}`, 404 unknown) answers everything in ONE round-trip:
+  platform label/slug (3) > summary (2) > id/path/provider (1). Ties — the COMMON case, since token
+  containment scores whole families identically — are then settled by `catalog_store.rerank()` over
+  the band `rank_band()` returns (the whole equal-scoring group at the cut, capped at `RERANK_BAND`
+  with a hint when that cap bites), on **measured reliability, then core-before-extended, then price**, with
+  `verified` and id keeping the order total; each result carries the `observed` block that decided it.
+  See [catalog](../architecture/catalog.md#the-evidence-decides-the-order-not-just-the-detail-page).
+  `catalog_endpoint` (`GET /catalog/endpoints/{endpoint_id}`) answers everything in ONE round-trip:
   `{endpoint, provider:{service, display_name, limits?, pricing_url?, docs?}, siblings[], call_template,
   example_response, hints[]}` — `siblings` are the other providers implementing the same capability (so a
   price/verification comparison needs no second call), `example_response` is inlined rather than left
   behind `/catalog/examples`, and `call_template` is a paste-ready `treg call …` line built from the
   endpoint's `test_request` (the request the verifier actually ran) falling back to documented examples.
   `hints` on both routes carries the next command, since finding an endpoint is never the goal.
+  An unknown id 404s with `{error, hint, did_you_mean[]}` rather than a bare string: an id is not
+  free text, and one that misses by a segment (`lusha.companies-signals` for
+  `lusha.x.companies-signals` — what a model produces relaying an id through a summary) broke the
+  loop at its first step, whereupon the usual next move is to invent another id and fail again.
+  `catalog_store.near_ids()` matches on segment overlap ignoring the tier marker; no near miss means
+  an empty list and a search hint, never a confidently wrong suggestion. `/call/` answers the same
+  way for a dotted target that misses — the branch where money is on the line used to reply "no tool
+  … in this org", describing the wrong half of treg.
   A zero-result search additionally points at **`POST /tool-requests`** (open, per-IP rate-limited,
   fields capped): file what the catalog is missing — stored as a `ToolRequest` row (see
   [data-model](../architecture/data-model.md)) with identity attached only when the caller happens
@@ -523,6 +535,8 @@ treg is an OAuth authorization server for its own MCP endpoint. Detail in
     POST /oauth/authorize                           the human's decision — approval is never a GET
     POST /oauth/token                               authorization_code and refresh_token grants
     POST /oauth/revoke                              RFC 7009; ends the whole refresh family, always 200
+    GET  /oauth/grants                              live (non-retired, non-expired) grant families
+    POST /oauth/grants/{family}/team                move family authority to another member team
     POST /mcp/                                      the MCP transport itself
 
     GET  /connect-demo                              a page that pretends to be an MCP client

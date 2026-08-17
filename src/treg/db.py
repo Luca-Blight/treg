@@ -354,6 +354,18 @@ def _migrate_to_orgs(conn) -> None:
             "AND monthly_cap_micro IS NULL AND calls_per_day < 0 AND status = 'active' "
             "AND (note IS NULL OR note = '')"))
 
+    # (A35) split mutable OAuth grant authority from immutable refresh-token provenance. create_all
+    # makes the new table; this backfill gives every existing family the team and consent timestamp
+    # from its oldest (consent) row. INSERT ... WHERE NOT EXISTS is portable and idempotent on both
+    # SQLite and Postgres, including a deploy restarted after the table was created but not filled.
+    if "oauthgrant" in tables and "oauthrefresh" in tables:
+        conn.execute(text(
+            "INSERT INTO oauthgrant (family_id, current_org_id, granted_at) "
+            "SELECT r.family_id, r.org_id, r.created_at FROM oauthrefresh r "
+            "WHERE r.id = (SELECT MIN(r0.id) FROM oauthrefresh r0 "
+            "WHERE r0.family_id = r.family_id) "
+            "AND NOT EXISTS (SELECT 1 FROM oauthgrant g WHERE g.family_id = r.family_id)"))
+
     # (A28) corrective: creditblock.stripe_payment_intent must be UNIQUE (the top-up idempotency
     # key). It sits HERE, above the (B) block, because (B) returns early on a fresh/new-schema DB —
     # and a fresh DB created between the ledger landing and this fix is precisely the one that has
