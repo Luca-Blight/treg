@@ -85,6 +85,33 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   refusal passes through — using the identity stashed in `request.state` (a bad-token 401 records
   anonymously). It is what tells "the provider failed" apart from "we said no": a paywall 402 must not read
   as a provider error, and `endpoint_stats` excludes refused rows entirely.
+  It also carries **`error_request` / `error_response`** (migration A36, nullable) — the redacted,
+  truncated evidence for a **failed PLATFORM-tier call only**, and the one exception to "bodies are
+  never stored". Written when `mk.metered` and the call failed, from three places: the settle path
+  (the provider's own body, since a relayed non-2xx returns as a `Response` and is never raised, plus
+  an **allowlisted set of response headers** — `Retry-After`, `WWW-Authenticate`, the rate-limit
+  trio, request/trace ids — because an empty-bodied 401 or 429 is otherwise undiagnosable and those
+  headers *are* the answer); the metered `except HTTPException` branch (treg's own `detail`, covering
+  the 502s — upstream timeout, failed injection, SSRF refusal — where a bare status says least); and
+  the reserve refusal, where `detail` names **which** cap was hit, since every 429 collapses to
+  `refused_by='cap'` and that one value spans member, tag, org, platform and trial limits.
+  Never written for a success, for
+  tiers 1–2, or for a non-catalog tool call: a team on its own key is billed by the provider, so
+  keeping their traffic would help nobody — the same line `IdempotentCall.response_body` draws.
+  Redaction is exact-match-first (treg's own platform credential, resolved from the binding's
+  `platform_setting`) and only then pattern-based, because a provider quoting the received key back
+  in a 401 can defeat any regex; masking happens **before** truncation, since truncating first can
+  leave a partial key that no longer matches. The exact match covers every spelling a provider can
+  echo, not only what treg sent: percent-encoded in **both** cases (`quote()` emits uppercase, servers
+  echo lower), `quote_plus`, JSON slash-escaped, and — for the Basic-auth providers whose platform
+  value is *itself* the base64 of `login:password` (dataforseo, moz; see `config.py`) — the **decoded
+  credential and each half**, since a provider that decodes Basic and reports
+  `received_username`/`received_password` echoes the key in a form containing neither the blob nor
+  `Basic <blob>`. Behind all of it sits a **fail-closed** check: after masking, a normalised copy
+  (percent-decoded, JSON-unescaped, lowercased) is re-scanned, and if a secret survived a transform
+  nobody anticipated the whole snippet is replaced. Losing a message beats leaking the shared key. Aged out to `'<expired>'` after 14 days by
+  `GET /admin/errors` — not on the request path, because `get_session` never commits and a lazy
+  marker written there would roll back, leaving the purge to run on every failed call.
 - **`ToolRequest`** — a "the catalog doesn't have X" report (`POST /tool-requests`, open + per-IP
   rate-limited): `capability` (the headline, ≤200 chars), `query` (the search that came up empty —
   auto-filled by agents, the dedup/priority signal), `note`, `contact`, `source` (`web` | `cli` |
@@ -224,8 +251,12 @@ lives in [money](money.md); this is the shape.
 records), `budget_dim`/`budget_val` (the indexed copy of the primary pair) and `tags` (the whole bag).
 
 > `audit.record_call` splats its `telemetry` dict as `**kwargs` into `CallRecord()`, and `audit._write`
-> swallows every exception. **A telemetry key without a matching column silently kills every audit
-> write** — the table goes dark with no error anywhere. Columns and telemetry keys must land together.
+> swallows every exception. **A telemetry key without a matching column used to silently kill every
+> audit write** — the table went dark with no error anywhere. Fixed alongside migration A36:
+> `_known_fields` filters telemetry against `CallRecord.model_fields`, so an unknown key now costs one
+> column and logs a warning naming it, and the surviving swallow in `_write` logs instead of passing.
+> Columns and telemetry keys should still land together — the guard makes a mismatch survivable and
+> visible, not correct.
 
 `Org` gains `budget_dims` (which keys may carry budgets, ≤3), `primary_dim` (the one that scopes
 idempotency) and `daily_cap_micro` (the team's own spend ceiling, 0 = follow the deployment default).

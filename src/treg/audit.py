@@ -15,6 +15,7 @@ bound — audit is best-effort; never OOM or wedge the server for it.
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from .db import session_maker
 from .models import CallRecord, RunRecord
@@ -49,8 +50,27 @@ def record_call(
     _schedule(_write(CallRecord,
         org_id=org_id, user_email=user_email, tool_name=tool_name,
         method=method, path=path, status_code=status_code, client=client, refused_by=refused_by,
-        **(telemetry or {}),
+        **_known_fields(CallRecord, telemetry),
     ))
+
+
+def _known_fields(model, telemetry: dict | None) -> dict:
+    """Drop telemetry keys the model has no column for, loudly.
+
+    `telemetry` is splatted straight into the model constructor, so ONE unknown key used to raise
+    inside `_write` — where the except swallows it — and the whole row vanished with no trace. That
+    is the worst possible failure for an audit table: a telemetry field added a commit before its
+    migration would silently delete every row it touched. An unknown key must cost one column, never
+    the row.
+    """
+    if not telemetry:
+        return {}
+    known = {k: v for k, v in telemetry.items() if k in model.model_fields}
+    if len(known) != len(telemetry):
+        logging.getLogger("treg.audit").warning(
+            "dropping unknown %s telemetry keys %s — is a migration missing?",
+            model.__name__, sorted(set(telemetry) - set(known)))
+    return known
 
 
 def record_run(
@@ -63,9 +83,24 @@ def record_run(
     ))
 
 
+_shed = 0  # audit rows dropped by back-pressure this process; only ever grows
+
+
 def _schedule(coro) -> None:
     if len(_pending) >= _MAX_PENDING:  # shed load — audit is best-effort, never OOM the server
         coro.close()
+        # Say so. Shedding bypasses `_write` entirely, so the warning there never fires for it, and
+        # a shed row is invisible: the audit table simply has less in it. For a table whose job is
+        # to record what happened, "quiet" and "quietly broken" must not look identical — and the
+        # failure-evidence columns ride this same path, so a burst silently loses exactly the errors
+        # someone would go looking for. Logged on the first drop and then every 1,000th, so a long
+        # incident cannot itself flood the log.
+        global _shed
+        _shed += 1
+        if _shed == 1 or _shed % 1000 == 0:
+            logging.getLogger("treg.audit").warning(
+                "audit back-pressure: %d row(s) dropped this process (pending at %d)",
+                _shed, _MAX_PENDING)
         return
     task = asyncio.create_task(coro)
     _pending.add(task)
@@ -79,7 +114,11 @@ async def _write(model, **fields) -> None:
                 session.add(model(**fields))
                 await session.commit()
         except Exception:  # noqa: BLE001 — audit must never surface into a call's result
-            pass
+            # Swallowed on purpose, but no longer SILENT: this used to be a bare `pass`, so a bad
+            # write was indistinguishable from a call that never happened. The row is still lost —
+            # that is the contract — but now something says so.
+            logging.getLogger("treg.audit").warning(
+                "audit write dropped for %s", model.__name__, exc_info=True)
 
 
 async def drain() -> None:
