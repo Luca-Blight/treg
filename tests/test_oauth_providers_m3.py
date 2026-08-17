@@ -46,7 +46,7 @@ def test_every_provider_is_registered():
         "apollo", "pdl", "akta", "hunter", "crunchbase", "tikhub", "brightdata", "semrush", "justoneapi",
         "scrapecreators",
         "dataforseo", "seranking", "moz", "majestic", "serpstat",
-        "lusha", "coresignal", "diffbot", "thecompaniesapi", "leadmagic",
+        "lusha", "coresignal", "diffbot", "thecompaniesapi", "leadmagic", "fiber-ai",
         "spyfu", "apify", "meta-ad-library", "serpapi",
         "coingecko", "polygon", "finnhub", "twelvedata", "fmp", "eodhd", "marketstack", "tiingo",
         "microsoft-ads", "snapchat-ads", "tiktok-ads", "pinterest-ads",
