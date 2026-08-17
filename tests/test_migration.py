@@ -158,7 +158,7 @@ async def test_existing_refresh_families_gain_a_separate_authority_record(tmp_pa
                 "expires_at, created_at, retired_at, retired_reason) VALUES "
                 "(1, 'old', 'family', 'client', 7, 11, '2026-09-01', '2026-07-01', "
                 "'2026-07-02', 'rotated'), "
-                "(2, 'new', 'family', 'client', 7, 11, '2026-09-02', '2026-07-02', NULL, '')"))
+                "(2, 'new', 'family', 'client', 7, 12, '2026-09-02', '2026-07-02', NULL, '')"))
             await conn.run_sync(SQLModel.metadata.create_all)
             await conn.run_sync(_migrate_to_orgs)
             await conn.run_sync(_migrate_to_orgs)

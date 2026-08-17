@@ -772,16 +772,15 @@ def wire_value(value) -> str:
 def query_values(ep: dict | None, name: str, value) -> list[str]:
     """Encode one structured query value according to the endpoint's declared wire contract.
 
-    A Python/MCP list does not identify an HTTP representation: Meta expects one JSON array,
-    Pinterest expects one comma-separated value, while ordinary repeated keys remain useful for
-    team tools and catalog parameters that explicitly use them. The catalog records only the two
-    exceptional encodings; absence preserves the established repeated-key behavior.
+    A Python/MCP list does not identify an HTTP representation: Meta expects one JSON array, while
+    ordinary repeated keys remain useful for team tools and catalog endpoints. An endpoint may
+    declare one exceptional encoding when all its array parameters share that contract; absence
+    preserves the established repeated-key behavior.
     """
     if not isinstance(value, (list, tuple)):
         return [wire_value(value)]
     inp = (ep or {}).get("input") or {}
-    spec = (inp.get("queryParams") or {}).get(name) or {}
-    encoding = spec.get("arrayEncoding") or inp.get("queryArrayEncoding") or "repeated"
+    encoding = inp.get("queryArrayEncoding") or "repeated"
     if encoding == "json":
         return [wire_value(value)]
     if encoding == "comma":

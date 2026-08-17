@@ -978,6 +978,97 @@ async def test_the_team_on_a_grant_can_be_moved_without_reconnecting(clients):
     assert out["team"] == other["org"], "the client's very next refresh spends from the new team"
 
 
+async def test_a_rolling_deploy_family_without_authority_can_be_listed_and_moved(clients):
+    """A35 is a startup snapshot, not a fence around old instances. During a rolling deploy an old
+    binary can consent a valid family after the new binary ran A35, leaving only OAuthRefresh. The
+    repair must happen on both inspection paths: listing cannot show null authority, and a direct
+    team move cannot 404 merely because nobody listed the family first."""
+    from datetime import datetime
+    from sqlmodel import select
+
+    from treg import crypto
+    from treg.db import session_maker
+    from treg.models import OAuthGrant, OAuthRefresh
+
+    email = "rolling-gap@superdesign.dev"
+    body, client_id, original_org_id = await _grant_full(clients, email)
+    me = await _as(email)
+    other = (await clients.post("/orgs", json={"name": "rolling gap destination"},
+                                headers=me)).json()
+    original = next(team for team in (await clients.get("/orgs", headers=me)).json()
+                    if team["org_id"] == original_org_id)
+    rotated = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert rotated.status_code == 200, rotated.text
+    body = rotated.json()
+    consented_at = datetime(2026, 1, 2, 3, 4, 5)
+    async with session_maker() as db:
+        live = (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.token_hash == crypto.hash_token(body["refresh_token"])))).scalar_one()
+        family_id = live.family_id
+        rows = (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.family_id == family_id).order_by(OAuthRefresh.id))).scalars().all()
+        assert len(rows) == 2 and rows[0].retired_at is not None
+        rows[0].created_at = consented_at
+        rows[1].created_at = datetime(2026, 2, 2, 3, 4, 5)
+        # A different VALID team makes a newest-row reconstruction observably wrong. Both fixture
+        # rows used the same org in the first version, so choosing newest still passed.
+        rows[1].org_id = other["org_id"]
+        db.add_all(rows)
+        grant = await db.get(OAuthGrant, family_id)
+        await db.delete(grant)
+        await db.commit()
+
+    listed = (await clients.get("/oauth/grants", headers=me)).json()
+    assert listed[0]["grant"] == family_id
+    assert listed[0]["team"] == original["slug"]
+    assert listed[0]["granted"] == "2026-01-02T03:04:05"
+
+    # Remove it again so the setter itself — not the GET above — has to heal the rolling gap.
+    async with session_maker() as db:
+        await db.delete(await db.get(OAuthGrant, family_id))
+        await db.commit()
+    moved = await clients.post(f"/oauth/grants/{family_id}/team",
+                               json={"team": other["org"]}, headers=me)
+    assert moved.status_code == 200, moved.text
+    async with session_maker() as db:
+        grant = await db.get(OAuthGrant, family_id)
+        assert grant.current_org_id == other["org_id"]
+        assert grant.granted_at == consented_at
+
+
+async def test_refresh_repairs_missing_authority_with_the_original_consent_time(clients):
+    """Refresh already fell back to OAuthRefresh.org_id, which hid the missing row until rotation.
+    Rotation then created OAuthGrant with the rotation time, making an old consent look new. Repair
+    before issuing the replacement and preserve the oldest row's actual consent timestamp."""
+    from datetime import datetime
+    from sqlmodel import select
+
+    from treg import crypto
+    from treg.db import session_maker
+    from treg.models import OAuthGrant, OAuthRefresh
+
+    body, client_id, _ = await _grant_full(clients, "rolling-refresh@superdesign.dev")
+    consented_at = datetime(2026, 2, 3, 4, 5, 6)
+    async with session_maker() as db:
+        token = (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.token_hash == crypto.hash_token(body["refresh_token"])))).scalar_one()
+        family_id = token.family_id
+        token.created_at = consented_at
+        db.add(token)
+        await db.delete(await db.get(OAuthGrant, family_id))
+        await db.commit()
+
+    refreshed = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert refreshed.status_code == 200, refreshed.text
+    async with session_maker() as db:
+        grant = await db.get(OAuthGrant, family_id)
+        assert grant is not None and grant.granted_at == consented_at
+
+
 async def test_a_grant_cannot_be_moved_to_a_team_you_are_not_in(clients):
     """Moving a grant must not reach further than the consent screen would have offered — otherwise
     it becomes a way into a team the human was never able to pick."""

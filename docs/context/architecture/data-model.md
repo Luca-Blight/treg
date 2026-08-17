@@ -203,9 +203,11 @@ Four tables, all added with the MCP front door. See `architecture/mcp-oauth.md` 
 
 `OAuthCode` and `OAuthRefresh` are org-scoped and therefore listed in `_ORG_SCOPED_MODELS`; `OAuthGrant`
 is cleared explicitly by `_cascade_delete_org` because its FK is intentionally named `current_org_id`.
-A grant naming a deleted team is a dangling row. `OAuthClient` is not — a client is global, and
-nothing about it belongs to one team. Each `OAuthRefresh.org_id` is immutable issue provenance;
-moving a family updates only `OAuthGrant.current_org_id`.
+The cascade revokes the union of families that name the deleted team through current authority or
+any historical `OAuthRefresh.org_id`: deleting only a retired provenance row would erase the replay
+evidence while leaving its live descendants usable. `OAuthClient` is not org-scoped — a client is
+global, and nothing about it belongs to one team. Each `OAuthRefresh.org_id` is immutable issue
+provenance; moving a family updates only `OAuthGrant.current_org_id`.
 
 ## Caller tags (`X-Treg-Meta`)
 

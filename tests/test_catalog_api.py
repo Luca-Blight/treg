@@ -481,11 +481,8 @@ def test_call_templates_share_wire_encoding_and_quote_complete_query_arguments()
 
     cat = cs.load()
     meta = shlex.split(cs.call_template(cat.by_id["meta-ad-library.meta-ads.library.search"]))
-    pinterest = shlex.split(cs.call_template(cat.by_id["pinterest-ads.query"]))
     meta_query = [meta[i + 1] for i, part in enumerate(meta) if part == "--query"]
-    pinterest_query = [pinterest[i + 1] for i, part in enumerate(pinterest) if part == "--query"]
     assert 'ad_reached_countries=["US"]' in meta_query
-    assert "columns=SPEND_IN_DOLLAR,IMPRESSION_1,CLICKTHROUGH_1,TOTAL_CONVERSIONS" in pinterest_query
 
     synthetic = {
         "id": "demo.web.query", "method": "GET",
@@ -499,27 +496,25 @@ def test_call_templates_share_wire_encoding_and_quote_complete_query_arguments()
     assert "'phrase=two words'" in line
 
 
-def test_catalog_validator_rejects_unknown_array_encodings(tmp_path, capsys):
-    """Both encoding declaration levels are schema, not free-form prose. Exercise the real
+def test_catalog_validator_rejects_an_unknown_endpoint_array_encoding(tmp_path, capsys):
+    """The endpoint encoding declaration is schema, not free-form prose. Exercise the real
     validator so deleting its validation block cannot leave a falsely green test suite."""
     cv = _load_validator()
     real = cv.CATALOG
     for name in ("capabilities.yaml", "fx.yaml"):
         (tmp_path / name).write_text((real / name).read_text())
-    pinterest = (real / "pinterest-ads.yaml").read_text()
-    pinterest = pinterest.replace("    input:\n", "    input:\n      queryArrayEncoding: nonsense\n", 1)
-    pinterest = pinterest.replace("arrayEncoding: comma", "arrayEncoding: nonsense", 1)
-    (tmp_path / "pinterest-ads.yaml").write_text(pinterest)
+    meta = (real / "meta-ad-library.yaml").read_text()
+    meta = meta.replace("queryArrayEncoding: json", "queryArrayEncoding: nonsense", 1)
+    (tmp_path / "meta-ad-library.yaml").write_text(meta)
     original = cv.CATALOG
     try:
         cv.CATALOG = tmp_path
-        result = cv.main(["pinterest-ads"])
+        result = cv.main(["meta-ad-library"])
     finally:
         cv.CATALOG = original
     output = capsys.readouterr().out
     assert result == 1
     assert "input.queryArrayEncoding must be one of" in output
-    assert "columns' arrayEncoding must be one of" in output
 
 
 # ---- example responses -------------------------------------------------------------------

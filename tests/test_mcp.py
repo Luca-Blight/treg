@@ -1039,22 +1039,16 @@ async def test_a_boolean_query_param_goes_on_the_wire_as_a_boolean(clients):
 async def test_catalog_query_arrays_use_the_endpoints_declared_wire_encoding(monkeypatch):
     """A structured MCP list is not synonymous with repeated query keys.
 
-    Meta parses one compact JSON array value; Pinterest mixes repeated-key ids with one
-    comma-separated `columns` parameter on the SAME endpoint. The parameter schema must decide,
-    while an unmodelled team tool keeps the longstanding repeated-key default. This goes through
-    `call`, not only `_query_values`: the first version stayed green if the MCP call site stopped
-    using the helper.
+    Meta declares one compact JSON array value for every array on the endpoint, while an unmodelled
+    team tool keeps the longstanding repeated-key default. This goes through `call`, not only
+    `_query_values`: the first version stayed green if the MCP call site stopped using the helper.
     """
     from treg import catalog_store as cs
     from treg import mcp as _mcp
 
     cat = cs.load()
     meta = cat.by_id["meta-ad-library.meta-ads.library.search"]
-    pinterest = cat.by_id["pinterest-ads.campaign.analytics"]
     assert _mcp._query_values(meta, "ad_reached_countries", ["US"]) == ['["US"]']
-    assert _mcp._query_values(pinterest, "campaign_ids", ["1", "2"]) == ["1", "2"]
-    assert _mcp._query_values(pinterest, "columns", ["SPEND_IN_DOLLAR", "IMPRESSION_1"]) == [
-        "SPEND_IN_DOLLAR,IMPRESSION_1"]
     assert _mcp._query_values(None, "tag", ["a", "b"]) == ["a", "b"]
 
     captured = {}
@@ -1079,14 +1073,10 @@ async def test_catalog_query_arrays_use_the_endpoints_declared_wire_encoding(mon
     monkeypatch.setattr(_mcp, "_api", _api)
     monkeypatch.setattr(_mcp, "_resolve_org", _org)
     ctx = type("Ctx", (), {"headers": {"authorization": "Bearer test"}})()
-    await _mcp.call("pinterest-ads.campaign.analytics", params={
-        "ad_account_id": "acct", "campaign_ids": ["1", "2"],
-        "columns": ["SPEND_IN_DOLLAR", "IMPRESSION_1"],
+    await _mcp.call("meta-ad-library.meta-ads.library.search", params={
+        "ad_reached_countries": ["US"],
     }, ctx=ctx)
-    assert captured["params"] == [
-        ("ad_account_id", "acct"), ("campaign_ids", "1"), ("campaign_ids", "2"),
-        ("columns", "SPEND_IN_DOLLAR,IMPRESSION_1"),
-    ]
+    assert captured["params"] == [("ad_reached_countries", '["US"]')]
 
 
 async def test_an_unset_query_param_is_omitted_rather_than_sent_as_None(clients):

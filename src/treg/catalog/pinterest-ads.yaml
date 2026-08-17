@@ -21,6 +21,10 @@ source:
 
 pricing_url: https://developers.pinterest.com/docs/api/v5/introduction/
 endpoints:
+  # Query arrays intentionally keep treg's undeclared repeated-key default while Pinterest is
+  # unconfigured. Pinterest's generated client confirms repeated keys for ids despite older API
+  # prose below; `columns` is the known comma-separated exception, to ship separately with a live
+  # contract-level verification.
   - id: pinterest-ads.accounts
     capability: pinterest-ads.accounts
     platform: pinterest-ads
@@ -52,7 +56,7 @@ endpoints:
       queryParams:
         start_date: {type: string, required: true, note: "YYYY-MM-DD; the window may not exceed 90 days and may not start more than 90 days ago", example: "2026-06-28"}
         end_date: {type: string, required: true, note: "YYYY-MM-DD", example: "2026-07-28"}
-        columns: {type: array, required: true, arrayEncoding: comma, note: "REQUIRED, comma-separated metric names — there is no default. e.g. SPEND_IN_DOLLAR,IMPRESSION_1,CLICKTHROUGH_1,TOTAL_CONVERSIONS,CPC_IN_DOLLAR", example: ["SPEND_IN_DOLLAR", "IMPRESSION_1", "CLICKTHROUGH_1", "TOTAL_CONVERSIONS"]}
+        columns: {type: array, required: true, note: "REQUIRED, comma-separated metric names — there is no default. e.g. SPEND_IN_DOLLAR,IMPRESSION_1,CLICKTHROUGH_1,TOTAL_CONVERSIONS,CPC_IN_DOLLAR", example: ["SPEND_IN_DOLLAR", "IMPRESSION_1", "CLICKTHROUGH_1", "TOTAL_CONVERSIONS"]}
         granularity: {type: string, required: true, note: "TOTAL | DAY | HOUR | WEEK | MONTH", example: "DAY"}
         click_window_days: {type: integer, required: false, note: "conversion attribution window: 0 | 1 | 7 | 14 | 30 (default 30)", example: 30}
         engagement_window_days: {type: integer, required: false, note: "0 | 1 | 7 | 14 | 30 (default 30)"}
@@ -74,7 +78,7 @@ endpoints:
       pathParams:
         ad_account_id: {type: string, required: true, example: "549755885175"}
       queryParams:
-        campaign_ids: {type: array, required: false, note: "repeated query keys; mutually exclusive with entity_statuses"}
+        campaign_ids: {type: array, required: false, note: "comma-separated ids; mutually exclusive with entity_statuses"}
         entity_statuses: {type: array, required: false, note: "ACTIVE | PAUSED | ARCHIVED — defaults to ACTIVE and PAUSED, so archived campaigns are hidden unless asked for", example: ["ACTIVE"]}
         page_size: {type: integer, required: false, note: "max 250", example: 25}
         order: {type: string, required: false, note: "ASCENDING | DESCENDING by id"}
@@ -95,10 +99,10 @@ endpoints:
       pathParams:
         ad_account_id: {type: string, required: true, example: "549755885175"}
       queryParams:
-        campaign_ids: {type: array, required: true, note: "REQUIRED — repeated query keys, max 500. There is no all-campaigns form; list the campaigns first", example: ["626746651239"]}
+        campaign_ids: {type: array, required: true, note: "REQUIRED — comma-separated campaign ids, max 500. There is no all-campaigns form; list the campaigns first", example: ["626746651239"]}
         start_date: {type: string, required: true, note: "YYYY-MM-DD", example: "2026-06-28"}
         end_date: {type: string, required: true, note: "YYYY-MM-DD", example: "2026-07-28"}
-        columns: {type: array, required: true, arrayEncoding: comma, example: ["SPEND_IN_DOLLAR", "IMPRESSION_1", "CLICKTHROUGH_1", "TOTAL_CONVERSIONS"]}
+        columns: {type: array, required: true, example: ["SPEND_IN_DOLLAR", "IMPRESSION_1", "CLICKTHROUGH_1", "TOTAL_CONVERSIONS"]}
         granularity: {type: string, required: true, note: "TOTAL | DAY | HOUR | WEEK | MONTH", example: "TOTAL"}
         click_window_days: {type: integer, required: false, example: 30}
         conversion_report_time: {type: string, required: false, example: "TIME_OF_AD_ACTION"}
@@ -118,7 +122,7 @@ endpoints:
       pathParams:
         ad_account_id: {type: string, required: true, example: "549755885175"}
       queryParams:
-        campaign_ids: {type: array, required: false, note: "repeated query keys, to scope to one campaign"}
+        campaign_ids: {type: array, required: false, note: "comma-separated, to scope to one campaign"}
         ad_group_ids: {type: array, required: false}
         entity_statuses: {type: array, required: false, example: ["ACTIVE"]}
         page_size: {type: integer, required: false, example: 25}

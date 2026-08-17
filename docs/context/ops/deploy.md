@@ -172,7 +172,10 @@ redirect (`provider`, `code_verifier`, `auth_params`, `token_endpoint_auth_metho
 `scope_separator`, `long_lived_exchange BOOLEAN DEFAULT false`, `replaces_secret_id INTEGER`) so the
 callback exchanges the code exactly as the consent URL was built; and **A35** backfills one
 `oauthgrant` authority row per existing refresh family from its oldest token, using portable,
-idempotent `INSERT … SELECT … WHERE NOT EXISTS` SQL.
+idempotent `INSERT … SELECT … WHERE NOT EXISTS` SQL. Because a rolling deploy keeps an old binary
+alive after that snapshot, API `_ensure_grant` also reconstructs any later old-binary family at first
+refresh, listing, or team move with an `ON CONFLICT DO NOTHING` upsert supported by SQLite and
+Postgres; the oldest token's `created_at` remains the consent time.
 
 **Audit back-pressure (`audit.py`).** Audit rows are written off the request path (fire-and-forget), and
 each write opens a DB connection from the small pool **shared** with real requests. Two limits keep

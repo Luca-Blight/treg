@@ -63,10 +63,9 @@ each of which was added because a real endpoint needed it:
 
 - `query` — ALWAYS the query string. A team-tool list keeps the repeated-key default
   (`?tag=a&tag=b`, which a dict would collapse); a catalog array follows its explicit
-  endpoint default `input.queryArrayEncoding` or a query parameter's narrower `arrayEncoding`
-  (`json`, `comma`, or `repeated`). Meta Ad Library therefore receives
-  `ad_reached_countries=["US"]` as one JSON value while Pinterest sends ids as repeated keys and
-  only `columns` as one comma-separated value. Composable with `body` on a POST — the Bright Data dataset shape
+  endpoint default `input.queryArrayEncoding` (`json`, `comma`, or `repeated`). Meta Ad Library
+  therefore receives `ad_reached_countries=["US"]` as one JSON value; an undeclared endpoint sends
+  repeated keys. Composable with `body` on a POST — the Bright Data dataset shape
   (`?dataset_id=…` + array body) was uncallable over MCP without it.
 - `body` — ALWAYS the body. Object/array → JSON; a STRING is sent raw with `content_type` naming
   it (sniffed as `application/json` when it parses as JSON — the CLI's rule). A body implies POST.
@@ -268,7 +267,7 @@ team, and the first signal was spend on a balance nobody had opened. Two halves 
   consent screen would have offered. A *refresh* still cannot change teams; that is not a second
   chance to pick, it is a deliberate action by the person who made the first one.
 
-  Three lifecycle rules, all found in review:
+  Lifecycle rules found in review:
 
   - **Family authority is separate from token provenance.** `OAuthGrant.current_org_id` is the one
     mutable answer `_family_org`, listing and refresh read. `OAuthRefresh.org_id` never changes after
@@ -283,6 +282,15 @@ team, and the first signal was spend on a balance nobody had opened. Two halves 
     the org still existed, never that the user was still *in* it. Calls were refused meanwhile
     (`require_member` re-resolves membership every time), but the grant kept minting tokens and would
     spring back to life, with no new consent, if the membership were ever restored.
+  - **A rolling deploy cannot strand a family without authority.** A35 is a startup snapshot; an old
+    instance can still issue only `OAuthRefresh` after a new instance has run it. `_ensure_grant`
+    reconstructs the missing row from the oldest refresh token before refresh, listing, and team
+    moves. Its portable upsert tolerates concurrent repair, and `granted_at` remains the oldest row's
+    consent time rather than the later repair or rotation time.
+  - **Deleting any team in a family's history revokes the whole family.** `_cascade_delete_org`
+    collects family ids through both `OAuthGrant.current_org_id` and immutable
+    `OAuthRefresh.org_id`. Otherwise deleting a former team erases the retired row that recognises a
+    replay while leaving a live token under the destination team.
   - **"Not your team" and "no such team" answer identically** (404). Told apart, the route reports
     whether an arbitrary slug exists on treg, to any signed-in account.
 
@@ -307,7 +315,8 @@ costs somebody's balance.
 
 The kept row also keeps immutable issue-time team provenance. Mutable team choice and stable consent
 time live once per family in `OAuthGrant`; startup migration A35 backfills that row from the oldest
-existing refresh token.
+existing refresh token, and `_ensure_grant` performs the same reconstruction for families an old
+binary creates during the rolling-deploy window.
 
 ## Tokens are exchanged, not forwarded
 

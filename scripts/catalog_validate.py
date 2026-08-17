@@ -355,14 +355,6 @@ def main(argv: list[str]) -> int:
                     and default_array_encoding not in QUERY_ARRAY_ENCODINGS):
                 fail(errors, where, "input.queryArrayEncoding must be one of "
                      f"{sorted(QUERY_ARRAY_ENCODINGS)}")
-            for param, spec in (inp.get("queryParams") or {}).items():
-                if not isinstance(spec, dict) or spec.get("arrayEncoding") is None:
-                    continue
-                if spec.get("type") != "array":
-                    fail(errors, where, f"query param '{param}' has arrayEncoding but is not an array")
-                if spec.get("arrayEncoding") not in QUERY_ARRAY_ENCODINGS:
-                    fail(errors, where, f"query param '{param}' arrayEncoding must be one of "
-                         f"{sorted(QUERY_ARRAY_ENCODINGS)}")
             cost = ep.get("cost")
             if cost is not None or tier == "core":
                 # cost is optional in the extended tier — several providers publish prices per API

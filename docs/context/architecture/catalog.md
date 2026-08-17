@@ -127,8 +127,7 @@ endpoints:
                                     #   `name` is ours to word, `summary` is theirs
     input:                           # split by location — mirrors treg's binding model
       queryArrayEncoding: json      # optional default for array query params: json | comma |
-                                    # repeated (the compatibility default). A parameter may
-                                    # override it with its own `arrayEncoding`.
+                                    # repeated (the compatibility default).
       queryParams:
         uniqueId: {type: string, required: false, note: "username from the profile URL", example: "tiktok"}
         secUid:   {type: string, required: false}
@@ -194,14 +193,14 @@ Rules:
 - `input` / `test_request` appear when the provider publishes enough parameter documentation to
   generate them; both are machine-written and are rewritten on the next ingest.
 - Query arrays carry an explicit wire encoding when the provider does not accept repeated keys:
-  `input.queryArrayEncoding` sets the endpoint default and a query parameter's `arrayEncoding`
-  overrides it. `catalog_store.query_values()` is shared by MCP request assembly and
-  `call_template()`, so the structured schema and paste-ready command cannot disagree. Complete
+  `input.queryArrayEncoding` sets the endpoint-wide format. `catalog_store.query_values()` is shared
+  by MCP request assembly and `call_template()`, so the structured schema and paste-ready command
+  cannot disagree. Complete
   `name=value` arguments are shell-quoted with `shlex.quote` after canonical boolean/JSON encoding.
-  Endpoint defaults are only valid when every array parameter shares a wire format. Pinterest's
-  analytics routes are deliberately mixed: ids/statuses use repeated keys while only `columns`
-  declares `arrayEncoding: comma`. Meta Ad Library's array parameters all use JSON, so its endpoint
-  default remains correct.
+  Endpoint declarations are only valid when every array parameter shares a wire format. Meta Ad
+  Library's array parameters all use JSON; undeclared endpoints retain repeated keys. Pinterest's
+  mixed convention remains a documented catalog gap until a live connection can verify a separate
+  per-parameter extension.
 - `verified` + `example_response` mean a live call was made and passed, and carry exactly the same
   weight as in core — the validator applies one rule to both tiers: verified ⇒ a `test_request` to
   re-verify with and an `example_response` file that exists.

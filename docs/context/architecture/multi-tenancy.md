@@ -208,8 +208,11 @@ is spelled `BOOLEAN NOT NULL DEFAULT false`, and the legacy `INSERT INTO org (�
 `public_demo` explicitly with a `false` literal. **(A35) OAuth grant authority** backfills the new
 `oauthgrant` table from each refresh family's oldest row with a portable, idempotent
 `INSERT … SELECT … WHERE NOT EXISTS`; future team moves update that family row and leave historical
-token `org_id` values untouched. **(A21) PROJECTS** follows the same shape: the `project`
-table itself needs no ALTER (a brand-new table is created by `create_all`), so the step only adds the three
+token `org_id` values untouched. Because a rolling deploy can run an old binary after A35 and create
+only `OAuthRefresh`, request-time `_ensure_grant` repeats that oldest-row reconstruction with a
+concurrency-safe upsert before refresh, grant listing, or a team move. **(A21) PROJECTS** follows the
+same shape: the `project` table itself needs no ALTER (a brand-new table is created by `create_all`),
+so the step only adds the three
 columns that hang off it — `tool.project_id` (INTEGER, nullable) plus `project_access` (JSON, nullable) on
 **both** `membership` and `invite`. Every one is nullable and NULL means *org-wide / unrestricted*, so an
 existing deployment behaves exactly as before until someone creates a project; and because none of them is a
