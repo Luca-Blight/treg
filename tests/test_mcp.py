@@ -1054,13 +1054,14 @@ async def test_search_breaks_ties_on_what_treg_has_MEASURED(clients):
     uncallable, and the cheapest endpoint with a perfect record cut off below the fold."""
     from treg import catalog_store as cs
     cat = cs.load()
-    ranked, _ = cs.search("ad library", cat, cs.band_limit(8))
+    ranked, _, truncated = cs.rank_band("ad library", cat, 8)
+    assert not truncated, "24 matches sit well inside the band"
     ids = [ep["id"] for ep, _ in ranked]
     good, broken = "scrapecreators.x.v1-tiktok-ad-library-search", "tikhub.x.tiktok-ads-search-ads"
     assert {good, broken} <= set(ids), "both are in the band before any evidence is applied"
 
-    stats = {good: {"samples": 16, "ok_rate": 1.0, "any_ok": True},
-             broken: {"samples": 7, "ok_rate": None, "any_ok": False}}
+    stats = {good: {"samples": 16, "ok_rate": 1.0},
+             broken: {"samples": 12, "ok_rate": 0.0}}
     reranked = cs.rerank(ranked, stats, cat)
     out = [ep["id"] for ep, _ in reranked]
     assert out[0] == good, "a perfect measured record wins its score group outright"
@@ -1080,4 +1081,62 @@ async def test_balance_says_WHOSE_grant_and_which_team_by_name(clients):
         out = await _call_tool(c, "balance", {}, token=token)
     assert out["team"] and out["team_name"]
     assert out["identity"] == "whose@superdesign.dev"
-    assert "use-team" in (out.get("hint") or ""), "and how to move it, without reconnecting"
+    # This one is a HEADER token, whose team is baked in — so it is labelled, but not sent to
+    # `treg mcp grants`, which would list nothing for it. The OAuth half is asserted in
+    # test_mcp_oauth.py::test_balance_tells_an_oauth_caller_how_to_move_the_team.
+    assert "use-team" not in (out.get("hint") or "")
+
+
+async def test_the_tie_band_covers_the_WHOLE_equal_scoring_group(clients):
+    """Reranking a slice that was already cut mid-tie cannot put back the row the cut dropped. The
+    band therefore keeps taking while the score stays equal — and when a query ties so broadly that
+    even the ceiling can't hold the group, it SAYS so rather than presenting an unranked tail as a
+    ranked answer."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    rows, total, truncated = cs.rank_band("ad library", cat, 8)
+    scores = [s for _, s in rows]
+    assert len(rows) > 8 and not truncated
+    everything, _ = cs.search("ad library", cat, 10**6)
+    assert scores.count(scores[-1]) == sum(1 for _, s in everything if s == scores[-1]), \
+        "the group straddling the cut is taken whole, or the cut is still arbitrary"
+
+    # a single word ties across hundreds — bounded, and the bound is announced
+    wide, wide_total, wide_trunc = cs.rank_band("tiktok", cat, 8)
+    assert wide_total > cs.RERANK_BAND and wide_trunc
+    assert len(wide) <= cs.RERANK_BAND
+    token = (await clients.post("/users", json={"email": "wide@superdesign.dev"})).json()["token"]
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "catalog_search", {"query": "tiktok", "limit": 8}, token=token)
+    assert "narrow" in (out.get("ranking_note") or ""), out.get("ranking_note")
+
+
+async def test_a_near_miss_never_suggests_a_DIFFERENT_provider(clients):
+    """A suggestion claims the caller mistyped. `apollo.people.email.find` is not a typo for
+    `hunter.people.email.find` — it is another vendor, another price and another credential, so on a
+    path that spends money that is provider routing wearing a spellcheck's clothes. treg compares
+    providers and the caller chooses."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    assert cs.near_ids("lusha.companies-signals", cat) == ["lusha.x.companies-signals"]
+    for crossing in ("apollo.people.email.find", "fake.companies-signals", "hunter.tiktok.video.comments"):
+        for suggested in cs.near_ids(crossing, cat):
+            assert cat.by_id[suggested]["provider"] == crossing.split(".")[0], suggested
+
+
+def test_a_header_token_is_not_told_to_run_a_command_that_lists_nothing():
+    """`treg mcp grants` only has an answer for an OAuth grant. A header token already carries its
+    own team, so pointing it at that command sends it to an empty list."""
+    import asyncio
+    from treg import mcp as _mcp
+
+    class _Dead:
+        headers: dict = {}
+        async def get(self, *a, **k):
+            raise RuntimeError("no api here — the label must degrade, not gate")
+
+    plain = asyncio.run(_mcp._whose_grant(_Dead(), "superdesign", oauth=False))
+    granted = asyncio.run(_mcp._whose_grant(_Dead(), "superdesign", oauth=True))
+    assert "use-team" not in (plain.get("hint") or "")
+    assert "use-team" in granted["hint"]
+    assert plain["team"] == "superdesign", "and it still labels the team it does know"

@@ -3400,11 +3400,15 @@ def cmd_mcp_grants(args, cfg) -> None:
         print("no MCP connections authorised by this account")
         _dim("connections made while signed in as somebody else are listed under THAT account")
         return
-    print(f"  {'GRANT':<14} {'CLIENT':<24} {'TEAM':<20} {'GRANTED':<20}")
+    # The grant id prints WHOLE. It is 22 characters and every other column here is clipped, so it
+    # was clipped too — and `use-team` matches exactly, which made the one command this table exists
+    # to feed answer 404 for anything copied off the screen. An identifier is not prose: clip the
+    # human-readable columns, never the thing the next command takes as an argument.
+    print(f"  {'GRANT':<22} {'CLIENT':<22} {'TEAM':<18} {'GRANTED':<20}")
     for g in rows:
-        print(f"  {_clip(g['grant'], 14):<14} {_clip(g.get('client') or '', 24):<24} "
-              f"{_clip(g.get('team') or '?', 20):<20} {(g.get('granted') or '')[:19]:<20}")
-    _dim("  point one at another team: treg mcp use-team <grant> <team-slug>")
+        print(f"  {g['grant']:<22} {_clip(g.get('client') or '', 22):<22} "
+              f"{_clip(g.get('team') or '?', 18):<18} {(g.get('granted') or '')[:19]:<20}")
+    _dim(f"  point one at another team: treg mcp use-team {rows[0]['grant']} <team-slug>")
 
 
 def cmd_mcp_use_team(args, cfg) -> None:
@@ -4337,14 +4341,7 @@ def _observed_cell(obs: dict | None) -> str:
     than no rate, because it reads as evidence."""
     if not obs or obs.get("ok_rate") is None:
         n = (obs or {}).get("samples") or 0
-        if not n:
-            return f"{_M}—{_R}"
-        # Below the floor there is still one thing worth saying, and it is the one a reader most
-        # needs: whether it has EVER answered. `— (7)` next to a fresh LAST OK read as "fine, just
-        # new" on an endpoint that had failed all seven times.
-        if not obs.get("any_ok", True):
-            return f"{_A}✗{_R} {_M}({n}){_R}"
-        return f"{_M}— ({n}){_R}"
+        return f"{_M}— ({n}){_R}" if n else f"{_M}—{_R}"
     pct = obs["ok_rate"] * 100
     colour = _G if pct >= 99 else (_AM if pct >= 90 else _A)
     return f"{colour}{pct:.0f}%{_R} {_M}({obs['samples']}){_R}"
@@ -4558,7 +4555,11 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
                 print(f"  did you mean: {_B}{eid}{_R}")
             _dim(f"  treg catalog get {near[0]}")
         else:
-            _dim(f"find one with: treg catalog search {endpoint_id.split('.')[-1]}")
+            # The whole id minus its provider, as words. `…split(".")[-1]` gave "find" for
+            # `apollo.people.email.find` — a search term that matches half the catalog, on the
+            # path a caller now lands on whenever the near miss belongs to another provider.
+            terms = " ".join(endpoint_id.split(".")[1:] or [endpoint_id]).replace("-", " ").replace("_", " ")
+            _dim(f"find one with: treg catalog search {terms.strip()}")
         sys.exit(1)
     if r.status_code != 200:
         _show(r)

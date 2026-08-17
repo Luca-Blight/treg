@@ -107,12 +107,17 @@ async def observed(
     for ep_id, n, ok, bad, last_ok in rows:
         n, ok, bad = int(n or 0), int(ok or 0), int(bad or 0)
         if n < MIN_SAMPLES:
-            # Honest emptiness: say how thin the evidence is, claim nothing from it — except the
-            # one thing thinness can still support. "Has this EVER answered?" is a yes/no, not a
-            # rate: three of three failures is not a 0% success rate worth publishing, but
-            # `any_ok: false` is a fact that survives any sample size, and without it a row that
-            # has never once worked is indistinguishable from a row nobody has tried.
-            out[ep_id] = {"samples": n, "ok_rate": None, "any_ok": ok > 0,
+            # Honest emptiness: say how thin the evidence is, claim nothing from it. An earlier
+            # revision of this fix published `any_ok` here — "has it EVER answered?" — on the
+            # argument that a yes/no survives any sample size. It doesn't survive THIS module's
+            # own two rules, and it broke both. It leaked outcome (not just volume) about a single
+            # tenant's single call on a quiet endpoint, which is what the floor exists to prevent;
+            # and because `samples` counts 4xx while `ok` does not, one caller's malformed 422
+            # produced `any_ok: false` and made a healthy endpoint look broken to everybody — the
+            # exact failure the 4xx rule below is written to stop. "Never worked" is now read off
+            # `ok_rate == 0`, which is computed only from DECIDED (2xx vs 5xx) samples above the
+            # floor, so it cannot be inferred from caller errors at all.
+            out[ep_id] = {"samples": n, "ok_rate": None,
                           "p50_ms": None, "p95_ms": None, "last_ok_days": None}
             continue
         decided = ok + bad          # 4xx excluded — the caller's fault, not the provider's
@@ -120,12 +125,11 @@ async def observed(
         out[ep_id] = {
             "samples": n,
             "ok_rate": round(ok / decided, 4) if decided else None,
-            "any_ok": ok > 0,
             "p50_ms": _pct(ms, 0.50),
             "p95_ms": _pct(ms, 0.95),
             "last_ok_days": (_now() - last_ok).days if last_ok else None,
         }
     for ep_id in ids:                # an endpoint nobody has called says so, rather than vanishing
-        out.setdefault(ep_id, {"samples": 0, "ok_rate": None, "any_ok": False,
+        out.setdefault(ep_id, {"samples": 0, "ok_rate": None,
                                "p50_ms": None, "p95_ms": None, "last_ok_days": None})
     return out

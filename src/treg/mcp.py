@@ -117,7 +117,6 @@ class SearchResult(TypedDict, total=False):
     score: int | None
     works: float | None          # measured success rate, or null when there isn't enough evidence
     samples: int | None          # how many real calls that rate stands on
-    never_worked: bool | None    # called, and not one of those calls came back 2xx
 
 
 class SearchOut(TypedDict, total=False):
@@ -125,6 +124,7 @@ class SearchOut(TypedDict, total=False):
     count: int | None
     total_matches: int | None
     results: list[SearchResult] | None
+    ranking_note: str | None     # set when the tie group outran what the evidence sort could weigh
     hint: str | None
     next: str | None
     error: str | None
@@ -422,7 +422,7 @@ async def _resolve_org(client: httpx.AsyncClient) -> tuple[int | None, str | Non
     return int(chosen["org_id"]), chosen.get("slug"), None
 
 
-async def _whose_grant(client: httpx.AsyncClient, slug: str | None) -> dict:
+async def _whose_grant(client: httpx.AsyncClient, slug: str | None, *, oauth: bool) -> dict:
     """`{team, team_name, identity, hint}` — enough for a human to spot the WRONG team.
 
     A slug on its own cannot be sanity-checked. `superdesign-7` looks like a plausible team to an
@@ -454,9 +454,13 @@ async def _whose_grant(client: httpx.AsyncClient, slug: str | None) -> dict:
                                f"account's teams — check who authorised it")
     except Exception:  # noqa: BLE001 — a label, never a gate
         logging.getLogger("treg.mcp").warning("could not label the grant's team", exc_info=True)
-    out.setdefault("hint", "to spend from a different team, the human who authorised this "
-                           "connection runs `treg mcp grants` then `treg mcp use-team "
-                           "<grant> <team>` — no need to reconnect")
+    if oauth:
+        # Only an OAuth grant HAS a team to move. A header token carries its own team already, and
+        # `treg mcp grants` would list nothing for it — sending that caller to a command with no
+        # answer is the "documented a feature that isn't there for you" failure in miniature.
+        out.setdefault("hint", "to spend from a different team, the human who authorised this "
+                               "connection runs `treg mcp grants` then `treg mcp use-team "
+                               "<grant> <team>` — no need to reconnect")
     return out
 
 
@@ -482,7 +486,7 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
     # one of the 24 "ad library" matches scores 6 — so with a default limit of 8 the rows an agent
     # actually sees were decided by file order. That handed back seven tikhub rows (one of them
     # uncallable) and hid the cheapest endpoint with a perfect measured record.
-    ranked, total = catalog_store.search(query, cat, catalog_store.band_limit(limit))
+    ranked, total, tie_truncated = catalog_store.rank_band(query, cat, limit)
     stats = await _observed_stats([ep["id"] for ep, _ in ranked])
     ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
     results = []
@@ -506,9 +510,14 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
             # at a time, after the shortlist had already been cut blind.
             "works": obs.get("ok_rate"),
             "samples": obs.get("samples") or 0,
-            "never_worked": bool(obs.get("samples")) and not obs.get("any_ok", True),
         })
     out = {"query": query, "count": len(results), "total_matches": total, "results": results}
+    if tie_truncated:
+        # No silent caps: past this many equally-scoring rows the evidence sort never saw the rest,
+        # so the tail is ordered by nothing in particular and must not read as a ranked answer.
+        out["ranking_note"] = (f"{query!r} matches too broadly to rank on measured reliability past "
+                               f"the first {catalog_store.RERANK_BAND} equally-scoring rows — "
+                               f"add a word to narrow it")
     if not results:
         out["hint"] = (
             f"nothing matches all of {query!r} — drop a word, or try a different way of saying the task. "
@@ -603,7 +612,11 @@ async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
         "injected credentials always win over them. Use `query` + `body` together for endpoints "
         "that split a POST across both (Bright Data's ?dataset_id=… + array body). Giving `body` "
         "implies POST. Multipart file uploads aren't supported here — run (or tell the human to "
-        "run) the CLI: `treg call <endpoint> --upload name=@/path/to/file`."
+        "run) the CLI: `treg call <endpoint> --upload name=@/path/to/file`.\n\n"
+        "Query values are sent the way HTTP spells them: booleans as `true`/`false`, nested "
+        "objects as compact JSON. A null query value is OMITTED from the query string — if an "
+        "upstream distinguishes an absent parameter from an empty one, send the empty string "
+        "explicitly rather than null."
     ),
     annotations=_CALLS,
     structured_output=True
@@ -789,7 +802,7 @@ async def balance(ctx: Context) -> BalanceOut:
         if problem:
             return problem
         r = await client.get(f"/orgs/{org_id}/balance", headers={"X-Treg-Org": slug or ""})
-        whose = await _whose_grant(client, slug)
+        whose = await _whose_grant(client, slug, oauth=_oauth_claims(token) is not None)
     body = _body(r)
     if r.status_code != 200:
         return {"error": "could not read the balance", "detail": body}
@@ -819,7 +832,7 @@ async def my_tools(ctx: Context) -> MyToolsOut:
         if problem:
             return problem
         r = await client.get("/tools", headers={"X-Treg-Org": slug or ""})
-        whose = await _whose_grant(client, slug)
+        whose = await _whose_grant(client, slug, oauth=_oauth_claims(token) is not None)
     body = _body(r)
     if r.status_code != 200:
         return {"error": "could not list the team's tools", "detail": body}

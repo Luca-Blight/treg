@@ -205,8 +205,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   (`catalog_store.search`, no deps, no embeddings): **every** query token must match somewhere (AND, so a
   second word narrows), and score sums each token's best field weight — capability id/description +
   platform label/slug (3) > summary (2) > id/path/provider (1). Ties — the COMMON case, since token
-  containment scores whole families identically — are then settled by `catalog_store.rerank()` over a
-  `band_limit()` slice, on **measured reliability, then core-before-extended, then price**, with
+  containment scores whole families identically — are then settled by `catalog_store.rerank()` over
+  the band `rank_band()` returns (the whole equal-scoring group at the cut, capped at `RERANK_BAND`
+  with a hint when that cap bites), on **measured reliability, then core-before-extended, then price**, with
   `verified` and id keeping the order total; each result carries the `observed` block that decided it.
   See [catalog](../architecture/catalog.md#the-evidence-decides-the-order-not-just-the-detail-page).
   `catalog_endpoint` (`GET /catalog/endpoints/{endpoint_id}`) answers everything in ONE round-trip:

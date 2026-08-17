@@ -721,21 +721,37 @@ Five rules worth keeping:
   an endpoint that had been called seven times today and failed all seven read `WORKS — (7)` next
   to `LAST OK: today` — which is how `tikhub.x.tiktok-ads-search-ads` passed for a merely new row
   while being uncallable (2026-08-17).
-- **Below the floor, "has it EVER answered?" is still publishable.** `any_ok` is a yes/no, not a
-  rate: it survives any sample size, carries no more than `samples` already does, and without it a
-  row that has never once worked is indistinguishable from one nobody has tried. The CLI prints
-  `✗ (7)` for that case instead of the neutral `— (7)`.
+- **Below the floor, the outcome stays unpublished — not even a yes/no.** The 2026-08-17 fix first
+  added `any_ok` ("has it EVER answered?") on the argument that a boolean survives any sample size.
+  It did not survive the two rules above. On a quiet endpoint it exposed the *outcome* of one
+  tenant's one call, which is half of why the floor exists; and because `samples` counts 4xx while
+  successes do not, a single caller's malformed 422 published `any_ok: false` and made a healthy
+  endpoint look broken to every other tenant — precisely the failure the 4xx rule prevents. It was
+  removed. "Never worked" is read off `ok_rate == 0`, which is computed from DECIDED samples only,
+  so no volume of caller errors can produce it.
 
 ### The evidence decides the ORDER, not just the detail page
 
 Token scoring ties by the dozen — all 24 `"ad library"` matches score 6 — so "which 8 do I show?"
 was answered by file order. That returned seven near-duplicate tikhub rows (one of them the
 uncallable one above) and cut off `scrapecreators.x.v1-tiktok-ad-library-search`, cheaper and 17 for
-17 measured. `catalog_store.rerank()` now settles equal scores over a `band_limit()` slice, on
+17 measured. `catalog_store.rerank()` now settles equal scores over the band `rank_band()` returns, on
 buckets rather than a weighted formula (an ok_rate and a price are different units, and a blended
 score is one nobody can predict or argue with):
 
 **relevance → measured (good · unknown · poor · never-worked) → core before extended → price**
+
+where the measured bucket comes from `ok_rate` alone — `>= 0.9` good, `None` unknown, `0` never
+worked, else poor — so a demotion always rests on calls the provider actually decided.
+
+**The band takes the tie group whole.** A cut made *inside* a group of equally relevant rows is the
+arbitrary cut, and reranking a slice that already dropped the best-measured row cannot put it back —
+so `rank_band()` keeps taking while the score stays equal to the last row kept. That group is 17 rows
+for "ad library" and 24 for "email", but 523 for the bare word "tiktok", and this is an OPEN route:
+taking every group whole would put a 523-id `IN` clause behind every search. So it is bounded at
+`RERANK_BAND` (250) and **says when it truncated** — `ranking_note` over MCP, a hint on the HTTP
+route — because a bounded cut that announces itself is the thing this fix set out to build, and a
+silent one is what it set out to remove.
 
 Two orderings there are deliberate. Evidence outranks curation, because a core row that has never
 answered is not the better suggestion. Curation outranks **price**, because `core` is the hand-picked

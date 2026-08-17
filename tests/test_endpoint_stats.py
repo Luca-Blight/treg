@@ -110,9 +110,7 @@ async def test_aggregates_pool_across_orgs_but_carry_nothing_identifying(clients
         await _record(EP, 200, org_id=2)
     got = (await _observed([EP]))[EP]
     assert got["samples"] == 6                                   # pooled across tenants
-    # `any_ok` is a pooled yes/no like the rest — it says whether ANY caller ever got a 2xx, which
-    # is the one thing a below-the-floor sample can still support without publishing a rate.
-    assert set(got) == {"samples", "ok_rate", "any_ok", "p50_ms", "p95_ms", "last_ok_days"}
+    assert set(got) == {"samples", "ok_rate", "p50_ms", "p95_ms", "last_ok_days"}
     assert not any(k in got for k in ("org_id", "user_email", "params_hash", "client"))
 
 
@@ -165,19 +163,49 @@ async def test_last_ok_means_the_last_SUCCESS_not_the_last_attempt(clients: Asyn
     assert got["last_ok_days"] == 9
 
 
-async def test_below_the_floor_we_still_say_whether_it_EVER_answered(clients: AsyncClient):
-    """The floor exists so a rate isn't published on noise — but "has this ever worked at all?" is a
-    yes/no, not a rate, and it survives any sample size. Without it a row that has never once
-    answered is indistinguishable from one nobody has tried."""
+async def test_below_the_floor_NOTHING_about_the_outcome_is_published(clients: AsyncClient):
+    """The floor publishes volume, never outcome — not even a yes/no.
+
+    A first cut of the 2026-08-17 fix published `any_ok` here, reasoning that "has it EVER
+    answered?" survives any sample size. It broke both of this module's rules at once. On a quiet
+    endpoint it exposed the OUTCOME of a single tenant's single call, which is the leak the floor
+    exists to prevent. And since `samples` counts 4xx while successes do not, one caller's malformed
+    422 published `any_ok: false` — making a healthy endpoint look broken to every other tenant,
+    the exact failure `test_a_caller_error_is_not_held_against_the_provider` guards."""
     for _ in range(3):
         await _record(EP, 500)
-    never = (await _observed([EP]))[EP]
-    assert never["ok_rate"] is None and never["samples"] == 3    # still no rate published
-    assert never["any_ok"] is False
+    thin = (await _observed([EP]))[EP]
+    assert thin["samples"] == 3
+    assert all(thin[k] is None for k in ("ok_rate", "p50_ms", "p95_ms", "last_ok_days"))
+    assert "any_ok" not in thin
 
-    await _record("other.ep", 200)
-    tried = (await _observed(["other.ep"]))["other.ep"]
-    assert tried["ok_rate"] is None and tried["any_ok"] is True
+    await _record("caller.error.only", 422)
+    one_bad_call = (await _observed(["caller.error.only"]))["caller.error.only"]
+    assert one_bad_call["ok_rate"] is None, "one agent's bad parameters say nothing about the endpoint"
 
-    untouched = (await _observed(["nobody.called.this"]))["nobody.called.this"]
-    assert untouched["samples"] == 0 and untouched["any_ok"] is False
+
+async def test_never_worked_is_read_off_DECIDED_samples_only(clients: AsyncClient):
+    """"Never worked" has to mean the provider failed the calls that were ITS to answer. Above the
+    floor `ok_rate == 0` says exactly that — 4xx is already excluded from the rate — so ranking can
+    demote a genuinely broken endpoint without a single caller error being able to trigger it."""
+    from treg import catalog_store as cs
+    for _ in range(6):
+        await _record(EP, 503)                       # the provider failing, decisively
+    assert (await _observed([EP]))[EP]["ok_rate"] == 0.0
+
+    for _ in range(6):
+        await _record("all.caller.errors", 422)      # six bad requests from callers
+    caller_fault = (await _observed(["all.caller.errors"]))["all.caller.errors"]
+    assert caller_fault["samples"] == 6 and caller_fault["ok_rate"] is None
+
+    # and ranking follows: decisively-failing sinks below never-measured, caller-errors-only does not
+    rows = [({"id": i, "tier": "extended", "verified": None, "cost": None}, 6)
+            for i in ("broken", "untried", "caller-fault")]
+    order = [ep["id"] for ep, _ in cs.rerank(rows, {
+        "broken": {"samples": 6, "ok_rate": 0.0},          # the provider failed every decided call
+        "untried": {"samples": 0, "ok_rate": None},        # nobody has called it
+        "caller-fault": {"samples": 6, "ok_rate": None},   # six 422s and nothing decided
+    })]
+    assert order[-1] == "broken"
+    assert order.index("caller-fault") < order.index("broken"), \
+        "caller errors must not sink an endpoint the way a real failure does"

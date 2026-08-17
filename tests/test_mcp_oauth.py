@@ -989,7 +989,9 @@ async def test_a_grant_cannot_be_moved_to_a_team_you_are_not_in(clients):
     theirs = (await clients.get("/orgs", headers={"X-Treg-Token": outsider["token"]})).json()[0]
 
     r = await clients.post(f"/oauth/grants/{grant}/team", json={"team": theirs["slug"]}, headers=me)
-    assert r.status_code == 403
+    # 404, not 403: a team you are not in must look exactly like a team that does not exist, or
+    # this route becomes a slug-existence oracle (see the test at the bottom of this file).
+    assert r.status_code == 404
 
 
 async def test_only_the_grants_own_user_can_move_it(clients):
@@ -1003,3 +1005,128 @@ async def test_only_the_grants_own_user_can_move_it(clients):
     r = await clients.post(f"/oauth/grants/{grant}/team", json={"team": theirs["slug"]},
                            headers={"X-Treg-Token": stranger["token"]})
     assert r.status_code == 404, "and it must not confirm the grant exists"
+
+
+async def test_balance_tells_an_oauth_caller_how_to_move_the_team(clients):
+    """The label is only half of report #5 — the other half is knowing the choice is reversible."""
+    body, _, _ = await _grant_full(clients, "labelled@superdesign.dev")
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=body["access_token"])
+    assert out["identity"] == "labelled@superdesign.dev" and out["team_name"]
+    assert "use-team" in out["hint"]
+
+
+async def test_the_listed_grant_id_is_the_one_use_team_accepts(clients, monkeypatch):
+    """The id printed by `treg mcp grants` is an ARGUMENT, not prose. It is 22 characters and the
+    table clipped it to 13 plus an ellipsis, so the one command the table exists to feed answered
+    404 for anything a human copied off their screen — report #5's fix, broken end to end, with a
+    test suite that never once went through the CLI."""
+    import io
+    from contextlib import redirect_stdout
+
+    from treg import cli
+
+    email = "roundtrip@superdesign.dev"
+    await _grant_full(clients, email)
+    me = await _as(email)
+
+    listed = (await clients.get("/oauth/grants", headers=me)).json()
+    grant = listed[0]["grant"]
+    assert len(grant) > 14, "a shorter id would make this test pass for the wrong reason"
+
+    # what the human actually sees. The CLI is synchronous httpx, so its client is stubbed with the
+    # response the server just gave us — the rendering is what is under test, not the transport.
+    class _Stub:
+        status_code, headers = 200, {"content-type": "application/json"}
+        def json(self): return listed
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def get(self, *a, **k): return self
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        monkeypatch.setattr(cli, "_client", lambda cfg: _Stub())
+        cli.cmd_mcp_grants(type("A", (), {})(), {})
+    printed = buf.getvalue()
+    assert grant in printed, f"the full id must be on screen, got:\n{printed}"
+
+    # and it round-trips through the command it is printed for
+    moved = await clients.post(f"/oauth/grants/{grant}/team",
+                               json={"team": listed[0]["team"]}, headers=me)
+    assert moved.status_code == 200, moved.text
+
+
+async def test_a_grant_dies_with_the_membership_it_was_consented_under(clients):
+    """The grant is consent to spend a TEAM's balance; leaving that team ends the standing it was
+    given with. Refresh checked only that the user and org still existed, so a grant kept minting
+    tokens forever — every call refused by `require_member`, but the grant lying dormant and
+    springing back to life, with no new consent, the day membership was restored."""
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import Membership, User
+
+    body, client_id, org_id = await _grant_full(clients, "departing@superdesign.dev")
+    async with session_maker() as db:
+        user = (await db.execute(select(User).where(
+            User.email == "departing@superdesign.dev"))).scalar_one()
+        m = (await db.execute(select(Membership).where(
+            Membership.user_id == user.id, Membership.org_id == org_id))).scalar_one()
+        await db.delete(m)
+        await db.commit()
+
+    r = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert r.status_code == 400, "a grant must not outlive the membership it was granted under"
+    assert "member" in r.json()["error_description"]
+
+
+async def test_a_refresh_racing_the_move_does_not_drag_the_team_back(clients):
+    """The team rides on every row of the refresh family, so a rotation that copied the org off the
+    row it happened to read could resurrect the old team milliseconds after the user was told the
+    move had succeeded — money going back to the balance they had just moved it off. Rotation reads
+    the team from the family as it stands NOW, not from the row it was handed."""
+    email = "racer@superdesign.dev"
+    body, client_id, _ = await _grant_full(clients, email)
+    me = await _as(email)
+    other = (await clients.post("/orgs", json={"name": "destination team"}, headers=me)).json()
+    grant = (await clients.get("/oauth/grants", headers=me)).json()[0]["grant"]
+
+    assert (await clients.post(f"/oauth/grants/{grant}/team",
+                               json={"team": other["org"]}, headers=me)).status_code == 200
+
+    # the client rotates with a refresh token minted BEFORE the move — the stale-row case
+    r = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert r.status_code == 200, r.text
+    async with mcp_session(clients) as c:
+        out = await _call_tool(c, "balance", {}, token=r.json()["access_token"])
+    assert out["team"] == other["org"]
+
+    # and the NEXT rotation stays there too, rather than reverting to the row's old value
+    again = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": r.json()["refresh_token"],
+        "client_id": client_id})
+    async with mcp_session(clients) as c:
+        out2 = await _call_tool(c, "balance", {}, token=again.json()["access_token"])
+    assert out2["team"] == other["org"]
+
+
+async def test_a_team_you_cannot_use_is_indistinguishable_from_one_that_does_not_exist(clients):
+    """Told apart, this route reports whether an arbitrary slug exists on treg — an oracle any
+    signed-in account could walk."""
+    await _grant_full(clients, "prober@superdesign.dev")
+    me = await _as("prober@superdesign.dev")
+    grant = (await clients.get("/oauth/grants", headers=me)).json()[0]["grant"]
+
+    outsider = (await clients.post("/users", json={"email": "elsewhere@superdesign.dev"})).json()
+    theirs = (await clients.get("/orgs", headers={"X-Treg-Token": outsider["token"]})).json()[0]
+
+    real_but_not_mine = await clients.post(f"/oauth/grants/{grant}/team",
+                                           json={"team": theirs["slug"]}, headers=me)
+    pure_fiction = await clients.post(f"/oauth/grants/{grant}/team",
+                                      json={"team": "no-such-team-anywhere"}, headers=me)
+    assert real_but_not_mine.status_code == pure_fiction.status_code == 404
+    assert real_but_not_mine.json()["detail"] == pure_fiction.json()["detail"].replace(
+        "no-such-team-anywhere", theirs["slug"])

@@ -553,18 +553,35 @@ def near_ids(endpoint_id: str, cat: Catalog, limit: int = 3) -> list[str]:
     if not want:
         return []
     provider, want_set = want[0], set(want)
-    scored: list[tuple[int, int, str]] = []
-    for eid in cat.by_id:
+    # SAME PROVIDER ONLY. Two reasons, and the second is the load-bearing one. A suggestion is a
+    # claim that the caller mistyped, and `apollo.people.email.find` is not a typo for
+    # `hunter.people.email.find` — it is a different vendor, a different price and a different
+    # credential. On a path that spends money, "did you mean <competitor>?" is provider routing
+    # wearing a spellcheck's clothes, which is exactly what the charter says treg does not do:
+    # treg compares providers side by side and the CALLER chooses. (The first cut of this scored
+    # cross-provider matches and merely preferred the same provider — via `r[2] != provider`, which
+    # compared a full id against a bare provider token and was therefore true every time, so even
+    # that preference never applied. `fake.companies-signals` confidently answered
+    # `lusha.x.companies-signals`.)
+    if provider not in cat.provider_meta:
+        return []
+    exact, scored = [], []
+    for eid, ep in cat.by_id.items():
+        if ep.get("provider") != provider:
+            continue
         have = [t for t in _SPLIT.split(eid.lower()) if t and t != "x"]
         if not have:
             continue
-        if have == want:                      # the same id but for a tier marker — an exact hit
-            return [eid]
+        if have == want:      # the same id but for a tier marker — collect ALL, don't return the
+            exact.append(eid)  # first: ids that normalise identically are equally good answers
+            continue
         overlap = len(want_set & set(have))
         if not overlap or overlap < len(want_set) - 1:
             continue
         scored.append((-overlap, len(set(have) - want_set), eid))
-    scored.sort(key=lambda r: (r[0], r[1], r[2] != provider, r[2]))
+    if exact:
+        return sorted(exact)[:limit]
+    scored.sort()
     return [eid for _, _, eid in scored[:limit]]
 
 
@@ -629,14 +646,35 @@ def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, 
     return scored[:max(limit, 0)], len(scored)
 
 
-# How many equal-scoring rows to pull before the observed-evidence sort decides the cut. Scoring is
-# token containment over three fields, so ties are the NORM, not the exception: "ad library" scores
-# every one of its 24 matches a 6, and the answer to "which 8 do I show?" was then file order.
-RERANK_BAND = 60
+# The ceiling on how many equal-scoring rows the evidence sort may consider. Scoring is token
+# containment over three fields, so ties are the NORM, not the exception: "ad library" scores every
+# one of its 24 matches a 6, and the answer to "which 8 do I show?" was then file order.
+#
+# Sized against the real catalog rather than guessed. The tie group straddling a default limit of 8
+# is 17 rows for "ad library", 24 for "email", 88 for "company", 127 for "backlinks" — but 523 for
+# the bare word "tiktok". Taking the whole group unconditionally would put a 523-id `IN` clause
+# behind every search on an OPEN, unauthenticated route, so the group is taken whole up to this
+# ceiling and the caller is TOLD when it was not (see `rank_band`) — a bounded cut that announces
+# itself, rather than the silent one this fix set out to remove.
+RERANK_BAND = 250
 
 
-def band_limit(limit: int) -> int:
-    return max(min(RERANK_BAND, 6 * max(limit, 1)), limit)
+def rank_band(query: str, cat: Catalog, limit: int) -> tuple[list[tuple[dict, int]], int, bool]:
+    """`(rows, total_matches, tie_truncated)` — the candidates the evidence sort gets to reorder.
+
+    Takes `limit` rows, then keeps taking while the score stays equal to the last one kept: a cut
+    made *inside* a group of equally relevant rows is the arbitrary cut, and reranking a slice that
+    already dropped the best-measured row cannot put it back. `tie_truncated` is true when the group
+    ran past `RERANK_BAND` and the evidence therefore did not get to see all of it.
+    """
+    rows, total = search(query, cat, max(limit, 0))
+    if not rows or len(rows) >= total:
+        return rows, total, False
+    wider, _ = search(query, cat, RERANK_BAND)
+    edge = rows[-1][1]
+    kept = [r for r in wider if r[1] > edge] + [r for r in wider if r[1] == edge]
+    truncated = len(kept) >= RERANK_BAND and total > RERANK_BAND
+    return kept, total, truncated
 
 
 def rerank(rows: list[tuple[dict, int]], stats: dict[str, dict],
@@ -654,12 +692,16 @@ def rerank(rows: list[tuple[dict, int]], stats: dict[str, dict],
     measured-good — a new endpoint is an unknown, not a suspect.
     """
     def bucket(ep: dict) -> int:
-        obs = stats.get(ep["id"]) or {}
-        rate, samples = obs.get("ok_rate"), obs.get("samples") or 0
-        if samples and not obs.get("any_ok", rate is not None and rate > 0):
-            return 3        # called, never once answered — the broken-metadata case
+        rate = (stats.get(ep["id"]) or {}).get("ok_rate")
         if rate is None:
             return 1        # no evidence either way (or too few samples to publish one)
+        # `ok_rate` is computed from DECIDED samples only — 2xx against 5xx, with 4xx excluded as
+        # the caller's fault — so a 0 here means the provider failed every call that was its to
+        # answer. Reading "never worked" off anything wider (an earlier revision used a
+        # sample-count-based `any_ok`) demotes a healthy endpoint the moment one agent sends bad
+        # parameters, which is the failure `endpoint_stats`' 4xx rule exists to prevent.
+        if rate == 0:
+            return 3
         return 0 if rate >= 0.9 else 2
 
     def price(ep: dict) -> float:

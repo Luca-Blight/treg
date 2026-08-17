@@ -253,7 +253,9 @@ team, and the first signal was spend on a balance nobody had opened. Two halves 
 
 - **`balance` and `my_tools` label the grant**: `team_name` (a slug alone cannot be sanity-checked)
   and `identity` — the account the grant belongs to, which is usually the half that differs. If the
-  grant names a team that identity's own `/orgs` does not list, the answer says so outright.
+  grant names a team that identity's own `/orgs` does not list, the answer says so outright. The
+  *how to move it* half of the hint is added only for an actual OAuth caller: a header token carries
+  its own team, and `treg mcp grants` would list nothing for it.
 - **The team can be moved without re-consenting.** It lives on the refresh family
   (`OAuthRefresh.org_id`), not only inside the issued access token, so `GET /oauth/grants` +
   `POST /oauth/grants/{family}/team` (`treg mcp grants`, `treg mcp use-team`) is a row update the
@@ -261,6 +263,19 @@ team, and the first signal was spend on a balance nobody had opened. Two halves 
   user may move it, and only to a team they belong to — a grant must never reach further than the
   consent screen would have offered. A *refresh* still cannot change teams; that is not a second
   chance to pick, it is a deliberate action by the person who made the first one.
+
+  Three things that fall out of putting the team on every row of the family, all found in review:
+
+  - **Rotation reads the team from the family as it stands NOW**, not off the row it was handed.
+    A refresh in flight when the move commits would otherwise copy the stale `org_id` into the
+    replacement and quietly drag the grant back to the old balance — moments after the user was told
+    the move succeeded.
+  - **A grant dies with the membership it was consented under.** Refresh checked that the user and
+    the org still existed, never that the user was still *in* it. Calls were refused meanwhile
+    (`require_member` re-resolves membership every time), but the grant kept minting tokens and would
+    spring back to life, with no new consent, if the membership were ever restored.
+  - **"Not your team" and "no such team" answer identically** (404). Told apart, the route reports
+    whether an arbitrary slug exists on treg, to any signed-in account.
 
 Approval is a POST (a GET that granted access could be triggered by any page that can navigate),
 same-origin, and the page inherits `X-Frame-Options: DENY`.

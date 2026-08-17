@@ -566,7 +566,7 @@ async def catalog_search(q: str = "", limit: int = 25,
     command, since finding the endpoint is never the goal — inspecting or calling it is."""
     cat = catalog_store.load()
     limit = max(1, min(limit, 100))
-    ranked, total = catalog_store.search(q, cat, catalog_store.band_limit(limit))
+    ranked, total, tie_truncated = catalog_store.rank_band(q, cat, limit)
     stats = await _observed_or_empty(db, [ep["id"] for ep, _ in ranked])
     ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
     results = [
@@ -588,6 +588,12 @@ async def catalog_search(q: str = "", limit: int = 25,
                  f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
         if total > len(results):
             hints.append(f"{total - len(results)} more matches — raise limit (max 100)")
+        if tie_truncated:
+            # No silent caps. Every row here scored the same, more of them scored the same than the
+            # evidence sort was allowed to weigh, so the tail of this list is back to being ordered
+            # by nothing in particular — say so instead of letting it read as a ranked answer.
+            hints.append(f"{q!r} matches too broadly to rank on measured reliability past the first "
+                         f"{catalog_store.RERANK_BAND} equally-scoring rows — add a word to narrow it")
     return {"query": q, "count": len(results), "total": total, "results": results, "hints": hints}
 
 
@@ -2815,18 +2821,38 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
     user = await db.get(User, row.user_id)
     if user is None or user.suspended:
         return bad("invalid_grant", "the account behind this grant is no longer active")
-    org = await db.get(Org, row.org_id)
+    # Re-read the team off the family rather than trusting the row we were handed. `set_team` can
+    # commit between the SELECT above and this point, and copying the stale `row.org_id` into the
+    # replacement would silently undo a move the user was just told had succeeded — money going
+    # back to the balance they had moved it off. Reading it here shrinks that window to the gap
+    # between this statement and the commit below.
+    live_org_id = (await db.execute(
+        select(OAuthRefresh.org_id).where(OAuthRefresh.family_id == row.family_id)
+        .order_by(OAuthRefresh.id.desc()).limit(1))).scalar_one_or_none() or row.org_id
+    org = await db.get(Org, live_org_id)
     if org is None or org.suspended:
         return bad("invalid_grant", "the team on this grant is no longer available")
+    # STILL a member? The grant is the user's consent to spend a TEAM's balance, and leaving (or
+    # being removed from) that team ends the standing they consented with. Without this a grant
+    # kept minting tokens forever: every downstream call was refused by `require_member`, so the
+    # damage was bounded, but the grant lay dormant and sprang back to life — with no new consent —
+    # the day the membership was restored.
+    still_in = (await db.execute(select(Membership).where(
+        Membership.user_id == row.user_id, Membership.org_id == live_org_id))).scalar_one_or_none()
+    if still_in is None:
+        await _revoke_refresh_family(row.family_id, "membership ended", db)
+        await db.commit()
+        return bad("invalid_grant",
+                   "the account behind this grant is no longer a member of its team — sign in again")
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     row.retired_at, row.retired_reason = now, "rotated"
     db.add(row)
     replacement = await _issue_refresh(family_id=row.family_id, client_id=row.client_id,
-                                       user_id=row.user_id, org_id=row.org_id,
+                                       user_id=row.user_id, org_id=live_org_id,
                                        resource=row.resource, scope=row.scope, db=db)
     access = mcp_oauth.make_access_token(
-        user_id=row.user_id, org_id=row.org_id, scope=row.scope,
+        user_id=row.user_id, org_id=live_org_id, scope=row.scope,
         audience=mcp_oauth.normalize_resource(row.resource),  # heal pre-normalization spellings
         token_version=user.token_version)
     await db.commit()
@@ -3899,12 +3925,15 @@ async def oauth_grant_set_team(family_id: str, body: GrantTeamIn,
     if not rows:
         raise HTTPException(status_code=404, detail=f"no live grant {family_id!r} on this account")
     org = await _resolve_org(body.team, db)
-    if org is None or org.suspended:
-        raise HTTPException(status_code=404, detail=f"no team {body.team!r}")
     member = (await db.execute(select(Membership).where(
-        Membership.user_id == user.id, Membership.org_id == org.id))).scalar_one_or_none()
-    if member is None:
-        raise HTTPException(status_code=403, detail=f"you are not a member of {org.slug!r}")
+        Membership.user_id == user.id, Membership.org_id == org.id))).scalar_one_or_none() if org else None
+    # ONE answer for "no such team" and "a team that isn't yours". Told apart, this route reports
+    # whether an arbitrary slug exists on treg — a slug-existence oracle any signed-in account could
+    # walk. The caller's own teams are already listed to them by `treg org ls`, so the distinction
+    # buys them nothing they cannot see elsewhere.
+    if org is None or org.suspended or member is None:
+        raise HTTPException(status_code=404, detail=(
+            f"no team {body.team!r} on this account — see `treg org ls` for the teams you can use"))
     for row in rows:
         row.org_id = org.id
         db.add(row)
