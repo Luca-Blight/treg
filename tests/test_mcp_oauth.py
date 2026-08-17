@@ -1125,6 +1125,10 @@ async def test_a_rotation_started_before_a_move_cannot_drag_the_team_back(client
         db.add(newest)
         await db.commit()
 
+    listed = (await clients.get("/oauth/grants", headers=me)).json()
+    assert listed[0]["team"] == other["org"], \
+        "the grant list must show the same family authority refresh will use"
+
     r = await clients.post("/oauth/token", data={
         "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
         "client_id": client_id})

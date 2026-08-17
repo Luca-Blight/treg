@@ -90,6 +90,32 @@ async def test_latency_percentiles_come_from_successful_calls(clients: AsyncClie
     assert got["p95_ms"] == 5000             # the tail is the point of p95
 
 
+async def test_caller_errors_cannot_lift_one_decided_result_over_the_floor(clients: AsyncClient):
+    """The evidence floor applies to the denominator, not unrelated traffic.
+
+    Four malformed caller requests plus one real result used to publish that one result as either
+    0% or 100%. Besides being statistically empty, that exposes the outcome of one quiet tenant's
+    call — exactly the privacy leak MIN_SAMPLES exists to prevent.
+    """
+    for ep_id, decided_status in (("one.failure", 405), ("one.success", 200)):
+        for _ in range(endpoint_stats.MIN_SAMPLES - 1):
+            await _record(ep_id, 422)
+        await _record(ep_id, decided_status, ms=42)
+        got = (await _observed([ep_id]))[ep_id]
+        assert got["samples"] == endpoint_stats.MIN_SAMPLES
+        assert all(got[k] is None for k in ("ok_rate", "p50_ms", "p95_ms", "last_ok_days"))
+
+
+async def test_latency_needs_its_own_success_sample_floor(clients: AsyncClient):
+    """A publishable reliability denominator does not make one latency a percentile."""
+    for _ in range(endpoint_stats.MIN_SAMPLES - 1):
+        await _record("one.latency", 503)
+    await _record("one.latency", 200, ms=42)
+    got = (await _observed(["one.latency"]))["one.latency"]
+    assert got["ok_rate"] == round(1 / endpoint_stats.MIN_SAMPLES, 4)
+    assert got["p50_ms"] is None and got["p95_ms"] is None
+
+
 async def test_old_calls_fall_out_of_the_window(clients: AsyncClient):
     for _ in range(6):
         await _record(EP, 200, days_ago=99)
@@ -241,7 +267,27 @@ async def test_a_405_endpoint_sinks_in_the_ranking(clients: AsyncClient):
     for _ in range(7):
         await _record(EP, 405)
     stats = {EP: (await _observed([EP]))[EP],
-             "rival": {"samples": 17, "ok_rate": 1.0}}
+             "rival": {"samples": 17, "ok_rate": 0.8}}
     rows = [({"id": EP, "tier": "extended", "verified": None, "cost": None}, 6),
             ({"id": "rival", "tier": "extended", "verified": None, "cost": None}, 6)]
     assert [e["id"] for e, _ in cs.rerank(rows, stats)] == ["rival", EP]
+
+
+async def test_HTTP_search_orders_equal_matches_on_observed_evidence(clients: AsyncClient):
+    """Pin the HTTP wiring with an order the catalog's default order gets wrong.
+
+    The stale row starts earlier in file order. With 405 classified correctly it must fall behind a
+    merely-poor endpoint; removing either the 405 classification or the route's rerank call puts it
+    first again.
+    """
+    stale = "apify.meta-ads.library.search"
+    poor = "tikhub.x.tiktok-ads-search-ads"
+    for _ in range(endpoint_stats.MIN_SAMPLES):
+        await _record(stale, 405)
+    for status in (200, 200, 200, 200, 503):
+        await _record(poor, status)
+
+    rows = (await clients.get(
+        "/catalog/search", params={"q": "ad library", "limit": 100})).json()["results"]
+    ids = [row["id"] for row in rows]
+    assert ids.index(poor) < ids.index(stale), ids

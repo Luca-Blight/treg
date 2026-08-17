@@ -1036,6 +1036,25 @@ async def test_a_boolean_query_param_goes_on_the_wire_as_a_boolean(clients):
     assert _mcp._qs_value({"a": 1}) == '{"a":1}'      # never Python's single-quoted repr
 
 
+def test_catalog_query_arrays_use_the_endpoints_declared_wire_encoding():
+    """A structured MCP list is not synonymous with repeated query keys.
+
+    Meta parses one compact JSON array value; Pinterest parses one comma-separated value. The
+    endpoint schema must decide, while an unmodelled team tool keeps the longstanding repeated-key
+    default.
+    """
+    from treg import catalog_store as cs
+    from treg import mcp as _mcp
+
+    cat = cs.load()
+    meta = cat.by_id["meta-ad-library.meta-ads.library.search"]
+    pinterest = cat.by_id["pinterest-ads.query"]
+    assert _mcp._query_values(meta, "ad_reached_countries", ["US"]) == ['["US"]']
+    assert _mcp._query_values(pinterest, "columns", ["SPEND_IN_DOLLAR", "IMPRESSION_1"]) == [
+        "SPEND_IN_DOLLAR,IMPRESSION_1"]
+    assert _mcp._query_values(None, "tag", ["a", "b"]) == ["a", "b"]
+
+
 async def test_an_unset_query_param_is_omitted_rather_than_sent_as_None(clients):
     """`None` means "no value", and `?limit=None` is not that — it is a string an upstream parses."""
     assert (await clients.post("/tools", json={"name": "echo", "base_url": "http://upstream"})).status_code == 200
@@ -1171,22 +1190,23 @@ async def test_the_SEARCH_TOOL_itself_ranks_on_evidence_not_just_the_helper(clie
     from treg.db import session_maker
     from treg.models import CallRecord
 
-    good = "scrapecreators.x.v1-tiktok-ad-library-search"
-    broken = "tikhub.x.tiktok-ads-search-ads"
+    broken = "apify.meta-ads.library.search"  # earlier in file order: rerank must move it
+    good = "tikhub.x.tiktok-ads-search-ads"
     async with session_maker() as db:
-        for _ in range(17):
+        for status in (200, 200, 200, 200, 503):
             db.add(CallRecord(org_id=1, user_email="a@b.c", tool_name=good, method="GET", path="/x",
-                              status_code=200, endpoint_id=good, duration_ms=100))
-        for _ in range(7):      # the uncallable one, failing the way the report saw it
+                              status_code=status, endpoint_id=good, duration_ms=100))
+        for _ in range(5):      # the uncallable one, failing the way the report saw it
             db.add(CallRecord(org_id=1, user_email="a@b.c", tool_name=broken, method="POST", path="/x",
                               status_code=405, endpoint_id=broken, duration_ms=100))
         await db.commit()
-    assert endpoint_stats.MIN_SAMPLES <= 7
+    assert endpoint_stats.MIN_SAMPLES <= 5
 
     token = (await clients.post("/users", json={"email": "ranker@superdesign.dev"})).json()["token"]
     async with mcp_session(clients) as c:
-        out = await _call_tool(c, "catalog_search", {"query": "ad library", "limit": 8}, token=token)
+        out = await _call_tool(c, "catalog_search", {"query": "ad library", "limit": 25}, token=token)
     ids = [r["endpoint_id"] for r in out["results"]]
-    assert ids[0] == good, ids
-    assert broken not in ids, "the endpoint that answers 405 to every call must not be offered"
-    assert out["results"][0]["works"] == 1.0 and out["results"][0]["samples"] == 17
+    assert ids.index(good) < ids.index(broken), ids
+    good_row = next(r for r in out["results"] if r["endpoint_id"] == good)
+    broken_row = next(r for r in out["results"] if r["endpoint_id"] == broken)
+    assert good_row["works"] == 0.8 and broken_row["works"] == 0.0

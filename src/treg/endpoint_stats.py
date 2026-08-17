@@ -121,7 +121,8 @@ async def observed(
     out: dict[str, dict] = {}
     for ep_id, n, ok, bad, last_ok in rows:
         n, ok, bad = int(n or 0), int(ok or 0), int(bad or 0)
-        if n < MIN_SAMPLES:
+        decided = ok + bad          # 4xx excluded — the caller's fault, not the provider's
+        if decided < MIN_SAMPLES:
             # Honest emptiness: say how thin the evidence is, claim nothing from it. An earlier
             # revision of this fix published `any_ok` here — "has it EVER answered?" — on the
             # argument that a yes/no survives any sample size. It doesn't survive THIS module's
@@ -131,17 +132,23 @@ async def observed(
             # produced `any_ok: false` and made a healthy endpoint look broken to everybody — the
             # exact failure the 4xx rule below is written to stop. "Never worked" is now read off
             # `ok_rate == 0`, which is computed only from DECIDED (2xx vs 5xx) samples above the
-            # floor, so it cannot be inferred from caller errors at all.
+            # floor, so it cannot be inferred from caller errors at all. The floor must therefore
+            # be tested against `decided`, not total traffic: four 422s plus one 405 previously
+            # published the outcome of that ONE decided call as 0%, violating both the evidence
+            # and privacy reasons for having the floor.
             out[ep_id] = {"samples": n, "ok_rate": None,
                           "p50_ms": None, "p95_ms": None, "last_ok_days": None}
             continue
-        decided = ok + bad          # 4xx excluded — the caller's fault, not the provider's
         ms = sorted(by_id.get(ep_id, []))
+        enough_latency = len(ms) >= MIN_SAMPLES
         out[ep_id] = {
             "samples": n,
             "ok_rate": round(ok / decided, 4) if decided else None,
-            "p50_ms": _pct(ms, 0.50),
-            "p95_ms": _pct(ms, 0.95),
+            # A rate may rest on five decided calls while only one succeeded. Calling that single
+            # duration p50 AND p95 dresses one observation up as a distribution, so latency has
+            # its own successful-sample floor.
+            "p50_ms": _pct(ms, 0.50) if enough_latency else None,
+            "p95_ms": _pct(ms, 0.95) if enough_latency else None,
             "last_ok_days": (_now() - last_ok).days if last_ok else None,
         }
     for ep_id in ids:                # an endpoint nobody has called says so, rather than vanishing

@@ -251,11 +251,12 @@ def _qs_value(v: Any) -> str:
     quotes is not JSON and no upstream parses it). `None` never reaches here — an unset parameter is
     omitted from the query string entirely, which is what "no value" means over HTTP.
     """
-    if isinstance(v, bool):          # before int — bool IS an int in Python
-        return "true" if v else "false"
-    if isinstance(v, (dict, list, tuple)):
-        return json.dumps(v, separators=(",", ":"), ensure_ascii=False)
-    return str(v)
+    return catalog_store.wire_value(v)
+
+
+def _query_values(ep: dict | None, name: str, value: Any) -> list[str]:
+    """Structured value(s) for one query key, using the catalog's declared wire encoding."""
+    return catalog_store.query_values(ep, name, value)
 
 
 async def _observed_stats(endpoint_ids: list[str]) -> dict[str, dict]:
@@ -682,10 +683,8 @@ async def call(endpoint_id: str, params: dict | list | None = None,
         query_pairs += parse_qsl(inline, keep_blank_values=True)
     for src in (args if (reads_query and isinstance(args, dict)) else {}, query or {}):
         for k, v in src.items():
-            if isinstance(v, (list, tuple)):
-                query_pairs += [(k, _qs_value(x)) for x in v if x is not None]
-            elif v is not None:
-                query_pairs.append((k, _qs_value(v)))
+            if v is not None:
+                query_pairs += [(k, encoded) for encoded in _query_values(ep, k, v)]
 
     the_body = body if body is not None else (args if not reads_query else None)
     # Caller headers relay to the upstream exactly as the CLI's --header does (Google Ads'

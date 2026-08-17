@@ -472,7 +472,31 @@ def test_call_template_falls_back_to_documented_examples(tmp_path):
         "        offset: {type: integer, required: false}\n")
     ep = cs.load(directory=tmp_path).by_id["moz.web.thing"]
     # Path params ride as --query (the server folds them into the path), required query after.
-    assert cs.call_template(ep) == "treg call moz.web.thing --query site=moz.com --query limit=<integer>"
+    assert cs.call_template(ep) == "treg call moz.web.thing --query site=moz.com --query 'limit=<integer>'"
+
+
+def test_call_templates_share_wire_encoding_and_quote_complete_query_arguments():
+    """The detail command is paste-ready, including arrays, booleans and shell metacharacters."""
+    import shlex
+
+    cat = cs.load()
+    meta = shlex.split(cs.call_template(cat.by_id["meta-ad-library.meta-ads.library.search"]))
+    pinterest = shlex.split(cs.call_template(cat.by_id["pinterest-ads.query"]))
+    meta_query = [meta[i + 1] for i, part in enumerate(meta) if part == "--query"]
+    pinterest_query = [pinterest[i + 1] for i, part in enumerate(pinterest) if part == "--query"]
+    assert 'ad_reached_countries=["US"]' in meta_query
+    assert "columns=SPEND_IN_DOLLAR,IMPRESSION_1,CLICKTHROUGH_1,TOTAL_CONVERSIONS" in pinterest_query
+
+    synthetic = {
+        "id": "demo.web.query", "method": "GET",
+        "input": {"queryParams": {
+            "enabled": {"type": "boolean", "required": True, "example": True},
+            "phrase": {"type": "string", "required": True, "example": "two words"},
+        }},
+    }
+    line = cs.call_template(synthetic)
+    assert shlex.split(line)[3:] == ["--query", "enabled=true", "--query", "phrase=two words"]
+    assert "'phrase=two words'" in line
 
 
 # ---- example responses -------------------------------------------------------------------

@@ -70,6 +70,7 @@ TIERS = {"core", "extended"}
 # what an endpoint IS (marketplace browse surface vs. plumbing). Optional — absent reads as "data" —
 # but a stated one must be from this set. See docs/context/architecture/catalog.md.
 KINDS = {"data", "action", "account", "utility"}
+QUERY_ARRAY_ENCODINGS = {"json", "comma", "repeated"}
 # the section heading an endpoint files under on its platform page — one lowercase word
 DOMAIN = re.compile(r"[a-z][a-z0-9_]*")
 REQUIRED = {
@@ -348,6 +349,20 @@ def main(argv: list[str]) -> int:
                 fail(errors, where, f"bad scope '{ep.get('scope')}'")
             if ep.get("method") not in METHODS:
                 fail(errors, where, f"bad method '{ep.get('method')}'")
+            inp = ep.get("input") or {}
+            default_array_encoding = inp.get("queryArrayEncoding")
+            if (default_array_encoding is not None
+                    and default_array_encoding not in QUERY_ARRAY_ENCODINGS):
+                fail(errors, where, "input.queryArrayEncoding must be one of "
+                     f"{sorted(QUERY_ARRAY_ENCODINGS)}")
+            for param, spec in (inp.get("queryParams") or {}).items():
+                if not isinstance(spec, dict) or spec.get("arrayEncoding") is None:
+                    continue
+                if spec.get("type") != "array":
+                    fail(errors, where, f"query param '{param}' has arrayEncoding but is not an array")
+                if spec.get("arrayEncoding") not in QUERY_ARRAY_ENCODINGS:
+                    fail(errors, where, f"query param '{param}' arrayEncoding must be one of "
+                         f"{sorted(QUERY_ARRAY_ENCODINGS)}")
             cost = ep.get("cost")
             if cost is not None or tier == "core":
                 # cost is optional in the extended tier — several providers publish prices per API

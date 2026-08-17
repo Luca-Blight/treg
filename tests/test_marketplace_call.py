@@ -1010,7 +1010,7 @@ def test_the_billability_truth_table():
         (200, "per_success", True), (200, "per_call", True),
         # not the caller's fault: credential, payment, quota, timeout, rate limit — never billed
         (401, "per_call", False), (402, "per_call", False), (403, "per_call", False),
-        (407, "per_call", False), (408, "per_call", False),
+        (405, "per_call", False), (407, "per_call", False), (408, "per_call", False),
         (429, "per_call", False), (429, "per_success", False), (429, "per_result", False),
         # the caller's own input: billed under per_call only
         (400, "per_call", True), (404, "per_call", True), (422, "per_call", True),
@@ -1035,6 +1035,24 @@ async def test_an_upstream_429_releases_the_hold(clients: AsyncClient, platform_
     assert kinds[:2] == ["release", "reserve"], kinds
     row = await _telemetry(clients)
     assert row["cost_charged_micro"] == 0
+
+
+async def test_a_stale_catalog_method_never_charges_a_per_call_endpoint(
+        clients: AsyncClient, platform_on, monkeypatch):
+    """A relayed 405 is treg's stale method metadata, not caller input.
+
+    The catalog chooses the method and rejects a caller override before relay. Even a provider whose
+    pricing says ``per_call`` therefore cannot turn its rejection of TREG'S method into team spend.
+    Pin the ledger path as well as the classifier: this is real balance, not display arithmetic.
+    """
+    monkeypatch.setattr(A, "relay", _fake_relay(405, b'{"error":"method not allowed"}'))
+    before = await _balance(clients)
+    r = await clients.get(f"/call/{EP_CALL}?group_id=1")
+    assert r.status_code == 405
+    assert r.headers.get("X-Treg-Cost-Micro") == "0"
+    assert await _balance(clients) == before
+    kinds = [e["kind"] for e in await _entries(clients)]
+    assert kinds[:2] == ["release", "reserve"], kinds
 
 
 async def test_the_SAME_KEY_with_a_DIFFERENT_QUERY_is_refused_end_to_end(clients: AsyncClient,

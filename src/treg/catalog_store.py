@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -749,11 +750,43 @@ def rerank(rows: list[tuple[dict, int]], stats: dict[str, dict],
 
 
 # ---- call template ---------------------------------------------------------------------------
-def _placeholder(spec: dict) -> str:
+def _placeholder(spec: dict):
     example = spec.get("example")
     if example not in (None, ""):
-        return str(example)
+        # Keep structured examples structured until the wire encoder sees them. Stringifying a
+        # list here produced Python repr (`['US']`) before the JSON/comma metadata had any chance
+        # to choose its representation; booleans likewise became capitalized Python `True`.
+        return example
     return f"<{spec.get('type') or 'value'}>"
+
+
+def wire_value(value) -> str:
+    """One scalar query value in its canonical HTTP spelling, shared by MCP and command hints."""
+    if isinstance(value, bool):      # before int — bool IS an int in Python
+        return "true" if value else "false"
+    if isinstance(value, (dict, list, tuple)):
+        return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+    return str(value)
+
+
+def query_values(ep: dict | None, name: str, value) -> list[str]:
+    """Encode one structured query value according to the endpoint's declared wire contract.
+
+    A Python/MCP list does not identify an HTTP representation: Meta expects one JSON array,
+    Pinterest expects one comma-separated value, while ordinary repeated keys remain useful for
+    team tools and catalog parameters that explicitly use them. The catalog records only the two
+    exceptional encodings; absence preserves the established repeated-key behavior.
+    """
+    if not isinstance(value, (list, tuple)):
+        return [wire_value(value)]
+    inp = (ep or {}).get("input") or {}
+    spec = (inp.get("queryParams") or {}).get(name) or {}
+    encoding = spec.get("arrayEncoding") or inp.get("queryArrayEncoding") or "repeated"
+    if encoding == "json":
+        return [wire_value(value)]
+    if encoding == "comma":
+        return [",".join(wire_value(item) for item in value if item is not None)]
+    return [wire_value(item) for item in value if item is not None]
 
 
 def _required_examples(params) -> dict:
@@ -783,9 +816,14 @@ def call_template(ep: dict) -> str:
         parts += ["--method", ep["method"]]
     # Path params first (the server folds them into the path), then query params proper.
     for name, value in {**_required_examples(inp.get("pathParams")), **(test.get("pathParams") or {})}.items():
-        parts += ["--query", f"{name}={value}"]
+        parts += ["--query", shlex.quote(f"{name}={wire_value(value)}")]
     for name, value in {**_required_examples(inp.get("queryParams")), **(test.get("queryParams") or {})}.items():
-        parts += ["--query", f"{name}={value}"]
+        for encoded in query_values(ep, name, value):
+            # Quote the COMPLETE argv token, not just its value. `name=['US']` lost its inner
+            # quotes after shell parsing and became either an unmatched glob (zsh) or `[US]`;
+            # `name=two words` split into two arguments. shlex.quote makes the printed command the
+            # same request the structured MCP path sends.
+            parts += ["--query", shlex.quote(f"{name}={encoded}")]
 
     body = test.get("body") if test.get("body") is not None else (_required_examples(inp.get("body")) or None)
     # `is not None`, not truthiness: `body: {}` is a real stored test request — a POST that takes no
@@ -793,8 +831,8 @@ def call_template(ep: dict) -> str:
     # reader a command that differs from the one that was tested, on handlers that reject an empty
     # body outright.
     if body is not None and (body or ep["method"] != "GET"):
-        # single-quoted so the JSON's own quotes survive a paste into any POSIX shell
-        parts += ["--data", "'" + json.dumps(body, separators=(",", ":"), ensure_ascii=False) + "'"]
+        parts += ["--data", shlex.quote(json.dumps(
+            body, separators=(",", ":"), ensure_ascii=False))]
     return " ".join(parts)
 
 

@@ -3902,7 +3902,11 @@ async def oauth_grants(user: User = Depends(require_identity),
         if row.family_id in seen:
             continue
         seen.add(row.family_id)
-        org = await db.get(Org, row.org_id)
+        # Listing and refresh must read the SAME authority. In the refresh-vs-move race the live,
+        # newest row can retain a stale org_id while the oldest family anchor correctly holds the
+        # user's selection; showing the live row told the user team A while refresh spent team B.
+        org_id = await _family_org(row.family_id, db)
+        org = await db.get(Org, org_id) if org_id is not None else None
         client = (await db.execute(select(OAuthClient).where(
             OAuthClient.client_id == row.client_id))).scalar_one_or_none()
         out.append({
@@ -9018,7 +9022,7 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
 # "resource not accessible": when it is unclear whether the provider charged us, the safe direction
 # is not to charge. Absorbing a rare few micro-USD is recoverable; over-billing out of an append-only
 # ledger is not.
-_NOT_THE_CALLERS_FAULT = frozenset({401, 402, 403, 407, 408, 429})
+_NOT_THE_CALLERS_FAULT = frozenset({401, 402, 403, 405, 407, 408, 429})
 
 
 def _platform_billable(status_code: int, cost_type: str) -> bool:
@@ -9027,9 +9031,10 @@ def _platform_billable(status_code: int, cost_type: str) -> bool:
       4xx                        → only under `per_call`, and only when the rejection is about the
                                    CALLER'S INPUT (400/404/422 …): the provider charges for accepting
                                    such a request, so it is on the caller. A credential/quota refusal
-                                   (`_NOT_THE_CALLERS_FAULT`) is on us and is never billed — a 429
-                                   doubly so on a SHARED-plan key, where it is treg's own saturation
-                                   and billing it would charge teams for our congestion. Under
+                                   (`_NOT_THE_CALLERS_FAULT`) is on us and is never billed — a 405
+                                   rejects the method OUR catalog selected, while a 429 on a
+                                   SHARED-plan key is treg's own saturation. Billing either would
+                                   charge teams for our metadata or congestion. Under
                                    `per_result`/`per_success` a rejected request produced nothing.
       5xx / 3xx / network error  → no. An upstream failure is never billed to the caller.
     """

@@ -61,8 +61,11 @@ memory, so a search answers in about a millisecond. That is a **speed** choice, 
 explicit slots exist for the shapes that role can't express, mirroring `treg call`'s flags —
 each of which was added because a real endpoint needed it:
 
-- `query` — ALWAYS the query string; a list value expands to repeated keys (`?tag=a&tag=b`,
-  which a dict would collapse). Composable with `body` on a POST — the Bright Data dataset shape
+- `query` — ALWAYS the query string. A team-tool list keeps the repeated-key default
+  (`?tag=a&tag=b`, which a dict would collapse); a catalog array follows its explicit
+  `input.queryArrayEncoding` (`json`, `comma`, or `repeated`). Meta Ad Library therefore receives
+  `ad_reached_countries=["US"]` as one JSON value while Pinterest receives one comma-separated
+  `columns` value. Composable with `body` on a POST — the Bright Data dataset shape
   (`?dataset_id=…` + array body) was uncallable over MCP without it.
 - `body` — ALWAYS the body. Object/array → JSON; a STRING is sent raw with `content_type` naming
   it (sniffed as `application/json` when it parses as JSON — the CLI's rule). A body implies POST.
@@ -276,6 +279,9 @@ team, and the first signal was spend on a balance nobody had opened. Two halves 
     locking removes: an access token already minted for the old team keeps working until it expires
     (≤ `ACCESS_TTL_SECONDS`). The family itself converges — the next rotation reads the anchor — so
     the move is never undone, only briefly overlapped.
+    `GET /oauth/grants` reads that same anchor rather than the newest live row: the race state can
+    legitimately leave a stale team on the newest row, and the CLI must display the team refresh
+    will actually spend from.
   - **A grant dies with the membership it was consented under.** Refresh checked that the user and
     the org still existed, never that the user was still *in* it. Calls were refused meanwhile
     (`require_member` re-resolves membership every time), but the grant kept minting tokens and would
