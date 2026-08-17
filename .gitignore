@@ -52,3 +52,6 @@ docs/context/interface/*-audit-*.md
 docs/assets/restyle-*.png
 docs/context/interface/*-proposal.md
 .codegraph/
+
+# e2e harness scratch (see e2e-server.sh) — the DB is disposable, never commit it.
+e2e.db*
