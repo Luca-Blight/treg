@@ -901,3 +901,45 @@ def test_the_referral_link_is_not_gated_behind_paying_us():
     assert 'v-if="!ref.eligible"' in INDEX
     assert "Create a team to unlock your link" in INDEX
     assert "Add funds once to unlock your link" not in INDEX
+
+
+def _referrals_view() -> str:
+    """The Referrals view block ONLY. Anchored on the template tag, not the bare `view==='referrals'`
+    string — the nav button matches that first and would slice from the sidebar."""
+    start = INDEX.index("<template v-if=\"view==='referrals'\">")
+    end = INDEX.index("<template v-if=\"view==='help'\">", start)
+    return INDEX[start:end]
+
+
+def test_referral_stat_tiles_use_the_sheets_own_class_names():
+    """`.stat` styles `.n` (the figure, 26px accent) and `.l` (the uppercase caption) — and nothing
+    else. A hand-rolled `.k`/`.v` pair renders as two lines of unstyled body text that still *look*
+    like content, so nothing errors and the bug ships. Order matters too: figure first."""
+    block = _referrals_view()
+    assert 'class="statgrid"' in block
+    assert block.count('<div class="n">') == 3 and block.count('<div class="l">') == 3
+    assert 'class="k"' not in block and 'class="v"' not in block
+    assert block.index('<div class="n">') < block.index('<div class="l">')
+
+
+def test_referral_stat_tiles_fill_the_column():
+    """The sheet's `.statgrid` is auto-FILL, which at this width lays out four 150px tracks and
+    leaves the fourth empty — three tiles then stop short of the right edge the card above and the
+    table below both reach. auto-fit collapses the empty track."""
+    assert "grid-template-columns:repeat(auto-fit,minmax(150px,1fr))" in _referrals_view()
+
+
+def test_referral_table_keeps_the_sheets_cell_padding():
+    """A bare `<table>` IS a card here (background, border, radius) and `th,td` already carry
+    10px/13px. Overriding that to `padding:8px 0` — copied from a table that lives INSIDE a card —
+    puts the right-aligned amount flush against the card's own edge, which reads as clipped."""
+    block = _referrals_view()
+    table = block[block.index("<table"):block.index("</table>")]
+    assert "padding:" not in table, "let th,td carry the padding"
+    assert "<th>" in table, "house tables have a header row"
+
+
+def test_the_referral_column_is_one_width():
+    """Card, tiles and table sit in a SINGLE max-width container. Three separate max-widths is what
+    made them start and end at three different x-positions."""
+    assert _referrals_view().count("max-width:") == 1
