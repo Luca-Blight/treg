@@ -918,3 +918,51 @@ async def test_a_second_topup_queues_nothing_further(c, monkeypatch):
             AdConversion.action == adsconv.ACTION_PAID))).scalars().all()
         assert len(rows) == 1
         assert rows[0].dedupe_key == "pi_first"   # the FIRST payment is the one recorded
+
+
+async def test_adsconv_commit_failure_cannot_500_or_break_the_webhook(c, monkeypatch):
+    """A CRITICAL regression: if the ad-conversion `db.commit()` inside `_credit`'s try block fails
+    for a reason unrelated to `adsconv.queue`'s own IntegrityError savepoint (a serialization
+    failure, a connection blip — plausible under concurrent webhook redelivery), the session is left
+    by SQLAlchemy in "pending rollback" state. `_on_payment_succeeded` immediately reuses the same
+    `db` for `_set_default_pm`'s `db.get(Org, ...)`; without a rollback in the except block, that
+    raises PendingRollbackError, which 500s the webhook and makes Stripe retry a payment
+    `ledger.topup()` had ALREADY durably credited. The webhook must still return 200, the credit
+    must still stand, and the rest of the request (saving the default payment method) must still
+    complete."""
+    from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
+
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    async with session_maker() as db:
+        org = await db.get(Org, org_id)
+        org.ad_gclid = "CLICK_PAID"  # gives adsconv.queue something to write, so its commit matters
+        db.add(org)
+        await db.commit()
+
+    real_commit = SAAsyncSession.commit
+    calls = {"n": 0}
+
+    async def flaky_commit(self):
+        calls["n"] += 1
+        if calls["n"] == 2:  # the ad-conversion commit inside _credit's try block, not the topup one
+            raise RuntimeError("simulated serialization failure")
+        return await real_commit(self)
+
+    monkeypatch.setattr(SAAsyncSession, "commit", flaky_commit)
+
+    event = _pi_event(org_id, pi="pi_adsconv_commit_blip", cents=1000)
+    r = await _deliver(c, event)
+    assert r.status_code == 200, r.text  # NOT a 500 — Stripe must not be told to retry this
+    assert r.json()["credited"] is True
+    assert calls["n"] >= 3, "the flaky commit was never reached, or the request stopped early"
+
+    body = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()
+    # The payment is credited regardless of the ad-conversion commit's fate.
+    assert body["balance_micro"] == get_settings().promo_grant_micro + 10_000_000
+
+    async with session_maker() as db:
+        # The default payment method save runs AFTER the failed ads-conversion commit; it only
+        # succeeds if the session was rolled back and made usable again.
+        fresh_org = await db.get(Org, org_id)
+        assert fresh_org.stripe_default_pm == "pm_card_visa"

@@ -779,6 +779,9 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
     )).first() is not None
     block = await ledger.topup(db, org_id, amount_micro, pi_id,
                               meta={"auto": auto, "source": "stripe"})
+    block_id = block.id  # captured now: a later rollback (the ad-conversion except below) expires
+                        # every object this session is tracking, `block` included, and reading an
+                        # expired attribute outside an awaited call raises MissingGreenlet.
     after = await ledger.balance_of(db, org_id)
     fresh = not already
     if fresh:
@@ -814,8 +817,16 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
                                     value_usd_micro=amount_micro, dedupe_key=pi_id)
                 await db.commit()
             except Exception as e:  # noqa: BLE001 — see comment above
+                # A failure here (not just adsconv.queue's own IntegrityError, which it already
+                # absorbs via savepoint, but e.g. the commit above failing on a serialization
+                # error or connection blip) can leave the session in SQLAlchemy's "pending
+                # rollback" state. The callers below reuse this same `db` for more work
+                # (_set_default_pm's db.get(Org, ...)); without rolling back here, that next use
+                # raises PendingRollbackError, which 500s the webhook and makes Stripe retry a
+                # payment ledger.topup() already credited. Do not remove this as redundant.
+                await db.rollback()
                 log.warning("billing: could not queue ad conversion for org %s: %s", org_id, e)
-    return {"handled": True, "credited": fresh, "block_id": block.id,
+    return {"handled": True, "credited": fresh, "block_id": block_id,
             "amount_micro": amount_micro, "balance_micro": after}
 
 
