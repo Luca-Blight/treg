@@ -354,6 +354,18 @@ def _migrate_to_orgs(conn) -> None:
             "AND monthly_cap_micro IS NULL AND calls_per_day < 0 AND status = 'active' "
             "AND (note IS NULL OR note = '')"))
 
+    # (A35) additive: callrecord.error_request / error_response — the redacted, truncated evidence
+    # kept for a FAILED platform-tier call so a provider error can be diagnosed after the fact (see
+    # models.CallRecord). NULLABLE with no default: NULL means "nothing captured", which is correct
+    # for every pre-existing row and for every successful or own-key call written after this ships.
+    # VARCHAR, matching every other additive column here — TEXT is not portability-checked by
+    # tests/test_migration_ddl.py.
+    if "callrecord" in tables:
+        cols = {c["name"] for c in insp.get_columns("callrecord")}
+        for col in ("error_request", "error_response"):
+            if col not in cols:
+                conn.execute(text(f"ALTER TABLE callrecord ADD COLUMN {col} VARCHAR"))
+
     # (A28) corrective: creditblock.stripe_payment_intent must be UNIQUE (the top-up idempotency
     # key). It sits HERE, above the (B) block, because (B) returns early on a fresh/new-schema DB —
     # and a fresh DB created between the ledger landing and this fix is precisely the one that has

@@ -15,6 +15,7 @@ bound — audit is best-effort; never OOM or wedge the server for it.
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from .db import session_maker
 from .models import CallRecord, RunRecord
@@ -49,8 +50,27 @@ def record_call(
     _schedule(_write(CallRecord,
         org_id=org_id, user_email=user_email, tool_name=tool_name,
         method=method, path=path, status_code=status_code, client=client, refused_by=refused_by,
-        **(telemetry or {}),
+        **_known_fields(CallRecord, telemetry),
     ))
+
+
+def _known_fields(model, telemetry: dict | None) -> dict:
+    """Drop telemetry keys the model has no column for, loudly.
+
+    `telemetry` is splatted straight into the model constructor, so ONE unknown key used to raise
+    inside `_write` — where the except swallows it — and the whole row vanished with no trace. That
+    is the worst possible failure for an audit table: a telemetry field added a commit before its
+    migration would silently delete every row it touched. An unknown key must cost one column, never
+    the row.
+    """
+    if not telemetry:
+        return {}
+    known = {k: v for k, v in telemetry.items() if k in model.model_fields}
+    if len(known) != len(telemetry):
+        logging.getLogger("treg.audit").warning(
+            "dropping unknown %s telemetry keys %s — is a migration missing?",
+            model.__name__, sorted(set(telemetry) - set(known)))
+    return known
 
 
 def record_run(
@@ -79,7 +99,11 @@ async def _write(model, **fields) -> None:
                 session.add(model(**fields))
                 await session.commit()
         except Exception:  # noqa: BLE001 — audit must never surface into a call's result
-            pass
+            # Swallowed on purpose, but no longer SILENT: this used to be a bare `pass`, so a bad
+            # write was indistinguishable from a call that never happened. The row is still lost —
+            # that is the contract — but now something says so.
+            logging.getLogger("treg.audit").warning(
+                "audit write dropped for %s", model.__name__, exc_info=True)
 
 
 async def drain() -> None:

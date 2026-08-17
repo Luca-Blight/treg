@@ -220,8 +220,24 @@ class CallRecord(SQLModel, table=True):
     duration_ms: int | None = Field(default=None)
     response_bytes: int | None = Field(default=None)
     # sha256 of endpoint_id + the canonicalized query + body — an identity for "the same call again".
-    # Bodies are NEVER stored; this is the future cache key and the repeat-rate signal (plan phase 5).
+    # The hash itself never carries a body, so it is safe to keep forever; it is the future cache key
+    # and the repeat-rate signal (plan phase 5). For the ONE case where a body IS retained, see
+    # `error_request` below — it is deliberately narrow and does not weaken this column's guarantee.
     params_hash: str | None = Field(default=None, index=True)
+    # ---- failure evidence (NULL unless a PLATFORM-tier call failed) ----------------------------
+    # The only place treg retains request or response CONTENT, and the exception to "bodies are not
+    # stored". Written on a failed platform-tier call, because that is the call treg made on its own
+    # key, with its own money, and is therefore treg's to debug — a team calling on its own key is
+    # billed by the provider and storing their traffic would help nobody (same line `IdempotentCall`
+    # draws). Never written for a success, for tiers 1-2, or for a non-catalog tool call.
+    #
+    # Both are REDACTED and TRUNCATED at the point of capture (see api._error_snippets): treg's own
+    # platform credential is exact-matched out first, then known third-party secret shapes. They are
+    # evidence for a human, never an exact replay — `error_request` cannot reconstruct the call.
+    # Both are overwritten with '<expired>' once past the retention window, so "captured then aged
+    # out" stays distinguishable from "never captured".
+    error_request: str | None = Field(default=None)
+    error_response: str | None = Field(default=None)
     # Set when TREG refused the call before a byte went upstream; NULL when the provider answered
     # (whatever its status). Values: auth (bad/expired token) | policy (ACL/deny rule/suspension) |
     # balance (402 insufficient prepaid balance) | cap (429 daily caps) | resolution (no such tool
