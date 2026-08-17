@@ -55,10 +55,10 @@ from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
-from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
-                     IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
-                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, TagBudget, TagSpend, Tool,
-                     ToolRequest, User)
+from .models import (ROLE_RANK, AdConversion, Bundle, CallRecord, CapabilityPin, CreditBlock,
+                     DenyRule, Hold, IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient,
+                     OAuthCode, OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret,
+                     TagBudget, TagSpend, Tool, ToolRequest, User)
 from .proxy import relay
 
 
@@ -3361,6 +3361,7 @@ _ORG_SCOPED_MODELS = (
     OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
     IdempotentCall,            # a remembered answer belongs to the team that paid for it
     ToolRequest,  # attribution rows go with the team; anonymous filings carry no org_id and stay
+    AdConversion,  # pending Google Ads conversions belong to the team they'd be attributed to
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 

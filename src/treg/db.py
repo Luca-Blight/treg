@@ -354,6 +354,16 @@ def _migrate_to_orgs(conn) -> None:
             "AND monthly_cap_micro IS NULL AND calls_per_day < 0 AND status = 'active' "
             "AND (note IS NULL OR note = '')"))
 
+    # (A35) additive: org ad-attribution columns + first_call_at. `create_all` builds them on a
+    # fresh database; this is for one created before this feature shipped. All nullable, so no
+    # backfill is meaningful — a team that predates the ads work has no click to attribute to.
+    if "org" in tables:
+        org_cols = {c["name"] for c in insp.get_columns("org")}
+        for col, ddl in (("ad_gclid", "VARCHAR"), ("ad_landing", "VARCHAR"),
+                         ("ad_click_at", "TIMESTAMP"), ("first_call_at", "TIMESTAMP")):
+            if col not in org_cols:
+                conn.execute(text(f"ALTER TABLE org ADD COLUMN {col} {ddl}"))
+
     # (A28) corrective: creditblock.stripe_payment_intent must be UNIQUE (the top-up idempotency
     # key). It sits HERE, above the (B) block, because (B) returns early on a fresh/new-schema DB —
     # and a fresh DB created between the ledger landing and this fix is precisely the one that has
