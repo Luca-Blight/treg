@@ -234,7 +234,11 @@ class AdConversion(SQLModel, table=True):
     action: str  # adsconv.ACTION_* — "signup" | "first_call" | "paid"
     dedupe_key: str = Field(default="")  # provenance (e.g. the Stripe PaymentIntent id); not the key
     value_usd_micro: int = Field(default=0)  # converted to AUD at upload time, never stored as AUD
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # `_now`, NOT `datetime.now(timezone.utc)`: these columns are TIMESTAMP WITHOUT TIME ZONE and
+    # asyncpg rejects a tz-aware value into a naive column. SQLite is lax, so a tz-aware default
+    # passes every test here and fails on the Postgres deploy target. See `_now` at the top of this
+    # file — 24 other tables already follow it.
+    created_at: datetime = Field(default_factory=_now)
     uploaded_at: datetime | None = Field(default=None, index=True)
     attempts: int = Field(default=0)
     error: str = Field(default="")  # last upload error; a permanent failure stops the retries
@@ -454,7 +458,10 @@ Expected: FAIL — `org.ad_gclid` is `None`, assertion error on `CLICK_XYZ`
     var q = new URLSearchParams(window.location.search);
     var id = q.get('gclid') || q.get('gbraid') || q.get('wbraid');
     if (!id) return;
-    var landing = q.get('utm_content') || '';
+    // utm_content is what _measurement.md specifies, but the use-case pages' own CTAs carry the
+    // page id as ?ref=p1 (see the logged-out redirect in index.html). Read either, so attribution
+    // does not come back empty on whichever convention a given page happens to use.
+    var landing = q.get('utm_content') || q.get('ref') || '';
     // 90 days: Google's click-through conversion window. Lax so it survives the top-level
     // navigation from the ad, which is a cross-site GET.
     var v = encodeURIComponent(id + '|' + landing);
@@ -691,7 +698,7 @@ In the `/call/{rest:path}` handler, after the upstream response is known to be s
         updated = (await db.execute(
             update(Org)
             .where(Org.id == caller.org_id, Org.first_call_at.is_(None))
-            .values(first_call_at=datetime.now(timezone.utc))
+            .values(first_call_at=_utcnow_naive())   # naive UTC — see models._now; asyncpg rejects tz-aware
         )).rowcount
         if updated:
             org_row = await db.get(Org, caller.org_id)
@@ -700,7 +707,9 @@ In the `/call/{rest:path}` handler, after the upstream response is known to be s
             await db.commit()
 ```
 
-Ensure `update` is imported from `sqlalchemy` in `api.py`. Match the handler's real variable names for the response and the caller — the names above are indicative, read the surrounding code and use what is actually in scope.
+Ensure `update` is imported from `sqlalchemy` in `api.py`. Use the `_utcnow_naive()` helper that
+already exists in `api.py` (defined around line 3832) — do NOT add a second copy, and do NOT use
+`datetime.now(timezone.utc)`: `first_call_at` is a naive column and asyncpg rejects tz-aware values. Match the handler's real variable names for the response and the caller — the names above are indicative, read the surrounding code and use what is actually in scope.
 
 - [ ] **Step 4: Run the tests**
 
@@ -870,13 +879,28 @@ Expected: FAIL with `AttributeError: module 'treg.adsconv' has no attribute 'bui
 - [ ] **Step 3: Implement `build_payload`**
 
 ```python
+def _utcnow_naive() -> datetime:
+    """Naive UTC. Our datetime columns are TIMESTAMP WITHOUT TIME ZONE and asyncpg rejects a
+    tz-aware value into one; see `_now` in models.py, which 24 other tables already follow.
+    `api.py` has its own copy of this for the same reason — it is private to that module."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 API_VERSION = "v22"  # v21 is blocked: "Version v21 is deprecated" (verified 2026-08-17)
 _UPLOAD_DELAY_S = 6 * 3600   # Google will not accept a conversion until hours after the click
 _MAX_ATTEMPTS = 8
 
 
 def _conversion_time(dt: datetime) -> str:
-    """Ads wants 'yyyy-mm-dd hh:mm:ss+hh:mm'. ISO with a 'Z' is rejected."""
+    """Ads wants 'yyyy-mm-dd hh:mm:ss+hh:mm'. ISO with a 'Z' is rejected.
+
+    `dt` comes out of the database as NAIVE UTC (see models._now), so it is stamped with UTC, not
+    converted. `.astimezone()` on a naive value would read it as LOCAL time — on the Sydney deploy
+    target that shifts every conversion by 10-11 hours, which Google would either reject as
+    pre-dating the click or attribute to the wrong day.
+    """
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S+00:00")
 
 
@@ -964,7 +988,9 @@ async def drain_once(db: AsyncSession, client) -> dict:
     """
     if not enabled():
         return {"sent": 0, "reason": "disabled"}
-    cutoff = datetime.now(timezone.utc) - timedelta(seconds=_UPLOAD_DELAY_S)
+    # Naive UTC on BOTH sides: created_at is a naive column, and comparing it against a tz-aware
+    # value is an asyncpg error on Postgres (and a silently wrong comparison elsewhere).
+    cutoff = _utcnow_naive() - timedelta(seconds=_UPLOAD_DELAY_S)
     rows = (await db.execute(
         select(AdConversion)
         .where(AdConversion.uploaded_at.is_(None),
@@ -983,7 +1009,7 @@ async def drain_once(db: AsyncSession, client) -> dict:
     url = f"https://googleads.googleapis.com/{API_VERSION}/customers/{cid}:uploadClickConversions"
     headers = await _auth_headers(db, client)
     resp = await client.post(url, json=payload, headers=headers)
-    now = datetime.now(timezone.utc)
+    now = _utcnow_naive()
     for row in rows:
         row.attempts += 1
         if resp.status_code == 200:
