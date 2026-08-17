@@ -27,6 +27,17 @@ incl. duplicates, headers, cookies, body bytes):
    `credentials:'include'` Try-it would otherwise leak our session token — while keeping other cookies.
 3. **the injected credential(s)** — each binding overwrites only its target header/param.
 
+> **What treg keeps from a call.** Normally nothing: the relay forwards bytes and the audit row
+> records status, size and timing, not content. The single exception is a **failed platform-tier
+> call**, where `CallRecord.error_request` / `error_response` retain a redacted, truncated copy of
+> what the caller sent and what the provider answered — otherwise a failure is a bare status code
+> that cannot be explained afterwards, since `path` holds the catalog's URL rather than the caller's
+> parameters and `params_hash` is one-way. It costs nothing extra on the wire: metered responses are
+> already fully buffered by `_buffer_response` (settling needs the provider's reported cost out of
+> the body), and `force_identity` already asks those responses to arrive uncompressed. Own-key and
+> non-catalog calls keep the original guarantee — nothing of them is retained. See
+> [data-model](data-model.md) for the redaction order and retention.
+
 Faithfulness mechanics inside `relay()`:
 - request headers rebuilt from `request.headers.raw` into an `httpx.Headers` multidict (preserves
   duplicate headers / cookies); injection (`headers[name] = v`) overwrites only the named one.

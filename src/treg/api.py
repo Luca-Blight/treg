@@ -27,12 +27,13 @@ import shutil
 import tempfile
 import time
 import uuid
+import zlib
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
 
-from sqlalchemy import case, delete, func, or_
+from sqlalchemy import case, delete, func, or_, update
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -48,6 +49,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 from sqlmodel import select
 
 from . import analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
@@ -6614,7 +6616,13 @@ async def list_calls(
     load. Money comes from `/orgs/{id}/usage/by-tag`, which reads the ledger.
     """
     limit = max(1, min(limit, 500))
-    q = select(CallRecord).where(CallRecord.org_id == caller.org_id)
+    # The failure-evidence columns are not in the response below and are not fetched either: they are
+    # the two wide columns on this table, this endpoint returns up to 500 rows, and a column nobody
+    # reads should not cross the wire. Deferring also means adding them to the payload later has to be
+    # a deliberate edit in two places, not an accident in one.
+    q = (select(CallRecord)
+         .options(defer(CallRecord.error_request), defer(CallRecord.error_response))
+         .where(CallRecord.org_id == caller.org_id))
     if days is not None:
         q = q.where(CallRecord.created_at >= _day_start_utc() - timedelta(days=max(1, min(days, 365)) - 1))
     if before_id is not None:
@@ -7527,7 +7535,12 @@ async def admin_stats(_: str = Depends(require_superadmin), db: AsyncSession = D
 
     tools = (await db.execute(select(Tool))).scalars().all()
     secrets = (await db.execute(select(Secret))).scalars().all()
-    calls = (await db.execute(select(CallRecord))).scalars().all()
+    # THREE COLUMNS, not the whole row. This is an unbounded read of the largest table in the
+    # database (tens of thousands of rows), and every one of them was being materialised as a full
+    # ORM object to count three fields. It matters more now that `callrecord` carries the failure
+    # evidence columns, which are wide and are read by nothing here.
+    calls = (await db.execute(
+        select(CallRecord.org_id, CallRecord.created_at, CallRecord.status_code))).all()
     users = (await db.execute(select(User))).scalars().all()
     orgs = (await db.execute(select(Org))).scalars().all()
     # Sandbox onboarding data isn't real platform usage — exclude the demo footprint from totals so
@@ -7657,6 +7670,79 @@ async def admin_calls(
     rows = (await db.execute(select(CallRecord).order_by(CallRecord.id.desc()).limit(limit))).scalars().all()
     return [{"id": c.id, "org_id": c.org_id, "user": c.user_email, "tool": c.tool_name,
              "method": c.method, "status": c.status_code, "at": c.created_at.isoformat()} for c in rows]
+
+
+_ERROR_EVIDENCE_TTL_DAYS = 14
+_ERROR_EVIDENCE_EXPIRED = "<expired>"
+
+
+@app.get("/admin/errors")
+async def admin_errors(
+    days: int = 7, limit: int = 100, provider: str | None = None, status: int | None = None,
+    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Failed PLATFORM calls with the evidence to explain them — the caller's request and the
+    provider's own answer (see models.CallRecord.error_request).
+
+    Superadmin-only and deliberately not mirrored on `/calls`: the rows hold customers' request
+    content, so v1 keeps them behind the same door as every other cross-tenant view.
+
+    Ageing happens HERE rather than on the request path. There is no scheduler in this app by design
+    (see the comment above `_claim_idempotent`), and the obvious lazy hook — a marker written on the
+    request session — cannot work: `get_session` never commits, so the marker would roll back and the
+    purge would then run on every single failed call. Doing it on this route costs one UPDATE to the
+    person who came to read errors, which is exactly who wants the stale ones gone.
+    """
+    purged = await _purge_expired_error_evidence()
+    since = _utcnow_naive() - timedelta(days=max(1, min(days, 90)))
+    q = (select(CallRecord)
+         .where(CallRecord.created_at >= since, CallRecord.credential_tier == "platform",
+                or_(CallRecord.error_request.is_not(None), CallRecord.error_response.is_not(None)))
+         .order_by(CallRecord.id.desc()).limit(max(1, min(limit, 500))))
+    if provider:
+        q = q.where(CallRecord.provider == provider)
+    if status is not None:
+        q = q.where(CallRecord.status_code == status)
+    rows = (await db.execute(q)).scalars().all()
+    omap = {o.id: o for o in (await db.execute(
+        select(Org).where(Org.id.in_({c.org_id for c in rows if c.org_id is not None})))).scalars().all()}
+    return {
+        "since": since.isoformat(), "days": days, "retention_days": _ERROR_EVIDENCE_TTL_DAYS,
+        "expired_rows_purged": purged,
+        "errors": [{
+            "id": c.id, "call_ref": c.call_ref, "at": c.created_at.isoformat(),
+            "org": omap[c.org_id].slug if c.org_id in omap else None,
+            "endpoint_id": c.endpoint_id, "provider": c.provider, "status": c.status_code,
+            "refused_by": c.refused_by, "duration_ms": c.duration_ms,
+            "request": c.error_request, "response": c.error_response,
+        } for c in rows],
+    }
+
+
+async def _purge_expired_error_evidence() -> int:
+    """Blank the evidence columns past the retention window; returns how many rows were cleared.
+
+    An UPDATE, not a DELETE: `callrecord` is the audit trail and the rest of the row must survive.
+    The sentinel rather than NULL keeps "captured, then aged out" distinguishable from "never
+    captured" — without it an old failure and a successful call look identical. Runs on its own
+    session because the request's session is not committed for us.
+    """
+    cutoff = _utcnow_naive() - timedelta(days=_ERROR_EVIDENCE_TTL_DAYS)
+    try:
+        async with session_maker() as db:
+            result = await db.execute(
+                update(CallRecord)
+                .where(CallRecord.created_at < cutoff,
+                       or_(CallRecord.error_request.is_not(None),
+                           CallRecord.error_response.is_not(None)),
+                       CallRecord.error_response != _ERROR_EVIDENCE_EXPIRED)
+                .values(error_request=_ERROR_EVIDENCE_EXPIRED,
+                        error_response=_ERROR_EVIDENCE_EXPIRED))
+            await db.commit()
+            return int(result.rowcount or 0)
+    except Exception as exc:  # noqa: BLE001 — retention housekeeping must not break the view
+        logging.getLogger("treg").warning("error-evidence purge failed: %s", exc)
+        return 0
 
 
 @app.get("/admin/health")
@@ -8886,6 +8972,131 @@ def _platform_billable(status_code: int, cost_type: str) -> bool:
 
 _PLATFORM_BODY_MAX = 8 * 1024 * 1024  # buffer ceiling for a metered response (API JSON, not downloads)
 
+# ---- failure evidence: what a failed PLATFORM call is allowed to leave behind -------------------
+# Sized to hold a real provider error whole — a typical 400 body is 80-300 characters and a verbose
+# JSON one about 800 — while still capping a ~14KB CDN error page and a caller stuck in a retry loop.
+_ERROR_RESPONSE_MAX = 2000
+_ERROR_REQUEST_MAX = 1000
+# Sliced off the FRONT before any decode, so an 8MB single-line HTML error page never gets decoded or
+# regex-scanned on the request path. Every limit above is characters; this one is bytes.
+_ERROR_BODY_SLICE = 8192
+
+# Third-party secret shapes. `_ARGV_SECRET_RE` (see `_redact_argv`) covers values; these two cover
+# the places a value hides in a URL or a JSON body, which `_CRED_FLAG_EQ_RE` misses because it
+# requires a leading dash (it was written for argv, where `--token=x` is the only shape).
+_QUERY_CRED_RE = re.compile(
+    r"(?i)((?:api[-_]?key|apikey|key|token|secret|password|passwd|pwd|auth|access[-_]?token"
+    r"|sig|signature)\"?\s*[=:]\s*\"?)[^&\s\"',}]+")
+_URL_USERINFO_RE = re.compile(r"://[^/\s:@]+:[^/\s@]+@")
+
+
+def _platform_secret_renderings(tool: Tool) -> list[str]:
+    """Every spelling of TREG'S OWN key for this tool, longest first.
+
+    This is the primary defence and the only deterministic one: for a platform call the credential is
+    a named setting, so it can be matched exactly instead of guessed at. That matters because
+    providers routinely quote the offending request back inside a 400/401 body — the header they
+    received, or the full URL including the query — and a key can survive `_ARGV_SECRET_RE` by being
+    shorter than 24 characters, by carrying a `.`/`:`/`+` that breaks a word boundary, or by arriving
+    percent-encoded. None of those defeat an exact substring match.
+
+    Three renderings, because treg only ever produces three: the raw value, the value after the
+    binding's `format` (`Bearer {secret}`, `Basic {secret}` — treg injects verbatim and never
+    base64-encodes, so no encoded variant is needed), and percent-encoded for the twelve providers
+    whose key rides in a query parameter and can therefore come back inside an echoed URL.
+    """
+    out: set[str] = set()
+    for binding in tool.bindings or []:
+        setting = binding.get("platform_setting")
+        if not setting:
+            continue  # tiers 1-2 carry a secret_id instead; this function is platform-only by design
+        value = getattr(get_settings(), setting, None)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        value = value.strip()
+        out.add(value)
+        out.add(quote(value, safe=""))
+        rendered = str(binding.get("format") or "{secret}").format(secret=value)
+        if rendered != value:
+            out.add(rendered)
+    # Longest first so `Bearer abc` is masked as a unit before the bare `abc` inside it turns the
+    # line into `Bearer ***` — same result here, but the ordering stops a shorter secret that is a
+    # substring of a longer one from fragmenting it into an unmatchable remainder.
+    return sorted((s for s in out if len(s) >= 4), key=len, reverse=True)
+
+
+def _decode_error_body(raw: bytes, content_encoding: str = "", content_type: str = "") -> str:
+    """Bytes off the wire → something a human can read, or an honest marker saying why not.
+
+    `force_identity` asks the provider not to compress a metered response, but a CDN or WAF error page
+    is generated at the edge and answers however it likes — and those 403s are exactly the responses
+    this feature exists to explain. `relay` streams `aiter_raw()`, so nothing has decoded them.
+    """
+    if not raw:
+        return ""
+    enc = (content_encoding or "").strip().lower()
+    if enc and enc != "identity":
+        try:
+            if enc == "gzip":
+                raw = gzip.decompress(raw)
+            elif enc == "deflate":
+                raw = zlib.decompress(raw, -zlib.MAX_WBITS)
+            else:  # br, zstd — no stdlib decoder we can rely on
+                return f"<{enc}-encoded, {len(raw)} bytes, not decoded>"
+        except Exception:  # noqa: BLE001 — a truncated slice of a gzip stream is expected to fail
+            return f"<{enc}-encoded, {len(raw)} bytes, undecodable>"
+    text = raw.decode("utf-8", "replace")
+    # A binary payload decoded with errors="replace" is a wall of U+FFFD that says nothing. Report the
+    # shape instead, keeping a short hex head so the content type is still identifiable.
+    if text.count("�") > len(text) // 5 or ("\x00" in text[:512]):
+        return f"<binary {content_type or 'response'}, {len(raw)} bytes, head={raw[:32].hex()}>"
+    return text
+
+
+def _caller_request_snippet(request: Request, tool: Tool, caller_body: bytes,
+                            secrets: list[str]) -> str:
+    """What the CALLER actually sent, redacted — the half of a failure treg otherwise forgets.
+
+    `CallRecord.path` stores the catalog's upstream URL with only `{placeholder}` path params filled,
+    so the caller's real query and body survive nowhere else (`params_hash` is one-way). Without this
+    a 400 cannot be explained even when the provider says exactly what was wrong with it.
+
+    Query params are read from the INBOUND request, which never carries an injected credential:
+    injection builds a separate outbound list (see proxy.relay). The binding's own query names are
+    dropped anyway, for the caller who passed a value into the slot the injector overwrites.
+    """
+    drop = {b.get("name", "Authorization") for b in (tool.bindings or [])
+            if b.get("location", "header") == "query"}
+    parts = []
+    pairs = [f"{k}={v}" for k, v in request.query_params.multi_items() if k not in drop]
+    if pairs:
+        parts.append("?" + "&".join(pairs))
+    if caller_body:
+        parts.append(_decode_error_body(caller_body[:_ERROR_BODY_SLICE], "",
+                                        request.headers.get("content-type", "")))
+    return _redact_snippet(" ".join(parts), secrets, _ERROR_REQUEST_MAX)
+
+
+def _redact_snippet(text: str, secrets: list[str], limit: int) -> str:
+    """Mask, THEN truncate — never the other way round.
+
+    Truncating first can cut a 40-character token down to a 12-character survivor that no longer
+    matches the 24+ rule, which is how a "redacted" field ends up holding half a key. `_redact_argv`
+    already gets this order right; this follows it.
+    """
+    if not text:
+        return ""
+    for secret in secrets:  # exact and deterministic, before any pattern guessing
+        text = text.replace(secret, "***")
+    text = _URL_USERINFO_RE.sub("://***:***@", text)
+    text = _QUERY_CRED_RE.sub(r"\1***", text)
+    text = _ARGV_SECRET_RE.sub("***", text)
+    text = " ".join(text.split())  # collapse newlines/indentation; these are read in a table
+    if len(text) <= limit:
+        return text
+    # Truncation can expose a partial token at the seam that was safe only while whole.
+    return re.sub(r"[A-Za-z0-9_\-+/=.]{8,}$", "***", text[:limit]) + "…"
+
 
 def _observed_cost_micro(provider: str, body: bytes) -> int | None:
     """The provider's OWN reported charge for this call, in micro-USD, or None when it doesn't say.
@@ -9133,6 +9344,19 @@ async def call_tool(
     if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
         await _enforce_public_demo_ip_cap(request, db)  # shared token → meter by client IP, not user
 
+    # The caller's own request bytes, read ONCE and only for a platform call, so a failure can be
+    # explained later (see models.CallRecord.error_request). Starlette caches the body, so the relay
+    # still streams the same bytes — but read it here rather than relying on some other path having
+    # happened to read it first, which would make this silently stop working the day that path moves.
+    # Named `caller_body`: `body` in this function is the buffered RESPONSE, and confusing the two
+    # would file the provider's answer as the caller's request.
+    caller_body = b""
+    if mk is not None and mk.metered and _may_have_body(request):
+        try:
+            caller_body = await request.body()
+        except Exception:  # noqa: BLE001 — a caller that hung up must not become a 500 here
+            caller_body = b""
+
     # Snapshot the audit identity NOW: a failed reserve rolls the session back, expiring the ORM
     # instances behind `caller` — reading them inside a later _audit would raise MissingGreenlet.
     audit_org_id, audit_email, audit_tool = caller.org_id, caller.email, tool.name
@@ -9140,7 +9364,8 @@ async def call_tool(
 
     def _audit(status_code: int, *, observed_micro: int | None = None, charged_micro: int | None = None,
                duration_ms: int | None = None, response_bytes: int | None = None,
-               refused_by: str | None = None) -> None:
+               refused_by: str | None = None,
+               error_request: str | None = None, error_response: str | None = None) -> None:
         # Audit the attempt too — failures are results worth recording. A marketplace call additionally
         # carries its telemetry (which endpoint, which credential tier, what it cost): still
         # fire-and-forget, because the money itself already landed synchronously in the ledger.
@@ -9159,6 +9384,11 @@ async def call_tool(
                 "duration_ms": duration_ms, "response_bytes": response_bytes,
                 "params_hash": mk.params_hash,
             }
+            # The tier gate lives HERE as well as at every call site: this is the one field that
+            # retains content, and a future site that forgets the check must still not be able to
+            # write a team's own-key traffic into it.
+            if mk.metered and (error_request or error_response):
+                telemetry |= {"error_request": error_request, "error_response": error_response}
         audit.record_call(
             org_id=audit_org_id, user_email=audit_email, tool_name=audit_tool,
             method=request.method, path=upstream_url, status_code=status_code,
@@ -9250,7 +9480,14 @@ async def call_tool(
         # unreachable upstream) → return the hold in full, regardless of the endpoint's billing type.
         if mk is not None and mk.metered:
             await _platform_settle(mk, None, reason=f"call_failed_{exc.status_code}")
-            _audit(exc.status_code, charged_micro=0, duration_ms=_now_ms() - started)
+            # No provider body exists on this branch — `body` is UNBOUND here whenever relay raised,
+            # so it must never be referenced. treg's own detail is the explanation instead, and it is
+            # the one worth keeping: this branch carries the 502s (upstream timeout, connection reset,
+            # failed injection, SSRF refusal, missing platform key) where a bare status says least.
+            _secrets = _platform_secret_renderings(tool)
+            _audit(exc.status_code, charged_micro=0, duration_ms=_now_ms() - started,
+                   error_request=_caller_request_snippet(request, tool, caller_body, _secrets),
+                   error_response=_redact_snippet(f"treg: {exc.detail}", _secrets, _ERROR_RESPONSE_MAX))
         else:
             _audit(exc.status_code, duration_ms=_now_ms() - started)  # record the failed attempt
         raise
@@ -9263,8 +9500,21 @@ async def call_tool(
     duration_ms = _now_ms() - started
     if mk is not None and mk.metered:
         charged, observed = await _platform_settle(mk, response.status_code, body)
+        # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
+        # (see _refusal_kind). So this is where the provider's own explanation is captured, and the
+        # only place it exists: nothing downstream keeps the body.
+        err_request = err_response = None
+        if response.status_code >= 400:
+            _secrets = _platform_secret_renderings(tool)
+            err_request = _caller_request_snippet(request, tool, caller_body, _secrets)
+            err_response = _redact_snippet(
+                _decode_error_body(body[:_ERROR_BODY_SLICE],
+                                   response.headers.get("content-encoding", ""),
+                                   response.headers.get("content-type", "")),
+                _secrets, _ERROR_RESPONSE_MAX)
         _audit(response.status_code, observed_micro=observed, charged_micro=charged,
-               duration_ms=duration_ms, response_bytes=len(body))
+               duration_ms=duration_ms, response_bytes=len(body),
+               error_request=err_request, error_response=err_response)
         if idem_key:
             # Here, and not earlier: this is the first point where BOTH the response and what it
             # actually cost are known, and a replay has to hand back the real charge rather than the
