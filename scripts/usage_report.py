@@ -103,7 +103,7 @@ with c as (
     -- the team registered themselves or a shape treg could not resolve at all.
     (endpoint_id is not null)                     as cataloged,
     id, method, org_id, user_email, status_code, refused_by, credential_tier, path,
-    error_request, error_response,
+    {evidence_cols}
     nullif(client,'')                             as client,
     coalesce(cost_charged_micro,0)                as spend,
     duration_ms, created_at,
@@ -176,10 +176,7 @@ QUERIES: dict[str, str] = {
              status_code, count(*) n, count(distinct org_id) orgs,
              left(min(path), 170) sample,
              string_agg(distinct method, '/') methods,
-             left((array_agg(error_response
-                   order by (error_response is not null) desc, id desc))[1], 400) evidence,
-             left((array_agg(error_request
-                   order by (error_response is not null) desc, id desc))[1], 220) sent
+             {evidence_agg}
       from c where status_code >= 400
       group by 1,2,3,4 order by 1, 5 desc""",
     "providers": BASE + """
@@ -253,9 +250,30 @@ async def collect(since: dt.datetime, unit: str = "day") -> dict:
                       f"retrying in {pause}s", file=sys.stderr)
                 await asyncio.sleep(pause)
         try:
+            # The failure-evidence columns arrive with migration (A35). Until that deploys, prod does
+            # not have them — so probe rather than assume, or this script dies on
+            # UndefinedColumnError against exactly the database it exists to report on. Degrading to
+            # "no evidence available" keeps every other panel working through the deploy window.
+            has_evidence = bool(await conn.fetchval(
+                "select 1 from information_schema.columns"
+                " where table_name = 'callrecord' and column_name = 'error_response'"))
+            if not has_evidence:
+                print("  note: callrecord has no error_request/error_response yet — evidence panels "
+                      "will be empty until migration (A35) deploys", file=sys.stderr)
+            ev_cols = ("error_request, error_response," if has_evidence
+                       else "null::text error_request, null::text error_response,")
+            ev_agg = ("""left((array_agg(error_response
+                            order by (error_response is not null) desc, id desc))[1], 400) evidence,
+                         left((array_agg(error_request
+                            order by (error_response is not null) desc, id desc))[1], 220) sent"""
+                      if has_evidence else "null::text evidence, null::text sent")
+
             out = {}
             for name, sql in QUERIES.items():
-                rows = [dict(r) for r in await conn.fetch(sql.replace("{unit}", unit), since)]
+                sql = (sql.replace("{unit}", unit)
+                          .replace("{evidence_cols}", ev_cols)
+                          .replace("{evidence_agg}", ev_agg))
+                rows = [dict(r) for r in await conn.fetch(sql, since)]
                 out[name] = rows
                 print(f"  {name}: {len(rows)} rows", file=sys.stderr)
             return out

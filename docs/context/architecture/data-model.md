@@ -87,10 +87,15 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   as a provider error, and `endpoint_stats` excludes refused rows entirely.
   It also carries **`error_request` / `error_response`** (migration A35, nullable) — the redacted,
   truncated evidence for a **failed PLATFORM-tier call only**, and the one exception to "bodies are
-  never stored". Written when `mk.metered` and the call failed, from two places: the settle path (the
-  provider's own body, since a relayed non-2xx returns as a `Response` and is never raised) and the
-  metered `except HTTPException` branch (treg's own `detail`, covering the 502s — upstream timeout,
-  failed injection, SSRF refusal — where a bare status says least). Never written for a success, for
+  never stored". Written when `mk.metered` and the call failed, from three places: the settle path
+  (the provider's own body, since a relayed non-2xx returns as a `Response` and is never raised, plus
+  an **allowlisted set of response headers** — `Retry-After`, `WWW-Authenticate`, the rate-limit
+  trio, request/trace ids — because an empty-bodied 401 or 429 is otherwise undiagnosable and those
+  headers *are* the answer); the metered `except HTTPException` branch (treg's own `detail`, covering
+  the 502s — upstream timeout, failed injection, SSRF refusal — where a bare status says least); and
+  the reserve refusal, where `detail` names **which** cap was hit, since every 429 collapses to
+  `refused_by='cap'` and that one value spans member, tag, org, platform and trial limits.
+  Never written for a success, for
   tiers 1–2, or for a non-catalog tool call: a team on its own key is billed by the provider, so
   keeping their traffic would help nobody — the same line `IdempotentCall.response_body` draws.
   Redaction is exact-match-first (treg's own platform credential, resolved from the binding's

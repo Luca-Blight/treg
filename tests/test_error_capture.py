@@ -304,6 +304,23 @@ async def test_a_real_secret_shape_is_still_masked(clients: AsyncClient, platfor
     assert "eyJhbGciOi.JIUzI1NiIsInR5cCI6" not in row["error_response"]
 
 
+async def test_a_cap_refusal_says_WHICH_cap(clients: AsyncClient, platform_on, monkeypatch):
+    """`refused_by='cap'` is an aggregation bucket, not a diagnosis: every 429 lands in it, covering
+    member call caps, tag caps, the platform ceiling, trial allowances and demo-IP limits. Which one
+    it was is in treg's own detail, and 878 refusals a week were discarding it."""
+    from fastapi import HTTPException
+
+    async def _boom(*a, **k):
+        raise HTTPException(status_code=429, detail="daily call cap reached for this member (500/500)")
+
+    monkeypatch.setattr(A, "_platform_reserve", _boom)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 429
+    row = await _row(clients)
+    assert row["refused_by"] == "cap", "still aggregates as a cap"
+    assert "daily call cap reached for this member" in row["error_response"], "and now says which"
+
+
 async def test_admin_errors_surfaces_the_method(clients: AsyncClient, platform_on, monkeypatch):
     """A GET at a POST endpoint IS the diagnosis for 47 real apollo failures."""
     monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"error":"nope"}'))

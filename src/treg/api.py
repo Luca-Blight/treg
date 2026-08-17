@@ -9515,8 +9515,18 @@ async def call_tool(
         except HTTPException as exc:
             # A call refused for MONEY (402 empty balance / 429 daily cap) is the event the org will
             # ask about first — it must appear in the activity feed, charged 0.
+            #
+            # Keep the detail, because `cap` alone is not a diagnosis: every 429 maps to it, and that
+            # covers a member call cap, a tag call or spend cap, the platform ceiling, a trial
+            # allowance and a demo-IP limit. WHICH one is in `exc.detail` and was being discarded —
+            # 878 refusals in a week that could not be told apart afterwards. This branch is inside
+            # `mk.metered`, so it stays platform-only like every other capture site, and the detail
+            # is treg's own text about the caller's org: no provider content, no third-party data.
             _audit(exc.status_code, charged_micro=0,
-                   refused_by="balance" if exc.status_code == 402 else "cap")
+                   refused_by="balance" if exc.status_code == 402 else "cap",
+                   error_response=_redact_snippet(f"treg: {exc.detail}",
+                                                  _platform_secret_renderings(tool),
+                                                  _ERROR_RESPONSE_MAX))
             raise
     started = _now_ms()
     try:
