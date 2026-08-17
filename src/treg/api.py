@@ -2084,6 +2084,20 @@ async def robots_txt():
                              headers={"Cache-Control": "max-age=3600"})
 
 
+# The outcome landing pages: one per vertical, the destinations for search ads and the organic
+# `/use-cases/` cluster. Their COPY is generated from marketing/landing/*.md — never hand-edit
+# the HTML in web/, it is overwritten by that build. The slug is the public URL and is quoted in
+# live ad campaigns, so treat this map as an API: add freely, never rename or remove without a
+# redirect.
+_USE_CASES = {
+    "seo-data-for-ai-agents": "usecase-seo.html",
+    "lead-enrichment-for-ai-agents": "usecase-enrichment.html",
+    "social-trend-research-for-ai-agents": "usecase-social.html",
+    "competitor-ad-research-for-ai-agents": "usecase-ads.html",
+    "company-research-for-ai-agents": "usecase-company.html",
+}
+
+
 # The pages a crawler should know about. Everything here must answer 200 to a GET — a sitemap that
 # lists a redirect or a 404 is worse than no sitemap, so `tests/test_seo.py` walks every entry.
 # Deliberately absent: /contact and /help (alias URLs for the one support.html), /vendor-listing.md
@@ -2095,10 +2109,19 @@ _SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
     ("/catalog", "", "0.9"),
     ("/tutorial", "tutorial.html", "0.8"),
     ("/docs", "", "0.7"),
+    ("/resources", "resources.html", "0.8"),
     ("/vendor-listing", "vendor-listing.md", "0.5"),
     ("/support", "support.html", "0.4"),
     ("/terms", "terms.html", "0.2"),
     ("/privacy", "privacy.html", "0.2"),
+    # The outcome pages. Listed WITHOUT a trailing slash on purpose: `/use-cases/<slug>/` 307s to
+    # this form, and a sitemap that lists a redirect is worse than no sitemap. Their canonical tags
+    # match these exactly. `_USE_CASES` is the one source for the set, so a new page is listed the
+    # moment it is routed, and `tests/test_seo.py` will fail if one stops answering 200.
+    *(
+        (f"/use-cases/{slug}", name, "0.8")
+        for slug, name in _USE_CASES.items()
+    ),
 )
 
 
@@ -2304,6 +2327,41 @@ async def privacy_page():
     (Google requires a reachable privacy policy carrying the Limited Use disclosure), so this path
     is effectively public API — don't rename it without updating the provider consoles."""
     return _legal_page("privacy.html")
+
+
+@app.get("/resources", include_in_schema=False)
+async def resources_page():
+    """The hub for the outcome pages. It exists for two reasons beyond navigation: without it the
+    `/use-cases/*` pages are orphans that no crawler reaches, and it gives the footer one durable
+    link instead of five that grow every time a page is added."""
+    page = _WEB_DIR / "resources.html"
+    if not page.exists():
+        raise HTTPException(status_code=404, detail="resources.html not bundled")
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/usecase.css", include_in_schema=False)
+async def usecase_css():
+    """The shared skin for /use-cases/* (landing-page tokens, one copy — same deal as legal.css)."""
+    f = _WEB_DIR / "usecase.css"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="usecase.css not bundled")
+    return FileResponse(f, media_type="text/css", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/use-cases/{slug}", include_in_schema=False)
+async def use_case_page(slug: str):
+    """One outcome page. Unlike the root landing this does NOT redirect a signed-in visitor to
+    /app: these are ad destinations, and bouncing a returning user away from the page they paid
+    to reach would make the campaign data unreadable."""
+    name = _USE_CASES.get(slug.strip("/").lower())
+    if not name:
+        raise HTTPException(status_code=404, detail="unknown use case")
+    page = _WEB_DIR / name
+    if not page.exists():
+        raise HTTPException(status_code=404, detail=f"{name} not bundled")
+    # no-cache: these are edited against live campaign data and must never serve stale.
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
 
 
 class OAuthClientRegistration(BaseModel):
