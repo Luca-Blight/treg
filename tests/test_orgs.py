@@ -54,3 +54,33 @@ async def test_a_team_with_a_BALANCE_can_still_be_deleted(clients):
     gone = await clients.request("DELETE", f"/orgs/{org_id}", params={"confirm": slug}, headers=hdr)
     assert gone.status_code == 200, gone.text
     assert (await clients.get(f"/orgs/{org_id}/balance", headers=hdr)).status_code != 200
+
+
+async def test_a_team_with_oauth_family_authority_can_be_deleted(clients):
+    """OAuthGrant deliberately calls its FK `current_org_id`, so the schema-walking `org_id` guard
+    above cannot discover it. Pin its explicit cascade path before Postgres turns an omission into a
+    foreign-key 500 (SQLite does not enforce that FK in this suite)."""
+    from datetime import datetime
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import OAuthGrant, OAuthRefresh
+
+    made = (await clients.post("/orgs", json={"name": "oauth-family-team"})).json()
+    async with session_maker() as db:
+        db.add(OAuthGrant(family_id="delete-family", current_org_id=made["org_id"]))
+        # Provenance can name a PREVIOUS team. Deleting current family authority still revokes and
+        # removes the whole family; otherwise this historical row is orphaned from its authority.
+        db.add(OAuthRefresh(token_hash="delete-token", family_id="delete-family", client_id="c",
+                            user_id=1, org_id=made["org_id"] + 999,
+                            expires_at=datetime(2026, 9, 1)))
+        await db.commit()
+    gone = await clients.request("DELETE", f"/orgs/{made['org_id']}",
+                                 params={"confirm": made["org"]},
+                                 headers={"X-Treg-Token": made["token"]})
+    assert gone.status_code == 200, gone.text
+    async with session_maker() as db:
+        assert (await db.execute(select(OAuthGrant).where(
+            OAuthGrant.family_id == "delete-family"))).scalar_one_or_none() is None
+        assert (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.family_id == "delete-family"))).scalar_one_or_none() is None

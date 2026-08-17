@@ -57,7 +57,7 @@ from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, plat
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
                      IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
-                     OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, TagBudget, TagSpend, Tool,
+                     OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, TagBudget, TagSpend, Tool,
                      ToolRequest, User)
 from .proxy import relay
 
@@ -2420,23 +2420,25 @@ REFRESH_TTL_S = 30 * 24 * 3600   # a connector the user still uses keeps working
 
 
 async def _family_org(family_id: str, db: AsyncSession) -> int | None:
-    """Which team this grant spends from — read from the family's OLDEST row.
+    """Which team future tokens in this grant family spend from.
 
-    One row has to be the authority or a move cannot be made to stick, and the oldest is the only
-    one that qualifies: it is the row written at consent, rows are retired rather than deleted, and
-    nothing but `set_team` ever changes its `org_id`. Reading the NEWEST row instead (the first
-    attempt at this) hands authority to whichever refresh happened to rotate last — so a rotation
-    that started before a team move and finished after it would write its stale team onto the newest
-    row and permanently revert the move, minutes after the user was told it had succeeded.
+    Mutable family authority has its own row. Token rows retain the team each token was issued under
+    so a later replay audit keeps its original attribution. The previous oldest-token authority made
+    moves stick across refresh races, but only by rewriting retired history.
 
     The residual window is the one no design without distributed locking removes: an access token
     already minted for the old team keeps working until it expires (≤ ACCESS_TTL_SECONDS). The
     FAMILY, though, converges on the move — the next rotation reads this row and mints for the new
     team — so the move is never undone, only briefly overlapped.
     """
-    return (await db.execute(
-        select(OAuthRefresh.org_id).where(OAuthRefresh.family_id == family_id)
-        .order_by(OAuthRefresh.id.asc()).limit(1))).scalar_one_or_none()
+    grant = await db.get(OAuthGrant, family_id)
+    return grant.current_org_id if grant is not None else None
+
+
+def _refresh_is_live(row: OAuthRefresh, *, now: datetime | None = None) -> bool:
+    """One definition of a usable grant token, shared by refresh, listing and team moves."""
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+    return row.retired_at is None and row.expires_at >= now
 
 
 async def _issue_refresh(*, family_id: str, client_id: str, user_id: int, org_id: int,
@@ -2444,6 +2446,8 @@ async def _issue_refresh(*, family_id: str, client_id: str, user_id: int, org_id
     """Mint a refresh token and store only its hash — a database copy is a database leak."""
     import secrets as _s
 
+    if await db.get(OAuthGrant, family_id) is None:
+        db.add(OAuthGrant(family_id=family_id, current_org_id=org_id))
     token = _s.token_urlsafe(40)
     db.add(OAuthRefresh(
         token_hash=crypto.hash_token(token), family_id=family_id, client_id=client_id,
@@ -2831,7 +2835,7 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
         return bad("invalid_grant",
                    "this refresh token was already used — the grant has been revoked, sign in again")
 
-    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+    if not _refresh_is_live(row):
         return bad("invalid_grant", "refresh token expired")
     if client_id and client_id != row.client_id:
         return bad("invalid_grant", "refresh token was issued to a different client")
@@ -3368,6 +3372,21 @@ _ORG_SCOPED_MODELS = (
 
 async def _cascade_delete_org(org: Org, db: AsyncSession) -> None:
     """Delete every org-scoped row then the org. Shared by owner delete_org + admin force-delete."""
+    # OAuthGrant names its mutable team `current_org_id` to distinguish family authority from the
+    # immutable `OAuthRefresh.org_id` provenance. It therefore cannot join the generic list below,
+    # but its FK must be cleared before the team row just the same.
+    grants = (await db.execute(select(OAuthGrant).where(
+        OAuthGrant.current_org_id == org.id))).scalars().all()
+    family_ids = [grant.family_id for grant in grants]
+    if family_ids:
+        # Deleting the authority revokes the WHOLE family, including retired provenance rows whose
+        # org_id names a previous team. Leaving those behind would create token rows with no grant.
+        for token in (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.family_id.in_(family_ids)))).scalars().all():
+            await db.delete(token)
+    for grant in grants:
+        await db.delete(grant)
+    await db.flush()
     for model in _ORG_SCOPED_MODELS:
         for r in (await db.execute(select(model).where(model.org_id == org.id))).scalars().all():
             await db.delete(r)
@@ -3896,16 +3915,17 @@ async def oauth_grants(user: User = Depends(require_identity),
     rows = (await db.execute(select(OAuthRefresh).where(
         OAuthRefresh.user_id == user.id, OAuthRefresh.retired_at.is_(None)
     ).order_by(OAuthRefresh.created_at.desc()))).scalars().all()
+    rows = [row for row in rows if _refresh_is_live(row)]
     seen: set[str] = set()
     out: list[dict] = []
     for row in rows:                      # one entry per GRANT, not per rotation of its token
         if row.family_id in seen:
             continue
         seen.add(row.family_id)
-        # Listing and refresh must read the SAME authority. In the refresh-vs-move race the live,
-        # newest row can retain a stale org_id while the oldest family anchor correctly holds the
-        # user's selection; showing the live row told the user team A while refresh spent team B.
-        org_id = await _family_org(row.family_id, db)
+        # Listing and refresh must read the SAME family authority. A token row's org_id is immutable
+        # issue provenance and may legitimately name the team used before a later move.
+        grant = await db.get(OAuthGrant, row.family_id)
+        org_id = grant.current_org_id if grant is not None else None
         org = await db.get(Org, org_id) if org_id is not None else None
         client = (await db.execute(select(OAuthClient).where(
             OAuthClient.client_id == row.client_id))).scalar_one_or_none()
@@ -3914,7 +3934,7 @@ async def oauth_grants(user: User = Depends(require_identity),
             "client": (client.client_name if client else "") or row.client_id,
             "team": org.slug if org else None,
             "team_name": org.name if org else None,
-            "granted": row.created_at.isoformat(timespec="seconds"),
+            "granted": grant.granted_at.isoformat(timespec="seconds") if grant else None,
         })
     return out
 
@@ -3939,6 +3959,7 @@ async def oauth_grant_set_team(family_id: str, body: GrantTeamIn,
     rows = (await db.execute(select(OAuthRefresh).where(
         OAuthRefresh.family_id == family_id, OAuthRefresh.user_id == user.id,
         OAuthRefresh.retired_at.is_(None)))).scalars().all()
+    rows = [row for row in rows if _refresh_is_live(row)]
     if not rows:
         raise HTTPException(status_code=404, detail=f"no live grant {family_id!r} on this account")
     org = await _resolve_org(body.team, db)
@@ -3951,15 +3972,13 @@ async def oauth_grant_set_team(family_id: str, body: GrantTeamIn,
     if org is None or org.suspended or member is None:
         raise HTTPException(status_code=404, detail=(
             f"no team {body.team!r} on this account — see `treg org ls` for the teams you can use"))
-    # EVERY row of the family, retired ones included — the oldest row is the authority `_family_org`
-    # reads (see there), and it is a retired row on any grant that has ever rotated. Moving only the
-    # live rows would leave the authority pointing at the old team, so the move would appear to
-    # succeed and then evaporate on the next rotation.
-    family = (await db.execute(select(OAuthRefresh).where(
-        OAuthRefresh.family_id == family_id, OAuthRefresh.user_id == user.id))).scalars().all()
-    for row in family:
-        row.org_id = org.id
-        db.add(row)
+    # Change only family authority. Token rows are evidence of where each historical bearer was
+    # issued and must stay immutable, especially retired rows kept for reuse detection.
+    grant = await db.get(OAuthGrant, family_id)
+    if grant is None:  # startup migration creates these for every pre-feature family
+        raise HTTPException(status_code=404, detail=f"no live grant {family_id!r} on this account")
+    grant.current_org_id = org.id
+    db.add(grant)
     await db.commit()
     return {
         "grant": family_id, "team": org.slug, "team_name": org.name,

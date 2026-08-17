@@ -170,7 +170,9 @@ connection metadata on `secret` (`provider`, `granted_scopes`, `resource_ref`, `
 and expire a credential; **A17–A20** the per-provider auth quirks on `pendingoauth` carried through the
 redirect (`provider`, `code_verifier`, `auth_params`, `token_endpoint_auth_method`, `client_id_param`,
 `scope_separator`, `long_lived_exchange BOOLEAN DEFAULT false`, `replaces_secret_id INTEGER`) so the
-callback exchanges the code exactly as the consent URL was built.
+callback exchanges the code exactly as the consent URL was built; and **A35** backfills one
+`oauthgrant` authority row per existing refresh family from its oldest token, using portable,
+idempotent `INSERT … SELECT … WHERE NOT EXISTS` SQL.
 
 **Audit back-pressure (`audit.py`).** Audit rows are written off the request path (fire-and-forget), and
 each write opens a DB connection from the small pool **shared** with real requests. Two limits keep

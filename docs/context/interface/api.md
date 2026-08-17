@@ -521,6 +521,8 @@ treg is an OAuth authorization server for its own MCP endpoint. Detail in
     POST /oauth/authorize                           the human's decision — approval is never a GET
     POST /oauth/token                               authorization_code and refresh_token grants
     POST /oauth/revoke                              RFC 7009; ends the whole refresh family, always 200
+    GET  /oauth/grants                              live (non-retired, non-expired) grant families
+    POST /oauth/grants/{family}/team                move family authority to another member team
     POST /mcp/                                      the MCP transport itself
 
     GET  /connect-demo                              a page that pretends to be an MCP client

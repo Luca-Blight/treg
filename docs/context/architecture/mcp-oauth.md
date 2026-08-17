@@ -63,9 +63,10 @@ each of which was added because a real endpoint needed it:
 
 - `query` — ALWAYS the query string. A team-tool list keeps the repeated-key default
   (`?tag=a&tag=b`, which a dict would collapse); a catalog array follows its explicit
-  `input.queryArrayEncoding` (`json`, `comma`, or `repeated`). Meta Ad Library therefore receives
-  `ad_reached_countries=["US"]` as one JSON value while Pinterest receives one comma-separated
-  `columns` value. Composable with `body` on a POST — the Bright Data dataset shape
+  endpoint default `input.queryArrayEncoding` or a query parameter's narrower `arrayEncoding`
+  (`json`, `comma`, or `repeated`). Meta Ad Library therefore receives
+  `ad_reached_countries=["US"]` as one JSON value while Pinterest sends ids as repeated keys and
+  only `columns` as one comma-separated value. Composable with `body` on a POST — the Bright Data dataset shape
   (`?dataset_id=…` + array body) was uncallable over MCP without it.
 - `body` — ALWAYS the body. Object/array → JSON; a STRING is sent raw with `content_type` naming
   it (sniffed as `application/json` when it parses as JSON — the CLI's rule). A body implies POST.
@@ -259,29 +260,25 @@ team, and the first signal was spend on a balance nobody had opened. Two halves 
   grant names a team that identity's own `/orgs` does not list, the answer says so outright. The
   *how to move it* half of the hint is added only for an actual OAuth caller: a header token carries
   its own team, and `treg mcp grants` would list nothing for it.
-- **The team can be moved without re-consenting.** It lives on the refresh family
-  (`OAuthRefresh.org_id`), not only inside the issued access token, so `GET /oauth/grants` +
+- **The team can be moved without re-consenting.** It lives on the refresh family's `OAuthGrant`
+  authority row (`current_org_id`), not only inside the issued access token, so `GET /oauth/grants` +
   `POST /oauth/grants/{family}/team` (`treg mcp grants`, `treg mcp use-team`) is a row update the
   next refresh picks up, within the access token's hour. Guarded on both sides: only the grant's own
   user may move it, and only to a team they belong to — a grant must never reach further than the
   consent screen would have offered. A *refresh* still cannot change teams; that is not a second
   chance to pick, it is a deliberate action by the person who made the first one.
 
-  Three things that fall out of putting the team on every row of the family, all found in review:
+  Three lifecycle rules, all found in review:
 
-  - **One row is the authority: the family's OLDEST** (`_family_org`). Some row has to be, or a move
-    cannot be made to stick — and the oldest is the only candidate, because it is written at consent,
-    rows are retired rather than deleted, and nothing but `set_team` ever rewrites its `org_id`.
-    Reading the NEWEST row instead (the first attempt) hands authority to whichever refresh rotated
-    last, so a rotation that began before a move and landed after it wrote its stale team onto the
-    newest row and **permanently reverted the move**. `set_team` therefore updates every row of the
-    family, retired ones included. The residual window is the one no design without distributed
-    locking removes: an access token already minted for the old team keeps working until it expires
-    (≤ `ACCESS_TTL_SECONDS`). The family itself converges — the next rotation reads the anchor — so
-    the move is never undone, only briefly overlapped.
-    `GET /oauth/grants` reads that same anchor rather than the newest live row: the race state can
-    legitimately leave a stale team on the newest row, and the CLI must display the team refresh
-    will actually spend from.
+  - **Family authority is separate from token provenance.** `OAuthGrant.current_org_id` is the one
+    mutable answer `_family_org`, listing and refresh read. `OAuthRefresh.org_id` never changes after
+    issue: a retired token replay is therefore audited against the team that token actually named,
+    not a team the family moved to later. `OAuthGrant.granted_at` is likewise the consent time, so
+    routine rotation cannot make an old authorization look newly granted. The residual window is an
+    access token already minted for the old team, which lasts at most `ACCESS_TTL_SECONDS`; future
+    rotations read the family row, so a refresh racing a move cannot revert it.
+  - **Live means non-retired and non-expired** (`_refresh_is_live`) everywhere: refresh, grant listing,
+    and team moves. An expired family is omitted from `GET /oauth/grants` and cannot be moved.
   - **A grant dies with the membership it was consented under.** Refresh checked that the user and
     the org still existed, never that the user was still *in* it. Calls were refused meanwhile
     (`require_member` re-resolves membership every time), but the grant kept minting tokens and would
@@ -307,6 +304,10 @@ looks merely unknown; a retired one says somebody used a credential that had alr
 that point a client retrying after a dropped response and a thief with a copy are indistinguishable,
 so the whole `family_id` is revoked. Being wrong that way costs one sign-in; being wrong the other way
 costs somebody's balance.
+
+The kept row also keeps immutable issue-time team provenance. Mutable team choice and stable consent
+time live once per family in `OAuthGrant`; startup migration A35 backfills that row from the oldest
+existing refresh token.
 
 ## Tokens are exchanged, not forwarded
 

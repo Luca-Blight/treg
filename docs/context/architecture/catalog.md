@@ -198,6 +198,10 @@ Rules:
   overrides it. `catalog_store.query_values()` is shared by MCP request assembly and
   `call_template()`, so the structured schema and paste-ready command cannot disagree. Complete
   `name=value` arguments are shell-quoted with `shlex.quote` after canonical boolean/JSON encoding.
+  Endpoint defaults are only valid when every array parameter shares a wire format. Pinterest's
+  analytics routes are deliberately mixed: ids/statuses use repeated keys while only `columns`
+  declares `arrayEncoding: comma`. Meta Ad Library's array parameters all use JSON, so its endpoint
+  default remains correct.
 - `verified` + `example_response` mean a live call was made and passed, and carry exactly the same
   weight as in core — the validator applies one rule to both tiers: verified ⇒ a `test_request` to
   re-verify with and an `example_response` file that exists.

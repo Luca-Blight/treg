@@ -1163,3 +1163,112 @@ async def test_a_team_you_cannot_use_is_indistinguishable_from_one_that_does_not
     assert real_but_not_mine.status_code == pure_fiction.status_code == 404
     assert real_but_not_mine.json()["detail"] == pure_fiction.json()["detail"].replace(
         "no-such-team-anywhere", theirs["slug"])
+
+
+async def test_an_expired_grant_is_not_presented_as_authorized(clients):
+    """The token endpoint already refuses an expired refresh token. Listing the same family as an
+    active authorization gives the operator two contradictory answers about one credential."""
+    from datetime import datetime, timedelta, timezone
+    from sqlmodel import select
+
+    from treg import crypto
+    from treg.db import session_maker
+    from treg.models import OAuthRefresh
+
+    body, client_id, _ = await _grant_full(clients, "expired-list@superdesign.dev")
+    me = await _as("expired-list@superdesign.dev")
+    async with session_maker() as db:
+        row = (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.token_hash == crypto.hash_token(body["refresh_token"])
+        ))).scalar_one()
+        row.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
+        db.add(row)
+        await db.commit()
+
+    assert (await clients.get("/oauth/grants", headers=me)).json() == []
+    refused = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert refused.status_code == 400 and "expired" in refused.json()["error_description"]
+
+
+async def test_an_expired_grant_cannot_be_moved(clients):
+    """A team move is an operation on usable authority. Accepting it on a dead family says the
+    grant is live even though its next token exchange is guaranteed to fail."""
+    from datetime import datetime, timedelta, timezone
+    from sqlmodel import select
+
+    from treg import crypto
+    from treg.db import session_maker
+    from treg.models import OAuthRefresh
+
+    body, _, _ = await _grant_full(clients, "expired-move@superdesign.dev")
+    me = await _as("expired-move@superdesign.dev")
+    other = (await clients.post("/orgs", json={"name": "expired destination"}, headers=me)).json()
+    family_id = (await clients.get("/oauth/grants", headers=me)).json()[0]["grant"]
+    async with session_maker() as db:
+        row = (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.token_hash == crypto.hash_token(body["refresh_token"])
+        ))).scalar_one()
+        row.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
+        db.add(row)
+        await db.commit()
+
+    moved = await clients.post(f"/oauth/grants/{family_id}/team",
+                               json={"team": other["org"]}, headers=me)
+    assert moved.status_code == 404
+
+
+async def test_rotation_does_not_change_the_grant_date(clients):
+    """`granted` means when the human consented, not when the connector last refreshed. Rotation
+    creates a token row, but it must not make an old authorization appear newly granted."""
+    from datetime import timedelta
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import OAuthRefresh
+
+    body, client_id, _ = await _grant_full(clients, "grant-date@superdesign.dev")
+    me = await _as("grant-date@superdesign.dev")
+    before = (await clients.get("/oauth/grants", headers=me)).json()[0]
+    rotated = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert rotated.status_code == 200
+    async with session_maker() as db:
+        newest = (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.family_id == before["grant"]
+        ).order_by(OAuthRefresh.id.desc()).limit(1))).scalar_one()
+        newest.created_at = newest.created_at + timedelta(days=1)
+        db.add(newest)
+        await db.commit()
+
+    after = (await clients.get("/oauth/grants", headers=me)).json()[0]
+    assert after["granted"] == before["granted"]
+
+
+async def test_a_moved_grant_keeps_retired_token_team_provenance(clients, monkeypatch):
+    """A replay audit is evidence about the token that was copied. Moving the live grant later
+    must not rewrite history and attribute a team-A token to team B."""
+    from treg import audit
+
+    email = "provenance@superdesign.dev"
+    body, client_id, original_org_id = await _grant_full(clients, email)
+    me = await _as(email)
+    grant = (await clients.get("/oauth/grants", headers=me)).json()[0]["grant"]
+    rotated = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert rotated.status_code == 200
+    other = (await clients.post("/orgs", json={"name": "provenance destination"}, headers=me)).json()
+    moved = await clients.post(f"/oauth/grants/{grant}/team",
+                               json={"team": other["org"]}, headers=me)
+    assert moved.status_code == 200
+
+    recorded = {}
+    monkeypatch.setattr(audit, "record_call", lambda **kwargs: recorded.update(kwargs))
+    replay = await clients.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": body["refresh_token"],
+        "client_id": client_id})
+    assert replay.status_code == 400 and "already used" in replay.json()["error_description"]
+    assert recorded["org_id"] == original_org_id

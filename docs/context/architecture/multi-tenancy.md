@@ -205,7 +205,10 @@ connection-metadata columns (`provider`/`granted_scopes`/`resource_ref`/`resourc
 in-place uses `DEFAULT false`, never `DEFAULT 0` — Postgres rejects an integer default on a `BOOLEAN`
 column (SQLite accepts both, so the test suite alone cannot catch it); `pendingoauth.long_lived_exchange`
 is spelled `BOOLEAN NOT NULL DEFAULT false`, and the legacy `INSERT INTO org (…)` backfill names
-`public_demo` explicitly with a `false` literal. **(A21) PROJECTS** follows the same shape: the `project`
+`public_demo` explicitly with a `false` literal. **(A35) OAuth grant authority** backfills the new
+`oauthgrant` table from each refresh family's oldest row with a portable, idempotent
+`INSERT … SELECT … WHERE NOT EXISTS`; future team moves update that family row and leave historical
+token `org_id` values untouched. **(A21) PROJECTS** follows the same shape: the `project`
 table itself needs no ALTER (a brand-new table is created by `create_all`), so the step only adds the three
 columns that hang off it — `tool.project_id` (INTEGER, nullable) plus `project_access` (JSON, nullable) on
 **both** `membership` and `invite`. Every one is nullable and NULL means *org-wide / unrestricted*, so an

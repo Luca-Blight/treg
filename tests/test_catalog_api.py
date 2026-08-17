@@ -499,6 +499,29 @@ def test_call_templates_share_wire_encoding_and_quote_complete_query_arguments()
     assert "'phrase=two words'" in line
 
 
+def test_catalog_validator_rejects_unknown_array_encodings(tmp_path, capsys):
+    """Both encoding declaration levels are schema, not free-form prose. Exercise the real
+    validator so deleting its validation block cannot leave a falsely green test suite."""
+    cv = _load_validator()
+    real = cv.CATALOG
+    for name in ("capabilities.yaml", "fx.yaml"):
+        (tmp_path / name).write_text((real / name).read_text())
+    pinterest = (real / "pinterest-ads.yaml").read_text()
+    pinterest = pinterest.replace("    input:\n", "    input:\n      queryArrayEncoding: nonsense\n", 1)
+    pinterest = pinterest.replace("arrayEncoding: comma", "arrayEncoding: nonsense", 1)
+    (tmp_path / "pinterest-ads.yaml").write_text(pinterest)
+    original = cv.CATALOG
+    try:
+        cv.CATALOG = tmp_path
+        result = cv.main(["pinterest-ads"])
+    finally:
+        cv.CATALOG = original
+    output = capsys.readouterr().out
+    assert result == 1
+    assert "input.queryArrayEncoding must be one of" in output
+    assert "columns' arrayEncoding must be one of" in output
+
+
 # ---- example responses -------------------------------------------------------------------
 async def test_example_route_serves_a_captured_response(clients: AsyncClient):
     r = await clients.get("/catalog/examples/tikhub.tiktok.user.profile")
