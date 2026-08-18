@@ -116,7 +116,9 @@ class Settings(BaseSettings):
     # permanent share of pass-through GMV, and — unlike a flat figure — it rewards farming in
     # proportion to effort. Nobody builds a fake-account farm for $10; plenty would for 15% of an
     # uncapped balance. All figures are micro-USD (1e-6 USD), like every other amount in the system.
-    referral_referrer_micro: int = 10_000_000   # $10 to the person who shared the link
+    # Symmetric on purpose: both sides get the same, so the offer is one sentence to explain and
+    # neither party can feel like the other got the better end of it.
+    referral_referrer_micro: int = 5_000_000    # $5 to the person who shared the link
     referral_referred_micro: int = 5_000_000    # $5 to the friend who signed up
     # The friend's first top-up must clear this for anything to be owed. Deliberately well above the
     # bounties themselves: below it, buying the bonus with your own card is profitable.

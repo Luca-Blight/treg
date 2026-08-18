@@ -7,7 +7,7 @@ under load — right for analytics, fatal for money).
 
 THE SHAPE, and why it is this shape
 -----------------------------------
-A friend gets $5, the referrer gets $10, both flat. The qualifying event is the friend's FIRST
+Both sides get $5, flat and symmetric. The qualifying event is the friend's FIRST
 PAID TOP-UP, never their signup: `promo_grant_micro` is granted per ORG and a user may create
 unlimited orgs, so a signup-triggered bounty is a faucet pointed at itself.
 

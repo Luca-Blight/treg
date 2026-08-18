@@ -456,9 +456,10 @@ and it replaces editing one env var that would lift the blast-radius rail for ev
 public promise (terms §08, landing 04), so there is no gross margin on a catalog call to share. The
 only thing treg actually keeps is the gap between what a team tops up and what it consumes. A
 percentage of top-ups would therefore be a permanent share of pass-through GMV — and, worse, it
-scales the reward with effort, which is the definition of a farmable incentive. Flat figures ($10 to
-the referrer, $5 to the friend, `config.referral_*`) are budgetable as CAC, bounded by construction,
-and not worth building a fake-account farm for.
+scales the reward with effort, which is the definition of a farmable incentive. Flat figures ($5 to
+each side, `config.referral_*`) are budgetable as CAC, bounded by construction, and not worth
+building a fake-account farm for. The two sides are deliberately SYMMETRIC: it makes the offer one
+sentence to explain, and neither party can feel short-changed by the other's share.
 
 **The qualifying event is the friend's FIRST PAID TOP-UP, never their signup.** `promo_grant_micro`
 is granted per ORG and nothing caps orgs per user, so a signup-triggered bounty is a faucet pointed

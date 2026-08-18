@@ -1380,10 +1380,10 @@ a:hover{text-decoration-color:var(--muted)}
           <span style="font-family:var(--mono);font-weight:700;color:var(--accent)">{{money(billing.balance_micro)}}</span>
         </div>
         <!-- Second door into Referrals, right under the balance: this is where someone is already
-             thinking about what treg costs them, which is the moment "get $10" actually lands. -->
+             thinking about what treg costs them, which is the moment the offer actually lands. -->
         <div v-if="billing" style="margin:0 10px 6px;text-align:center">
           <a href="#referrals" @click.prevent="go('referrals')" class="sub"
-             style="font-size:11px;text-decoration:none">Refer a friend — get {{money(ref.terms.referrer_micro||10000000)}}</a>
+             style="font-size:11px;text-decoration:none">Refer a friend — get {{money(ref.terms.referrer_micro||5000000)}}</a>
         </div>
         <!-- PUBLIC (bottom): a signed-out catalog visitor gets the way in, where a member's
              account block would be. The catalog is readable without an account; calling is not. -->
