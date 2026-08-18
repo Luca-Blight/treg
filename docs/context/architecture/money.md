@@ -498,8 +498,24 @@ cost is the mirror failure — a crash between claim and grant pays nobody and s
 is the right way round for money, is visible in `/admin/referrals` as a paid row with a null block
 id, and errs toward paying once rather than twice.
 
-**The hold is the only clawback window there is.** Rewards land `referral_hold_days` (7) after
-qualifying. `charge.dispute.created` / `charge.refunded` — the first reversal events treg has ever
+**The two sides are paid at different times, on purpose.** The REFEREE is credited the instant they
+qualify; only the REFERRER waits out `referral_hold_days` (7).
+
+They are not in the same position. The referrer has a Referrals page listing every invitation and
+what it is worth, so a pending reward there is legible. The referee has no such page — for them the
+**balance is the only feedback that exists**, and a bonus that is merely "coming" is
+indistinguishable from one that never happened. That is not hypothetical: it was reported exactly
+that way (topped up, saw the plain total, assumed it had failed), and an "earned, lands on <date>"
+banner was built and then discarded in favour of just paying them, because explaining a delay is
+worse than not having one.
+
+The price is half the clawback window, and it is worth paying: exposure is one bounty per card (the
+fingerprint gate still binds), the referee has just handed us the qualifying payment, and a
+chargeback already costs us that payment plus the dispute fee — against which $5 is marginal.
+`_grant_referee` is guarded on `referred_block_id`, which is both the once-only guard and the
+record, so `sweep`'s referee branch survives only as a fallback for a failed instant grant.
+
+**The hold is the only clawback window there is**, and it now covers the referrer's half alone. `charge.dispute.created` / `charge.refunded` — the first reversal events treg has ever
 handled — cancel a bonus still inside that window. Anything already granted is **logged for a human,
 never auto-reversed**: referral credit burns first and is usually spent by then, and reversing it
 would mean a second code path able to drive a balance negative. The clawback touches the *bonus*

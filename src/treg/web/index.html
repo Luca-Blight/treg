@@ -2430,14 +2430,19 @@ a:hover{text-decoration-color:var(--muted)}
                           <b>{{billing.referral_offer.referrer_masked}}</b></template>
                         <template v-else>to treg</template>
                         — add
-                        <!-- Once they have paid something, ask for the REMAINDER. Repeating the full
-                             amount reads as though the money they already added did not count, and
-                             it does: the threshold is cumulative. -->
+                        <!-- Once they have paid something, ask for the REMAINDER. Repeating the
+                             full amount reads as though the money they already added did not
+                             count, and it does: the threshold is cumulative. -->
                         <b>{{money(billing.referral_offer.remaining_micro)}}</b>
                         <template v-if="billing.referral_offer.topped_up_micro"> more</template>
                         <template v-else> or more</template>
-                        and we'll put <b>{{money(billing.referral_offer.referred_micro)}}</b> extra in
-                        your balance. They get {{money(billing.referral_offer.referrer_micro)}}.
+                        <!-- "straight away" is load-bearing. The referee has no Referrals page, so
+                             the balance is their ONLY feedback; promising a bonus without saying
+                             when is what made a correct payout look like a failure. -->
+                        and we'll add <b>{{money(billing.referral_offer.referred_micro)}}</b> to your
+                        balance <b>straight away</b>. They get
+                        {{money(billing.referral_offer.referrer_micro)}} after
+                        {{billing.referral_offer.hold_days}} days.
                       </div>
                       <div class="fundgrid" style="margin-top:8px">
                         <button v-for="p in billing.topup.presets" :key="p" class="fundcard" :disabled="billingBusy" @click="addFunds(p)">
@@ -4916,9 +4921,14 @@ createApp({
     // How much extra THIS preset earns a referred team, or 0. Guarded on the offer existing, so a
     // team that arrived on its own sees the buttons exactly as before.
     refPresetBonus(usd){ const o=this.billing&&this.billing.referral_offer;
+      // NULL-GUARD FIRST. `referral_offer` is null for every team that was not referred — i.e. most
+      // of them — and reading through it throws inside a render, which in Vue blanks the ENTIRE
+      // dashboard rather than just this row. Cost one blank page during review; keep it on its own
+      // line rather than folded into the expression below, where deleting a clause drops it silently.
+      if(!o) return 0;
       // Against what is REMAINING, not the full minimum: a team that already added $5 unlocks the
       // bonus with another $5, and marking that button "one-time" would be simply wrong.
-      return (o && usd*1000000 >= o.remaining_micro) ? o.referred_micro : 0; },
+      return (usd*1000000 >= o.remaining_micro) ? o.referred_micro : 0; },
     async copyRefLink(){ try{ await navigator.clipboard.writeText(this.ref.link); }catch(e){}
       this.refCopied=true; this.track('referral_link_copied');
       setTimeout(()=>{ this.refCopied=false; }, 1600); },

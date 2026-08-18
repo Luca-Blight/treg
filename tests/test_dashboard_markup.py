@@ -968,3 +968,14 @@ def test_the_billing_prompt_renders_the_masked_referrer_never_a_raw_one():
     block = INDEX[at : INDEX.index("</div>", at)]
     assert "billing.referral_offer.referrer_masked" in block
     assert "referrer_email" not in INDEX
+
+
+def test_the_referral_preset_helper_null_guards_before_reading_the_offer():
+    """`referral_offer` is null for every team that was NOT referred — most of them. Reading through
+    it throws inside a render, and a render error in Vue blanks the entire dashboard, not just the
+    row. This shipped once, as a blank billing page, when a guard clause was folded into a larger
+    expression and then edited away."""
+    at = INDEX.index("refPresetBonus(usd)")
+    body = INDEX[at : INDEX.index("},", at)]
+    assert "if(!o) return 0;" in body
+    assert body.index("if(!o) return 0;") < body.index("o.remaining_micro")

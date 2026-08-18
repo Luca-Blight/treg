@@ -192,8 +192,10 @@ async def test_full_loop_pays_both_sides_after_the_hold(c, monkeypatch):
     await _topup(c, monkeypatch, bob_org, pi="pi_bob_1", cents=1000, fingerprint="fp_bob")
     rows = await _referral_rows()
     assert rows[0].status == "qualified"
-    # NOTHING has been granted yet — the hold is the only clawback window that exists.
-    assert await _blocks(bob_org, "referral") == []
+    s = get_settings()
+    # The referee is paid AT ONCE — the balance is their only feedback. The referrer waits out the
+    # hold, which is now the only clawback window that remains.
+    assert [b.amount_micro for b in await _blocks(bob_org, "referral")] == [s.referral_referred_micro]
     assert await _blocks(ann_org, "referral") == []
 
     await _age_qualification()
@@ -201,7 +203,6 @@ async def test_full_loop_pays_both_sides_after_the_hold(c, monkeypatch):
     assert r.status_code == 200
     body = r.json()
 
-    s = get_settings()
     bob_blocks = await _blocks(bob_org, "referral")
     ann_blocks = await _blocks(ann_org, "referral")
     assert [b.amount_micro for b in bob_blocks] == [s.referral_referred_micro]
@@ -285,7 +286,7 @@ async def test_the_threshold_is_cumulative(c, monkeypatch):
     assert (await _referral_rows())[0].status == "pending"
     await _topup(c, monkeypatch, bob_org, pi="pi_bob_2", cents=500, fingerprint="fp_bob")
     assert (await _referral_rows())[0].status == "qualified"
-    # The offer is gone now that it has been taken, and the bonus really lands.
+    # The offer is gone (the referee's bonus is already in their balance), and the referrer's lands.
     assert (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"] is None
     await _age_qualification()
     async with session_maker() as db:
@@ -376,7 +377,11 @@ async def test_lifetime_cap_records_but_does_not_pay(c, monkeypatch):
 
 
 # ---- clawback ----------------------------------------------------------------------------------
-async def test_dispute_inside_the_hold_cancels_the_payout(c, monkeypatch):
+async def test_dispute_inside_the_hold_cancels_the_referrers_half(c, monkeypatch):
+    """The hold now protects ONE side. The referee's bonus went out on qualification and is treated
+    like any already-paid credit — logged for a human, never reversed, because no code path here may
+    drive a balance negative. Recovering half a bounty is the deliberate price of paying the referee
+    immediately, and it is why the per-card gate matters more than this window does."""
     ann_org, _, code = await _ready_referrer(c, monkeypatch)
     bob_org, _ = await _signup(c, "bob@example.com", ref=code)
     await _topup(c, monkeypatch, bob_org, pi="pi_bob", fingerprint="fp_bob")
@@ -388,8 +393,9 @@ async def test_dispute_inside_the_hold_cancels_the_payout(c, monkeypatch):
     await _age_qualification()
     async with session_maker() as db:
         assert await referrals.sweep(db) == 0
-    assert await _blocks(ann_org, "referral") == []
-    assert await _blocks(bob_org, "referral") == []
+    assert await _blocks(ann_org, "referral") == [], "the referrer's half never goes out"
+    s = get_settings()
+    assert [b.amount_micro for b in await _blocks(bob_org, "referral")] == [s.referral_referred_micro]
 
 
 async def test_dispute_does_not_touch_the_balance(c, monkeypatch):
@@ -479,6 +485,7 @@ async def test_a_referred_team_is_told_the_minimum_on_its_billing_page(c, monkey
                      "min_topup_micro": s.referral_min_topup_micro,
                      "topped_up_micro": 0,
                      "remaining_micro": s.referral_min_topup_micro,
+                     "hold_days": s.referral_hold_days,
                      "referrer_masked": "a•••@superdesign.dev"}
 
 
@@ -489,14 +496,54 @@ async def test_a_team_that_arrived_on_its_own_sees_no_offer(c, monkeypatch):
     assert (await c.get("/billing", headers=_h(token))).json()["referral_offer"] is None
 
 
-async def test_the_offer_disappears_once_it_has_been_taken(c, monkeypatch):
-    """Only while `pending`. After qualifying the money is already on its way through the sweep, and
-    still advertising it would read as a second bonus."""
+async def test_the_referee_is_paid_the_instant_they_qualify(c, monkeypatch):
+    """The two sides are not in the same position. The referrer has a Referrals page where a pending
+    reward is legible; the referee has none, so the BALANCE is their only feedback and a bonus that
+    is merely "coming" is indistinguishable from one that never happened. Reported exactly that way.
+    """
     _, _, code = await _ready_referrer(c, monkeypatch)
     bob_org, bob_token = await _signup(c, "bob@example.com", ref=code)
-    assert (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"] is not None
+    before = (await c.get("/billing", headers=_h(bob_token))).json()["balance_micro"]
+    await _topup(c, monkeypatch, bob_org, pi="pi_bob", cents=1000, fingerprint="fp_bob")
+    s = get_settings()
+    after = (await c.get("/billing", headers=_h(bob_token))).json()["balance_micro"]
+    assert after == before + 10_000_000 + s.referral_referred_micro, "top-up AND bonus, immediately"
+    assert [b.amount_micro for b in await _blocks(bob_org, "referral")] == [s.referral_referred_micro]
+
+
+async def test_the_referrer_still_waits_out_the_hold(c, monkeypatch):
+    """Only the referee's half goes early. Nothing about the referrer's experience needs it sooner,
+    and the hold is the only clawback window there is."""
+    ann_org, _, code = await _ready_referrer(c, monkeypatch)
+    bob_org, _ = await _signup(c, "bob@example.com", ref=code)
     await _topup(c, monkeypatch, bob_org, pi="pi_bob", fingerprint="fp_bob")
-    assert (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"] is None
+    assert await _blocks(ann_org, "referral") == [], "the referrer is not paid on qualification"
+    await _age_qualification()
+    async with session_maker() as db:
+        assert await referrals.sweep(db) == 1
+    s = get_settings()
+    assert [b.amount_micro for b in await _blocks(ann_org, "referral")] == [s.referral_referrer_micro]
+
+
+async def test_the_sweep_does_not_pay_the_referee_a_second_time(c, monkeypatch):
+    """`_pay` still has a referee branch as a fallback for a failed instant grant, so it must be
+    guarded on `referred_block_id` — unguarded it would hand out a second bonus a week later."""
+    _, _, code = await _ready_referrer(c, monkeypatch)
+    bob_org, _ = await _signup(c, "bob@example.com", ref=code)
+    await _topup(c, monkeypatch, bob_org, pi="pi_bob", fingerprint="fp_bob")
+    await _age_qualification()
+    async with session_maker() as db:
+        await referrals.sweep(db)
+    s = get_settings()
+    assert [b.amount_micro for b in await _blocks(bob_org, "referral")] == [s.referral_referred_micro]
+
+
+async def test_the_offer_says_when_each_side_is_paid(c, monkeypatch):
+    """"We'll add $5" with no timing is what made a correct payout look like a failure."""
+    _, _, code = await _ready_referrer(c, monkeypatch)
+    _, bob_token = await _signup(c, "bob@example.com", ref=code)
+    offer = (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"]
+    assert offer["hold_days"] == get_settings().referral_hold_days
 
 
 async def test_the_advertised_minimum_is_the_one_qualify_enforces(c, monkeypatch):

@@ -253,7 +253,46 @@ async def qualify(
         # sequential path: it is qualified, and it will be paid exactly once.
         await db.rollback()
         return (await db.execute(select(Referral).where(Referral.id == row.id))).scalars().first()
+
+    # THE REFEREE IS PAID NOW; only the referrer waits out the hold.
+    #
+    # The two sides are not in the same position. The referrer has a Referrals page showing every
+    # invitation and what it is worth, so a pending reward there is legible. The referee has no such
+    # page — for them the only feedback that exists is the balance, and a bonus that is "coming"
+    # is indistinguishable from one that never happened. Reported exactly that way: topped up
+    # expecting the bonus, saw the plain total, assumed it had failed.
+    #
+    # The hold is a chargeback window, and giving up half of it is the price. It is a fair one: the
+    # exposure is one bounty per card (the fingerprint gate still binds), the referee has just handed
+    # us the qualifying payment, and a chargeback already costs us that payment plus the dispute fee,
+    # against which the bonus is marginal. The referrer's half stays held because nothing about their
+    # experience needs it sooner.
+    await _grant_referee(db, row)
     return row
+
+
+async def _grant_referee(db: AsyncSession, row: Referral) -> None:
+    """Put the referee's bonus in their balance immediately. Never raises.
+
+    `referred_block_id` is the guard AND the record: set means paid, so a retry cannot double-grant
+    and `sweep` knows to skip this side. A failure here is not fatal — the row stays qualified with
+    the field unset, and the sweep pays it as a fallback.
+    """
+    if row.referred_block_id:
+        return
+    try:
+        block = await ledger.grant(
+            db, row.referred_org_id, amount_micro=int(get_settings().referral_referred_micro),
+            kind="referral", once=False,
+            meta={"referral_id": row.id, "code": row.code, "side": "referred"})
+        if block is not None:
+            row.referred_block_id = block.id
+            row.referred_reward_micro = block.amount_micro
+            db.add(row)
+            await db.commit()
+    except Exception as exc:  # noqa: BLE001 — the sweep retries; a bonus must not fail a webhook
+        await db.rollback()
+        log.warning("referral %s: instant referee grant failed, sweep will retry: %s", row.id, exc)
 
 
 # ---- clawback ----------------------------------------------------------------------------------
@@ -264,6 +303,10 @@ async def reject_for_payment(db: AsyncSession, payment_intent: str, reason: str)
     Only touches `qualified`. A `paid` row is left alone and merely logged: the credit burns first
     and is typically already spent, and clawing it back would mean a code path that can drive a
     balance negative. That is the boundary the hold window buys us, and it is deliberate.
+
+    Since the referee is paid instantly, the hold now only protects the REFERRER's half. Cancelling
+    a qualified row therefore recovers half a bounty, not all of it — the deliberate price of giving
+    the referee immediate feedback, and the reason the per-card gate matters more than this one.
     """
     rows = (await db.execute(
         select(Referral).where(Referral.qualifying_payment_intent == payment_intent)
@@ -275,6 +318,14 @@ async def reject_for_payment(db: AsyncSession, payment_intent: str, reason: str)
             row.reject_reason = reason
             db.add(row)
             cancelled += 1
+            # Cancelling `qualified` stops the REFERRER's half, which is the one still held. The
+            # referee's was granted the moment they qualified, so by now it is spent or spendable —
+            # same position as an already-paid row, and logged the same way rather than reversed.
+            if row.referred_block_id:
+                log.warning(
+                    "referral %s: referee bonus of %s micro-USD was already granted when payment "
+                    "%s was %s — needs a human", row.id, row.referred_reward_micro,
+                    payment_intent, reason)
         elif row.status == "paid":
             log.warning(
                 "referral %s was already PAID when payment %s was %s — %s micro-USD needs a human",
@@ -335,7 +386,12 @@ async def sweep(db: AsyncSession, *, limit: int = 100, referrer_user_id: int | N
 
 
 async def _pay(db: AsyncSession, row: Referral) -> bool:
-    """Grant both sides and mark the row paid. Returns False if it could not be paid this pass.
+    """Pay whatever this row still owes and mark it paid. Returns False if it could not be paid.
+
+    In practice that is the REFERRER's half: the referee was paid the moment they qualified (see
+    `_grant_referee`). The referee branch here is a fallback for the case where that instant grant
+    failed, which is why it is guarded on `referred_block_id` rather than run unconditionally —
+    granting it again would be a second bonus.
 
     THE CLAIM COMES FIRST. The row is flipped to `paid` and committed BEFORE any credit moves, so
     that the unique row — not the grant — is what stops a double payout when two instances sweep at
@@ -364,18 +420,22 @@ async def _pay(db: AsyncSession, row: Referral) -> bool:
         return False  # another sweep claimed it between our SELECT and here
 
     meta = {"referral_id": row.id, "code": row.code}
-    referred_block = await ledger.grant(
-        db, referred_org.id, amount_micro=int(s.referral_referred_micro), kind="referral",
-        once=False, meta={**meta, "side": "referred"})
+    # Only if the instant grant did not already land it — see the docstring.
+    referred_block = None
+    if not row.referred_block_id:
+        referred_block = await ledger.grant(
+            db, referred_org.id, amount_micro=int(s.referral_referred_micro), kind="referral",
+            once=False, meta={**meta, "side": "referred"})
     referrer_block = await ledger.grant(
         db, referrer_org.id, amount_micro=int(s.referral_referrer_micro), kind="referral",
         once=False, meta={**meta, "side": "referrer"})
 
     fresh = await db.get(Referral, row.id)
     if fresh is not None:
-        fresh.referred_block_id = referred_block.id if referred_block else None
+        if referred_block is not None:
+            fresh.referred_block_id = referred_block.id
+            fresh.referred_reward_micro = referred_block.amount_micro
         fresh.referrer_block_id = referrer_block.id if referrer_block else None
-        fresh.referred_reward_micro = referred_block.amount_micro if referred_block else 0
         fresh.referrer_reward_micro = referrer_block.amount_micro if referrer_block else 0
         db.add(fresh)
         await db.commit()
@@ -460,8 +520,9 @@ async def offer_for_org(db: AsyncSession, org_id: int | None) -> dict | None:
     a reward nobody was told about cannot change what they do. So the billing page — the one screen
     where they are already deciding how much to add — says the minimum out loud.
 
-    Returns only while `pending`. Once qualified the offer has been taken, and the money is on its way
-    through `sweep`; still advertising it there would read as a second bonus.
+    Returns only while `pending`. Once qualified the referee's bonus is ALREADY IN THEIR BALANCE
+    (see `qualify`), so the balance is the confirmation and a banner promising money that has
+    already arrived is noise.
 
     Names the referrer, MASKED (`j•••@superdesign.dev`). Not anonymous, because "you were invited"
     with nobody attached reads as marketing copy rather than a fact, and someone who clicked a link
@@ -497,6 +558,9 @@ async def offer_for_org(db: AsyncSession, org_id: int | None) -> dict | None:
         "min_topup_micro": int(s.referral_min_topup_micro),
         "topped_up_micro": int(paid_micro),
         "remaining_micro": max(0, int(s.referral_min_topup_micro) - int(paid_micro)),
+        # The REFERRER's wait, not the referee's — the referee is paid the moment they qualify.
+        # Kept in the payload because the note names what each side gets and when.
+        "hold_days": int(s.referral_hold_days),
         "referrer_masked": mask_email(referrer.email if referrer else ""),
     }
 
