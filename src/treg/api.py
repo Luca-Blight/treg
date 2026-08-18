@@ -3268,6 +3268,32 @@ if _TOUR_DIR.exists():
     app.mount("/dashboard-tour", StaticFiles(directory=str(_TOUR_DIR), html=True), name="dashboard-tour")
 
 
+# Third-party front-end libraries, vendored rather than pulled from a CDN at page load. The
+# dashboard is a single hand-written Vue file with no bundler, so Vue arrives as a plain <script>
+# — and while that script came from unpkg.com, any network that cannot reach unpkg rendered the
+# signed-in dashboard as a blank page (issue #137: a mainland-China visitor, ERR_CONNECTION_CLOSED,
+# then `Vue is not defined`). Serving it ourselves means the dashboard depends on exactly one
+# origin: whoever served the page can serve its runtime. It also closes the supply-chain hole in
+# the old floating `vue@3` tag, which let whatever npm published next run in an authed session.
+# Filenames carry their version, so a bump is a visible one-line change and caches never collide.
+class _ImmutableStatic(StaticFiles):
+    """StaticFiles that says out loud what its filenames already promise.
+
+    Every file here is version-stamped, so a given URL's bytes never change — a new version is a
+    new URL. Without the header a browser still caches, but heuristically, on its own guess; being
+    explicit means a returning visitor re-fetches nothing and a bump is picked up instantly.
+    """
+    def file_response(self, *args, **kwargs):
+        resp = super().file_response(*args, **kwargs)
+        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return resp
+
+
+_VENDOR_DIR = _WEB_DIR / "vendor"
+if _VENDOR_DIR.exists():
+    app.mount("/vendor", _ImmutableStatic(directory=str(_VENDOR_DIR)), name="vendor")
+
+
 # ---- caller auth (token = a Membership; open registration) --------------------------------
 @dataclass
 class Caller:

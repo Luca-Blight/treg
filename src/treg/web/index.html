@@ -11,11 +11,40 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<!-- Vue is vendored and served from this origin, never a CDN: an unpkg.com that a visitor's network
+     cannot reach used to leave the whole signed-in dashboard blank (issue #137). Version lives in
+     the filename — bump it here and in src/treg/web/vendor/ together. -->
+<script src="/vendor/vue-3.5.41.global.prod.js"></script>
+<script>
+// Fail loudly. `[v-cloak]{display:none}` hides the un-compiled template until Vue mounts, so
+// anything that stops Vue mounting turns the dashboard into a silent blank page with nothing in
+// the console but `Vue is not defined` — issue #137 needed a bug report to find, because the
+// screen said nothing at all. If #app is still cloaked once the page has loaded, Vue never got
+// there: say so, in place of the blank.
+addEventListener('load', function(){
+  setTimeout(function(){
+    var app = document.getElementById('app');
+    if (!app || !app.hasAttribute('v-cloak')) return;   // mounted fine — nothing to do
+    var why = window.Vue ? 'The dashboard failed to start.'
+                         : 'The dashboard could not load one of its files.';
+    var box = document.createElement('div');
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'max-width:560px;margin:18vh auto;padding:22px 24px;border:1px solid ' +
+      'var(--line,#e3dac7);border-radius:14px;background:var(--panel,#fffdf8);color:var(--ink,#201c15);' +
+      'font:14px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,monospace';
+    box.innerHTML = '<b>▚ treg</b><p>' + why + ' This is usually a network hiccup between you and ' +
+      'the server.</p><p><button type="button" class="btn" id="dashReload">Reload</button> — and if it keeps ' +
+      'happening, tell us at <a href="https://github.com/superdesigndev/treg/issues">github.com/superdesigndev/treg/issues</a> ' +
+      'with whatever your browser console shows.</p>';
+    document.body.appendChild(box);
+    document.getElementById('dashReload').onclick = function(){ location.reload(); };
+  }, 1500);   // generous: a slow connection is still a working one, and must not see this
+});
+</script>
 <script src="/tutorial.js"></script>
 <script src="/dashboard-tour/tour.js"></script>
 <style>
-  [v-cloak]{display:none}  /* hide the raw template until Vue mounts — else a hard refresh flashes the un-compiled landing markup while the CDN script downloads */
+  [v-cloak]{display:none}  /* hide the raw template until Vue mounts — else a hard refresh flashes the un-compiled markup while the script downloads. Vue drops the attribute on mount, which is also how the loader guard above detects that it never did. */
   /* ===== Ledger: warm paper + clay, mono-forward. Dark default. ===== */
   :root{ --bg:#211d16;--panel:#2a251d;--panel2:#332d23;--ink:#f0e9d9;--muted:#a99e88;--line:#3b352a;
     --accent:#e0703f;--onAccent:#231c14;--green:#7fae72;--amber:#d0a24a;--teal:#6aa89c;--red:#e08a7a;--r:14px;--rb:9px;
