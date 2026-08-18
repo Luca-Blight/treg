@@ -14,10 +14,12 @@ related:
 
 # Google Ads conversion tracking
 
-Off unless `google_ads_customer_id`, `google_ads_developer_token` and `ads_conv_org_slug` are all set
-(`adsconv.enabled()`) — keeps the test suite and self-hosted instances from starting machinery that
-cannot upload. When off, `/adtrack.js` is an empty no-cache response and attribution cookies are
-ignored, so nothing is captured, queued or uploaded; the whole feature is additive.
+Off unless `google_ads_customer_id` and `ads_conv_refresh_token` are both set (`adsconv.enabled()`) —
+keeps the test suite and self-hosted instances from starting machinery that cannot upload. When off,
+`/adtrack.js` is an empty no-cache response and attribution cookies are ignored, so nothing is
+captured, queued or uploaded; the whole feature is additive. `google_ads_developer_token` is NOT part
+of this gate: Data Manager has no developer-token header, so that setting only matters for the
+read-side Ads catalog calls (`oauth_providers.GOOGLE_ADS`), a separate credential entirely (below).
 
 ## The chain: capture → store → fire → upload
 
@@ -57,15 +59,39 @@ ignored, so nothing is captured, queued or uploaded; the whole feature is additi
    six-hour delay exists because a click id may not be accepted immediately after the click; uploading
    too early can be rejected.
 
-## Authentication and manager accounts
+## Authentication: a platform credential, not a customer's OAuth connection
 
-The uploader decrypts the `google-ads` OAuth `Secret` belonging to `ads_conv_org_slug`, then sends that
-bearer token with the platform `google_ads_developer_token`. `google_ads_customer_id` is the target Ads
-account. When the OAuth identity reaches it through a manager account, configure that manager explicitly
-as `google_ads_login_customer_id`; hyphens are stripped for the request header. Never infer
-`login-customer-id` from `Secret.resource_ref`: discovery stores the selected **target client** there,
-while Google requires the **manager** account in this header. Direct client-account auth leaves the
-header unset.
+Two different purposes were once conflated here and no longer are. A **customer** connecting their
+Google Ads account (`oauth_providers.GOOGLE_ADS`) so their agent can read campaign data is one thing;
+**treg** uploading its own marketing conversions to its own ad account is another. The uploader does
+not borrow the customer-facing provider or any per-org `Secret` — it holds its own PLATFORM
+credential, `settings.ads_conv_refresh_token`, obtained once out of band by an operator via the OAuth
+playground with scope `https://www.googleapis.com/auth/datamanager`. `_auth_headers` exchanges it
+directly against `https://oauth2.googleapis.com/token` (`grant_type=refresh_token`), redeemed with
+the SAME client the refresh token was issued against — `google_ads_client_id`/`_secret`, reused from
+the read-side Ads OAuth client rather than a new one — never the shared `google_client_id` and never
+a customer's connection. `google_ads_customer_id` is the target Ads account. Data Manager takes
+neither a developer-token header nor a login-customer-id header at all: `google_ads_developer_token`
+plays no part in this path, and the manager (MCC) account moves into the request BODY as
+`destinations[].loginAccount` (`google_ads_login_customer_id`, hyphens stripped) instead — set only
+for manager-account auth; direct client auth leaves it unset. (`Secret.resource_ref`, where it
+exists on an unrelated per-org connection, is never the source for this — it names a discovered
+target client, not a manager.)
+
+The exchanged access token is cached in `adsconv` **module state** (`_cached_access_token`,
+`_token_expires_at`) and reused until within 60 seconds of its ~3599s expiry. `worker` drains every
+300s, so most drains hit the cache; re-exchanging the refresh token every pass would be wasteful and
+risks Google's refresh rate limit. `test_access_token_is_cached_and_not_re_exchanged_within_its_lifetime`
+proves a second same-window drain makes zero additional token calls. A failed exchange raises
+`RuntimeError`; `drain_once` runs inside `worker`'s try/except, so that just retries next pass rather
+than crashing the loop.
+
+Before this rework, `oauth_providers.GOOGLE_ADS` carried `datamanager` alongside `adwords` so the
+uploader could borrow a customer's OAuth connection — but `listing()` shows every provider to every
+customer, so that put a marketing-only permission on every consent screen for no reason (`adwords`
+alone was confirmed, via a `validateOnly` `userLists:mutate` call, to already cover audience/
+customer-match writes). The provider is back to exactly `adwords`; `datamanager`'s `SCOPE_LABELS`
+copy stays (harmless, and correct if the scope is ever genuinely requested).
 
 ## Idempotency: the outbox's unique constraint, not a check-then-insert
 

@@ -59,15 +59,24 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   Advertising OAuth platforms `microsoft_ads_*`, `snapchat_ads_*`, `tiktok_ads_*`, `pinterest_*` (all
   unset by default, so those providers ship **unconfigured** until a deployment registers a dev app).
   Empty for a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
-- **Ad conversion tracking** — `google_ads_customer_id` (the target Ads account),
-  `google_ads_developer_token`, and `ads_conv_org_slug` (which team's `google-ads` OAuth connection the
-  uploader authenticates as — a platform setting, not a per-tenant one, since treg uploads to its OWN
-  ad account). **All three** must be set or the whole feature is off (`adsconv.enabled()`): the capture
-  script is empty, attribution cookies are ignored, conversions are not queued, and the background
-  uploader is not started. For manager-account auth, set optional `google_ads_login_customer_id` to the
-  manager MCC id; direct client auth leaves it empty. Do not use the selected connection
-  `resource_ref` as the manager id—it names the target account. Self-hosters and the test suite carry
-  zero ad-conversion machinery by default. See
+- **Ad conversion tracking** — `google_ads_customer_id` (the target Ads account) and
+  `ads_conv_refresh_token` (treg's OWN long-lived refresh token for the Data Manager uploader,
+  minted once, out of band, by an operator via the OAuth playground with scope
+  `https://www.googleapis.com/auth/datamanager`, then pasted in as a platform setting). **Both**
+  must be set or the whole feature is off (`adsconv.enabled()`): the capture script is empty,
+  attribution cookies are ignored, conversions are not queued, and the background uploader is not
+  started. The refresh token is exchanged for an access token against the SAME client it was issued
+  against — `google_ads_client_id`/`_secret` above, reused here rather than duplicated — never
+  against `google_client_id` or a customer's own OAuth app; the exchanged access token is cached in
+  process memory with its expiry so the uploader (which drains every ~300s) doesn't re-exchange on
+  every pass. `google_ads_developer_token` is NOT part of this feature — Data Manager has no
+  developer-token header at all; that setting only backs the read-side Ads catalog calls through
+  `oauth_providers.GOOGLE_ADS`. For manager-account auth, set optional
+  `google_ads_login_customer_id` to the manager MCC id; direct client auth leaves it empty. This is
+  a PLATFORM credential, deliberately separate from a customer's `google-ads` OAuth connection
+  (which grants only `adwords`, never `datamanager` — that scope would otherwise show up on every
+  customer's consent screen for a permission only treg's own marketing uploader uses). Self-hosters
+  and the test suite carry zero ad-conversion machinery by default. See
   [ads-conversions](../architecture/ads-conversions.md).
 - **Landing live-wire (optional):** `demo_stripe_key` (`TREG_DEMO_STRIPE_KEY`, a Stripe **sandbox
   restricted** key) powers the landing sandbox's ONE real upstream call — a sandbox call to the exact
