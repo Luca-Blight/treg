@@ -54,6 +54,8 @@ Two kinds of tool answer to the same token, through the same proxy, which inject
 - **The catalog** — curated external endpoints treg can call for you.
 - **Your own tools** — what a teammate registered and shared with this org: API accounts, OAuth
   connections, skills.
+  Note: an X (Twitter) connection made through treg's app is metered per call (X bills the app
+  owner per use); the response reports the price. A team's own X developer app is not metered.
 
 The mechanics:
 

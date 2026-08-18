@@ -7,6 +7,7 @@ sources:
 related:
   - architecture/data-model.md
   - architecture/auth-secrets.md
+  - architecture/ads-conversions.md
   - foundation/charter.md
 ---
 
@@ -26,6 +27,17 @@ incl. duplicates, headers, cookies, body bytes):
    treg's own cookies (`treg_session`, `treg_oauth_state`) from the Cookie header — the dashboard's
    `credentials:'include'` Try-it would otherwise leak our session token — while keeping other cookies.
 3. **the injected credential(s)** — each binding overwrites only its target header/param.
+
+> **What treg keeps from a call.** Normally nothing: the relay forwards bytes and the audit row
+> records status, size and timing, not content. The single exception is a **failed platform-tier
+> call**, where `CallRecord.error_request` / `error_response` retain a redacted, truncated copy of
+> what the caller sent and what the provider answered — otherwise a failure is a bare status code
+> that cannot be explained afterwards, since `path` holds the catalog's URL rather than the caller's
+> parameters and `params_hash` is one-way. It costs nothing extra on the wire: metered responses are
+> already fully buffered by `_buffer_response` (settling needs the provider's reported cost out of
+> the body), and `force_identity` already asks those responses to arrive uncompressed. Own-key and
+> non-catalog calls keep the original guarantee — nothing of them is retained. See
+> [data-model](data-model.md) for the redaction order and retention.
 
 Faithfulness mechanics inside `relay()`:
 - request headers rebuilt from `request.headers.raw` into an `httpx.Headers` multidict (preserves
@@ -53,6 +65,11 @@ developer token is the case that exists. The value never lives in the org's secr
 can't read it or extract it through a local run; a missing setting is a clean `502`
 (`this server has no <setting> configured`). Used by the OAuth-marketplace auto-provisioner for a provider
 that needs a second credential treg holds centrally (see [api](../interface/api.md)).
+
+A separate case that looks similar but is NOT a platform binding: the Google Ads **conversion**
+uploader (`adsconv.py`) also spends treg's own platform connection, but it is not a caller-issued
+`/call/` request at all, so it never reaches `relay()` or `injectors.py` — it reads the platform org's
+stored OAuth secret directly and builds its own headers. See [ads-conversions](ads-conversions.md).
 
 **Accept-Encoding is normalized to `identity`** when the caller sent none. `relay()` streams the upstream
 body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would otherwise add its own

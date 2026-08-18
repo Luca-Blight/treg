@@ -11,13 +11,16 @@ related:
   - interface/cli.md
   - architecture/proxy-model.md
   - architecture/auth-secrets.md
+  - architecture/ads-conversions.md
 ---
 
 # The API
 
 FastAPI `app` in `src/treg/api.py`. Everything the CLI + skill do is one HTTP call over this. `lifespan`
 runs `init_db()` and creates the shared keepalive `httpx.AsyncClient` at `app.state.http` (and
-`audit.drain()`s on shutdown).
+`audit.drain()`s on shutdown). It also starts the Google Ads conversion uploader (`adsconv.worker`) as
+a background task, but only when `adsconv.enabled()` — see
+[ads-conversions](../architecture/ads-conversions.md).
 
 ## WAF escape hatch — `X-Treg-Body-Encoding`
 Some hosting edges (Cloudflare, including Render's) 403 any request whose **body** matches an
@@ -50,7 +53,11 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
 ## Endpoints
 - **Users / orgs:** `register_user` (`POST /users`, open, legacy — used by the test fixture) creates the
   user + an org + owner membership and returns a token **once**; the dashboard/CLI login doors do NOT go
-  through it (they create the user only, no auto org). `create_org` (`POST /orgs`, `require_identity` so a
+  through it (they create the user only, no auto org). Both this door and `create_org` read the
+  first-party `treg_ad` cookie (`_ad_attribution_from`) and, when conversion tracking is enabled,
+  stamp `Org.ad_gclid`/`ad_click_id_type`/`ad_landing`/`ad_click_at` on the new org when present — see
+  [ads-conversions](../architecture/ads-conversions.md).
+  `create_org` (`POST /orgs`, `require_identity` so a
   zero-org user can make their first team) + `list_orgs` (`GET /orgs`,
   each org carries a `tool_count` — one grouped query — so the dashboard can land on the org with tools;
   its `active` flag follows `require_member`'s precedence — per-org membership token, else `X-Treg-Org`,
@@ -107,7 +114,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   skips the count entirely (zero overhead); the sandbox is exempt. **Soft by design** — it counts the
   best-effort `CallRecord`, so under load it fails *open*, never closed.
 - **Super-admin (cross-tenant, `require_superadmin`):** `/admin/stats|orgs|orgs/{id}|users|tools|calls|
-  health` (reads) + `/admin/users/{id}/superadmin|suspend`, `DELETE /admin/users/{id}`,
+  errors|health` (reads — `errors` is failed **platform** calls with the captured request/response
+  evidence, and runs the 14-day retention pass; see [super-admin](../architecture/super-admin.md))
+  + `/admin/users/{id}/superadmin|suspend`, `DELETE /admin/users/{id}`,
   `/admin/orgs/{id}/suspend`, `DELETE /admin/orgs/{id}` (Phase-2). See
   [super-admin](../architecture/super-admin.md).
 - **Secrets:** `create_secret` / `list_secrets` / `update_secret` (re-encrypts on value change) /
@@ -321,6 +330,10 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `web/llms.txt` as `text/plain` with `{BASE}` templated from `public_url` — the [llms.txt](https://llmstxt.org)
   agent-onboarding file (call protocol + discovery + auth + CLI + skills + doc links). See [dashboard](dashboard.md).
   `install_sh` (`GET /install.sh`, `{BASE}`-templated) serves the CLI installer (`web/install.sh`).
+  `adtrack_js` (`GET /adtrack.js`, no-cache) serves the first-party ad-click capture script loaded by
+  `index.html`'s `<script src="/adtrack.js">`; it returns an empty script when conversion tracking is
+  disabled, so unconfigured deployments do not collect advertising cookies. See
+  [ads-conversions](../architecture/ads-conversions.md).
   `well_known_skills_index` (`GET /.well-known/skills/index.json`) + `well_known_skill_md`
   (`GET /.well-known/skills/treg/SKILL.md`) advertise treg's own skill under the agentskills.io
   convention, making **this host** a skill source with no registry in between (Hermes reads it
@@ -401,7 +414,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
 - **Audit:** `list_calls` (`GET /calls`, limit clamped 1–500; each row carries its `kind` —
   `call`/`local_run` — for the Activity + Usage views, and `refused_by` — non-null = treg refused
   pre-relay; see the data-model fragment — so `treg audit` can tell "the provider failed" from
-  "we said no").
+  "we said no"). It does **not** carry `error_request`/`error_response`, and defers them so they are
+  not even fetched: the captured evidence is admin-only in v1, and putting it on a team's own feed
+  has to be a deliberate edit in two places rather than a column appearing by accident.
 - **OAuth connect + the provider marketplace:** `oauth_start` (`POST /oauth/start`) creates a
   `PendingOAuth` and returns `consent_url` + `state` + `redirect_uri`; `oauth_callback`
   (`GET /oauth/callback`, open) exchanges the code and creates/updates the oauth secret; `oauth_status`
@@ -409,7 +424,10 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `token_uri`/`scopes`) or **REGISTRY** (supply `provider` + optional `capability`) where treg fills
   everything from **its own approved OAuth app** — the marketplace. `oauth_providers_list`
   (`GET /oauth/providers`) lists the providers treg holds an app for, each flagged `configured` (false
-  when this deployment hasn't set that provider's client credentials). In registry mode `oauth_start`
+  when this deployment hasn't set that provider's client credentials) and `metered` (true when the
+  provider's upstream bills treg's app per use AND this deployment charges for it — then
+  `billed_rates` carries the default prices, so the UI can show them before consent; see
+  [auth-secrets](../architecture/auth-secrets.md) on `platform_billed`). In registry mode `oauth_start`
   reads the provider from `oauth_providers.get`, resolves scopes via `scopes_for(capability)`, and
   stashes every per-provider auth quirk on the `PendingOAuth` (PKCE `code_verifier`, `auth_params`,
   `token_endpoint_auth_method`, `client_id_param`, `scope_separator`, `long_lived_exchange`) so the
@@ -611,3 +629,29 @@ Untagged traffic shows up as `unattributed_micro` rather than being dropped.
 
 **Isolation.** `treg org agent-new <name> --pin customer=cust_A` mints a token pinned to one tag value;
 the pin beats the header and a mismatch is a 403. Rule of thumb: **tag for counting, token for control.**
+
+## Referrals
+
+`GET /referrals` · `POST /referrals/code` · `GET /admin/referrals`. Policy lives in
+[money](../architecture/money.md); three API-shaped decisions live here.
+
+**`require_identity`, not `require_member`.** A referral belongs to a PERSON, not to one of their
+teams (`User.referral_code`). The reward does land in an org, but *which* org is our decision —
+the oldest one they own — so nothing on these routes is scoped by `X-Treg-Org`.
+
+**`GET /referrals` returns the referred person's full email**, which makes it the one route here
+where a scoping mistake leaks another user's data rather than merely miscounting. It is scoped in
+the query itself (`referrer_user_id == caller.id`), never filtered afterwards, and pinned by a test.
+`privacy.html` discloses the visibility.
+
+**`/?ref=CODE` is the one query string the landing route serves.** `GET /` deliberately treats any
+query string as the SPA's and falls through to the dashboard — which for a referral link would send
+a stranger who has never heard of treg to an empty app shell instead of the pitch. So a *lone* `ref`
+counts as parameterless (anything alongside it still belongs to the SPA), and the code is parked in
+`treg_ref` — httponly, lax, 30 days, and revalidated on read exactly like `_take_oauth_return`,
+because a cookie is attacker-supplied and this value reaches a query.
+
+Redemption happens at **first team creation**, in both org-creating doors (`POST /orgs` and the
+legacy `POST /users`), immediately after `_grant_signup_promo` and with the same swallow-and-log
+posture: a referral is a marketing nicety and a signup is not. It must never be why someone cannot
+make a team.

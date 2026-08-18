@@ -6,11 +6,13 @@ sources:
   - src/treg/models.py
   - src/treg/billing.py
   - src/treg/reconcile.py
+  - src/treg/referrals.py
   - src/treg/api.py
 related:
   - architecture/catalog.md
   - architecture/proxy-model.md
   - architecture/data-model.md
+  - architecture/ads-conversions.md
 ---
 
 # Money
@@ -18,6 +20,14 @@ related:
 A catalogued endpoint can be served on **treg's own key** — no provider signup for the caller — which
 means treg pays the provider and bills the team. That needs a balance, a way to top it up, and a way
 to prove afterwards that the numbers were real. Three modules, one job each:
+
+Two wallets of treg's spend through this machinery, and only these two: **tier-4 platform keys**
+(`TREG_PLATFORM_KEY_*`) and **oauth-billed apps** — providers like X whose upstream bills the app
+owner per use, so even a call on the org's *own* connection spends treg's prepaid credits
+(`MarketplaceCall.billed_oauth`; detection and rates live in
+[auth-secrets](auth-secrets.md)). Both run the same reserve→relay→settle path in `api.py`, share the
+fail-closed daily cap, and are distinguished in ledger meta by `tier: platform` vs `tier: oauth`.
+An org's own key/credential on any *other* provider is never metered — there the org's account pays.
 
 | Module | Job | May it write money? |
 |---|---|---|
@@ -119,6 +129,14 @@ synchronous and swallowing by construction — analytics is the one side effect 
 allowed to fail, and it must fail silently, because a raise here would 500 the handler and make Stripe
 retry a payment that already credited. Amounts travel as canonical integer `amount_micro`; the
 `amount_usd` on the event is display-only.
+
+On the same `fresh` branch, `_credit` also queues a `paid` Google Ads conversion (`adsconv.queue`) when
+the org has a click to attribute to — but this one is **not** atomic with the credit: `ledger.topup()`
+already committed by the time `_credit` gets here, so the conversion is a second, separate commit. A
+crash between the two loses the conversion permanently (the money is still correctly credited). Found
+in review and accepted deliberately (2026-08-17) rather than restructuring `ledger.py`'s commit-inside
+convention; full reasoning and the cheap future fix in
+[ads-conversions](ads-conversions.md).
 
 **Invoices exist on the manual path only.** The top-up Checkout sets `invoice_creation`, so a
 one-off purchase produces a real Stripe Invoice — number, PDF, billing address, tax ID — which is the
@@ -445,3 +463,134 @@ the entire point of giving them a scoped token.
 trips it. Raising past our ceiling is **refused, not clamped**: a builder who thinks they set $500/day
 and silently got the platform default discovers it as an outage mid-launch. That refusal is the commercial conversation,
 and it replaces editing one env var that would lift the blast-radius rail for every team at once.
+
+## Referrals — paying for growth out of the one margin we have
+
+`referrals.py` decides; `ledger.py` moves. The only crossing is `ledger.grant(...)`, exactly as
+`billing.py`'s only crossing is `ledger.topup(...)`.
+
+**Why a flat bounty and not a percentage.** `platform_margin` is 0.0 and "we add no markup" is a
+public promise (terms §08, landing 04), so there is no gross margin on a catalog call to share. The
+only thing treg actually keeps is the gap between what a team tops up and what it consumes. A
+percentage of top-ups would therefore be a permanent share of pass-through GMV — and, worse, it
+scales the reward with effort, which is the definition of a farmable incentive. Flat figures ($5 to
+each side, `config.referral_*`) are budgetable as CAC, bounded by construction, and not worth
+building a fake-account farm for. The two sides are deliberately SYMMETRIC: it makes the offer one
+sentence to explain, and neither party can feel short-changed by the other's share.
+
+**The qualifying event is a PAID TOP-UP, never a signup.** `promo_grant_micro` is granted per ORG
+and nothing caps orgs per user, so a signup-triggered bounty is a faucet pointed at itself.
+
+**The threshold is cumulative, and falling short is not fatal.** This first shipped as "the first
+top-up must clear the minimum, or the referral is rejected", and that was wrong in the one way that
+mattered: **$5 is the first preset on the billing page and the minimum is $10**, so the most obvious
+button silently destroyed the reward, permanently, with no way back even if the team added $100 the
+next day. It punished exactly the person the program exists to convert and removed their reason to
+add the rest. A short payment now leaves the row `pending`, counts toward the total, and the billing
+page keeps the offer up — asking for the REMAINDER, because repeating the full figure reads as
+though the money already paid did not count.
+
+This costs nothing in abuse terms: the money still has to arrive, so $5 + $5 buys a referral on
+exactly the terms $10 does, and the fingerprint and the cap are untouched. It also let the old
+"must be the first purchase" rule go — that existed to stop a second bounty, and `pending` already
+does it, since `qualify` only ever selects a pending row.
+
+**Referral credit burns first.** `_KIND_ORDER` gives `referral` the same rank as `promotional`,
+because both are marketing spend we can never be asked to return, and spending them first keeps the
+refundable/disputable purchased pool as small as possible. This is not cosmetic: an unrecognised
+kind sorts LAST (`.get(kind, 99)`), so omitting the entry would have made the bonus burn *after*
+money someone actually paid us. Pinned by a test.
+
+**The `Referral` row is the idempotency guard, not `grant(once=True)`.** `grant`'s `once` check is a
+SELECT with no backing unique index — fine for a signup promo that is merely retried, wrong for
+money owed to a third party, where two concurrent redemptions can both miss it. So every referral
+grant passes `once=False`, and two UNIQUE columns arbitrate instead: `referred_org_id` (an org is
+referred once, ever) and `qualifying_payment_intent` (one payment funds one qualification). Same
+reasoning as the conditional UPDATE in `reserve` and the unique `stripe_payment_intent` in `topup` —
+where two paths can read before either writes, the database has to be the one that says no.
+
+`_pay` **claims before it grants**: the row flips to `paid` in its own committed statement, and only
+then does credit move. The opposite order would mean the loser of a race had already granted. The
+cost is the mirror failure — a crash between claim and grant pays nobody and says otherwise — which
+is the right way round for money, is visible in `/admin/referrals` as a paid row with a null block
+id, and errs toward paying once rather than twice.
+
+**The two sides are paid at different times, on purpose.** The REFEREE is credited the instant they
+qualify; only the REFERRER waits out `referral_hold_days` (7).
+
+They are not in the same position. The referrer has a Referrals page listing every invitation and
+what it is worth, so a pending reward there is legible. The referee has no such page — for them the
+**balance is the only feedback that exists**, and a bonus that is merely "coming" is
+indistinguishable from one that never happened. That is not hypothetical: it was reported exactly
+that way (topped up, saw the plain total, assumed it had failed), and an "earned, lands on <date>"
+banner was built and then discarded in favour of just paying them, because explaining a delay is
+worse than not having one.
+
+The price is half the clawback window, and it is worth paying: exposure is one bounty per card (the
+fingerprint gate still binds), the referee has just handed us the qualifying payment, and a
+chargeback already costs us that payment plus the dispute fee — against which $5 is marginal.
+`_grant_referee` is guarded on `referred_block_id`, which is both the once-only guard and the
+record, so `sweep`'s referee branch survives only as a fallback for a failed instant grant.
+
+**The hold is the only clawback window there is**, and it now covers the referrer's half alone. `charge.dispute.created` / `charge.refunded` — the first reversal events treg has ever
+handled — cancel a bonus still inside that window. Anything already granted is **logged for a human,
+never auto-reversed**: referral credit burns first and is usually spent by then, and reversing it
+would mean a second code path able to drive a balance negative. The clawback touches the *bonus*
+only; it never refunds the top-up, because that has always been a human decision.
+
+**The gates** (`qualify`): first top-up only, at or above the minimum; not a self-referral; the
+paying card's Stripe fingerprint has not already claimed a referral; and the referrer is under their
+lifetime cap. The fingerprint is the load-bearing one — an email address is free and a card is not —
+and it is read via `expand=["payment_method"]` on the `PaymentIntent.retrieve` that
+`_on_checkout_completed` was already making. It is not card data and it lives on the `referral` row
+alone, never on an `Org`.
+
+**There is deliberately no "the referrer must have topped up first" gate.** It was built and then
+removed, and the reasoning is worth keeping because it will be proposed again. A top-up is not a cost
+to a self-dealer — it converts into credit they keep — so the attack it appears to block survives it
+untouched: requiring one of the *referrer* too just adds a step that returns its own money. The cap
+is per-referrer and referrer accounts are free, so a farm's real constraint is CARDS, and the gate
+added roughly one card per twenty referrals: a ~5% tax. Against that it hid the link from every
+free-tier user, who on a product pitched as "$1.00 free, no card" are most of the userbase and the
+likeliest people to tell a friend — a ~90% tax on legitimate referrers. **Before adding any new
+eligibility rule here, price it against cards, not accounts.**
+
+The remaining ceiling to be aware of: because the cap is per-referrer and accounts are free, global
+exposure is bounded only by how many cards an attacker has. A platform-wide monthly payout budget is
+the fix if that ever matters; it is not built.
+
+A refusal is **recorded, not dropped**, and `capped` is deliberately distinct from `rejected`: one is
+"you ran out of self-serve allowance", the other is "a gate said no". "I referred someone and got
+nothing" is the ticket this program generates, and the answer has to be on the page.
+
+**No scheduler, as everywhere else.** `sweep()` runs from `billing._credit` (any top-up advances the
+queue) and from `GET /referrals` (someone checking on their reward is the one who makes it land) —
+the same lazy, caller-pays bargain as `reap_stale_holds`. It never raises: its callers are a Stripe
+webhook and a page load, and neither may fail over a bonus.
+
+**The referee is told, on the screen where it changes their behaviour.** `offer_for_org` is the
+mirror of `summary`: a team that arrived through a link has a `pending` row and no idea a bonus
+exists. `GET /billing` carries a `referral_offer` (merged in the api route, not in `billing.py` —
+that module keeps its one job) and the dashboard names the MINIMUM there, because the first top-up
+preset is $5 and the minimum is $10, so the most-clicked button silently forfeits the reward
+otherwise. The qualifying presets say `+$5 bonus` on themselves; a note alone sits above the place
+the decision is actually made. The offer is returned only while `pending` — after qualifying the
+money is already on its way through `sweep`, and still advertising it would read as a second bonus —
+and it names the referrer MASKED (`mask_email`, `j•••@domain`). Not anonymous — "you were invited"
+with nobody attached reads as marketing copy, and someone who clicked a link off a tweet last week
+genuinely may not recall whose it was. Not in full either: **a referral link is public by design**,
+so the full address would publish one influencer's email to every stranger who signs up through it,
+a harvestable list at exactly the volume this program is built to produce. The domain survives the
+mask because it is what makes a real friend recognisable; the local part collapses to one character
+plus a FIXED bullet run, so the mask cannot leak its own length.
+
+Note the asymmetry against `summary`, which returns referee addresses in FULL: there the referrer has
+no other way to tell which of their invitations converted. Here the referee needs no identity at all
+to decide whether to add funds, so the same exposure would buy nothing. It is worth stating plainly
+that this protects the person who opted into the program and exposes the person who merely signed up
+— justified only by that attribution need, and not a precedent to extend.
+
+**Cash payouts are not built.** The self-serve program pays in credit only, and the cap refusal is
+the commercial conversation that replaces an uncapped percentage. When an influencer tier lands, it
+reads `/admin/referrals` — the same table, filtered — and the payout rail (and its W-9/1099
+obligations) is what gets bought rather than built.

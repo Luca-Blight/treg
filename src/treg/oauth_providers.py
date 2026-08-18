@@ -146,6 +146,18 @@ class OAuthProvider:
     # tool is provisioned with a platform binding; the per-user prompt is only the fallback.
     extra_credential_setting: str = ""
 
+    # Some providers bill the OWNER OF THE APP per use, whoever's token made the call — X moved to
+    # prepaid pay-per-use in Feb 2026 (per resource read, per post written; no plans). For those,
+    # a registry connect rides treg's app and every call spends treg's credits, so the proxy meters
+    # it against the org's balance (api.py, same reserve→settle path as tier 4) when the deployment
+    # allow-lists the provider (`TREG_OAUTH_BILLED_PROVIDERS` — see config.oauth_billed_set).
+    # The rates are the provider-level DEFAULTS, used when the called route has no priced catalog
+    # entry; a curated endpoint's own `cost` (catalog/x.yaml) wins when the path matches one.
+    platform_billed: bool = False
+    billed_read_usd: float = 0.0        # per resource returned, GET routes
+    billed_write_usd: float = 0.0       # per request, write routes
+    billed_write_link_usd: float = 0.0  # per request when the posted text carries a URL (X: 13x)
+
     @property
     def needs_extra_credential(self) -> bool:
         return bool(self.extra_credential_header)
@@ -583,6 +595,15 @@ X = OAuthProvider(
     identity_path="/2/users/me",
     identity_id_path="data.id",
     identity_label_path="data.username",
+    # X bills treg's app per use (prepaid credits, no plans — docs.x.com/x-api/getting-started/
+    # pricing, checked 2026-08-12): posts $0.005/resource read, users $0.010, own-account reads
+    # $0.001, post writes $0.015/request — $0.20 when the text carries a URL. The curated
+    # catalog/x.yaml prices carry the per-endpoint numbers; these are the fallback for the long
+    # tail (x.extended.yaml and URL-passthrough calls).
+    platform_billed=True,
+    billed_read_usd=0.005,
+    billed_write_usd=0.015,
+    billed_write_link_usd=0.20,
 )
 
 # TikTok grants scopes through PRODUCTS, not à la carte: user.info.basic rides on Login Kit,
@@ -1888,6 +1909,14 @@ def listing() -> list[dict]:
             "docs_url": p.docs_url,
             "consent_notice": p.consent_notice,
             "configured": is_configured(p),
+            # Whether calls on this connection are metered from the team balance (the provider
+            # bills treg's app per use), with the default rates — shown BEFORE consent, so nobody
+            # connects an account without seeing the price. Off unless the deployment enables it.
+            "metered": p.platform_billed and p.service in get_settings().oauth_billed_set,
+            **({"billed_rates": {"read_per_result_usd": p.billed_read_usd,
+                                 "write_per_call_usd": p.billed_write_usd,
+                                 "write_with_link_usd": p.billed_write_link_usd}}
+               if p.platform_billed and p.service in get_settings().oauth_billed_set else {}),
         }
         # Grouped first, alphabetical within a shelf — so the dashboard can render the shelves by
         # walking the list once instead of re-sorting what the registry already knows.

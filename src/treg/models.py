@@ -89,6 +89,18 @@ class Org(SQLModel, table=True):
     # env-var edit that lifts the blast-radius rail for every team at once.
     daily_cap_micro: int = Field(default=0)
 
+    # ---- Google Ads attribution (see adsconv.py) --------------------------------------------------
+    # The click that produced this team, captured as a first-party cookie on landing and persisted
+    # here at signup. Kept for the life of the team: a top-up weeks later still attributes to it.
+    ad_gclid: str | None = Field(default=None)
+    # Which mutually-exclusive Google click-id field ad_gclid contains. NULL means a legacy GCLID.
+    ad_click_id_type: str | None = Field(default=None)  # gclid | gbraid | wbraid
+    ad_click_at: datetime | None = Field(default=None)
+    ad_landing: str | None = Field(default=None)  # utm_content — the landing page id (p1…p5)
+    # Set ONCE, by a guarded UPDATE in the /call/ handler. Deliberately not derived from CallRecord:
+    # audit.py sheds rows past its queue bound, so a derived value undercounts exactly under load.
+    first_call_at: datetime | None = Field(default=None)
+
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -106,6 +118,11 @@ class User(SQLModel, table=True):
     token_version: int = Field(default=0)
     onboarded: bool = Field(default=False)  # has completed OR skipped first-run onboarding (don't re-offer)
     demo: bool = Field(default=False)  # a fake teammate seeded into a demo team (can't log in; excluded from stats)
+    # This person's referral code (`treg.to/?ref=<code>`). On the USER, not the Org, because a person
+    # refers a friend — and because anyone may create unlimited orgs, so a per-org code would hand the
+    # same human unlimited codes to farm with. NULL until they open the Referrals page; minted lazily
+    # so we never generate codes for the majority who never look. See referrals.py.
+    referral_code: str | None = Field(default=None, index=True, unique=True)
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -220,8 +237,24 @@ class CallRecord(SQLModel, table=True):
     duration_ms: int | None = Field(default=None)
     response_bytes: int | None = Field(default=None)
     # sha256 of endpoint_id + the canonicalized query + body — an identity for "the same call again".
-    # Bodies are NEVER stored; this is the future cache key and the repeat-rate signal (plan phase 5).
+    # The hash itself never carries a body, so it is safe to keep forever; it is the future cache key
+    # and the repeat-rate signal (plan phase 5). For the ONE case where a body IS retained, see
+    # `error_request` below — it is deliberately narrow and does not weaken this column's guarantee.
     params_hash: str | None = Field(default=None, index=True)
+    # ---- failure evidence (NULL unless a PLATFORM-tier call failed) ----------------------------
+    # The only place treg retains request or response CONTENT, and the exception to "bodies are not
+    # stored". Written on a failed platform-tier call, because that is the call treg made on its own
+    # key, with its own money, and is therefore treg's to debug — a team calling on its own key is
+    # billed by the provider and storing their traffic would help nobody (same line `IdempotentCall`
+    # draws). Never written for a success, for tiers 1-2, or for a non-catalog tool call.
+    #
+    # Both are REDACTED and TRUNCATED at the point of capture (see api._error_snippets): treg's own
+    # platform credential is exact-matched out first, then known third-party secret shapes. They are
+    # evidence for a human, never an exact replay — `error_request` cannot reconstruct the call.
+    # Both are overwritten with '<expired>' once past the retention window, so "captured then aged
+    # out" stays distinguishable from "never captured".
+    error_request: str | None = Field(default=None)
+    error_response: str | None = Field(default=None)
     # Set when TREG refused the call before a byte went upstream; NULL when the provider answered
     # (whatever its status). Values: auth (bad/expired token) | policy (ACL/deny rule/suspension) |
     # balance (402 insufficient prepaid balance) | cap (429 daily caps) | resolution (no such tool
@@ -379,6 +412,40 @@ class Secret(SQLModel, table=True):
     last_error: str = Field(default="")
 
     created_at: datetime = Field(default_factory=_now)
+
+
+class AdConversion(SQLModel, table=True):
+    """One conversion owed to Google Ads — an OUTBOX row, not a log line.
+
+    Written synchronously inside the transaction of the event it describes, so the event and its
+    pending conversion commit or fail together — true for `signup` (queued before `ledger.grant`,
+    whose own commit lands both) and `first_call` (queued and committed on its own dedicated
+    session). It is NOT true for `paid`: `ledger.topup()` commits internally before `billing._credit`
+    queues the conversion, so a crash between the two commits loses that conversion permanently. This
+    gap is a known, accepted trade-off (2026-08-17) rather than a reason to restructure `ledger.py` —
+    see `docs/context/architecture/ads-conversions.md`. A background worker uploads every row later;
+    until then `uploaded_at` is NULL. The unique constraint on (org_id, action) is what makes every
+    fire site idempotent — a webhook redelivery or a retried signup bounces off it instead of
+    double-counting.
+    """
+
+    __table_args__ = (UniqueConstraint("org_id", "action", name="uq_adconversion_org_action"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int = Field(index=True, foreign_key="org.id")
+    action: str  # adsconv.ACTION_* — "signup" | "first_call" | "paid"
+    dedupe_key: str = Field(default="")  # provenance (e.g. the Stripe PaymentIntent id); not the key
+    value_usd_micro: int = Field(default=0)  # converted to AUD at upload time, never stored as AUD
+    # Naive UTC (no tzinfo): columns are TIMESTAMP WITHOUT TIME ZONE, and Postgres rejects tz-aware
+    # values into naive columns. Use _now (defined above) to stay consistent with other tables.
+    created_at: datetime = Field(default_factory=_now)
+    uploaded_at: datetime | None = Field(default=None, index=True)
+    # Retryable failures wait here with exponential backoff. Terminal per-row failures keep the
+    # outbox row and error for inspection rather than being mislabeled as uploaded or disappearing.
+    next_attempt_at: datetime | None = Field(default=None, index=True)
+    failed_at: datetime | None = Field(default=None, index=True)
+    attempts: int = Field(default=0)
+    error: str = Field(default="")
 
 
 class Tool(SQLModel, table=True):
@@ -637,6 +704,64 @@ class TagBudget(SQLModel, table=True):
     note: str = Field(default="")
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
+
+
+class Referral(SQLModel, table=True):
+    """One person invited another, and what we owe for it. See referrals.py and
+    docs/context/architecture/money.md.
+
+    THE ROW IS THE IDEMPOTENCY GUARD, not `ledger.grant`. `grant(once=True)` checks
+    `(org_id, kind)` with a SELECT and no backing unique index, so two concurrent redemptions
+    can both miss it — fine for a signup promo that is retried, wrong for money owed to a third
+    party. So referrals.py calls `grant(..., once=False)` and lets these two UNIQUE columns
+    arbitrate instead, the same way `CreditBlock.stripe_payment_intent` arbitrates a topup and
+    the conditional UPDATE arbitrates a reserve. Where two paths can read before either writes,
+    the database has to be the one that says no.
+
+    Status is a one-way ladder, and every terminal state is kept rather than deleted — a referral
+    we refused is the record of WHY someone was not paid, which is the first thing asked when a
+    user emails about a missing reward:
+
+        pending    attributed at signup; the friend has not topped up yet. Owes nothing.
+        qualified  the friend made their first paid top-up. Owes both bonuses, AFTER the hold.
+        paid       both grants landed. `referrer_block_id` / `referred_block_id` name them.
+        capped     qualified, but the referrer is already at their lifetime cap. Pays nothing.
+        rejected   an abuse gate said no, or the funding payment was disputed/refunded inside
+                   the hold window. `reject_reason` says which.
+    """
+
+    __table_args__ = (
+        # An org can be referred exactly once, ever. This is what stops a second signup door, a
+        # retried request, or two concurrent redemptions from paying the same bounty twice.
+        UniqueConstraint("referred_org_id", name="uq_referral_referred_org"),
+        # And one payment can fund at most one qualification, for the same reason `topup` keys on
+        # the PaymentIntent: Stripe delivers at least once and prod runs more than one instance.
+        UniqueConstraint("qualifying_payment_intent", name="uq_referral_qualifying_pi"),
+        Index("ix_referral_status_qualified", "status", "qualified_at"),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    code: str = Field(index=True)  # the code as typed, kept even if the referrer later changes theirs
+    referrer_user_id: int = Field(foreign_key="user.id", index=True)
+    referred_user_id: int = Field(foreign_key="user.id", index=True)
+    referred_org_id: int = Field(foreign_key="org.id")  # unique — see __table_args__
+    status: str = Field(default="pending", index=True)
+    reject_reason: str = Field(default="")
+    # The payment that qualified this referral. NULL while pending — and NULL is exempt from a
+    # unique index, so any number of pending rows coexist happily.
+    qualifying_payment_intent: str | None = Field(default=None)
+    # Stripe's stable per-card id (`pm.card.fingerprint`). NOT card data — an opaque token that only
+    # means anything inside our own Stripe account. It is the one signal that survives a fresh email
+    # address, which is exactly the abuse this program invites. Stored here and nowhere else.
+    card_fingerprint: str | None = Field(default=None, index=True)
+    # The blocks the two grants created, so a payout can be traced back into the ledger by id.
+    referrer_block_id: str | None = Field(default=None)
+    referred_block_id: str | None = Field(default=None)
+    referrer_reward_micro: int = Field(default=0)  # what was actually granted, not what was promised
+    referred_reward_micro: int = Field(default=0)
+    qualified_at: datetime | None = Field(default=None)
+    paid_at: datetime | None = Field(default=None)
+    created_at: datetime = Field(default_factory=_now, index=True)
 
 
 class Project(SQLModel, table=True):

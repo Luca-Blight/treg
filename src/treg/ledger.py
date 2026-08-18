@@ -57,7 +57,13 @@ from .models import CreditBlock, Hold, LedgerEntry, Org, TagSpend
 # Block consumption order: promotional credit burns first, then the oldest purchased block. Promo is
 # a marketing expense and never refundable, so spending it first keeps the refundable (and disputable)
 # purchased pool as small as possible for as long as possible.
-_KIND_ORDER = {"promotional": 0, "purchased": 1}
+#
+# `referral` sits alongside `promotional` at 0 for exactly that reason — a referral bonus is marketing
+# spend we can never be asked to return, so it must burn before the money someone actually paid us.
+# It is a separate kind ONLY so reporting can tell the two apart. Note that an unrecognised kind
+# sorts LAST (`.get(kind, 99)` in `_consume_blocks`), i.e. after purchased: any new non-refundable
+# kind must be added here or it silently gets the most expensive treatment available.
+_KIND_ORDER = {"promotional": 0, "referral": 0, "purchased": 1}
 
 
 class InsufficientBalance(Exception):
