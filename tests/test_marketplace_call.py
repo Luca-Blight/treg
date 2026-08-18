@@ -409,33 +409,56 @@ async def test_scrapecreators_settles_on_the_credits_it_charged(clients: AsyncCl
     assert (await _telemetry(clients))["cost_observed_micro"] == 3 * EP_CALL_MICRO
 
 
+def _mk(provider: str, **kw) -> A.MarketplaceCall:
+    """A minimal MarketplaceCall for observed-cost tests — only the fields the settle math reads."""
+    kw.setdefault("tier", "platform")
+    return A.MarketplaceCall(tool=None, upstream="", consumed=set(), endpoint_id="ep",
+                             provider=provider, **kw)
+
+
 def test_observed_cost_only_trusts_a_real_number():
     """A missing, non-numeric or negative charge means "we never learned it" — settle at the estimate.
     A reported ZERO is different: the provider is saying it did not charge, and is honoured."""
-    assert A._observed_cost_micro("dataforseo", b'{"cost": 0}') == 0
-    assert A._observed_cost_micro("dataforseo", b'{"cost": "0.5"}') is None
-    assert A._observed_cost_micro("dataforseo", b'{"cost": -1}') is None
-    assert A._observed_cost_micro("dataforseo", b"not json") is None
-    assert A._observed_cost_micro("dataforseo", b"[1,2,3]") is None
-    assert A._observed_cost_micro("tikhub", b'{"cost": 0.5}') is None, "tikhub doesn't report a charge"
-    assert A._observed_cost_micro("scrapecreators", b'{"credits_charged": 2}') == 2 * EP_CALL_MICRO
-    assert A._observed_cost_micro("scrapecreators", b'{"success": true}') is None
+    assert A._observed_cost_micro(_mk("dataforseo"), b'{"cost": 0}') == 0
+    assert A._observed_cost_micro(_mk("dataforseo"), b'{"cost": "0.5"}') is None
+    assert A._observed_cost_micro(_mk("dataforseo"), b'{"cost": -1}') is None
+    assert A._observed_cost_micro(_mk("dataforseo"), b"not json") is None
+    assert A._observed_cost_micro(_mk("dataforseo"), b"[1,2,3]") is None
+    assert A._observed_cost_micro(_mk("tikhub"), b'{"cost": 0.5}') is None, "tikhub doesn't report a charge"
+    assert A._observed_cost_micro(_mk("scrapecreators"), b'{"credits_charged": 2}') == 2 * EP_CALL_MICRO
+    assert A._observed_cost_micro(_mk("scrapecreators"), b'{"success": true}') is None
     # akta reports `credits_consumed` — the field that makes its per-section enrich billable at
     # actuals rather than the catalog's upper-bound estimate. $0.05/credit (fx.yaml).
-    assert A._observed_cost_micro("akta", b'{"credits_consumed": 0.5}') == 25_000
-    assert A._observed_cost_micro("akta", b'{"credits_consumed": 0}') == 0, "a reported zero is honoured"
-    assert A._observed_cost_micro("akta", b'{"credits_charged": 2}') is None, "wrong field name means we never learned it"
+    assert A._observed_cost_micro(_mk("akta"), b'{"credits_consumed": 0.5}') == 25_000
+    assert A._observed_cost_micro(_mk("akta"), b'{"credits_consumed": 0}') == 0, "a reported zero is honoured"
+    assert A._observed_cost_micro(_mk("akta"), b'{"credits_charged": 2}') is None, "wrong field name means we never learned it"
+
+
+def test_observed_cost_counts_resources_for_billed_oauth_reads():
+    """An oauth-billed per_result call settles against the RESPONSE — X bills per resource returned,
+    so `data`'s length is the bill: 7 posts back on a 100-post ask settles at 7, an empty page at
+    zero, and a single-object `data` (a profile read) at one. Anything unparseable falls back to
+    the estimate (None), and a non-per_result billed call never counts."""
+    x = _mk("x", tier="tool", billed_oauth=True, cost_type="per_result", unit_micro=5_000)
+    assert A._observed_cost_micro(x, b'{"data": [{}, {}, {}]}') == 15_000
+    assert A._observed_cost_micro(x, b'{"data": []}') == 0
+    assert A._observed_cost_micro(x, b'{"data": {"id": "1"}}') == 5_000
+    assert A._observed_cost_micro(x, b'{"errors": [{}]}') == 0, "no data key = nothing served"
+    assert A._observed_cost_micro(x, b"not json") is None, "unreadable body settles at the estimate"
+    write = _mk("x", tier="tool", billed_oauth=True, cost_type="per_call", unit_micro=0)
+    assert A._observed_cost_micro(write, b'{"data": {"id": "1"}}') is None, "per_call settles at the estimate"
+
     # leadmagic reports `credits_consumed` too — including 0 on a 2xx miss (observed at verify
     # time) and fractions (email verify = 0.25 credits). $0.025/credit (fx.yaml).
-    assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 1}') == 25_000
-    assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 0}') == 0, "a 2xx miss is free"
-    assert A._observed_cost_micro("leadmagic", b'{"credits_consumed": 0.25}') == 6_250
+    assert A._observed_cost_micro(_mk("leadmagic"), b'{"credits_consumed": 1}') == 25_000
+    assert A._observed_cost_micro(_mk("leadmagic"), b'{"credits_consumed": 0}') == 0, "a 2xx miss is free"
+    assert A._observed_cost_micro(_mk("leadmagic"), b'{"credits_consumed": 0.25}') == 6_250
     # lusha nests the same contract one level down: billing.creditsCharged — 0 on a 2xx miss
     # (the captured people.enrich example is one), 2 credits on a company enrich. $0.1248/credit.
-    assert A._observed_cost_micro("lusha", b'{"billing": {"creditsCharged": 1, "resultsReturned": 10}}') == 124_800
-    assert A._observed_cost_micro("lusha", b'{"billing": {"creditsCharged": 0, "resultsReturned": 0}}') == 0, "a 2xx miss is free"
-    assert A._observed_cost_micro("lusha", b'{"billing": {"creditsCharged": 2}}') == 249_600
-    assert A._observed_cost_micro("lusha", b'{"requestId": "x"}') is None, "no billing block means we never learned it"
+    assert A._observed_cost_micro(_mk("lusha"), b'{"billing": {"creditsCharged": 1, "resultsReturned": 10}}') == 124_800
+    assert A._observed_cost_micro(_mk("lusha"), b'{"billing": {"creditsCharged": 0, "resultsReturned": 0}}') == 0, "a 2xx miss is free"
+    assert A._observed_cost_micro(_mk("lusha"), b'{"billing": {"creditsCharged": 2}}') == 249_600
+    assert A._observed_cost_micro(_mk("lusha"), b'{"requestId": "x"}') is None, "no billing block means we never learned it"
 
 
 def test_apollo_settles_a_2xx_miss_at_zero():
@@ -445,12 +468,12 @@ def test_apollo_settles_a_2xx_miss_at_zero():
     carrying neither documented shape (people enrichment's 1-9 credit range) stays at the
     estimate — deriving is only safe where the rule is flat."""
     credit = 26_000  # $0.026/credit (fx.yaml, Basic $65/mo / 2,500 credits)
-    assert A._observed_cost_micro("apollo", b'{"organization": {"name": "Apple"}}') == credit
-    assert A._observed_cost_micro("apollo", b'{"organization": null}') == 0, "a 2xx miss is free"
-    assert A._observed_cost_micro("apollo", b'{"organizations": [{"name": "Apple"}], "pagination": {}}') == credit
-    assert A._observed_cost_micro("apollo", b'{"organizations": [], "pagination": {}}') == 0, "an empty page is free"
-    assert A._observed_cost_micro("apollo", b'{"person": {"id": "x"}}') is None, "1-9 credit range: estimate, not a guess"
-    assert A._observed_cost_micro("apollo", b"not json") is None
+    assert A._observed_cost_micro(_mk("apollo"), b'{"organization": {"name": "Apple"}}') == credit
+    assert A._observed_cost_micro(_mk("apollo"), b'{"organization": null}') == 0, "a 2xx miss is free"
+    assert A._observed_cost_micro(_mk("apollo"), b'{"organizations": [{"name": "Apple"}], "pagination": {}}') == credit
+    assert A._observed_cost_micro(_mk("apollo"), b'{"organizations": [], "pagination": {}}') == 0, "an empty page is free"
+    assert A._observed_cost_micro(_mk("apollo"), b'{"person": {"id": "x"}}') is None, "1-9 credit range: estimate, not a guess"
+    assert A._observed_cost_micro(_mk("apollo"), b"not json") is None
 
 
 async def test_daily_cap_fails_closed(clients: AsyncClient, platform_on, monkeypatch):
