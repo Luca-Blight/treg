@@ -72,6 +72,23 @@ does) gives us everything needed to generate a test request and make the call. W
 to core is the part a machine cannot do — mapping the endpoint to a capability, choosing the test
 target deliberately, and a full-fidelity example. See "bulk-verifying the extended tier" below.
 
+**An ingested price is a claim we will charge on, so a generated `free` is a bug, not a default.**
+`x.extended.yaml` shipped 168 routes priced `free` off a plan-tier model X had already abolished,
+while the proxy — which skips a `free` block, its `usd` being falsy — billed the provider fallback:
+the catalog published $0 and the balance moved $0.10. Where the upstream bills *treg* (an
+`oauth_billed` provider, [auth-secrets](auth-secrets.md)), the generator must therefore price every
+route it emits, and a test walks the provider asserting the published price equals the reserved one.
+
+The second half of that lesson cost a review round: **the fix for a blanket price is not a smaller
+blanket.** The first repair priced all 74 X writes at $0.015 — the post-creation rate — when X
+publishes a row per ACTION, and creating a list is $0.010, managing one $0.005, deleting an
+interaction $0.010. Read the rate card and transcribe it (`catalog_ingest.X_RATES` is the card,
+`X_ROUTE_RATES` the route→row mapping, and each entry's note names the row it was priced from);
+where the mapping is a judgement call, `confidence: inferred` says so and takes the dearer reading,
+because treg pays the difference. Watch for **conditional** rates in particular: X's $0.001 "owned
+read" applies only when the caller owns the developer app, which on a registry connect is treg —
+quoting it for our members under-billed the very calls we are charged the most for.
+
 Core wins on collision: `catalog_ingest.py` drops any `(method, path)` the provider's core file
 already curates, so an endpoint appears exactly once across both tiers. Promoting an extended entry
 means moving it into the core file and completing it (steps 3–8 below) — not editing it in place;

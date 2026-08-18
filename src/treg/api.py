@@ -8715,7 +8715,12 @@ def _oauth_billed_estimate(provider, ep: dict | None, method: str, query, body: 
     default); the provider-level rates cover the extended/passthrough long tail. `unit_micro` is
     the per-resource price a `per_result` settle counts the response against."""
     cv = catalog_store.load().cost_view(ep.get("cost"), provider.service) if ep and ep.get("cost") else None
-    if cv and cv.get("usd"):
+    # A ZERO price must fall through to the provider rate, not bill zero — on an oauth-billed
+    # provider the upstream charges us whatever the catalog says, so `free` there is a catalog bug
+    # (a stale ingest), never a fact. Spelled out because it used to ride on `0.0` being falsy:
+    # the same expression read as "no price recorded" and "the price is nothing", and the catalog
+    # could publish free while the balance was debited the fallback.
+    if cv and cv.get("type") != "free" and cv.get("usd"):
         ctype = str(cv.get("type") or "per_call")
         est = _platform_estimate_micro(cv, query, body)
         if method != "GET" and provider.billed_write_link_usd and _post_has_link(body):

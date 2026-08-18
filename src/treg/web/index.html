@@ -5697,7 +5697,8 @@ createApp({
       // the tooltip) — but "from" is a floor, and the floor is free.
       const provs=(pl && pl.providers)||[];
       const hasOauth=provs.some(s=>{
-        const p=this.providers.find(x=>x.service===s); return p && p.auth_kind==='oauth'; });
+        const p=this.providers.find(x=>x.service===s);
+        return p && p.auth_kind==='oauth' && !p.metered; });
       if(hasOauth) return {free:true, text:'free with your account', paid};
       if(paid) return {free:false, text:paid, native:this.nativeAmount(pf)};
       return null; },  // priced with no published number, or key-auth with no rate — unknown, not free
@@ -5710,6 +5711,14 @@ createApp({
               p.native ? 'billed as '+p.native+' / '+this.priceUnit(pf.type)+', converted at the catalog’s FX rate' : '',
               pf.note].filter(Boolean).join(' — '); },
     catConnected(service){ return !!this.connCount[service]; },
+    // Whether a REGISTRY connection to this provider is still metered. Connecting usually ends the
+    // billing question — the account you connect is the licence — but a `metered` provider bills
+    // treg's own app per use (X since Feb 2026), so those calls are debited from the team balance
+    // no matter whose account made them. `/providers` carries the flag, and the deployment's
+    // TREG_OAUTH_BILLED_PROVIDERS decides whether it is set, so the price a browser shows follows
+    // the kill switch instead of hard-coding today's answer.
+    catMetered(service){
+      const p=this.providers.find(x=>x.service===service); return !!(p && p.metered); },
     // A platform is callable today if ANY provider serving it is connected — the card is browsing,
     // not routing, so which one it is stays a question for the platform page.
     platConnected(pl){ return ((pl&&pl.providers)||[]).some(s=>this.catConnected(s)); },
@@ -5740,7 +5749,8 @@ createApp({
       return typeof c.usd==='number' ? c.usd : null; },
     // An OAuth endpoint you have already connected costs nothing MORE to call — the account is the
     // licence — so a connected own_account row is the free path, and usually the right answer.
-    capFree(e){ return this.catConnected(e.provider) && (e.scope==='own_account' || (e.cost&&e.cost.type==='free')); },
+    capFree(e){ return this.catConnected(e.provider) && !this.catMetered(e.provider)
+      && (e.scope==='own_account' || (e.cost&&e.cost.type==='free')); },
     capCheapest(eps){
       let best=null;
       for(const e of (eps||[])){

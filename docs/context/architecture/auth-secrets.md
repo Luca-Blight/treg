@@ -117,8 +117,16 @@ module symbols:
   (`api.py` `_billed_marketplace` → the tier-4 reserve→settle path; [money](money.md)). Gated on the
   deploy opting in via `TREG_OAUTH_BILLED_PROVIDERS` (`config.oauth_billed_set` — empty means free,
   the kill-switch shape `platform_providers` uses). The rates here are the fallback for uncatalogued
-  routes; a priced `catalog/x.yaml` entry wins. `listing()` carries `metered` + `billed_rates` so the
-  dashboard can show the price BEFORE consent. A **BYO connect is never metered** — the callback
+  routes; a priced catalog entry wins — and since a `free` block has a falsy `usd`, "priced" has to be
+  read as *not free*, or a catalog that says $0 quietly bills the fallback instead. **Every X entry
+  therefore carries a real rate**, taken from X's per-resource-type rate card rather than one read
+  price and one write price (`x.yaml` curates five; `catalog_ingest.X_RATES` transcribes the card and
+  `X_ROUTE_RATES` maps the other 168 routes onto it), and `tests/test_marketplace_call.py` walks the
+  provider asserting the published number equals the reserved one. The `billed_*` fields here are the
+  fallback for a path no entry claims; **the $0.001 owned-read rate is deliberately not among them**,
+  since X grants it only to the app's own owner and a registry connect's member never is. `listing()` carries `metered` +
+  `billed_rates` so the dashboard can show the price BEFORE consent — and so the catalog's own price
+  display can stop calling a connected account free (`catMetered`, [dashboard](../interface/dashboard.md)). A **BYO connect is never metered** — the callback
   stamps `secret.provider` only in registry mode, and that attribution is the whole detection.
 - `auth_kind` = `"oauth"` (treg's app), `"token"` (Slack — a workspace-scoped bot the user creates and
   pastes; `is_token_kind`), or `"key"` (an **API-key provider** connected by pasting a key: Apollo, PDL,
