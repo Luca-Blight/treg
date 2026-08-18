@@ -89,6 +89,18 @@ class Org(SQLModel, table=True):
     # env-var edit that lifts the blast-radius rail for every team at once.
     daily_cap_micro: int = Field(default=0)
 
+    # ---- Google Ads attribution (see adsconv.py) --------------------------------------------------
+    # The click that produced this team, captured as a first-party cookie on landing and persisted
+    # here at signup. Kept for the life of the team: a top-up weeks later still attributes to it.
+    ad_gclid: str | None = Field(default=None)
+    # Which mutually-exclusive Google click-id field ad_gclid contains. NULL means a legacy GCLID.
+    ad_click_id_type: str | None = Field(default=None)  # gclid | gbraid | wbraid
+    ad_click_at: datetime | None = Field(default=None)
+    ad_landing: str | None = Field(default=None)  # utm_content — the landing page id (p1…p5)
+    # Set ONCE, by a guarded UPDATE in the /call/ handler. Deliberately not derived from CallRecord:
+    # audit.py sheds rows past its queue bound, so a derived value undercounts exactly under load.
+    first_call_at: datetime | None = Field(default=None)
+
     created_at: datetime = Field(default_factory=_now)
 
 
@@ -395,6 +407,40 @@ class Secret(SQLModel, table=True):
     last_error: str = Field(default="")
 
     created_at: datetime = Field(default_factory=_now)
+
+
+class AdConversion(SQLModel, table=True):
+    """One conversion owed to Google Ads — an OUTBOX row, not a log line.
+
+    Written synchronously inside the transaction of the event it describes, so the event and its
+    pending conversion commit or fail together — true for `signup` (queued before `ledger.grant`,
+    whose own commit lands both) and `first_call` (queued and committed on its own dedicated
+    session). It is NOT true for `paid`: `ledger.topup()` commits internally before `billing._credit`
+    queues the conversion, so a crash between the two commits loses that conversion permanently. This
+    gap is a known, accepted trade-off (2026-08-17) rather than a reason to restructure `ledger.py` —
+    see `docs/context/architecture/ads-conversions.md`. A background worker uploads every row later;
+    until then `uploaded_at` is NULL. The unique constraint on (org_id, action) is what makes every
+    fire site idempotent — a webhook redelivery or a retried signup bounces off it instead of
+    double-counting.
+    """
+
+    __table_args__ = (UniqueConstraint("org_id", "action", name="uq_adconversion_org_action"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    org_id: int = Field(index=True, foreign_key="org.id")
+    action: str  # adsconv.ACTION_* — "signup" | "first_call" | "paid"
+    dedupe_key: str = Field(default="")  # provenance (e.g. the Stripe PaymentIntent id); not the key
+    value_usd_micro: int = Field(default=0)  # converted to AUD at upload time, never stored as AUD
+    # Naive UTC (no tzinfo): columns are TIMESTAMP WITHOUT TIME ZONE, and Postgres rejects tz-aware
+    # values into naive columns. Use _now (defined above) to stay consistent with other tables.
+    created_at: datetime = Field(default_factory=_now)
+    uploaded_at: datetime | None = Field(default=None, index=True)
+    # Retryable failures wait here with exponential backoff. Terminal per-row failures keep the
+    # outbox row and error for inspection rather than being mislabeled as uploaded or disappearing.
+    next_attempt_at: datetime | None = Field(default=None, index=True)
+    failed_at: datetime | None = Field(default=None, index=True)
+    attempts: int = Field(default=0)
+    error: str = Field(default="")
 
 
 class Tool(SQLModel, table=True):

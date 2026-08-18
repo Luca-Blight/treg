@@ -52,15 +52,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 from sqlmodel import select
 
-from . import analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
+from . import adsconv, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
 from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
-from .models import (ROLE_RANK, Bundle, CallRecord, CapabilityPin, CreditBlock, DenyRule, Hold,
-                     IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient, OAuthCode,
-                     OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret, TagBudget, TagSpend, Tool,
-                     ToolRequest, User)
+from .models import (ROLE_RANK, AdConversion, Bundle, CallRecord, CapabilityPin, CreditBlock,
+                     DenyRule, Hold, IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient,
+                     OAuthCode, OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, RunRecord,
+                     Secret, TagBudget, TagSpend, Tool, ToolRequest, User)
 from .proxy import relay
 
 
@@ -146,6 +146,10 @@ async def lifespan(app: FastAPI):
     # TCP+TLS connections across requests — the single biggest latency win for a relay.
     limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
     app.state.http = httpx.AsyncClient(limits=limits, timeout=httpx.Timeout(float(get_settings().call_timeout_s)))
+    # Off unless configured (adsconv.enabled() requires the customer id, developer token and OAuth
+    # org slug) — keeps the test suite and self-hosted instances completely inert by default.
+    ads_task = asyncio.create_task(adsconv.worker(session_maker, app.state.http)) \
+        if adsconv.enabled() else None
     try:
         if _mcp is None:
             yield
@@ -156,6 +160,8 @@ async def lifespan(app: FastAPI):
             async with _mcp.mcp_lifespan():
                 yield
     finally:
+        if ads_task is not None:
+            ads_task.cancel()
         await audit.drain()  # flush pending audit writes before tearing down
         await analytics.drain()  # best-effort flush of queued analytics events
         await app.state.http.aclose()
@@ -2357,6 +2363,23 @@ async def privacy_page():
     return _legal_page("privacy.html")
 
 
+@app.get("/adtrack.js", include_in_schema=False)
+async def adtrack_js():
+    """First-party ad-click capture (see the file itself): sets the `treg_ad` cookie that
+    `_ad_attribution_from` reads at signup. No Google script, no third-party request."""
+    headers = {"Cache-Control": "no-cache"}
+    if not adsconv.enabled():
+        # The page keeps one static script include, but an unconfigured/self-hosted deployment must
+        # not collect an advertising cookie at all. A stale cookie is also ignored at signup below.
+        return Response(content="", media_type="application/javascript", headers=headers)
+    f = _WEB_DIR / "adtrack.js"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="adtrack.js not bundled")
+    # no-cache, same reasoning as tutorial.js: served as a bare `<script src="/adtrack.js">` with no
+    # version query, so without this header a browser would keep an ad-window-stale copy after a fix.
+    return FileResponse(f, media_type="application/javascript", headers=headers)
+
+
 @app.get("/resources", include_in_schema=False)
 async def resources_page():
     """The hub for the outcome pages. It exists for two reasons beyond navigation: without it the
@@ -3455,6 +3478,7 @@ _ORG_SCOPED_MODELS = (
     OAuthCode, OAuthRefresh,   # grants naming a team that no longer exists
     IdempotentCall,            # a remembered answer belongs to the team that paid for it
     ToolRequest,  # attribution rows go with the team; anonymous filings carry no org_id and stay
+    AdConversion,  # pending Google Ads conversions belong to the team they'd be attributed to
     Membership,   # last: it is what makes the caller a member of the org being deleted
 )
 
@@ -3876,7 +3900,21 @@ async def _grant_signup_promo(db: AsyncSession, org: Org) -> None:
     if org is None or org.id is None or org.demo or org.public_demo:
         return
     try:
-        await ledger.grant(db, org.id)
+        # Queue BEFORE granting: adsconv.queue() only adds a row inside a SAVEPOINT, it never commits.
+        # ledger.grant() commits internally, so calling it second is what makes its commit durable for
+        # BOTH rows in one transaction — the event and its conversion must land together (see
+        # adsconv.queue's docstring). Reordering this silently reintroduces a two-transaction gap.
+        # Same door, same once-only guarantee: this function is already the single place a brand-new
+        # real team comes into existence.
+        try:
+            await adsconv.queue(db, org, adsconv.ACTION_SIGNUP)
+        except Exception as exc:  # noqa: BLE001 — its OWN guard, deliberately, not the outer one
+            # Because the queue now runs FIRST, sharing the outer except would mean an unexpected
+            # failure here (anything but the IntegrityError queue() already absorbs) skips the grant
+            # entirely and costs the team its $1 promotional credit. A marketing metric must not be
+            # able to take away a product benefit: swallow it here so the grant still runs.
+            logging.getLogger("treg").warning("ad conversion queue failed for org %s: %s", org.id, exc)
+        await ledger.grant(db, org.id)  # commits — absorbs the queued conversion row too
     except Exception as exc:  # noqa: BLE001 — the team is already created; don't 500 the signup over credit
         logging.getLogger("treg").warning("promo grant failed for org %s: %s", org.id, exc)
 
@@ -3907,9 +3945,26 @@ async def _find_or_create_user(db: AsyncSession, email: str) -> User:
     return user
 
 
+def _ad_attribution_from(request: Request) -> tuple[str, str, str]:
+    """Return (click-id field, click-id, landing), with legacy GCLID-cookie compatibility."""
+    if not adsconv.enabled():
+        return "", "", ""
+    raw = request.cookies.get("treg_ad") or ""
+    if not raw:
+        return "", "", ""
+    first, separator, rest = unquote(raw).partition("|")
+    if separator and first in ("gclid", "gbraid", "wbraid"):
+        click_id, _, landing = rest.partition("|")
+        click_field = first
+    else:
+        # Old cookies were `CLICK_ID|landing` and always held a GCLID.
+        click_field, click_id, landing = "gclid", first, rest
+    return click_field, click_id.strip()[:255], landing.strip()[:64]
+
+
 # ---- users (open registration; personal org + owner membership; token shown once) ---------
 @app.post("/users")
-async def register_user(body: UserIn, db: AsyncSession = Depends(get_session)) -> dict:
+async def register_user(body: UserIn, request: Request, db: AsyncSession = Depends(get_session)) -> dict:
     email = _norm_email(body.email)
     # This door creates a User directly (it predates `_find_or_create_user`), so it needs the same
     # machine-domain block — otherwise open registration could squat an agent address.
@@ -3925,6 +3980,14 @@ async def register_user(body: UserIn, db: AsyncSession = Depends(get_session)) -
     org, token = await _make_org_membership(
         db, user, name=email, slug_base=_slugify(email), role="owner", webhook_url=body.webhook_url
     )
+    click_field, gclid, landing = _ad_attribution_from(request)
+    if gclid:
+        org.ad_gclid = gclid
+        org.ad_click_id_type = click_field
+        org.ad_landing = landing or None
+        org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
+                                            # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
+        db.add(org)
     try:
         await db.commit()
     except IntegrityError:
@@ -3969,7 +4032,8 @@ async def _count_owners(org_id: int, db: AsyncSession) -> int:
 
 @app.post("/orgs")
 async def create_org(
-    body: OrgIn, user: User = Depends(require_identity), db: AsyncSession = Depends(get_session)
+    body: OrgIn, request: Request,
+    user: User = Depends(require_identity), db: AsyncSession = Depends(get_session),
 ) -> dict:
     # Any authenticated user spins up a new org and becomes its owner, minting a fresh org-scoped
     # token for it. **require_identity, NOT require_member** — a brand-new user has zero orgs (no auto
@@ -3979,12 +4043,22 @@ async def create_org(
             "the demo sandbox can't create a real team — sign in with GitHub, Google, or email to make one"))
     user_id = user.id  # snapshot BEFORE the loop: db.rollback() expires ORM instances, so
     name = body.name   # touching `user` afterwards could trigger a lazy load → MissingGreenlet.
+    click_field, gclid, landing = _ad_attribution_from(request)  # the OTHER signup door
+    # (browser sign-in → mandatory first-team creation), separate from register_user's /users. A
+    # browser visitor who clicked an ad lands here, not there, so attribution must be read in both.
     for _ in range(3):  # a concurrent create can take the slug between _unique_slug and commit — retry
         org = Org(name=name, slug=await _unique_slug(_slugify(name), db))
         db.add(org)
         await db.flush()
         token = crypto.new_token()
         db.add(Membership(user_id=user_id, org_id=org.id, role="owner", token_hash=crypto.hash_token(token)))
+        if gclid:
+            org.ad_gclid = gclid
+            org.ad_click_id_type = click_field
+            org.ad_landing = landing or None
+            org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
+                                                # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
+            db.add(org)
         try:
             await db.commit()
             break
@@ -9591,6 +9665,34 @@ async def _platform_settle(
     return charged, observed
 
 
+async def _record_first_call(org_id: int) -> None:
+    """Set Org.first_call_at once — the metric that decides whether a marketing channel is real (see
+    marketing/landing/_measurement.md). A CONDITIONAL UPDATE, not read-then-write: concurrent first
+    calls would both see NULL and both fire. Set for EVERY org (it is a product metric in its own
+    right); adsconv.queue() itself no-ops for orgs with no ad_gclid, so the conversion side stays
+    ad-attributed-only.
+
+    Runs on its OWN session, same reason as _platform_settle: this fires after the response is built,
+    while the request's `db` may still be mid-settlement (or mid-rollback from one), and a commit or
+    rollback issued here would land on THAT transaction instead of this one. Never raises — a metric
+    write must not turn a working proxied call into a 500."""
+    try:
+        async with session_maker() as db:
+            result = await db.execute(
+                update(Org)
+                .where(Org.id == org_id, Org.first_call_at.is_(None))
+                .values(first_call_at=_utcnow_naive())  # naive UTC — asyncpg rejects tz-aware here
+            )
+            if result.rowcount:
+                org_row = await db.get(Org, org_id)
+                if org_row is not None:
+                    await adsconv.queue(db, org_row, adsconv.ACTION_FIRST_CALL)
+                await db.commit()
+    except Exception:  # noqa: BLE001 — loudly, but never into the caller's response
+        logging.getLogger("treg.adsconv").error(
+            "first_call_at update/queue failed for org %s", org_id, exc_info=True)
+
+
 async def _relay_live_demo(request: Request, upstream_url: str, key: str, visitor: str):
     """The sandbox's ONE real upstream call (the landing live wire). Deliberately narrower than
     relay(): form-encoded only, auth header built here from the env key (never from a sandbox
@@ -9879,6 +9981,13 @@ async def call_tool(
             await _platform_settle(mk, None, reason="call_crashed")
         raise
     duration_ms = _now_ms() - started
+    # First successful call. The common case — an org that already has one — is an in-memory check
+    # against `caller.org` (freshly loaded this request by require_member): zero DB cost on a path
+    # that runs on every proxied call. Only an org's actual first call touches the database, and it
+    # does so via _record_first_call's own session, never the request's `db` (which _platform_settle,
+    # right below, is about to settle/release — see its docstring for why that session is off-limits).
+    if 200 <= response.status_code < 400 and caller.org_id and caller.org.first_call_at is None:
+        await _record_first_call(caller.org_id)
     if mk is not None and mk.metered:
         charged, observed = await _platform_settle(mk, response.status_code, body)
         # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
