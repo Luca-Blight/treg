@@ -399,7 +399,12 @@ GOOGLE_ADS = OAuthProvider(
     display_name="Google Ads",
     auth_uri="https://accounts.google.com/o/oauth2/v2/auth",
     token_uri="https://oauth2.googleapis.com/token",
-    scopes={"manage": ["https://www.googleapis.com/auth/adwords"]},
+    # `datamanager` was added 2026-08 so the platform's own conversion uploader (adsconv.py) can
+    # call the Data Manager API — `uploadClickConversions` is closed to new integrations. Existing
+    # connections made before this change hold only `adwords` and must be reconnected to pick up
+    # the new scope; treg cannot silently upgrade a token it didn't request.
+    scopes={"manage": ["https://www.googleapis.com/auth/adwords",
+                        "https://www.googleapis.com/auth/datamanager"]},
     # Ads gets its OWN OAuth client, in a DIFFERENT Cloud project from the other Google providers.
     # A Google Ads developer token is permanently paired to the first Cloud project it calls from,
     # and the shared Google project is already welded to a different (stale) token — so Ads must
@@ -1818,6 +1823,8 @@ SCOPE_LABELS: dict[str, str] = {
         "Manage your business listings, reviews and posts",
     "https://www.googleapis.com/auth/adwords":
         "Read campaigns, spend and performance, and manage campaigns",
+    "https://www.googleapis.com/auth/datamanager":
+        "Send conversion and audience events through the Data Manager API",
     # Google — YouTube
     "https://www.googleapis.com/auth/youtube.readonly":
         "See your channel, videos and playlists",
