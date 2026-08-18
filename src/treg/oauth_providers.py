@@ -399,12 +399,6 @@ GOOGLE_ADS = OAuthProvider(
     display_name="Google Ads",
     auth_uri="https://accounts.google.com/o/oauth2/v2/auth",
     token_uri="https://oauth2.googleapis.com/token",
-    # `adwords` alone, deliberately. It already covers audience / customer-match writes — verified
-    # empirically, a `validateOnly` userLists:mutate returned `{}` — so a customer connecting Ads
-    # gains nothing from the Data Manager scope. treg's OWN conversion uploader (adsconv.py) needs
-    # that scope, but authenticates with a platform refresh token (settings.ads_conv_refresh_token),
-    # never this provider. Do not add it here: `listing()` shows every provider, so it would put a
-    # marketing-only permission on every customer's consent screen.
     scopes={"manage": ["https://www.googleapis.com/auth/adwords"]},
     # Ads gets its OWN OAuth client, in a DIFFERENT Cloud project from the other Google providers.
     # A Google Ads developer token is permanently paired to the first Cloud project it calls from,
