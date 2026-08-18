@@ -399,12 +399,14 @@ GOOGLE_ADS = OAuthProvider(
     display_name="Google Ads",
     auth_uri="https://accounts.google.com/o/oauth2/v2/auth",
     token_uri="https://oauth2.googleapis.com/token",
-    # `datamanager` was added 2026-08 so the platform's own conversion uploader (adsconv.py) can
-    # call the Data Manager API — `uploadClickConversions` is closed to new integrations. Existing
-    # connections made before this change hold only `adwords` and must be reconnected to pick up
-    # the new scope; treg cannot silently upgrade a token it didn't request.
-    scopes={"manage": ["https://www.googleapis.com/auth/adwords",
-                        "https://www.googleapis.com/auth/datamanager"]},
+    # `adwords` alone — validated empirically (a `validateOnly` userLists:mutate call returned
+    # `{}`) to already cover audience/customer-match writes, so a customer connecting Ads gains
+    # nothing from `datamanager`. That scope is real (SCOPE_LABELS keeps its copy) but belongs only
+    # to treg's OWN conversion uploader (adsconv.py), which authenticates with a platform refresh
+    # token (settings.ads_conv_refresh_token), never this customer-facing provider — see
+    # docs/context/architecture/ads-conversions.md. Do not add it back here: `listing()` shows every
+    # provider, so it would put a marketing-only permission on every customer's consent screen.
+    scopes={"manage": ["https://www.googleapis.com/auth/adwords"]},
     # Ads gets its OWN OAuth client, in a DIFFERENT Cloud project from the other Google providers.
     # A Google Ads developer token is permanently paired to the first Cloud project it calls from,
     # and the shared Google project is already welded to a different (stale) token — so Ads must

@@ -40,9 +40,9 @@ def usd_micro_to_aud_micro(usd_micro: int) -> int:
 
 
 import asyncio
-import json
 import logging
 import re
+import time
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import or_
@@ -50,15 +50,20 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from . import crypto, oauth
 from .config import get_settings
-from .models import AdConversion, Org, Secret
+from .models import AdConversion, Org
 
 
 def enabled() -> bool:
-    """Missing upload configuration = OFF. Keeps tests and self-hosted instances inert."""
+    """Missing upload configuration = OFF. Keeps tests and self-hosted instances inert.
+
+    `google_ads_developer_token` is deliberately NOT required here: it is the read-side Ads API's
+    header (see oauth_providers.GOOGLE_ADS), and Data Manager has no developer-token header at all
+    (see `_auth_headers`). `ads_conv_org_slug` is gone entirely — the uploader no longer borrows a
+    customer-facing OAuth connection; it authenticates with its own platform refresh token.
+    """
     s = get_settings()
-    return bool(s.google_ads_customer_id and s.google_ads_developer_token and s.ads_conv_org_slug)
+    return bool(s.google_ads_customer_id and s.ads_conv_refresh_token)
 
 
 async def queue(db: AsyncSession, org: Org, action: str, *,
@@ -104,6 +109,7 @@ def _utcnow_naive() -> datetime:
 # sunset cycle (oauth_providers.GOOGLE_ADS, catalog yaml, auth-secrets.md still track that
 # separately for the read-side Ads catalog calls) — there is nothing to keep in sync here.
 DATA_MANAGER_URL = "https://datamanager.googleapis.com/v1/events:ingest"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 _UPLOAD_DELAY_S = 6 * 3600   # Google will not accept a conversion until hours after the click
 _MAX_ATTEMPTS = 8
 _RETRY_BASE_S = 5 * 60
@@ -205,7 +211,48 @@ def build_payload(rows: list[AdConversion], orgs: dict[int, Org]) -> dict:
     return _payload_and_rows(rows, orgs)[0]
 
 
-async def _auth_headers(db: AsyncSession, client) -> dict[str, str]:
+# Module-level cache for the platform access token: ONE credential, shared by every drain, so a
+# per-call or per-db-session cache would just re-exchange the refresh token every pass for no
+# reason. `worker` drains every 300s; a token typically lives ~3599s, so almost every pass should
+# hit this cache rather than call Google. `_token_expires_at` is a `time.time()` epoch, not a naive
+# UTC datetime (unlike the rest of this module) — it is process-local runtime state, never
+# persisted or compared against a DB column, so there is no naive/aware mismatch to guard against.
+_cached_access_token: str | None = None
+_token_expires_at: float = 0.0
+_TOKEN_SKEW_S = 60.0  # refresh this many seconds before actual expiry, same margin as oauth.py
+
+
+async def _exchange_refresh_token(client) -> tuple[str, float]:
+    """One refresh_token grant against Google's token endpoint. Raises on any failure — the caller
+    (`_auth_headers`) decides whether that's fatal to this drain; `drain_once` is called inside
+    `worker`'s try/except, so a raise here just means "retry next pass," not a crashed loop."""
+    settings = get_settings()
+    resp = await client.post(
+        GOOGLE_TOKEN_URL,
+        data={
+            "grant_type": "refresh_token",
+            "refresh_token": settings.ads_conv_refresh_token,
+            "client_id": settings.google_ads_client_id,
+            "client_secret": settings.google_ads_client_secret,
+        },
+    )
+    try:
+        body = resp.json()
+    except Exception:  # noqa: BLE001 — an unparseable body is not a usable token either
+        body = {}
+    token = body.get("access_token") if isinstance(body, dict) else None
+    if not token:
+        raise RuntimeError(
+            f"ads conversion token refresh failed: {resp.status_code} {resp.text[:300]}"
+        )
+    try:
+        expires_in = float(body.get("expires_in") or 0)
+    except (TypeError, ValueError):
+        expires_in = 0.0
+    return token, time.time() + expires_in
+
+
+async def _auth_headers(client) -> dict[str, str]:
     """Bearer-only headers for a direct call to the Data Manager REST API.
 
     Data Manager has neither a developer-token header nor a login-customer-id header: the manager
@@ -214,36 +261,22 @@ async def _auth_headers(db: AsyncSession, client) -> dict[str, str]:
 
     This does NOT go through proxy.relay/injectors.py — the uploader is not a caller-issued
     `/call/` request, it's treg spending its OWN platform connection, so there is no Tool/bindings
-    row to resolve credentials from. Instead it reads the `google-ads` OAuth `Secret` stored on
-    the platform org named by `ads_conv_org_slug`, the same shape a normal registry connect
-    produces (see api.py's `/oauth/callback`, which stores `kind="oauth"` + a JSON blob). That
-    connection must hold the `datamanager` scope (oauth_providers.GOOGLE_ADS) — a connection made
-    before that scope was added only has `adwords` and needs reconnecting.
+    row (and no per-tenant Secret) to resolve credentials from. It exchanges treg's OWN long-lived
+    `settings.ads_conv_refresh_token` for an access token directly against Google's token endpoint,
+    redeemed with the same `google_ads_client_id`/`_secret` the refresh token was issued against.
+    Two different purposes stay on two different credentials: a customer connecting Google Ads
+    (oauth_providers.GOOGLE_ADS, `adwords` scope only) never touches this path, and this path never
+    touches a customer's OAuth connection.
 
-    Raises if the platform org, its google-ads connection, or a usable token is missing — the
-    caller (`drain_once`, called from `worker`'s try/except) logs that and retries next pass
-    rather than crashing the loop.
+    The access token is cached in module state with its expiry (`_cached_access_token`,
+    `_token_expires_at`) and only re-exchanged within `_TOKEN_SKEW_S` of expiring — `worker` drains
+    every few minutes, so re-exchanging on every pass would be wasteful and risks Google's refresh
+    rate limit.
     """
-    settings = get_settings()
-    org = (await db.execute(
-        select(Org).where(Org.slug == settings.ads_conv_org_slug)
-    )).scalar_one_or_none()
-    if org is None:
-        raise RuntimeError(f"ads_conv_org_slug {settings.ads_conv_org_slug!r} matches no org")
-    secret = (await db.execute(
-        select(Secret).where(Secret.org_id == org.id, Secret.provider == "google-ads",
-                              Secret.kind == "oauth")
-    )).scalars().first()
-    if secret is None:
-        raise RuntimeError(f"org {settings.ads_conv_org_slug!r} has no google-ads oauth connection")
-    # Same call health.py:205 makes from its own background task — refreshes in place if stale,
-    # no-ops for a still-valid or MANUAL-mode (non-refreshable) token.
-    await oauth.ensure_fresh(secret, db, client)
-    blob = json.loads(crypto.decrypt(secret.value))
-    token = blob.get("access_token") or blob.get("token")
-    if not token:
-        raise RuntimeError("google-ads secret decrypted with no access token")
-    return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    global _cached_access_token, _token_expires_at
+    if _cached_access_token is None or time.time() > _token_expires_at - _TOKEN_SKEW_S:
+        _cached_access_token, _token_expires_at = await _exchange_refresh_token(client)
+    return {"Authorization": f"Bearer {_cached_access_token}", "Content-Type": "application/json"}
 
 
 def _retry_delay(attempts: int) -> timedelta:
@@ -362,7 +395,7 @@ async def drain_once(db: AsyncSession, client) -> dict:
     if not payload["events"]:
         await db.commit()
         return {"sent": 0, "failed": len(skipped)}
-    headers = await _auth_headers(db, client)
+    headers = await _auth_headers(client)
     resp = await client.post(DATA_MANAGER_URL, json=payload, headers=headers)
 
     try:
