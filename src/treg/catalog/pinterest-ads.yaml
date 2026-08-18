@@ -21,6 +21,10 @@ source:
 
 pricing_url: https://developers.pinterest.com/docs/api/v5/introduction/
 endpoints:
+  # Query arrays intentionally keep treg's undeclared repeated-key default while Pinterest is
+  # unconfigured. Pinterest's generated client confirms repeated keys for ids despite older API
+  # prose below; `columns` is the known comma-separated exception, to ship separately with a live
+  # contract-level verification.
   - id: pinterest-ads.accounts
     capability: pinterest-ads.accounts
     platform: pinterest-ads
@@ -148,4 +152,3 @@ endpoints:
       note: "a Pinterest ad is a promoted Pin: the creative itself is `pin_id`, which you resolve through GET /pins/{pin_id} for the image and description. destination_url and creative_type (REGULAR | VIDEO | CAROUSEL | IDEA | COLLECTION) are on the ad"
     cost: {type: free, value: 0, currency: USD, unit: call, note: included with the connected account}
     docs_url: https://developers.pinterest.com/docs/api/v5/ads-list/
-

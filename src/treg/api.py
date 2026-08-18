@@ -27,12 +27,13 @@ import shutil
 import tempfile
 import time
 import uuid
+import zlib
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from urllib.parse import parse_qsl, quote, unquote, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, quote_plus, unquote, urlsplit, urlunsplit
 
-from sqlalchemy import case, delete, func, or_, update
+from sqlalchemy import case, delete, func, or_, text, update
 
 INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 
@@ -48,6 +49,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 from sqlmodel import select
 
 from . import adsconv, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
@@ -57,8 +59,8 @@ from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, plat
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, AdConversion, Bundle, CallRecord, CapabilityPin, CreditBlock,
                      DenyRule, Hold, IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient,
-                     OAuthCode, OAuthRefresh, Org, PendingOAuth, Project, RunRecord, Secret,
-                     TagBudget, TagSpend, Tool, ToolRequest, User)
+                     OAuthCode, OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, RunRecord,
+                     Secret, TagBudget, TagSpend, Tool, ToolRequest, User)
 from .proxy import relay
 
 
@@ -547,21 +549,40 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     }
 
 
+async def _observed_or_empty(db: AsyncSession, endpoint_ids: list[str]) -> dict[str, dict]:
+    """What the served calls say about these endpoints — or `{}` if that query is unavailable.
+
+    Telemetry must never take the catalog down: the catalog answers signed-out readers and is the
+    step every agent starts from, while these numbers are an enrichment on top of it.
+    """
+    try:
+        return await endpoint_stats.observed(db, endpoint_ids)
+    except Exception:  # noqa: BLE001
+        logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
+        return {}
+
+
 @app.get("/catalog/search")
-async def catalog_search(q: str = "", limit: int = 25) -> dict:
+async def catalog_search(q: str = "", limit: int = 25,
+                         db: AsyncSession = Depends(get_session)) -> dict:
     """Open: free-text search across the whole catalog — the DISCOVER half of the loop.
 
     An agent that knows what it wants ("tiktok comments") shouldn't have to guess which platform
     shelf hides it. Ranking is plain token matching (see `catalog_store.search`) so results are
-    reproducible and explainable; `hints` carries the next command, since finding the endpoint is
-    never the goal — inspecting or calling it is."""
+    reproducible and explainable; equal scores — the common case, not the edge — then break on what
+    treg has MEASURED and on price, so the cut stops being file order. `hints` carries the next
+    command, since finding the endpoint is never the goal — inspecting or calling it is."""
     cat = catalog_store.load()
     limit = max(1, min(limit, 100))
-    ranked, total = catalog_store.search(q, cat, limit)
+    ranked, total, tie_truncated = catalog_store.rank_band(q, cat, limit)
+    stats = await _observed_or_empty(db, [ep["id"] for ep, _ in ranked])
+    ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
     results = [
         catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
         | catalog_store.endpoint_context(ep, cat)
-        | {"score": score}
+        # The evidence that decided the order, shown rather than merely applied: a caller comparing
+        # two rows should be able to see WHY one is above the other.
+        | {"score": score, "observed": stats.get(ep["id"])}
         for ep, score in ranked
     ]
     if not q.strip():
@@ -575,6 +596,12 @@ async def catalog_search(q: str = "", limit: int = 25) -> dict:
                  f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
         if total > len(results):
             hints.append(f"{total - len(results)} more matches — raise limit (max 100)")
+        if tie_truncated:
+            # No silent caps. Every row here scored the same, more of them scored the same than the
+            # evidence sort was allowed to weigh, so the tail of this list is back to being ordered
+            # by nothing in particular — say so instead of letting it read as a ranked answer.
+            hints.append(f"{q!r} matches too broadly to rank on measured reliability past the first "
+                         f"{catalog_store.RERANK_BAND} equally-scoring rows — add a word to narrow it")
     return {"query": q, "count": len(results), "total": total, "results": results, "hints": hints}
 
 
@@ -589,7 +616,12 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
     cat = catalog_store.load()
     ep = cat.by_id.get(endpoint_id)
     if ep is None:
-        raise HTTPException(status_code=404, detail=f"unknown endpoint {endpoint_id!r}")
+        # Name the near misses. An id that is one segment off is the common miss, and a bare 404
+        # ends the search → get → call loop at its first step with nothing to try next.
+        raise HTTPException(status_code=404, detail={
+            "error": f"unknown endpoint {endpoint_id!r}",
+            "hint": catalog_store.unknown_id_hint(endpoint_id, cat),
+            "did_you_mean": catalog_store.near_ids(endpoint_id, cat)})
     view = (catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
             | catalog_store.endpoint_context(ep, cat))
     siblings = [
@@ -608,11 +640,7 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
     # of "compare providers" that only treg can answer (see endpoint_stats + CAPABILITY-CHOICE-PLAN).
     # Attached to the SAME response because the choice is made here; a second round-trip to compare
     # reliability is a round-trip an agent will skip.
-    try:
-        stats = await endpoint_stats.observed(db, [endpoint_id] + [s["id"] for s in siblings])
-    except Exception:  # noqa: BLE001 — telemetry must never take the catalog down
-        logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
-        stats = {}
+    stats = await _observed_or_empty(db, [endpoint_id] + [s["id"] for s in siblings])
     view = view | {"observed": stats.get(endpoint_id)}
     siblings = [s | {"observed": stats.get(s["id"])} for s in siblings]
 
@@ -2474,11 +2502,64 @@ AUTH_CODE_TTL_S = 300   # a code is redeemed within seconds; five minutes is gen
 REFRESH_TTL_S = 30 * 24 * 3600   # a connector the user still uses keeps working for a month
 
 
+async def _ensure_grant(family_id: str, db: AsyncSession) -> OAuthGrant | None:
+    """Return this family's authority row, reconstructing a rolling-deploy gap if necessary.
+
+    A35 backfilled every family that existed when a new instance started, but a rolling deploy runs
+    old and new binaries together. An old instance can therefore issue another OAuthRefresh AFTER
+    the one-time backfill, without the OAuthGrant row it knows nothing about. Listing then showed a
+    null team, team moves answered 404, and the first rotation made the grant look newly consented.
+
+    The oldest refresh row is the only surviving consent-time authority for such a family. The raw
+    upsert is intentional: both supported databases implement this spelling, and ON CONFLICT makes
+    two new instances repairing the same old-binary write converge instead of racing into a unique
+    constraint failure.
+    """
+    grant = await db.get(OAuthGrant, family_id)
+    if grant is not None:
+        return grant
+    oldest = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.family_id == family_id
+    ).order_by(OAuthRefresh.created_at, OAuthRefresh.id).limit(1))).scalars().first()
+    if oldest is None:
+        return None
+    await db.execute(text(
+        "INSERT INTO oauthgrant (family_id, current_org_id, granted_at) "
+        "VALUES (:family_id, :org_id, :granted_at) "
+        "ON CONFLICT (family_id) DO NOTHING"
+    ), {"family_id": family_id, "org_id": oldest.org_id, "granted_at": oldest.created_at})
+    return await db.get(OAuthGrant, family_id)
+
+
+async def _family_org(family_id: str, db: AsyncSession) -> int | None:
+    """Which team future tokens in this grant family spend from.
+
+    Mutable family authority has its own row. Token rows retain the team each token was issued under
+    so a later replay audit keeps its original attribution. The previous oldest-token authority made
+    moves stick across refresh races, but only by rewriting retired history.
+
+    The residual window is the one no design without distributed locking removes: an access token
+    already minted for the old team keeps working until it expires (≤ ACCESS_TTL_SECONDS). The
+    FAMILY, though, converges on the move — the next rotation reads this row and mints for the new
+    team — so the move is never undone, only briefly overlapped.
+    """
+    grant = await _ensure_grant(family_id, db)
+    return grant.current_org_id if grant is not None else None
+
+
+def _refresh_is_live(row: OAuthRefresh, *, now: datetime | None = None) -> bool:
+    """One definition of a usable grant token, shared by refresh, listing and team moves."""
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+    return row.retired_at is None and row.expires_at >= now
+
+
 async def _issue_refresh(*, family_id: str, client_id: str, user_id: int, org_id: int,
                          resource: str, scope: str, db: AsyncSession) -> str:
     """Mint a refresh token and store only its hash — a database copy is a database leak."""
     import secrets as _s
 
+    if await db.get(OAuthGrant, family_id) is None:
+        db.add(OAuthGrant(family_id=family_id, current_org_id=org_id))
     token = _s.token_urlsafe(40)
     db.add(OAuthRefresh(
         token_hash=crypto.hash_token(token), family_id=family_id, client_id=client_id,
@@ -2866,7 +2947,7 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
         return bad("invalid_grant",
                    "this refresh token was already used — the grant has been revoked, sign in again")
 
-    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+    if not _refresh_is_live(row):
         return bad("invalid_grant", "refresh token expired")
     if client_id and client_id != row.client_id:
         return bad("invalid_grant", "refresh token was issued to a different client")
@@ -2876,18 +2957,31 @@ async def _refresh_grant(*, refresh_token: str, client_id: str, resource: str,
     user = await db.get(User, row.user_id)
     if user is None or user.suspended:
         return bad("invalid_grant", "the account behind this grant is no longer active")
-    org = await db.get(Org, row.org_id)
+    live_org_id = await _family_org(row.family_id, db) or row.org_id
+    org = await db.get(Org, live_org_id)
     if org is None or org.suspended:
         return bad("invalid_grant", "the team on this grant is no longer available")
+    # STILL a member? The grant is the user's consent to spend a TEAM's balance, and leaving (or
+    # being removed from) that team ends the standing they consented with. Without this a grant
+    # kept minting tokens forever: every downstream call was refused by `require_member`, so the
+    # damage was bounded, but the grant lay dormant and sprang back to life — with no new consent —
+    # the day the membership was restored.
+    still_in = (await db.execute(select(Membership).where(
+        Membership.user_id == row.user_id, Membership.org_id == live_org_id))).scalar_one_or_none()
+    if still_in is None:
+        await _revoke_refresh_family(row.family_id, "membership ended", db)
+        await db.commit()
+        return bad("invalid_grant",
+                   "the account behind this grant is no longer a member of its team — sign in again")
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     row.retired_at, row.retired_reason = now, "rotated"
     db.add(row)
     replacement = await _issue_refresh(family_id=row.family_id, client_id=row.client_id,
-                                       user_id=row.user_id, org_id=row.org_id,
+                                       user_id=row.user_id, org_id=live_org_id,
                                        resource=row.resource, scope=row.scope, db=db)
     access = mcp_oauth.make_access_token(
-        user_id=row.user_id, org_id=row.org_id, scope=row.scope,
+        user_id=row.user_id, org_id=live_org_id, scope=row.scope,
         audience=mcp_oauth.normalize_resource(row.resource),  # heal pre-normalization spellings
         token_version=user.token_version)
     await db.commit()
@@ -3391,6 +3485,30 @@ _ORG_SCOPED_MODELS = (
 
 async def _cascade_delete_org(org: Org, db: AsyncSession) -> None:
     """Delete every org-scoped row then the org. Shared by owner delete_org + admin force-delete."""
+    # OAuthGrant names its mutable team `current_org_id` to distinguish family authority from the
+    # immutable `OAuthRefresh.org_id` provenance. A family can name this team on EITHER side: after
+    # a move, only a retired provenance row still names the former team. Deleting just that row
+    # destroys the replay evidence while leaving the live family authorised elsewhere, so a stolen
+    # old token becomes "unknown" instead of revoking every descendant. Revoke the union of both
+    # paths; preserving historical provenance across team deletion would need a nullable/soft FK.
+    authority_grants = (await db.execute(select(OAuthGrant).where(
+        OAuthGrant.current_org_id == org.id))).scalars().all()
+    provenance_families = (await db.execute(select(OAuthRefresh.family_id).where(
+        OAuthRefresh.org_id == org.id))).scalars().all()
+    family_ids = {grant.family_id for grant in authority_grants} | set(provenance_families)
+    if family_ids:
+        # Delete the WHOLE family, including rows issued under other teams. Keeping only the live
+        # destination token would be exactly the partial revocation that reuse detection forbids.
+        for token in (await db.execute(select(OAuthRefresh).where(
+            OAuthRefresh.family_id.in_(family_ids)))).scalars().all():
+            await db.delete(token)
+        grants = (await db.execute(select(OAuthGrant).where(
+            OAuthGrant.family_id.in_(family_ids)))).scalars().all()
+    else:
+        grants = []
+    for grant in grants:
+        await db.delete(grant)
+    await db.flush()
     for model in _ORG_SCOPED_MODELS:
         for r in (await db.execute(select(model).where(model.org_id == org.id))).scalars().all():
             await db.delete(r)
@@ -3950,6 +4068,101 @@ async def create_org(
         raise HTTPException(status_code=409, detail="could not allocate a unique org slug — retry")
     await _grant_signup_promo(db, org)
     return {"org": org.slug, "org_id": org.id, "name": org.name, "role": "owner", "token": token}
+
+
+class GrantTeamIn(BaseModel):
+    team: str = ""          # the slug (or numeric id) of a team the signed-in user belongs to
+
+
+@app.get("/oauth/grants", include_in_schema=False)
+async def oauth_grants(user: User = Depends(require_identity),
+                       db: AsyncSession = Depends(get_session)) -> list[dict]:
+    """The MCP connections this account has granted, and which team each one spends from.
+
+    The team on a grant was chosen once, on a consent screen, and after that it was invisible from
+    every side: the client reports a slug, the CLI lists the teams of whichever identity is logged
+    in THERE, and the two need not be the same account at all. Somebody spent from a team they could
+    not see listed anywhere and had no way to recognise as wrong.
+    """
+    rows = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.user_id == user.id, OAuthRefresh.retired_at.is_(None)
+    ).order_by(OAuthRefresh.created_at.desc()))).scalars().all()
+    rows = [row for row in rows if _refresh_is_live(row)]
+    seen: set[str] = set()
+    out: list[dict] = []
+    for row in rows:                      # one entry per GRANT, not per rotation of its token
+        if row.family_id in seen:
+            continue
+        seen.add(row.family_id)
+        # Listing and refresh must read the SAME family authority. A token row's org_id is immutable
+        # issue provenance and may legitimately name the team used before a later move.
+        grant = await _ensure_grant(row.family_id, db)
+        org_id = grant.current_org_id if grant is not None else None
+        org = await db.get(Org, org_id) if org_id is not None else None
+        client = (await db.execute(select(OAuthClient).where(
+            OAuthClient.client_id == row.client_id))).scalar_one_or_none()
+        out.append({
+            "grant": row.family_id,
+            "client": (client.client_name if client else "") or row.client_id,
+            "team": org.slug if org else None,
+            "team_name": org.name if org else None,
+            "granted": grant.granted_at.isoformat(timespec="seconds") if grant else None,
+        })
+    # GET normally reads only, but repairing a family created by an old rolling-deploy instance is
+    # a durable compatibility backfill. Without this commit the response looks healed once while
+    # the inserted authority row is rolled back when the request session closes.
+    await db.commit()
+    return out
+
+
+@app.post("/oauth/grants/{family_id}/team", include_in_schema=False)
+async def oauth_grant_set_team(family_id: str, body: GrantTeamIn,
+                               user: User = Depends(require_identity),
+                               db: AsyncSession = Depends(get_session)) -> dict:
+    """Re-point a live grant at another of the user's teams — without re-doing the OAuth dance.
+
+    The team is stored on the refresh family rather than only inside the issued access token, so
+    moving it is a row update and the next refresh picks it up. Re-consenting works too, but it
+    means disconnecting a working connector in whatever client holds it, and "the only way to fix
+    which balance this spends is to tear the connection down" is not an answer for the person who
+    just found out they were spending from the wrong one.
+
+    Only the GRANT'S OWN user may move it, and only to a team THEY are a member of — a grant must
+    never become a way to reach a team the consent screen would not have offered.
+    """
+    from . import mcp_oauth
+
+    rows = (await db.execute(select(OAuthRefresh).where(
+        OAuthRefresh.family_id == family_id, OAuthRefresh.user_id == user.id,
+        OAuthRefresh.retired_at.is_(None)))).scalars().all()
+    rows = [row for row in rows if _refresh_is_live(row)]
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"no live grant {family_id!r} on this account")
+    org = await _resolve_org(body.team, db)
+    member = (await db.execute(select(Membership).where(
+        Membership.user_id == user.id, Membership.org_id == org.id))).scalar_one_or_none() if org else None
+    # ONE answer for "no such team" and "a team that isn't yours". Told apart, this route reports
+    # whether an arbitrary slug exists on treg — a slug-existence oracle any signed-in account could
+    # walk. The caller's own teams are already listed to them by `treg org ls`, so the distinction
+    # buys them nothing they cannot see elsewhere.
+    if org is None or org.suspended or member is None:
+        raise HTTPException(status_code=404, detail=(
+            f"no team {body.team!r} on this account — see `treg org ls` for the teams you can use"))
+    # Change only family authority. Token rows are evidence of where each historical bearer was
+    # issued and must stay immutable, especially retired rows kept for reuse detection.
+    grant = await _ensure_grant(family_id, db)
+    if grant is None:  # the live-row check above makes this defensive, not a normal outcome
+        raise HTTPException(status_code=404, detail=f"no live grant {family_id!r} on this account")
+    grant.current_org_id = org.id
+    db.add(grant)
+    await db.commit()
+    return {
+        "grant": family_id, "team": org.slug, "team_name": org.name,
+        # Access tokens live an hour and carry the old team until the client refreshes. Saying so
+        # is the difference between "it didn't work" and "it hasn't taken effect yet".
+        "note": (f"new calls spend from {org.slug!r} once the client refreshes its access token "
+                 f"(within {mcp_oauth.ACCESS_TTL_SECONDS // 60} minutes)"),
+    }
 
 
 @app.get("/orgs")
@@ -6207,7 +6420,12 @@ async def delete_tool(
 # that follows a credential-looking flag (so a SHORT password like `--password hunter2` is masked too).
 _ARGV_SECRET_RE = re.compile(
     r"\b(?:sk|pk|rk|ghp|gho|ghs|ghu|glpat|AKIA|ASIA|AIza|xox[baprs])[A-Za-z0-9_\-]{6,}\b"
-    r"|eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_.\-]{8,}"          # JWT (base64url with dots)
+    # JWT (base64url with dots). `\b` and the POSSESSIVE `++` are load-bearing, not tidying: without
+    # the anchor, input like "eyJeyJeyJ…" offers a fresh start position every three characters and
+    # each one scans forward for a `.`, which is quadratic. Anchoring leaves one start; `++` removes
+    # backtracking within an attempt (it cannot change what matches here — the class excludes `.`,
+    # so the run always ends at the first one). Same shape guards the argv rule below.
+    r"|\beyJ[A-Za-z0-9_\-]++\.[A-Za-z0-9_.\-]{8,}"
     r"|\b[A-Za-z0-9_\-]{24,}\b")  # any 24+ high-entropy run — deliberately over-masks (git SHAs, UUIDs)
                                   # since in an audit log a false mask is harmless but a real key isn't
 _CRED_FLAG = r"--?(?:token|password|passwd|pass|pwd|api[-_]?key|secret|auth|bearer|credential)s?"
@@ -6746,7 +6964,13 @@ async def list_calls(
     load. Money comes from `/orgs/{id}/usage/by-tag`, which reads the ledger.
     """
     limit = max(1, min(limit, 500))
-    q = select(CallRecord).where(CallRecord.org_id == caller.org_id)
+    # The failure-evidence columns are not in the response below and are not fetched either: they are
+    # the two wide columns on this table, this endpoint returns up to 500 rows, and a column nobody
+    # reads should not cross the wire. Deferring also means adding them to the payload later has to be
+    # a deliberate edit in two places, not an accident in one.
+    q = (select(CallRecord)
+         .options(defer(CallRecord.error_request), defer(CallRecord.error_response))
+         .where(CallRecord.org_id == caller.org_id))
     if days is not None:
         q = q.where(CallRecord.created_at >= _day_start_utc() - timedelta(days=max(1, min(days, 365)) - 1))
     if before_id is not None:
@@ -7659,7 +7883,12 @@ async def admin_stats(_: str = Depends(require_superadmin), db: AsyncSession = D
 
     tools = (await db.execute(select(Tool))).scalars().all()
     secrets = (await db.execute(select(Secret))).scalars().all()
-    calls = (await db.execute(select(CallRecord))).scalars().all()
+    # THREE COLUMNS, not the whole row. This is an unbounded read of the largest table in the
+    # database (tens of thousands of rows), and every one of them was being materialised as a full
+    # ORM object to count three fields. It matters more now that `callrecord` carries the failure
+    # evidence columns, which are wide and are read by nothing here.
+    calls = (await db.execute(
+        select(CallRecord.org_id, CallRecord.created_at, CallRecord.status_code))).all()
     users = (await db.execute(select(User))).scalars().all()
     orgs = (await db.execute(select(Org))).scalars().all()
     # Sandbox onboarding data isn't real platform usage — exclude the demo footprint from totals so
@@ -7789,6 +8018,92 @@ async def admin_calls(
     rows = (await db.execute(select(CallRecord).order_by(CallRecord.id.desc()).limit(limit))).scalars().all()
     return [{"id": c.id, "org_id": c.org_id, "user": c.user_email, "tool": c.tool_name,
              "method": c.method, "status": c.status_code, "at": c.created_at.isoformat()} for c in rows]
+
+
+_ERROR_EVIDENCE_TTL_DAYS = 14
+_ERROR_EVIDENCE_EXPIRED = "<expired>"
+
+
+@app.get("/admin/errors")
+async def admin_errors(
+    days: int = 7, limit: int = 100, provider: str | None = None, status: int | None = None,
+    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Failed PLATFORM calls with the evidence to explain them — the caller's request and the
+    provider's own answer (see models.CallRecord.error_request).
+
+    Superadmin-only and deliberately not mirrored on `/calls`: the rows hold customers' request
+    content, so v1 keeps them behind the same door as every other cross-tenant view.
+
+    Ageing happens HERE rather than on the request path. There is no scheduler in this app by design
+    (see the comment above `_claim_idempotent`), and the obvious lazy hook — a marker written on the
+    request session — cannot work: `get_session` never commits, so the marker would roll back and the
+    purge would then run on every single failed call. Doing it on this route costs one UPDATE to the
+    person who came to read errors, which is exactly who wants the stale ones gone.
+    """
+    purged = await _purge_expired_error_evidence()
+    since = _utcnow_naive() - timedelta(days=max(1, min(days, 90)))
+    q = (select(CallRecord)
+         .where(CallRecord.created_at >= since, CallRecord.credential_tier == "platform",
+                or_(CallRecord.error_request.is_not(None), CallRecord.error_response.is_not(None)))
+         .order_by(CallRecord.id.desc()).limit(max(1, min(limit, 500))))
+    if provider:
+        q = q.where(CallRecord.provider == provider)
+    if status is not None:
+        q = q.where(CallRecord.status_code == status)
+    rows = (await db.execute(q)).scalars().all()
+    omap = {o.id: o for o in (await db.execute(
+        select(Org).where(Org.id.in_({c.org_id for c in rows if c.org_id is not None})))).scalars().all()}
+    return {
+        "since": since.isoformat(), "days": days, "retention_days": _ERROR_EVIDENCE_TTL_DAYS,
+        "expired_rows_purged": purged,
+        "errors": [{
+            "id": c.id, "call_ref": c.call_ref, "at": c.created_at.isoformat(),
+            "org": omap[c.org_id].slug if c.org_id in omap else None,
+            # `method` is already on the row and is the whole diagnosis for a real failure class:
+            # 47 of apollo.people.enrich's failures were a GET at a POST endpoint. Omitting a field
+            # we already store, in the view built to explain failures, was a free loss.
+            "endpoint_id": c.endpoint_id, "provider": c.provider, "status": c.status_code,
+            "method": c.method, "refused_by": c.refused_by, "duration_ms": c.duration_ms,
+            # An aged-out row holds the sentinel, which is a STATE, not content. Returning it as the
+            # request/response would have a reader treat the word `<expired>` as the provider's
+            # answer; `expired` says the same thing without pretending to be evidence.
+            "request": None if c.error_request == _ERROR_EVIDENCE_EXPIRED else c.error_request,
+            "response": None if c.error_response == _ERROR_EVIDENCE_EXPIRED else c.error_response,
+            "expired": c.error_response == _ERROR_EVIDENCE_EXPIRED,
+        } for c in rows],
+    }
+
+
+async def _purge_expired_error_evidence() -> int:
+    """Blank the evidence columns past the retention window; returns how many rows were cleared.
+
+    An UPDATE, not a DELETE: `callrecord` is the audit trail and the rest of the row must survive.
+    The sentinel rather than NULL keeps "captured, then aged out" distinguishable from "never
+    captured" — without it an old failure and a successful call look identical. Runs on its own
+    session because the request's session is not committed for us.
+    """
+    cutoff = _utcnow_naive() - timedelta(days=_ERROR_EVIDENCE_TTL_DAYS)
+    try:
+        async with session_maker() as db:
+            result = await db.execute(
+                update(CallRecord)
+                # `coalesce`, not a bare `!=`: SQL three-valued logic makes `error_response !=
+                # '<expired>'` UNKNOWN when that column is NULL, so a row carrying request-only
+                # evidence would never age out — excluded by the very predicate meant only to skip
+                # rows already purged.
+                .where(CallRecord.created_at < cutoff,
+                       or_(CallRecord.error_request.is_not(None),
+                           CallRecord.error_response.is_not(None)),
+                       or_(func.coalesce(CallRecord.error_request, "") != _ERROR_EVIDENCE_EXPIRED,
+                           func.coalesce(CallRecord.error_response, "") != _ERROR_EVIDENCE_EXPIRED))
+                .values(error_request=_ERROR_EVIDENCE_EXPIRED,
+                        error_response=_ERROR_EVIDENCE_EXPIRED))
+            await db.commit()
+            return int(result.rowcount or 0)
+    except Exception as exc:  # noqa: BLE001 — retention housekeeping must not break the view
+        logging.getLogger("treg").warning("error-evidence purge failed: %s", exc)
+        return 0
 
 
 @app.get("/admin/health")
@@ -8006,10 +8321,20 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         await db.execute(select(Tool).where(Tool.name == name, Tool.org_id == org_id))
     ).scalar_one_or_none()
     if tool is None:
+        cat = catalog_store.load()
+        # A DOTTED name that reached here was meant to be a catalog endpoint id and missed — a
+        # near-miss id, most often one segment off. Answering "no tool 'lusha.companies-signals' in
+        # this org" describes the wrong half of treg and leaves the caller nothing to try; naming
+        # the real id turns the dead end back into the next call.
+        if "." in name and not path and (near := catalog_store.near_ids(name, cat)):
+            raise HTTPException(status_code=404, detail={
+                "error": f"no endpoint {name!r} in the catalog",
+                "hint": "did you mean " + ", ".join(near) + "?",
+                "did_you_mean": near})
         detail = f"no tool {name!r} in this org"
         # A bare provider name (`treg call tikhub /path`) stays a miss, but points at the
         # marketplace form instead of dead-ending — its endpoints are callable without a tool.
-        if oauth_providers.get(name) is not None or name in catalog_store.load().provider_meta:
+        if oauth_providers.get(name) is not None or name in cat.provider_meta:
             detail += (f" — but {name!r} is a marketplace provider; call its endpoints directly: "
                        f"treg catalog search <what you need> → treg call <endpoint-id>")
         raise HTTPException(status_code=404, detail=detail)
@@ -8994,7 +9319,7 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
 # "resource not accessible": when it is unclear whether the provider charged us, the safe direction
 # is not to charge. Absorbing a rare few micro-USD is recoverable; over-billing out of an append-only
 # ledger is not.
-_NOT_THE_CALLERS_FAULT = frozenset({401, 402, 403, 407, 408, 429})
+_NOT_THE_CALLERS_FAULT = frozenset({401, 402, 403, 405, 407, 408, 429})
 
 
 def _platform_billable(status_code: int, cost_type: str) -> bool:
@@ -9003,9 +9328,10 @@ def _platform_billable(status_code: int, cost_type: str) -> bool:
       4xx                        → only under `per_call`, and only when the rejection is about the
                                    CALLER'S INPUT (400/404/422 …): the provider charges for accepting
                                    such a request, so it is on the caller. A credential/quota refusal
-                                   (`_NOT_THE_CALLERS_FAULT`) is on us and is never billed — a 429
-                                   doubly so on a SHARED-plan key, where it is treg's own saturation
-                                   and billing it would charge teams for our congestion. Under
+                                   (`_NOT_THE_CALLERS_FAULT`) is on us and is never billed — a 405
+                                   rejects the method OUR catalog selected, while a 429 on a
+                                   SHARED-plan key is treg's own saturation. Billing either would
+                                   charge teams for our metadata or congestion. Under
                                    `per_result`/`per_success` a rejected request produced nothing.
       5xx / 3xx / network error  → no. An upstream failure is never billed to the caller.
     """
@@ -9017,6 +9343,198 @@ def _platform_billable(status_code: int, cost_type: str) -> bool:
 
 
 _PLATFORM_BODY_MAX = 8 * 1024 * 1024  # buffer ceiling for a metered response (API JSON, not downloads)
+
+# ---- failure evidence: what a failed PLATFORM call is allowed to leave behind -------------------
+# Sized to hold a real provider error whole — a typical 400 body is 80-300 characters and a verbose
+# JSON one about 800 — while still capping a ~14KB CDN error page and a caller stuck in a retry loop.
+_ERROR_RESPONSE_MAX = 2000
+_ERROR_REQUEST_MAX = 1000
+# Sliced off the FRONT before any decode, so an 8MB single-line HTML error page never gets decoded or
+# regex-scanned on the request path. Every limit above is characters; this one is bytes.
+_ERROR_BODY_SLICE = 8192
+
+# Third-party secret shapes. `_EVIDENCE_SECRET_RE` below covers values that LOOK like a key; these
+# two cover the places a value hides by its NAME instead — in a URL or a JSON body — which
+# `_CRED_FLAG_EQ_RE` misses because it requires a leading dash (it was written for argv, where
+# `--token=x` is the only shape).
+_QUERY_CRED_RE = re.compile(
+    r"(?i)((?:api[-_]?key|apikey|key|token|secret|password|passwd|pwd|auth|access[-_]?token"
+    r"|sig|signature)\"?\s*[=:]\s*\"?)[^&\s\"',}]+")
+_URL_USERINFO_RE = re.compile(r"://[^/\s:@]+:[^/\s@]+@")
+
+# `_ARGV_SECRET_RE`'s catch-all masks ANY 24+ run of [A-Za-z0-9_-], which is right for an argv log and
+# wrong here: it deletes 100% of provider correlation identifiers — UUIDs, ULIDs, 32-char trace ids,
+# request ids — which are exactly what you quote to a provider's support desk. Measured on real error
+# bodies: the prose always survived, the correlation field never did. So for evidence we keep the
+# TARGETED half (known key prefixes, JWTs) and drop the catch-all. Platform credentials do not depend
+# on it — they have exact masking plus the fail-closed backstop below — and the owner has accepted
+# that a third-party secret may occasionally survive here.
+_EVIDENCE_SECRET_RE = re.compile(
+    r"\b(?:sk|pk|rk|ghp|gho|ghs|ghu|glpat|AKIA|ASIA|AIza|xox[baprs])[A-Za-z0-9_\-]{6,}\b"
+    # Anchored + possessive for the same reason as the argv rule above, and it matters MORE here:
+    # this one runs on a PROVIDER's response body, which is uncontrolled input on the request path.
+    r"|\beyJ[A-Za-z0-9_\-]++\.[A-Za-z0-9_.\-]{8,}")
+
+# Response headers worth keeping on a FAILED platform call. An empty-bodied 401 or 429 is otherwise
+# undiagnosable, and these say which of "bad credential" / "wrong scheme" / "quota gone" / "retry in
+# N" it was. Allowlisted, never the whole bag: `authorization` and `set-cookie` live in there too.
+_EVIDENCE_HEADERS = (
+    "retry-after", "www-authenticate",
+    "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset",
+    "ratelimit-limit", "ratelimit-remaining", "ratelimit-reset",
+    "x-request-id", "x-requestid", "request-id", "x-correlation-id", "x-amzn-requestid",
+    "cf-ray", "x-trace-id",
+)
+
+
+def _platform_secret_renderings(tool: Tool) -> list[str]:
+    """Every spelling of TREG'S OWN key for this tool, longest first.
+
+    This is the primary defence and the only deterministic one: for a platform call the credential is
+    a named setting, so it can be matched exactly instead of guessed at. That matters because
+    providers routinely quote the offending request back inside a 400/401 body — the header they
+    received, or the full URL including the query — and a key can survive `_EVIDENCE_SECRET_RE` by
+    simply not looking like a known key shape: no recognised prefix, not a JWT. None of that defeats
+    an exact substring match, which is why the deterministic layer carries the weight here and the
+    pattern layer is only a net for third-party secrets.
+
+    treg injects the value verbatim, but a PROVIDER may hand it back transformed, and a transform it
+    can reverse is one we have to anticipate. Four families, all observed shapes rather than guesses:
+
+    * the raw value, and the value after the binding's `format` (`Bearer {secret}`, `Basic {secret}`);
+    * percent-encoded — twelve providers authenticate by query param, so the key comes back inside an
+      echoed URL. Both cases: `quote()` emits UPPERCASE hex (`%2F`) and plenty of servers echo lower;
+    * JSON-escaped, because a body quoting a URL usually writes `\\/` for `/`;
+    * **the DECODED halves of a Basic credential.** `config.py` states that dataforseo's platform
+      value is already the base64 of `login:password`. A provider that decodes Basic auth and reports
+      `{"received_username": …, "received_password": …}` echoes treg's credential in a form where
+      neither the base64 blob nor `Basic <blob>` appears. dataforseo is the largest provider by
+      spend, so this is the opposite of theoretical.
+    """
+    out: set[str] = set()
+
+    def add(value: str) -> None:
+        """One secret and every spelling of it a provider might echo back."""
+        if not value or len(value) < 4:
+            return  # too short to mask without redacting half the message
+        enc = quote(value, safe="")
+        out.update({value, enc, enc.lower(), quote_plus(value), value.replace("/", "\\/")})
+
+    for binding in tool.bindings or []:
+        setting = binding.get("platform_setting")
+        if not setting:
+            continue  # tiers 1-2 carry a secret_id instead; this function is platform-only by design
+        value = getattr(get_settings(), setting, None)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        value = value.strip()
+        add(value)
+        add(str(binding.get("format") or "{secret}").format(secret=value))
+        for part in _basic_credential_parts(value):  # mask what the provider can DECODE
+            add(part)
+    # Longest first so `Bearer abc` is masked as a unit before the bare `abc` inside it turns the
+    # line into `Bearer ***` — same result here, but the ordering stops a shorter secret that is a
+    # substring of a longer one from fragmenting it into an unmatchable remainder.
+    return sorted((s for s in out if len(s) >= 4), key=len, reverse=True)
+
+
+def _basic_credential_parts(value: str) -> list[str]:
+    """`login:password` and its two halves, when `value` is the base64 of a Basic credential.
+
+    Returns [] for anything that is not — an ordinary API key rarely base64-decodes to printable text
+    containing a colon, and a false positive here only costs an extra (harmless) mask.
+    """
+    try:
+        decoded = base64.b64decode(value, validate=True).decode("utf-8")
+    except Exception:  # noqa: BLE001 — not base64, or not text: simply not a Basic credential
+        return []
+    if ":" not in decoded or not decoded.isprintable():
+        return []
+    login, _, password = decoded.partition(":")
+    return [p for p in (decoded, login, password) if p]
+
+
+def _decode_error_body(raw: bytes, content_encoding: str = "", content_type: str = "") -> str:
+    """Bytes off the wire → something a human can read, or an honest marker saying why not.
+
+    `force_identity` asks the provider not to compress a metered response, but a CDN or WAF error page
+    is generated at the edge and answers however it likes — and those 403s are exactly the responses
+    this feature exists to explain. `relay` streams `aiter_raw()`, so nothing has decoded them.
+    """
+    if not raw:
+        return ""
+    enc = (content_encoding or "").strip().lower()
+    if enc and enc != "identity":
+        if enc not in ("gzip", "deflate"):  # br, zstd — no stdlib decoder we can rely on
+            return f"<{enc}-encoded, {len(raw)} bytes, not decoded>"
+        try:
+            # INCREMENTAL and capped just past the evidence limit. `gzip.decompress` is unbounded, so
+            # slicing the INPUT to 8KiB does not bound the OUTPUT: 20MB of one repeated byte
+            # compresses to under 20KB, and a bomb would expand to megabytes that four regexes then
+            # walk synchronously on the request path.
+            d = zlib.decompressobj(16 + zlib.MAX_WBITS if enc == "gzip" else -zlib.MAX_WBITS)
+            raw = d.decompress(raw, _ERROR_RESPONSE_MAX * 4)
+        except Exception:  # noqa: BLE001 — a truncated slice of a gzip stream is expected to fail
+            return f"<{enc}-encoded, {len(raw)} bytes, undecodable>"
+    text = raw.decode("utf-8", "replace")
+    # A binary payload decoded with errors="replace" is a wall of U+FFFD that says nothing. Report the
+    # shape instead, keeping a short hex head so the content type is still identifiable.
+    if text.count("�") > len(text) // 5 or ("\x00" in text[:512]):
+        return f"<binary {content_type or 'response'}, {len(raw)} bytes, head={raw[:32].hex()}>"
+    return text
+
+
+def _caller_request_snippet(request: Request, tool: Tool, caller_body: bytes,
+                            secrets: list[str]) -> str:
+    """What the CALLER actually sent, redacted — the half of a failure treg otherwise forgets.
+
+    `CallRecord.path` stores the catalog's upstream URL with only `{placeholder}` path params filled,
+    so the caller's real query and body survive nowhere else (`params_hash` is one-way). Without this
+    a 400 cannot be explained even when the provider says exactly what was wrong with it.
+
+    Query params are read from the INBOUND request, which never carries an injected credential:
+    injection builds a separate outbound list (see proxy.relay). The binding's own query names are
+    dropped anyway, for the caller who passed a value into the slot the injector overwrites.
+    """
+    drop = {b.get("name", "Authorization") for b in (tool.bindings or [])
+            if b.get("location", "header") == "query"}
+    parts = []
+    pairs = [f"{k}={v}" for k, v in request.query_params.multi_items() if k not in drop]
+    if pairs:
+        parts.append("?" + "&".join(pairs))
+    if caller_body:
+        parts.append(_decode_error_body(caller_body[:_ERROR_BODY_SLICE], "",
+                                        request.headers.get("content-type", "")))
+    return _redact_snippet(" ".join(parts), secrets, _ERROR_REQUEST_MAX)
+
+
+def _redact_snippet(text: str, secrets: list[str], limit: int) -> str:
+    """Mask, THEN truncate — never the other way round.
+
+    Truncating first can cut a 40-character token down to a 12-character survivor that no longer
+    matches the 24+ rule, which is how a "redacted" field ends up holding half a key. `_redact_argv`
+    already gets this order right; this follows it.
+    """
+    if not text:
+        return ""
+    for secret in secrets:  # exact and deterministic, before any pattern guessing
+        text = text.replace(secret, "***")
+    text = _URL_USERINFO_RE.sub("://***:***@", text)
+    text = _QUERY_CRED_RE.sub(r"\1***", text)
+    text = _EVIDENCE_SECRET_RE.sub("***", text)
+    text = " ".join(text.split())  # collapse newlines/indentation; these are read in a table
+    # Fail closed. Everything above is a list of transforms we thought of; this asks whether a secret
+    # survived one we did not, by re-checking a NORMALISED copy (percent-decoded, JSON-unescaped,
+    # lowercased). If one is still there, drop the whole snippet: losing a debugging message is a bad
+    # day, leaking the credential every tenant shares is a much worse one.
+    if secrets:
+        probe = unquote(text.replace("\\/", "/")).lower()
+        if any(s.lower() in probe for s in secrets):
+            return "<redacted: a platform credential survived masking>"
+    if len(text) <= limit:
+        return text
+    # Truncation can expose a partial token at the seam that was safe only while whole.
+    return re.sub(r"[A-Za-z0-9_\-+/=.]{8,}$", "***", text[:limit]) + "…"
 
 
 def _observed_cost_micro(provider: str, body: bytes) -> int | None:
@@ -9293,6 +9811,19 @@ async def call_tool(
     if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
         await _enforce_public_demo_ip_cap(request, db)  # shared token → meter by client IP, not user
 
+    # The caller's own request bytes, read ONCE and only for a platform call, so a failure can be
+    # explained later (see models.CallRecord.error_request). Starlette caches the body, so the relay
+    # still streams the same bytes — but read it here rather than relying on some other path having
+    # happened to read it first, which would make this silently stop working the day that path moves.
+    # Named `caller_body`: `body` in this function is the buffered RESPONSE, and confusing the two
+    # would file the provider's answer as the caller's request.
+    caller_body = b""
+    if mk is not None and mk.metered and _may_have_body(request):
+        try:
+            caller_body = await request.body()
+        except Exception:  # noqa: BLE001 — a caller that hung up must not become a 500 here
+            caller_body = b""
+
     # Snapshot the audit identity NOW: a failed reserve rolls the session back, expiring the ORM
     # instances behind `caller` — reading them inside a later _audit would raise MissingGreenlet.
     audit_org_id, audit_email, audit_tool = caller.org_id, caller.email, tool.name
@@ -9300,7 +9831,8 @@ async def call_tool(
 
     def _audit(status_code: int, *, observed_micro: int | None = None, charged_micro: int | None = None,
                duration_ms: int | None = None, response_bytes: int | None = None,
-               refused_by: str | None = None) -> None:
+               refused_by: str | None = None,
+               error_request: str | None = None, error_response: str | None = None) -> None:
         # Audit the attempt too — failures are results worth recording. A marketplace call additionally
         # carries its telemetry (which endpoint, which credential tier, what it cost): still
         # fire-and-forget, because the money itself already landed synchronously in the ledger.
@@ -9319,6 +9851,11 @@ async def call_tool(
                 "duration_ms": duration_ms, "response_bytes": response_bytes,
                 "params_hash": mk.params_hash,
             }
+            # The tier gate lives HERE as well as at every call site: this is the one field that
+            # retains content, and a future site that forgets the check must still not be able to
+            # write a team's own-key traffic into it.
+            if mk.metered and (error_request or error_response):
+                telemetry |= {"error_request": error_request, "error_response": error_response}
         audit.record_call(
             org_id=audit_org_id, user_email=audit_email, tool_name=audit_tool,
             method=request.method, path=upstream_url, status_code=status_code,
@@ -9374,8 +9911,24 @@ async def call_tool(
         except HTTPException as exc:
             # A call refused for MONEY (402 empty balance / 429 daily cap) is the event the org will
             # ask about first — it must appear in the activity feed, charged 0.
+            #
+            # Keep the detail, because `cap` alone is not a diagnosis: every 429 maps to it, and that
+            # covers a member call cap, a tag call or spend cap, the platform ceiling, a trial
+            # allowance and a demo-IP limit. WHICH one is in `exc.detail` and was being discarded —
+            # 878 refusals in a week that could not be told apart afterwards. This branch is inside
+            # `mk.metered`, so it stays platform-only like every other capture site, and it runs
+            # BEFORE relay, so no provider content can reach it.
+            #
+            # It is NOT free of caller data, though: a tag-cap detail carries the tag's `val` — an
+            # end-customer id the builder supplied. That is the caller's own identifier, in the
+            # caller's own row, and it is also the thing that makes the refusal diagnosable ("which
+            # customer hit the cap"). It is strictly less than the request bodies this feature
+            # already retains, and it is bounded by the same redaction and 14-day retention.
             _audit(exc.status_code, charged_micro=0,
-                   refused_by="balance" if exc.status_code == 402 else "cap")
+                   refused_by="balance" if exc.status_code == 402 else "cap",
+                   error_response=_redact_snippet(f"treg: {exc.detail}",
+                                                  _platform_secret_renderings(tool),
+                                                  _ERROR_RESPONSE_MAX))
             raise
     started = _now_ms()
     try:
@@ -9410,7 +9963,14 @@ async def call_tool(
         # unreachable upstream) → return the hold in full, regardless of the endpoint's billing type.
         if mk is not None and mk.metered:
             await _platform_settle(mk, None, reason=f"call_failed_{exc.status_code}")
-            _audit(exc.status_code, charged_micro=0, duration_ms=_now_ms() - started)
+            # No provider body exists on this branch — `body` is UNBOUND here whenever relay raised,
+            # so it must never be referenced. treg's own detail is the explanation instead, and it is
+            # the one worth keeping: this branch carries the 502s (upstream timeout, connection reset,
+            # failed injection, SSRF refusal, missing platform key) where a bare status says least.
+            _secrets = _platform_secret_renderings(tool)
+            _audit(exc.status_code, charged_micro=0, duration_ms=_now_ms() - started,
+                   error_request=_caller_request_snippet(request, tool, caller_body, _secrets),
+                   error_response=_redact_snippet(f"treg: {exc.detail}", _secrets, _ERROR_RESPONSE_MAX))
         else:
             _audit(exc.status_code, duration_ms=_now_ms() - started)  # record the failed attempt
         raise
@@ -9430,8 +9990,34 @@ async def call_tool(
         await _record_first_call(caller.org_id)
     if mk is not None and mk.metered:
         charged, observed = await _platform_settle(mk, response.status_code, body)
+        # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
+        # (see _refusal_kind). So this is where the provider's own explanation is captured, and the
+        # only place it exists: nothing downstream keeps the body.
+        err_request = err_response = None
+        if response.status_code >= 400:
+            _secrets = _platform_secret_renderings(tool)
+            err_request = _caller_request_snippet(request, tool, caller_body, _secrets)
+            # Headers first: a 401 or 429 often has an empty or generic body, and `Retry-After` /
+            # `WWW-Authenticate` / the rate-limit trio are then the entire diagnosis — the difference
+            # between a bad credential, the wrong auth scheme, and a quota that returns in 60s.
+            hdrs = " ".join(f"{h}={response.headers[h]}" for h in _EVIDENCE_HEADERS
+                            if response.headers.get(h))
+            err_response = _redact_snippet(
+                (f"[{hdrs}] " if hdrs else "") +
+                _decode_error_body(body[:_ERROR_BODY_SLICE],
+                                   response.headers.get("content-encoding", ""),
+                                   response.headers.get("content-type", "")),
+                _secrets, _ERROR_RESPONSE_MAX)
+            # A failed platform call must ALWAYS leave evidence, even when there is nothing to say.
+            # A bodyless 4xx with none of the allowlisted headers produced "" for both snippets, and
+            # `_audit` only records evidence when one is truthy — so the row dropped out of
+            # `/admin/errors` entirely and the failure looked like it had never been captured.
+            # "Nothing came back" is itself the finding; silence must not be indistinguishable from
+            # the feature not running.
+            err_response = err_response or "<no response body or headers>"
         _audit(response.status_code, observed_micro=observed, charged_micro=charged,
-               duration_ms=duration_ms, response_bytes=len(body))
+               duration_ms=duration_ms, response_bytes=len(body),
+               error_request=err_request, error_response=err_response)
         if idem_key:
             # Here, and not earlier: this is the first point where BOTH the response and what it
             # actually cost are known, and a replay has to hand back the real charge rather than the

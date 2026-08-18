@@ -675,6 +675,60 @@ dark, including the muted "expected result" panes, which use the ramp's comment 
 `pre` rules, and a markup test forbids a hex literal inside any `.hl-*` / `.s-*` rule — a literal is
 one theme's value, and three earlier generations of this ramp each left one behind.
 
+## The launch banner (`.phb`) — temporary, delete-as-one-block
+A Product Hunt "upvote us" strip, the first announcement banner this app has ever had. Three things
+about it are load-bearing rather than cosmetic, and all three are the reason it looks the way it does:
+
+- It lives **inside `#app`** with `v-if="ph && !publicCatalog"`, not as a sibling of `#app`. `/catalog`
+  and `/catalog/<slug>` are served from **this same file**, so a static strip would appear on all ~80
+  crawlable catalog pages; the `!publicCatalog` gate is the only thing scoping it to the app and the
+  logged-out landing fall-through.
+- It **sticks** at the top (`position:sticky;top:0;z-index:40`), above the chrome. That chrome pins
+  itself with hardcoded offsets — `.top{top:0}`, `.side{top:57px;height:calc(100vh - 57px)}`,
+  `--lbar-top:57px` / `--lsec-top:107px`, plus `.lp-nav{top:0}` on the logged-out branch — and every
+  one of them would slide *underneath* a sticky strip. So the strip publishes its height as
+  **`--phb-h`** and each offset adds it: `.top{top:var(--phb-h)}`,
+  `.side{top:calc(57px + var(--phb-h));height:calc(100vh - 57px - var(--phb-h))}`, and the two ledger
+  vars likewise. Two things about that are easy to get wrong:
+  - the overrides must be declared **after** `:root{--lbar-top:57px;--lsec-top:107px}` (§3.7) and
+    after `.side`'s own rule — same specificity, later wins — so they live in their own block down
+    there rather than with the rest of the `.phb` CSS;
+  - the height is **measured**, not hardcoded — the strip is shorter on mobile, and a stale constant
+    shows up as the top bar overlapping the sidebar. `--phb-h` defaults to `0px`, which is what makes
+    every `calc()` inert on the public catalog and after a dismiss.
+
+  Two bugs were paid for in the measuring code, both worth keeping in mind if it is ever touched:
+
+  1. **Vue watchers on `ph`/`publicCatalog` are not enough.** A signed-in member on a `/catalog` URL
+     has `publicCatalog` flipped `true → false` mid-boot (`mounted`, after `/auth/me`), so the strip
+     is rendered, removed, and rendered again. The sync is driven by a **`MutationObserver` on
+     `#app`'s child list** — the strip is a direct child — plus one forced measure in `mounted` and a
+     `resize` listener. That fires on the DOM fact, not on a Vue lifecycle guess.
+  2. **Do not close over the element.** The first version cached one `ResizeObserver` whose callback
+     closed over the strip it was created for. After `v-if` swapped the node, that observer fired on
+     the **detached** element (`offsetHeight` 0) and stamped `--phb-h` back to `0px` immediately after
+     the correct value was written — a sticky header sitting under the strip, on the one route that
+     re-renders it. `phbApplyHeight()` therefore re-queries `.phb` on every call.
+
+  Worth knowing while testing this by hand: `/catalog` is served `Cache-Control: public, max-age=600`,
+  so a browser will happily show a ten-minute-old copy of the page and make a fixed bug look unfixed.
+  Add a cache-busting query when checking a change there.
+- Colours are **hardcoded PH orange/white**, not tokens, so it reads identically in both themes and
+  leaves with the block.
+
+The strip carries **two** actions, in this order: the white pill goes to the launch, the underlined
+`Claim $5 →` goes to a Google Form collecting a Product Hunt profile link + a treg account email.
+The reward is **not automated** — there is no admin grant endpoint, so each claim is fulfilled by hand
+with `ledger.grant(kind=promotional)` (see `architecture/money.md`). Both links live in the same strip
+in both files, and `tests/test_ph_banner.py` asserts that: a banner promising $5 with no way to claim
+it is the one failure here that costs goodwill rather than clicks.
+
+Dismissal writes `localStorage['treg-ph']='1'` (`dismissPh()`, next to `toggleTheme()`). `landing.html`
+carries its own copy of the strip and writes the **same key**, so dismissing on the marketing page also
+clears it here. `tests/test_ph_banner.py` guards the scope gate, the shared key, and the fact that
+`index.html` gets **no** `{BASE}` substitution — it is launch-scoped and gets deleted along with the
+markup, the CSS block and `dismissPh()`.
+
 ## Shareable detail pages (`/app/skills/<name>`, `/app/tools/<name>`)
 A skill or a tool has its own deep-linkable page so a member can **share** the exact thing (`view==='detail'`,
 `detail={kind,name}`). Server routes `dashboard_skill_page` (`/app/skills/{name}`) and `dashboard_tool_page`

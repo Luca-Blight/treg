@@ -232,8 +232,24 @@ class CallRecord(SQLModel, table=True):
     duration_ms: int | None = Field(default=None)
     response_bytes: int | None = Field(default=None)
     # sha256 of endpoint_id + the canonicalized query + body — an identity for "the same call again".
-    # Bodies are NEVER stored; this is the future cache key and the repeat-rate signal (plan phase 5).
+    # The hash itself never carries a body, so it is safe to keep forever; it is the future cache key
+    # and the repeat-rate signal (plan phase 5). For the ONE case where a body IS retained, see
+    # `error_request` below — it is deliberately narrow and does not weaken this column's guarantee.
     params_hash: str | None = Field(default=None, index=True)
+    # ---- failure evidence (NULL unless a PLATFORM-tier call failed) ----------------------------
+    # The only place treg retains request or response CONTENT, and the exception to "bodies are not
+    # stored". Written on a failed platform-tier call, because that is the call treg made on its own
+    # key, with its own money, and is therefore treg's to debug — a team calling on its own key is
+    # billed by the provider and storing their traffic would help nobody (same line `IdempotentCall`
+    # draws). Never written for a success, for tiers 1-2, or for a non-catalog tool call.
+    #
+    # Both are REDACTED and TRUNCATED at the point of capture (see api._error_snippets): treg's own
+    # platform credential is exact-matched out first, then known third-party secret shapes. They are
+    # evidence for a human, never an exact replay — `error_request` cannot reconstruct the call.
+    # Both are overwritten with '<expired>' once past the retention window, so "captured then aged
+    # out" stays distinguishable from "never captured".
+    error_request: str | None = Field(default=None)
+    error_response: str | None = Field(default=None)
     # Set when TREG refused the call before a byte went upstream; NULL when the provider answered
     # (whatever its status). Values: auth (bad/expired token) | policy (ACL/deny rule/suspension) |
     # balance (402 insufficient prepaid balance) | cap (429 daily caps) | resolution (no such tool
@@ -781,6 +797,23 @@ class OAuthCode(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now)
 
 
+class OAuthGrant(SQLModel, table=True):
+    """Mutable authority for one refresh-token family, separate from token provenance.
+
+    A token row records the team that token was ISSUED under and is immutable after issuance. The
+    family record records the team future tokens should spend from, which the user may change. These
+    used to be one `org_id`, so moving a grant rewrote retired rows and a later reuse-detection audit
+    blamed the destination team for a token that had actually been issued under the source team.
+
+    `granted_at` is the consent time, not a rotation time. Rotation creates token rows; it does not
+    create a new human authorization.
+    """
+
+    family_id: str = Field(primary_key=True)
+    current_org_id: int = Field(foreign_key="org.id", index=True)
+    granted_at: datetime = Field(default_factory=_now)
+
+
 class OAuthRefresh(SQLModel, table=True):
     """A refresh token: the thing that keeps a connector working past the access token's hour.
 
@@ -795,8 +828,8 @@ class OAuthRefresh(SQLModel, table=True):
     reconnects; a thief loses the token. The failure mode is inconvenience on one side and containment
     on the other, which is the right way round.
 
-    `org_id` rides along because it is what the human chose at consent. A refresh must not become a
-    chance to quietly re-pick a team.
+    `org_id` is immutable token provenance: the team this particular token was ISSUED under. Mutable
+    family authority lives in `OAuthGrant.current_org_id`, so moving a grant cannot rewrite history.
     """
 
     __table_args__ = (UniqueConstraint("token_hash", name="uq_oauth_refresh_token"),)

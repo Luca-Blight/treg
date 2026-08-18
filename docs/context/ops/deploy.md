@@ -181,14 +181,27 @@ connection metadata on `secret` (`provider`, `granted_scopes`, `resource_ref`, `
 and expire a credential; **A17–A20** the per-provider auth quirks on `pendingoauth` carried through the
 redirect (`provider`, `code_verifier`, `auth_params`, `token_endpoint_auth_method`, `client_id_param`,
 `scope_separator`, `long_lived_exchange BOOLEAN DEFAULT false`, `replaces_secret_id INTEGER`) so the
-callback exchanges the code exactly as the consent URL was built.
+callback exchanges the code exactly as the consent URL was built; and **A35** backfills one
+`oauthgrant` authority row per existing refresh family from its oldest token, using portable,
+idempotent `INSERT … SELECT … WHERE NOT EXISTS` SQL. Because a rolling deploy keeps an old binary
+alive after that snapshot, API `_ensure_grant` also reconstructs any later old-binary family at first
+refresh, listing, or team move with an `ON CONFLICT DO NOTHING` upsert supported by SQLite and
+Postgres; the oldest token's `created_at` remains the consent time; **A36** adds nullable
+`callrecord.error_request`/`error_response` evidence; **A37** adds nullable Ads attribution and
+`first_call_at` columns to `org`; and **A38** adds nullable retry/dead-letter timestamps to the Ads
+conversion outbox. The A37/A38 timestamps use portable `TIMESTAMP` DDL and require no backfill.
 
 **Audit back-pressure (`audit.py`).** Audit rows are written off the request path (fire-and-forget), and
 each write opens a DB connection from the small pool **shared** with real requests. Two limits keep
 best-effort logging from starving that pool: a loop-bound semaphore caps concurrent audit writes at
 `_MAX_CONCURRENT_WRITES`, and under an extreme burst the writer **sheds** load — it drops any audit row
 past `_MAX_PENDING` rather than let the pending set grow without bound. Audit must never OOM or wedge the
-server.
+server. Shedding is the *only* loss that should ever happen: `record_call` splats its telemetry dict
+into `CallRecord(**fields)`, so a key with no matching column used to raise inside `_write`, where the
+except swallowed it, and the whole row disappeared — a telemetry field deployed one commit ahead of its
+migration would have silently emptied the table. `_known_fields` now drops unknown keys (logging which
+ones), and `_write`'s swallow logs a warning with the traceback. **A quiet audit table is now a bug you
+can see in the logs**, not one you find out about weeks later.
 
 The proxy is thin and IO-bound (a relay, low CPU/memory), so cheap machines scale it.
 
