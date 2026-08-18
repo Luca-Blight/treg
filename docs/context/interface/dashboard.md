@@ -870,3 +870,11 @@ rather than in an email to us.
 Opening the page **has a side effect**: `GET /referrals` runs the payout sweep, so a user checking
 whether their reward has landed is the one who makes it land. There is no scheduler in treg, so this
 work rides on a request someone is already making.
+
+### The billing page's referral prompt
+
+The Billing tab renders `billing.referral_offer` when the team was referred: a green note naming the
+minimum, and `+$X bonus` on each preset that clears it (`refPresetBonus`). Both are needed — the
+amount is chosen at the buttons, and the first preset ($5) is below the $10 minimum, so a note on its
+own would let the most-clicked button quietly forfeit the reward. Null offer = the page renders
+exactly as it did before this shipped.

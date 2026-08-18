@@ -2414,10 +2414,27 @@ a:hover{text-decoration-color:var(--muted)}
                   <template v-if="billing.configured">
                     <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
                       <div class="lbl">Add funds</div>
+                      <!-- A team that arrived through someone's link does not know a bonus exists.
+                           This is the one screen where saying so changes what they do, and the
+                           MINIMUM is the part that matters: the first preset ($5) is below it, so
+                           without this the most-clicked button silently forfeits the reward. -->
+                      <div v-if="billing.referral_offer" style="margin-top:8px;padding:9px 12px;font-size:12.5px;
+                           border:1px solid var(--green);border-radius:8px;
+                           background:color-mix(in srgb,var(--green) 12%,transparent)">
+                        You were invited to treg — add
+                        <b>{{money(billing.referral_offer.min_topup_micro)}}</b> or more and we'll put
+                        <b>{{money(billing.referral_offer.referred_micro)}}</b> extra in your balance.
+                        Whoever invited you gets {{money(billing.referral_offer.referrer_micro)}}.
+                      </div>
                       <div class="fundgrid" style="margin-top:8px">
                         <button v-for="p in billing.topup.presets" :key="p" class="fundcard" :disabled="billingBusy" @click="addFunds(p)">
                           <b>${{p}}</b>
-                          <span>{{billingBusy&&topupAmount===p?'Opening Stripe…':'one-time'}}</span>
+                          <!-- The bonus is named ON the qualifying buttons, not only in the note
+                               above: the amount is chosen here, and a preset that quietly forfeits
+                               it is the whole failure this is meant to prevent. -->
+                          <span v-if="billingBusy&&topupAmount===p">Opening Stripe…</span>
+                          <span v-else-if="refPresetBonus(p)" style="color:var(--green)">+{{money(refPresetBonus(p))}} bonus</span>
+                          <span v-else>one-time</span>
                         </button>
                       </div>
                     </div>
@@ -4883,6 +4900,10 @@ createApp({
       // trigger), so there is no POST-then-GET round trip and no window where `link` is empty.
       const out=await this.api('/referrals').catch(()=>null);
       if(out) this.ref={...out, loading:false}; else this.ref={...this.ref, loading:false}; },
+    // How much extra THIS preset earns a referred team, or 0. Guarded on the offer existing, so a
+    // team that arrived on its own sees the buttons exactly as before.
+    refPresetBonus(usd){ const o=this.billing&&this.billing.referral_offer;
+      return (o && usd*1000000 >= o.min_topup_micro) ? o.referred_micro : 0; },
     async copyRefLink(){ try{ await navigator.clipboard.writeText(this.ref.link); }catch(e){}
       this.refCopied=true; this.track('referral_link_copied');
       setTimeout(()=>{ this.refCopied=false; }, 1600); },

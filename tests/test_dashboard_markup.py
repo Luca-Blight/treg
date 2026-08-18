@@ -943,3 +943,19 @@ def test_the_referral_column_is_one_width():
     """Card, tiles and table sit in a SINGLE max-width container. Three separate max-widths is what
     made them start and end at three different x-positions."""
     assert _referrals_view().count("max-width:") == 1
+
+
+def test_the_billing_page_names_the_bonus_on_the_qualifying_presets():
+    """A referred team decides HOW MUCH to add on this screen, and the first preset ($5) is below the
+    minimum. A note alone is not enough — the amount is chosen at the buttons, so the qualifying ones
+    have to say so themselves."""
+    at = INDEX.index('<div class="fundgrid"')
+    grid = INDEX[at : INDEX.index("</div>", INDEX.index("</button>", at))]
+    assert "refPresetBonus(p)" in grid, "presets must mark which ones earn the bonus"
+    assert "billing.referral_offer" in INDEX
+
+
+def test_the_referral_offer_is_hidden_from_teams_that_were_not_referred():
+    """`v-if` on the offer object, so a team that arrived on its own sees the billing page exactly as
+    it was before this shipped."""
+    assert 'v-if="billing.referral_offer"' in INDEX

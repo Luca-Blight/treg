@@ -5114,7 +5114,13 @@ async def billing_get(
     there's a Stripe customer and a saved card, the auto-top-up policy + why it's off if it is, and how
     much of this month's automatic cap has been used."""
     org = _billing_org(caller)
-    return await billing.billing_state(db, org)
+    state = await billing.billing_state(db, org)
+    # Merged HERE rather than inside `billing_state`, so billing.py keeps its one job (Stripe) and
+    # does not grow a second reason to know about referrals. This is the screen where a referred team
+    # is already deciding how much to add, so it is the only place the minimum actually changes a
+    # decision — see referrals.offer_for_org.
+    state["referral_offer"] = await referrals.offer_for_org(db, org.id)
+    return state
 
 
 @app.post("/billing/topup")

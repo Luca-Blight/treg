@@ -522,6 +522,17 @@ queue) and from `GET /referrals` (someone checking on their reward is the one wh
 the same lazy, caller-pays bargain as `reap_stale_holds`. It never raises: its callers are a Stripe
 webhook and a page load, and neither may fail over a bonus.
 
+**The referee is told, on the screen where it changes their behaviour.** `offer_for_org` is the
+mirror of `summary`: a team that arrived through a link has a `pending` row and no idea a bonus
+exists. `GET /billing` carries a `referral_offer` (merged in the api route, not in `billing.py` —
+that module keeps its one job) and the dashboard names the MINIMUM there, because the first top-up
+preset is $5 and the minimum is $10, so the most-clicked button silently forfeits the reward
+otherwise. The qualifying presets say `+$5 bonus` on themselves; a note alone sits above the place
+the decision is actually made. The offer is returned only while `pending` — after qualifying the
+money is already on its way through `sweep`, and still advertising it would read as a second bonus —
+and it names no one: the referee came through a friend's link so they already know who, and naming
+the referrer is a disclosure the privacy policy makes in one direction only.
+
 **Cash payouts are not built.** The self-serve program pays in credit only, and the cap refusal is
 the commercial conversation that replaces an uncapped percentage. When an influencer tier lands, it
 reads `/admin/referrals` — the same table, filtered — and the payout rail (and its W-9/1099

@@ -434,3 +434,34 @@ async def summary(db: AsyncSession, user: User) -> dict:
         },
         "referrals": items,
     }
+
+
+# ---- the referee's side ------------------------------------------------------------------------
+async def offer_for_org(db: AsyncSession, org_id: int | None) -> dict | None:
+    """"You were invited — here is what a top-up earns you." None when there is nothing to say.
+
+    The mirror of `summary`, for the OTHER party. A team that arrived through someone's link has a
+    `pending` row and does not know it: the bounty is invisible until it either lands or doesn't, and
+    a reward nobody was told about cannot change what they do. So the billing page — the one screen
+    where they are already deciding how much to add — says the minimum out loud.
+
+    Returns only while `pending`. Once qualified the offer has been taken, and the money is on its way
+    through `sweep`; still advertising it there would read as a second bonus.
+
+    Deliberately says nothing about WHO referred them. They came through a friend's link so they
+    already know, and naming the referrer here would be a disclosure the privacy policy does not make
+    (it covers the other direction only).
+    """
+    if org_id is None:
+        return None
+    row = (await db.execute(
+        select(Referral).where(Referral.referred_org_id == org_id, Referral.status == "pending")
+    )).scalars().first()
+    if row is None:
+        return None
+    s = get_settings()
+    return {
+        "referred_micro": int(s.referral_referred_micro),
+        "referrer_micro": int(s.referral_referrer_micro),
+        "min_topup_micro": int(s.referral_min_topup_micro),
+    }

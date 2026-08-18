@@ -437,3 +437,45 @@ async def test_admin_report_totals_pending_before_it_is_spent(c, monkeypatch):
 async def test_admin_report_is_superadmin_only(c, monkeypatch):
     _, token, _ = await _ready_referrer(c, monkeypatch)
     assert (await c.get("/admin/referrals", headers=_h(token))).status_code == 403
+
+
+# ---- the referee's side: telling them the bonus exists -----------------------------------------
+async def test_a_referred_team_is_told_the_minimum_on_its_billing_page(c, monkeypatch):
+    """The referee does not know a bonus exists, and the FIRST top-up preset ($5) is below the
+    minimum — so without this the most-clicked button silently forfeits the reward."""
+    _, _, code = await _ready_referrer(c, monkeypatch)
+    _, bob_token = await _signup(c, "bob@example.com", ref=code)
+    offer = (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"]
+    s = get_settings()
+    assert offer == {"referred_micro": s.referral_referred_micro,
+                     "referrer_micro": s.referral_referrer_micro,
+                     "min_topup_micro": s.referral_min_topup_micro}
+
+
+async def test_a_team_that_arrived_on_its_own_sees_no_offer(c, monkeypatch):
+    """Null, not a zeroed object: the billing page must look exactly as it did before this shipped
+    for the teams that were never referred."""
+    _, token = await _signup(c, "solo@example.com")
+    assert (await c.get("/billing", headers=_h(token))).json()["referral_offer"] is None
+
+
+async def test_the_offer_disappears_once_it_has_been_taken(c, monkeypatch):
+    """Only while `pending`. After qualifying the money is already on its way through the sweep, and
+    still advertising it would read as a second bonus."""
+    _, _, code = await _ready_referrer(c, monkeypatch)
+    bob_org, bob_token = await _signup(c, "bob@example.com", ref=code)
+    assert (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"] is not None
+    await _topup(c, monkeypatch, bob_org, pi="pi_bob", fingerprint="fp_bob")
+    assert (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"] is None
+
+
+async def test_the_advertised_minimum_is_the_one_qualify_enforces(c, monkeypatch):
+    """The offer and the gate read the same setting. If they ever diverge we would be promising a
+    bonus at an amount that does not earn one — the worst possible bug on this screen."""
+    _, _, code = await _ready_referrer(c, monkeypatch)
+    bob_org, bob_token = await _signup(c, "bob@example.com", ref=code)
+    offer = (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"]
+    cents = int(offer["min_topup_micro"] // 10_000)
+    await _topup(c, monkeypatch, bob_org, pi="pi_bob", cents=cents, fingerprint="fp_bob")
+    rows = await _referral_rows()
+    assert rows[0].status == "qualified", "the advertised minimum must actually qualify"
