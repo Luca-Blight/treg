@@ -14,7 +14,12 @@ import os
 # TREG_TEST_DB_URL (not TREG_DATABASE_URL — a stray production URL in a shell must never become the
 # test target) lets two suites run side by side: `reset_db()` DROPS tables, so two concurrent runs
 # against the same sqlite file tear down each other's schema mid-test.
-os.environ["TREG_DATABASE_URL"] = os.environ.get("TREG_TEST_DB_URL", "sqlite+aiosqlite:///./treg-test.db")
+# Under pytest-xdist each worker process gets its OWN file (gw0, gw1, …) — twelve workers against
+# one sqlite file drop each other's tables mid-test (1,022 errors on the first parallel run). An
+# explicit TREG_TEST_DB_URL wins untouched, for single-process runs against something specific.
+_worker = os.environ.get("PYTEST_XDIST_WORKER", "")
+_default = f"sqlite+aiosqlite:///./treg-test{'-' + _worker if _worker else ''}.db"
+os.environ["TREG_DATABASE_URL"] = os.environ.get("TREG_TEST_DB_URL", _default)
 os.environ["TREG_EMAIL_DEV_MODE"] = "true"  # tests need the returned OTP code (prod default is now False)
 os.environ["TREG_RESEND_API_KEY"] = ""  # never fire a real Resend send from the test suite (send_otp/send_invite skip when empty)
 os.environ["TREG_RUN_ALLOWED_BINS"] = "sh,echo,true,false,cat,sleep,treg-nonexistent-bin-xyz"  # allow the test CLIs for --server run tests

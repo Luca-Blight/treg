@@ -77,6 +77,8 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/tour/tour.js` | interface/dashboard.md |
 | `src/treg/web/tutorial.html` | interface/dashboard.md |
 | `src/treg/web/tutorial.js` | interface/dashboard.md |
+| `src/treg/web/vendor/README.md` | interface/dashboard.md |
+| `src/treg/web/vendor/vue-3.5.41.global.prod.js` | interface/dashboard.md |
 
 ## Fragment → sources
 
@@ -98,7 +100,7 @@ Regenerate via `scripts/build-map.py`.
 | `interface/api.md` | `api.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
 | `interface/catalog-review-proposal.md` | _(no source files — narrative/reference)_ |
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
-| `interface/dashboard.md` | `index.html`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `session.py` |
+| `interface/dashboard.md` | `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `session.py` |
 | `interface/env-import.md` | `providers.py`, `skills.py` |
 | `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `demo.py`, `cli.py`, `index.html` |

@@ -3,6 +3,8 @@ title: The web dashboard (Ledger, served from FastAPI)
 status: shipped
 sources:
   - src/treg/web/index.html
+  - src/treg/web/vendor/README.md
+  - src/treg/web/vendor/vue-3.5.41.global.prod.js
   - src/treg/web/tutorial.js
   - src/treg/web/tutorial.html
   - src/treg/web/tour/tour.js
@@ -20,10 +22,32 @@ related:
 
 # Web dashboard (Phase 1)
 
-A single-file Vue 3 (CDN) dashboard in `src/treg/web/index.html`, served **same-origin** by the API
+A single-file Vue 3 dashboard in `src/treg/web/index.html`, served **same-origin** by the API
 (`GET /` → `FileResponse`, `dashboard()` in `api.py`, via `_WEB_DIR`). Same origin = no CORS and it
 ships with the server (Render/Fly). Design language: **Ledger** (warm charcoal + clay accent,
 mono-forward, dark default + light toggle) — see `docs/style-board.html` / `docs/DASHBOARD-PLAN.md`.
+
+### Vue is vendored, not fetched from a CDN
+There is no bundler, so Vue arrives as a plain `<script src>` — but from **`/vendor/`**, served off
+`src/treg/web/vendor/` by an `_ImmutableStatic` mount in `api.py`, never from unpkg. It used to come
+from `unpkg.com/vue@3`, and a visitor whose network could not reach unpkg got a **blank signed-in
+dashboard with no error** ([#137](https://github.com/superdesigndev/treg/issues/137): mainland-China
+`ERR_CONNECTION_CLOSED`, then `Vue is not defined`). The landing has no external scripts at all, so
+the symptom read as "sign-in broke the site" when it was only "the dashboard needs one more origin".
+
+Two rules follow, and both are load-bearing:
+
+- **Pin the version in the filename** (`vue-3.5.41.global.prod.js`) and verify new bytes against a
+  second CDN before committing them — see `src/treg/web/vendor/README.md`. A floating `vue@3` tag is
+  arbitrary future code running in an authenticated session; that is why it is gone.
+- **Nothing in the dashboard's critical path may be third-party.** Still CDN-hosted and *not*
+  critical: the `@lobehub` agent icons (`agentIcon`/`agentIconInv`) and Google Fonts — those degrade
+  to broken images and system fonts rather than a blank page.
+
+A **loader guard** sits right after the script tag. `[v-cloak]{display:none}` hides the un-compiled
+template until Vue mounts, which is precisely what made #137 silent — so the guard checks whether
+`#app` is still cloaked ~1.5s after `load` and, if it is, replaces the blank with a readable message,
+a reload button, and the issues link. Anything that stops Vue mounting now says so on screen.
 
 `index.html`'s closing `<script src="/adtrack.js">` loads the first-party ad-click capture script on
 every page render (dashboard included, since a visitor can arrive on `/app` from an ad) — no Google
@@ -425,9 +449,12 @@ platform without opening it, and every field comes off the `/catalog/platforms` 
   prices; it lives in the hover `title` now.
   A `price_from` that exists but publishes no number renders **nothing** — "from —" says less than
   silence. "From" is a **floor**, and an `oauth` integration among the platform's providers makes the
-  floor $0 (the account you connect is the licence): **any** OAuth provider ⇒ **"free with your
-  account"**, even when metered providers also serve the platform and publish a rate — Google Ads is
-  served by its own OAuth integration *and* by scrapers, and must not read "from $0.00188". The
+  floor $0 (the account you connect is the licence): **any** *unmetered* OAuth provider ⇒ **"free with
+  your account"**, even when metered providers also serve the platform and publish a rate — Google Ads is
+  served by its own OAuth integration *and* by scrapers, and must not read "from $0.00188". A
+  **`metered` provider is the exception, and it is not a special case so much as the same rule**: the
+  account you connect is the licence only where the licence is what you are paying for, and X bills
+  *treg's app* per use, so a connected X account changes who made the call and not who is billed. The
   metered rate moves into the tooltip ("without it, metered providers serve this from …"). A key-auth
   provider with no published rate stays silent. Note that `price_from` arrives as `null` *or* as an
   empty `{}`, and the empty object has to be normalised to null first — being truthy, it otherwise
@@ -549,7 +576,10 @@ The price column is the same unified USD as everywhere else (`capCheapest` → `
 muted `.cost-nat` suffix). Two things can never win "cheapest": an endpoint with no published rate, and a
 `quota_rows` price (a row quota is not a price, and "from —" would be worse than naming the cheapest rate
 we do know). A **connected** `own_account` or `free` row counts as **free** (`capFree`) — the OAuth account
-you already hold is the licence. When nothing is priced but a row carries a `cost.note`, the cell reads
+you already hold is the licence — **unless the provider is `metered`** (`catMetered`, from `/oauth/providers`),
+where the upstream bills treg's app per call and connecting changes nothing about the price. Reading the
+flag off the server rather than naming X here means the display follows `TREG_OAUTH_BILLED_PROVIDERS`:
+throw the kill switch and the rows go back to reading free, because they are. When nothing is priced but a row carries a `cost.note`, the cell reads
 **"see provider"** rather than an em-dash: the enrichment providers (Apollo, PDL, Hunter, Coresignal,
 Lusha, Diffbot…) bill in their own credits, so their price *is* documented, just not in dollars — and that
 is the whole People/Company half of the catalog.
@@ -637,7 +667,7 @@ shelves and their connect flow, the category heading being a real heading, the c
 (mark + name + category, the connected-state corner, the count/price footer — and NO summary
 paragraph, with the name wrapping instead of ellipsising), the
 unified-USD price rule (server `usd`, no local FX constant, native suffix, `{}`-normalisation,
-`quota_rows` excluded first) and its OAuth-only "free with your account" branch,
+`quota_rows` excluded first) and its unmetered-OAuth-only "free with your account" branch,
 the runnable green on all three of its surfaces, the stacked platform header, the always-both
 provider/endpoint counts, the credit-priced fallback ranking ahead of "price not published",
 the parameters block sitting before the example

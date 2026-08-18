@@ -29,6 +29,13 @@ owner per use, so even a call on the org's *own* connection spends treg's prepai
 fail-closed daily cap, and are distinguished in ledger meta by `tier: platform` vs `tier: oauth`.
 An org's own key/credential on any *other* provider is never metered — there the org's account pays.
 
+On an oauth-billed provider a **`free` catalog price is a bug, never a fact**: the upstream charges us
+whatever the route costs, so a zero there means the entry is stale, not that the call is free. The
+estimator must fall through to the provider rate rather than reserve nothing — it used to rest on
+`0.0` being falsy, which read as both "no price recorded" and "the price is nothing", and let the
+catalog publish $0 while the balance lost the fallback. Whatever the catalog publishes for these
+providers is what the reserve takes, and a test walks the provider asserting the two agree.
+
 | Module | Job | May it write money? |
 |---|---|---|
 | `ledger.py` | the only code path that moves money | **yes — exclusively** |
