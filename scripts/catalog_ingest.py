@@ -1514,6 +1514,140 @@ X_OWN = re.compile(
     r"|account_activity|webhooks|reverse_chronological)\b")
 
 
+# X PRICING IS PAY-PER-USE AND THE BILL LANDS ON TREG's APP, so an extended entry that says "free"
+# is not a cosmetic slip — it is a price we published and then charged against.
+#
+# X publishes a RATE CARD PER RESOURCE TYPE, not one read price and one write price
+# (docs.x.com/x-api/getting-started/pricing). Flattening it is how "create a list" ends up billed at
+# the post-creation rate — 50% over the real $0.010. The card is transcribed below verbatim so the
+# mapping can be audited against it line by line, and every route names the row it was priced from.
+#
+# OWNED READS ($0.001/resource) DO NOT APPLY TO US. The discount needs the authenticated user to be
+# "the owner of the developer app" — on a registry connect the app is treg's and the user is a
+# stranger to it, so a connected member reading their own timeline pays the ordinary Posts rate.
+# Pricing those routes at $0.001 would have under-billed the calls treg is charged the most for.
+X_PRICING_URL = "https://docs.x.com/x-api/getting-started/pricing"
+X_PRICE_CHECKED = "2026-08-18"
+
+# (value, cost type, unit) exactly as the card states it. Reads are per RESOURCE RETURNED; the
+# entries marked per_call are the card's own per-REQUEST rows (counts and trends sit in the write
+# table despite being GETs).
+X_RATES = {
+    "posts":       (0.005, "per_result", "post"),     # Posts: Read
+    "user":        (0.010, "per_result", "user"),     # User: Read / Following-Followers: Read
+    "dm_event":    (0.010, "per_result", "result"),   # DM Event: Read
+    "list":        (0.005, "per_result", "result"),   # List: Read
+    "space":       (0.005, "per_result", "result"),   # Space: Read
+    "community":   (0.005, "per_result", "result"),   # Community: Read
+    "note":        (0.005, "per_result", "result"),   # Note: Read
+    "like":        (0.001, "per_result", "result"),   # Like: Read
+    "mute":        (0.001, "per_result", "result"),   # Mute: Read
+    "block":       (0.001, "per_result", "result"),   # Block: Read
+    "counts_recent": (0.005, "per_call", "call"),     # Counts: Recent
+    "counts_all":  (0.010, "per_call", "call"),       # Counts: All
+    "trends":      (0.010, "per_call", "call"),       # Trends
+    "post_create": (0.015, "per_call", "call"),       # Post: Create ($0.200 with a URL)
+    "dm_create":   (0.015, "per_call", "call"),       # DM Interaction: Create
+    "interaction": (0.015, "per_call", "call"),       # User Interaction: Create
+    "int_delete":  (0.010, "per_call", "call"),       # Interaction: Delete
+    "content":     (0.005, "per_call", "call"),       # Content: Manage
+    "list_create": (0.010, "per_call", "call"),       # List: Create
+    "list_manage": (0.005, "per_call", "call"),       # List: Manage
+    "bookmark":    (0.005, "per_call", "call"),       # Bookmark
+    "media_meta":  (0.005, "per_call", "call"),       # Media Metadata
+    "privacy":     (0.010, "per_call", "call"),       # Privacy: Update
+    "mute_delete": (0.005, "per_call", "call"),       # Mute: Delete
+}
+# The rate a route earns when the card names no row for its resource (webhooks, subscriptions,
+# connections, stream rules, media upload, compliance jobs, analytics). It is the figure
+# `api._oauth_billed_estimate` falls back to, so the published price still equals the metered one —
+# `inferred` says we are quoting treg's fallback, not a rate X published.
+X_FALLBACK_READ, X_FALLBACK_WRITE = "posts", "post_create"
+
+# (methods, path regex, rate key, confidence). FIRST MATCH WINS, so the specific rows precede the
+# families they sit inside. `documented` means the card names this resource; `inferred` means the
+# route's resource type is a judgement call (a route returning the users who liked a post could be
+# read as User: Read or Like: Read — it takes the dearer reading, since treg pays the difference).
+X_ROUTE_RATES: list[tuple[str, str, str, str]] = [
+    # --- writes: the specific actions first -----------------------------------------------------
+    ("POST",            r"^/2/lists$",                              "list_create", "documented"),
+    ("PUT|DELETE",      r"^/2/lists/\{[^}]+\}$",                    "list_manage", "documented"),
+    ("POST|DELETE",     r"^/2/lists/\{[^}]+\}/members",             "list_manage", "documented"),
+    ("POST|DELETE",     r"/(followed_lists|pinned_lists)(/|$)",     "list_manage", "documented"),
+    ("POST|DELETE",     r"/bookmarks(/|$)",                         "bookmark",    "documented"),
+    ("POST|DELETE",     r"^/2/media/(metadata|subtitles)$",          "media_meta",  "documented"),
+    ("DELETE",          r"/muting/",                                "mute_delete", "documented"),
+    ("DELETE",          r"/(likes|retweets|following)/",            "int_delete",  "documented"),
+    ("POST",            r"/(likes|retweets|following|muting)$",     "interaction", "documented"),
+    ("POST",            r"^/2/users/\{[^}]+\}/dm/(un)?block$",       "privacy",     "inferred"),
+    ("POST",            r"^/2/dm_conversations(/|$)|^/2/chat/conversations/\{[^}]+\}/messages",
+                                                                    "dm_create",   "documented"),
+    ("POST",            r"^/2/chat/conversations",                  "dm_create",   "inferred"),
+    ("DELETE",          r"^/2/dm_events/",                          "int_delete",  "inferred"),
+    ("DELETE",          r"^/2/tweets/\{[^}]+\}$",                   "int_delete",  "inferred"),
+    ("PUT",             r"^/2/tweets/\{[^}]+\}/hidden$",            "content",     "documented"),
+    ("POST|DELETE",     r"^/2/(notes|articles|broadcasts)",          "content",     "inferred"),
+    # --- reads: per-resource rows ---------------------------------------------------------------
+    ("GET",             r"^/2/tweets/counts/recent$",               "counts_recent", "documented"),
+    ("GET",             r"^/2/tweets/counts/all$",                  "counts_all",  "documented"),
+    ("GET",             r"^/2/trends/",                             "trends",      "documented"),
+    ("GET",             r"^/2/users/personalized_trends$",          "trends",      "inferred"),
+    ("GET",             r"^/2/likes/",                              "like",        "documented"),
+    ("GET",             r"/muting$",                                "mute",        "documented"),
+    ("GET",             r"/blocking$",                              "block",       "documented"),
+    ("GET",             r"^/2/(dm_events|dm_conversations)|^/2/chat/conversations/\{[^}]+\}/events$",
+                                                                    "dm_event",    "documented"),
+    ("GET",             r"^/2/communities/",                        "community",   "documented"),
+    ("GET",             r"^/2/spaces(/|$)(?!.*\{[^}]+\}/(tweets|buyers))", "space", "documented"),
+    ("GET",             r"^/2/notes/search/",                       "note",        "documented"),
+    ("GET",             r"^/2/lists/\{[^}]+\}$",                    "list",        "documented"),
+    ("GET",             r"/(owned_lists|followed_lists|list_memberships|pinned_lists)$",
+                                                                    "list",        "documented"),
+    ("GET",             r"^/2/lists/\{[^}]+\}/(followers|members)$",  "user",        "inferred"),
+    ("GET",             r"/(followers|following)$",                 "user",        "documented"),
+    ("GET",             r"/(liking_users|retweeted_by|buyers|members|affiliates)$",
+                                                                    "user",        "inferred"),
+    ("GET",             r"^/2/users(/by|/search)?$|^/2/users/\{[^}]+\}$", "user",   "documented"),
+    ("GET",             r"^/2/tweets(/|$)(?!.*\b(analytics|label|compliance|webhooks|rules)\b)",
+                                                                    "posts",       "documented"),
+    ("GET",             r"/(liked_tweets|mentions|bookmarks|quote_tweets|retweets|reposts_of_me"
+                        r"|notes_written|posts_eligible_for_notes|reverse_chronological)$",
+                                                                    "posts",       "documented"),
+    ("GET",             r"^/2/(lists|spaces)/\{[^}]+\}/tweets$",     "posts",       "documented"),
+    ("GET",             r"^/2/news/",                               "note",        "inferred"),
+]
+_X_COMPILED = [(set(ms.split("|")), re.compile(rx), key, conf) for ms, rx, key, conf in X_ROUTE_RATES]
+
+
+def _x_cost(method: str, path: str, scope: str = "") -> dict:
+    """The rate `api._oauth_billed_estimate` will actually charge this route, written down.
+
+    Never returns `free`: nothing on X's v2 API is free to treg any more, and a `free` block here
+    both misleads the catalog reader and is skipped by the meter (its `usd` is 0, which is falsy),
+    so the two numbers silently disagree — the display says $0 and the balance says otherwise."""
+    key = conf = None
+    for methods, rx, k, c in _X_COMPILED:
+        if method in methods and rx.search(path):
+            key, conf = k, c
+            break
+    if key is None:
+        key = X_FALLBACK_READ if method == "GET" else X_FALLBACK_WRITE
+        conf = "inferred"
+    value, ctype, unit = X_RATES[key]
+    note = (f"X's rate card, {key.replace('_', ' ')}: ${value:g} "
+            f"{'per resource returned' if ctype == 'per_result' else 'per request'}")
+    if conf == "inferred":
+        note = (f"X publishes no rate for this route's resource, so treg meters it at ${value:g} "
+                f"{'per resource' if ctype == 'per_result' else 'per request'} — the same figure "
+                f"the proxy falls back to") if key in (X_FALLBACK_READ, X_FALLBACK_WRITE) else \
+               (f"{note}; which row applies is a judgement call, and this takes the dearer reading")
+    if key == "post_create" and conf == "documented":
+        note += " — $0.200 when the text carries a URL, which the proxy prices at the higher rate"
+    return {"type": ctype, "value": value, "currency": "USD", "per": 1, "unit": unit,
+            "source": "docs", "source_url": X_PRICING_URL, "checked": X_PRICE_CHECKED,
+            "confidence": conf, "note": note}
+
+
 def _x_scopes(op: dict) -> list[str]:
     for sec in op.get("security") or []:
         for name, scopes in sec.items():
@@ -1538,6 +1672,7 @@ def ingest_x(refresh: bool) -> tuple[Path, dict]:
             slug = re.sub(r"(?<!^)(?=[A-Z])", "-", opid).lower() if opid else \
                 re.sub(r"[^a-z0-9]+", "-", f"{method}-{path}".lower()).strip("-")
             summary = clean(op.get("summary") or "") or clean(op.get("description") or "") or opid
+            scope = "own_account" if (method != "GET" or X_OWN.search(path)) else "any_account"
             entry: dict = {
                 "id": f"{provider}.x.{re.sub(r'[^a-z0-9]+', '-', slug).strip('-')}",
                 "tier": "extended",
@@ -1545,9 +1680,8 @@ def ingest_x(refresh: bool) -> tuple[Path, dict]:
                 "method": method,
                 "path": path,
                 "summary": summary[:400],
-                "scope": "own_account" if (method != "GET" or X_OWN.search(path)) else "any_account",
-                "cost": {"type": "free", "value": 0.0, "currency": "USD",
-                         "note": "no per-call charge; consumed from the X API plan's monthly post cap"},
+                "scope": scope,
+                "cost": _x_cost(method, path, scope),
                 "docs_url": "https://docs.x.com/x-api",
             }
             needed = _x_scopes(op)
@@ -1589,9 +1723,17 @@ def ingest_x(refresh: bool) -> tuple[Path, dict]:
         "blocks, DMs and media upload each have their own scope. They are listed with `scope_gap:`",
         "rather than omitted, because that list IS the decision of which scopes to add to the app.",
         "",
-        "Beyond scopes, most v2 routes are gated by the ACCESS TIER of the X developer plan (Free",
-        "posts only; Basic/Pro unlock search and timelines) — the spec cannot express that, so a",
-        "listed route may still answer 403 on a Free project.",
+        "Beyond scopes, a route may still answer 403 on a project whose access the spec cannot",
+        "express — the OpenAPI document lists the whole surface, not what one app may reach.",
+        "",
+        "EVERY ENTRY IS PRICED, AND NONE OF THEM ARE FREE. X bills the APP OWNER per use (prepaid",
+        "credits, no plan tiers since Feb 2026), so a call on a registry connect spends treg's money",
+        "and is metered from the team balance. Reads are per resource RETURNED — posts $0.005, users",
+        "$0.010 — an own-account read is $0.001, and a write is $0.015 per request ($0.20 when a",
+        "post's text carries a URL). The rates are documented; which one a route earns is read off",
+        "the resource it returns, so routes returning a resource type X publishes no rate for are",
+        "marked `confidence: inferred` at the post-read rate — the same figure the proxy's fallback",
+        "charges, so the published price and the metered price cannot drift apart.",
         "",
         "scope: GET routes that read public data are `any_account`; writes and anything touching",
         "/me, DMs, bookmarks, blocks, mutes, compliance or usage are `own_account`.",

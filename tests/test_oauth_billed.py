@@ -25,7 +25,10 @@ from treg.models import Org, Secret, Tool
 
 POSTS = "x.x.user.posts"        # GET /2/users/{id}/tweets — per_result $0.005/post
 POST_MICRO = 5_000
-PROFILE_MICRO = 1_000           # GET /2/users/me — per_call $0.001 (an owned read)
+# GET /2/users/me — one User resource at $0.010. NOT the $0.001 "owned read": X grants that rate
+# only when the caller owns the developer app, and on a registry connect the app is treg's, so a
+# member reading their own profile pays the ordinary rate. This said 1_000 until 2026-08-18.
+PROFILE_MICRO = 10_000
 CREATE_MICRO = 15_000           # POST /2/tweets — per_call $0.015…
 CREATE_LINK_MICRO = 200_000     # …but $0.20 when the text carries a URL
 
@@ -140,7 +143,7 @@ async def test_url_passthrough_is_priced_off_the_matched_endpoint(
     clients: AsyncClient, billed_on, monkeypatch
 ):
     """Calling the URL directly must not be a discount door: /2/users/me lands on the curated
-    own-account read and bills its per_call $0.001."""
+    profile read and bills its per_result $0.010."""
     await _connect_x(clients)
     monkeypatch.setattr(A, "relay", _stub_relay(200, b'{"data": {"id": "1"}}'))
     r = await clients.get("/call/https://api.x.com/2/users/me")
