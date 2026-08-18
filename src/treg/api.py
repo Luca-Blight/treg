@@ -10252,6 +10252,13 @@ async def call_tool(
     # network: everything above (ACL, deny rules, caps) can still refuse the call, and a refused
     # call must not leave a hold behind for the reaper to clean up.
     if mk is not None and mk.metered:
+        # Rendered BEFORE the reserve, while `tool` is still live. `ledger.reserve` calls
+        # `db.rollback()` on InsufficientBalance, which EXPIRES every ORM object this session is
+        # tracking — `tool` included — and reading an expired attribute outside an awaited call
+        # raises MissingGreenlet. Doing it inside the handler below turned the one refusal an agent
+        # is most likely to hit into a 500 with no `balance_micro` and no top-up URL. Same reasoning
+        # as `block_id` in billing._credit, and the reason that capture is pinned by a test.
+        refusal_secrets = _platform_secret_renderings(tool)
         try:
             await _platform_reserve(mk, caller, db, meta=meta, call_ref=call_ref)
         except HTTPException as exc:
@@ -10272,8 +10279,7 @@ async def call_tool(
             # already retains, and it is bounded by the same redaction and 14-day retention.
             _audit(exc.status_code, charged_micro=0,
                    refused_by="balance" if exc.status_code == 402 else "cap",
-                   error_response=_redact_snippet(f"treg: {exc.detail}",
-                                                  _platform_secret_renderings(tool),
+                   error_response=_redact_snippet(f"treg: {exc.detail}", refusal_secrets,
                                                   _ERROR_RESPONSE_MAX))
             raise
     started = _now_ms()
