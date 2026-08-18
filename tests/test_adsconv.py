@@ -359,7 +359,9 @@ def test_build_payload_converts_currency_and_formats_time():
     assert event["adIdentifiers"]["gclid"] == "CLICK1"
     assert event["eventTimestamp"] == "2026-08-17T09:00:00Z"  # RFC 3339, not the old "+hh:mm" form
     assert event["destinationReferences"] == [adsconv.ACTION_PAID]
-    assert event["transactionId"] == "1"  # stable per outbox row, for Google-side dedup on resend
+    # NOT bare "1": Data Manager 400s on a purely numeric transactionId (verified live
+    # 2026-08-18). validateOnly does not catch it, so this assertion is the guard.
+    assert event["transactionId"] == "treg-1"
     # US$20.00 at the fixed rate -> A$28.571428
     assert event["conversionValue"] == pytest.approx(28.571428, rel=1e-6)
     assert event["currency"] == "AUD"
@@ -409,7 +411,7 @@ def test_build_payload_batches_every_action_into_one_request_with_deduped_destin
     assert len(references) == len(set(references))  # deduped: 4 rows, only 3 actions
     for event, row in zip(payload["events"], rows):
         assert event["destinationReferences"] == [row.action]
-        assert event["transactionId"] == str(row.id)
+        assert event["transactionId"] == f"treg-{row.id}"
 
 
 def test_build_payload_sets_manager_account_per_destination(monkeypatch, ads_enabled):
@@ -730,3 +732,22 @@ async def test_every_public_landing_surface_loads_the_capture_script(clients):
         if "/adtrack.js" not in r.text:
             missing.append(path)
     assert not missing, f"pages that do not load the capture script: {missing}"
+
+
+def test_transaction_id_is_never_purely_numeric():
+    """Data Manager rejects a bare numeric transactionId with a 400 on `events[N]`.
+
+    Verified live 2026-08-18: identical payloads differing only in transactionId — "2"/"3" return
+    400 INVALID_ARGUMENT, "row-2"/"row-3" return 200. `validateOnly` does NOT surface it, so no
+    dry-run can catch a regression here; this test is the only guard.
+    """
+    now = adsconv._utcnow_naive()
+    org = Org(id=7, name="t", slug="t", ad_gclid="CLICK", ad_click_id_type="gclid", ad_click_at=now)
+    rows = [AdConversion(id=i, org_id=7, action=adsconv.ACTION_SIGNUP, created_at=now)
+            for i in (1, 2, 42, 1000)]
+    payload, _ = adsconv._payload_and_rows(rows[:1], {7: org})
+    for row in rows:
+        p, _ = adsconv._payload_and_rows([row], {7: org})
+        tid = p["events"][0]["transactionId"]
+        assert not tid.isdigit(), f"transactionId {tid!r} is purely numeric — Google will 400"
+        assert tid == f"treg-{row.id}"
