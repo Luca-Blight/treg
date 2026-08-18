@@ -448,9 +448,17 @@ async def offer_for_org(db: AsyncSession, org_id: int | None) -> dict | None:
     Returns only while `pending`. Once qualified the offer has been taken, and the money is on its way
     through `sweep`; still advertising it there would read as a second bonus.
 
-    Deliberately says nothing about WHO referred them. They came through a friend's link so they
-    already know, and naming the referrer here would be a disclosure the privacy policy does not make
-    (it covers the other direction only).
+    Names the referrer, MASKED (`j•••@superdesign.dev`). Not anonymous, because "you were invited"
+    with nobody attached reads as marketing copy rather than a fact, and someone who clicked a link
+    off a tweet a week ago genuinely may not remember whose it was. Not the full address either: a
+    referral link is PUBLIC by design, so printing it in full would publish one influencer's email to
+    every stranger who signs up through their link — a harvestable list, at exactly the volume this
+    program is meant to produce. The domain survives masking because that is the part that actually
+    triggers recognition in a real friend.
+
+    Note the asymmetry with `summary`, which returns FULL referee addresses: there, the referrer
+    cannot otherwise tell which of their invitations converted. Here the referee needs no identity to
+    decide whether to add funds, so the same exposure buys nothing.
     """
     if org_id is None:
         return None
@@ -459,9 +467,24 @@ async def offer_for_org(db: AsyncSession, org_id: int | None) -> dict | None:
     )).scalars().first()
     if row is None:
         return None
+    referrer = await db.get(User, row.referrer_user_id)
     s = get_settings()
     return {
         "referred_micro": int(s.referral_referred_micro),
         "referrer_micro": int(s.referral_referrer_micro),
         "min_topup_micro": int(s.referral_min_topup_micro),
+        "referrer_masked": mask_email(referrer.email if referrer else ""),
     }
+
+
+def mask_email(email: str) -> str:
+    """`jason@superdesign.dev` -> `j•••@superdesign.dev`. "" for anything that isn't an address.
+
+    The local part collapses to its FIRST character only — a fixed three-bullet run, never one bullet
+    per character, because a length-preserving mask leaks the length. The domain is kept whole: it is
+    what makes a friend recognisable, and it is not personally identifying on its own.
+    """
+    local, _, domain = (email or "").partition("@")
+    if not local or not domain:
+        return ""
+    return f"{local[0]}•••@{domain}"

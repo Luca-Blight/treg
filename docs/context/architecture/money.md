@@ -530,8 +530,19 @@ preset is $5 and the minimum is $10, so the most-clicked button silently forfeit
 otherwise. The qualifying presets say `+$5 bonus` on themselves; a note alone sits above the place
 the decision is actually made. The offer is returned only while `pending` — after qualifying the
 money is already on its way through `sweep`, and still advertising it would read as a second bonus —
-and it names no one: the referee came through a friend's link so they already know who, and naming
-the referrer is a disclosure the privacy policy makes in one direction only.
+and it names the referrer MASKED (`mask_email`, `j•••@domain`). Not anonymous — "you were invited"
+with nobody attached reads as marketing copy, and someone who clicked a link off a tweet last week
+genuinely may not recall whose it was. Not in full either: **a referral link is public by design**,
+so the full address would publish one influencer's email to every stranger who signs up through it,
+a harvestable list at exactly the volume this program is built to produce. The domain survives the
+mask because it is what makes a real friend recognisable; the local part collapses to one character
+plus a FIXED bullet run, so the mask cannot leak its own length.
+
+Note the asymmetry against `summary`, which returns referee addresses in FULL: there the referrer has
+no other way to tell which of their invitations converted. Here the referee needs no identity at all
+to decide whether to add funds, so the same exposure would buy nothing. It is worth stating plainly
+that this protects the person who opted into the program and exposes the person who merely signed up
+— justified only by that attribution need, and not a precedent to extend.
 
 **Cash payouts are not built.** The self-serve program pays in credit only, and the cap refusal is
 the commercial conversation that replaces an uncapped percentage. When an influencer tier lands, it

@@ -959,3 +959,12 @@ def test_the_referral_offer_is_hidden_from_teams_that_were_not_referred():
     """`v-if` on the offer object, so a team that arrived on its own sees the billing page exactly as
     it was before this shipped."""
     assert 'v-if="billing.referral_offer"' in INDEX
+
+
+def test_the_billing_prompt_renders_the_masked_referrer_never_a_raw_one():
+    """The template must read `referrer_masked`. Reaching for any full-address field here would
+    publish an influencer's email to every stranger who signs up through their public link."""
+    at = INDEX.index("You were invited")
+    block = INDEX[at : INDEX.index("</div>", at)]
+    assert "billing.referral_offer.referrer_masked" in block
+    assert "referrer_email" not in INDEX

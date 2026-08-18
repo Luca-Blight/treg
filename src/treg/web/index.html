@@ -2421,10 +2421,17 @@ a:hover{text-decoration-color:var(--muted)}
                       <div v-if="billing.referral_offer" style="margin-top:8px;padding:9px 12px;font-size:12.5px;
                            border:1px solid var(--green);border-radius:8px;
                            background:color-mix(in srgb,var(--green) 12%,transparent)">
-                        You were invited to treg — add
-                        <b>{{money(billing.referral_offer.min_topup_micro)}}</b> or more and we'll put
-                        <b>{{money(billing.referral_offer.referred_micro)}}</b> extra in your balance.
-                        Whoever invited you gets {{money(billing.referral_offer.referrer_micro)}}.
+                        <!-- The referrer is MASKED (`j•••@domain`): a referral link is public, so
+                             the full address would be published to every stranger who signs up
+                             through an influencer's link. The domain is what a real friend
+                             recognises. Falls back to "to treg" if we somehow have no address. -->
+                        You were invited
+                        <template v-if="billing.referral_offer.referrer_masked">by
+                          <b>{{billing.referral_offer.referrer_masked}}</b></template>
+                        <template v-else>to treg</template>
+                        — add <b>{{money(billing.referral_offer.min_topup_micro)}}</b> or more and
+                        we'll put <b>{{money(billing.referral_offer.referred_micro)}}</b> extra in
+                        your balance. They get {{money(billing.referral_offer.referrer_micro)}}.
                       </div>
                       <div class="fundgrid" style="margin-top:8px">
                         <button v-for="p in billing.topup.presets" :key="p" class="fundcard" :disabled="billingBusy" @click="addFunds(p)">

@@ -449,7 +449,8 @@ async def test_a_referred_team_is_told_the_minimum_on_its_billing_page(c, monkey
     s = get_settings()
     assert offer == {"referred_micro": s.referral_referred_micro,
                      "referrer_micro": s.referral_referrer_micro,
-                     "min_topup_micro": s.referral_min_topup_micro}
+                     "min_topup_micro": s.referral_min_topup_micro,
+                     "referrer_masked": "a•••@superdesign.dev"}
 
 
 async def test_a_team_that_arrived_on_its_own_sees_no_offer(c, monkeypatch):
@@ -479,3 +480,25 @@ async def test_the_advertised_minimum_is_the_one_qualify_enforces(c, monkeypatch
     await _topup(c, monkeypatch, bob_org, pi="pi_bob", cents=cents, fingerprint="fp_bob")
     rows = await _referral_rows()
     assert rows[0].status == "qualified", "the advertised minimum must actually qualify"
+
+
+def test_the_referrer_is_named_but_never_in_full():
+    """A referral link is PUBLIC: an influencer posts theirs, and printing the full address would
+    publish their email to every stranger who signs up through it — a harvestable list at exactly the
+    volume this program is built to produce. The domain survives because that is what makes a real
+    friend recognisable; the local part collapses to one character plus a FIXED bullet run, so the
+    mask does not leak its own length."""
+    assert referrals.mask_email("jason@superdesign.dev") == "j•••@superdesign.dev"
+    assert referrals.mask_email("jz@superdesign.dev") == "j•••@superdesign.dev", "length must not leak"
+    assert referrals.mask_email("notanemail") == ""
+    assert referrals.mask_email("") == ""
+
+
+async def test_the_referee_never_receives_the_referrers_real_address(c, monkeypatch):
+    """The whole point of the mask. Asserted on the wire, not on the helper, because the leak that
+    matters is the one that ships in a response body."""
+    _, _, code = await _ready_referrer(c, monkeypatch)
+    _, bob_token = await _signup(c, "bob@example.com", ref=code)
+    body = (await c.get("/billing", headers=_h(bob_token))).text
+    assert "ann@superdesign.dev" not in body
+    assert "a•••@superdesign.dev" in body
