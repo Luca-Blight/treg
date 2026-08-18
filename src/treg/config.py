@@ -269,17 +269,23 @@ class Settings(BaseSettings):
     # can't work without this) rather than silently reusing the wrong client.
     google_ads_client_id: str = ""
     google_ads_client_secret: str = ""
-    # Google Ads conversion upload. This customer id, the developer token above, and the OAuth org
-    # slug below are all required; if any is empty the whole feature is OFF (tests stay inert and
-    # self-hosters send nothing) — the same gate shape analytics.py uses for posthog_key.
+    # Google Ads conversion upload. This customer id and the refresh token below are both required;
+    # if either is empty the whole feature is OFF (tests stay inert and self-hosters send nothing) —
+    # the same gate shape analytics.py uses for posthog_key.
     google_ads_customer_id: str = ""
     # Manager (MCC) account used to access google_ads_customer_id. Optional for direct client auth;
     # when present this is sent as login-customer-id. It cannot be inferred from Secret.resource_ref,
     # which is the TARGET client account selected in discovery, not its manager.
     google_ads_login_customer_id: str = ""
-    # Which team's google-ads OAuth connection the uploader authenticates as. treg uploads to its
-    # OWN ad account, so this is a platform setting, never a per-tenant one.
-    ads_conv_org_slug: str = ""
+    # treg's OWN long-lived refresh token for the Data Manager conversion uploader — a PLATFORM
+    # credential, obtained once, out of band, by an operator via the OAuth playground with scope
+    # https://www.googleapis.com/auth/datamanager. It is exchanged against `google_ads_client_id`/
+    # `_secret` above (the refresh token is issued against that client, so it must be redeemed with
+    # it), never against a customer's own OAuth connection: the uploader ships treg's OWN marketing
+    # conversions to treg's OWN ad account, a different purpose from a customer connecting Ads to
+    # read their campaign data, and the two must not share a credential or a consent screen. Empty
+    # = the whole feature is OFF. See docs/context/architecture/ads-conversions.md.
+    ads_conv_refresh_token: str = ""
 
     linkedin_client_id: str = ""
     linkedin_client_secret: str = ""

@@ -40,8 +40,9 @@ def usd_micro_to_aud_micro(usd_micro: int) -> int:
 
 
 import asyncio
-import json
 import logging
+import re
+import time
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import or_
@@ -49,15 +50,20 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from . import crypto, oauth
 from .config import get_settings
-from .models import AdConversion, Org, Secret
+from .models import AdConversion, Org
 
 
 def enabled() -> bool:
-    """Missing upload configuration = OFF. Keeps tests and self-hosted instances inert."""
+    """Missing upload configuration = OFF. Keeps tests and self-hosted instances inert.
+
+    `google_ads_developer_token` is deliberately NOT required here: it is the read-side Ads API's
+    header (see oauth_providers.GOOGLE_ADS), and Data Manager has no developer-token header at all
+    (see `_auth_headers`). `ads_conv_org_slug` is gone entirely — the uploader no longer borrows a
+    customer-facing OAuth connection; it authenticates with its own platform refresh token.
+    """
     s = get_settings()
-    return bool(s.google_ads_customer_id and s.google_ads_developer_token and s.ads_conv_org_slug)
+    return bool(s.google_ads_customer_id and s.ads_conv_refresh_token)
 
 
 async def queue(db: AsyncSession, org: Org, action: str, *,
@@ -99,30 +105,31 @@ def _utcnow_naive() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-# v21 was sunset 2026-08-05 (JSON 400 UNSUPPORTED_VERSION); every other path that names a Google
-# Ads API version in this repo (oauth_providers.GOOGLE_ADS, .agents/skills/google-ads/SKILL.md,
-# docs/context/architecture/auth-secrets.md) was repointed at v25 on 2026-08-17 — see commit
-# 6541167. The original task brief for this file still said v22 (written before that fix landed);
-# v25 is what is actually live, so that is what's pinned here. Bump all four places together next
-# time Google sunsets a version — see auth-secrets.md's note on this.
-API_VERSION = "v25"
+# Data Manager is its own product with its own `v1`, unrelated to the Google Ads REST version
+# sunset cycle (oauth_providers.GOOGLE_ADS, catalog yaml, auth-secrets.md still track that
+# separately for the read-side Ads catalog calls) — there is nothing to keep in sync here.
+DATA_MANAGER_URL = "https://datamanager.googleapis.com/v1/events:ingest"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 _UPLOAD_DELAY_S = 6 * 3600   # Google will not accept a conversion until hours after the click
 _MAX_ATTEMPTS = 8
 _RETRY_BASE_S = 5 * 60
 _RETRY_CAP_S = 24 * 3600
 _CLICK_ID_FIELDS = frozenset({"gclid", "gbraid", "wbraid"})
-_ACKNOWLEDGED_ROW_ERRORS = frozenset({"CLICK_CONVERSION_ALREADY_EXISTS"})
-_RETRYABLE_ROW_ERRORS = frozenset({
-    "INTERNAL_ERROR",
-    "RESOURCE_EXHAUSTED",
-    "TEMPORARILY_UNAVAILABLE",
-    "TOO_RECENT_CONVERSION_ACTION",
-    "TOO_RECENT_EVENT",
-})
+# Data Manager has no analogue for CLICK_CONVERSION_ALREADY_EXISTS: within one conversion action it
+# dedupes silently on `events[].transactionId` (see `_payload_and_rows`) rather than erroring, so a
+# retry after an ambiguous prior outcome just gets folded into the existing conversion server-side
+# and comes back as an ordinary 200. The set stays here, empty, so the by-index classification below
+# keeps the same three-way shape (acknowledged / retryable / dead-letter) and stays extensible if
+# Google ever does surface a duplicate-style rejection.
+_ACKNOWLEDGED_ROW_ERRORS: frozenset[str] = frozenset()
+_RETRYABLE_ROW_ERRORS = frozenset({"INTERNAL_ERROR"})
+# Matches the event index out of a `google.rpc.BadRequest.FieldViolation.field` path such as
+# "events[2].userData..." or "events.events[2]...", and equally out of a `FieldWarning.fieldPath`.
+_EVENT_INDEX_RE = re.compile(r"events\[(\d+)\]")
 
 
 def _conversion_time(dt: datetime) -> str:
-    """Ads wants 'yyyy-mm-dd hh:mm:ss+hh:mm'. ISO with a 'Z' is rejected.
+    """RFC 3339, e.g. '2026-08-18T10:00:00Z'. Data Manager rejects the old 'yyyy-mm-dd hh:mm:ss+hh:mm'.
 
     `dt` comes out of the database as NAIVE UTC (see models._now), so it is stamped with UTC, not
     converted. `.astimezone()` on a naive value would read it as LOCAL time — on the Sydney deploy
@@ -131,15 +138,27 @@ def _conversion_time(dt: datetime) -> str:
     """
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S+00:00")
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _payload_and_rows(
     rows: list[AdConversion], orgs: dict[int, Org]
 ) -> tuple[dict, list[AdConversion]]:
-    """Build the request and preserve its operation-index -> outbox-row mapping."""
+    """Build the events:ingest request and preserve its operation-index -> outbox-row mapping.
+
+    Data Manager takes every destination (conversion action) and every event in ONE request, so a
+    batch spanning signup/first_call/paid rows is sent as a single call: `destinations[]` lists each
+    action touched by this batch exactly once (deduped by `reference`), and each event names the one
+    destination it belongs to via `destinationReferences`. `events[index]` stays a straight 1:1
+    mapping onto `payload_rows[index]` — `destinations` is a separate, deduped list, so it never
+    disturbs that index. `drain_once` and `_partial_failure_errors` rely on that 1:1 mapping to
+    attribute a rejected request back to the row that caused it.
+    """
     cid = get_settings().google_ads_customer_id
-    conversions = []
+    login_cid = (get_settings().google_ads_login_customer_id or "").replace("-", "").strip()
+    destinations: list[dict] = []
+    dest_index_by_action: dict[str, int] = {}
+    events = []
     payload_rows = []
     for row in rows:
         org = orgs.get(row.org_id)
@@ -148,77 +167,116 @@ def _payload_and_rows(
         click_field = org.ad_click_id_type or "gclid"  # NULL means a pre-type-migration GCLID.
         if click_field not in _CLICK_ID_FIELDS:
             click_field = "gclid"  # defensive for a manually edited legacy row
-        conv = {
-            click_field: org.ad_gclid,
-            "conversionAction": f"customers/{cid}/conversionActions/{CONVERSION_ACTION_IDS[row.action]}",
-            "conversionDateTime": _conversion_time(row.created_at),
+        if row.action not in dest_index_by_action:
+            destination = {
+                "operatingAccount": {"accountType": "GOOGLE_ADS", "accountId": cid},
+                "productDestinationId": CONVERSION_ACTION_IDS[row.action],
+                "reference": row.action,
+            }
+            # `loginAccount` is per-destination, not a header — never infer it from
+            # Secret.resource_ref (that's the target CLIENT account discovery stored, not the
+            # manager Google requires here). Direct client-account auth leaves it unset.
+            if login_cid:
+                destination["loginAccount"] = {"accountType": "GOOGLE_ADS", "accountId": login_cid}
+            dest_index_by_action[row.action] = len(destinations)
+            destinations.append(destination)
+        event = {
+            "adIdentifiers": {click_field: org.ad_gclid},
+            "eventTimestamp": _conversion_time(row.created_at),
+            "eventSource": "WEB",
+            "destinationReferences": [row.action],
+            # Stable per outbox row, so a resend after an ambiguous prior outcome (e.g. a timeout
+            # whose response we never saw) dedupes into the SAME conversion on Google's side instead
+            # of double-counting — see _ACKNOWLEDGED_ROW_ERRORS.
+            "transactionId": str(row.id),
         }
         if row.value_usd_micro:
-            # The one permitted float: the Ads API's conversionValue field is a wire double, so a
-            # decimal amount is what the JSON boundary requires. The arithmetic that produced the
-            # micro amount stayed integral (usd_micro_to_aud_micro).
-            conv["conversionValue"] = usd_micro_to_aud_micro(row.value_usd_micro) / 1_000_000
-            conv["currencyCode"] = "AUD"
-        conversions.append(conv)
+            # The one permitted float: conversionValue is a wire double, so a decimal amount is what
+            # the JSON boundary requires. The arithmetic that produced the micro amount stayed
+            # integral (usd_micro_to_aud_micro).
+            event["conversionValue"] = usd_micro_to_aud_micro(row.value_usd_micro) / 1_000_000
+            event["currency"] = "AUD"
+        events.append(event)
         payload_rows.append(row)
-    return {"conversions": conversions, "partialFailure": True}, payload_rows
+    return {"destinations": destinations, "events": events, "validateOnly": False}, payload_rows
 
 
 def build_payload(rows: list[AdConversion], orgs: dict[int, Org]) -> dict:
-    """Turn outbox rows into an uploadClickConversions body.
+    """Turn outbox rows into an events:ingest body.
 
-    `partialFailure` keeps a bad row from rejecting its siblings. `drain_once` retains the row
-    mapping from `_payload_and_rows` and reads every result before acknowledging anything.
-    Value is converted to the ACCOUNT's currency here, at upload time; the outbox stores USD so a
-    rate change never rewrites history.
+    `drain_once` retains the row mapping from `_payload_and_rows` and reads the response before
+    acknowledging anything. Value is converted to the ACCOUNT's currency here, at upload time; the
+    outbox stores USD so a rate change never rewrites history.
     """
     return _payload_and_rows(rows, orgs)[0]
 
 
-async def _auth_headers(db: AsyncSession, client) -> dict[str, str]:
-    """Bearer + developer-token (+ login-customer-id if the connection is scoped to a client
-    account under a manager), for a direct call to the Ads REST API.
+# Module-level cache for the platform access token: ONE credential, shared by every drain, so a
+# per-call or per-db-session cache would just re-exchange the refresh token every pass for no
+# reason. `worker` drains every 300s; a token typically lives ~3599s, so almost every pass should
+# hit this cache rather than call Google. `_token_expires_at` is a `time.time()` epoch, not a naive
+# UTC datetime (unlike the rest of this module) — it is process-local runtime state, never
+# persisted or compared against a DB column, so there is no naive/aware mismatch to guard against.
+_cached_access_token: str | None = None
+_token_expires_at: float = 0.0
+_TOKEN_SKEW_S = 60.0  # refresh this many seconds before actual expiry, same margin as oauth.py
+
+
+async def _exchange_refresh_token(client) -> tuple[str, float]:
+    """One refresh_token grant against Google's token endpoint. Raises on any failure — the caller
+    (`_auth_headers`) decides whether that's fatal to this drain; `drain_once` is called inside
+    `worker`'s try/except, so a raise here just means "retry next pass," not a crashed loop."""
+    settings = get_settings()
+    resp = await client.post(
+        GOOGLE_TOKEN_URL,
+        data={
+            "grant_type": "refresh_token",
+            "refresh_token": settings.ads_conv_refresh_token,
+            "client_id": settings.google_ads_client_id,
+            "client_secret": settings.google_ads_client_secret,
+        },
+    )
+    try:
+        body = resp.json()
+    except Exception:  # noqa: BLE001 — an unparseable body is not a usable token either
+        body = {}
+    token = body.get("access_token") if isinstance(body, dict) else None
+    if not token:
+        raise RuntimeError(
+            f"ads conversion token refresh failed: {resp.status_code} {resp.text[:300]}"
+        )
+    try:
+        expires_in = float(body.get("expires_in") or 0)
+    except (TypeError, ValueError):
+        expires_in = 0.0
+    return token, time.time() + expires_in
+
+
+async def _auth_headers(client) -> dict[str, str]:
+    """Bearer-only headers for a direct call to the Data Manager REST API.
+
+    Data Manager has neither a developer-token header nor a login-customer-id header: the manager
+    account is expressed per-destination as `loginAccount` in the request BODY instead (see
+    `_payload_and_rows`). Do not resurrect either header here.
 
     This does NOT go through proxy.relay/injectors.py — the uploader is not a caller-issued
     `/call/` request, it's treg spending its OWN platform connection, so there is no Tool/bindings
-    row to resolve credentials from. Instead it reads the `google-ads` OAuth `Secret` stored on
-    the platform org named by `ads_conv_org_slug`, the same shape a normal registry connect
-    produces (see api.py's `/oauth/callback`, which stores `kind="oauth"` + a JSON blob).
+    row (and no per-tenant Secret) to resolve credentials from. It exchanges treg's OWN long-lived
+    `settings.ads_conv_refresh_token` for an access token directly against Google's token endpoint,
+    redeemed with the same `google_ads_client_id`/`_secret` the refresh token was issued against.
+    Two different purposes stay on two different credentials: a customer connecting Google Ads
+    (oauth_providers.GOOGLE_ADS, `adwords` scope only) never touches this path, and this path never
+    touches a customer's OAuth connection.
 
-    Raises if the platform org, its google-ads connection, or a usable token is missing — the
-    caller (`drain_once`, called from `worker`'s try/except) logs that and retries next pass
-    rather than crashing the loop.
+    The access token is cached in module state with its expiry (`_cached_access_token`,
+    `_token_expires_at`) and only re-exchanged within `_TOKEN_SKEW_S` of expiring — `worker` drains
+    every few minutes, so re-exchanging on every pass would be wasteful and risks Google's refresh
+    rate limit.
     """
-    settings = get_settings()
-    org = (await db.execute(
-        select(Org).where(Org.slug == settings.ads_conv_org_slug)
-    )).scalar_one_or_none()
-    if org is None:
-        raise RuntimeError(f"ads_conv_org_slug {settings.ads_conv_org_slug!r} matches no org")
-    secret = (await db.execute(
-        select(Secret).where(Secret.org_id == org.id, Secret.provider == "google-ads",
-                              Secret.kind == "oauth")
-    )).scalars().first()
-    if secret is None:
-        raise RuntimeError(f"org {settings.ads_conv_org_slug!r} has no google-ads oauth connection")
-    # Same call health.py:205 makes from its own background task — refreshes in place if stale,
-    # no-ops for a still-valid or MANUAL-mode (non-refreshable) token.
-    await oauth.ensure_fresh(secret, db, client)
-    blob = json.loads(crypto.decrypt(secret.value))
-    token = blob.get("access_token") or blob.get("token")
-    if not token:
-        raise RuntimeError("google-ads secret decrypted with no access token")
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "developer-token": settings.google_ads_developer_token,
-        "Content-Type": "application/json",
-    }
-    # `resource_ref` is the TARGET account chosen in discovery. It is not the manager account that
-    # Google requires in login-customer-id, so never infer this header from the Secret. Direct client
-    # auth omits it; manager auth configures the MCC explicitly.
-    if settings.google_ads_login_customer_id:
-        headers["login-customer-id"] = settings.google_ads_login_customer_id.replace("-", "").strip()
-    return headers
+    global _cached_access_token, _token_expires_at
+    if _cached_access_token is None or time.time() > _token_expires_at - _TOKEN_SKEW_S:
+        _cached_access_token, _token_expires_at = await _exchange_refresh_token(client)
+    return {"Authorization": f"Bearer {_cached_access_token}", "Content-Type": "application/json"}
 
 
 def _retry_delay(attempts: int) -> timedelta:
@@ -229,33 +287,57 @@ def _retry_delay(attempts: int) -> timedelta:
 
 
 def _partial_failure_errors(body: dict) -> tuple[dict[int, list[tuple[str, str]]], list[tuple[str, str]]]:
-    """Return Google Ads partial errors keyed by conversions[index], plus batch-level details."""
+    """Parse Data Manager's error envelope for a REJECTED request (non-200 status).
+
+    Unlike ConversionUploadService, Data Manager has no partial-success envelope on a 200: as
+    `drain_once` handles separately, a 200 means the WHOLE request was accepted and every event in
+    it is acknowledged. A non-200 means the WHOLE request was rejected before anything was
+    ingested — but the standard `google.rpc.Status` error body Google returns can still say WHICH
+    row caused it, via `error.details[].fieldViolations[].field` paths like "events[2]...". A row
+    named that way is a genuine candidate for dead-lettering once it hits the attempt ceiling
+    (`drain_once`); every OTHER row in the same rejected batch was caught in the crossfire — its
+    own data was never at fault — and must keep retrying regardless of its own attempt count.
+    """
     by_index: dict[int, list[tuple[str, str]]] = {}
     general: list[tuple[str, str]] = []
-    status = body.get("partialFailureError") or {}
-    for detail in status.get("details") or []:
+    error = body.get("error") if isinstance(body, dict) else None
+    if not isinstance(error, dict):
+        return by_index, general
+    for detail in error.get("details") or []:
         if not isinstance(detail, dict):
             continue
-        for error in detail.get("errors") or []:
-            if not isinstance(error, dict):
+        for violation in detail.get("fieldViolations") or []:
+            if not isinstance(violation, dict):
                 continue
-            error_code = error.get("errorCode") or {}
-            code = next((str(v) for v in error_code.values() if v), "UNKNOWN") \
-                if isinstance(error_code, dict) else "UNKNOWN"
-            message = str(error.get("message") or status.get("message") or "partial failure")
-            index = None
-            location = error.get("location") or {}
-            for part in location.get("fieldPathElements") or []:
-                if isinstance(part, dict) and part.get("fieldName") == "conversions":
-                    candidate = part.get("index")
-                    if isinstance(candidate, int):
-                        index = candidate
-                        break
-            target = by_index.setdefault(index, []) if index is not None else general
+            code = str(violation.get("reason") or "UNKNOWN")
+            message = str(violation.get("description") or error.get("message") or "request rejected")
+            match = _EVENT_INDEX_RE.search(str(violation.get("field") or ""))
+            target = by_index.setdefault(int(match.group(1)), []) if match else general
             target.append((code, message))
-    if not by_index and not general and status:
-        general.append(("UNKNOWN", str(status.get("message") or "partial failure")))
+    if not by_index and not general and error:
+        general.append(("UNKNOWN", str(error.get("message") or "request rejected")))
     return by_index, general
+
+
+def _field_warnings_by_index(body: dict) -> dict[int, list[tuple[str, str]]]:
+    """Non-fatal per-event notes on an ACCEPTED (200) response.
+
+    Per Data Manager's own contract, a warning means "the API didn't reject the record, but had to
+    ignore part of its data" — the event is still ingested. So a row with a warning is still
+    `_acknowledge`d in `drain_once`; the text is kept on `row.error` purely for operator visibility,
+    never as a reason to retry or dead-letter.
+    """
+    by_index: dict[int, list[tuple[str, str]]] = {}
+    for warning in body.get("fieldWarnings") or []:
+        if not isinstance(warning, dict):
+            continue
+        match = _EVENT_INDEX_RE.search(str(warning.get("fieldPath") or ""))
+        if not match:
+            continue
+        code = str(warning.get("reason") or "UNKNOWN")
+        message = str(warning.get("description") or "field warning")
+        by_index.setdefault(int(match.group(1)), []).append((code, message))
+    return by_index
 
 
 def _schedule_retry(row: AdConversion, now: datetime, error: str) -> None:
@@ -277,6 +359,11 @@ async def drain_once(db: AsyncSession, client) -> dict:
     Due = not uploaded/terminal, older than the click-availability delay, and past its retry time.
     HTTP failures retry indefinitely with backoff. Per-row permanent failures are dead-lettered
     after `_MAX_ATTEMPTS`; they remain queryable with `failed_at` + the last Google error.
+
+    Data Manager's ingest response has no per-event partial-success shape the way the old
+    ConversionUploadService did: a 200 means the WHOLE request was accepted (every event in it),
+    and a non-200 means the WHOLE request was rejected (nothing in it was ingested) — see
+    `_partial_failure_errors` for how a rejection can still be traced back to one row.
     """
     if not enabled():
         return {"sent": 0, "reason": "disabled"}
@@ -305,52 +392,52 @@ async def drain_once(db: AsyncSession, client) -> dict:
         row.failed_at = now
         row.error = "outbox row has no attributable org/click id"
         db.add(row)
-    if not payload["conversions"]:
+    if not payload["events"]:
         await db.commit()
         return {"sent": 0, "failed": len(skipped)}
-    cid = get_settings().google_ads_customer_id
-    url = f"https://googleads.googleapis.com/{API_VERSION}/customers/{cid}:uploadClickConversions"
-    headers = await _auth_headers(db, client)
-    resp = await client.post(url, json=payload, headers=headers)
-    if resp.status_code != 200:
-        for row in payload_rows:
-            row.attempts += 1
-            _schedule_retry(row, now, f"{resp.status_code}: {resp.text[:260]}")
-            db.add(row)
-        await db.commit()
-        return {"sent": 0, "retried": len(payload_rows), "failed": len(skipped),
-                "status": resp.status_code}
+    headers = await _auth_headers(client)
+    resp = await client.post(DATA_MANAGER_URL, json=payload, headers=headers)
 
     try:
         body = resp.json()
-    except Exception:  # noqa: BLE001 — an unexpected 200 body must not acknowledge durable rows
+    except Exception:  # noqa: BLE001 — an unparseable body must not acknowledge durable rows
         body = {}
-    results = body.get("results") if isinstance(body, dict) else None
-    indexed_errors, general_errors = _partial_failure_errors(body if isinstance(body, dict) else {})
+    if not isinstance(body, dict):
+        body = {}
+
     sent = retried = failed = 0
-    for index, row in enumerate(payload_rows):
-        row.attempts += 1
-        result = results[index] if isinstance(results, list) and index < len(results) else None
-        if isinstance(result, dict) and result:
-            _acknowledge(row, now)
-            sent += 1
+    if resp.status_code == 200:
+        request_id = body.get("requestId")
+        if not request_id:
+            # An unexpected/empty 200 body is not proof of acceptance — retry the whole batch
+            # rather than guess which rows, if any, actually landed.
+            for row in payload_rows:
+                row.attempts += 1
+                _schedule_retry(row, now, "200: missing requestId")
+                db.add(row)
+                retried += 1
         else:
+            warnings_by_index = _field_warnings_by_index(body)
+            for index, row in enumerate(payload_rows):
+                row.attempts += 1
+                _acknowledge(row, now)
+                warning = warnings_by_index.get(index)
+                if warning:
+                    row.error = ("; ".join(f"{code}: {message}" for code, message in warning))[:300]
+                sent += 1
+                db.add(row)
+    else:
+        indexed_errors, general_errors = _partial_failure_errors(body)
+        for index, row in enumerate(payload_rows):
+            row.attempts += 1
             row_errors = indexed_errors.get(index)
             errors = row_errors or general_errors
             codes = {code for code, _ in errors}
             detail = "; ".join(f"{code}: {message}" for code, message in errors) \
-                or "200: missing conversion result"
-            if codes and codes <= _ACKNOWLEDGED_ROW_ERRORS:
-                # A retry may race the prior worker's commit; Google has already stored this event.
-                _acknowledge(row, now)
-                sent += 1
-            elif (
-                row_errors is None
-                or codes & _RETRYABLE_ROW_ERRORS
-                or row.attempts < _MAX_ATTEMPTS
-            ):
-                # A missing/unparseable result or batch-level failure is not evidence that this row
-                # is permanently bad. Only an indexed row error may reach the dead-letter ceiling.
+                or f"{resp.status_code}: {resp.text[:260]}"
+            if row_errors is None or codes & _RETRYABLE_ROW_ERRORS or row.attempts < _MAX_ATTEMPTS:
+                # A row this rejection didn't name (row_errors is None) was caught in the
+                # crossfire of a sibling's bad data — never dead-letter it on that basis alone.
                 _schedule_retry(row, now, detail)
                 retried += 1
             else:
@@ -358,7 +445,7 @@ async def drain_once(db: AsyncSession, client) -> dict:
                 row.next_attempt_at = None
                 row.failed_at = now
                 failed += 1
-        db.add(row)
+            db.add(row)
     await db.commit()
     return {"sent": sent, "retried": retried, "failed": failed + len(skipped),
             "status": resp.status_code}
