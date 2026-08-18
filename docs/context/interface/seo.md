@@ -162,9 +162,10 @@ asserted to appear in its body. Edit one, edit the other, same commit.
 
 **A promo banner on `index.html` is a catalog-page edit.** `/catalog` and `/catalog/<slug>` render
 from `index.html`, so anything added to that file lands on all ~80 crawlable shelves unless it is
-gated. The Product Hunt strip (`.phb`, see `interface/dashboard.md`) is inside the Vue app behind
-`v-if="ph && !publicCatalog"` for exactly this reason, and `tests/test_ph_banner.py` asserts the
-catalog's `#prerender` block never carries it. Note also that `landing.html` **is** `{BASE}`-substituted
+gated. The one banner this app has carried — the Product Hunt launch strip, since removed — sat
+inside the Vue app behind `v-if="…&& !publicCatalog"` for exactly this reason; anything similar needs
+the same gate, plus a test that the catalog's `#prerender` block never carries it. Note also that
+`landing.html` **is** `{BASE}`-substituted
 and `index.html` **is not** (`dashboard()` returns a plain `FileResponse`), so a placeholder that is
 safe in one half ships literally in the other — hardcode absolute URLs on the app side.
 
