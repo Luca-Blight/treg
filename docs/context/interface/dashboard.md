@@ -849,3 +849,42 @@ multi-binding + edit, skill bundles, super-admin mutations, OAuth connect, share
 shipped. Packaging: `src/treg/web` lives inside the `treg` package, so the wheel's `packages`
 inclusion ships every asset (incl. `tutorial.js`/`tutorial.html`) — no `force-include` (a redundant
 one double-adds each file and breaks the wheel build).
+
+## The Referrals view
+
+A top-level `<template v-if="view==='referrals'">`, plus a nav button and a second entry point under
+the balance chip (where someone is already thinking about what treg costs them).
+
+**`'referrals'` must appear in BOTH view whitelists** — `viewFromHash()` and the `popstate` handler.
+`go('referrals')` works on click regardless of them; those two lists are what make the view survive
+a RELOAD and a BACK button. Missing either is invisible in review and in clicking around, which is
+precisely the silent failure CLAUDE.md warns about. Pinned by a test that counts both.
+
+**The link is NOT gated behind paying us.** Every signed-in person gets one, free tier included —
+see [money](../architecture/money.md) for why that gate was removed. The `!eligible` branch survives
+only for the degenerate case of owning no team to pay a reward into, and a test asserts it never
+again asks anyone to add funds.
+
+`GET /referrals` mints the code as well as sweeping, so the page is one call and `link` is never
+empty on a first visit.
+
+**Every status renders a reason** (`refStatus`), including `capped` and `rejected`. "I referred
+someone and got nothing" is the ticket this program generates, and the answer belongs on the page
+rather than in an email to us.
+
+Opening the page **has a side effect**: `GET /referrals` runs the payout sweep, so a user checking
+whether their reward has landed is the one who makes it land. There is no scheduler in treg, so this
+work rides on a request someone is already making.
+
+### The billing page's referral prompt
+
+The Billing tab renders `billing.referral_offer` when the team was referred: a green note naming the
+minimum, and `+$X bonus` on each preset that clears it (`refPresetBonus`). Both are measured
+against `remaining_micro`, not the full minimum — the threshold is cumulative, so a team that has
+already added $5 is asked for "$5 more" and sees the bonus marked on the $5 button. The note says
+the referee is credited **straight away** and the referrer after the hold — that timing is
+load-bearing copy, not decoration: the referee has no Referrals page, so an unstated delay is what
+made a correct payout look like a failure. Both are needed — the
+amount is chosen at the buttons, and the first preset ($5) is below the $10 minimum, so a note on its
+own would let the most-clicked button quietly forfeit the reward. Null offer = the page renders
+exactly as it did before this shipped.

@@ -180,6 +180,15 @@
     <tr><td>Upstream APIs you connect</td><td>Whatever your call sends them</td><td>The call you asked us to make</td><td>Varies by provider</td></tr>
     <tr><td>Google Ads</td><td>A click id and a conversion event (signup, first call, or first payment) — only if you arrived via a Google Ads click</td><td>Measures whether the ad that brought you converted</td><td>USA</td></tr>
   </table></div>
+  <p><b>Referrals.</b> If you sign up through someone's referral link, <b>your email address is
+  shown to the person who referred you</b>, along with the date you signed up and whether your team
+  has added funds — that's how they see which of their invitations worked. Nothing else about you or
+  your usage is shared with them. If you'd rather not be visible that way, sign up without using the
+  link.</p>
+  <p>In the other direction we show you less: if you were referred, we tell you who invited you as a
+  <b>partial</b> address (<code>j&bull;&bull;&bull;@theirdomain.com</code>) and never in full. Referral
+  links are often shared publicly, and the full address of whoever posted one is not ours to hand to
+  everyone who clicks it.</p>
   <p>We'll also disclose data where legally required, or where necessary to protect the Service or
   its users from a live security threat. If we're ever compelled to hand over data about you, we'll
   tell you unless we're legally barred from doing so.</p>
@@ -191,6 +200,11 @@
   <p><code>treg_session</code>: HTTP-only, SameSite=Lax, secure over HTTPS. It holds a signed session
   reference and nothing else. It's strictly necessary to keep you signed in, so there's no consent
   banner and nothing to opt out of short of signing out.</p>
+  <p><code>treg_oauth_return</code> and <code>treg_ref</code>: both HTTP-only with the same flags, and
+  both exist only when you've done the thing that sets them. The first holds the page to return you to
+  after a sign-in detour (a few minutes). The second holds a referral code if you arrived through
+  someone's invite link, so we can credit them when you create a team (30 days). Neither identifies
+  you, and neither is used for advertising.</p>
   <p><code>treg_ad</code>: set by our own <code>/adtrack.js</code>, not a Google script — if you arrive
   from a Google Ads click, it records which ad click led to your visit (the click id and the landing
   page), retained for <b>90 days</b>. It exists to tell us whether an ad turned into a signup, an active

@@ -626,3 +626,29 @@ Untagged traffic shows up as `unattributed_micro` rather than being dropped.
 
 **Isolation.** `treg org agent-new <name> --pin customer=cust_A` mints a token pinned to one tag value;
 the pin beats the header and a mismatch is a 403. Rule of thumb: **tag for counting, token for control.**
+
+## Referrals
+
+`GET /referrals` · `POST /referrals/code` · `GET /admin/referrals`. Policy lives in
+[money](../architecture/money.md); three API-shaped decisions live here.
+
+**`require_identity`, not `require_member`.** A referral belongs to a PERSON, not to one of their
+teams (`User.referral_code`). The reward does land in an org, but *which* org is our decision —
+the oldest one they own — so nothing on these routes is scoped by `X-Treg-Org`.
+
+**`GET /referrals` returns the referred person's full email**, which makes it the one route here
+where a scoping mistake leaks another user's data rather than merely miscounting. It is scoped in
+the query itself (`referrer_user_id == caller.id`), never filtered afterwards, and pinned by a test.
+`privacy.html` discloses the visibility.
+
+**`/?ref=CODE` is the one query string the landing route serves.** `GET /` deliberately treats any
+query string as the SPA's and falls through to the dashboard — which for a referral link would send
+a stranger who has never heard of treg to an empty app shell instead of the pitch. So a *lone* `ref`
+counts as parameterless (anything alongside it still belongs to the SPA), and the code is parked in
+`treg_ref` — httponly, lax, 30 days, and revalidated on read exactly like `_take_oauth_return`,
+because a cookie is attacker-supplied and this value reaches a query.
+
+Redemption happens at **first team creation**, in both org-creating doors (`POST /orgs` and the
+legacy `POST /users`), immediately after `_grant_signup_promo` and with the same swallow-and-log
+posture: a referral is a marketing nicety and a signup is not. It must never be why someone cannot
+make a team.

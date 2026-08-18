@@ -4,6 +4,7 @@ status: shipped
 sources:
   - src/treg/models.py
   - src/treg/db.py
+  - src/treg/referrals.py
   - src/treg/audit.py
   - src/treg/analytics.py
   - src/treg/ratestore.py
@@ -282,3 +283,28 @@ Migrations `A30`-`A32` in `db.py` add the columns, guarded as usual; `TagSpend` 
 tables and need no DDL. Note `A31` also required adding the two new NOT NULL `org` columns to the raw
 `INSERT INTO org` in the legacy `(B)` backfill: a column `create_all` builds from a SQLModel default is
 NOT NULL with **no server default**, so raw SQL must supply it (ops/deploy.md §migration portability).
+
+## `Referral` — one invitation, and what it owes
+
+Written by `referrals.py`; the money it results in is granted through `ledger.grant`. See
+[money](money.md) for the policy and the gates. Two things about the SHAPE belong here:
+
+**Two UNIQUE columns do the arbitration, not application code.** `referred_org_id` (an org can be
+referred exactly once, ever) and `qualifying_payment_intent` (one payment funds one qualification).
+`ledger.grant(once=True)` was not enough: its check is a SELECT with no backing unique index, which
+survives a retry but not two concurrent redemptions — and this is money owed to a third party, not a
+signup promo. NULL is exempt from a unique index, so any number of `pending` rows coexist.
+
+**`status` is a ladder and every terminal state is kept**, never deleted:
+`pending` (signed up, owes nothing) → `qualified` (friend paid, owes both bonuses after the hold) →
+`paid`; or `capped` (referrer out of self-serve allowance) / `rejected` (a gate said no, or the
+funding payment was reversed inside the hold — `reject_reason` says which). A deleted row cannot
+answer "why did I not get paid", which is the first question this feature generates.
+
+`User.referral_code` is on the USER, not the Org: a person refers a friend, and anyone may create
+unlimited orgs, so a per-org code would hand the same human unlimited codes to farm with. It is
+minted lazily on first visit to the Referrals page — NULL is the normal state.
+
+`Referral.card_fingerprint` holds Stripe's stable per-card id. It is **not card data** (opaque
+outside our own Stripe account) and lives here alone, never on `Org`, which keeps
+`Org.stripe_default_pm`'s no-card-data posture intact.

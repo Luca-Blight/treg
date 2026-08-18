@@ -19,7 +19,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Google Ads conversion tracking — capture, outbox, upload](architecture/ads-conversions.md) | shipped | adsconv.py, adtrack.js |
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
 | [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog_store.py, endpoint_stats.py |
-| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | models.py, db.py, audit.py, analytics.py, … |
+| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | models.py, db.py, referrals.py, audit.py, … |
 | [Local proxy — catch a program's own outgoing calls (`treg <command>`)](architecture/local-proxy.md) | shipped | localproxy.py, server.js |
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
 | [MCP — the front door for assistants, and treg as an OAuth authorization server](architecture/mcp-oauth.md) | shipped | mcp.py, mcp_oauth.py, connect-demo.html |

@@ -46,6 +46,7 @@ from . import adsconv
 from . import analytics
 from . import email as email_mod
 from . import ledger
+from . import referrals
 from .config import get_settings
 from .models import CreditBlock, LedgerEntry, Membership, Org, User
 
@@ -240,13 +241,34 @@ async def _set_default_pm(db: AsyncSession, org_id: int, payment_method: str | N
 async def _pm_of_payment_intent(pi_id: str) -> str | None:
     """The PaymentMethod a succeeded PaymentIntent used — how a Checkout with
     `setup_future_usage` hands us the card to reuse, without any Stripe.js on our side."""
+    pm_id, _ = await _pm_and_fingerprint(pi_id)
+    return pm_id
+
+
+async def _pm_and_fingerprint(pi_id: str) -> tuple[str | None, str | None]:
+    """`(payment_method_id, card_fingerprint)` for a succeeded PaymentIntent, in ONE retrieve.
+
+    The fingerprint is Stripe's stable per-CARD identifier: the same physical card presented under a
+    different email, name or Customer produces the same string. That makes it the only durable
+    signal the referral program's abuse checks have — an email address is free, a card is not (see
+    referrals.qualify). It is not card data: the value is opaque and meaningless outside our own
+    Stripe account, so nothing here weakens `Org.stripe_default_pm`'s no-card-data-in-our-DB posture.
+    It is stored on the `referral` row alone, never on an org.
+
+    `expand` rather than a second `PaymentMethod.retrieve`: this call already happens on every
+    Checkout completion, and one round trip on the webhook path is enough.
+    """
     try:
-        pi = await _sdk(stripe.PaymentIntent.retrieve, id=pi_id)
+        pi = await _sdk(stripe.PaymentIntent.retrieve, id=pi_id, expand=["payment_method"])
     except Exception as e:  # noqa: BLE001 — a card we can't look up just means no auto-top-up yet
         log.warning("billing: could not retrieve PaymentIntent %s: %s", pi_id, e)
-        return None
+        return None, None
     pm = pi.get("payment_method")
-    return pm if isinstance(pm, str) else (pm or {}).get("id")
+    if isinstance(pm, str):  # not expanded (an older API version, or a fake in tests)
+        return pm, None
+    pm = pm or {}
+    fingerprint = ((pm.get("card") or {}).get("fingerprint")) or None
+    return pm.get("id"), fingerprint
 
 
 # ---- manual top-up (Stripe-hosted Checkout) ----------------------------------------------------
@@ -761,6 +783,8 @@ async def handle_webhook_event(db: AsyncSession, event: dict) -> dict:
         return await _on_payment_failed(db, obj)
     if kind == "setup_intent.succeeded":
         return await _on_setup_succeeded(db, obj)
+    if kind in ("charge.dispute.created", "charge.refunded"):
+        return await _on_payment_reversed(db, obj, kind)
     # Everything else acknowledged and dropped — deliberately, not by omission. `invoice_creation` on
     # the top-up Checkout makes Stripe emit `invoice.created` / `invoice.paid` for every purchase, and
     # crediting on those too would be a second door onto the same money. The invoice is a document; the
@@ -768,9 +792,14 @@ async def handle_webhook_event(db: AsyncSession, event: dict) -> dict:
     return {"handled": False, "type": kind}
 
 
-async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, *, auto: bool) -> dict:
+async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, *, auto: bool,
+                  fingerprint: str | None = None) -> dict:
     """Credit a paid PaymentIntent to the org's balance, once. Emails a receipt only when this
-    delivery is the one that actually moved money — a redelivery must not re-notify."""
+    delivery is the one that actually moved money — a redelivery must not re-notify.
+
+    `fingerprint` is the paying card's Stripe fingerprint, used only by the referral abuse checks;
+    None is always safe (it costs a gate, not a payout).
+    """
     # "Has this PaymentIntent already been credited?" is asked BEFORE the credit rather than inferred
     # from a balance change afterwards — a concurrent reserve moves the balance too, and mistaking that
     # for a fresh credit would email a receipt on every webhook redelivery.
@@ -826,6 +855,27 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
                 # payment ledger.topup() already credited. Do not remove this as redundant.
                 await db.rollback()
                 log.warning("billing: could not queue ad conversion for org %s: %s", org_id, e)
+        # A paid top-up is the referral program's qualifying event, so this `fresh` branch is the
+        # only correct place to ask: it is the one point that knows money genuinely moved for the
+        # first time. Swallowed for the same reason as the two above — a raise here would 500 the
+        # handler and make Stripe retry a payment that has already credited, and a bonus is never
+        # worth double-charging someone's card. Rolled back for the same reason too: `qualify`
+        # commits internally, so a failure part-way can leave the session pending-rollback and
+        # break `_set_default_pm` below.
+        try:
+            await referrals.qualify(db, org_id=org_id, payment_intent=pi_id,
+                                    amount_micro=amount_micro, fingerprint=fingerprint)
+        except Exception as e:  # noqa: BLE001
+            await db.rollback()
+            log.warning("billing: referral qualification failed for org %s: %s", org_id, e)
+    # Pay out whatever has cleared its hold. Lazy and caller-paid, exactly like ledger's stale-hold
+    # reaper: there is no scheduler in treg, and every top-up anywhere is a fine clock to advance a
+    # queue this small. `sweep` never raises, but the belt stays on — this is a money webhook.
+    try:
+        await referrals.sweep(db)
+    except Exception as e:  # noqa: BLE001 — pragma: no cover
+        await db.rollback()
+        log.warning("billing: referral sweep failed: %s", e)
     return {"handled": True, "credited": fresh, "block_id": block_id,
             "amount_micro": amount_micro, "balance_micro": after}
 
@@ -858,10 +908,14 @@ async def _on_checkout_completed(db: AsyncSession, session: dict) -> dict:
     amount_micro = cents_to_micro(session.get("amount_total") or 0)
     if amount_micro <= 0:
         return {"handled": False, "reason": "zero amount"}
-    result = await _credit(db, org_id, amount_micro, pi_id, auto=False)
+    # Read the card BEFORE crediting: `_credit` is where a referral qualifies, and the fingerprint is
+    # the abuse gate that stops one card claiming a bounty under a second email. Same single retrieve
+    # that already ran here for the saved-card id, just moved above the credit.
+    pm_id, fingerprint = await _pm_and_fingerprint(pi_id)
+    result = await _credit(db, org_id, amount_micro, pi_id, auto=False, fingerprint=fingerprint)
     # The Checkout saved the card (setup_future_usage); remember it so auto-top-up can be armed
     # without asking for a second card entry.
-    await _set_default_pm(db, org_id, await _pm_of_payment_intent(pi_id))
+    await _set_default_pm(db, org_id, pm_id)
     return result
 
 
@@ -882,6 +936,35 @@ async def _on_payment_succeeded(db: AsyncSession, pi: dict) -> dict:
     pm = pi.get("payment_method")
     await _set_default_pm(db, org_id, pm if isinstance(pm, str) else (pm or {}).get("id"))
     return result
+
+
+async def _on_payment_reversed(db: AsyncSession, charge_or_dispute: dict, kind: str) -> dict:
+    """A funded payment was disputed or refunded. Cancels any referral bonus it earned that has not
+    landed yet — and does NOTHING to the balance itself.
+
+    That split is deliberate and it is the reason the hold window exists. treg has never reversed a
+    top-up automatically: `ledger.py` has no path that drives a balance negative, blocks burn
+    promotional-first precisely to keep the disputable pool small, and refund policy is a human
+    decision. What IS safe to automate is not paying a third party a bounty funded by money that
+    just went away. A bonus already granted is logged for a human instead (see
+    `referrals.reject_for_payment`); referral credit burns first, so by then it is usually spent.
+
+    Both event shapes carry the PaymentIntent: a Charge has `payment_intent`, and a Dispute has it
+    directly too (as well as `charge`). We key on it because it is what `CreditBlock` and
+    `Referral` already store.
+    """
+    pi = charge_or_dispute.get("payment_intent")
+    pi_id = pi if isinstance(pi, str) else (pi or {}).get("id")
+    if not pi_id:
+        return {"handled": False, "reason": "no payment_intent on event"}
+    try:
+        cancelled = await referrals.reject_for_payment(db, pi_id, kind)
+    except Exception as e:  # noqa: BLE001 — a webhook must not 500 over a bonus
+        log.warning("billing: referral clawback failed for %s: %s", pi_id, e)
+        return {"handled": False, "reason": "clawback failed"}
+    if cancelled:
+        log.warning("billing: %s on %s cancelled %s pending referral bonus(es)", kind, pi_id, cancelled)
+    return {"handled": True, "type": kind, "referrals_cancelled": cancelled}
 
 
 async def _on_payment_failed(db: AsyncSession, pi: dict) -> dict:

@@ -54,13 +54,13 @@ from sqlmodel import select
 
 from . import adsconv, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
-from . import pubfeed, ratestore, reconcile, runner, sandbox as demo_sandbox, session as sess
+from . import pubfeed, ratestore, reconcile, referrals, runner, sandbox as demo_sandbox, session as sess
 from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
 from .db import get_session, init_db, session_maker
 from .models import (ROLE_RANK, AdConversion, Bundle, CallRecord, CapabilityPin, CreditBlock,
                      DenyRule, Hold, IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient,
-                     OAuthCode, OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, RunRecord,
-                     Secret, TagBudget, TagSpend, Tool, ToolRequest, User)
+                     OAuthCode, OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, Referral,
+                     RunRecord, Secret, TagBudget, TagSpend, Tool, ToolRequest, User)
 from .proxy import relay
 
 
@@ -1994,9 +1994,19 @@ async def landing(request: Request, treg_session: str = Cookie(default=""),
     """Serve the marketing landing at the root. Any query string (invite links, OAuth returns,
     tour deep-links) belongs to the SPA, so those requests fall through to the dashboard —
     the landing is only the clean, parameterless front door. A signed-in visitor belongs on
-    the dashboard, so a live session redirects to /app instead of re-showing the pitch."""
+    the dashboard, so a live session redirects to /app instead of re-showing the pitch.
+
+    `?ref=<code>` is the ONE exception, and it has to be: a referral link's whole job is to show a
+    stranger the pitch. Falling through to the SPA would send someone who has never heard of treg
+    to an empty dashboard shell — so a lone `ref` counts as parameterless, and the code is parked in
+    a cookie on the way past. It is only redeemed much later, when they create their first team.
+    """
     page = _WEB_DIR / "landing.html"
-    if page.exists() and not request.query_params:
+    ref = referrals.normalize_code(request.query_params.get("ref", ""))
+    # Only `ref` may be present. Anything else alongside it belongs to the SPA, and a referral code
+    # is not a reason to hijack an invite or an OAuth return.
+    ref_only = set(request.query_params.keys()) <= {"ref"}
+    if page.exists() and (not request.query_params or (ref and ref_only)):
         if treg_session and await _user_from_session(treg_session, db):
             return RedirectResponse("/app", status_code=302)
         # Read-and-substitute rather than a bare FileResponse: the canonical, og:url and og:image
@@ -2004,7 +2014,10 @@ async def landing(request: Request, treg_session: str = Cookie(default=""),
         # would tell crawlers its front page really lives on treg.to.
         html = page.read_text(encoding="utf-8").replace(
             "{BASE}", get_settings().public_url.rstrip("/"))
-        return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
+        resp = HTMLResponse(html, headers={"Cache-Control": "no-cache"})
+        if ref:
+            _remember_referral(resp, request, ref)
+        return resp
     return await dashboard(request, treg_session, db)
 
 
@@ -2691,6 +2704,39 @@ def _take_oauth_return(request: Request) -> str | None:
     # would have cost a silently-dropped authorization in production.
     target = (request.cookies.get(OAUTH_RETURN_COOKIE) or "").strip('"')
     return target if target.startswith("/oauth/authorize?") else None
+
+
+REFERRAL_COOKIE = "treg_ref"
+# A month. The gap between clicking a friend's link and actually creating a team is measured in days
+# for the people this program is for — they read the landing, think about it, and come back. Shorter
+# would silently drop the referrals that took the longest to convert, which are exactly the genuine
+# ones; much longer would keep attributing a signup to a link somebody forgot they ever clicked.
+REFERRAL_COOKIE_MAX_AGE = 30 * 24 * 3600
+
+
+def _remember_referral(resp, request: Request, code: str) -> None:
+    """Park a referral code from `/?ref=…` until the visitor creates their first team.
+
+    Same shape as `_remember_oauth_return`: httponly (no script needs it), `samesite=lax` so it
+    survives the click through to a GitHub/Google sign-in and back, and `secure` only when we are
+    actually on HTTPS so local development still works.
+
+    First code wins is NOT enforced here — the cookie is simply overwritten. Someone who clicks two
+    different referral links before signing up gets attributed to the second, which is both the
+    normal advertising convention (last touch) and the one that needs no extra state.
+    """
+    resp.set_cookie(REFERRAL_COOKIE, code, httponly=True, samesite="lax",
+                    secure=_is_https(request), max_age=REFERRAL_COOKIE_MAX_AGE)
+
+
+def _take_referral(request: Request) -> str:
+    """The parked code, revalidated. "" when there is none or it is not a shape we ever mint.
+
+    Validated on READ as well as on write, exactly like `_take_oauth_return`: a cookie is
+    attacker-supplied, and this value reaches a database query. `normalize_code` is a strict
+    allowlist, so anything odd becomes "" and the signup simply proceeds unreferred.
+    """
+    return referrals.normalize_code((request.cookies.get(REFERRAL_COOKIE) or "").strip('"'))
 
 
 def _wrong_resource(resource: str) -> str | None:
@@ -3993,6 +4039,9 @@ async def register_user(body: UserIn, request: Request, db: AsyncSession = Depen
     except IntegrityError:
         raise HTTPException(status_code=409, detail="email already registered")
     await _grant_signup_promo(db, org)
+    # Both org-creating doors redeem, for the same reason both grant the signup promo: this one
+    # predates `_find_or_create_user` but still ends with a person owning a fresh team and a balance.
+    await _redeem_referral(db, request, user, org)
     return {"id": user.id, "email": user.email, "org": org.slug, "org_id": org.id, "role": "owner", "token": token}
 
 
@@ -4067,7 +4116,28 @@ async def create_org(
     else:
         raise HTTPException(status_code=409, detail="could not allocate a unique org slug — retry")
     await _grant_signup_promo(db, org)
+    await _redeem_referral(db, request, user, org)
     return {"org": org.slug, "org_id": org.id, "name": org.name, "role": "owner", "token": token}
+
+
+async def _redeem_referral(db: AsyncSession, request: Request, user: User, org: Org) -> None:
+    """Attribute a brand-new team to whoever's link brought them here. Owes nothing yet — the bonus
+    is earned at the team's first paid top-up, not at signup (see referrals.py).
+
+    Team creation is the right and only redemption point: `_find_or_create_user` deliberately makes
+    no org, so this is where a person first becomes a tenant with a balance. It fires on EVERY team
+    a user creates, and `referrals.attribute` is what refuses the ones that should not count — a
+    self-referral, a demo team, or an org that already carries a referral.
+
+    Swallow-and-log, matching `_grant_signup_promo` immediately above: a referral is a marketing
+    nicety and a signup is not. Nothing here may ever be the reason someone cannot make a team.
+    """
+    try:
+        code = _take_referral(request)
+        if code:
+            await referrals.attribute(db, user=user, org=org, code=code)
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger("treg").warning("referral attribution failed for org %s: %s", org.id, exc)
 
 
 class GrantTeamIn(BaseModel):
@@ -5117,7 +5187,13 @@ async def billing_get(
     there's a Stripe customer and a saved card, the auto-top-up policy + why it's off if it is, and how
     much of this month's automatic cap has been used."""
     org = _billing_org(caller)
-    return await billing.billing_state(db, org)
+    state = await billing.billing_state(db, org)
+    # Merged HERE rather than inside `billing_state`, so billing.py keeps its one job (Stripe) and
+    # does not grow a second reason to know about referrals. This is the screen where a referred team
+    # is already deciding how much to add, so it is the only place the minimum actually changes a
+    # decision — see referrals.offer_for_org.
+    state["referral_offer"] = await referrals.offer_for_org(db, org.id)
+    return state
 
 
 @app.post("/billing/topup")
@@ -5213,6 +5289,49 @@ async def billing_portal(
         raise HTTPException(status_code=503, detail=str(e))
     except billing.TopupRejected as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+# ---- referrals ---------------------------------------------------------------------------------
+# Deliberately `require_identity`, not `require_member`: a referral belongs to a PERSON, not to one
+# of their teams (see models.Referral). The reward lands in an org, but which org is our decision,
+# not the caller's — so nothing here is scoped by `X-Treg-Org`.
+@app.get("/referrals")
+async def my_referrals(
+    user: User = Depends(require_identity), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """This person's referral link and everyone who has used it.
+
+    Also runs the payout sweep, scoped to this user. There is no scheduler in treg, so the two
+    trigger points are any top-up (`billing._credit`) and this page — which means someone checking
+    whether their reward has landed is the one who makes it land. That is the same lazy,
+    caller-pays-for-their-own-cleanup bargain as `ledger.reap_stale_holds`.
+    """
+    # Mint the code here too, not only on POST. Asking for this page IS the lazy trigger the code
+    # was always meant to hang off, and every caller needs a usable `link` — a response carrying an
+    # empty one is a footgun for any client that doesn't know to POST first.
+    try:
+        await referrals.ensure_code(db, user)
+    except Exception as exc:  # noqa: BLE001 — a code we couldn't mint is an empty link, not a 500
+        logging.getLogger("treg").warning("referral code mint failed for user %s: %s", user.id, exc)
+    try:
+        await referrals.sweep(db, referrer_user_id=user.id)
+    except Exception as exc:  # noqa: BLE001 — pragma: no cover
+        logging.getLogger("treg").warning("referral sweep failed for user %s: %s", user.id, exc)
+    return await referrals.summary(db, user)
+
+
+@app.post("/referrals/code")
+async def mint_referral_code(
+    user: User = Depends(require_identity), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Mint this person's referral code, or return the one they already have.
+
+    Idempotent, so the dashboard can call it every time the page opens without checking first. Codes
+    are minted here rather than at signup because most people never open this page, and a code
+    nobody has seen is a unique index entry earning nothing.
+    """
+    code = await referrals.ensure_code(db, user)
+    return {"code": code, "link": f"{get_settings().public_url.rstrip('/')}/?ref={code}"}
 
 
 @app.post("/billing/stripe/webhook", include_in_schema=False)
@@ -8247,6 +8366,56 @@ async def admin_reconcile_repeats(
             **await reconcile.repeat_rate(db, since, top=top)}
 
 
+@app.get("/admin/referrals")
+async def admin_referrals(
+    status: str = "", limit: int = Query(200, ge=1, le=1000),
+    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Every referral, across every team — who invited whom, what it cost, and what is still owed.
+
+    Cross-org, so `require_superadmin` and nothing weaker, exactly like the reconcile trio above.
+    Read-only: it pays nothing and refuses nothing. `pending_payout_micro` is what the sweep will
+    grant once holds elapse, and it is the number that says whether this program is affordable
+    before the money leaves — the same job `provider_spend` does for provider bills.
+
+    This is also the report the influencer tier will read when it lands: a cash payout run is this
+    list, filtered to partners on a contract, exported.
+    """
+    s = get_settings()
+    q = select(Referral).order_by(Referral.created_at.desc()).limit(limit)
+    if status:
+        q = q.where(Referral.status == status)
+    rows = (await db.execute(q)).scalars().all()
+
+    emails: dict[int, str] = {}
+    for uid in {r.referrer_user_id for r in rows} | {r.referred_user_id for r in rows}:
+        u = await db.get(User, uid)
+        if u is not None:
+            emails[uid] = u.email
+
+    by_status: dict[str, int] = {}
+    for r in rows:
+        by_status[r.status] = by_status.get(r.status, 0) + 1
+    pending = sum(int(s.referral_referrer_micro) + int(s.referral_referred_micro)
+                  for r in rows if r.status == "qualified")
+    paid = sum(r.referrer_reward_micro + r.referred_reward_micro for r in rows if r.status == "paid")
+    return {
+        "counts": by_status,
+        "paid_micro": paid,
+        "pending_payout_micro": pending,
+        "referrals": [{
+            "id": r.id, "code": r.code, "status": r.status, "reason": r.reject_reason,
+            "referrer": emails.get(r.referrer_user_id, ""),
+            "referred": emails.get(r.referred_user_id, ""),
+            "referred_org_id": r.referred_org_id,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "qualified_at": r.qualified_at.isoformat() if r.qualified_at else None,
+            "paid_at": r.paid_at.isoformat() if r.paid_at else None,
+            "paid_micro": r.referrer_reward_micro + r.referred_reward_micro,
+        } for r in rows],
+    }
+
+
 # ---- the proxy: call a tool without holding its credential --------------------------------
 async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[Tool, str]:
     """Resolve `/call/<rest>` to (tool, full upstream URL), scoped to the caller's org. Shapes:
@@ -10083,6 +10252,13 @@ async def call_tool(
     # network: everything above (ACL, deny rules, caps) can still refuse the call, and a refused
     # call must not leave a hold behind for the reaper to clean up.
     if mk is not None and mk.metered:
+        # Rendered BEFORE the reserve, while `tool` is still live. `ledger.reserve` calls
+        # `db.rollback()` on InsufficientBalance, which EXPIRES every ORM object this session is
+        # tracking — `tool` included — and reading an expired attribute outside an awaited call
+        # raises MissingGreenlet. Doing it inside the handler below turned the one refusal an agent
+        # is most likely to hit into a 500 with no `balance_micro` and no top-up URL. Same reasoning
+        # as `block_id` in billing._credit, and the reason that capture is pinned by a test.
+        refusal_secrets = _platform_secret_renderings(tool)
         try:
             await _platform_reserve(mk, caller, db, meta=meta, call_ref=call_ref)
         except HTTPException as exc:
@@ -10103,8 +10279,7 @@ async def call_tool(
             # already retains, and it is bounded by the same redaction and 14-day retention.
             _audit(exc.status_code, charged_micro=0,
                    refused_by="balance" if exc.status_code == 402 else "cap",
-                   error_response=_redact_snippet(f"treg: {exc.detail}",
-                                                  _platform_secret_renderings(tool),
+                   error_response=_redact_snippet(f"treg: {exc.detail}", refusal_secrets,
                                                   _ERROR_RESPONSE_MAX))
             raise
     started = _now_ms()

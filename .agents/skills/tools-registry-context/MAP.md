@@ -57,6 +57,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/pubfeed.py` | interface/landing-sandbox.md |
 | `src/treg/ratestore.py` | architecture/data-model.md, interface/api.md |
 | `src/treg/reconcile.py` | architecture/money.md |
+| `src/treg/referrals.py` | architecture/data-model.md, architecture/money.md |
 | `src/treg/runner.py` | interface/api.md |
 | `src/treg/sandbox.py` | interface/landing-sandbox.md |
 | `src/treg/session.py` | interface/dashboard.md |
@@ -84,11 +85,11 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
 | `architecture/catalog.md` | `catalog_store.py`, `endpoint_stats.py` |
-| `architecture/data-model.md` | `models.py`, `db.py`, `audit.py`, `analytics.py`, `ratestore.py` |
+| `architecture/data-model.md` | `models.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `mcp.py`, `mcp_oauth.py`, `connect-demo.html` |
-| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `reconcile.py`, `api.py` |
+| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `reconcile.py`, `referrals.py`, `api.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `db.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
 | `architecture/super-admin.md` | `api.py`, `config.py` |
