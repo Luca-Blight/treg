@@ -110,7 +110,6 @@ def _utcnow_naive() -> datetime:
 # separately for the read-side Ads catalog calls) — there is nothing to keep in sync here.
 DATA_MANAGER_URL = "https://datamanager.googleapis.com/v1/events:ingest"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-_UPLOAD_DELAY_S = 6 * 3600   # Google will not accept a conversion until hours after the click
 _MAX_ATTEMPTS = 8
 _RETRY_BASE_S = 5 * 60
 _RETRY_CAP_S = 24 * 3600
@@ -185,10 +184,13 @@ def _payload_and_rows(
             "eventTimestamp": _conversion_time(row.created_at),
             "eventSource": "WEB",
             "destinationReferences": [row.action],
-            # Stable per outbox row, so a resend after an ambiguous prior outcome (e.g. a timeout
-            # whose response we never saw) dedupes into the SAME conversion on Google's side instead
-            # of double-counting — see _ACKNOWLEDGED_ROW_ERRORS.
-            "transactionId": str(row.id),
+            # Stable per outbox row, so a resend after an ambiguous prior outcome dedupes into the
+            # SAME conversion on Google's side instead of double-counting. The `treg-` prefix is
+            # REQUIRED, not cosmetic: Data Manager rejects a purely numeric transactionId with a
+            # bare 400 INVALID_ARGUMENT on `events[N]` (verified live 2026-08-18 — "2"/"3" fail,
+            # "row-2"/"row-3" succeed with every other field identical). validateOnly does NOT
+            # catch it, so only a real ingest surfaces this.
+            "transactionId": f"treg-{row.id}",
         }
         if row.value_usd_micro:
             # The one permitted float: conversionValue is a wire double, so a decimal amount is what
@@ -370,12 +372,10 @@ async def drain_once(db: AsyncSession, client) -> dict:
     # Naive UTC on BOTH sides: created_at is a naive column, and comparing it against a tz-aware
     # value is an asyncpg error on Postgres (and a silently wrong comparison elsewhere).
     now = _utcnow_naive()
-    cutoff = now - timedelta(seconds=_UPLOAD_DELAY_S)
     rows = (await db.execute(
         select(AdConversion)
         .where(AdConversion.uploaded_at.is_(None),
                AdConversion.failed_at.is_(None),
-               AdConversion.created_at <= cutoff,
                or_(AdConversion.next_attempt_at.is_(None), AdConversion.next_attempt_at <= now))
         .order_by(AdConversion.created_at, AdConversion.id)
         .limit(100)
