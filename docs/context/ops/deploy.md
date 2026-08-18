@@ -11,6 +11,7 @@ sources:
   - render.yaml
 related:
   - architecture/data-model.md
+  - architecture/ads-conversions.md
   - foundation/charter.md
 ---
 
@@ -58,6 +59,16 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   Advertising OAuth platforms `microsoft_ads_*`, `snapchat_ads_*`, `tiktok_ads_*`, `pinterest_*` (all
   unset by default, so those providers ship **unconfigured** until a deployment registers a dev app).
   Empty for a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
+- **Ad conversion tracking** — `google_ads_customer_id` (the target Ads account),
+  `google_ads_developer_token`, and `ads_conv_org_slug` (which team's `google-ads` OAuth connection the
+  uploader authenticates as — a platform setting, not a per-tenant one, since treg uploads to its OWN
+  ad account). **All three** must be set or the whole feature is off (`adsconv.enabled()`): the capture
+  script is empty, attribution cookies are ignored, conversions are not queued, and the background
+  uploader is not started. For manager-account auth, set optional `google_ads_login_customer_id` to the
+  manager MCC id; direct client auth leaves it empty. Do not use the selected connection
+  `resource_ref` as the manager id—it names the target account. Self-hosters and the test suite carry
+  zero ad-conversion machinery by default. See
+  [ads-conversions](../architecture/ads-conversions.md).
 - **Landing live-wire (optional):** `demo_stripe_key` (`TREG_DEMO_STRIPE_KEY`, a Stripe **sandbox
   restricted** key) powers the landing sandbox's ONE real upstream call — a sandbox call to the exact
   seeded `stripe` tool relays for real with this key injected; the key exists in no sandbox org. Empty ⇒
@@ -175,7 +186,10 @@ callback exchanges the code exactly as the consent URL was built; and **A35** ba
 idempotent `INSERT … SELECT … WHERE NOT EXISTS` SQL. Because a rolling deploy keeps an old binary
 alive after that snapshot, API `_ensure_grant` also reconstructs any later old-binary family at first
 refresh, listing, or team move with an `ON CONFLICT DO NOTHING` upsert supported by SQLite and
-Postgres; the oldest token's `created_at` remains the consent time.
+Postgres; the oldest token's `created_at` remains the consent time; **A36** adds nullable
+`callrecord.error_request`/`error_response` evidence; **A37** adds nullable Ads attribution and
+`first_call_at` columns to `org`; and **A38** adds nullable retry/dead-letter timestamps to the Ads
+conversion outbox. The A37/A38 timestamps use portable `TIMESTAMP` DDL and require no backfill.
 
 **Audit back-pressure (`audit.py`).** Audit rows are written off the request path (fire-and-forget), and
 each write opens a DB connection from the small pool **shared** with real requests. Two limits keep
@@ -205,6 +219,15 @@ a conversation rather than an env-var edit that lifts the rail for every team at
 It is a **blast-radius limit**, not a billing control: it exists because auto-top-up refills the
 balance, so the balance alone is not a ceiling against a runaway agent or a mispriced catalog entry.
 Enforced fail-closed.
+
+## X pay-per-use billing (switch ON since 2026-08-18)
+
+`TREG_OAUTH_BILLED_PROVIDERS` — comma-separated providers whose upstream bill lands on TREG's
+developer app (X moved to pay-per-use: the app owner pays per call, whoever's token made it). A
+provider named here has its registry-connect calls metered against the org balance, `tier: oauth`
+in the ledger. Empty = those calls are free (the pre-2026-08-18 behaviour). Currently `x`.
+BYO-app connections are never metered. Ongoing spend is visible in the reconcile reports under
+`tier: oauth`; the burn from the free period is only in console.x.com.
 
 ## Market data platform keys (2026-08-16)
 

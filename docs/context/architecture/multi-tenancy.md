@@ -143,7 +143,11 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   with no code (403 if `invite.email != user.email`, 409 if already a member). The code path stays.
 - **Org management endpoints:** `register_user` (`POST /users`, legacy open-registration, used by the
   test fixture) still creates the user + an org + owner membership via `_make_org_membership` (mints the
-  token) — NOT reached by the dashboard/CLI login doors, which no longer auto-make an org. `create_org`
+  token) — NOT reached by the dashboard/CLI login doors, which no longer auto-make an org. Both this door
+  and `create_org` below now also read the first-party ad-click cookie (`api._ad_attribution_from`) and,
+  when enabled and present, stamp `Org.ad_gclid`/`ad_click_id_type`/`ad_landing`/`ad_click_at` on the
+  new org — preserving whether the click was a GCLID, GBRAID or WBRAID — see
+  [ads-conversions](ads-conversions.md). `create_org`
   (`POST /orgs`, `require_identity`),
   `list_orgs` (`GET /orgs`), `create_invite` (`POST /orgs/{id}/invites`, admin+), `accept_invite`
   (`POST /invites/accept`, open + code-protected → registers the user if new, joins them to the invited
@@ -162,7 +166,9 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
 - **Org administration:** `set_member_role` (`PATCH /orgs/{id}/members/{user}`, **owner-only** via
   `_require_owner_of`; a `_count_owners` last-owner guard blocks demoting the sole owner — ownership
   transfer = promote another to owner, then step down), `leave_org` (`POST /orgs/{id}/leave`, self-removal,
-  same last-owner guard), `delete_org` (`DELETE /orgs/{id}`, owner-only, cascades every org-scoped row).
+  same last-owner guard), `delete_org` (`DELETE /orgs/{id}`, owner-only, cascades every org-scoped row —
+  including any pending `AdConversion`, which `_ORG_SCOPED_MODELS` now lists: a queued conversion belongs
+  to the team it would be attributed to).
 - **Invites lifecycle:** one-time **and** time-bounded — `Invite.expires_at` (default `INVITE_TTL_DAYS`),
   `accept_invite` returns `410` past expiry. `list_invites` (`GET /orgs/{id}/invites`, admin+) and
   `revoke_invite` (`DELETE /orgs/{id}/invites/{invite}`, admin+); expired codes are garbage-collected by

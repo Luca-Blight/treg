@@ -380,7 +380,26 @@ def _migrate_to_orgs(conn) -> None:
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE callrecord ADD COLUMN {col} VARCHAR"))
 
-    # (A37) additive: user.referral_code — this person's `?ref=` code (see referrals.py). NULLABLE
+    # (A37) additive: org ad-attribution columns + first_call_at. `create_all` builds them on a
+    # fresh database; this is for one created before this feature shipped. All nullable, so no
+    # backfill is meaningful — a team that predates the ads work has no click to attribute to.
+    if "org" in tables:
+        org_cols = {c["name"] for c in insp.get_columns("org")}
+        for col, ddl in (("ad_gclid", "VARCHAR"), ("ad_click_id_type", "VARCHAR"),
+                         ("ad_click_at", "TIMESTAMP"),
+                         ("ad_landing", "VARCHAR"), ("first_call_at", "TIMESTAMP")):
+            if col not in org_cols:
+                conn.execute(text(f"ALTER TABLE org ADD COLUMN {col} {ddl}"))
+
+    # (A38) additive: durable retry/dead-letter state for the Ads conversion outbox. The table may
+    # already exist from the first conversion-tracking deploy; create_all does not add new columns.
+    if "adconversion" in tables:
+        conv_cols = {c["name"] for c in insp.get_columns("adconversion")}
+        for col in ("next_attempt_at", "failed_at"):
+            if col not in conv_cols:
+                conn.execute(text(f"ALTER TABLE adconversion ADD COLUMN {col} TIMESTAMP"))
+
+    # (A39) additive: user.referral_code — this person's `?ref=` code (see referrals.py). NULLABLE
     # with no default: it is minted lazily the first time someone opens the Referrals page, so NULL
     # ("never asked for one") is the correct and overwhelmingly common state. "user" is QUOTED — a
     # reserved word in Postgres, and this ALTER runs in place on the live PG database.
@@ -389,6 +408,9 @@ def _migrate_to_orgs(conn) -> None:
     # built it on a fresh database, so this branch only runs where the table predates the feature,
     # and IF NOT EXISTS keeps it idempotent across a restarted deploy. The `referral` table itself
     # needs nothing here — create_all makes a brand-new table for free.
+    #
+    # Renumbered from (A37) on merge: main took 37 and 38 for the ad-attribution work above, and two
+    # blocks sharing a tag would make the next collision impossible to talk about.
     if "user" in tables and "referral_code" not in {c["name"] for c in insp.get_columns("user")}:
         conn.execute(text('ALTER TABLE "user" ADD COLUMN referral_code VARCHAR'))
         conn.execute(text(

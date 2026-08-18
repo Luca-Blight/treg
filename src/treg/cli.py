@@ -892,7 +892,13 @@ def _run_catalog(cfg: dict, args) -> None:
         _kv("served", "on treg's key — you need no account with this provider")
         _kv("price", f"~${a.get('estimated_cost_usd', 0):g} per call, from your team balance")
     elif tier in ("tool", "credential"):
-        _kv("served", "with your team's OWN credential — not metered")
+        if a.get("metered"):
+            # An oauth-billed provider (X): the credential is the team's, the upstream bill is
+            # treg's, so the call is metered — say so before the call, not on the invoice.
+            _kv("served", "with your team's own connection — metered from the team balance")
+            _dim(f"  {detail}")
+        else:
+            _kv("served", "with your team's OWN credential — not metered")
     else:
         _kv("served", "not yet")
         _dim(f"  {detail}")

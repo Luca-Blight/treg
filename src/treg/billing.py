@@ -42,6 +42,7 @@ import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from . import adsconv
 from . import analytics
 from . import email as email_mod
 from . import ledger
@@ -807,6 +808,9 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
     )).first() is not None
     block = await ledger.topup(db, org_id, amount_micro, pi_id,
                               meta={"auto": auto, "source": "stripe"})
+    block_id = block.id  # captured now: a later rollback (the ad-conversion except below) expires
+                        # every object this session is tracking, `block` included, and reading an
+                        # expired attribute outside an awaited call raises MissingGreenlet.
     after = await ledger.balance_of(db, org_id)
     fresh = not already
     if fresh:
@@ -831,15 +835,38 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
                            "auto": auto, "balance_after_micro": after,
                            "org": org.slug if org else ""},
                           groups={"team": org.slug if org else ""})
-        # A first paid top-up is the referral program's qualifying event, so this `fresh` branch is
-        # the only correct place to ask: it is the one point that knows money genuinely moved for
-        # the first time. Swallowed for the same reason `analytics.capture` is — a raise here would
-        # 500 the handler and make Stripe retry a payment that has already credited. A bonus is
-        # never worth double-charging someone's card.
+        # First top-up only: `fresh` is already the "this delivery moved money" branch, and the
+        # outbox's unique (org_id, action) makes a second top-up a silent no-op. We measure becoming
+        # a payer, not revenue — value-based bidding needs volume treg does not have yet. Guarded like
+        # analytics.capture above: an exception here must not 500 the webhook and make Stripe retry an
+        # already-credited payment.
+        if org is not None:
+            try:
+                await adsconv.queue(db, org, adsconv.ACTION_PAID,
+                                    value_usd_micro=amount_micro, dedupe_key=pi_id)
+                await db.commit()
+            except Exception as e:  # noqa: BLE001 — see comment above
+                # A failure here (not just adsconv.queue's own IntegrityError, which it already
+                # absorbs via savepoint, but e.g. the commit above failing on a serialization
+                # error or connection blip) can leave the session in SQLAlchemy's "pending
+                # rollback" state. The callers below reuse this same `db` for more work
+                # (_set_default_pm's db.get(Org, ...)); without rolling back here, that next use
+                # raises PendingRollbackError, which 500s the webhook and makes Stripe retry a
+                # payment ledger.topup() already credited. Do not remove this as redundant.
+                await db.rollback()
+                log.warning("billing: could not queue ad conversion for org %s: %s", org_id, e)
+        # A paid top-up is the referral program's qualifying event, so this `fresh` branch is the
+        # only correct place to ask: it is the one point that knows money genuinely moved for the
+        # first time. Swallowed for the same reason as the two above — a raise here would 500 the
+        # handler and make Stripe retry a payment that has already credited, and a bonus is never
+        # worth double-charging someone's card. Rolled back for the same reason too: `qualify`
+        # commits internally, so a failure part-way can leave the session pending-rollback and
+        # break `_set_default_pm` below.
         try:
             await referrals.qualify(db, org_id=org_id, payment_intent=pi_id,
                                     amount_micro=amount_micro, fingerprint=fingerprint)
         except Exception as e:  # noqa: BLE001
+            await db.rollback()
             log.warning("billing: referral qualification failed for org %s: %s", org_id, e)
     # Pay out whatever has cleared its hold. Lazy and caller-paid, exactly like ledger's stale-hold
     # reaper: there is no scheduler in treg, and every top-up anywhere is a fine clock to advance a
@@ -847,8 +874,9 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
     try:
         await referrals.sweep(db)
     except Exception as e:  # noqa: BLE001 — pragma: no cover
+        await db.rollback()
         log.warning("billing: referral sweep failed: %s", e)
-    return {"handled": True, "credited": fresh, "block_id": block.id,
+    return {"handled": True, "credited": fresh, "block_id": block_id,
             "amount_micro": amount_micro, "balance_micro": after}
 
 

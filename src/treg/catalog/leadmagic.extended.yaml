@@ -70,11 +70,11 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://leadmagic.io/pricing
-      checked: '2026-07-28'
-      confidence: documented
-      note: 10 credits if a profile is found; free if not found
+      checked: '2026-08-16'
+      confidence: verified
+      note: "VERIFIED live 2026-08-16 by LeadMagic's own echo: a hit answered credits_consumed: 10 (charged $0.25 exactly), a miss credits_consumed: 0 (charged $0). The 'b2b overstatement' suspicion from the August sweep was checked and REFUTED for this endpoint — the over-billing it was blamed for was the settle bug fixed in d458ee5"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.b2b-profile.json
     docs_url: https://leadmagic.io/docs/api-reference/email-to-profile
@@ -102,11 +102,11 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://leadmagic.io/pricing
-      checked: '2026-07-28'
-      confidence: documented
-      note: 5 credits if an email is found; free if not found
+      checked: '2026-08-16'
+      confidence: verified
+      note: "VERIFIED live 2026-08-16 by LeadMagic's own echo: credits_consumed: 5, charged $0.125 exactly. The August-sweep value was correct"
     verified: 2026-07-28
     example_response: examples/leadmagic.x.b2b-profile-email.json
     docs_url: https://leadmagic.io/docs/api-reference/profile-to-email

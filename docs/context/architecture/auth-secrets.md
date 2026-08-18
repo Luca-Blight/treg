@@ -110,6 +110,16 @@ module symbols:
   are cumulative supersets (write ⊇ read); `default_capability` is the **broadest** (an agent product needs
   write eventually, so one honest consent screen beats connecting twice). `scopes_for()` /
   `satisfied_capabilities()` decide when a later capability needs a re-consent.
+- `platform_billed` + `billed_read_usd`/`billed_write_usd`/`billed_write_link_usd` — providers whose
+  UPSTREAM bills the app owner per use, whoever's token made the call. X is the one entry: it dropped
+  plan tiers for prepaid pay-per-use (per resource read / per post written, checked 2026-08-12), so a
+  registry X connect spends treg's credits and the proxy meters those calls against the org's balance
+  (`api.py` `_billed_marketplace` → the tier-4 reserve→settle path; [money](money.md)). Gated on the
+  deploy opting in via `TREG_OAUTH_BILLED_PROVIDERS` (`config.oauth_billed_set` — empty means free,
+  the kill-switch shape `platform_providers` uses). The rates here are the fallback for uncatalogued
+  routes; a priced `catalog/x.yaml` entry wins. `listing()` carries `metered` + `billed_rates` so the
+  dashboard can show the price BEFORE consent. A **BYO connect is never metered** — the callback
+  stamps `secret.provider` only in registry mode, and that attribution is the whole detection.
 - `auth_kind` = `"oauth"` (treg's app), `"token"` (Slack — a workspace-scoped bot the user creates and
   pastes; `is_token_kind`), or `"key"` (an **API-key provider** connected by pasting a key: Apollo, PDL,
   Akta, Hunter, Crunchbase, Lusha, Coresignal, Diffbot, The Companies API, LeadMagic on a new

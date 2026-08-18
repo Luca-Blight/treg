@@ -507,6 +507,7 @@ TEMPLATE = """<!doctype html>
   }}
 }})();
 </script>
+<script src="/adtrack.js"></script>
 </body>
 </html>
 """
@@ -643,6 +644,7 @@ HUB = """<!doctype html>
   </div>
 </footer>
 
+<script src="/adtrack.js"></script>
 </body>
 </html>
 """

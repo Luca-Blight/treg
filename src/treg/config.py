@@ -178,6 +178,15 @@ class Settings(BaseSettings):
     # blast-radius limit on a runaway agent or a mispriced catalog entry, not a billing control —
     # the balance is what a team actually spends against.
     platform_daily_cap_usd: float = 100.0
+    # OAuth providers whose UPSTREAM bill lands on treg's developer app rather than the connected
+    # user (X moved to pay-per-use in Feb 2026: the app owner is billed per resource read / per post
+    # written, whoever's token made the call). Calls through a registry connect of a provider named
+    # here are metered against the org's balance — the same reserve→settle path as tier 4. Same
+    # kill-switch shape as `platform_providers`: empty (the default) = those calls stay free, so a
+    # deploy must OPT IN to charging (`TREG_OAUTH_BILLED_PROVIDERS=x`). BYO-app connections
+    # (/oauth/start with the caller's own client_id) are never metered — their upstream bill is
+    # already theirs.
+    oauth_billed_providers: str = ""
 
     # ---- Stripe top-ups (billing.py) -----------------------------------------------------------
     # OUR billing account's keys. Deliberately NOT the `demo_stripe_*` pair above: that one belongs to
@@ -260,6 +269,17 @@ class Settings(BaseSettings):
     # can't work without this) rather than silently reusing the wrong client.
     google_ads_client_id: str = ""
     google_ads_client_secret: str = ""
+    # Google Ads conversion upload. This customer id, the developer token above, and the OAuth org
+    # slug below are all required; if any is empty the whole feature is OFF (tests stay inert and
+    # self-hosters send nothing) — the same gate shape analytics.py uses for posthog_key.
+    google_ads_customer_id: str = ""
+    # Manager (MCC) account used to access google_ads_customer_id. Optional for direct client auth;
+    # when present this is sent as login-customer-id. It cannot be inferred from Secret.resource_ref,
+    # which is the TARGET client account selected in discovery, not its manager.
+    google_ads_login_customer_id: str = ""
+    # Which team's google-ads OAuth connection the uploader authenticates as. treg uploads to its
+    # OWN ad account, so this is a platform setting, never a per-tenant one.
+    ads_conv_org_slug: str = ""
 
     linkedin_client_id: str = ""
     linkedin_client_secret: str = ""
@@ -339,6 +359,12 @@ class Settings(BaseSettings):
     @property
     def platform_daily_cap_micro(self) -> int:
         return int(round(self.platform_daily_cap_usd * 1_000_000))
+
+    @property
+    def oauth_billed_set(self) -> frozenset[str]:
+        """OAuth providers whose registry-connect calls are metered (comma-separated
+        `TREG_OAUTH_BILLED_PROVIDERS`). Empty = the current free behavior."""
+        return frozenset(p.strip().lower() for p in self.oauth_billed_providers.split(",") if p.strip())
 
     @property
     def expose_dev_code(self) -> bool:

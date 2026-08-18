@@ -12,6 +12,7 @@ related:
   - architecture/catalog.md
   - architecture/proxy-model.md
   - architecture/data-model.md
+  - architecture/ads-conversions.md
 ---
 
 # Money
@@ -19,6 +20,14 @@ related:
 A catalogued endpoint can be served on **treg's own key** — no provider signup for the caller — which
 means treg pays the provider and bills the team. That needs a balance, a way to top it up, and a way
 to prove afterwards that the numbers were real. Three modules, one job each:
+
+Two wallets of treg's spend through this machinery, and only these two: **tier-4 platform keys**
+(`TREG_PLATFORM_KEY_*`) and **oauth-billed apps** — providers like X whose upstream bills the app
+owner per use, so even a call on the org's *own* connection spends treg's prepaid credits
+(`MarketplaceCall.billed_oauth`; detection and rates live in
+[auth-secrets](auth-secrets.md)). Both run the same reserve→relay→settle path in `api.py`, share the
+fail-closed daily cap, and are distinguished in ledger meta by `tier: platform` vs `tier: oauth`.
+An org's own key/credential on any *other* provider is never metered — there the org's account pays.
 
 | Module | Job | May it write money? |
 |---|---|---|
@@ -120,6 +129,14 @@ synchronous and swallowing by construction — analytics is the one side effect 
 allowed to fail, and it must fail silently, because a raise here would 500 the handler and make Stripe
 retry a payment that already credited. Amounts travel as canonical integer `amount_micro`; the
 `amount_usd` on the event is display-only.
+
+On the same `fresh` branch, `_credit` also queues a `paid` Google Ads conversion (`adsconv.queue`) when
+the org has a click to attribute to — but this one is **not** atomic with the credit: `ledger.topup()`
+already committed by the time `_credit` gets here, so the conversion is a second, separate commit. A
+crash between the two loses the conversion permanently (the money is still correctly credited). Found
+in review and accepted deliberately (2026-08-17) rather than restructuring `ledger.py`'s commit-inside
+convention; full reasoning and the cheap future fix in
+[ads-conversions](ads-conversions.md).
 
 **Invoices exist on the manual path only.** The top-up Checkout sets `invoice_creation`, so a
 one-off purchase produces a real Stripe Invoice — number, PDF, billing address, tax ID — which is the
