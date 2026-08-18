@@ -874,7 +874,9 @@ work rides on a request someone is already making.
 ### The billing page's referral prompt
 
 The Billing tab renders `billing.referral_offer` when the team was referred: a green note naming the
-minimum, and `+$X bonus` on each preset that clears it (`refPresetBonus`). Both are needed — the
+minimum, and `+$X bonus` on each preset that clears it (`refPresetBonus`). Both are measured
+against `remaining_micro`, not the full minimum — the threshold is cumulative, so a team that has
+already added $5 is asked for "$5 more" and sees the bonus marked on the $5 button. Both are needed — the
 amount is chosen at the buttons, and the first preset ($5) is below the $10 minimum, so a note on its
 own would let the most-clicked button quietly forfeit the reward. Null offer = the page renders
 exactly as it did before this shipped.

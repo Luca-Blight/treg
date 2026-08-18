@@ -461,10 +461,22 @@ each side, `config.referral_*`) are budgetable as CAC, bounded by construction, 
 building a fake-account farm for. The two sides are deliberately SYMMETRIC: it makes the offer one
 sentence to explain, and neither party can feel short-changed by the other's share.
 
-**The qualifying event is the friend's FIRST PAID TOP-UP, never their signup.** `promo_grant_micro`
-is granted per ORG and nothing caps orgs per user, so a signup-triggered bounty is a faucet pointed
-at itself. The minimum top-up sits deliberately above both bounties combined: below it, buying your
-own bonus with your own card turns a profit.
+**The qualifying event is a PAID TOP-UP, never a signup.** `promo_grant_micro` is granted per ORG
+and nothing caps orgs per user, so a signup-triggered bounty is a faucet pointed at itself.
+
+**The threshold is cumulative, and falling short is not fatal.** This first shipped as "the first
+top-up must clear the minimum, or the referral is rejected", and that was wrong in the one way that
+mattered: **$5 is the first preset on the billing page and the minimum is $10**, so the most obvious
+button silently destroyed the reward, permanently, with no way back even if the team added $100 the
+next day. It punished exactly the person the program exists to convert and removed their reason to
+add the rest. A short payment now leaves the row `pending`, counts toward the total, and the billing
+page keeps the offer up — asking for the REMAINDER, because repeating the full figure reads as
+though the money already paid did not count.
+
+This costs nothing in abuse terms: the money still has to arrive, so $5 + $5 buys a referral on
+exactly the terms $10 does, and the fingerprint and the cap are untouched. It also let the old
+"must be the first purchase" rule go — that existed to stop a second bounty, and `pending` already
+does it, since `qualify` only ever selects a pending row.
 
 **Referral credit burns first.** `_KIND_ORDER` gives `referral` the same rank as `promotional`,
 because both are marketing spend we can never be asked to return, and spending them first keeps the

@@ -2429,8 +2429,14 @@ a:hover{text-decoration-color:var(--muted)}
                         <template v-if="billing.referral_offer.referrer_masked">by
                           <b>{{billing.referral_offer.referrer_masked}}</b></template>
                         <template v-else>to treg</template>
-                        — add <b>{{money(billing.referral_offer.min_topup_micro)}}</b> or more and
-                        we'll put <b>{{money(billing.referral_offer.referred_micro)}}</b> extra in
+                        — add
+                        <!-- Once they have paid something, ask for the REMAINDER. Repeating the full
+                             amount reads as though the money they already added did not count, and
+                             it does: the threshold is cumulative. -->
+                        <b>{{money(billing.referral_offer.remaining_micro)}}</b>
+                        <template v-if="billing.referral_offer.topped_up_micro"> more</template>
+                        <template v-else> or more</template>
+                        and we'll put <b>{{money(billing.referral_offer.referred_micro)}}</b> extra in
                         your balance. They get {{money(billing.referral_offer.referrer_micro)}}.
                       </div>
                       <div class="fundgrid" style="margin-top:8px">
@@ -4910,7 +4916,9 @@ createApp({
     // How much extra THIS preset earns a referred team, or 0. Guarded on the offer existing, so a
     // team that arrived on its own sees the buttons exactly as before.
     refPresetBonus(usd){ const o=this.billing&&this.billing.referral_offer;
-      return (o && usd*1000000 >= o.min_topup_micro) ? o.referred_micro : 0; },
+      // Against what is REMAINING, not the full minimum: a team that already added $5 unlocks the
+      // bonus with another $5, and marking that button "one-time" would be simply wrong.
+      return (o && usd*1000000 >= o.remaining_micro) ? o.referred_micro : 0; },
     async copyRefLink(){ try{ await navigator.clipboard.writeText(this.ref.link); }catch(e){}
       this.refCopied=true; this.track('referral_link_copied');
       setTimeout(()=>{ this.refCopied=false; }, 1600); },

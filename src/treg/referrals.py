@@ -144,11 +144,22 @@ async def qualify(
     db: AsyncSession, *, org_id: int, payment_intent: str, amount_micro: int,
     fingerprint: str | None = None,
 ) -> Referral | None:
-    """The org just paid for the first time — decide whether that earns anybody anything. Commits.
+    """The org just paid — decide whether that earns anybody anything. Commits.
 
-    Returns the row in whatever state it ended in (`qualified`, `capped`, `rejected`) or None if
-    this org was never referred. A refusal is RECORDED, not dropped: "why did I not get paid" is the
-    first support question a referral program generates, and a deleted row cannot answer it.
+    Returns the row in whatever state it ended in (`pending`, `qualified`, `capped`, `rejected`) or
+    None if this org was never referred. A refusal is RECORDED, not dropped: "why did I not get paid"
+    is the first support question a referral program generates, and a deleted row cannot answer it.
+
+    The threshold is CUMULATIVE and a short payment is not fatal. This started out as "the first
+    top-up must clear the minimum, or the referral is rejected", which was wrong in the one way that
+    matters: $5 is the first preset on the billing page, so the most obvious button permanently
+    destroyed the reward — silently, and with no way back even if the team added $100 the next day.
+    That punishes exactly the person we are trying to convert, and removes their reason to add the
+    rest. So a below-threshold payment now leaves the row PENDING and the offer on screen, counting
+    toward the total.
+
+    It costs nothing in abuse terms: the money still has to arrive, so $5 + $5 buys a referral on the
+    same terms $10 does, and the card fingerprint and the cap are untouched.
     """
     row = (await db.execute(
         select(Referral).where(Referral.referred_org_id == org_id, Referral.status == "pending")
@@ -168,18 +179,22 @@ async def qualify(
         log.info("referral %s refused: %s", row.id, reason)
         return row
 
-    # Gate 1 — the top-up has to be big enough that buying your own bonus loses money.
-    if int(amount_micro) < int(s.referral_min_topup_micro):
-        return await _refuse("topup_below_minimum")
-
-    # Gate 2 — this must be the org's FIRST purchase. `_credit` only calls us on a fresh payment,
-    # but a second top-up is still a fresh payment, and the bounty is for arriving, not for paying
-    # twice. Count blocks rather than trusting the caller's framing.
-    purchased = (await db.execute(
-        select(CreditBlock.id).where(CreditBlock.org_id == org_id, CreditBlock.kind == "purchased")
-    )).scalars().all()
-    if len(purchased) > 1:
-        return await _refuse("not_first_topup")
+    # Gate 1 — enough money has to have arrived that buying your own bonus loses money. CUMULATIVE,
+    # and read from the blocks rather than from this one payment: a team that adds $5 twice has paid
+    # the same $10 as a team that added it at once, and telling them otherwise would be a rule whose
+    # only effect is to punish a small first payment.
+    #
+    # Falling short is NOT a refusal — the row stays pending, so the billing page keeps offering the
+    # bonus and can say how much is left to go. `pending` is also what keeps this once-only: a row
+    # that has already qualified is not selected above, so no later payment can earn a second bounty.
+    paid_micro = sum((await db.execute(
+        select(CreditBlock.amount_micro).where(
+            CreditBlock.org_id == org_id, CreditBlock.kind == "purchased")
+    )).scalars().all())
+    if paid_micro < int(s.referral_min_topup_micro):
+        log.info("referral %s: %s of %s micro-USD paid — still pending",
+                 row.id, paid_micro, s.referral_min_topup_micro)
+        return row
 
     referrer = await db.get(User, row.referrer_user_id)
     if referrer is None or referrer.suspended:
@@ -469,10 +484,19 @@ async def offer_for_org(db: AsyncSession, org_id: int | None) -> dict | None:
         return None
     referrer = await db.get(User, row.referrer_user_id)
     s = get_settings()
+    # How far along they already are. A team that added $5 has NOT lost the bonus (see `qualify`), so
+    # the page must be able to say "add $5 more" rather than silently repeating the full ask — which
+    # reads as though the $5 they just paid did not count.
+    paid_micro = sum((await db.execute(
+        select(CreditBlock.amount_micro).where(
+            CreditBlock.org_id == org_id, CreditBlock.kind == "purchased")
+    )).scalars().all())
     return {
         "referred_micro": int(s.referral_referred_micro),
         "referrer_micro": int(s.referral_referrer_micro),
         "min_topup_micro": int(s.referral_min_topup_micro),
+        "topped_up_micro": int(paid_micro),
+        "remaining_micro": max(0, int(s.referral_min_topup_micro) - int(paid_micro)),
         "referrer_masked": mask_email(referrer.email if referrer else ""),
     }
 

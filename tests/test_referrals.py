@@ -261,13 +261,37 @@ async def test_self_referral_is_never_attributed(c, monkeypatch):
     assert await _referral_rows() == []
 
 
-async def test_topup_below_the_minimum_earns_nothing(c, monkeypatch):
-    """Below the minimum, buying your own bonus with your own card would turn a profit."""
+async def test_a_short_topup_leaves_the_referral_alive(c, monkeypatch):
+    """$5 is the FIRST preset on the billing page. Treating a short payment as a refusal meant the
+    most obvious button silently destroyed the reward forever — punishing the exact person we are
+    trying to convert, and removing their reason to add the rest. It stays pending."""
     _, _, code = await _ready_referrer(c, monkeypatch)
-    bob_org, _ = await _signup(c, "bob@example.com", ref=code)
+    bob_org, bob_token = await _signup(c, "bob@example.com", ref=code)
     await _topup(c, monkeypatch, bob_org, pi="pi_bob_small", cents=500, fingerprint="fp_bob")
     rows = await _referral_rows()
-    assert rows[0].status == "rejected" and rows[0].reject_reason == "topup_below_minimum"
+    assert rows[0].status == "pending" and rows[0].reject_reason == ""
+    # ...and the offer is still on screen, now asking only for the remainder.
+    offer = (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"]
+    assert offer["topped_up_micro"] == 5_000_000
+    assert offer["remaining_micro"] == get_settings().referral_min_topup_micro - 5_000_000
+
+
+async def test_the_threshold_is_cumulative(c, monkeypatch):
+    """$5 twice is the same $10 as $10 once. The money still has to arrive, so this costs nothing in
+    abuse terms — it only stops us punishing someone for paying in two goes."""
+    ann_org, _, code = await _ready_referrer(c, monkeypatch)
+    bob_org, bob_token = await _signup(c, "bob@example.com", ref=code)
+    await _topup(c, monkeypatch, bob_org, pi="pi_bob_1", cents=500, fingerprint="fp_bob")
+    assert (await _referral_rows())[0].status == "pending"
+    await _topup(c, monkeypatch, bob_org, pi="pi_bob_2", cents=500, fingerprint="fp_bob")
+    assert (await _referral_rows())[0].status == "qualified"
+    # The offer is gone now that it has been taken, and the bonus really lands.
+    assert (await c.get("/billing", headers=_h(bob_token))).json()["referral_offer"] is None
+    await _age_qualification()
+    async with session_maker() as db:
+        assert await referrals.sweep(db) == 1
+    s = get_settings()
+    assert [b.amount_micro for b in await _blocks(ann_org, "referral")] == [s.referral_referrer_micro]
 
 
 async def test_one_card_can_only_ever_claim_once(c, monkeypatch):
@@ -305,14 +329,17 @@ async def test_a_free_tier_referrer_still_earns(c, monkeypatch):
     assert [b.amount_micro for b in await _blocks(ann_org, "referral")] == [s.referral_referrer_micro]
 
 
-async def test_second_topup_does_not_qualify_again(c, monkeypatch):
-    """The bounty is for arriving, not for paying twice."""
+async def test_a_later_topup_cannot_earn_a_second_bounty(c, monkeypatch):
+    """`pending` is the once-only guard: `qualify` only ever selects a pending row, so once a
+    referral has been taken no further payment can re-earn it. That is what replaced the old
+    "must be the first purchase" rule, which existed for this and cost us the short-payment case."""
     _, _, code = await _ready_referrer(c, monkeypatch)
     bob_org, _ = await _signup(c, "bob@example.com", ref=code)
     await _topup(c, monkeypatch, bob_org, pi="pi_bob_1", fingerprint="fp_bob")
-    await _topup(c, monkeypatch, bob_org, pi="pi_bob_2", fingerprint="fp_bob")
+    await _topup(c, monkeypatch, bob_org, pi="pi_bob_2", cents=5000, fingerprint="fp_bob")
     rows = await _referral_rows()
     assert len(rows) == 1 and rows[0].status == "qualified"
+    assert rows[0].qualifying_payment_intent == "pi_bob_1", "the first crossing is the one recorded"
 
 
 async def test_an_org_can_only_be_referred_once(c, monkeypatch):
@@ -450,6 +477,8 @@ async def test_a_referred_team_is_told_the_minimum_on_its_billing_page(c, monkey
     assert offer == {"referred_micro": s.referral_referred_micro,
                      "referrer_micro": s.referral_referrer_micro,
                      "min_topup_micro": s.referral_min_topup_micro,
+                     "topped_up_micro": 0,
+                     "remaining_micro": s.referral_min_topup_micro,
                      "referrer_masked": "a•••@superdesign.dev"}
 
 
