@@ -596,10 +596,16 @@ X = OAuthProvider(
     identity_id_path="data.id",
     identity_label_path="data.username",
     # X bills treg's app per use (prepaid credits, no plans — docs.x.com/x-api/getting-started/
-    # pricing, checked 2026-08-12): posts $0.005/resource read, users $0.010, own-account reads
-    # $0.001, post writes $0.015/request — $0.20 when the text carries a URL. The curated
-    # catalog/x.yaml prices carry the per-endpoint numbers; these are the fallback for the long
-    # tail (x.extended.yaml and URL-passthrough calls).
+    # pricing, re-read 2026-08-18). The card prices EVERY resource type separately, so these two
+    # numbers are only a FALLBACK for a path no catalog entry claims (a route X ships that we have
+    # not re-ingested): the post-read rate for a GET, the post-write rate for anything else. Both
+    # catalog files now price every known route from the card itself — `catalog_ingest.X_RATES` —
+    # so the fallback should be reached rarely, and when it is, it is a signal to re-ingest.
+    # Note the exposure it carries: a fallback GET that turns out to have returned USERS was billed
+    # at $0.005 and cost us $0.010. Raising it to the dearer rate would over-bill the far more
+    # common post read, so the fix is coverage, not a bigger guess.
+    # The $0.001 "owned read" rate is deliberately absent: X grants it only to an app's OWN owner,
+    # which a registry connect's member never is.
     platform_billed=True,
     billed_read_usd=0.005,
     billed_write_usd=0.015,

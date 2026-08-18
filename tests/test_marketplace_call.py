@@ -1167,3 +1167,144 @@ async def test_another_orgs_usage_never_burns_MY_trial(clients: AsyncClient, tri
         await db.commit()
     monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"c": 1}'))
     assert (await clients.get("/call/finnhub.quote?symbol=AAPL")).status_code == 200
+
+
+# ---- X: the catalog price and the metered price are the same number ----------------------------
+# The bug this pins: `x.extended.yaml` shipped 168 routes priced `free` (a note about the Free/Basic/
+# Pro plan caps X abolished in Feb 2026), while `_oauth_billed_estimate` skipped that block — its
+# `usd` is 0, which is falsy — and charged the provider fallback instead. The catalog said $0 and
+# the balance said $0.10, which is the one disagreement a published price must never have.
+
+def _x_endpoints():
+    from treg import catalog_store
+    return [e for e in catalog_store.load().by_id.values() if e.get("provider") == "x"]
+
+
+def test_no_x_endpoint_is_published_as_free():
+    """Nothing on X's v2 API is free to treg any more: X bills the app owner per use, so every
+    entry must carry a real rate. A `free` block here is a stale ingest, not a fact."""
+    free = [e["id"] for e in _x_endpoints() if (e.get("cost") or {}).get("type") == "free"]
+    assert not free, f"X is pay-per-use — these publish a price treg cannot honour: {free[:10]}"
+
+
+def test_x_catalog_price_equals_what_the_meter_charges():
+    """For every X route, the price the catalog publishes is the price the proxy reserves. Walked
+    over the whole provider rather than a sample, because the failure mode is one stale entry."""
+    from treg import oauth_providers
+    x = oauth_providers.get("x")
+    for ep in _x_endpoints():
+        method = (ep.get("method") or "GET").upper()
+        est, ctype, _ = A._oauth_billed_estimate(x, ep, method, {}, b"")
+        published = A._platform_estimate_micro(
+            A.catalog_store.load().cost_view(ep["cost"], "x"), {}, b"")
+        assert est == published and ctype == ep["cost"]["type"], (
+            f"{ep['id']}: catalog says {published} micro ({ep['cost']['type']}), "
+            f"meter reserves {est} micro ({ctype})")
+
+
+def test_a_zero_price_on_a_billed_provider_falls_back_rather_than_billing_zero():
+    """Belt and braces for the next stale ingest: if a `free` block ever reappears on X, the meter
+    must charge the provider rate rather than serve an upstream we get billed for at $0."""
+    from treg import oauth_providers
+    x = oauth_providers.get("x")
+    ep = {"id": "x.x.stale", "provider": "x", "method": "GET", "path": "/2/tweets",
+          "cost": {"type": "free", "value": 0, "currency": "USD", "unit": "call"}}
+    est, ctype, unit = A._oauth_billed_estimate(x, ep, "GET", {}, b"")
+    assert est > 0 and ctype == "per_result" and unit == A._usd_to_micro(x.billed_read_usd)
+
+
+# ---- X end to end: the published price is the price the balance loses --------------------------
+# Everything above tests the pricing FUNCTIONS. This walks the whole path a real X call takes —
+# registry connection → `_billed_marketplace` → reserve → relay → settle — because the free-price
+# bug was invisible to every unit test and only showed up as a number on a screen.
+
+@pytest.fixture
+def x_billed(monkeypatch):
+    """X metering on, the way prod has had it since 2026-08-18."""
+    monkeypatch.setenv("TREG_OAUTH_BILLED_PROVIDERS", "x")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+async def _connect_x(clients: AsyncClient) -> None:
+    """A REGISTRY X connection: `secret.provider` set is what marks the bill as treg's (a BYO
+    connect leaves it empty and is never metered)."""
+    import json as _json
+
+    from treg import crypto
+    from treg.models import Secret
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        db.add(Secret(org_id=org_id, name="x", kind="oauth", provider="x",
+                      value=crypto.encrypt(_json.dumps({"access_token": "tok-test"}))))
+        await db.commit()
+
+
+async def test_a_formerly_free_x_route_now_debits_the_balance(clients: AsyncClient, x_billed,
+                                                              monkeypatch):
+    """`x.x.get-users-muting` is one of the 168 extended routes that used to publish `free`. X's card
+    prices a Mute read at $0.001 per resource, so one muted account back costs exactly that."""
+    await _connect_x(clients)
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"data": [{"id": "1"}]}'))
+    before = await _balance(clients)
+    r = await clients.get("/call/x.x.get-users-muting?id=44196397")
+    assert r.status_code == 200, r.text
+    spent = before - await _balance(clients)
+    assert spent > 0, "a route X bills us for must never be served free"
+    assert spent == 1_000, f"expected the published $0.001, spent {spent} micro-USD"
+
+
+async def test_the_rate_card_is_per_resource_type_not_one_read_and_one_write(clients: AsyncClient):
+    """The regression that shipped and was caught in review: every write billed at the post-creation
+    rate. X prices each action separately, and the catalog has to say so — creating a list is $0.010,
+    managing one $0.005, and deleting an interaction $0.010, none of them $0.015."""
+    from treg import catalog_store
+    by_id = catalog_store.load().by_id
+    assert by_id["x.x.create-lists"]["cost"]["value"] == 0.010, "List: Create is $0.010 per request"
+    assert by_id["x.x.update-lists"]["cost"]["value"] == 0.005, "List: Manage is $0.005 per request"
+    assert by_id["x.x.unfollow-user"]["cost"]["value"] == 0.010, "Interaction: Delete is $0.010"
+    assert by_id["x.x.get-users-muting"]["cost"]["value"] == 0.001, "Mute: Read is $0.001/resource"
+    assert by_id["x.x.get-direct-messages-events"]["cost"]["value"] == 0.010, "DM Event: Read is $0.010/resource"
+
+
+def test_the_owned_read_discount_is_never_claimed():
+    """$0.001 owned reads need the caller to own the developer app. On a registry connect the app is
+    treg's, so no X entry may quote that rate as a per-CALL own-account price — the way `/2/users/me`
+    did until 2026-08-18, under-billing the reads treg pays the most for."""
+    from treg import catalog_store
+    me = catalog_store.load().by_id["x.x.user.profile"]
+    assert me["cost"]["value"] == 0.010 and me["cost"]["type"] == "per_result", (
+        "/2/users/me is an ordinary User read for a registry connect")
+
+
+async def test_a_user_lookup_settles_per_user_returned(clients: AsyncClient, x_billed, monkeypatch):
+    """`per_result` settles against the RESPONSE, so the published $0.010/user is what each returned
+    user costs — three users back is $0.030, not the reserve for a full page."""
+    await _connect_x(clients)
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"data": [{"id":"1"},{"id":"2"},{"id":"3"}]}'))
+    before = await _balance(clients)
+    r = await clients.get("/call/x.x.get-users-by-ids?ids=1,2,3")
+    assert r.status_code == 200, r.text
+    assert before - await _balance(clients) == 30_000
+
+
+async def test_a_byo_x_connection_is_never_metered(clients: AsyncClient, x_billed, monkeypatch):
+    """The other half of the rule: a connection made with the org's OWN X app carries no
+    `secret.provider`, its upstream bill is already theirs, and treg must not charge for it."""
+    import json as _json
+
+    from treg import crypto
+    from treg.models import Secret
+
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        db.add(Secret(org_id=org_id, name="x", kind="oauth", provider="",
+                      value=crypto.encrypt(_json.dumps({"access_token": "byo-tok"}))))
+        await db.commit()
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"data": [{"id": "1"}]}'))
+    before = await _balance(clients)
+    r = await clients.get("/call/x.x.get-webhooks")
+    assert r.status_code == 200, r.text
+    assert await _balance(clients) == before, "a BYO app's bill is the org's, not ours"
