@@ -110,12 +110,6 @@ def _utcnow_naive() -> datetime:
 # separately for the read-side Ads catalog calls) — there is nothing to keep in sync here.
 DATA_MANAGER_URL = "https://datamanager.googleapis.com/v1/events:ingest"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-# A click needs time to propagate into Google's systems before a conversion naming it can be
-# matched. Too early risks being ACCEPTED but never matched — worse than rejected, because we
-# would mark the row uploaded and never retry. The original 6h was a guess with no source; 1h
-# keeps a propagation buffer while getting conversions reported same-day. Settable so it can be
-# tuned without a code change once real-click evidence exists.
-_UPLOAD_DELAY_S = 3600
 _MAX_ATTEMPTS = 8
 _RETRY_BASE_S = 5 * 60
 _RETRY_CAP_S = 24 * 3600
@@ -378,12 +372,10 @@ async def drain_once(db: AsyncSession, client) -> dict:
     # Naive UTC on BOTH sides: created_at is a naive column, and comparing it against a tz-aware
     # value is an asyncpg error on Postgres (and a silently wrong comparison elsewhere).
     now = _utcnow_naive()
-    cutoff = now - timedelta(seconds=_UPLOAD_DELAY_S)
     rows = (await db.execute(
         select(AdConversion)
         .where(AdConversion.uploaded_at.is_(None),
                AdConversion.failed_at.is_(None),
-               AdConversion.created_at <= cutoff,
                or_(AdConversion.next_attempt_at.is_(None), AdConversion.next_attempt_at <= now))
         .order_by(AdConversion.created_at, AdConversion.id)
         .limit(100)

@@ -430,12 +430,11 @@ def test_build_payload_sets_manager_account_per_destination(monkeypatch, ads_ena
     assert "loginAccount" not in dest
 
 
-async def test_drain_marks_rows_uploaded_and_skips_young_ones(clients, ads_enabled):
-    """A row younger than the upload delay is left alone; an old one is sent and marked.
+async def test_drain_sends_every_pending_row_in_one_batch(clients, ads_enabled):
+    """Rows are sent as soon as they exist, regardless of age, and a mixed batch goes in one call.
 
-    `_auth_headers` no longer reads anything off the DB — it exchanges treg's OWN platform
-    `ads_conv_refresh_token` (set by `ads_enabled`) directly against Google's token endpoint, which
-    `FakeAdsClient` fakes alongside the Data Manager ingest call.
+    `_auth_headers` exchanges treg's OWN platform `ads_conv_refresh_token` against Google's token
+    endpoint, which `FakeAdsClient` fakes alongside the Data Manager ingest call.
     """
     client = FakeAdsClient(FakeAdsResponse({"requestId": "req-drain-1"}))
 
@@ -447,18 +446,18 @@ async def test_drain_marks_rows_uploaded_and_skips_young_ones(clients, ads_enabl
         await db.refresh(org)
         old = AdConversion(org_id=org.id, action=adsconv.ACTION_SIGNUP,
                            created_at=datetime.now(timezone.utc) - timedelta(hours=12))
-        young = AdConversion(org_id=org.id, action=adsconv.ACTION_PAID,
+        fresh = AdConversion(org_id=org.id, action=adsconv.ACTION_PAID,
                              created_at=datetime.now(timezone.utc))
-        db.add(old); db.add(young)
+        db.add(old); db.add(fresh)
         await db.commit()
 
         await adsconv.drain_once(db, client)
 
-        await db.refresh(old); await db.refresh(young)
-        assert old.uploaded_at is not None
-        assert old.next_attempt_at is None
-        assert old.failed_at is None
-        assert young.uploaded_at is None
+        await db.refresh(old); await db.refresh(fresh)
+        for row in (old, fresh):
+            assert row.uploaded_at is not None
+            assert row.next_attempt_at is None
+            assert row.failed_at is None
         assert len(client.calls) == 1
         assert client.calls[0][0] == adsconv.DATA_MANAGER_URL
         assert len(client.token_calls) == 1
