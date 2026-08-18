@@ -220,6 +220,15 @@ It is a **blast-radius limit**, not a billing control: it exists because auto-to
 balance, so the balance alone is not a ceiling against a runaway agent or a mispriced catalog entry.
 Enforced fail-closed.
 
+## X pay-per-use billing (switch ON since 2026-08-18)
+
+`TREG_OAUTH_BILLED_PROVIDERS` — comma-separated providers whose upstream bill lands on TREG's
+developer app (X moved to pay-per-use: the app owner pays per call, whoever's token made it). A
+provider named here has its registry-connect calls metered against the org balance, `tier: oauth`
+in the ledger. Empty = those calls are free (the pre-2026-08-18 behaviour). Currently `x`.
+BYO-app connections are never metered. Ongoing spend is visible in the reconcile reports under
+`tier: oauth`; the burn from the free period is only in console.x.com.
+
 ## Market data platform keys (2026-08-16)
 
 Five more `TREG_PLATFORM_KEY_*` env vars beside the originals, and the providers must ALSO be in
