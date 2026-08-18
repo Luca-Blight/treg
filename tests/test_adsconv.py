@@ -568,3 +568,30 @@ async def test_auth_uses_explicit_manager_account_not_target_resource_ref(
             db, FakeAdsClient(FakeAdsResponse({"results": []}))
         )
         assert "login-customer-id" not in headers
+
+
+async def test_every_public_landing_surface_loads_the_capture_script(clients):
+    """Every page an ad can land on must load /adtrack.js.
+
+    `/` serves landing.html — the MARKETING front door — not index.html, which is the signed-in app
+    shell. When capture first shipped the tag went onto index.html, so the root domain (and every
+    organic visitor who signed up from it) was silently unattributed while the use-case pages worked.
+    Asserting the whole set here means the next page added without the tag fails a test instead of
+    quietly capturing nothing.
+    """
+    surfaces = [
+        "/",
+        "/resources",
+        "/use-cases/seo-data-for-ai-agents",
+        "/use-cases/lead-enrichment-for-ai-agents",
+        "/use-cases/social-trend-research-for-ai-agents",
+        "/use-cases/competitor-ad-research-for-ai-agents",
+        "/use-cases/company-research-for-ai-agents",
+    ]
+    missing = []
+    for path in surfaces:
+        r = await clients.get(path)
+        assert r.status_code == 200, f"{path} -> HTTP {r.status_code}"
+        if "/adtrack.js" not in r.text:
+            missing.append(path)
+    assert not missing, f"pages that do not load the capture script: {missing}"
