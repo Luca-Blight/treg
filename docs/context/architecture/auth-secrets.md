@@ -156,6 +156,16 @@ module symbols:
   the Basic blob for `Basic {secret}` (DataForSEO, Moz). `can_autoprovision` (has a `base_url` and either needs no
   second credential or treg holds it) drives auto-building a callable tool on a successful connect;
   `needs_extra_credential` covers Google Ads' `developer-token` header (a second binding the operator supplies).
+  **Split-host vendors get one extra Tool per host** (`extra_tools`): GA4 runs reports on
+  `analyticsdata` but lists the property ids those reports need on `analyticsadmin` — one scope covers
+  both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin
+  path on the data host → Google 404; admin host → treg "no registered tool"; 13 calls/7 orgs observed
+  stuck there). The extra (`<connection>-admin`) binds the SAME secret, upserts idempotently on
+  reconnect — which is also how pre-fix connections heal — and revoke already sweeps it (any tool
+  whose only binding was the deleted credential goes). `resource_example` closes the loop from the
+  other side: the moment the user picks their property (`POST /connections/{id}/resource`), the
+  template renders `{resource}`/`{resource_name}` into a ready-made call stamped into the data tool's
+  examples (marker `stamped: resource`, so re-picking replaces instead of piling up).
 - Post-connect helpers the dashboard/CLI drive: resource **discovery** (`supports_discovery`,
   `discover_*` — which site/property/account this connection acts on), row **enrichment**
   (`supports_enrichment`, `enrich_*` — Google Ads returns bare ids, so a per-row lookup fills the human name),
