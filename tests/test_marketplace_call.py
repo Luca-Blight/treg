@@ -412,8 +412,8 @@ async def test_scrapecreators_settles_on_the_credits_it_charged(clients: AsyncCl
 def _mk(provider: str, **kw) -> A.MarketplaceCall:
     """A minimal MarketplaceCall for observed-cost tests — only the fields the settle math reads."""
     kw.setdefault("tier", "platform")
-    return A.MarketplaceCall(tool=None, upstream="", consumed=set(), endpoint_id="ep",
-                             provider=provider, **kw)
+    kw.setdefault("endpoint_id", "ep")  # hunter's derived cost is keyed on the endpoint, not just the provider
+    return A.MarketplaceCall(tool=None, upstream="", consumed=set(), provider=provider, **kw)
 
 
 def test_observed_cost_only_trusts_a_real_number():
@@ -474,6 +474,50 @@ def test_apollo_settles_a_2xx_miss_at_zero():
     assert A._observed_cost_micro(_mk("apollo"), b'{"organizations": [], "pagination": {}}') == 0, "an empty page is free"
     assert A._observed_cost_micro(_mk("apollo"), b'{"person": {"id": "x"}}') is None, "1-9 credit range: estimate, not a guess"
     assert A._observed_cost_micro(_mk("apollo"), b"not json") is None
+
+
+def test_hunter_domain_search_settles_on_the_emails_it_returned():
+    """Hunter's domain search bills one whole SEARCH credit per 10 emails RETURNED, rounded up, and
+    a domain it knows nobody at is free — a rule the catalog's per-row price (1 credit ÷ 10 =
+    $0.00245/result) cannot express, so the estimate is wrong in both directions. Settling on
+    `data.emails` is what makes the published number and the ledger agree: zero emails costs zero,
+    and one email costs the same whole credit ten do."""
+    credit = 24_500  # $0.0245/credit (fx.yaml, Starter $49/mo / 2,000 credits)
+    h = _mk("hunter", endpoint_id="hunter.companies.emails", cost_type="per_result")
+    assert A._observed_cost_micro(h, b'{"data": {"domain": "x.com", "emails": []}}') == 0, \
+        "a domain with no results is free — the catalog says so and Hunter bills so"
+    assert A._observed_cost_micro(h, b'{"data": {"emails": [{"value": "a@x.com"}]}}') == credit, \
+        "one email costs a whole search credit, not a tenth of one"
+    def _emails(n: int) -> bytes:
+        return json.dumps({"data": {"emails": [{"value": f"p{i}@x.com"} for i in range(n)]}}).encode()
+    assert A._observed_cost_micro(h, _emails(10)) == credit, "ten still fit in one credit"
+    assert A._observed_cost_micro(h, _emails(11)) == 2 * credit, "the 11th rounds up to a second credit"
+    assert A._observed_cost_micro(h, b'{"errors": [{"code": "wrong_params"}]}') is None, \
+        "no emails key at all: we never learned the count, settle at the estimate"
+    assert A._observed_cost_micro(h, b"not json") is None
+    other = _mk("hunter", endpoint_id="hunter.people.email.verify", cost_type="per_call")
+    assert A._observed_cost_micro(other, b'{"data": {"emails": []}}') is None, \
+        "only domain search bills per 10 returned; every other hunter route settles at its estimate"
+
+
+async def test_hunter_zero_result_search_costs_nothing(clients: AsyncClient, platform_on, monkeypatch):
+    """End to end, the bug this fixes: four domain searches that returned no emails each settled at
+    $0.0490 — the 20-row default page assumption × the per-row price — for results nobody received."""
+    monkeypatch.setenv("TREG_PLATFORM_KEY_HUNTER", "PLATFORM-HUNTER-KEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,brightdata,hunter")
+    get_settings.cache_clear()
+    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(
+        {"data": {"domain": "nobody.example", "emails": []}, "meta": {"results": 0}}).encode()))
+    before = await _balance(clients)
+    assert (await clients.get("/call/hunter.companies.emails?domain=nobody.example")).status_code == 200
+    assert await _balance(clients) == before, "an empty domain search must not move the balance"
+    assert (await _telemetry(clients))["cost_observed_micro"] == 0
+
+    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(
+        {"data": {"domain": "stripe.com", "emails": [{"value": "a@stripe.com"}]},
+         "meta": {"results": 2207}}).encode()))
+    assert (await clients.get("/call/hunter.companies.emails?domain=stripe.com&limit=1")).status_code == 200
+    assert await _balance(clients) == before - 24_500, "one email is one whole search credit"
 
 
 async def test_daily_cap_fails_closed(clients: AsyncClient, platform_on, monkeypatch):
