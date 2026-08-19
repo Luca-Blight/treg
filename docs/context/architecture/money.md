@@ -244,6 +244,16 @@ are admin-scale windows over a bounded number of metered calls, the same tradeof
               upper bound, the settle is the real charge), else at the estimate;
               release instead when the call was not billable
 
+Two providers do not report a charge but have a rule the RESPONSE decides, so `_observed_cost_micro`
+derives it rather than letting the estimate stand: apollo answers a miss with 2xx and charges nothing
+(`organization: null`, an empty `organizations` page), and **hunter's domain search bills one whole
+search credit per 10 emails returned, rounded up, with an empty domain free**. Hunter is the case that
+shows why a per-row estimate is not a settlement: its catalog price has to be flattened to
+$0.00245/result (1 credit ÷ 10) for a price list, and settling on that number billed a zero-email
+search the 20-row default page — $0.0490 for results nobody got, 20x the published per-result price —
+while `limit=1` on a domain that did answer settled at a tenth of the credit Hunter actually took.
+Where a provider's real rule is "whole units, rounded up, free on a miss", only the body knows.
+
 Closing the hold runs on its **own session** (the request's may be mid-rollback from the very error
 being released for) and **never raises** — the caller already has their answer, and a ledger hiccup
 must not turn a served call into a 500. A hold that fails to close is not lost money either: the
