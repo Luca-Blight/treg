@@ -233,7 +233,11 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `catalog_store.near_ids()` matches on segment overlap ignoring the tier marker; no near miss means
   an empty list and a search hint, never a confidently wrong suggestion. `/call/` answers the same
   way for a dotted target that misses — the branch where money is on the line used to reply "no tool
-  … in this org", describing the wrong half of treg.
+  … in this org", describing the wrong half of treg. A known endpoint marked `retired` or `broken`
+  remains inspectable here with `status_note` and optional `superseded_by`, but is absent from every
+  discovery list. Calling it—or asking `/catalog/endpoints/{id}/access` whether it is callable—returns
+  an actionable 410. The `/call/` refusal is recorded with `refused_by=retired` and never reaches a
+  provider credential or relay.
   A zero-result search additionally points at **`POST /tool-requests`** (open, per-IP rate-limited,
   fields capped): file what the catalog is missing — stored as a `ToolRequest` row (see
   [data-model](../architecture/data-model.md)) with identity attached only when the caller happens
@@ -479,7 +483,8 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
 - **Health:** `run_health` (`POST /health/run`) → `health.run_all`; `get_health` (`GET /health`) now
   returns `health._view(s)` plus a `needs_reconnect` flag (`health.needs_reconnect`) so a credential treg
   can't renew announces itself before it dies.
-- **The proxy:** `call_tool` (`* /call/{rest:path}`) → `_resolve_call` → `_enforce_daily_cap` (the
+- **The proxy:** `call_tool` (`* /call/{rest:path}`) → `_resolve_call` → (on a dotted 404,
+  catalog lookup + retirement gate + credential ladder) → `_enforce_daily_cap` (the
   per-user daily cap; 429 when over) → (public-demo token → `_enforce_public_demo_ip_cap`) → load secrets
   (+ `ensure_fresh`) → `relay()` → `audit.record_call`. A **platform binding** carries no `secret_id`
   (its value comes from settings at relay time), so secret-loading now skips `secret_id is None`. Detail

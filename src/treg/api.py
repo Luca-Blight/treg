@@ -332,7 +332,7 @@ def _refusal_kind(status_code: int) -> str | None:
     must not be counted as a treg refusal."""
     if status_code >= 500:
         return None
-    return {401: "auth", 402: "balance", 403: "policy", 404: "resolution",
+    return {401: "auth", 402: "balance", 403: "policy", 404: "resolution", 410: "retired",
             429: "cap"}.get(status_code, "request")
 
 
@@ -8565,6 +8565,26 @@ def _catalog_endpoint_for(rest: str) -> dict | None:
     return catalog_store.load().by_id.get(rest)
 
 
+def _enforce_catalog_status(ep: dict) -> None:
+    """Refuse a catalog id the provider has retired or broken, with its migration story.
+
+    This runs only after `_resolve_call` has failed and `_catalog_endpoint_for` has identified a
+    real catalog id. A team's own tool with the same name therefore still wins, and URL-passthrough
+    calls never enter this path at all.
+    """
+    status = str(ep.get("status") or "").strip().lower()
+    if not status:
+        return
+    detail = f"{ep['id']} is {status}"
+    if note := str(ep.get("status_note") or "").strip():
+        detail += f": {note}"
+    if successor := str(ep.get("superseded_by") or "").strip():
+        detail += f" Use {successor} instead."
+    else:
+        detail += " No replacement is currently catalogued."
+    raise HTTPException(status_code=410, detail=detail)
+
+
 async def _marketplace_secret(service: str, org_id: int, db: AsyncSession) -> Secret | None:
     """Tier 2's credential: an org secret tagged with this provider (registry connects), else one
     NAMED exactly for it (`treg secret add tikhub …`). Newest wins — a reconnect supersedes."""
@@ -9266,6 +9286,7 @@ async def _resolve_marketplace_call(
     NOTHING is reserved here. Resolution only PRICES the call; `call_tool` reserves after the deny
     rules and caps have had their say, so a refused call never has to un-hold money."""
     await _enforce_capability_pin(ep, caller, db)
+    _enforce_catalog_status(ep)
     service = ep["provider"]
     provider = oauth_providers.get(service)
     if provider is None or not provider.base_url:
@@ -9336,6 +9357,7 @@ async def catalog_endpoint_access(
     ep = catalog_store.load().by_id.get(endpoint_id)
     if ep is None:
         raise HTTPException(status_code=404, detail=f"unknown endpoint {endpoint_id!r}")
+    _enforce_catalog_status(ep)
     service = ep["provider"]
     provider = oauth_providers.get(service)
     if provider is None or not provider.base_url:
