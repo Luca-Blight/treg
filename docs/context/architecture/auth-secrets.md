@@ -58,7 +58,12 @@ and raises a clear error when a 200 body carries no `access_token`; `_expires_at
 
 `refresh()` posts the credential's recorded `client_id_param` dialect (TikTok reads `client_key`, not
 `client_id`), snapshotted onto the blob at mint time so a refresh months later still speaks the dialect
-the grant was minted with.
+the grant was minted with. The same snapshotting covers `token_endpoint_auth_method`: X and Pinterest
+demand the secret in HTTP **Basic**, and for a while only `exchange_code` knew — so connect succeeded
+and every refresh 401'd two hours later (surfaced to callers as `502 oauth refresh failed`; ≥6 orgs
+hit it live). Now the method rides in the blob and `refresh()` honors it; a legacy blob without the
+field gets body auth, then ONE retry with Basic on a 4xx, and stamps whichever worked — existing
+broken connections self-heal on their next call, no migration.
 
 **Connect flow (mint the first token):** `consent_url(pending)` builds the provider consent URL
 (default `access_type=offline` + `prompt=consent` so a refresh token comes back); `exchange_code(pending,
