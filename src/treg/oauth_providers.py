@@ -707,6 +707,17 @@ FACEBOOK = OAuthProvider(
     scopes={
         "read": _FB_READ,
         "post": [*_FB_READ, "pages_manage_posts"],
+        # The full account-operations tier: engagement moderation, visitor content, settings and
+        # webhook subscriptions, Messenger, native Page video, lead retrieval — which Meta only
+        # honors alongside pages_manage_ads, so the pair travels together — and the business's
+        # product catalogs. One tier rather than several because these scopes are useless alone:
+        # an agent moderating comments needs the visitor content it moderates, and an agent
+        # working leads needs the form metadata around them.
+        "manage": [
+            *_FB_READ, "pages_manage_posts", "pages_manage_engagement",
+            "pages_read_user_content", "pages_manage_metadata", "pages_messaging",
+            "publish_video", "leads_retrieval", "pages_manage_ads", "catalog_management",
+        ],
     },
     client_id_setting="meta_client_id",
     client_secret_setting="meta_client_secret",
@@ -751,6 +762,13 @@ INSTAGRAM = OAuthProvider(
         "post": [
             "instagram_basic", "instagram_manage_insights", "pages_show_list",
             "pages_read_engagement", "business_management", "instagram_content_publish",
+        ],
+        # Adds the two-way surfaces: comment moderation and direct messages. Kept off `post` so a
+        # publish-only connect never puts "manage your messages" on the consent screen.
+        "manage": [
+            "instagram_basic", "instagram_manage_insights", "pages_show_list",
+            "pages_read_engagement", "business_management", "instagram_content_publish",
+            "instagram_manage_comments", "instagram_manage_messages",
         ],
     },
     client_id_setting="meta_client_id",
@@ -1883,10 +1901,20 @@ SCOPE_LABELS: dict[str, str] = {
     "pages_read_engagement": "Read your Pages' posts, comments and reactions",
     "read_insights": "Read your Pages' reach and engagement insights",
     "pages_manage_posts": "Create, edit and delete posts on your Pages",
+    "pages_manage_engagement": "Reply to and moderate comments on your Pages' posts",
+    "pages_read_user_content": "Read what visitors post on your Pages",
+    "pages_manage_metadata": "Manage your Pages' settings and event subscriptions",
+    "pages_messaging": "Read and reply to your Pages' Messenger conversations",
+    "publish_video": "Upload videos to your Pages",
+    "leads_retrieval": "Retrieve leads from your Pages' instant forms",
+    "pages_manage_ads": "Manage ads run by your Pages",
+    "catalog_management": "Create and update your product catalogs",
     # Meta — Instagram
     "instagram_basic": "See your Instagram account, media and comments",
     "instagram_manage_insights": "Read your Instagram reach and engagement insights",
     "instagram_content_publish": "Publish posts to your Instagram account",
+    "instagram_manage_comments": "Reply to, hide and delete comments on your Instagram posts",
+    "instagram_manage_messages": "Read and reply to your Instagram direct messages",
     # Meta — Ads
     "ads_read": "Read your ad accounts, campaigns and performance",
     "business_management": "See the businesses and ad accounts you have access to",

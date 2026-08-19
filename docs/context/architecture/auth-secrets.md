@@ -88,6 +88,10 @@ consents, supplying nothing. The asymmetry is the point of a hosted registry: th
 platforms is the *approval* (a Google Ads developer token, Meta App Review), not the OAuth dance — treg
 has already cleared it. treg's own client id/secret load from `Settings` (named by
 `client_id_setting`/`client_secret_setting`, so they come from `.env` like every other setting).
+The Meta pair carries three tiers — read / post / **manage** (comments + DMs on Instagram; engagement,
+visitor content, metadata/webhooks, Messenger, Page video, leads_retrieval + its required
+pages_manage_ads rider, and catalog_management on Facebook Pages) — sized for the 2026-08 App Review
+bundle; `default_capability` is the broadest tier by design, so a plain Connect asks for manage.
 
 Each entry is a frozen `OAuthProvider` dataclass; `REGISTRY` is the `{service: provider}` map. Key
 module symbols:
