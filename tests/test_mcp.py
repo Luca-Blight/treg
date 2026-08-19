@@ -130,6 +130,20 @@ async def test_search_says_so_when_nothing_matches(clients):
     assert out["count"] == 0
     assert "catalog_request" in out.get("hint", "")  # the empty result names the way to file the gap
 
+    # And the miss is the record (models.SearchMiss) — this tool reads the catalog in-process, so
+    # the HTTP route's logging never sees it; the tool must log its own.
+    from sqlmodel import select
+
+    from treg import audit
+    from treg.db import session_maker
+    from treg.models import SearchMiss
+
+    await audit.drain()
+    async with session_maker() as s:
+        (row,) = (await s.execute(select(SearchMiss))).scalars()
+    assert row.query == "zzzz-no-such-capability"
+    assert row.source == "mcp"
+
 
 async def test_catalog_request_files_the_gap_with_attribution(clients):
     """The zero-result hint's payoff: the agent can file the missing capability in the same session,

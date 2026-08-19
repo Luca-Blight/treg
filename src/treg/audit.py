@@ -18,7 +18,7 @@ import asyncio
 import logging
 
 from .db import session_maker
-from .models import CallRecord, RunRecord
+from .models import CallRecord, RunRecord, SearchMiss
 
 _pending: set[asyncio.Task] = set()
 _MAX_CONCURRENT_WRITES = 4   # cap on audit writes holding a DB connection at once (protect the request pool)
@@ -71,6 +71,13 @@ def _known_fields(model, telemetry: dict | None) -> dict:
             "dropping unknown %s telemetry keys %s — is a migration missing?",
             model.__name__, sorted(set(telemetry) - set(known)))
     return known
+
+
+def record_search_miss(*, query: str, source: str) -> None:
+    """A catalog search that matched nothing — logged so the misses can steer ingest (see
+    models.SearchMiss). Same contract as every write here: fire-and-forget, and a dropped row
+    under load costs a data point, never a search response."""
+    _schedule(_write(SearchMiss, query=query[:300], source=source))
 
 
 def record_run(

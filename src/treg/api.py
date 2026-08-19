@@ -588,6 +588,11 @@ async def catalog_search(q: str = "", limit: int = 25,
     if not q.strip():
         hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
     elif not results:
+        # The miss IS the signal: log it (fire-and-forget, see models.SearchMiss) so the queries the
+        # catalog couldn't answer surface in the usage report next to the ToolRequests they rarely
+        # become. One source for this whole route — web, CLI and raw API all arrive here, and
+        # guessing which from headers would be a made-up column.
+        audit.record_search_miss(query=q.strip(), source="api")
         hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves",
                  "still missing? POST /tool-requests {\"capability\": \"<what you need>\"} — "
                  "requests steer which provider gets added next"]

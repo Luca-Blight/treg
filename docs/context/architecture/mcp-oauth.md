@@ -41,7 +41,9 @@ nothing upstream, nothing spent), so it stays closed-world and non-destructive. 
 `POST /tool-requests` so rate limiting and field caps live in one place, forwarding the edge's
 `X-Forwarded-For` — the in-process relay would otherwise collapse every MCP caller into one
 rate-limit bucket. `catalog_search`'s zero-result hint names it, so an agent that just searched
-and found nothing can file the gap in the same session.
+and found nothing can file the gap in the same session — and the miss itself is logged as a
+`SearchMiss` row (`audit.record_search_miss`, `source="mcp"`): this tool reads the catalog
+in-process, so the HTTP route's own miss logging never sees an MCP agent's empty search.
 
 ## In-process, not over the network
 
