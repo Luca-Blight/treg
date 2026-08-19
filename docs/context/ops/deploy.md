@@ -11,6 +11,7 @@ sources:
   - render.yaml
 related:
   - architecture/data-model.md
+  - architecture/ads-conversions.md
   - foundation/charter.md
 ---
 
@@ -58,6 +59,25 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   Advertising OAuth platforms `microsoft_ads_*`, `snapchat_ads_*`, `tiktok_ads_*`, `pinterest_*` (all
   unset by default, so those providers ship **unconfigured** until a deployment registers a dev app).
   Empty for a provider ⇒ it lists as **unconfigured** rather than failing part-way through a consent.
+- **Ad conversion tracking** — `google_ads_customer_id` (the target Ads account) and
+  `ads_conv_refresh_token` (treg's OWN long-lived refresh token for the Data Manager uploader,
+  minted once, out of band, by an operator via the OAuth playground with scope
+  `https://www.googleapis.com/auth/datamanager`, then pasted in as a platform setting). **Both**
+  must be set or the whole feature is off (`adsconv.enabled()`): the capture script is empty,
+  attribution cookies are ignored, conversions are not queued, and the background uploader is not
+  started. The refresh token is exchanged for an access token against the SAME client it was issued
+  against — `google_ads_client_id`/`_secret` above, reused here rather than duplicated — never
+  against `google_client_id` or a customer's own OAuth app; the exchanged access token is cached in
+  process memory with its expiry so the uploader (which drains every ~300s) doesn't re-exchange on
+  every pass. `google_ads_developer_token` is NOT part of this feature — Data Manager has no
+  developer-token header at all; that setting only backs the read-side Ads catalog calls through
+  `oauth_providers.GOOGLE_ADS`. For manager-account auth, set optional
+  `google_ads_login_customer_id` to the manager MCC id; direct client auth leaves it empty. This is
+  a PLATFORM credential, deliberately separate from a customer's `google-ads` OAuth connection
+  (which grants only `adwords`, never `datamanager` — that scope would otherwise show up on every
+  customer's consent screen for a permission only treg's own marketing uploader uses). Self-hosters
+  and the test suite carry zero ad-conversion machinery by default. See
+  [ads-conversions](../architecture/ads-conversions.md).
 - **Landing live-wire (optional):** `demo_stripe_key` (`TREG_DEMO_STRIPE_KEY`, a Stripe **sandbox
   restricted** key) powers the landing sandbox's ONE real upstream call — a sandbox call to the exact
   seeded `stripe` tool relays for real with this key injected; the key exists in no sandbox org. Empty ⇒
@@ -175,14 +195,22 @@ callback exchanges the code exactly as the consent URL was built; and **A35** ba
 idempotent `INSERT … SELECT … WHERE NOT EXISTS` SQL. Because a rolling deploy keeps an old binary
 alive after that snapshot, API `_ensure_grant` also reconstructs any later old-binary family at first
 refresh, listing, or team move with an `ON CONFLICT DO NOTHING` upsert supported by SQLite and
-Postgres; the oldest token's `created_at` remains the consent time.
+Postgres; the oldest token's `created_at` remains the consent time; **A36** adds nullable
+`callrecord.error_request`/`error_response` evidence; **A37** adds nullable Ads attribution and
+`first_call_at` columns to `org`; and **A38** adds nullable retry/dead-letter timestamps to the Ads
+conversion outbox. The A37/A38 timestamps use portable `TIMESTAMP` DDL and require no backfill.
 
 **Audit back-pressure (`audit.py`).** Audit rows are written off the request path (fire-and-forget), and
 each write opens a DB connection from the small pool **shared** with real requests. Two limits keep
 best-effort logging from starving that pool: a loop-bound semaphore caps concurrent audit writes at
 `_MAX_CONCURRENT_WRITES`, and under an extreme burst the writer **sheds** load — it drops any audit row
 past `_MAX_PENDING` rather than let the pending set grow without bound. Audit must never OOM or wedge the
-server.
+server. Shedding is the *only* loss that should ever happen: `record_call` splats its telemetry dict
+into `CallRecord(**fields)`, so a key with no matching column used to raise inside `_write`, where the
+except swallowed it, and the whole row disappeared — a telemetry field deployed one commit ahead of its
+migration would have silently emptied the table. `_known_fields` now drops unknown keys (logging which
+ones), and `_write`'s swallow logs a warning with the traceback. **A quiet audit table is now a bug you
+can see in the logs**, not one you find out about weeks later.
 
 The proxy is thin and IO-bound (a relay, low CPU/memory), so cheap machines scale it.
 
@@ -200,6 +228,15 @@ a conversation rather than an env-var edit that lifts the rail for every team at
 It is a **blast-radius limit**, not a billing control: it exists because auto-top-up refills the
 balance, so the balance alone is not a ceiling against a runaway agent or a mispriced catalog entry.
 Enforced fail-closed.
+
+## X pay-per-use billing (switch ON since 2026-08-18)
+
+`TREG_OAUTH_BILLED_PROVIDERS` — comma-separated providers whose upstream bill lands on TREG's
+developer app (X moved to pay-per-use: the app owner pays per call, whoever's token made it). A
+provider named here has its registry-connect calls metered against the org balance, `tier: oauth`
+in the ledger. Empty = those calls are free (the pre-2026-08-18 behaviour). Currently `x`.
+BYO-app connections are never metered. Ongoing spend is visible in the reconcile reports under
+`tier: oauth`; the burn from the free period is only in console.x.com.
 
 ## Market data platform keys (2026-08-16)
 

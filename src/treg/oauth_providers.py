@@ -146,6 +146,18 @@ class OAuthProvider:
     # tool is provisioned with a platform binding; the per-user prompt is only the fallback.
     extra_credential_setting: str = ""
 
+    # Some providers bill the OWNER OF THE APP per use, whoever's token made the call — X moved to
+    # prepaid pay-per-use in Feb 2026 (per resource read, per post written; no plans). For those,
+    # a registry connect rides treg's app and every call spends treg's credits, so the proxy meters
+    # it against the org's balance (api.py, same reserve→settle path as tier 4) when the deployment
+    # allow-lists the provider (`TREG_OAUTH_BILLED_PROVIDERS` — see config.oauth_billed_set).
+    # The rates are the provider-level DEFAULTS, used when the called route has no priced catalog
+    # entry; a curated endpoint's own `cost` (catalog/x.yaml) wins when the path matches one.
+    platform_billed: bool = False
+    billed_read_usd: float = 0.0        # per resource returned, GET routes
+    billed_write_usd: float = 0.0       # per request, write routes
+    billed_write_link_usd: float = 0.0  # per request when the posted text carries a URL (X: 13x)
+
     @property
     def needs_extra_credential(self) -> bool:
         return bool(self.extra_credential_header)
@@ -175,6 +187,32 @@ class OAuthProvider:
     discover_nested_key: str = ""
     discover_id_field: str = "id"
     discover_label_field: str = ""
+    # Meta's Business Manager owns assets on the user's BEHALF: an agency member reaches a Page
+    # through business-level access with no personal role on it, so the primary listing answers []
+    # for exactly the accounts they manage all day. `discover_extra_path` is a second listing
+    # fetched the same way (same discover_key), whose rows each HOLD lists of primary-shaped rows
+    # at the dotted paths in `discover_extra_list_paths`. The flattened entries merge after the
+    # primary ones and the picker dedupes by id, so a directly-managed Page never doubles. A
+    # failing extra listing is swallowed: connections that consented before the scope it needs
+    # (business_management) simply lack it, and the primary listing has already answered.
+    discover_extra_path: str = ""
+    discover_extra_list_paths: tuple[str, ...] = ()
+
+    # Some vendors split ONE product across hosts: GA4 runs reports on analyticsdata but lists the
+    # properties those reports need on analyticsadmin. The credential already covers both — Google
+    # scopes are per-capability, not per-host — but /call/ resolution is per-HOST, so without a
+    # second Tool row the agent is trapped: the admin path 404s on the data host (Google) and the
+    # admin host 404s in treg ("no registered tool"). Observed live: 13 calls / 7 orgs stuck at
+    # exactly that wall while runReport itself worked fine. Each entry provisions one extra Tool
+    # bound to the SAME secret: {"suffix", "base_url", optional "probe_path", optional "examples"}.
+    # The suffix names it `<connection>-<suffix>` so a second account's tools stay distinct too.
+    extra_tools: tuple = ()
+
+    # Rendered into the DATA tool's examples the moment the user picks their site/property/account
+    # (`POST /connections/{id}/resource`). `{resource}` = the picked id (resource_ref) and
+    # `{resource_name}` = its human label. This closes the discovery loop from the other side:
+    # the agent reads the ready-made call off the tool instead of hunting the admin API for ids.
+    resource_example: dict | None = None
 
     # Some listings return only ids — Google Ads' listAccessibleCustomers gives
     # ["customers/6186675831", …] and nothing else. "6186675831" tells a user nothing about which
@@ -339,8 +377,8 @@ GOOGLE_ANALYTICS = OAuthProvider(
          "note": "Data API v1beta. Body: {\"dateRanges\":[{\"startDate\":\"28daysAgo\","
                  "\"endDate\":\"yesterday\"}],\"dimensions\":[{\"name\":\"pagePath\"}],"
                  "\"metrics\":[{\"name\":\"screenPageViews\"}]}. Use 'yesterday', not 'today' "
-                 "(today is a partial day). The Admin API (property listing) is a different host — "
-                 "use `treg connections resources`."},
+                 "(today is a partial day). Don't know your property id? The companion "
+                 "`google-analytics-admin` tool lists them: GET v1beta/accountSummaries."},
     ),
     # No probe_path: the Data API is POST-only (runReport), and a probe must be a cheap GET on
     # base_url. Don't "fix" this by pointing at analyticsadmin — the probe runs against the
@@ -355,6 +393,26 @@ GOOGLE_ANALYTICS = OAuthProvider(
     discover_nested_key="propertySummaries",
     discover_id_field="property",
     discover_label_field="displayName",
+    # The Admin API as a CALLABLE tool, not just connect-time discovery. Agents need it mid-task
+    # ("which property id do I report on?"), and analytics.readonly already authorizes its reads —
+    # without this row they called admin paths on the data host (Google 404) or the admin host with
+    # no tool registered (treg 404). Both doors shut; this opens the correct one.
+    extra_tools=(
+        {"suffix": "admin",
+         "base_url": "https://analyticsadmin.googleapis.com",
+         "probe_path": "/v1beta/accountSummaries",
+         "examples": [
+             {"method": "GET", "path": "v1beta/accountSummaries",
+              "note": "Every account and GA4 property this credential can see — the property ids "
+                      "that runReport (on the google-analytics tool) needs."},
+         ]},
+    ),
+    resource_example={
+        "method": "POST", "path": "v1beta/{resource}:runReport",
+        "note": "Your property “{resource_name}”. Body: {\"dateRanges\":[{\"startDate\":"
+                "\"28daysAgo\",\"endDate\":\"yesterday\"}],\"dimensions\":[{\"name\":\"pagePath\"}],"
+                "\"metrics\":[{\"name\":\"screenPageViews\"}]}",
+    },
 )
 
 GOOGLE_BUSINESS_PROFILE = OAuthProvider(
@@ -583,6 +641,21 @@ X = OAuthProvider(
     identity_path="/2/users/me",
     identity_id_path="data.id",
     identity_label_path="data.username",
+    # X bills treg's app per use (prepaid credits, no plans — docs.x.com/x-api/getting-started/
+    # pricing, re-read 2026-08-18). The card prices EVERY resource type separately, so these two
+    # numbers are only a FALLBACK for a path no catalog entry claims (a route X ships that we have
+    # not re-ingested): the post-read rate for a GET, the post-write rate for anything else. Both
+    # catalog files now price every known route from the card itself — `catalog_ingest.X_RATES` —
+    # so the fallback should be reached rarely, and when it is, it is a signal to re-ingest.
+    # Note the exposure it carries: a fallback GET that turns out to have returned USERS was billed
+    # at $0.005 and cost us $0.010. Raising it to the dearer rate would over-bill the far more
+    # common post read, so the fix is coverage, not a bigger guess.
+    # The $0.001 "owned read" rate is deliberately absent: X grants it only to an app's OWN owner,
+    # which a registry connect's member never is.
+    platform_billed=True,
+    billed_read_usd=0.005,
+    billed_write_usd=0.015,
+    billed_write_link_usd=0.20,
 )
 
 # TikTok grants scopes through PRODUCTS, not à la carte: user.info.basic rides on Login Kit,
@@ -647,7 +720,17 @@ _META_CONSENT_NOTICE = (
 
 # pages_show_list is the floor for BOTH providers: it is what returns the Page list, and an
 # Instagram professional account is only reachable *through* the Page it is linked to.
-_FB_READ = ["pages_show_list", "pages_read_engagement", "read_insights"]
+# business_management sits next to it for the same reason it does on META_ADS: most agency-held
+# Pages and Instagram accounts are OWNED by a Business portfolio, where the member has
+# business-level access and no personal Page role — without this scope /me/businesses answers
+# "Missing Permission" and those assets are undiscoverable, so the connect consents cleanly and
+# then offers an empty picker. (The scope already has Advanced Access on our Meta app.)
+_FB_READ = ["pages_show_list", "pages_read_engagement", "read_insights", "business_management"]
+
+# One request walks the Business graph: each business row holds owned_pages and client_pages
+# (the agency case), every entry shaped exactly like a /me/accounts row — so the same
+# discover_id_field/label_field read both listings.
+_META_BIZ_PAGE_LISTS = ("owned_pages.data", "client_pages.data")
 
 FACEBOOK = OAuthProvider(
     service="facebook",
@@ -660,6 +743,17 @@ FACEBOOK = OAuthProvider(
     scopes={
         "read": _FB_READ,
         "post": [*_FB_READ, "pages_manage_posts"],
+        # The full account-operations tier: engagement moderation, visitor content, settings and
+        # webhook subscriptions, Messenger, native Page video, lead retrieval — which Meta only
+        # honors alongside pages_manage_ads, so the pair travels together — and the business's
+        # product catalogs. One tier rather than several because these scopes are useless alone:
+        # an agent moderating comments needs the visitor content it moderates, and an agent
+        # working leads needs the form metadata around them.
+        "manage": [
+            *_FB_READ, "pages_manage_posts", "pages_manage_engagement",
+            "pages_read_user_content", "pages_manage_metadata", "pages_messaging",
+            "publish_video", "leads_retrieval", "pages_manage_ads", "catalog_management",
+        ],
     },
     client_id_setting="meta_client_id",
     client_secret_setting="meta_client_secret",
@@ -678,6 +772,8 @@ FACEBOOK = OAuthProvider(
     discover_key="data",
     discover_id_field="id",
     discover_label_field="name",
+    discover_extra_path="/me/businesses?fields=owned_pages{id,name},client_pages{id,name}",
+    discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
     # /me returns the person, not the Page, and needs no extra scope — so it keeps working even for
     # a connection whose Page was later unassigned, which is exactly when you want the probe to
     # still distinguish "credential dead" from "asset gone".
@@ -692,11 +788,23 @@ INSTAGRAM = OAuthProvider(
     # instagram_basic alone cannot publish, and instagram_content_publish alone cannot read the
     # account it publishes to — Meta enforces that dependency in App Review, so post is a strict
     # superset rather than a swap.
+    # business_management is here for the same reason it is in _FB_READ: an agency member's
+    # Instagram accounts hang off Business-owned Pages that /me/accounts cannot see.
     scopes={
-        "read": ["instagram_basic", "instagram_manage_insights", "pages_show_list", "pages_read_engagement"],
+        "read": [
+            "instagram_basic", "instagram_manage_insights", "pages_show_list",
+            "pages_read_engagement", "business_management",
+        ],
         "post": [
             "instagram_basic", "instagram_manage_insights", "pages_show_list",
-            "pages_read_engagement", "instagram_content_publish",
+            "pages_read_engagement", "business_management", "instagram_content_publish",
+        ],
+        # Adds the two-way surfaces: comment moderation and direct messages. Kept off `post` so a
+        # publish-only connect never puts "manage your messages" on the consent screen.
+        "manage": [
+            "instagram_basic", "instagram_manage_insights", "pages_show_list",
+            "pages_read_engagement", "business_management", "instagram_content_publish",
+            "instagram_manage_comments", "instagram_manage_messages",
         ],
     },
     client_id_setting="meta_client_id",
@@ -719,6 +827,13 @@ INSTAGRAM = OAuthProvider(
     discover_key="data",
     discover_id_field="instagram_business_account.id",
     discover_label_field="instagram_business_account.username",
+    # The Business walk asks for the SAME nested field, so its flattened rows are again
+    # Page-shaped and the dotted id path above reads both listings unchanged.
+    discover_extra_path=(
+        "/me/businesses?fields=owned_pages{instagram_business_account{id,username}},"
+        "client_pages{instagram_business_account{id,username}}"
+    ),
+    discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
     probe_path="/me?fields=id,name",
 )
 
@@ -1849,10 +1964,20 @@ SCOPE_LABELS: dict[str, str] = {
     "pages_read_engagement": "Read your Pages' posts, comments and reactions",
     "read_insights": "Read your Pages' reach and engagement insights",
     "pages_manage_posts": "Create, edit and delete posts on your Pages",
+    "pages_manage_engagement": "Reply to and moderate comments on your Pages' posts",
+    "pages_read_user_content": "Read what visitors post on your Pages",
+    "pages_manage_metadata": "Manage your Pages' settings and event subscriptions",
+    "pages_messaging": "Read and reply to your Pages' Messenger conversations",
+    "publish_video": "Upload videos to your Pages",
+    "leads_retrieval": "Retrieve leads from your Pages' instant forms",
+    "pages_manage_ads": "Manage ads run by your Pages",
+    "catalog_management": "Create and update your product catalogs",
     # Meta — Instagram
     "instagram_basic": "See your Instagram account, media and comments",
     "instagram_manage_insights": "Read your Instagram reach and engagement insights",
     "instagram_content_publish": "Publish posts to your Instagram account",
+    "instagram_manage_comments": "Reply to, hide and delete comments on your Instagram posts",
+    "instagram_manage_messages": "Read and reply to your Instagram direct messages",
     # Meta — Ads
     "ads_read": "Read your ad accounts, campaigns and performance",
     "business_management": "See the businesses and ad accounts you have access to",
@@ -1915,6 +2040,14 @@ def listing() -> list[dict]:
             "docs_url": p.docs_url,
             "consent_notice": p.consent_notice,
             "configured": is_configured(p),
+            # Whether calls on this connection are metered from the team balance (the provider
+            # bills treg's app per use), with the default rates — shown BEFORE consent, so nobody
+            # connects an account without seeing the price. Off unless the deployment enables it.
+            "metered": p.platform_billed and p.service in get_settings().oauth_billed_set,
+            **({"billed_rates": {"read_per_result_usd": p.billed_read_usd,
+                                 "write_per_call_usd": p.billed_write_usd,
+                                 "write_with_link_usd": p.billed_write_link_usd}}
+               if p.platform_billed and p.service in get_settings().oauth_billed_set else {}),
         }
         # Grouped first, alphabetical within a shelf — so the dashboard can render the shelves by
         # walking the list once instead of re-sorting what the registry already knows.

@@ -7,6 +7,7 @@ sources:
 related:
   - architecture/data-model.md
   - architecture/auth-secrets.md
+  - architecture/ads-conversions.md
   - foundation/charter.md
 ---
 
@@ -26,6 +27,17 @@ incl. duplicates, headers, cookies, body bytes):
    treg's own cookies (`treg_session`, `treg_oauth_state`) from the Cookie header — the dashboard's
    `credentials:'include'` Try-it would otherwise leak our session token — while keeping other cookies.
 3. **the injected credential(s)** — each binding overwrites only its target header/param.
+
+> **What treg keeps from a call.** Normally nothing: the relay forwards bytes and the audit row
+> records status, size and timing, not content. The single exception is a **failed platform-tier
+> call**, where `CallRecord.error_request` / `error_response` retain a redacted, truncated copy of
+> what the caller sent and what the provider answered — otherwise a failure is a bare status code
+> that cannot be explained afterwards, since `path` holds the catalog's URL rather than the caller's
+> parameters and `params_hash` is one-way. It costs nothing extra on the wire: metered responses are
+> already fully buffered by `_buffer_response` (settling needs the provider's reported cost out of
+> the body), and `force_identity` already asks those responses to arrive uncompressed. Own-key and
+> non-catalog calls keep the original guarantee — nothing of them is retained. See
+> [data-model](data-model.md) for the redaction order and retention.
 
 Faithfulness mechanics inside `relay()`:
 - request headers rebuilt from `request.headers.raw` into an `httpx.Headers` multidict (preserves
@@ -54,6 +66,11 @@ can't read it or extract it through a local run; a missing setting is a clean `5
 (`this server has no <setting> configured`). Used by the OAuth-marketplace auto-provisioner for a provider
 that needs a second credential treg holds centrally (see [api](../interface/api.md)).
 
+A separate case that looks similar but is NOT a platform binding: the Google Ads **conversion**
+uploader (`adsconv.py`) also spends treg's own platform connection, but it is not a caller-issued
+`/call/` request at all, so it never reaches `relay()` or `injectors.py` — it reads the platform org's
+stored OAuth secret directly and builds its own headers. See [ads-conversions](ads-conversions.md).
+
 **Accept-Encoding is normalized to `identity`** when the caller sent none. `relay()` streams the upstream
 body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would otherwise add its own
 `Accept-Encoding: gzip` and hand a plain HTTP client / agent compressed bytes it never requested. Asking
@@ -73,6 +90,36 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
 - **Named:** `rest = "<tool>/<path>"` (`rest.partition("/")`), looked up by `Tool.name`; upstream URL =
   `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
+
+If both shapes miss with 404, a dotted target gets one final lookup in the endpoint catalog. A live
+row enters `_resolve_marketplace_call` and its credential ladder. A `retired`/`broken` tombstone is
+instead refused with 410, its `status_note`, and its optional `superseded_by`, before credentials are
+selected or the relay can run; the refusal is audited as `refused_by=retired`. This ordering is
+deliberate: an org's own tool named exactly like the old catalog id already resolved above and is not
+shadowed, while URL passthrough has no catalog-id shape to catch accidentally.
+
+**A dead end names its capability siblings.** Both refusals that end the ladder — the `410` tombstone
+with no `superseded_by`, and the tier-3 `404` when no credential can be found — append
+`_capability_alternatives(ep)`: the other providers catalogued for the same `capability`, cheapest
+first, each marked *callable now on treg's key* (both halves of `_platform_offer`'s tier-4 test hold)
+or *needs your own `<provider>` credential*. It is derived from `cat.endpoints`, which `_parse` has
+already stripped of marked rows, so a retirement stops being suggested the moment it is marked and no
+list is maintained by hand.
+
+Two facts motivate it. 41 of the 50 TikHub retirements have no same-provider successor, so
+`superseded_by` is structurally silent for them and a cross-provider sibling is the only migration
+path left. And on 2026-08-19 one org spent 268 calls on `meta-ad-library.meta-ads.library.search`,
+which treg holds no key for, while `scrapecreators.x.v1-facebook-adlibrary-search-ads` — the same
+capability string, on a key treg already had — answered 192 of 208 calls for fourteen other teams.
+The refusal knew the capability the whole time.
+
+This **compares, it does not route**: treg never fails over on the caller's behalf, so the refusal
+stands, nothing is substituted, and the choice stays with the caller. The helper is deliberately
+synchronous and I/O-free — observed success would need `endpoint_stats.observed` and a database
+round-trip on an error path, which is how a 404 becomes a 500, and `catalog get` already ranks the
+same siblings by observed success when the caller follows the pointer. It can only see curated
+`capability` values: an endpoint with a blank capability is invisible as an alternative, which is an
+argument for filling those in rather than for fuzzy id matching.
 
 **ACL-filtered candidates.** `_resolve_call` takes the **caller** and filters passthrough candidates by
 `_tool_usable` (project scope AND the per-tool list) **before** the longest-prefix tiebreak. A same-host

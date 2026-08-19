@@ -255,12 +255,34 @@ def test_meta_providers_share_one_app():
     assert P.FACEBOOK.base_url == P.INSTAGRAM.base_url
 
 
-def test_meta_post_contains_read():
-    """satisfied_capabilities() is set containment, so a non-cumulative post would report a
-    connection that can publish but 'cannot read' — and the default capability would be wrong."""
+def test_meta_capabilities_are_cumulative():
+    """satisfied_capabilities() is set containment, so a non-cumulative tier would report a
+    connection that can publish but 'cannot read' — and the default capability would be wrong.
+    default_capability is the BROADEST tier by design (one honest consent screen beats
+    connect-twice), so adding manage moved the default there."""
     for provider in (P.FACEBOOK, P.INSTAGRAM):
         assert set(provider.scopes["read"]) < set(provider.scopes["post"]), provider.service
-        assert provider.default_capability == "post", provider.service
+        assert set(provider.scopes["post"]) < set(provider.scopes["manage"]), provider.service
+        assert provider.default_capability == "manage", provider.service
+
+
+def test_meta_messaging_stays_out_of_the_publish_tier():
+    """A publish-only connect must never put "manage your messages" (or lead retrieval, or the
+    Page's Messenger inbox) on the consent screen — the two-way surfaces live only in manage."""
+    two_way = {
+        "instagram_manage_messages", "instagram_manage_comments", "pages_messaging",
+        "pages_manage_engagement", "leads_retrieval", "catalog_management",
+    }
+    for provider in (P.FACEBOOK, P.INSTAGRAM):
+        for cap in ("read", "post"):
+            assert not two_way & set(provider.scopes[cap]), (provider.service, cap)
+
+
+def test_lead_retrieval_brings_its_required_rider():
+    """Meta only honors leads_retrieval alongside pages_manage_ads — requesting one without the
+    other consents fine and then 400s on /leads, which would demo as a broken integration."""
+    manage = set(P.FACEBOOK.scopes["manage"])
+    assert {"leads_retrieval", "pages_manage_ads"} <= manage
 
 
 def test_instagram_is_reached_through_a_page():
@@ -283,6 +305,18 @@ def test_instagram_consent_never_mentions_page_publishing():
     'manage your Pages' posts' on the consent screen for authority it never uses."""
     for cap in P.INSTAGRAM.scopes.values():
         assert "pages_manage_posts" not in cap
+
+
+def test_meta_page_discovery_can_walk_the_business_graph():
+    """Most agency-held Pages (and the Instagram accounts linked to them) are OWNED by a Business
+    portfolio, where the member has business-level access and no personal Page role. Drop
+    business_management from either capability and that user consents cleanly, then gets an empty
+    picker — the extra listing 400s and is (rightly) swallowed."""
+    for provider in (P.FACEBOOK, P.INSTAGRAM):
+        for cap in provider.scopes.values():
+            assert "business_management" in cap, provider.service
+        assert provider.discover_extra_path.startswith("/me/businesses"), provider.service
+        assert provider.discover_extra_list_paths, provider.service
 
 
 def test_meta_ads_needs_no_second_credential():

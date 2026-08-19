@@ -70,6 +70,7 @@ TIERS = {"core", "extended"}
 # what an endpoint IS (marketplace browse surface vs. plumbing). Optional — absent reads as "data" —
 # but a stated one must be from this set. See docs/context/architecture/catalog.md.
 KINDS = {"data", "action", "account", "utility"}
+ENDPOINT_STATUSES = {"retired", "broken"}
 QUERY_ARRAY_ENCODINGS = {"json", "comma", "repeated"}
 # the section heading an endpoint files under on its platform page — one lowercase word
 DOMAIN = re.compile(r"[a-z][a-z0-9_]*")
@@ -104,6 +105,31 @@ def looks_like_secret(match: str) -> bool:
 
 def fail(errors: list[str], where: str, msg: str) -> None:
     errors.append(f"{where}: {msg}")
+
+
+def check_status_marker(ep: dict, where: str, endpoint_status: dict[str, str],
+                        errors: list[str]) -> None:
+    """Validate the migration marker and its cross-catalog successor reference."""
+    status = str(ep.get("status") or "").strip()
+    note = str(ep.get("status_note") or "").strip()
+    successor = str(ep.get("superseded_by") or "").strip()
+    if status and status not in ENDPOINT_STATUSES:
+        fail(errors, where, f"status '{status}' not one of {sorted(ENDPOINT_STATUSES)}")
+    if status and not note:
+        fail(errors, where, "status requires a non-empty status_note explaining the retirement")
+    if not status and note:
+        fail(errors, where, "status_note requires status: retired or status: broken")
+    if not status and successor:
+        fail(errors, where, "superseded_by requires status: retired or status: broken")
+    if not successor:
+        return
+    if successor == ep.get("id"):
+        fail(errors, where, "superseded_by cannot point to the endpoint itself")
+    elif successor not in endpoint_status:
+        fail(errors, where, f"superseded_by target '{successor}' is not a catalog endpoint id")
+    elif endpoint_status[successor]:
+        fail(errors, where, f"superseded_by target '{successor}' is itself "
+                            f"{endpoint_status[successor]} — replacements must be live")
 
 
 def _as_date(value) -> dt.date | None:
@@ -258,7 +284,19 @@ def main(argv: list[str]) -> int:
     from treg.oauth_providers import REGISTRY  # noqa: E402
 
     only = set(argv)
-    files = sorted(p for p in CATALOG.glob("*.yaml") if p.name not in ("capabilities.yaml", "fx.yaml"))
+    all_files = sorted(p for p in CATALOG.glob("*.yaml")
+                       if p.name not in ("capabilities.yaml", "fx.yaml"))
+    # Successors can appear later in the same file or in another provider. Build the reference map
+    # before validating any row; a one-pass lookup would make validity depend on filename order.
+    endpoint_status: dict[str, str] = {}
+    for path in all_files:
+        data = yaml.safe_load(path.read_text()) or {}
+        if not isinstance(data, dict):
+            continue
+        for ep in data.get("endpoints") or []:
+            if isinstance(ep, dict) and ep.get("id"):
+                endpoint_status[str(ep["id"])] = str(ep.get("status") or "").strip()
+    files = list(all_files)
     # "tikhub" selects tikhub.yaml AND tikhub.extended.yaml — a service is both its tiers
     service_of = {p: p.stem.removesuffix(".extended") for p in files}
     if only:
@@ -349,6 +387,7 @@ def main(argv: list[str]) -> int:
                 fail(errors, where, f"bad scope '{ep.get('scope')}'")
             if ep.get("method") not in METHODS:
                 fail(errors, where, f"bad method '{ep.get('method')}'")
+            check_status_marker(ep, where, endpoint_status, errors)
             inp = ep.get("input") or {}
             default_array_encoding = inp.get("queryArrayEncoding")
             if (default_array_encoding is not None

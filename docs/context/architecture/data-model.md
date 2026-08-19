@@ -4,12 +4,14 @@ status: shipped
 sources:
   - src/treg/models.py
   - src/treg/db.py
+  - src/treg/referrals.py
   - src/treg/audit.py
   - src/treg/analytics.py
   - src/treg/ratestore.py
 related:
   - architecture/proxy-model.md
   - architecture/auth-secrets.md
+  - architecture/ads-conversions.md
 ---
 
 # Data model
@@ -22,7 +24,13 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   `demo` (a sandbox team seeded by [onboarding](../interface/onboarding.md) — labeled + removable),
   `public_demo` (a team whose member token is PUBLISHED, e.g. on the landing page — non-admin members
   are locked to `/call` + reads and may never act as a user; gated in `api.require_member` /
-  `require_identity`), `created_at`.
+  `require_identity`), `created_at`. **`ad_gclid`/`ad_click_id_type`/`ad_click_at`/`ad_landing`**
+  (migration A37, all nullable) — set once, at signup, from the first-party `treg_ad` cookie; never
+  overwritten. The historically named `ad_gclid` holds the click value; `ad_click_id_type` says
+  `gclid`/`gbraid`/`wbraid`, with NULL meaning a legacy GCLID. **`first_call_at`** (same migration) —
+  set once by a guarded UPDATE in the `/call/` handler,
+  deliberately NOT derived from `CallRecord` (which `audit.py` sheds under load, undercounting exactly
+  when traffic is highest). Both feed [ads-conversions](ads-conversions.md).
 - **`User`** — a **global identity** only: `email` (unique), `is_superadmin` + `suspended` (platform
   flags, see [super-admin](super-admin.md)), `token_version` (bump to revoke every session cookie +
   identity token this user holds — the signed token carries the `tv` it was minted at; see `sess.make`
@@ -85,6 +93,33 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   refusal passes through — using the identity stashed in `request.state` (a bad-token 401 records
   anonymously). It is what tells "the provider failed" apart from "we said no": a paywall 402 must not read
   as a provider error, and `endpoint_stats` excludes refused rows entirely.
+  It also carries **`error_request` / `error_response`** (migration A36, nullable) — the redacted,
+  truncated evidence for a **failed PLATFORM-tier call only**, and the one exception to "bodies are
+  never stored". Written when `mk.metered` and the call failed, from three places: the settle path
+  (the provider's own body, since a relayed non-2xx returns as a `Response` and is never raised, plus
+  an **allowlisted set of response headers** — `Retry-After`, `WWW-Authenticate`, the rate-limit
+  trio, request/trace ids — because an empty-bodied 401 or 429 is otherwise undiagnosable and those
+  headers *are* the answer); the metered `except HTTPException` branch (treg's own `detail`, covering
+  the 502s — upstream timeout, failed injection, SSRF refusal — where a bare status says least); and
+  the reserve refusal, where `detail` names **which** cap was hit, since every 429 collapses to
+  `refused_by='cap'` and that one value spans member, tag, org, platform and trial limits.
+  Never written for a success, for
+  tiers 1–2, or for a non-catalog tool call: a team on its own key is billed by the provider, so
+  keeping their traffic would help nobody — the same line `IdempotentCall.response_body` draws.
+  Redaction is exact-match-first (treg's own platform credential, resolved from the binding's
+  `platform_setting`) and only then pattern-based, because a provider quoting the received key back
+  in a 401 can defeat any regex; masking happens **before** truncation, since truncating first can
+  leave a partial key that no longer matches. The exact match covers every spelling a provider can
+  echo, not only what treg sent: percent-encoded in **both** cases (`quote()` emits uppercase, servers
+  echo lower), `quote_plus`, JSON slash-escaped, and — for the Basic-auth providers whose platform
+  value is *itself* the base64 of `login:password` (dataforseo, moz; see `config.py`) — the **decoded
+  credential and each half**, since a provider that decodes Basic and reports
+  `received_username`/`received_password` echoes the key in a form containing neither the blob nor
+  `Basic <blob>`. Behind all of it sits a **fail-closed** check: after masking, a normalised copy
+  (percent-decoded, JSON-unescaped, lowercased) is re-scanned, and if a secret survived a transform
+  nobody anticipated the whole snippet is replaced. Losing a message beats leaking the shared key. Aged out to `'<expired>'` after 14 days by
+  `GET /admin/errors` — not on the request path, because `get_session` never commits and a lazy
+  marker written there would roll back, leaving the purge to run on every failed call.
 - **`ToolRequest`** — a "the catalog doesn't have X" report (`POST /tool-requests`, open + per-IP
   rate-limited): `capability` (the headline, ≤200 chars), `query` (the search that came up empty —
   auto-filled by agents, the dedup/priority signal), `note`, `contact`, `source` (`web` | `cli` |
@@ -98,6 +133,15 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   secrets are injected via env, not the command line), `exit_code`, `duration_ms`, `created_at`. Written
   off the request path like `CallRecord`. **Usage metering** (`GET /orgs/{id}/usage`, per-user daily caps)
   counts `CallRecord` + `RunRecord` together — see [the API fragment](../interface/api.md).
+- **`AdConversion`** — the Google Ads conversion outbox: `org_id`, `action` (`signup`|`first_call`|
+  `paid`), `dedupe_key`, `value_usd_micro`, `created_at`, `uploaded_at` (NULL = not yet uploaded),
+  `next_attempt_at` (backoff), `failed_at` (terminal/dead-letter state), `attempts`, `error`. The
+  latter two timestamp columns are migration A38. A pending row has all three state timestamps NULL;
+  uploaded and failed are explicit, mutually exclusive terminal states. Unique on `(org_id, action)`
+  — the sole idempotency mechanism, not a check-then-insert. Durable by design (written synchronously
+  in the firing code's transaction, unlike `audit.py`/`analytics.py`, which are droppable); a
+  background worker uploads it later. Full chain and the one non-atomic fire site:
+  [ads-conversions](ads-conversions.md).
 - **`Ephemeral`** — short-lived key/value state that must **survive a restart and stay correct across
   instances**: the emailed OTP code + its brute-force counter, and the auth rate-limit sliding windows.
   Keyed by `(ns, k)` — a namespace (`otp` | `otp_start` | `sandbox_hit`) plus the key within it — with an
@@ -224,8 +268,12 @@ lives in [money](money.md); this is the shape.
 records), `budget_dim`/`budget_val` (the indexed copy of the primary pair) and `tags` (the whole bag).
 
 > `audit.record_call` splats its `telemetry` dict as `**kwargs` into `CallRecord()`, and `audit._write`
-> swallows every exception. **A telemetry key without a matching column silently kills every audit
-> write** — the table goes dark with no error anywhere. Columns and telemetry keys must land together.
+> swallows every exception. **A telemetry key without a matching column used to silently kill every
+> audit write** — the table went dark with no error anywhere. Fixed alongside migration A36:
+> `_known_fields` filters telemetry against `CallRecord.model_fields`, so an unknown key now costs one
+> column and logs a warning naming it, and the surviving swallow in `_write` logs instead of passing.
+> Columns and telemetry keys should still land together — the guard makes a mismatch survivable and
+> visible, not correct.
 
 `Org` gains `budget_dims` (which keys may carry budgets, ≤3), `primary_dim` (the one that scopes
 idempotency) and `daily_cap_micro` (the team's own spend ceiling, 0 = follow the deployment default).
@@ -235,3 +283,28 @@ Migrations `A30`-`A32` in `db.py` add the columns, guarded as usual; `TagSpend` 
 tables and need no DDL. Note `A31` also required adding the two new NOT NULL `org` columns to the raw
 `INSERT INTO org` in the legacy `(B)` backfill: a column `create_all` builds from a SQLModel default is
 NOT NULL with **no server default**, so raw SQL must supply it (ops/deploy.md §migration portability).
+
+## `Referral` — one invitation, and what it owes
+
+Written by `referrals.py`; the money it results in is granted through `ledger.grant`. See
+[money](money.md) for the policy and the gates. Two things about the SHAPE belong here:
+
+**Two UNIQUE columns do the arbitration, not application code.** `referred_org_id` (an org can be
+referred exactly once, ever) and `qualifying_payment_intent` (one payment funds one qualification).
+`ledger.grant(once=True)` was not enough: its check is a SELECT with no backing unique index, which
+survives a retry but not two concurrent redemptions — and this is money owed to a third party, not a
+signup promo. NULL is exempt from a unique index, so any number of `pending` rows coexist.
+
+**`status` is a ladder and every terminal state is kept**, never deleted:
+`pending` (signed up, owes nothing) → `qualified` (friend paid, owes both bonuses after the hold) →
+`paid`; or `capped` (referrer out of self-serve allowance) / `rejected` (a gate said no, or the
+funding payment was reversed inside the hold — `reject_reason` says which). A deleted row cannot
+answer "why did I not get paid", which is the first question this feature generates.
+
+`User.referral_code` is on the USER, not the Org: a person refers a friend, and anyone may create
+unlimited orgs, so a per-org code would hand the same human unlimited codes to farm with. It is
+minted lazily on first visit to the Referrals page — NULL is the normal state.
+
+`Referral.card_fingerprint` holds Stripe's stable per-card id. It is **not card data** (opaque
+outside our own Stripe account) and lives here alone, never on `Org`, which keeps
+`Org.stripe_default_pm`'s no-card-data posture intact.

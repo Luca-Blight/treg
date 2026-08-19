@@ -102,7 +102,8 @@ with c as (
     -- endpoint_id means the call RESOLVED to a catalog endpoint; NULL means it was either a tool
     -- the team registered themselves or a shape treg could not resolve at all.
     (endpoint_id is not null)                     as cataloged,
-    org_id, user_email, status_code, refused_by, credential_tier, path,
+    id, method, org_id, user_email, status_code, refused_by, credential_tier, path,
+    {evidence_cols}
     nullif(client,'')                             as client,
     coalesce(cost_charged_micro,0)                as spend,
     duration_ms, created_at,
@@ -153,9 +154,37 @@ QUERIES: dict[str, str] = {
     # Keyed by (ep, cataloged), NOT by ep alone: the same name can appear in BOTH endpoint tables —
     # e.g. a tikhub id that resolved 3,428 times and was also sent 159 times in an unresolvable
     # shape. Keying on the name alone would show each row the other one's errors.
+    # `evidence` and `sent` are the provider's own error message and the caller's request, captured
+    # for failed PLATFORM calls only (see models.CallRecord.error_response). They are NULL for an
+    # own-key call by design, and for anything that failed before the capture shipped — so a blank
+    # column here means "not captured", never "no error".
+    #
+    # Both come from ONE row, via the same ORDER BY inside array_agg. They used to be independent
+    # `max()`es, which silently paired one call's request with a DIFFERENT call's response — a
+    # plausible, readable, wrong diagnosis, which is worse than showing nothing. Ordering prefers a
+    # row that actually has evidence, then the newest, and `id` makes it a total order so the two
+    # aggregates cannot disagree.
+    #
+    # `reason` distinguishes three owners, not two: treg refused it, treg could not reach the
+    # provider (a relay 502 — the provider never answered, and calling that "provider answered" is
+    # the same false-diagnosis class), or the provider answered badly.
     "errdetail": BASE + """
-      select ep, cataloged, coalesce(refused_by, '(provider answered)') reason, status_code,
-             count(*) n, count(distinct org_id) orgs, left(min(path), 170) sample
+      select ep, cataloged,
+             -- Four cases, not three. Deriving "who failed" from the evidence TEXT is only sound
+             -- while the text is there: before migration (A35) deploys it is NULL, and after 14 days
+             -- it is '<expired>'. Both used to fall through to "provider answered", which quietly
+             -- re-attributed treg's own 502s to the provider — the same false-diagnosis class this
+             -- report was just fixed for, reappearing whenever evidence is absent. When we cannot
+             -- tell, say so.
+             case when refused_by is not null then refused_by
+                  when error_response like 'treg:%' then '(treg never reached it)'
+                  when error_response is null or error_response = '<expired>'
+                       then '(evidence not captured)'
+                  else '(provider answered)' end reason,
+             status_code, count(*) n, count(distinct org_id) orgs,
+             left(min(path), 170) sample,
+             string_agg(distinct method, '/') methods,
+             {evidence_agg}
       from c where status_code >= 400
       group by 1,2,3,4 order by 1, 5 desc""",
     "providers": BASE + """
@@ -189,6 +218,18 @@ QUERIES: dict[str, str] = {
     "clients": BASE + """
       select coalesce(client,'(unreported)') client, count(*) n, count(distinct org_id) orgs
       from c group by 1 order by 2 desc""",
+    # "The catalog doesn't have X" — filed from the web, the CLI, or by an agent over MCP.
+    # NOT windowed like everything else, and deliberately: a request is a BACKLOG ITEM, not a time
+    # series. A `--days 1` run that showed only today's would report an empty queue while a month of
+    # unanswered asks sat in the table. So every open row is listed, and `in_window` marks the new
+    # ones. `$1` is referenced only for that flag — collect() passes `since` to every query, and a
+    # statement that ignores its parameter is a protocol error, not a no-op.
+    "requests": """
+      select id, org_id, user_email, capability, query, note, contact, source, status, created_at,
+             (created_at >= $1) as in_window
+      from toolrequest
+      where status = 'open' or created_at >= $1
+      order by created_at desc limit 300""",
     "orgs": BASE + """
       select c.org_id, o.slug, count(*) calls, sum(c.spend) spend,
              sum(case when c.failed then 1 else 0 end) failed,
@@ -229,9 +270,35 @@ async def collect(since: dt.datetime, unit: str = "day") -> dict:
                       f"retrying in {pause}s", file=sys.stderr)
                 await asyncio.sleep(pause)
         try:
+            # The failure-evidence columns arrive with migration (A35). Until that deploys, prod does
+            # not have them — so probe rather than assume, or this script dies on
+            # UndefinedColumnError against exactly the database it exists to report on. Degrading to
+            # "no evidence available" keeps every other panel working through the deploy window.
+            has_evidence = bool(await conn.fetchval(
+                "select 1 from information_schema.columns"
+                " where table_name = 'callrecord' and column_name = 'error_response'"))
+            if not has_evidence:
+                print("  note: callrecord has no error_request/error_response yet — evidence panels "
+                      "will be empty until migration (A35) deploys", file=sys.stderr)
+            ev_cols = ("error_request, error_response," if has_evidence
+                       else "null::text error_request, null::text error_response,")
+            # `nullif(..., '<expired>')` so an aged-out row reads as "no evidence" rather than as
+            # evidence whose content is the word `<expired>` — otherwise the drawer prints
+            # "said <expired>" and the exemplar picker prefers an expired row over a newer real one.
+            ev_agg = ("""left((array_agg(nullif(error_response, '<expired>')
+                            order by (nullif(error_response, '<expired>') is not null) desc,
+                                     id desc))[1], 400) evidence,
+                         left((array_agg(nullif(error_request, '<expired>')
+                            order by (nullif(error_response, '<expired>') is not null) desc,
+                                     id desc))[1], 220) sent"""
+                      if has_evidence else "null::text evidence, null::text sent")
+
             out = {}
             for name, sql in QUERIES.items():
-                rows = [dict(r) for r in await conn.fetch(sql.replace("{unit}", unit), since)]
+                sql = (sql.replace("{unit}", unit)
+                          .replace("{evidence_cols}", ev_cols)
+                          .replace("{evidence_agg}", ev_agg))
+                rows = [dict(r) for r in await conn.fetch(sql, since)]
                 out[name] = rows
                 print(f"  {name}: {len(rows)} rows", file=sys.stderr)
             return out
@@ -301,6 +368,21 @@ def print_summary(data: dict, days: int, top: int) -> None:
         for f in fails[:12]:
             print(f"  {f['n']:>5}  {f['status_code']}  {short(f['ep'], 62)}  ({f['orgs']} orgs)")
 
+    reqs = data.get("requests") or []
+    if reqs:
+        new = sum(1 for r in reqs if r["in_window"])
+        # A row with neither an email nor a contact is unanswerable — the request endpoint is
+        # deliberately anonymous-friendly, so this is the cost of that choice, stated out loud.
+        anon = sum(1 for r in reqs if not (r["user_email"] or r["contact"]))
+        print(f"\n\033[1mtool requests\033[0m  ({len(reqs)} open · {new} filed in this window · "
+              f"{anon} with no way to reply)")
+        for r in reqs[:12]:
+            who = r["user_email"] or r["contact"] or "anonymous"
+            print(f"  {r['created_at']:%m-%d %H:%M}  {r['source']:<4} {short(who, 24):<24} "
+                  f"{short(r['capability'], 58)}")
+        if len(reqs) > 12:
+            print(f"  … {len(reqs) - 12} more (the HTML lists every one)")
+
     print("\n\033[1mtop orgs\033[0m")
     for o in data["orgs"][:10]:
         print(f"  {o['calls']:>6} calls  {usd(o['spend']):>9}  {(o['slug'] or '?'):<24} "
@@ -356,6 +438,10 @@ td{padding:6px 8px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
 tr:last-child td{border-bottom:0}
 td.r,th.r{text-align:right}
 td.name{white-space:normal;word-break:break-word;min-width:220px}
+/* A request filed inside the report window. The left rule carries the meaning; the tint is only a
+   hint, so this still reads on a monochrome print and in both themes. */
+tr.fresh td{background:var(--accent-soft)}
+tr.fresh td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
 .bar{position:relative;display:block;height:3px;background:var(--accent-soft);border-radius:2px;margin-top:4px}
 .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:2px}
 .pill{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;
@@ -388,6 +474,12 @@ table.inner{width:auto;min-width:520px;font-size:12px;margin-top:2px}
 table.inner th{padding-top:8px;border-bottom:1px solid var(--line)}
 table.inner td{border-bottom:1px solid var(--line-soft);padding:4px 10px 4px 0}
 table.inner code{font-size:11px;background:transparent;padding:0}
+/* The captured evidence: what the provider said, and what the caller sent. Wraps, because these are
+   sentences — a message clipped to a column width is the problem this feature exists to fix. */
+tr.evrow td{padding:0 10px 8px 0;border-bottom:1px solid var(--line-soft)}
+.ev{display:flex;gap:8px;align-items:baseline;margin-top:2px;font-size:12px}
+.ev b{flex:0 0 auto;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ev code{white-space:pre-wrap;word-break:break-word;color:var(--ink);font-size:11.5px}
 """
 
 # Row expansion + filtering. Vanilla, inline, no network: the page must work from a file:// URL.
@@ -474,9 +566,14 @@ PLAIN = {
     "request":    ("bad request", "wrong method, or a missing/invalid parameter"),
     "resolution": ("not found", "no such endpoint, or treg has no key to call it with"),
     "balance":    ("out of credit", "the org's prepaid balance could not cover it"),
-    "cap":        ("daily cap", "the org hit its own spending cap"),
+    # NOT "the org hit its own spending cap": every 429 maps to `cap`, and that covers a member
+    # call-count cap, a tag call or spend cap, the platform ceiling, a trial allowance and a demo-IP
+    # limit. Naming one of them was a confident wrong answer for the other five.
+    "cap":        ("hit a limit", "some cap or quota — member, tag, org, platform or trial"),
     "auth":       ("bad token", "the caller's token was missing, wrong or expired"),
     "policy":     ("blocked", "an ACL, deny rule or suspension refused it"),
+    "(treg never reached it)": ("treg could not reach the provider",
+                                "timeout, reset, failed injection or SSRF refusal — no answer came"),
 }
 
 
@@ -496,10 +593,32 @@ def _detail_rows(detail: list[dict], cols: int) -> str:
         plain, gloss = PLAIN.get(d["reason"], (d["reason"], ""))
         why = ('<span class="dim">the provider rejected it</span>' if upstream
                else f'<b>{html.escape(plain)}</b> <span class="dim">— {html.escape(gloss)}</span>')
+        # The method is already on every row and costs nothing to show. It IS the diagnosis for a
+        # whole failure class: 47 of apollo.people.enrich's failures were a GET at a POST endpoint,
+        # and without this column the drawer only ever said "bad request".
+        meth = html.escape(d.get("methods") or "")
         rows.append(
-            f'<tr><td>{who}</td><td>{why}</td><td class="num">{d["status_code"]}</td>'
+            f'<tr><td>{who}</td><td>{why}</td><td class="num">{meth} {d["status_code"]}</td>'
             f'<td class="r num">{d["n"]:,}</td><td class="r num">{d["orgs"]}</td>'
             f'<td class="name dim"><code>{html.escape(d["sample"] or "")}</code></td></tr>')
+        # The captured evidence, when there is any. Its own full-width row rather than another
+        # column: a provider's message is a sentence, and squeezing it into a table cell is how it
+        # ends up truncated to uselessness — which was the whole problem this feature solves.
+        said, sent = d.get("evidence"), d.get("sent")
+        if said or sent:
+            bits = []
+            if said:
+                bits.append(f'<div class="ev"><b>said</b> <code>{html.escape(said)}</code></div>')
+            if sent:
+                bits.append(f'<div class="ev"><b>sent</b> <code>{html.escape(sent)}</code></div>')
+            rows.append(f'<tr class="evrow"><td></td><td colspan="5">{"".join(bits)}</td></tr>')
+        elif not d.get("cataloged"):
+            # Say WHY there is nothing, rather than letting a blank read as "no detail exists".
+            # Evidence is captured for platform calls only, so a team's own registered tool — which
+            # is the single largest failure group, google-ads at 283 — never has any here.
+            rows.append('<tr class="evrow"><td></td><td colspan="5"><div class="ev dim">'
+                        'not captured — own registered tool, so the request and the provider\'s '
+                        'answer are the team\'s to inspect, not treg\'s</div></td></tr>')
     return (f'<tr class="detail" hidden><td colspan="{cols}">'
             f'<div class="scroll"><table class="inner"><thead><tr>'
             f'<th>Stopped by</th><th>Reason</th><th>Status</th>'
@@ -609,6 +728,26 @@ def build_html(data: dict, days: int, top: int, since: dt.datetime, unit: str = 
         "".join(f'<tr><td>{html.escape(c["client"])}</td><td class="r num">{c["n"]:,}</td>'
                 f'<td class="r num">{c["orgs"]}</td></tr>' for c in data["clients"][:10]))
 
+    reqs = data.get("requests") or []
+    req_new = sum(1 for r in reqs if r["in_window"])
+    req_new_label = f" · {req_new} new" if req_new else ""
+    req_anon = sum(1 for r in reqs if not (r["user_email"] or r["contact"]))
+    def request_row(r: dict) -> str:
+        who = r["user_email"] or r["contact"]
+        who_cell = html.escape(who) if who else '<span class="dim">anonymous</span>'
+        detail = r["note"] or r["query"]
+        detail_html = f'<div class="dim">{html.escape(short(detail, 260))}</div>' if detail else ""
+        return (f'<tr class="{"fresh" if r["in_window"] else ""}">'
+                f'<td class="num">{r["created_at"]:%Y-%m-%d %H:%M}</td>'
+                f'<td><code>{html.escape(r["source"] or "?")}</code></td>'
+                f'<td>{who_cell}</td>'
+                f'<td class="name">{html.escape(r["capability"] or "—")}{detail_html}</td></tr>')
+
+    requests_html = table(
+        '<th>Filed</th><th>Source</th><th>Who</th><th>Asked for</th>',
+        "".join(request_row(r) for r in reqs)
+        or '<tr><td colspan="4" class="dim">No open requests.</td></tr>')
+
     details: dict[tuple[str, bool], list[dict]] = {}
     for d in data["errdetail"]:
         details.setdefault((d["ep"], d["cataloged"]), []).append(d)
@@ -647,6 +786,18 @@ def build_html(data: dict, days: int, top: int, since: dt.datetime, unit: str = 
   <div class="kpis">{kpi_html}</div>
 
   <div class="card"><h2>Volume by {unit}</h2>{svg_stacked(data["daily"], unit)}</div>
+
+  <div class="card"><h2>Tool requests — all {len(reqs)} open{req_new_label}</h2>
+    <p class="sub" style="margin:-4px 0 12px">"The catalog doesn't have X", filed from the web page,
+    the CLI, or by an agent mid-search over MCP. <b>New rows in this window are highlighted.</b>
+    Every row here stays until someone flips its <code>status</code> by hand — this is a queue, not a
+    feed, so it is listed in full regardless of the report window.<br/>
+    <b>Read them against the catalog before building anything.</b> A request for something treg
+    already serves is a <i>discovery</i> failure wearing a coverage failure's clothes, and shipping
+    the endpoint again would not have helped the person who asked.<br/>
+    {req_anon} of {len(reqs)} carry neither an email nor a contact — filing is deliberately
+    anonymous-friendly, so those asks cannot be answered even when we build the thing.</p>
+    {requests_html}</div>
 
   <div class="card"><h2>Catalog endpoints — all {len(cataloged)}</h2>
     <p class="sub" style="margin:-4px 0 12px">Calls that resolved to a catalog endpoint. The three

@@ -366,6 +366,56 @@ def _migrate_to_orgs(conn) -> None:
             "WHERE r0.family_id = r.family_id) "
             "AND NOT EXISTS (SELECT 1 FROM oauthgrant g WHERE g.family_id = r.family_id)"))
 
+    # (A36) additive: callrecord.error_request / error_response — the redacted, truncated evidence
+    # kept for a FAILED platform-tier call so a provider error can be diagnosed after the fact (see
+    # models.CallRecord). NULLABLE with no default: NULL means "nothing captured", which is correct
+    # for every pre-existing row and for every successful or own-key call written after this ships.
+    # VARCHAR, matching every other additive column here — TEXT is not portability-checked by
+    # tests/test_migration_ddl.py.
+    # Renumbered from (A35) on merge: main took that number for the OAuth-grant backfill above, and
+    # two blocks sharing a tag would make the next collision impossible to talk about.
+    if "callrecord" in tables:
+        cols = {c["name"] for c in insp.get_columns("callrecord")}
+        for col in ("error_request", "error_response"):
+            if col not in cols:
+                conn.execute(text(f"ALTER TABLE callrecord ADD COLUMN {col} VARCHAR"))
+
+    # (A37) additive: org ad-attribution columns + first_call_at. `create_all` builds them on a
+    # fresh database; this is for one created before this feature shipped. All nullable, so no
+    # backfill is meaningful — a team that predates the ads work has no click to attribute to.
+    if "org" in tables:
+        org_cols = {c["name"] for c in insp.get_columns("org")}
+        for col, ddl in (("ad_gclid", "VARCHAR"), ("ad_click_id_type", "VARCHAR"),
+                         ("ad_click_at", "TIMESTAMP"),
+                         ("ad_landing", "VARCHAR"), ("first_call_at", "TIMESTAMP")):
+            if col not in org_cols:
+                conn.execute(text(f"ALTER TABLE org ADD COLUMN {col} {ddl}"))
+
+    # (A38) additive: durable retry/dead-letter state for the Ads conversion outbox. The table may
+    # already exist from the first conversion-tracking deploy; create_all does not add new columns.
+    if "adconversion" in tables:
+        conv_cols = {c["name"] for c in insp.get_columns("adconversion")}
+        for col in ("next_attempt_at", "failed_at"):
+            if col not in conv_cols:
+                conn.execute(text(f"ALTER TABLE adconversion ADD COLUMN {col} TIMESTAMP"))
+
+    # (A39) additive: user.referral_code — this person's `?ref=` code (see referrals.py). NULLABLE
+    # with no default: it is minted lazily the first time someone opens the Referrals page, so NULL
+    # ("never asked for one") is the correct and overwhelmingly common state. "user" is QUOTED — a
+    # reserved word in Postgres, and this ALTER runs in place on the live PG database.
+    #
+    # The UNIQUE index is created separately and NOT as a column constraint: `create_all` already
+    # built it on a fresh database, so this branch only runs where the table predates the feature,
+    # and IF NOT EXISTS keeps it idempotent across a restarted deploy. The `referral` table itself
+    # needs nothing here — create_all makes a brand-new table for free.
+    #
+    # Renumbered from (A37) on merge: main took 37 and 38 for the ad-attribution work above, and two
+    # blocks sharing a tag would make the next collision impossible to talk about.
+    if "user" in tables and "referral_code" not in {c["name"] for c in insp.get_columns("user")}:
+        conn.execute(text('ALTER TABLE "user" ADD COLUMN referral_code VARCHAR'))
+        conn.execute(text(
+            'CREATE UNIQUE INDEX IF NOT EXISTS ix_user_referral_code ON "user" (referral_code)'))
+
     # (A28) corrective: creditblock.stripe_payment_intent must be UNIQUE (the top-up idempotency
     # key). It sits HERE, above the (B) block, because (B) returns early on a fresh/new-schema DB —
     # and a fresh DB created between the ledger landing and this fix is precisely the one that has
