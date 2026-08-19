@@ -115,7 +115,11 @@ rejects on HTTP status by default.
    count; it activates when the credentials are set.
 4. **Quirks** (all snapshotted onto `PendingOAuth`): `extra_credential_*` for a second header (Google Ads /
    Microsoft Ads `DeveloperToken`), `auth_params={}` for non-Google providers that reject `access_type`,
-   `client_id_param` (TikTok's `app_id`/`client_key`), `scope_separator`, `pkce`, `long_lived_exchange`.
+   `client_id_param` (TikTok's `app_id`/`client_key`), `scope_separator`, `pkce`, `long_lived_exchange`,
+   `token_endpoint_auth_method="client_secret_basic"` (X, Pinterest — ALSO persisted into the token blob
+   so refresh speaks the same dialect), `extra_tools` for a vendor that splits one product across hosts
+   (GA4's admin/data split — each extra host provisions a companion Tool on the same secret), and
+   `resource_example` to stamp a ready-made call onto the tool once the user picks their resource.
 5. **NON-STANDARD OAuth is not free.** TikTok Ads (`app_id`/`auth_code`, JSON-body token exchange, `code==0`
    envelope, `Access-Token` header instead of `Authorization: Bearer`) does NOT work with the standard
    `oauth.py` flow or the Bearer auto-provision binding. Add it as a **flagged placeholder** — it needs real
