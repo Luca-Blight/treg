@@ -9973,6 +9973,9 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
         enrich, an empty `organizations` page on search) and charges nothing for it, so status-based
         billing alone would bill the caller for a response Apollo gave away. The body says whether
         the charged thing came back; when it didn't, the call settles at 0.
+      - hunter (domain search only): DERIVED too, and for the opposite reason — its price is not
+        per row but one whole SEARCH credit per 10 emails returned, rounded up, with an empty
+        domain free. `data.emails` is the only place that number exists.
 
     Everyone else settles at the estimate. This is the same signal the catalog's `observed_cost`
     harvests, which is what lets phase 5's drift detector compare the two numbers directly."""
@@ -10005,6 +10008,22 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
         credits = billing.get("creditsCharged") if isinstance(billing, dict) else None
         rate = catalog_store.load().credit_rates.get("lusha")
         if isinstance(credits, (int, float)) and not isinstance(credits, bool) and credits >= 0 and rate:
+            return int(credits * rate * 1_000_000 + 0.5)
+        return None
+    if provider == "hunter" and mk.endpoint_id == "hunter.companies.emails":
+        # DERIVED, like apollo. Hunter's domain search does not bill per row at all: it takes ONE
+        # whole search credit per 10 emails RETURNED, rounded up, and a domain it knows nobody at is
+        # free. Neither half of that rule survives being flattened into the catalog's per-row price
+        # (1 credit ÷ 10 = $0.00245/result), so settling at the estimate is wrong in BOTH
+        # directions — a search with no `limit` reserved the 20-row default page and settled a
+        # ZERO-email answer at $0.0490, 20x the published per-result price for results nobody got,
+        # while `limit=1` on a domain that did answer settled at $0.00245, a tenth of the credit
+        # Hunter actually took. The returned list is the bill.
+        data = doc.get("data")
+        emails = data.get("emails") if isinstance(data, dict) else None
+        rate = catalog_store.load().credit_rates.get("hunter")
+        if isinstance(emails, list) and rate:
+            credits = -(-len(emails) // 10)  # whole credits, rounded up; no emails = no charge
             return int(credits * rate * 1_000_000 + 0.5)
         return None
     if provider == "apollo":
