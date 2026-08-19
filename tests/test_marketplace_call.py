@@ -500,6 +500,39 @@ def test_hunter_domain_search_settles_on_the_emails_it_returned():
         "only domain search bills per 10 returned; every other hunter route settles at its estimate"
 
 
+def test_hunter_email_finder_miss_is_free():
+    """The finder's rule is flat: one whole SEARCH credit when an email comes back, nothing on a
+    miss — Hunter's pricing says a miss is free, but a miss still answers HTTP 200 with
+    `email: null`, so settling at the estimate billed the full credit for a name Hunter had
+    nothing on. The body is the only place the found/missed distinction exists."""
+    credit = 24_500  # $0.0245/credit (fx.yaml, Starter $49/mo / 2,000 credits)
+    f = _mk("hunter", endpoint_id="hunter.people.email.find", cost_type="per_success")
+    assert A._observed_cost_micro(f, b'{"data": {"email": "a@x.com", "score": 92}}') == credit
+    assert A._observed_cost_micro(f, b'{"data": {"email": null, "score": null}}') == 0, \
+        "a miss is free — the catalog says so and Hunter bills so"
+    assert A._observed_cost_micro(f, b'{"data": {"email": "", "score": null}}') == 0, \
+        "an empty string is a miss too"
+    assert A._observed_cost_micro(f, b'{"errors": [{"code": "wrong_params"}]}') is None, \
+        "no email key at all: we never learned the outcome, settle at the estimate"
+    assert A._observed_cost_micro(f, b"not json") is None
+
+
+def test_tikhub_envelope_no_charge_settles_at_zero():
+    """TikHub reports billing in prose, not a number: a 2xx whose payload is an embedded error
+    still says the request will incur a charge — and TikHub really does charge us for it
+    (verified live 2026-07-30), so those settle at the estimate, faithfully. Only the explicit
+    no-charge phrasing settles at zero."""
+    t = _mk("tikhub", cost_type="per_success")
+    assert A._observed_cost_micro(t, b'{"code": 200, "message": "Request successful. This request will incur a charge.", "data": {}}') is None, \
+        "a billed answer settles at the estimate — that IS what TikHub takes"
+    assert A._observed_cost_micro(t, b'{"code": 200, "message": "Request successful. This request will incur a charge.", "data": {"error": "dead_page"}}') is None, \
+        "a dead page TikHub bills us for is passed through, not eaten"
+    assert A._observed_cost_micro(t, b'{"code": 400, "message": "Request failed. You won\'t be charged for this request.", "data": null}') == 0
+    assert A._observed_cost_micro(t, b'{"code": 200, "message": "This request will not incur charges.", "data": {}}') == 0
+    assert A._observed_cost_micro(t, b'{"code": 200, "data": {}}') is None, "no message: estimate"
+    assert A._observed_cost_micro(t, b"not json") is None
+
+
 async def test_hunter_zero_result_search_costs_nothing(clients: AsyncClient, platform_on, monkeypatch):
     """End to end, the bug this fixes: four domain searches that returned no emails each settled at
     $0.0490 — the 20-row default page assumption × the per-row price — for results nobody received."""
@@ -518,6 +551,32 @@ async def test_hunter_zero_result_search_costs_nothing(clients: AsyncClient, pla
          "meta": {"results": 2207}}).encode()))
     assert (await clients.get("/call/hunter.companies.emails?domain=stripe.com&limit=1")).status_code == 200
     assert await _balance(clients) == before - 24_500, "one email is one whole search credit"
+
+
+async def test_hunter_email_finder_no_match_costs_nothing(clients: AsyncClient, platform_on, monkeypatch):
+    """End to end, the finder half of the same bug: a no-match answers HTTP 200 with `email: null`
+    and Hunter charges nothing for it, but the settle used the estimate and billed the full
+    $0.0245 search credit — the exact over-charge a customer measured against the catalog note
+    'a miss is free'."""
+    monkeypatch.setenv("TREG_PLATFORM_KEY_HUNTER", "PLATFORM-HUNTER-KEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,brightdata,hunter")
+    get_settings.cache_clear()
+    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(
+        {"data": {"first_name": "Nobody", "last_name": "Here", "email": None, "score": None,
+                  "domain": "nobody.example", "sources": []},
+         "meta": {"params": {"full_name": "Nobody Here", "domain": "nobody.example"}}}).encode()))
+    before = await _balance(clients)
+    r = await clients.get("/call/hunter.people.email.find?domain=nobody.example&full_name=Nobody%20Here")
+    assert r.status_code == 200
+    assert await _balance(clients) == before, "a miss is free — the balance must not move"
+    assert (await _telemetry(clients))["cost_observed_micro"] == 0
+
+    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(
+        {"data": {"first_name": "Patrick", "last_name": "Collison", "email": "p@stripe.com",
+                  "score": 92, "domain": "stripe.com", "sources": []},
+         "meta": {"params": {"full_name": "Patrick Collison", "domain": "stripe.com"}}}).encode()))
+    assert (await clients.get("/call/hunter.people.email.find?domain=stripe.com&full_name=Patrick%20Collison")).status_code == 200
+    assert await _balance(clients) == before - 24_500, "a found email is one whole search credit"
 
 
 async def test_daily_cap_fails_closed(clients: AsyncClient, platform_on, monkeypatch):
