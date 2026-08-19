@@ -188,6 +188,22 @@ class OAuthProvider:
     discover_id_field: str = "id"
     discover_label_field: str = ""
 
+    # Some vendors split ONE product across hosts: GA4 runs reports on analyticsdata but lists the
+    # properties those reports need on analyticsadmin. The credential already covers both — Google
+    # scopes are per-capability, not per-host — but /call/ resolution is per-HOST, so without a
+    # second Tool row the agent is trapped: the admin path 404s on the data host (Google) and the
+    # admin host 404s in treg ("no registered tool"). Observed live: 13 calls / 7 orgs stuck at
+    # exactly that wall while runReport itself worked fine. Each entry provisions one extra Tool
+    # bound to the SAME secret: {"suffix", "base_url", optional "probe_path", optional "examples"}.
+    # The suffix names it `<connection>-<suffix>` so a second account's tools stay distinct too.
+    extra_tools: tuple = ()
+
+    # Rendered into the DATA tool's examples the moment the user picks their site/property/account
+    # (`POST /connections/{id}/resource`). `{resource}` = the picked id (resource_ref) and
+    # `{resource_name}` = its human label. This closes the discovery loop from the other side:
+    # the agent reads the ready-made call off the tool instead of hunting the admin API for ids.
+    resource_example: dict | None = None
+
     # Some listings return only ids — Google Ads' listAccessibleCustomers gives
     # ["customers/6186675831", …] and nothing else. "6186675831" tells a user nothing about which
     # account they're choosing, so a provider can declare a per-row lookup for the human name.
@@ -351,8 +367,8 @@ GOOGLE_ANALYTICS = OAuthProvider(
          "note": "Data API v1beta. Body: {\"dateRanges\":[{\"startDate\":\"28daysAgo\","
                  "\"endDate\":\"yesterday\"}],\"dimensions\":[{\"name\":\"pagePath\"}],"
                  "\"metrics\":[{\"name\":\"screenPageViews\"}]}. Use 'yesterday', not 'today' "
-                 "(today is a partial day). The Admin API (property listing) is a different host — "
-                 "use `treg connections resources`."},
+                 "(today is a partial day). Don't know your property id? The companion "
+                 "`google-analytics-admin` tool lists them: GET v1beta/accountSummaries."},
     ),
     # No probe_path: the Data API is POST-only (runReport), and a probe must be a cheap GET on
     # base_url. Don't "fix" this by pointing at analyticsadmin — the probe runs against the
@@ -367,6 +383,26 @@ GOOGLE_ANALYTICS = OAuthProvider(
     discover_nested_key="propertySummaries",
     discover_id_field="property",
     discover_label_field="displayName",
+    # The Admin API as a CALLABLE tool, not just connect-time discovery. Agents need it mid-task
+    # ("which property id do I report on?"), and analytics.readonly already authorizes its reads —
+    # without this row they called admin paths on the data host (Google 404) or the admin host with
+    # no tool registered (treg 404). Both doors shut; this opens the correct one.
+    extra_tools=(
+        {"suffix": "admin",
+         "base_url": "https://analyticsadmin.googleapis.com",
+         "probe_path": "/v1beta/accountSummaries",
+         "examples": [
+             {"method": "GET", "path": "v1beta/accountSummaries",
+              "note": "Every account and GA4 property this credential can see — the property ids "
+                      "that runReport (on the google-analytics tool) needs."},
+         ]},
+    ),
+    resource_example={
+        "method": "POST", "path": "v1beta/{resource}:runReport",
+        "note": "Your property “{resource_name}”. Body: {\"dateRanges\":[{\"startDate\":"
+                "\"28daysAgo\",\"endDate\":\"yesterday\"}],\"dimensions\":[{\"name\":\"pagePath\"}],"
+                "\"metrics\":[{\"name\":\"screenPageViews\"}]}",
+    },
 )
 
 GOOGLE_BUSINESS_PROFILE = OAuthProvider(

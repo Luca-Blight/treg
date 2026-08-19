@@ -218,6 +218,18 @@ QUERIES: dict[str, str] = {
     "clients": BASE + """
       select coalesce(client,'(unreported)') client, count(*) n, count(distinct org_id) orgs
       from c group by 1 order by 2 desc""",
+    # "The catalog doesn't have X" — filed from the web, the CLI, or by an agent over MCP.
+    # NOT windowed like everything else, and deliberately: a request is a BACKLOG ITEM, not a time
+    # series. A `--days 1` run that showed only today's would report an empty queue while a month of
+    # unanswered asks sat in the table. So every open row is listed, and `in_window` marks the new
+    # ones. `$1` is referenced only for that flag — collect() passes `since` to every query, and a
+    # statement that ignores its parameter is a protocol error, not a no-op.
+    "requests": """
+      select id, org_id, user_email, capability, query, note, contact, source, status, created_at,
+             (created_at >= $1) as in_window
+      from toolrequest
+      where status = 'open' or created_at >= $1
+      order by created_at desc limit 300""",
     "orgs": BASE + """
       select c.org_id, o.slug, count(*) calls, sum(c.spend) spend,
              sum(case when c.failed then 1 else 0 end) failed,
@@ -356,6 +368,21 @@ def print_summary(data: dict, days: int, top: int) -> None:
         for f in fails[:12]:
             print(f"  {f['n']:>5}  {f['status_code']}  {short(f['ep'], 62)}  ({f['orgs']} orgs)")
 
+    reqs = data.get("requests") or []
+    if reqs:
+        new = sum(1 for r in reqs if r["in_window"])
+        # A row with neither an email nor a contact is unanswerable — the request endpoint is
+        # deliberately anonymous-friendly, so this is the cost of that choice, stated out loud.
+        anon = sum(1 for r in reqs if not (r["user_email"] or r["contact"]))
+        print(f"\n\033[1mtool requests\033[0m  ({len(reqs)} open · {new} filed in this window · "
+              f"{anon} with no way to reply)")
+        for r in reqs[:12]:
+            who = r["user_email"] or r["contact"] or "anonymous"
+            print(f"  {r['created_at']:%m-%d %H:%M}  {r['source']:<4} {short(who, 24):<24} "
+                  f"{short(r['capability'], 58)}")
+        if len(reqs) > 12:
+            print(f"  … {len(reqs) - 12} more (the HTML lists every one)")
+
     print("\n\033[1mtop orgs\033[0m")
     for o in data["orgs"][:10]:
         print(f"  {o['calls']:>6} calls  {usd(o['spend']):>9}  {(o['slug'] or '?'):<24} "
@@ -411,6 +438,10 @@ td{padding:6px 8px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
 tr:last-child td{border-bottom:0}
 td.r,th.r{text-align:right}
 td.name{white-space:normal;word-break:break-word;min-width:220px}
+/* A request filed inside the report window. The left rule carries the meaning; the tint is only a
+   hint, so this still reads on a monochrome print and in both themes. */
+tr.fresh td{background:var(--accent-soft)}
+tr.fresh td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
 .bar{position:relative;display:block;height:3px;background:var(--accent-soft);border-radius:2px;margin-top:4px}
 .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:2px}
 .pill{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;
@@ -697,6 +728,26 @@ def build_html(data: dict, days: int, top: int, since: dt.datetime, unit: str = 
         "".join(f'<tr><td>{html.escape(c["client"])}</td><td class="r num">{c["n"]:,}</td>'
                 f'<td class="r num">{c["orgs"]}</td></tr>' for c in data["clients"][:10]))
 
+    reqs = data.get("requests") or []
+    req_new = sum(1 for r in reqs if r["in_window"])
+    req_new_label = f" · {req_new} new" if req_new else ""
+    req_anon = sum(1 for r in reqs if not (r["user_email"] or r["contact"]))
+    def request_row(r: dict) -> str:
+        who = r["user_email"] or r["contact"]
+        who_cell = html.escape(who) if who else '<span class="dim">anonymous</span>'
+        detail = r["note"] or r["query"]
+        detail_html = f'<div class="dim">{html.escape(short(detail, 260))}</div>' if detail else ""
+        return (f'<tr class="{"fresh" if r["in_window"] else ""}">'
+                f'<td class="num">{r["created_at"]:%Y-%m-%d %H:%M}</td>'
+                f'<td><code>{html.escape(r["source"] or "?")}</code></td>'
+                f'<td>{who_cell}</td>'
+                f'<td class="name">{html.escape(r["capability"] or "—")}{detail_html}</td></tr>')
+
+    requests_html = table(
+        '<th>Filed</th><th>Source</th><th>Who</th><th>Asked for</th>',
+        "".join(request_row(r) for r in reqs)
+        or '<tr><td colspan="4" class="dim">No open requests.</td></tr>')
+
     details: dict[tuple[str, bool], list[dict]] = {}
     for d in data["errdetail"]:
         details.setdefault((d["ep"], d["cataloged"]), []).append(d)
@@ -735,6 +786,18 @@ def build_html(data: dict, days: int, top: int, since: dt.datetime, unit: str = 
   <div class="kpis">{kpi_html}</div>
 
   <div class="card"><h2>Volume by {unit}</h2>{svg_stacked(data["daily"], unit)}</div>
+
+  <div class="card"><h2>Tool requests — all {len(reqs)} open{req_new_label}</h2>
+    <p class="sub" style="margin:-4px 0 12px">"The catalog doesn't have X", filed from the web page,
+    the CLI, or by an agent mid-search over MCP. <b>New rows in this window are highlighted.</b>
+    Every row here stays until someone flips its <code>status</code> by hand — this is a queue, not a
+    feed, so it is listed in full regardless of the report window.<br/>
+    <b>Read them against the catalog before building anything.</b> A request for something treg
+    already serves is a <i>discovery</i> failure wearing a coverage failure's clothes, and shipping
+    the endpoint again would not have helped the person who asked.<br/>
+    {req_anon} of {len(reqs)} carry neither an email nor a contact — filing is deliberately
+    anonymous-friendly, so those asks cannot be answered even when we build the thing.</p>
+    {requests_html}</div>
 
   <div class="card"><h2>Catalog endpoints — all {len(cataloged)}</h2>
     <p class="sub" style="margin:-4px 0 12px">Calls that resolved to a catalog endpoint. The three
