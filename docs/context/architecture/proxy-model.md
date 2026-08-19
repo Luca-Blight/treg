@@ -91,6 +91,13 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
   `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
 
+If both shapes miss with 404, a dotted target gets one final lookup in the endpoint catalog. A live
+row enters `_resolve_marketplace_call` and its credential ladder. A `retired`/`broken` tombstone is
+instead refused with 410, its `status_note`, and its optional `superseded_by`, before credentials are
+selected or the relay can run; the refusal is audited as `refused_by=retired`. This ordering is
+deliberate: an org's own tool named exactly like the old catalog id already resolved above and is not
+shadowed, while URL passthrough has no catalog-id shape to catch accidentally.
+
 **ACL-filtered candidates.** `_resolve_call` takes the **caller** and filters passthrough candidates by
 `_tool_usable` (project scope AND the per-tool list) **before** the longest-prefix tiebreak. A same-host
 tool the caller cannot use must not be able to cause a `409` — or win the tiebreak — for someone who

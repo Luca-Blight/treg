@@ -61,7 +61,8 @@ async def test_platform_detail_groups_the_same_job_across_providers(clients: Asy
     ep = next(e for e in profile["endpoints"] if e["provider"] == "tikhub")
     assert set(ep) == {"id", "provider", "provider_display", "name", "summary", "method", "path",
                        "scope", "tier", "kind", "domain", "call_template", "cost", "verified", "docs_url",
-                       "has_example", "input", "platform_eligible", "test_request", "miss"}
+                       "has_example", "input", "platform_eligible", "test_request", "miss",
+                       "status", "status_note", "superseded_by"}
     assert ep["kind"] == "data", "an endpoint with no explicit kind is data (the browse surface)"
     assert ep["provider_display"] == P.get("tikhub").display_name
     assert ep["method"] == "GET" and ep["path"].startswith("/")
@@ -337,6 +338,45 @@ async def test_endpoint_detail_answers_everything_in_one_call(clients: AsyncClie
     assert isinstance(body["example_response"], (dict, list)), "inline, so parsing needs no second call"
 
 
+async def test_retired_rows_leave_discovery_but_keep_an_actionable_direct_lookup(clients: AsyncClient):
+    """A cached endpoint id needs its migration story, while a new agent must never discover it."""
+    retired = "tikhub.x.linkedin-web-search-jobs"
+    successor = "tikhub.x.linkedin-web-v2-search-jobs"
+    cat = cs.load()
+    assert retired in cat.by_id
+    assert retired not in {ep["id"] for ep in cat.endpoints}
+    assert cat.by_id[retired]["status"] == "retired"
+    assert cat.by_id[retired]["superseded_by"] == successor
+    assert not cat.by_id[successor]["status"]
+
+    detail = (await clients.get(f"/catalog/endpoints/{retired}")).json()["endpoint"]
+    assert detail["status"] == "retired"
+    assert "collapsed" in detail["status_note"]
+    assert detail["superseded_by"] == successor
+    search = (await clients.get("/catalog/search", params={"q": retired})).json()
+    assert retired not in {row["id"] for row in search["results"]}
+
+
+def test_tikhub_drift_repair_preserves_markers_and_rescues_only_real_jobs():
+    cat = cs.load()
+    marked = [ep for ep in cat.by_id.values()
+              if ep["provider"] == "tikhub" and ep.get("status")]
+    assert len(marked) == 50
+    assert {ep["status"] for ep in marked} == {"retired"}
+    assert sum(bool(ep.get("superseded_by")) for ep in marked) == 9
+    assert all(ep.get("status_note") for ep in marked)
+    assert all(ep["superseded_by"] in cat.by_id and
+               not cat.by_id[ep["superseded_by"]].get("status")
+               for ep in marked if ep.get("superseded_by"))
+
+    people = cat.by_id["justoneapi.x.linkedin-search-user-v1"]
+    assert people["capability"] == "linkedin.search.people"
+    comments = cat.by_id["tikhub.x.linkedin-web-v2-get-post-comments"]
+    assert comments["path"] == "/api/v1/linkedin/web_v2/get_post_comments"
+    assert comments["method"] == "GET"
+    assert comments["capability"] == "linkedin.post.comments"
+
+
 async def test_call_template_carries_method_and_body_for_a_post(clients: AsyncClient):
     body = (await clients.get("/catalog/endpoints/dataforseo.web.backlinks.summary")).json()
     tmpl = body["call_template"]
@@ -440,6 +480,11 @@ async def test_platform_eligibility_refuses_everything_it_cannot_prove():
     assert cat.platform_eligible({**ok, "verified": None}), \
         "2026-07-31 policy: the live-called stamp is no longer required — a broken route fails unbilled"
     assert not cat.platform_eligible({**ok, "cost": None}), "no price block ⇒ refuse, not free"
+    # `ok` is fully priced, so status is the ONLY axis left to explain a refusal here. A marked row
+    # keeps its historical price — it is retained to explain a cached id, not to be sold — and an
+    # eligible one would put treg's own key behind a route the provider has already removed.
+    assert not cat.platform_eligible({**ok, "status": "retired"}), "a retired route is not an offer"
+    assert not cat.platform_eligible({**ok, "status": "broken"}), "a broken route is not an offer"
 
 
 async def test_eligibility_rides_on_the_served_row(clients: AsyncClient):

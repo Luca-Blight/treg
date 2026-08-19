@@ -5828,6 +5828,7 @@ endpoints:
   example_response: examples/justoneapi.x.linkedin-get-user-posts-v1.json
 - id: justoneapi.x.linkedin-search-user-v1
   tier: extended
+  capability: linkedin.search.people
   platform: linkedin
   method: GET
   path: /api/linkedin/search-user/v1

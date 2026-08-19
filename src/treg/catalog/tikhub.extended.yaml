@@ -8254,6 +8254,8 @@ endpoints:
   example_response: examples/tikhub.x.douyin-search-fetch-video-search-v2.json
   capability: douyin.search.videos
 - id: tikhub.x.douyin-search-fetch-vision-search
+  status: retired
+  status_note: "TikHub removed this Douyin route and publishes no route with the same resource name (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: douyin
   method: POST
@@ -17944,6 +17946,8 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.lemon8-app-get-user-ids.json
 - id: tikhub.x.linkedin-web-get-ad-detail
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -17974,6 +17978,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-ad-detail.json
   capability: linkedin.ad.detail
 - id: tikhub.x.linkedin-web-get-comments-replies
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18007,6 +18013,8 @@ endpoints:
         note: Previous replies token
   untestable: no documented value for required comment_id, previous_replies_token
 - id: tikhub.x.linkedin-web-get-company-affiliated-pages
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18037,6 +18045,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-company-affiliated-pages.json
   capability: linkedin.company.affiliated_pages
 - id: tikhub.x.linkedin-web-get-company-associated-member-insights
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18067,6 +18077,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-company-associated-member-insights.json
   capability: linkedin.company.employee_insights
 - id: tikhub.x.linkedin-web-get-company-job-count
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18097,6 +18109,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-company-job-count.json
   capability: linkedin.company.jobs
 - id: tikhub.x.linkedin-web-get-company-jobs
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18165,6 +18179,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-company-jobs.json
   capability: linkedin.company.jobs
 - id: tikhub.x.linkedin-web-get-company-people
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18201,6 +18217,9 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-company-people.json
   capability: linkedin.company.people
 - id: tikhub.x.linkedin-web-get-company-posts
+  status: retired
+  status_note: "TikHub retired linkedin/web when it collapsed LinkedIn into eight linkedin/web_v2 routes; use the replacement below (OpenAPI snapshot fetched 2026-08-17)."
+  superseded_by: tikhub.x.linkedin-web-v2-get-company-posts
   tier: extended
   platform: linkedin
   method: GET
@@ -18243,6 +18262,9 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-company-posts.json
   capability: linkedin.company.posts
 - id: tikhub.x.linkedin-web-get-company-profile
+  status: retired
+  status_note: "TikHub retired linkedin/web when it collapsed LinkedIn into eight linkedin/web_v2 routes; use the replacement below (OpenAPI snapshot fetched 2026-08-17)."
+  superseded_by: tikhub.x.linkedin-web-v2-get-company-profile
   tier: extended
   platform: linkedin
   method: GET
@@ -18277,6 +18299,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-company-profile.json
   capability: linkedin.company.profile
 - id: tikhub.x.linkedin-web-get-group-info
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18301,6 +18325,8 @@ endpoints:
         note: Group ID
   untestable: no documented value for required group_id
 - id: tikhub.x.linkedin-web-get-group-posts
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18330,6 +18356,9 @@ endpoints:
         example: '1'
   untestable: no documented value for required group_id
 - id: tikhub.x.linkedin-web-get-job-detail
+  status: retired
+  status_note: "TikHub retired linkedin/web when it collapsed LinkedIn into eight linkedin/web_v2 routes; use the replacement below (OpenAPI snapshot fetched 2026-08-17)."
+  superseded_by: tikhub.x.linkedin-web-v2-get-job-detail
   tier: extended
   platform: linkedin
   method: GET
@@ -18364,6 +18393,9 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-job-detail.json
   capability: linkedin.job.detail
 - id: tikhub.x.linkedin-web-get-post-comments
+  status: retired
+  status_note: "TikHub retired linkedin/web when it collapsed LinkedIn into eight linkedin/web_v2 routes; use the replacement below (OpenAPI snapshot fetched 2026-08-17)."
+  superseded_by: tikhub.x.linkedin-web-v2-get-post-comments
   tier: extended
   platform: linkedin
   method: GET
@@ -18408,6 +18440,9 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-post-comments.json
   capability: linkedin.post.comments
 - id: tikhub.x.linkedin-web-get-post-detail
+  status: retired
+  status_note: "TikHub retired linkedin/web when it collapsed LinkedIn into eight linkedin/web_v2 routes; use the replacement below (OpenAPI snapshot fetched 2026-08-17)."
+  superseded_by: tikhub.x.linkedin-web-v2-get-post-detail
   tier: extended
   platform: linkedin
   method: GET
@@ -18438,6 +18473,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-post-detail.json
   capability: linkedin.post.detail
 - id: tikhub.x.linkedin-web-get-post-reactions
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18479,6 +18516,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-post-reactions.json
   capability: linkedin.post.reactions
 - id: tikhub.x.linkedin-web-get-post-reposts
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18519,6 +18558,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-post-reposts.json
   capability: linkedin.post.reposts
 - id: tikhub.x.linkedin-web-get-user-about
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18548,6 +18589,8 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.linkedin-web-get-user-about.json
 - id: tikhub.x.linkedin-web-get-user-certifications
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18584,6 +18627,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-certifications.json
   capability: linkedin.user.certifications
 - id: tikhub.x.linkedin-web-get-user-comments
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18624,6 +18669,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-comments.json
   capability: linkedin.user.comments
 - id: tikhub.x.linkedin-web-get-user-contact
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18650,6 +18697,8 @@ endpoints:
   capability: linkedin.user.contact
   untestable: returns a named private individual's personal email and phone — no example may be committed to a public repo (route itself works)
 - id: tikhub.x.linkedin-web-get-user-educations
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18686,6 +18735,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-educations.json
   capability: linkedin.user.education
 - id: tikhub.x.linkedin-web-get-user-experience
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18722,6 +18773,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-experience.json
   capability: linkedin.user.experience
 - id: tikhub.x.linkedin-web-get-user-follower-and-connection
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18752,6 +18805,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-follower-and-connection.json
   capability: linkedin.user.followers
 - id: tikhub.x.linkedin-web-get-user-honors
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18788,6 +18843,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-honors.json
   capability: linkedin.user.honors
 - id: tikhub.x.linkedin-web-get-user-images
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18828,6 +18885,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-images.json
   capability: linkedin.user.images
 - id: tikhub.x.linkedin-web-get-user-interests-companies
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18864,6 +18923,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-interests-companies.json
   capability: linkedin.user.interests
 - id: tikhub.x.linkedin-web-get-user-interests-groups
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -18900,6 +18961,9 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-interests-groups.json
   capability: linkedin.user.interests
 - id: tikhub.x.linkedin-web-get-user-posts
+  status: retired
+  status_note: "TikHub retired linkedin/web when it collapsed LinkedIn into eight linkedin/web_v2 routes; use the replacement below (OpenAPI snapshot fetched 2026-08-17)."
+  superseded_by: tikhub.x.linkedin-web-v2-get-user-posts
   tier: extended
   platform: linkedin
   method: GET
@@ -18940,6 +19004,9 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-posts.json
   capability: linkedin.user.posts
 - id: tikhub.x.linkedin-web-get-user-profile
+  status: retired
+  status_note: "TikHub retired linkedin/web when it collapsed LinkedIn into eight linkedin/web_v2 routes; use the replacement below (OpenAPI snapshot fetched 2026-08-17)."
+  superseded_by: tikhub.x.linkedin-web-v2-get-user-profile
   tier: extended
   platform: linkedin
   method: GET
@@ -19010,6 +19077,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-profile.json
   capability: linkedin.user.profile
 - id: tikhub.x.linkedin-web-get-user-publications
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19046,6 +19115,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-publications.json
   capability: linkedin.user.publications
 - id: tikhub.x.linkedin-web-get-user-reactions
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19086,6 +19157,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-reactions.json
   capability: linkedin.user.reactions
 - id: tikhub.x.linkedin-web-get-user-recommendations
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19132,6 +19205,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-recommendations.json
   capability: linkedin.user.recommendations
 - id: tikhub.x.linkedin-web-get-user-skills
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19168,6 +19243,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-skills.json
   capability: linkedin.user.skills
 - id: tikhub.x.linkedin-web-get-user-videos
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19208,6 +19285,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-videos.json
   capability: linkedin.user.videos
 - id: tikhub.x.linkedin-web-get-user-volunteers
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19244,6 +19323,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-get-user-volunteers.json
   capability: linkedin.user.volunteering
 - id: tikhub.x.linkedin-web-search-ads
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19292,6 +19373,9 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-search-ads.json
   capability: linkedin.search.ads
 - id: tikhub.x.linkedin-web-search-jobs
+  status: retired
+  status_note: "TikHub retired linkedin/web when it collapsed LinkedIn into eight linkedin/web_v2 routes; use the replacement below (OpenAPI snapshot fetched 2026-08-17)."
+  superseded_by: tikhub.x.linkedin-web-v2-search-jobs
   tier: extended
   platform: linkedin
   method: GET
@@ -19376,6 +19460,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-search-jobs.json
   capability: linkedin.search.jobs
 - id: tikhub.x.linkedin-web-search-location
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19405,6 +19491,8 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.linkedin-web-search-location.json
 - id: tikhub.x.linkedin-web-search-people
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19489,6 +19577,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-search-people.json
   capability: linkedin.search.people
 - id: tikhub.x.linkedin-web-search-posts
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19545,6 +19635,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-search-posts.json
   capability: linkedin.search.posts
 - id: tikhub.x.linkedin-web-search-schools
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19581,6 +19673,8 @@ endpoints:
   example_response: examples/tikhub.x.linkedin-web-search-schools.json
   capability: linkedin.search.schools
 - id: tikhub.x.linkedin-web-search-suggestion-industry
+  status: retired
+  status_note: "TikHub removed this route when it collapsed linkedin/web into eight linkedin/web_v2 routes; no equivalent route remains (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19610,6 +19704,8 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.linkedin-web-search-suggestion-industry.json
 - id: tikhub.x.linkedin-web-v2-get-author-articles
+  status: retired
+  status_note: "TikHub removed this linkedin/web_v2 route; it is not among the eight remaining LinkedIn routes and has no equivalent (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19639,6 +19735,7 @@ endpoints:
   untestable: no documented value for required url
 - id: tikhub.x.linkedin-web-v2-get-company-posts
   tier: extended
+  capability: linkedin.company.posts
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/get_company_posts
@@ -19763,8 +19860,47 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.linkedin-web-v2-get-post-detail.json
   capability: linkedin.post.detail
+- id: tikhub.x.linkedin-web-v2-get-post-comments
+  tier: extended
+  capability: linkedin.post.comments
+  platform: linkedin
+  method: GET
+  path: /api/v1/linkedin/web_v2/get_post_comments
+  name: Get post comments
+  summary: Fetch comments of a LinkedIn post by its activity URN.
+  input:
+    queryParams:
+      urn:
+        type: string
+        required: true
+        note: Numeric activity URN from the LinkedIn post URL.
+        example: '7267273010393358336'
+      sort_by:
+        type: string
+        required: false
+        note: Most relevant (default) or Most recent.
+      page:
+        type: integer
+        required: false
+        note: Page number, starting at 1.
+        example: 1
+      pagination_token:
+        type: string
+        required: false
+        note: Pagination token returned by the previous response.
+      share_urn:
+        type: string
+        required: false
+        note: Optional share URN for shared posts.
+  test_request:
+    queryParams:
+      urn: '7267273010393358336'
+      sort_by: Most relevant
+      page: 1
+  skipped: not called with a credential during the drift repair; the route is present in TikHub's 2026-08-17 OpenAPI snapshot
 - id: tikhub.x.linkedin-web-v2-get-user-posts
   tier: extended
+  capability: linkedin.user.posts
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/get_user_posts
@@ -19831,6 +19967,7 @@ endpoints:
   capability: linkedin.user.profile
 - id: tikhub.x.linkedin-web-v2-search-jobs
   tier: extended
+  capability: linkedin.search.jobs
   platform: linkedin
   method: GET
   path: /api/v1/linkedin/web_v2/search_jobs
@@ -19893,6 +20030,8 @@ endpoints:
       keyword: data analyst
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
 - id: tikhub.x.linkedin-web-v2-search-jobs-by-url
+  status: retired
+  status_note: "TikHub removed this linkedin/web_v2 route; it is not among the eight remaining LinkedIn routes and has no equivalent (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -19921,6 +20060,8 @@ endpoints:
       url: https://www.linkedin.com/jobs/search?keywords=Software&location=New%20York
   unverified: 'http 400: Request failed. Please retry. Check the docs below to verify your parameters, te'
 - id: tikhub.x.linkedin-web-v2-search-users
+  status: retired
+  status_note: "TikHub removed this linkedin/web_v2 route; it is not among the eight remaining LinkedIn routes and has no equivalent (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: linkedin
   method: GET
@@ -23891,6 +24032,9 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-app-v3-fetch-share-short-link.json
 - id: tikhub.x.tiktok-app-v3-fetch-shop-id-by-share-link
+  status: retired
+  status_note: "TikHub retired this TikTok App V3 shop route and moved the same operation to tiktok/shop/web; use the replacement below (OpenAPI snapshot fetched 2026-08-17)."
+  superseded_by: tikhub.x.tiktok-shop-web-fetch-shop-id-by-share-link
   tier: extended
   platform: tiktok
   method: GET
@@ -23919,6 +24063,8 @@ endpoints:
   verified: '2026-07-28'
   example_response: examples/tikhub.x.tiktok-app-v3-fetch-shop-id-by-share-link.json
 - id: tikhub.x.tiktok-app-v3-fetch-shop-info
+  status: retired
+  status_note: "TikHub removed this TikTok route and publishes no route with the same resource name (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: tiktok
   method: GET
@@ -27529,6 +27675,8 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-ads-search-ads.json
   capability: tiktok-ads.library.search
 - id: tikhub.x.tiktok-app-v3-fetch-shop-home
+  status: retired
+  status_note: "TikHub removed this TikTok route and publishes no route with the same resource name (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: tiktok-shop
   method: GET
@@ -27564,6 +27712,8 @@ endpoints:
   example_response: examples/tikhub.x.tiktok-app-v3-fetch-shop-home.json
   capability: tiktok-shop.shop.detail
 - id: tikhub.x.tiktok-app-v3-fetch-shop-home-page-list
+  status: retired
+  status_note: "TikHub removed this TikTok route and publishes no route with the same resource name (OpenAPI snapshot fetched 2026-08-17)."
   tier: extended
   platform: tiktok-shop
   method: GET
