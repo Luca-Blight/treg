@@ -7317,13 +7317,41 @@ async def _autoprovision_provider_tool(
         existing.health_check = health_check or existing.health_check
         if examples and not existing.examples:
             existing.examples = examples
-        return
-    db.add(Tool(
-        org_id=secret.org_id, name=tool_name, owner=pending.owner,
-        base_url=provider.base_url, host=_host_of(provider.base_url),
-        bindings=bindings, health_check=health_check,
-        examples=examples,
-    ))
+    else:
+        db.add(Tool(
+            org_id=secret.org_id, name=tool_name, owner=pending.owner,
+            base_url=provider.base_url, host=_host_of(provider.base_url),
+            bindings=bindings, health_check=health_check,
+            examples=examples,
+        ))
+    # Split-host vendors (GA4: reports on analyticsdata, property listing on analyticsadmin) get
+    # one extra Tool per host, bound to the SAME secret — the scope already covers it; only /call/'s
+    # per-host resolution was in the way. Upserted with the same idempotency as the main tool, so a
+    # reconnect heals a connection made before the extra existed instead of duplicating it. Revoke
+    # needs no counterpart: it already deletes any tool whose only binding was this credential.
+    for extra in getattr(provider, "extra_tools", ()) or ():
+        extra_name = f"{tool_name}-{extra['suffix']}"
+        extra_probe = (
+            {"method": "GET", "path": extra["probe_path"], "expect_status": 200}
+            if extra.get("probe_path") else None
+        )
+        prior = (await db.execute(
+            select(Tool).where(Tool.org_id == secret.org_id, Tool.name == extra_name)
+        )).scalars().first()
+        if prior is not None:
+            prior.bindings = bindings
+            prior.base_url = extra["base_url"]
+            prior.host = _host_of(extra["base_url"])
+            prior.health_check = extra_probe or prior.health_check
+            if extra.get("examples") and not prior.examples:
+                prior.examples = extra["examples"]
+        else:
+            db.add(Tool(
+                org_id=secret.org_id, name=extra_name, owner=pending.owner,
+                base_url=extra["base_url"], host=_host_of(extra["base_url"]),
+                bindings=bindings, health_check=extra_probe,
+                examples=extra.get("examples") or [],
+            ))
 
 
 CATALOG_STAMP_CAP = 12  # a tool's examples are read by a human/agent scanning, not a full API doc
@@ -7758,6 +7786,29 @@ async def set_connection_resource(
     secret = await _owned_connection(secret_id, caller, db)
     secret.resource_ref = body.resource_ref
     secret.resource_name = body.resource_name
+    # Picking a property/site/account is the moment we finally KNOW the id every real call needs —
+    # so render it straight into the provisioned tool's examples as a ready-made call. Before this,
+    # agents went hunting for the id through the vendor's admin API mid-task (GA4: 13 calls/7 orgs
+    # dead-ended there). Re-picking replaces the stamped example rather than piling them up.
+    provider = oauth_providers.get(secret.provider) if secret.provider else None
+    tmpl = getattr(provider, "resource_example", None) if provider else None
+    if tmpl and body.resource_ref:
+        rendered = {
+            k: v.replace("{resource}", body.resource_ref)
+                .replace("{resource_name}", body.resource_name or body.resource_ref)
+            if isinstance(v, str) else v
+            for k, v in tmpl.items()
+        }
+        # The marker is what makes re-picking REPLACE: a stamp for property A and one for property B
+        # share no path, so path-matching would let them pile up, one stale and confidently wrong.
+        rendered["stamped"] = "resource"
+        tool = (await db.execute(select(Tool).where(
+            Tool.org_id == caller.org_id, Tool.name == (secret.name or provider.service)
+        ))).scalars().first()
+        if tool is not None:
+            others = [e for e in (tool.examples or [])
+                      if e.get("stamped") != "resource" and e.get("path") != tmpl["path"]]
+            tool.examples = [rendered] + others
     await db.commit()
     await db.refresh(secret)
     return oauth.connection_view(secret)

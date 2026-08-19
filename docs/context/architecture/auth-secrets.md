@@ -58,7 +58,12 @@ and raises a clear error when a 200 body carries no `access_token`; `_expires_at
 
 `refresh()` posts the credential's recorded `client_id_param` dialect (TikTok reads `client_key`, not
 `client_id`), snapshotted onto the blob at mint time so a refresh months later still speaks the dialect
-the grant was minted with.
+the grant was minted with. The same snapshotting covers `token_endpoint_auth_method`: X and Pinterest
+demand the secret in HTTP **Basic**, and for a while only `exchange_code` knew — so connect succeeded
+and every refresh 401'd two hours later (surfaced to callers as `502 oauth refresh failed`; ≥6 orgs
+hit it live). Now the method rides in the blob and `refresh()` honors it; a legacy blob without the
+field gets body auth, then ONE retry with Basic on a 4xx, and stamps whichever worked — existing
+broken connections self-heal on their next call, no migration.
 
 **Connect flow (mint the first token):** `consent_url(pending)` builds the provider consent URL
 (default `access_type=offline` + `prompt=consent` so a refresh token comes back); `exchange_code(pending,
@@ -155,6 +160,16 @@ module symbols:
   the Basic blob for `Basic {secret}` (DataForSEO, Moz). `can_autoprovision` (has a `base_url` and either needs no
   second credential or treg holds it) drives auto-building a callable tool on a successful connect;
   `needs_extra_credential` covers Google Ads' `developer-token` header (a second binding the operator supplies).
+  **Split-host vendors get one extra Tool per host** (`extra_tools`): GA4 runs reports on
+  `analyticsdata` but lists the property ids those reports need on `analyticsadmin` — one scope covers
+  both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin
+  path on the data host → Google 404; admin host → treg "no registered tool"; 13 calls/7 orgs observed
+  stuck there). The extra (`<connection>-admin`) binds the SAME secret, upserts idempotently on
+  reconnect — which is also how pre-fix connections heal — and revoke already sweeps it (any tool
+  whose only binding was the deleted credential goes). `resource_example` closes the loop from the
+  other side: the moment the user picks their property (`POST /connections/{id}/resource`), the
+  template renders `{resource}`/`{resource_name}` into a ready-made call stamped into the data tool's
+  examples (marker `stamped: resource`, so re-picking replaces instead of piling up).
 - Post-connect helpers the dashboard/CLI drive: resource **discovery** (`supports_discovery`,
   `discover_*` — which site/property/account this connection acts on), row **enrichment**.
   Discovery can walk a SECOND listing (`discover_extra_path` + `discover_extra_list_paths`): Meta's

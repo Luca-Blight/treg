@@ -669,3 +669,84 @@ def test_every_provider_has_a_logo():
 async def test_logos_are_served(clients):
     r = await clients.get("/logos/slack.svg")
     assert r.status_code == 200 and r.text.lstrip().startswith("<svg")
+
+
+# ---- split-host providers (GA4: reports vs property listing) -------------------------------
+async def test_split_host_connect_provisions_the_admin_tool_too(clients: AsyncClient, treg_google_app):
+    """GA4's property list lives on analyticsadmin while reports run on analyticsdata. One consent
+    covers both (scopes are per-capability), but /call/ resolves per HOST — so the connect must
+    yield a Tool row on each host or the agent can't discover its own property ids (observed live:
+    13 calls / 7 orgs dead-ended exactly there)."""
+    st = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
+    assert st["status"] == "done"
+    tools = {t["name"]: t for t in (await clients.get("/tools")).json()}
+
+    data = tools["google-analytics"]
+    admin = tools["google-analytics-admin"]
+    assert data.get("host") == "analyticsdata.googleapis.com"
+    assert admin.get("host") == "analyticsadmin.googleapis.com"
+    # SAME credential on both — this is one connection wearing two hosts, not two connections.
+    assert admin["bindings"] == data["bindings"]
+    assert admin["bindings"][0]["secret_id"] == st["secret_id"]
+    # The admin tool can prove itself on `health --run`, and tells the agent what it is for.
+    assert admin["health_check"] == {"method": "GET", "path": "/v1beta/accountSummaries",
+                                     "expect_status": 200}
+    assert any("accountSummaries" in e.get("path", "") for e in admin["examples"])
+
+
+async def test_split_host_reconnect_rebinds_extras_without_duplicating(clients: AsyncClient, treg_google_app):
+    first = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
+    await _connect_byo(clients, provider="google-analytics", name="google-analytics",
+                       connection_id=first["secret_id"])
+    admins = [t for t in (await clients.get("/tools")).json() if t["name"] == "google-analytics-admin"]
+    assert len(admins) == 1, "reconnecting must rebind the extra tool, not pile up duplicates"
+
+
+async def test_revoke_removes_the_extra_tool_too(clients: AsyncClient, treg_google_app):
+    """The admin tool's only binding is this credential — revoking must not leave it behind broken."""
+    st = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
+    r = await clients.delete(f"/connections/{st['secret_id']}")
+    assert r.status_code == 200
+    names = {t["name"] for t in (await clients.get("/tools")).json()}
+    assert "google-analytics" not in names
+    assert "google-analytics-admin" not in names
+
+
+# ---- picking a resource stamps a ready-made call onto the tool -----------------------------
+async def test_pick_resource_stamps_ready_made_example(clients: AsyncClient, treg_google_app):
+    """The pick is the moment treg finally knows the property id every runReport needs — render it
+    into the tool's examples so the agent reads the call off the tool instead of hunting for ids."""
+    st = await _connect_byo(clients, provider="google-analytics", name="google-analytics")
+    sid = st["secret_id"]
+    r = await clients.post(f"/connections/{sid}/resource",
+                           json={"resource_ref": "properties/384078430", "resource_name": "Prod site"})
+    assert r.status_code == 200, r.text
+
+    tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "google-analytics")
+    stamped = [e for e in tool["examples"] if e.get("stamped") == "resource"]
+    assert len(stamped) == 1
+    assert stamped[0]["path"] == "v1beta/properties/384078430:runReport"
+    assert "Prod site" in stamped[0]["note"]
+    # the un-rendered registry template with {property_id} must not ALSO sit there confusing agents
+    assert not any("{resource}" in e.get("path", "") for e in tool["examples"])
+
+    # Re-picking a different property REPLACES the stamp — a stale id is confidently wrong.
+    await clients.post(f"/connections/{sid}/resource",
+                       json={"resource_ref": "properties/999", "resource_name": "Staging"})
+    tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "google-analytics")
+    stamped = [e for e in tool["examples"] if e.get("stamped") == "resource"]
+    assert len(stamped) == 1
+    assert stamped[0]["path"] == "v1beta/properties/999:runReport"
+
+
+async def test_pick_resource_without_template_changes_no_examples(clients: AsyncClient, treg_google_app):
+    """GSC has no resource_example (yet) — picking a site must leave its examples alone."""
+    st = await _connect_byo(clients, provider="google-search-console", name="google-search-console")
+    before = next(t for t in (await clients.get("/tools")).json()
+                  if t["name"] == "google-search-console")["examples"]
+    r = await clients.post(f"/connections/{st['secret_id']}/resource",
+                           json={"resource_ref": "sc-domain:example.com"})
+    assert r.status_code == 200
+    after = next(t for t in (await clients.get("/tools")).json()
+                 if t["name"] == "google-search-console")["examples"]
+    assert after == before
