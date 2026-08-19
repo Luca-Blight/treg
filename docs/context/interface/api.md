@@ -459,7 +459,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   Slack) still lists. `connection_resources` (`GET /connections/{id}/resources`) **live-fetches** what a
   connection can act on (GSC sites, GA properties, Ads accounts), enriching id-only rows with the
   upstream's human name concurrently (`_enrich_resource_labels`) and recording the successful upstream
-  call as proof of health; `set_connection_resource` (`POST …/resource`) pins the chosen `resource_ref`
+  call as proof of health. For providers declaring `discover_extra_path` (the Meta pair) it also walks
+  the Business graph and merges Business-owned rows after the primary ones — deduped by id, id-less
+  rows dropped, and a failing walk swallowed rather than surfaced as a 502; `set_connection_resource` (`POST …/resource`) pins the chosen `resource_ref`
   + `resource_name`. `connect_with_token` (`POST /connections/token`) connects any **pasted-secret**
   provider — a bring-your-own bot token (Slack) or an **API key** (Apollo, Hunter, TikHub, Semrush, …) —
   **verifying the credential against the provider's probe before storing** (a header- OR query-param probe,

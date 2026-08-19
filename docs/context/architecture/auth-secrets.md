@@ -152,7 +152,14 @@ module symbols:
   second credential or treg holds it) drives auto-building a callable tool on a successful connect;
   `needs_extra_credential` covers Google Ads' `developer-token` header (a second binding the operator supplies).
 - Post-connect helpers the dashboard/CLI drive: resource **discovery** (`supports_discovery`,
-  `discover_*` — which site/property/account this connection acts on), row **enrichment**
+  `discover_*` — which site/property/account this connection acts on), row **enrichment**.
+  Discovery can walk a SECOND listing (`discover_extra_path` + `discover_extra_list_paths`): Meta's
+  Business Manager owns assets on the user's behalf, so an agency member sees `[]` from
+  `/me/accounts` for exactly the Pages/Instagram accounts they manage all day — the Business walk
+  (`/me/businesses?fields=owned_pages{…},client_pages{…}`, gated on the `business_management` scope
+  now in every Facebook/Instagram capability) flattens nested lists of primary-shaped rows into the
+  same picker, deduped by id with the primary listing winning, and a failing extra listing is
+  swallowed (pre-scope connections get a clean permission error that must read as "no extra assets"),
   (`supports_enrichment`, `enrich_*` — Google Ads returns bare ids, so a per-row lookup fills the human name),
   and **identity** (`has_identity`, `identity_*` — providers with nothing to pick, like LinkedIn/X/TikTok,
   capture who consented instead). A `probe_path` gives registry tools a real health check.

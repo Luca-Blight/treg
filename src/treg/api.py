@@ -7691,6 +7691,23 @@ async def connection_resources(
     rows = body.get(provider.discover_key) or []
     if provider.discover_nested_key:  # e.g. GA4 properties nested inside each account summary
         rows = [n for r in rows if isinstance(r, dict) for n in (r.get(provider.discover_nested_key) or [])]
+    # Business-owned assets (Meta): a second listing whose rows hold nested lists of
+    # primary-shaped rows — an agency member sees [] from /me/accounts yet manages everything
+    # through their Business portfolio. Best-effort by design: the primary listing has already
+    # answered, and a connection that consented before business_management existed in our scopes
+    # gets a clean permission error here, which must read as "no extra assets", not a 502.
+    if provider.discover_extra_path:
+        try:
+            extra = await request.app.state.http.get(
+                f"{provider.discovery_base.rstrip('/')}{provider.discover_extra_path}",
+                headers=disc_headers,
+            )
+            if extra.status_code < 400:
+                for holder in (extra.json().get(provider.discover_key) or []):
+                    for path in provider.discover_extra_list_paths:
+                        rows.extend(n for n in (_dig(holder, path) or []) if isinstance(n, dict))
+        except Exception:  # noqa: BLE001 — the extra listing must never break the picker
+            pass
     label_field = provider.discover_label_field or provider.discover_id_field
     resources = [
         # A row is usually an object, but some providers return bare strings — Google Ads'
@@ -7702,6 +7719,13 @@ async def connection_resources(
         else {"id": _dig(r, provider.discover_id_field), "label": _dig(r, label_field), "raw": r}
         for r in rows if isinstance(r, (dict, str))
     ]
+    if provider.discover_extra_path:
+        # A directly-managed Page is usually ALSO owned by a Business, so the two listings
+        # overlap — keep the first sighting (the primary listing's). Id-less rows go too: a
+        # Business-owned Page with no linked Instagram account digs to id None, and one None
+        # would survive dedup as a phantom picker row.
+        seen: set = set()
+        resources = [x for x in resources if x["id"] and not (x["id"] in seen or seen.add(x["id"]))]
     if provider.supports_enrichment:
         await _enrich_resource_labels(provider, resources, token, request.app.state.http)
     # Self-heal a connection whose target was chosen before we stored labels (or via the API, which

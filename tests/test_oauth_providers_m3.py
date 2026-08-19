@@ -285,6 +285,18 @@ def test_instagram_consent_never_mentions_page_publishing():
         assert "pages_manage_posts" not in cap
 
 
+def test_meta_page_discovery_can_walk_the_business_graph():
+    """Most agency-held Pages (and the Instagram accounts linked to them) are OWNED by a Business
+    portfolio, where the member has business-level access and no personal Page role. Drop
+    business_management from either capability and that user consents cleanly, then gets an empty
+    picker — the extra listing 400s and is (rightly) swallowed."""
+    for provider in (P.FACEBOOK, P.INSTAGRAM):
+        for cap in provider.scopes.values():
+            assert "business_management" in cap, provider.service
+        assert provider.discover_extra_path.startswith("/me/businesses"), provider.service
+        assert provider.discover_extra_list_paths, provider.service
+
+
 def test_meta_ads_needs_no_second_credential():
     """Google Ads is gated on a developer token from an approved manager account; Meta has no
     equivalent, so a Meta Ads connect must yield a callable tool on its own."""

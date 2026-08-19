@@ -187,6 +187,16 @@ class OAuthProvider:
     discover_nested_key: str = ""
     discover_id_field: str = "id"
     discover_label_field: str = ""
+    # Meta's Business Manager owns assets on the user's BEHALF: an agency member reaches a Page
+    # through business-level access with no personal role on it, so the primary listing answers []
+    # for exactly the accounts they manage all day. `discover_extra_path` is a second listing
+    # fetched the same way (same discover_key), whose rows each HOLD lists of primary-shaped rows
+    # at the dotted paths in `discover_extra_list_paths`. The flattened entries merge after the
+    # primary ones and the picker dedupes by id, so a directly-managed Page never doubles. A
+    # failing extra listing is swallowed: connections that consented before the scope it needs
+    # (business_management) simply lack it, and the primary listing has already answered.
+    discover_extra_path: str = ""
+    discover_extra_list_paths: tuple[str, ...] = ()
 
     # Some listings return only ids — Google Ads' listAccessibleCustomers gives
     # ["customers/6186675831", …] and nothing else. "6186675831" tells a user nothing about which
@@ -674,7 +684,17 @@ _META_CONSENT_NOTICE = (
 
 # pages_show_list is the floor for BOTH providers: it is what returns the Page list, and an
 # Instagram professional account is only reachable *through* the Page it is linked to.
-_FB_READ = ["pages_show_list", "pages_read_engagement", "read_insights"]
+# business_management sits next to it for the same reason it does on META_ADS: most agency-held
+# Pages and Instagram accounts are OWNED by a Business portfolio, where the member has
+# business-level access and no personal Page role — without this scope /me/businesses answers
+# "Missing Permission" and those assets are undiscoverable, so the connect consents cleanly and
+# then offers an empty picker. (The scope already has Advanced Access on our Meta app.)
+_FB_READ = ["pages_show_list", "pages_read_engagement", "read_insights", "business_management"]
+
+# One request walks the Business graph: each business row holds owned_pages and client_pages
+# (the agency case), every entry shaped exactly like a /me/accounts row — so the same
+# discover_id_field/label_field read both listings.
+_META_BIZ_PAGE_LISTS = ("owned_pages.data", "client_pages.data")
 
 FACEBOOK = OAuthProvider(
     service="facebook",
@@ -705,6 +725,8 @@ FACEBOOK = OAuthProvider(
     discover_key="data",
     discover_id_field="id",
     discover_label_field="name",
+    discover_extra_path="/me/businesses?fields=owned_pages{id,name},client_pages{id,name}",
+    discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
     # /me returns the person, not the Page, and needs no extra scope — so it keeps working even for
     # a connection whose Page was later unassigned, which is exactly when you want the probe to
     # still distinguish "credential dead" from "asset gone".
@@ -719,11 +741,16 @@ INSTAGRAM = OAuthProvider(
     # instagram_basic alone cannot publish, and instagram_content_publish alone cannot read the
     # account it publishes to — Meta enforces that dependency in App Review, so post is a strict
     # superset rather than a swap.
+    # business_management is here for the same reason it is in _FB_READ: an agency member's
+    # Instagram accounts hang off Business-owned Pages that /me/accounts cannot see.
     scopes={
-        "read": ["instagram_basic", "instagram_manage_insights", "pages_show_list", "pages_read_engagement"],
+        "read": [
+            "instagram_basic", "instagram_manage_insights", "pages_show_list",
+            "pages_read_engagement", "business_management",
+        ],
         "post": [
             "instagram_basic", "instagram_manage_insights", "pages_show_list",
-            "pages_read_engagement", "instagram_content_publish",
+            "pages_read_engagement", "business_management", "instagram_content_publish",
         ],
     },
     client_id_setting="meta_client_id",
@@ -746,6 +773,13 @@ INSTAGRAM = OAuthProvider(
     discover_key="data",
     discover_id_field="instagram_business_account.id",
     discover_label_field="instagram_business_account.username",
+    # The Business walk asks for the SAME nested field, so its flattened rows are again
+    # Page-shaped and the dotted id path above reads both listings unchanged.
+    discover_extra_path=(
+        "/me/businesses?fields=owned_pages{instagram_business_account{id,username}},"
+        "client_pages{instagram_business_account{id,username}}"
+    ),
+    discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
     probe_path="/me?fields=id,name",
 )
 

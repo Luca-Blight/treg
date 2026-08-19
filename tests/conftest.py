@@ -75,6 +75,51 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
             ]
         }
 
+    @up.post("/v25.0/oauth/access_token")
+    @up.get("/v25.0/oauth/access_token")
+    async def meta_token() -> dict:
+        # Meta's token endpoint, serving both the code exchange (POST) and the long-lived
+        # fb_exchange_token swap (GET). The ASGI transport routes every host here, so the real
+        # graph.facebook.com path must exist for a registry-mode Meta connect to complete.
+        return {"access_token": "META-TOKEN", "token_type": "bearer", "expires_in": 5183944}
+
+    @up.get("/me/accounts")
+    async def meta_pages() -> dict:
+        # Meta's primary Page listing: what the user manages through a PERSONAL Page role. One row
+        # carries both the facebook shape (id/name) and the instagram shape (nested professional
+        # account), so both Meta providers can discover against the same stand-in.
+        return {
+            "data": [
+                {"id": "PAGE-DIRECT", "name": "Directly Managed Page",
+                 "instagram_business_account": {"id": "IG-DIRECT", "username": "direct_ig"}},
+            ]
+        }
+
+    @up.get("/me/businesses")
+    async def meta_businesses(request: Request):
+        # Meta's Business walk (needs business_management): each business row nests owned_pages /
+        # client_pages whose entries are shaped like /me/accounts rows. PAGE-DIRECT reappears here
+        # (a personal-role Page is usually also Business-owned) to exercise dedup, and the
+        # agency-owned Page without a linked Instagram account must drop out of the IG picker.
+        # A token containing "noscope" emulates a connection that consented before
+        # business_management was in our scopes.
+        if "noscope" in request.headers.get("authorization", ""):
+            return JSONResponse(
+                {"error": {"message": "(#100) Missing Permission", "code": 100}}, status_code=400)
+        return {
+            "data": [
+                {"id": "BIZ-1", "owned_pages": {"data": [
+                    {"id": "PAGE-DIRECT", "name": "Directly Managed Page",
+                     "instagram_business_account": {"id": "IG-DIRECT", "username": "direct_ig"}},
+                    {"id": "PAGE-NO-IG", "name": "Business Page Without Instagram"},
+                ]}},
+                {"id": "BIZ-2", "client_pages": {"data": [
+                    {"id": "PAGE-CLIENT", "name": "Agency Client Page",
+                     "instagram_business_account": {"id": "IG-CLIENT", "username": "client_ig"}},
+                ]}},
+            ]
+        }
+
     @up.get("/auth.test")
     async def slack_auth_test(request: Request):
         # Faithful Slack stand-in: it answers HTTP 200 even for a DEAD token and signals failure
