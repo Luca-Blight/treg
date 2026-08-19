@@ -150,6 +150,10 @@ class Catalog:
         unbilled under per_success/per_result, and the fail-closed daily cap bounds the rest —
         coverage beats caution now that the ladder and settle logic are proven.
         """
+        # A marked row is retained only to explain a cached id and point at its replacement. It is
+        # never an offer treg may spend against, even if its historical price remains complete.
+        if endpoint.get("status"):
+            return False
         cost = self.cost_view(endpoint.get("cost"), endpoint.get("provider"))
         if not cost or cost.get("usd") is None:
             return False
@@ -229,7 +233,12 @@ def _parse(directory: Path) -> Catalog:
             if ep["id"] in by_id:  # first file wins; ids are unique by validator contract
                 continue
             by_id[ep["id"]] = ep
-            endpoints.append(ep)
+            # Marked endpoints stay addressable by id so a caller holding yesterday's id gets the
+            # provider's retirement story and replacement. Browse/search/census all read
+            # `endpoints`, so omitting the row here removes it from every discovery surface without
+            # turning a known retirement into an unexplained 404.
+            if not ep["status"]:
+                endpoints.append(ep)
 
     for ep in endpoints:  # a platform seen only in provider files still deserves a label
         platforms.setdefault(ep["platform"], {"label": ep["platform"], "category": "Other"})
@@ -395,6 +404,11 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         # 404s a person it has no record of). Only endpoints with evidenced miss semantics carry
         # it; for everything else an error status means what it says.
         "miss": raw.get("miss") or None,
+        # A provider can retire/move a route after an agent has cached its id. Keep that id in
+        # `by_id`, but remove it from discovery and return the migration story on direct lookup.
+        "status": str(raw.get("status") or "").strip().lower(),
+        "status_note": str(raw.get("status_note") or "").strip(),
+        "superseded_by": str(raw.get("superseded_by") or "").strip(),
         "docs_url": raw.get("docs_url") or "",
         "example_file": _example_file(raw, directory),
     }
@@ -455,6 +469,10 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # "no match" semantics, when the endpoint has them — an agent that reads `miss` stops
         # treating an expected empty answer as a failed call (and stops retrying it).
         "miss": ep.get("miss"),
+        # Only direct-id lookups can return a marked row; discovery surfaces never include one.
+        "status": ep.get("status") or None,
+        "status_note": ep.get("status_note") or None,
+        "superseded_by": ep.get("superseded_by") or None,
         "verified": ep["verified"],
         "docs_url": ep["docs_url"],
         "has_example": bool(ep["example_file"]),

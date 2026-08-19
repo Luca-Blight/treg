@@ -2,6 +2,11 @@
 title: Endpoint catalog — what you can DO with a connected key, and which provider should do it
 status: shipped
 sources:
+  - .github/workflows/catalog-drift.yml
+  - scripts/catalog_drift.py
+  - scripts/catalog_validate.py
+  - src/treg/catalog/justoneapi.extended.yaml
+  - src/treg/catalog/tikhub.extended.yaml
   - src/treg/catalog_store.py
   - src/treg/endpoint_stats.py
 related:
@@ -38,6 +43,7 @@ src/treg/catalog/
   <service>.extended.yaml  # EXTENDED tier — machine-generated full endpoint surface
   examples/<endpoint-id>.json  # truncated, scrubbed real responses captured at verify time
 scripts/
+  catalog_drift.py            # path+method drift against providers' public OpenAPI documents
   catalog_validate.py         # schema + referential checks (run in CI / after any edit)
   catalog_verify.py           # live-tests CORE endpoints with a real credential; writes examples/
   catalog_verify_extended.py  # the same for the extended tier, in bulk, under a spend cap
@@ -506,15 +512,47 @@ The 2026-08-17 TikTok-Ads breakage was first written up here as an ingester defe
 the correction matters more than the original claim. Those twelve routes really were `GET` when
 ingested: TikHub's July spec says `get`, and the captured `example_response` is a **real billed 200
 from a GET on 2026-07-27**. TikHub moved them to POST some time after. The catalog did not mis-read
-the provider — it went stale, and **nothing re-checks a provider's spec for drift**.
+the provider — it went stale, and at the time **nothing re-checked a provider's spec for drift**.
 
-That reframes the fix. Preferring the spec over the probe is a genuine hardening, but it only helps
+That reframed the fix. Preferring the spec over the probe is a genuine hardening, but it only helps
 *at re-ingest time*, and only if the cached spec was refreshed — the cache under
 `~/.cache/treg-catalog-ingest` is what an unqualified `catalog_ingest.py <provider>` reads, so a
 re-run against a months-old cache faithfully reproduces months-old truth. A `verified:` stamp is
-evidence about the day it was written and nothing after it. Detecting drift (re-fetching specs and
-diffing method/path against the checked-in tier) is unbuilt; until it exists, an endpoint failing
-`405`/`404` in the wild is the first signal we get.
+evidence about the day it was written and nothing after it.
+
+`scripts/catalog_drift.py` now closes that gap without making a paid API call: it discovers public
+OpenAPI documents from each provider file's source provenance, downloads the document with no
+credential, and compares every checked-in `(path, method)`. Plain JSON is preferred; the same
+`salvage_json_map` used by the ingester recovers a complete `paths` map from a truncated document,
+and YAML OpenAPI is accepted too. An unmarked missing path, method change, or marked route that has
+reappeared exits non-zero. Known absent marked rows are reported as `acknowledged`, not drift. The
+daily `catalog-drift.yml` workflow currently runs TikHub—the provider with demonstrated production
+rot—and the script remains provider-general for every catalog file that cites a public OpenAPI URL.
+
+### Retired and broken endpoints are tombstones, not offers
+
+Provider rot must not turn an id an agent cached yesterday into either a bare provider 404 or an
+unexplained registry 404. Keep the row and add:
+
+```yaml
+status: retired                 # or broken
+status_note: why it is gone and what changed
+superseded_by: provider.live-id # optional; only when the operation is genuinely equivalent
+```
+
+`catalog_store._parse` always retains the normalised row in `by_id`, so direct endpoint inspection
+can return its story, but excludes it from `endpoints`, the source for search, browse, capability
+counts and platform eligibility. On a direct endpoint-id call, `_resolve_marketplace_call` raises an
+actionable 410 before choosing or loading any credential; the pre-relay audit class is `retired`.
+`/catalog/endpoints/{id}/access` applies the same gate. This is catalog fallback only: an org tool
+whose exact name matches the retired id resolves first and remains callable, and URL passthrough
+never enters catalog lookup.
+
+The validator treats the marker as a contract: only `retired` and `broken` are valid; every marker
+needs a non-empty note; `status_note` and `superseded_by` cannot float without `status`; and a
+successor must be a different, existing, live catalog id. A marked id is therefore an explanation,
+not an alias chain or a route treg will still spend against.
+
 - **Platform is the system the data is ABOUT**, not the API family it lives under: DataForSEO's
   `/v3/merchant/amazon/products/live/advanced` is `amazon`, not `merchant`. Anything not tied to
   one system is `web`. Every new slug goes into `capabilities.yaml`'s `platforms` in the same
