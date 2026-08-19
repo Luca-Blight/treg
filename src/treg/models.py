@@ -998,3 +998,22 @@ class ToolRequest(SQLModel, table=True):
     source: str = Field(default="web", index=True)  # web | cli | mcp | api
     status: str = Field(default="open", index=True)  # open | done | dismissed — flipped by hand
     created_at: datetime = Field(default_factory=_now, index=True)
+
+
+class SearchMiss(SQLModel, table=True):
+    """A catalog search that returned NOTHING — the demand signal one step before a ToolRequest.
+
+    Most agents that miss never file a request; they just rephrase or leave. The queries themselves
+    are the record of what the catalog was asked for and couldn't answer — the raw material for
+    deciding what to ingest next and for spotting discovery failures (the capability exists but the
+    words used to ask for it don't match). Written fire-and-forget through `audit` — losing a row
+    under load costs analytics, never a search.
+
+    Deliberately identity-free: the search endpoints are open, most missing callers hold no token,
+    and the query text is the signal — who asked matters only once they file a ToolRequest.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    query: str  # the search text that matched nothing, capped by the writer
+    source: str = Field(default="api", index=True)  # api (HTTP /catalog/search: web + CLI) | mcp
+    created_at: datetime = Field(default_factory=_now, index=True)

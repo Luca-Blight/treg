@@ -243,7 +243,10 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   [data-model](../architecture/data-model.md)) with identity attached only when the caller happens
   to be signed in (token, or same-origin session; a cross-origin cookie POST stores anonymously
   rather than being rejected). The zero-result caller is exactly the demand signal the catalog team
-  wants, so no signup wall.
+  wants, so no signup wall. The miss itself is also logged as a `SearchMiss` row (fire-and-forget
+  via `audit.record_search_miss`, from this route and from the MCP `catalog_search` tool alike) —
+  most missing agents never file a request, and the queries they leave behind are what
+  `scripts/usage_report.py` reports as un-served demand.
 - **Auth — three identity doors** (all resolve to a user via the shared `_find_or_create_user`, so
   first-proof = registration — the **user only, no auto personal org**; a brand-new user lands with zero
   teams and names their first via the mandatory welcome / `treg org create`): **GitHub** — `auth_github` (`GET /auth/github`,
