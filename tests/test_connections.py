@@ -218,6 +218,66 @@ async def test_successful_discovery_marks_the_connection_working(clients: AsyncC
     assert {c["id"]: c for c in (await clients.get("/connections")).json()}[sid]["health"] == "ok"
 
 
+# ---- Business-owned Meta assets join the picker ---------------------------------------------
+@pytest.fixture
+def treg_meta_app(monkeypatch):
+    monkeypatch.setenv("TREG_META_CLIENT_ID", "treg-meta-cid")
+    monkeypatch.setenv("TREG_META_CLIENT_SECRET", "treg-meta-csec")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+def _meta_test_provider(monkeypatch, service: str, **over):
+    import dataclasses
+
+    from treg import oauth_providers as P
+
+    monkeypatch.setitem(P.REGISTRY, service, dataclasses.replace(
+        P.REGISTRY[service], discover_base_url="http://upstream", **over))
+
+
+async def test_business_owned_pages_join_the_facebook_picker(clients: AsyncClient, treg_meta_app, monkeypatch):
+    """An agency member reaches most Pages through their Business portfolio, not a personal Page
+    role — /me/accounts alone answers [] for exactly the Pages they manage all day. The Business
+    walk must add owned and client Pages, without doubling a Page both listings return."""
+    _meta_test_provider(monkeypatch, "facebook")
+    st = await _connect_byo(clients, provider="facebook", name="facebook")
+    r = await clients.get(f"/connections/{st['secret_id']}/resources")
+    assert r.status_code == 200, r.text
+    got = {x["id"]: x["label"] for x in r.json()["resources"]}
+    assert got == {
+        "PAGE-DIRECT": "Directly Managed Page",  # once, though both listings return it
+        "PAGE-NO-IG": "Business Page Without Instagram",
+        "PAGE-CLIENT": "Agency Client Page",
+    }
+    assert [x["id"] for x in r.json()["resources"]][0] == "PAGE-DIRECT", \
+        "the primary listing's rows keep first position"
+
+
+async def test_business_owned_instagram_accounts_join_the_picker(clients: AsyncClient, treg_meta_app, monkeypatch):
+    """Same walk through the Instagram lens: Business-owned Pages contribute their linked
+    professional accounts, a Page without one drops out instead of surviving as an id-less
+    phantom row, and the directly-reachable account is not doubled."""
+    _meta_test_provider(monkeypatch, "instagram")
+    st = await _connect_byo(clients, provider="instagram", name="instagram")
+    r = await clients.get(f"/connections/{st['secret_id']}/resources")
+    assert r.status_code == 200, r.text
+    got = {x["id"]: x["label"] for x in r.json()["resources"]}
+    assert got == {"IG-DIRECT": "direct_ig", "IG-CLIENT": "client_ig"}
+
+
+async def test_a_failing_business_walk_leaves_the_primary_listing_intact(clients: AsyncClient, treg_meta_app, monkeypatch):
+    """Connections that consented before business_management joined our scopes get a clean
+    permission error from the Business walk. That must read as "no extra assets", never a 502 —
+    the primary listing already answered."""
+    _meta_test_provider(monkeypatch, "facebook", discover_extra_path="/no-such-listing")
+    st = await _connect_byo(clients, provider="facebook", name="facebook")
+    r = await clients.get(f"/connections/{st['secret_id']}/resources")
+    assert r.status_code == 200, r.text
+    assert [x["id"] for x in r.json()["resources"]] == ["PAGE-DIRECT"]
+
+
 # ---- disconnecting must not leave a broken tool behind -------------------------------------
 async def test_revoke_removes_the_provider_tool_it_provisioned(clients: AsyncClient, treg_google_app):
     """A tool bound to a deleted credential isn't "still configured", it's broken — and it only

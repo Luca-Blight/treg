@@ -93,6 +93,10 @@ consents, supplying nothing. The asymmetry is the point of a hosted registry: th
 platforms is the *approval* (a Google Ads developer token, Meta App Review), not the OAuth dance — treg
 has already cleared it. treg's own client id/secret load from `Settings` (named by
 `client_id_setting`/`client_secret_setting`, so they come from `.env` like every other setting).
+The Meta pair carries three tiers — read / post / **manage** (comments + DMs on Instagram; engagement,
+visitor content, metadata/webhooks, Messenger, Page video, leads_retrieval + its required
+pages_manage_ads rider, and catalog_management on Facebook Pages) — sized for the 2026-08 App Review
+bundle; `default_capability` is the broadest tier by design, so a plain Connect asks for manage.
 
 Each entry is a frozen `OAuthProvider` dataclass; `REGISTRY` is the `{service: provider}` map. Key
 module symbols:
@@ -167,7 +171,14 @@ module symbols:
   template renders `{resource}`/`{resource_name}` into a ready-made call stamped into the data tool's
   examples (marker `stamped: resource`, so re-picking replaces instead of piling up).
 - Post-connect helpers the dashboard/CLI drive: resource **discovery** (`supports_discovery`,
-  `discover_*` — which site/property/account this connection acts on), row **enrichment**
+  `discover_*` — which site/property/account this connection acts on), row **enrichment**.
+  Discovery can walk a SECOND listing (`discover_extra_path` + `discover_extra_list_paths`): Meta's
+  Business Manager owns assets on the user's behalf, so an agency member sees `[]` from
+  `/me/accounts` for exactly the Pages/Instagram accounts they manage all day — the Business walk
+  (`/me/businesses?fields=owned_pages{…},client_pages{…}`, gated on the `business_management` scope
+  now in every Facebook/Instagram capability) flattens nested lists of primary-shaped rows into the
+  same picker, deduped by id with the primary listing winning, and a failing extra listing is
+  swallowed (pre-scope connections get a clean permission error that must read as "no extra assets"),
   (`supports_enrichment`, `enrich_*` — Google Ads returns bare ids, so a per-row lookup fills the human name),
   and **identity** (`has_identity`, `identity_*` — providers with nothing to pick, like LinkedIn/X/TikTok,
   capture who consented instead). A `probe_path` gives registry tools a real health check.

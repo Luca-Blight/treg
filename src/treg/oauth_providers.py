@@ -187,6 +187,16 @@ class OAuthProvider:
     discover_nested_key: str = ""
     discover_id_field: str = "id"
     discover_label_field: str = ""
+    # Meta's Business Manager owns assets on the user's BEHALF: an agency member reaches a Page
+    # through business-level access with no personal role on it, so the primary listing answers []
+    # for exactly the accounts they manage all day. `discover_extra_path` is a second listing
+    # fetched the same way (same discover_key), whose rows each HOLD lists of primary-shaped rows
+    # at the dotted paths in `discover_extra_list_paths`. The flattened entries merge after the
+    # primary ones and the picker dedupes by id, so a directly-managed Page never doubles. A
+    # failing extra listing is swallowed: connections that consented before the scope it needs
+    # (business_management) simply lack it, and the primary listing has already answered.
+    discover_extra_path: str = ""
+    discover_extra_list_paths: tuple[str, ...] = ()
 
     # Some vendors split ONE product across hosts: GA4 runs reports on analyticsdata but lists the
     # properties those reports need on analyticsadmin. The credential already covers both — Google
@@ -710,7 +720,17 @@ _META_CONSENT_NOTICE = (
 
 # pages_show_list is the floor for BOTH providers: it is what returns the Page list, and an
 # Instagram professional account is only reachable *through* the Page it is linked to.
-_FB_READ = ["pages_show_list", "pages_read_engagement", "read_insights"]
+# business_management sits next to it for the same reason it does on META_ADS: most agency-held
+# Pages and Instagram accounts are OWNED by a Business portfolio, where the member has
+# business-level access and no personal Page role — without this scope /me/businesses answers
+# "Missing Permission" and those assets are undiscoverable, so the connect consents cleanly and
+# then offers an empty picker. (The scope already has Advanced Access on our Meta app.)
+_FB_READ = ["pages_show_list", "pages_read_engagement", "read_insights", "business_management"]
+
+# One request walks the Business graph: each business row holds owned_pages and client_pages
+# (the agency case), every entry shaped exactly like a /me/accounts row — so the same
+# discover_id_field/label_field read both listings.
+_META_BIZ_PAGE_LISTS = ("owned_pages.data", "client_pages.data")
 
 FACEBOOK = OAuthProvider(
     service="facebook",
@@ -723,6 +743,17 @@ FACEBOOK = OAuthProvider(
     scopes={
         "read": _FB_READ,
         "post": [*_FB_READ, "pages_manage_posts"],
+        # The full account-operations tier: engagement moderation, visitor content, settings and
+        # webhook subscriptions, Messenger, native Page video, lead retrieval — which Meta only
+        # honors alongside pages_manage_ads, so the pair travels together — and the business's
+        # product catalogs. One tier rather than several because these scopes are useless alone:
+        # an agent moderating comments needs the visitor content it moderates, and an agent
+        # working leads needs the form metadata around them.
+        "manage": [
+            *_FB_READ, "pages_manage_posts", "pages_manage_engagement",
+            "pages_read_user_content", "pages_manage_metadata", "pages_messaging",
+            "publish_video", "leads_retrieval", "pages_manage_ads", "catalog_management",
+        ],
     },
     client_id_setting="meta_client_id",
     client_secret_setting="meta_client_secret",
@@ -741,6 +772,8 @@ FACEBOOK = OAuthProvider(
     discover_key="data",
     discover_id_field="id",
     discover_label_field="name",
+    discover_extra_path="/me/businesses?fields=owned_pages{id,name},client_pages{id,name}",
+    discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
     # /me returns the person, not the Page, and needs no extra scope — so it keeps working even for
     # a connection whose Page was later unassigned, which is exactly when you want the probe to
     # still distinguish "credential dead" from "asset gone".
@@ -755,11 +788,23 @@ INSTAGRAM = OAuthProvider(
     # instagram_basic alone cannot publish, and instagram_content_publish alone cannot read the
     # account it publishes to — Meta enforces that dependency in App Review, so post is a strict
     # superset rather than a swap.
+    # business_management is here for the same reason it is in _FB_READ: an agency member's
+    # Instagram accounts hang off Business-owned Pages that /me/accounts cannot see.
     scopes={
-        "read": ["instagram_basic", "instagram_manage_insights", "pages_show_list", "pages_read_engagement"],
+        "read": [
+            "instagram_basic", "instagram_manage_insights", "pages_show_list",
+            "pages_read_engagement", "business_management",
+        ],
         "post": [
             "instagram_basic", "instagram_manage_insights", "pages_show_list",
-            "pages_read_engagement", "instagram_content_publish",
+            "pages_read_engagement", "business_management", "instagram_content_publish",
+        ],
+        # Adds the two-way surfaces: comment moderation and direct messages. Kept off `post` so a
+        # publish-only connect never puts "manage your messages" on the consent screen.
+        "manage": [
+            "instagram_basic", "instagram_manage_insights", "pages_show_list",
+            "pages_read_engagement", "business_management", "instagram_content_publish",
+            "instagram_manage_comments", "instagram_manage_messages",
         ],
     },
     client_id_setting="meta_client_id",
@@ -782,6 +827,13 @@ INSTAGRAM = OAuthProvider(
     discover_key="data",
     discover_id_field="instagram_business_account.id",
     discover_label_field="instagram_business_account.username",
+    # The Business walk asks for the SAME nested field, so its flattened rows are again
+    # Page-shaped and the dotted id path above reads both listings unchanged.
+    discover_extra_path=(
+        "/me/businesses?fields=owned_pages{instagram_business_account{id,username}},"
+        "client_pages{instagram_business_account{id,username}}"
+    ),
+    discover_extra_list_paths=_META_BIZ_PAGE_LISTS,
     probe_path="/me?fields=id,name",
 )
 
@@ -1885,10 +1937,20 @@ SCOPE_LABELS: dict[str, str] = {
     "pages_read_engagement": "Read your Pages' posts, comments and reactions",
     "read_insights": "Read your Pages' reach and engagement insights",
     "pages_manage_posts": "Create, edit and delete posts on your Pages",
+    "pages_manage_engagement": "Reply to and moderate comments on your Pages' posts",
+    "pages_read_user_content": "Read what visitors post on your Pages",
+    "pages_manage_metadata": "Manage your Pages' settings and event subscriptions",
+    "pages_messaging": "Read and reply to your Pages' Messenger conversations",
+    "publish_video": "Upload videos to your Pages",
+    "leads_retrieval": "Retrieve leads from your Pages' instant forms",
+    "pages_manage_ads": "Manage ads run by your Pages",
+    "catalog_management": "Create and update your product catalogs",
     # Meta — Instagram
     "instagram_basic": "See your Instagram account, media and comments",
     "instagram_manage_insights": "Read your Instagram reach and engagement insights",
     "instagram_content_publish": "Publish posts to your Instagram account",
+    "instagram_manage_comments": "Reply to, hide and delete comments on your Instagram posts",
+    "instagram_manage_messages": "Read and reply to your Instagram direct messages",
     # Meta — Ads
     "ads_read": "Read your ad accounts, campaigns and performance",
     "business_management": "See the businesses and ad accounts you have access to",
