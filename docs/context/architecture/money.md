@@ -129,6 +129,11 @@ returns 500 **on purpose**: that is how Stripe is told to retry.
 
 The Stripe SDK is synchronous, so every call goes through `_sdk()` onto a worker thread — a blocking
 network call on the event loop would stall every in-flight request, including the proxy's hot path.
+`_sdk()` also converts the SDK's return value to a plain dict (`StripeObject.to_dict()`, which is
+deep): the SDK's objects stopped subclassing dict, so `.get()` on one raises, and every consumer —
+plus every test fake, which returns plain dicts through this same funnel — reads dict-style. Keep it
+that way: a consumer written against the object API would pass prod and break the fakes, and the
+last divergence shipped a webhook handler that 500'd on every live checkout while the suite was green.
 
 `_credit` also emits the `topup_completed` product-analytics event (`analytics.capture`, PostHog),
 riding the same `fresh` flag as the receipt email so a redelivery re-emits nothing. `capture` is

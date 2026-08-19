@@ -141,9 +141,17 @@ async def _sdk(fn, /, **kwargs):
 
     The key is passed per-call (`api_key=`) rather than set on the module, so nothing depends on
     global mutable state and a test can monkeypatch this single function to intercept every call.
+
+    Returns a plain dict, never a `StripeObject`. The SDK's objects stopped subclassing dict, so
+    `.get()` on one raises ("'get' is a dict method, but a PaymentIntent is not a dict") — which is
+    exactly how every `checkout.session.completed` webhook 500'd in production while the suite,
+    whose fakes return plain dicts through this same funnel, stayed green. Every consumer of this
+    function reads dict-style; converting once here keeps them and the test fakes on one shape.
+    `to_dict()` is deep: nested objects and list `data` items all come back as plain dicts.
     """
     key = _require_configured()
-    return await anyio.to_thread.run_sync(lambda: fn(api_key=key, **kwargs))
+    result = await anyio.to_thread.run_sync(lambda: fn(api_key=key, **kwargs))
+    return result.to_dict() if isinstance(result, stripe.StripeObject) else result
 
 
 # ---- policy reads ------------------------------------------------------------------------------

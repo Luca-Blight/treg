@@ -969,3 +969,50 @@ async def test_adsconv_commit_failure_cannot_500_or_break_the_webhook(c, monkeyp
         # succeeds if the session was rolled back and made usable again.
         fresh_org = await db.get(Org, org_id)
         assert fresh_org.stripe_default_pm == "pm_card_visa"
+
+
+# ---- the SDK-boundary shape --------------------------------------------------------------------
+# stripe-python's objects stopped subclassing dict, so `.get()` on one raises "'get' is a dict
+# method, but a PaymentIntent is not a dict". Every consumer of `_sdk` reads dict-style, and the
+# fakes in this suite return plain dicts through the same funnel — which is exactly how production
+# 500'd on every `checkout.session.completed` while the suite stayed green. These tests run the
+# REAL `_sdk`, feeding it genuine `StripeObject`s, to pin the conversion at the boundary.
+
+async def test_sdk_converts_stripe_objects_to_plain_dicts(monkeypatch):
+    monkeypatch.setattr(get_settings(), "stripe_secret_key", "sk_test_suite", raising=False)
+
+    def fake_retrieve(api_key=None, **kw):
+        return stripe.PaymentIntent.construct_from(
+            {"id": "pi_shape", "payment_method": {"id": "pm_shape", "card": {"fingerprint": "fp_shape"}}},
+            api_key)
+
+    out = await billing._sdk(fake_retrieve)
+    assert type(out) is dict
+    # Deep, not shallow: the nested object and its nested object are both plain dicts too.
+    assert out.get("payment_method", {}).get("card", {}).get("fingerprint") == "fp_shape"
+
+    def fake_list(api_key=None, **kw):
+        return stripe.ListObject.construct_from(
+            {"object": "list", "has_more": False,
+             "data": [{"id": "ch_shape", "invoice": {"id": "in_shape"}}]},
+            api_key)
+
+    charges = await billing._sdk(fake_list)
+    assert type(charges) is dict
+    assert type(charges.get("data")[0]) is dict
+    assert charges["data"][0].get("invoice", {}).get("id") == "in_shape"
+
+
+async def test_pm_and_fingerprint_survives_sdk_objects(monkeypatch):
+    """The exact production crash: `_pm_and_fingerprint` on the checkout-completed path, with the
+    SDK function itself (not `_sdk`) faked, so the real funnel handles the real object shape."""
+    monkeypatch.setattr(get_settings(), "stripe_secret_key", "sk_test_suite", raising=False)
+
+    def fake_retrieve(api_key=None, id=None, expand=None):
+        return stripe.PaymentIntent.construct_from(
+            {"id": id, "payment_method": {"id": "pm_real", "card": {"fingerprint": "fp_real"}}},
+            api_key)
+
+    monkeypatch.setattr(stripe.PaymentIntent, "retrieve", staticmethod(fake_retrieve))
+    pm_id, fingerprint = await billing._pm_and_fingerprint("pi_real")
+    assert (pm_id, fingerprint) == ("pm_real", "fp_real")
