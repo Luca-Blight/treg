@@ -553,6 +553,18 @@ needs a non-empty note; `status_note` and `superseded_by` cannot float without `
 successor must be a different, existing, live catalog id. A marked id is therefore an explanation,
 not an alias chain or a route treg will still spend against.
 
+### `platform_blocked:` — works upstream, but not on treg's plan
+
+A third state sits between "offer" and "tombstone": the route works and the price is real, but
+treg's own subscription cannot serve it — Akta answers every alternative-data call (jobs, posts,
+website-traffic, employee-reviews, headcount-trends, product-reviews) on the shared key with a
+free 403 "Your current subscription does not include access to this endpoint". Marking those
+`status: broken` would be a lie (a caller's OWN key on a bigger plan serves them fine) and leaving
+them unmarked sold them as platform offers — a customer ran a whole evaluation lane into that wall
+of 403s before learning the gate existed. `platform_blocked: <reason>` keeps the row in discovery
+but makes `platform_eligible()` refuse it, and the reason rides on the served row so every surface
+can say "bring your own key" *before* the call instead of relaying the 403 after it.
+
 - **Platform is the system the data is ABOUT**, not the API family it lives under: DataForSEO's
   `/v3/merchant/amazon/products/live/advanced` is `amazon`, not `merchant`. Anything not tied to
   one system is `web`. Every new slug goes into `capabilities.yaml`'s `platforms` in the same
