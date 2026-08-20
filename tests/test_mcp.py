@@ -1105,6 +1105,42 @@ async def test_an_unset_query_param_is_omitted_rather_than_sent_as_None(clients)
     assert sent == {"kept": "true", "off": "false"}
 
 
+async def test_search_survives_missing_a_few_words_of_an_agent_sentence(clients):
+    """Agents query in sentences, and demanding every word zeroed real ones (models.SearchMiss,
+    2026-08-19): "company job postings hiring open jobs linkedin" found nothing while three
+    endpoints matched 6 of its 7 words — the only miss was "linkedin" on rows shelved under
+    `companies`, or "open" on the one shelved under `linkedin`. A query may now miss one word in
+    three, and idf weighting keeps the order on the rare words rather than the filler."""
+    from treg import catalog_store as cs
+    cat = cs.load()
+    # the two logged SearchMiss queries, verbatim
+    rows, total = cs.search("company job postings hiring open jobs linkedin", cat, 8)
+    assert total > 0
+    assert {"apollo.companies.jobs", "apify.linkedin.search.jobs",
+            "leadmagic.x.jobs-search-v3"} <= {ep["id"] for ep, _ in rows}
+    # rank 1 must be the JOB (a companies.search row), never pinned to one provider — any newly
+    # added provider of the same capability may legitimately outscore the incumbents
+    rows, _ = cs.search("company search filter by location industry headcount growth", cat, 8)
+    assert rows and rows[0][0]["capability"] == "companies.search"
+    # the refinement property the old rule protected still holds: with one or two words there is no
+    # miss allowance, so "tiktok comments" must not return every tiktok endpoint
+    _, both = cs.search("tiktok comments", cat, 1)
+    _, all_tiktok = cs.search("tiktok", cat, 1)
+    assert 0 < both < all_tiktok
+    for ep, _ in cs.search("tiktok comments", cat, 10**6)[0]:
+        fields = cs._haystacks(ep, cat)
+        assert any("tiktok" in t for _, t in fields) and any("comment" in t for _, t in fields)
+    # aliases.yaml bridges the agent's word into the catalog's word at the same weight: the catalog
+    # says "crypto", nobody's endpoint text says "cryptocurrency", and substring containment only
+    # works in one direction
+    rows, total = cs.search("current price of a cryptocurrency", cat, 3)
+    assert total and rows[0][0]["id"].startswith("coingecko."), [ep["id"] for ep, _ in rows]
+    # function words are dropped before the miss allowance is computed, so they cannot crowd out
+    # the words that select ("on", "this" are not evidence about any endpoint)
+    rows, _ = cs.search("trending repositories on github this week", cat, 3)
+    assert rows and rows[0][0]["id"] == "scrapecreators.x.v1-github-trending-repositories"
+
+
 async def test_search_breaks_ties_on_what_treg_has_MEASURED(clients):
     """Token scoring ties by the dozen — every "ad library" match scores 6 — so with a default limit
     of 8 the rows an agent saw were decided by file order: seven tikhub rows, one of them

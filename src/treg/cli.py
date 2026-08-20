@@ -4509,8 +4509,8 @@ def _catalog_search(query: str, args, cfg) -> None:
     body = r.json()
     rows = body.get("results", [])
     if not rows:
-        print(f"nothing matches all of \"{query}\"")
-        _dim("every word has to match — drop one, or browse the shelves with `treg catalog`")
+        print(f"nothing matches \"{query}\"")
+        _dim("try different task words, or browse the shelves with `treg catalog`")
         _dim(f"still missing? file it: treg catalog request \"{query}\"   # requests steer what gets added next")
         return
 

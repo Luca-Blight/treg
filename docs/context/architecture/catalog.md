@@ -5,6 +5,7 @@ sources:
   - .github/workflows/catalog-drift.yml
   - scripts/catalog_drift.py
   - scripts/catalog_validate.py
+  - src/treg/catalog/aliases.yaml
   - src/treg/catalog/google-search-console.yaml
   - src/treg/catalog/google-search-console.extended.yaml
   - src/treg/catalog/justoneapi.extended.yaml
@@ -45,6 +46,7 @@ names returned by an upstream API. An invalid/literal `%` is still encoded as `%
 ```
 src/treg/catalog/
   capabilities.yaml        # the shared capability taxonomy (the cross-provider join key)
+  aliases.yaml             # query word -> catalog words (search-time vocabulary bridge)
   fx.yaml                  # currency -> USD rates + per-PROVIDER credit rates (see "Cost" below)
   <service>.yaml           # CORE tier — hand-curated; <service> = OAuthProvider.service
   <service>.extended.yaml  # EXTENDED tier — machine-generated full endpoint surface
@@ -846,9 +848,36 @@ Five rules worth keeping:
   removed. "Never worked" is read off `ok_rate == 0`, which is computed from DECIDED samples only,
   so no volume of caller errors can produce it.
 
+### Search scoring — most words must match, and the rare ones decide
+
+`catalog_store.search` demanded EVERY query token match (AND). Right for the 2–3 word refinement
+("tiktok comments" must not return every tiktok endpoint), and fatal for how agents actually query:
+the day the SearchMiss log shipped it recorded "company job postings hiring open jobs linkedin" → 0
+results while three endpoints matched 6 of the 7 words. The only misses were "linkedin" on rows
+shelved under `companies` (the agent names where the data lives, the catalog names what it is), and
+"open" on the row shelved under `linkedin`. Since 2026-08-20 a query may miss one token in every
+three (1–2 words: all still required), and each matched token scores its field weight times its BM25
+idf — "by" matches 558 endpoints and is worth ~nothing, "postings" matches 4 and decides the order.
+That asymmetry is also what keeps the miss allowance safe: dropping a rare word costs more score
+than dropping filler, so full-match fluff cannot outrank a near-match on substance. Rows matching
+the same tokens in the same fields still sum identical floats, so the tie band below keeps working.
+Two query-side layers close what scoring alone cannot. Function words ("on", "this", "what") are
+dropped before the miss allowance is computed — they select nothing, but each one raised the number
+of real words a row had to match. And `aliases.yaml` bridges vocabulary: substring containment only
+works in one direction, so "cryptocurrency" never finds the catalog's "crypto" without the map. A
+token matches under its own spelling or any curated alias, same field weight. The file is
+query-side only — it rewrites no provider text, survives every re-ingest, and the validator
+(`check_aliases`) rejects entries that could not survive the tokenizer and warns on aliases whose
+target occurs nowhere in the catalog. The SearchMiss log is its feed: a zero-result query whose
+words name an existing endpoint in different vocabulary is one row here.
+
+`scripts/search_bench.py` is the labeled replay (30 agent-shaped queries): sentence-style hit@8 went
+14% → 100% (hit@1 64%, MRR .766) with the 8 short-query regression rows byte-identical. The residue
+past this is semantic matching — an embedding model — which the bench so far says is not needed.
+
 ### The evidence decides the ORDER, not just the detail page
 
-Token scoring ties by the dozen — all 24 `"ad library"` matches score 6 — so "which 8 do I show?"
+Token scoring ties by the dozen — all 24 `"ad library"` matches score alike — so "which 8 do I show?"
 was answered by file order. That returned seven near-duplicate tikhub rows (one of them the
 uncallable one above) and cut off `scrapecreators.x.v1-tiktok-ad-library-search`, cheaper and 17 for
 17 measured. `catalog_store.rerank()` now settles equal scores over the band `rank_band()` returns, on
