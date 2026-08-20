@@ -1128,6 +1128,15 @@ async def test_search_survives_missing_a_few_words_of_an_agent_sentence(clients)
     for ep, _ in cs.search("tiktok comments", cat, 10**6)[0]:
         fields = cs._haystacks(ep, cat)
         assert any("tiktok" in t for _, t in fields) and any("comment" in t for _, t in fields)
+    # aliases.yaml bridges the agent's word into the catalog's word at the same weight: the catalog
+    # says "crypto", nobody's endpoint text says "cryptocurrency", and substring containment only
+    # works in one direction
+    rows, total = cs.search("current price of a cryptocurrency", cat, 3)
+    assert total and rows[0][0]["id"].startswith("coingecko."), [ep["id"] for ep, _ in rows]
+    # function words are dropped before the miss allowance is computed, so they cannot crowd out
+    # the words that select ("on", "this" are not evidence about any endpoint)
+    rows, _ = cs.search("trending repositories on github this week", cat, 3)
+    assert rows and rows[0][0]["id"] == "scrapecreators.x.v1-github-trending-repositories"
 
 
 async def test_search_breaks_ties_on_what_treg_has_MEASURED(clients):

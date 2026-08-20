@@ -211,10 +211,14 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   step is `treg call`. `catalog_search` (`GET /catalog/search?q=&limit=` , default 25, capped 100) →
   `{query, count, total, results[], hints[]}`; a result is the endpoint view **plus** `{capability,
   capability_description, platform, platform_label, score}`. Ranking is plain token containment
-  (`catalog_store.search`, no deps, no embeddings): **every** query token must match somewhere (AND, so a
-  second word narrows), and score sums each token's best field weight — capability id/description +
-  platform label/slug (3) > summary (2) > id/path/provider (1). Ties — the COMMON case, since token
-  containment scores whole families identically — are then settled by `catalog_store.rerank()` over
+  (`catalog_store.search`, no deps, no embeddings): **most** query tokens must match — a query may miss
+  one token in three, so a second word still narrows (1–2 words: all required) while an agent's
+  seven-word sentence survives its filler. Function words are dropped first, and a token also matches
+  through its `aliases.yaml` synonyms ("cryptocurrency" → "crypto"), at the same weight. Each matched
+  token scores its best field weight — capability id/description + platform label/slug (3) >
+  summary (2) > id/path/provider (1) — times its BM25 idf, so rare words decide the order. Ties —
+  still the COMMON case, since rows matching the same tokens in the same fields sum identical
+  floats — are then settled by `catalog_store.rerank()` over
   the band `rank_band()` returns (the whole equal-scoring group at the cut, capped at `RERANK_BAND`
   with a hint when that cap bites), on **measured reliability, then core-before-extended, then price**, with
   `verified` and id keeping the order total; each result carries the `observed` block that decided it.

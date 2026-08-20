@@ -5,6 +5,7 @@ sources:
   - .github/workflows/catalog-drift.yml
   - scripts/catalog_drift.py
   - scripts/catalog_validate.py
+  - src/treg/catalog/aliases.yaml
   - src/treg/catalog/justoneapi.extended.yaml
   - src/treg/catalog/tikhub.extended.yaml
   - src/treg/catalog_store.py
@@ -38,6 +39,7 @@ The catalog adds that operations layer:
 ```
 src/treg/catalog/
   capabilities.yaml        # the shared capability taxonomy (the cross-provider join key)
+  aliases.yaml             # query word -> catalog words (search-time vocabulary bridge)
   fx.yaml                  # currency -> USD rates + per-PROVIDER credit rates (see "Cost" below)
   <service>.yaml           # CORE tier — hand-curated; <service> = OAuthProvider.service
   <service>.extended.yaml  # EXTENDED tier — machine-generated full endpoint surface
@@ -852,10 +854,19 @@ idf — "by" matches 558 endpoints and is worth ~nothing, "postings" matches 4 a
 That asymmetry is also what keeps the miss allowance safe: dropping a rare word costs more score
 than dropping filler, so full-match fluff cannot outrank a near-match on substance. Rows matching
 the same tokens in the same fields still sum identical floats, so the tie band below keeps working.
+Two query-side layers close what scoring alone cannot. Function words ("on", "this", "what") are
+dropped before the miss allowance is computed — they select nothing, but each one raised the number
+of real words a row had to match. And `aliases.yaml` bridges vocabulary: substring containment only
+works in one direction, so "cryptocurrency" never finds the catalog's "crypto" without the map. A
+token matches under its own spelling or any curated alias, same field weight. The file is
+query-side only — it rewrites no provider text, survives every re-ingest, and the validator
+(`check_aliases`) rejects entries that could not survive the tokenizer and warns on aliases whose
+target occurs nowhere in the catalog. The SearchMiss log is its feed: a zero-result query whose
+words name an existing endpoint in different vocabulary is one row here.
+
 `scripts/search_bench.py` is the labeled replay (30 agent-shaped queries): sentence-style hit@8 went
-14% → 73% with the short-query rows unchanged. What it still cannot do is bridge vocabulary — 
-"cryptocurrency" does not contain "crypto", "software" is not "technologies" — which is the
-enrichment/aliases work, not a scoring knob.
+14% → 100% (hit@1 64%, MRR .766) with the 8 short-query regression rows byte-identical. The residue
+past this is semantic matching — an embedding model — which the bench so far says is not needed.
 
 ### The evidence decides the ORDER, not just the detail page
 

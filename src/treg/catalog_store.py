@@ -28,6 +28,7 @@ CATALOG_DIR = Path(__file__).parent / "catalog"
 EXAMPLES_DIRNAME = "examples"
 CAPABILITIES_FILE = "capabilities.yaml"
 FX_FILE = "fx.yaml"
+ALIASES_FILE = "aliases.yaml"
 
 # What an endpoint IS, so the marketplace can browse the useful surface and tuck the plumbing away:
 #   data    — fetch/scrape/enrich a resource (the DEFAULT when `kind:` is absent).
@@ -89,6 +90,8 @@ class Catalog:
     platforms: dict[str, dict] = field(default_factory=dict)     # slug -> {label, category}
     capabilities: dict[str, str] = field(default_factory=dict)   # id -> description
     endpoints: list[dict] = field(default_factory=list)          # normalized endpoint dicts
+    # query word -> catalog words that mean the same thing (aliases.yaml) — search-time only
+    aliases: dict[str, list[str]] = field(default_factory=dict)
     # lazy per-instance search index (see _search_fields) — never part of identity or repr
     _search_fields: list | None = field(default=None, init=False, repr=False, compare=False)
     by_id: dict[str, dict] = field(default_factory=dict)
@@ -217,7 +220,7 @@ def _parse(directory: Path) -> Catalog:
     # `<service>.yaml`, and both land under the same provider (curation splits a provider's
     # core operations from the long tail across two files).
     for path in sorted(directory.glob("*.yaml")):
-        if path.name in (CAPABILITIES_FILE, FX_FILE):
+        if path.name in (CAPABILITIES_FILE, FX_FILE, ALIASES_FILE):
             continue
         doc = _read_yaml(path)
         provider = doc.get("provider") or path.name.split(".")[0]
@@ -250,6 +253,10 @@ def _parse(directory: Path) -> Catalog:
 
     for ep in endpoints:  # a platform seen only in provider files still deserves a label
         platforms.setdefault(ep["platform"], {"label": ep["platform"], "category": "Other"})
+    aliases = {
+        str(k).lower(): [str(v).lower() for v in (vals if isinstance(vals, list) else [vals])]
+        for k, vals in (_read_yaml(directory / ALIASES_FILE).get("aliases") or {}).items()
+    }
     fx_doc = _read_yaml(directory / FX_FILE) or {}
     fx = dict(fx_doc.get("rates_to_usd") or {"USD": 1.0})
     # Each entry is a {usd, basis, source, checked} block; only the rate is served, and `usd: null`
@@ -278,7 +285,7 @@ def _parse(directory: Path) -> Catalog:
     return Catalog(fx=fx, credit_rates=credit_rates, unit_rates=unit_rates,
                    shared_plans=shared_plans, trial_pools=trial_pools, platforms=platforms,
                    capabilities=capabilities, endpoints=endpoints, by_id=by_id,
-                   provider_meta=provider_meta)
+                   provider_meta=provider_meta, aliases=aliases)
 
 
 # The subject an endpoint is ABOUT, within its platform — the section a platform page files it
@@ -668,6 +675,14 @@ def _tokens(text: str) -> list[str]:
     return [t for t in _SPLIT.split(text.lower()) if t]
 
 
+# Pure function words. They carry no meaning about WHICH endpoint, but each one inflates the query's
+# token count — and with it the number of real words a row must match to be admitted. "trending
+# repositories on github this week" is a 3-word query wearing 6 tokens; dropping these makes the
+# miss allowance apply to the words that matter. Never words that select ("open", "search", "list").
+_STOPWORDS = frozenset("""a an and are as at be by can do does for from how i in is it its me my
+    of on or that the this to was what when where which who will with you your""".split())
+
+
 def _haystacks(ep: dict, cat: Catalog) -> list[tuple[int, str]]:
     plat = cat.platforms.get(ep["platform"], {})
     return [
@@ -706,16 +721,22 @@ def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, 
     sums), which `rank_band`'s tie sweep and the evidence rerank both depend on. Remaining ties
     break to core-before-extended, then verified-before-not, then id — total and stable.
     """
-    tokens = _tokens(query)
+    raw = _tokens(query)
+    tokens = [t for t in raw if t not in _STOPWORDS] or raw
     if not tokens:
         return [], 0
+    # each token matches under its own spelling OR any curated alias (aliases.yaml), same weight —
+    # the catalog says "crypto", agents type "cryptocurrency", and substring containment only works
+    # in one direction
+    variants = [[tok, *cat.aliases.get(tok, ())] for tok in tokens]
     rows = _search_fields(cat)
     total = len(rows)
     # pass 1 — per (endpoint, token): the best field weight; per token: how many endpoints match
     best: list[list[int]] = []
     df = [0] * len(tokens)
     for _, fields in rows:
-        per_tok = [max((w for w, text in fields if tok in text), default=0) for tok in tokens]
+        per_tok = [max((w for w, text in fields if any(v in text for v in vs)), default=0)
+                   for vs in variants]
         best.append(per_tok)
         for i, w in enumerate(per_tok):
             if w:
