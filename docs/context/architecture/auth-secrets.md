@@ -97,6 +97,9 @@ The Meta pair carries three tiers — read / post / **manage** (comments + DMs o
 visitor content, metadata/webhooks, Messenger, Page video, leads_retrieval + its required
 pages_manage_ads rider, and catalog_management on Facebook Pages) — sized for the 2026-08 App Review
 bundle; `default_capability` is the broadest tier by design, so a plain Connect asks for manage.
+Google Search Console's hand-written tool example calls out its distinct direct-tool convention:
+substitute `{site_url}` with a value encoded exactly once (`sc-domain%3Aexample.com`), and never encode
+again a property identifier returned by the sites list.
 
 Each entry is a frozen `OAuthProvider` dataclass; `REGISTRY` is the `{service: provider}` map. Key
 module symbols:
