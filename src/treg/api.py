@@ -608,7 +608,17 @@ async def catalog_search(q: str = "", limit: int = 25,
             # by nothing in particular — say so instead of letting it read as a ranked answer.
             hints.append(f"{q!r} matches too broadly to rank on measured reliability past the first "
                          f"{catalog_store.RERANK_BAND} equally-scoring rows — add a word to narrow it")
-    return {"query": q, "count": len(results), "total": total, "results": results, "hints": hints}
+    out = {"query": q, "count": len(results), "total": total, "results": results, "hints": hints}
+    if not results and q.strip():
+        # the rows that JUST missed the admission gate and which words they missed — an agent (or
+        # the CLI display) turns this straight into the corrected query
+        near = catalog_store.near_misses(q, cat)
+        if near:
+            out["near"] = near
+            first = near[0]
+            hints.insert(1, f"nearest: {first['endpoint_id']} matches "
+                            f"{', '.join(first['matches'])} but not {', '.join(first['missing'])}")
+    return out
 
 
 @app.get("/catalog/endpoints/{endpoint_id}")

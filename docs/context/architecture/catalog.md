@@ -861,15 +861,27 @@ idf — "by" matches 558 endpoints and is worth ~nothing, "postings" matches 4 a
 That asymmetry is also what keeps the miss allowance safe: dropping a rare word costs more score
 than dropping filler, so full-match fluff cannot outrank a near-match on substance. Rows matching
 the same tokens in the same fields still sum identical floats, so the tie band below keeps working.
-Two query-side layers close what scoring alone cannot. Function words ("on", "this", "what") are
-dropped before the miss allowance is computed — they select nothing, but each one raised the number
-of real words a row had to match. And `aliases.yaml` bridges vocabulary: substring containment only
-works in one direction, so "cryptocurrency" never finds the catalog's "crypto" without the map. A
-token matches under its own spelling or any curated alias, same field weight. The file is
+Query-side layers close what scoring alone cannot. Function words ("on", "this", "what") and
+single-letter tokens ("K&L" tokenizes to k + l, df 2,000+) are dropped before the miss allowance is
+computed — they select nothing, but each one raised the number of real words a row had to match.
+Tokens matching over `SOFT_DF_SHARE` (25%) of the catalog ("data" 33%, "api" 50%, "get" 40%) are
+SOFT: they still add score where they match, but a row is never punished for missing them — a
+statistical stopword list no hand list would keep up with. And `aliases.yaml` bridges vocabulary:
+substring containment only works in one direction, so "cryptocurrency" never finds the catalog's
+"crypto" without the map. A token matches under its own spelling or any curated alias, same field
+weight. NOUNS ONLY: aliasing a verb to a commoner verb poisons the key (`lookup: [search, find]`
+inflated lookup's match set 27 → 689 endpoints and destroyed its ranking power). The file is
 query-side only — it rewrites no provider text, survives every re-ingest, and the validator
 (`check_aliases`) rejects entries that could not survive the tokenizer and warns on aliases whose
 target occurs nowhere in the catalog. The SearchMiss log is its feed: a zero-result query whose
 words name an existing endpoint in different vocabulary is one row here.
+
+A zero-result answer surfaces its `near_misses` — the rows that just missed the admission gate,
+with the exact words each one matched and missed ("apollo.companies.jobs matches job, hiring,
+signal; misses law, firm"). The matcher had already computed this; discarding it and answering
+with prose was the least useful thing the data allowed. Served structured over MCP (`near`), in
+the HTTP route's `near` + a hint line, and as "almost:" lines in the CLI — the caller is usually
+an LLM, and told exactly what to drop it re-queries correctly on the next call.
 
 `scripts/search_bench.py` is the labeled replay (30 agent-shaped queries): sentence-style hit@8 went
 14% → 100% (hit@1 64%, MRR .766) with the 8 short-query regression rows byte-identical. The residue

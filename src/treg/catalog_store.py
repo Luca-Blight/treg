@@ -705,6 +705,41 @@ def _search_fields(cat: Catalog) -> list[tuple[dict, list[tuple[int, str]]]]:
     return cached
 
 
+# A token matching more than this share of the catalog selects nothing — it may still add score
+# where it matches, but a row is never punished for missing it. Statistical stopwords: "data" (33%),
+# "api" (50%), "get" (40%) are corpus filler no hand list would keep up with, while "search" (22%)
+# and "tiktok" (19%) stay required. Measured 2026-08-20 over 2,791 endpoints.
+SOFT_DF_SHARE = 0.25
+
+
+def _match(query: str, cat: Catalog):
+    """The shared matching pass behind `search` and `near_misses`: tokens, per-row best-field
+    weights, idf, and the admission gate (which tokens are required, and how many must hit)."""
+    raw = _tokens(query)
+    # single letters can never select ("K&L" tokenizes to k + l, df 2,039 and 2,512) — they only
+    # inflated the number of matches a row needed elsewhere
+    tokens = [t for t in raw if t not in _STOPWORDS and len(t) > 1] or raw
+    if not tokens:
+        return None
+    variants = [[tok, *cat.aliases.get(tok, ())] for tok in tokens]
+    rows = _search_fields(cat)
+    total = len(rows)
+    best: list[list[int]] = []
+    df = [0] * len(tokens)
+    for _, fields in rows:
+        per_tok = [max((w for w, text in fields if any(v in text for v in vs)), default=0)
+                   for vs in variants]
+        best.append(per_tok)
+        for i, w in enumerate(per_tok):
+            if w:
+                df[i] += 1
+    idf = [math.log(1 + (total - d + 0.5) / (d + 0.5)) for d in df]
+    required = [i for i, d in enumerate(df) if d <= SOFT_DF_SHARE * total] \
+        or list(range(len(tokens)))
+    need = len(required) - len(required) // 3
+    return tokens, rows, best, idf, required, need
+
+
 def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, float]], int]:
     """`(ranked [(endpoint, score)], total_matches)` for a free-text query.
 
@@ -722,37 +757,42 @@ def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, 
     sums), which `rank_band`'s tie sweep and the evidence rerank both depend on. Remaining ties
     break to core-before-extended, then verified-before-not, then id — total and stable.
     """
-    raw = _tokens(query)
-    tokens = [t for t in raw if t not in _STOPWORDS] or raw
-    if not tokens:
+    m = _match(query, cat)
+    if m is None:
         return [], 0
-    # each token matches under its own spelling OR any curated alias (aliases.yaml), same weight —
-    # the catalog says "crypto", agents type "cryptocurrency", and substring containment only works
-    # in one direction
-    variants = [[tok, *cat.aliases.get(tok, ())] for tok in tokens]
-    rows = _search_fields(cat)
-    total = len(rows)
-    # pass 1 — per (endpoint, token): the best field weight; per token: how many endpoints match
-    best: list[list[int]] = []
-    df = [0] * len(tokens)
-    for _, fields in rows:
-        per_tok = [max((w for w, text in fields if any(v in text for v in vs)), default=0)
-                   for vs in variants]
-        best.append(per_tok)
-        for i, w in enumerate(per_tok):
-            if w:
-                df[i] += 1
-    idf = [math.log(1 + (total - d + 0.5) / (d + 0.5)) for d in df]
-    # pass 2 — admit rows missing at most one token in three, scored over what DID match
-    need = len(tokens) - len(tokens) // 3
+    tokens, rows, best, idf, required, need = m
     scored: list[tuple[dict, float]] = []
     for (ep, _), per_tok in zip(rows, best):
-        matched = sum(1 for w in per_tok if w)
-        if matched < need:
+        if sum(1 for i in required if per_tok[i]) < need:
             continue
         scored.append((ep, round(sum(w * idf[i] for i, w in enumerate(per_tok)), 4)))
     scored.sort(key=lambda row: (-row[1], row[0]["tier"] != "core", not row[0]["verified"], row[0]["id"]))
     return scored[:max(limit, 0)], len(scored)
+
+
+def near_misses(query: str, cat: Catalog, limit: int = 3) -> list[dict]:
+    """The rows just under the admission gate, and WHICH words they miss — for zero-result answers.
+
+    A zero-result search already computed which endpoints matched everything but one or two words;
+    throwing that away and answering with prose was the least useful thing the data allowed. The
+    caller is usually an LLM: told "apollo.companies.jobs matches job, hiring, signal; misses law,
+    firm", it re-queries correctly on the next call. Only meaningful when `search` returned 0."""
+    m = _match(query, cat)
+    if m is None:
+        return []
+    tokens, rows, best, idf, required, need = m
+    cand = []
+    for (ep, _), per_tok in zip(rows, best):
+        got = sum(1 for i in required if per_tok[i])
+        if 0 < got < need:
+            mass = sum(idf[i] * w for i, w in enumerate(per_tok))
+            cand.append((mass, ep, per_tok))
+    cand.sort(key=lambda c: (-c[0], c[1]["tier"] != "core", c[1]["id"]))
+    return [{
+        "endpoint_id": ep["id"],
+        "matches": [tokens[i] for i, w in enumerate(per_tok) if w],
+        "missing": [tokens[i] for i in required if not per_tok[i]],
+    } for _, ep, per_tok in cand[:max(limit, 0)]]
 
 
 # The ceiling on how many equal-scoring rows the evidence sort may consider. Scoring is token
