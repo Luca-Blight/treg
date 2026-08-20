@@ -51,6 +51,36 @@ async def test_unknown_tool_is_recorded_as_a_resolution_refusal(clients: AsyncCl
     assert rec.org_id is not None
 
 
+async def test_catalog_shaped_miss_suggests_the_orgs_own_tool_and_is_audited(
+    clients: AsyncClient,
+):
+    await _make_echo_tool(clients, "google-analytics")
+
+    plain = await clients.get("/call/google-analytics.unknown/reports")
+    assert plain.status_code == 404, plain.text
+    assert plain.json()["detail"] == {
+        "error": "no tool 'google-analytics.unknown' in this org",
+        "hint": "your org has tool 'google-analytics' — call /call/google-analytics/<path>",
+        "did_you_mean": ["google-analytics"],
+    }
+
+    # This is a real catalog id, so the named miss falls through to the marketplace ladder. The
+    # manually registered own tool is on another host and has no provider-attributed credential,
+    # making the ladder dead-end; that must not erase the own-tool route discovered on the first miss.
+    response = await clients.post(
+        "/call/google-analytics.report", params={"property_id": "123456789"})
+
+    assert response.status_code == 404, response.text
+    detail = response.json()["detail"]
+    assert detail["hint"] == (
+        "your org has tool 'google-analytics' — call /call/google-analytics/<path>")
+    assert detail["did_you_mean"] == ["google-analytics"]
+    records = await _rows()
+    assert [record.refused_by for record in records] == ["resolution", "resolution"]
+    assert [record.tool_name for record in records] == [
+        "google-analytics.unknown", "google-analytics.report"]
+
+
 async def test_bad_token_is_recorded_anonymously_as_an_auth_refusal(clients: AsyncClient):
     """No Caller ever existed, so the row cannot say who — but an anonymous row is still the
     fact that someone knocked with a dead token, which zero rows could never say."""

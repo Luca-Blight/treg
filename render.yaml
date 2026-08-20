@@ -130,6 +130,8 @@ services:
         sync: false
       - key: TREG_PLATFORM_KEY_LEADSFORGE         # LeadsForge API key (Authorization: Bearer)
         sync: false
+      - key: TREG_PLATFORM_KEY_FIBER_AI           # Fiber AI key (x-api-key)
+        sync: false
       - key: TREG_PLATFORM_KEY_TOMBA              # Tomba API key ta_… (X-Tomba-Key)
         sync: false
       - key: TREG_PLATFORM_KEY_TOMBA_SECRET       # Tomba API secret ts_… (X-Tomba-Secret) — set BOTH

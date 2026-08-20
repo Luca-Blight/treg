@@ -347,6 +347,8 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     examples=(
         {"method": "POST", "path": "webmasters/v3/sites/{site_url}/searchAnalytics/query",
          "note": "Search analytics. {site_url} is sc-domain:example.com or https://example.com/. "
+                 "Pass {site_url} percent-encoded exactly once (sc-domain%3Aexample.com); never "
+                 "re-encode a value read from the sites list. "
                  "Body: {\"startDate\":\"2026-06-01\",\"endDate\":\"2026-06-28\","
                  "\"dimensions\":[\"query\"]}. For a site TOTAL, omit dimensions — summing a "
                  "dimension does NOT equal the total."},
@@ -1420,6 +1422,34 @@ LEADMAGIC = OAuthProvider(
 )
 
 
+FIBER_AI = OAuthProvider(
+    service="fiber-ai",
+    display_name="Fiber AI",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Fiber API key (sk_live_...)",
+    # Fiber also accepts apiKey in the JSON body / query string, and Authorization: Bearer.
+    # Use the header so the key never lands in a logged URL.
+    token_header="x-api-key",
+    token_format="{secret}",
+    setup_url="https://fiber.ai/app/api",
+    setup_action_label="Get your Fiber AI API key",
+    setup_steps=(
+        "Sign in to Fiber AI and open the API keys page.",
+        "Create a key and copy it (sk_live_… or sk_test_…).",
+    ),
+    setup_note="Fiber charges credits per successful reveal/enrich/search; the credit balance check is free. 7-day free trial available on self-serve plans.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Agent-native B2B data: search, enrich, reveal work emails/phones, and run live LinkedIn fetch on standard keys.",
+    base_url="https://api.fiber.ai",
+    docs_url="https://api.fiber.ai/docs",
+    probe_path="/v1/get-org-credits",  # free; a bogus key answers 403 {"message":"Forbidden"}
+)
+
+
 # ---- more Enrichment API-key providers (2026-08 category expansion) ---------------------------
 # Eight providers added together to deepen Enrichment: company/people enrichment with prospecting
 # search (CompanyEnrich, Ocean.io), email finding & verification (Tomba, Findymail, Icypeas,
@@ -2185,7 +2215,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers
-        LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC,
+        LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC, FIBER_AI,
         COMPANYENRICH, OCEANIO, TOMBA, PREDICTLEADS, FINDYMAIL, BRANDDEV, ICYPEAS, LEADSFORGE,
         # Market data API-key providers
         COINGECKO, POLYGON, FINNHUB, TWELVEDATA, FMP, EODHD, MARKETSTACK, TIINGO,

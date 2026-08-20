@@ -241,15 +241,14 @@ class CallRecord(SQLModel, table=True):
     # and the repeat-rate signal (plan phase 5). For the ONE case where a body IS retained, see
     # `error_request` below — it is deliberately narrow and does not weaken this column's guarantee.
     params_hash: str | None = Field(default=None, index=True)
-    # ---- failure evidence (NULL unless a PLATFORM-tier call failed) ----------------------------
+    # ---- failure evidence (NULL unless a relayed call failed) ---------------------------------
     # The only place treg retains request or response CONTENT, and the exception to "bodies are not
-    # stored". Written on a failed platform-tier call, because that is the call treg made on its own
-    # key, with its own money, and is therefore treg's to debug — a team calling on its own key is
-    # billed by the provider and storing their traffic would help nobody (same line `IdempotentCall`
-    # draws). Never written for a success, for tiers 1-2, or for a non-catalog tool call.
+    # stored". Written on failed marketplace, own-key, and plain own-tool calls under the sanctioned
+    # reversal of PR #139: production failures without the provider's answer cannot be diagnosed.
+    # Never written for a success, and never exposed by the team-facing `/calls` route.
     #
-    # Both are REDACTED and TRUNCATED at the point of capture (see api._error_snippets): treg's own
-    # platform credential is exact-matched out first, then known third-party secret shapes. They are
+    # Both are REDACTED and TRUNCATED at the point of capture (see api._secret_renderings): every
+    # injected credential is exact-matched out first, then known third-party secret shapes. They are
     # evidence for a human, never an exact replay — `error_request` cannot reconstruct the call.
     # Both are overwritten with '<expired>' once past the retention window, so "captured then aged
     # out" stays distinguishable from "never captured".
