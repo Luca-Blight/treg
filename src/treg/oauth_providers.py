@@ -342,6 +342,8 @@ GOOGLE_SEARCH_CONSOLE = OAuthProvider(
     examples=(
         {"method": "POST", "path": "webmasters/v3/sites/{site_url}/searchAnalytics/query",
          "note": "Search analytics. {site_url} is sc-domain:example.com or https://example.com/. "
+                 "Pass {site_url} percent-encoded exactly once (sc-domain%3Aexample.com); never "
+                 "re-encode a value read from the sites list. "
                  "Body: {\"startDate\":\"2026-06-01\",\"endDate\":\"2026-06-28\","
                  "\"dimensions\":[\"query\"]}. For a site TOTAL, omit dimensions — summing a "
                  "dimension does NOT equal the total."},

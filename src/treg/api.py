@@ -8992,6 +8992,9 @@ def _marketplace_no_credential(service: str, ep_id: str, provider, ep: dict | No
     return HTTPException(status_code=404, detail="\n".join(lines))
 
 
+_VALID_PERCENT_ESCAPE_RE = re.compile(r"%[0-9A-Fa-f]{2}")
+
+
 def _marketplace_upstream(ep: dict, provider, query_params) -> tuple[str, set[str]]:
     """The full upstream URL for an endpoint-id call, with `{placeholder}` path params filled from
     the caller's query params (they are consumed — dropped from the relayed query). Missing
@@ -9002,7 +9005,11 @@ def _marketplace_upstream(ep: dict, provider, query_params) -> tuple[str, set[st
         if value is None:
             raise HTTPException(status_code=400, detail=(
                 f"{ep['id']} needs --query {name}=<value> (a path parameter of {ep['path']})"))
-        path = path.replace("{%s}" % name, quote(value, safe=""))
+        # Agents often pass `siteUrl` straight from GSC's sites list, where it may already be
+        # encoded. Preserve a value containing a real %HH escape; otherwise encode it exactly once.
+        # A literal/invalid percent sequence has no valid escape and therefore becomes `%25`.
+        rendered = value if _VALID_PERCENT_ESCAPE_RE.search(value) else quote(value, safe="")
+        path = path.replace("{%s}" % name, rendered)
         consumed.add(name)
     inp = ep.get("input") or {}
     required = [k for k, v in (inp.get("queryParams") or {}).items()

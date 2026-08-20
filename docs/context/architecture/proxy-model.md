@@ -92,7 +92,10 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
 
 If both shapes miss with 404, a dotted target gets one final lookup in the endpoint catalog. A live
-row enters `_resolve_marketplace_call` and its credential ladder. A `retired`/`broken` tombstone is
+row enters `_resolve_marketplace_call` and its credential ladder. `_marketplace_upstream` fills catalog
+path placeholders by percent-encoding raw values, but preserves a value containing a valid `%HH` escape;
+this prevents an already encoded Search Console property id such as `sc-domain%3Aexample.com` becoming
+double-encoded as `%253A`. Literal/invalid percent signs remain encoded. A `retired`/`broken` tombstone is
 instead refused with 410, its `status_note`, and its optional `superseded_by`, before credentials are
 selected or the relay can run; the refusal is audited as `refused_by=retired`. This ordering is
 deliberate: an org's own tool named exactly like the old catalog id already resolved above and is not

@@ -458,6 +458,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   → `{method, path, note}` where the note carries the summary, required params and capability),
   de-duplicated by (method, path) and capped at `CATALOG_STAMP_CAP` (12). Unverified endpoints are never
   stamped — an example is a promise the call works, and the `verified` date is the only evidence of that.
+  Search Console's hand-written example additionally documents that direct own-tool path substitution
+  takes a `site_url` encoded exactly once; catalog calls accept either raw values or existing `%HH`
+  escapes and prevent the latter from being encoded a second time.
 - **Connections (the marketplace's dashboard surface):** `list_connections` (`GET /connections`) returns
   every OAuth/registry credential in the org — metadata only, no token material — with health, expiry,
   and (for a known provider) `capabilities`/`missing_capabilities` + extra-credential notes. The filter
