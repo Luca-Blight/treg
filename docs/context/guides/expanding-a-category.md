@@ -12,8 +12,10 @@ related:
 
 # Expanding a marketplace category (adding providers)
 
-How we grew **SEO**, **Enrichment** and **Advertising** from a handful of entries to ten each. This is the
-repeatable process — follow it whenever a category needs more providers.
+How we grew **SEO**, **Enrichment** and **Advertising** from a handful of entries to ten each — and then
+Enrichment again by eight providers in one pass (2026-08-20: companyenrich, oceanio, tomba, predictleads,
+findymail, branddev, icypeas, leadsforge). This is the repeatable process — follow it whenever a
+category needs more providers.
 
 Everything lives in **`oauth_providers.py`** (the `REGISTRY` of `OAuthProvider` entries). Connecting,
 verifying and auto-provisioning a pasted-key provider is **`connect_with_token`** (`POST /connections/token`)
@@ -71,6 +73,9 @@ this fragment is the *process*, not the mechanics reference.
 | 200 on a bad key; an `ERROR …` text body | handled automatically (text-error guard) | Semrush |
 | No free probe; valid key 400s on empty body, invalid 401s | `probe_reject_statuses=(401,403)` | Coresignal |
 | The provider's OWN "test my auth" endpoint answers 200 with prose for a bad key | probe a DATA endpoint instead | Tiingo `/api/test` (2026-08-14; `/tiingo/daily/aapl` 403s cleanly) |
+| Bad key 302-redirects to an HTML login page (a Laravel app that only speaks JSON when asked) | `probe_reject_statuses=(302, 401, 403)` **plus** `token_verify_field` on a body field the redirect lacks | Findymail `/credits` → `email` (2026-08-20) |
+| TWO header credentials, both per-user, and a free probe answers the key alone | `extra_credential_label`/`extra_credential_header` with `extra_credential_setting` EMPTY (user binds the second half via `POST /connections/{id}/extra-credential`); probe the key-only route | Tomba `X-Tomba-Key` + `X-Tomba-Secret`, probe `/v1/usage` (2026-08-20) |
+| TWO credentials but the API also takes standard HTTP Basic `a:b` | one pasted `key:token` pair, `token_format="Basic {secret}"` + `token_encode="base64"` — no second slot needed | PredictLeads `api_key:api_token` (2026-08-20) |
 | A second host that answers 200 to anything (demo/free tier) | pin the host that rejects | CoinGecko demo host (2026-08-14) |
 | Accepts ANY key on every endpoint, even premium ones | DROP — cannot ship | Alpha Vantage (2026-08-14: `apikey=bogus123` returned real quote data) |
 | Ongoing tool health check | `probe_path` (a cheap GET on `base_url`) | most |

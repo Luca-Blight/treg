@@ -250,6 +250,16 @@ Five more `TREG_PLATFORM_KEY_*` env vars beside the originals, and the providers
   terminated, the pool dies gracefully (calls refuse, nothing bills) — replace the key or demote
   the provider to own-key-only by removing it from the allow-list.
 
+## Enrichment platform keys (2026-08-20)
+
+Seven more slots (`TREG_PLATFORM_KEY_COMPANYENRICH`, `_OCEANIO`, `_PREDICTLEADS` — base64 of
+`api_key:api_token` —, `_FINDYMAIL`, `_BRANDDEV`, `_ICYPEAS`, `_LEADSFORGE`), all UNFUNDED at merge:
+declared in `render.yaml` and `config.py` so tier 4 can be turned on per provider by funding the
+account, setting the env var, and adding the service to `TREG_PLATFORM_PROVIDERS`. Ocean.io stays
+refused even with a key until `fx.yaml` gets a real `usd` rate (its plan price is not machine-readable).
+Tomba has NO slot on purpose: its data routes need a key+secret header pair and the platform-binding
+path injects one value — wire a paired platform binding before offering tomba on tier 4.
+
 ## A db.py change needs a Postgres-shaped deploy plan
 
 SQLite cannot catch this class: it has no connection pool and no lock queue. Two rules, both from the

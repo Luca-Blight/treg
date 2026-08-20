@@ -162,7 +162,12 @@ module symbols:
   `probe_json` body (Serpstat's JSON-RPC), and `token_encode="base64"` turns a pasted `login:password` into
   the Basic blob for `Basic {secret}` (DataForSEO, Moz). `can_autoprovision` (has a `base_url` and either needs no
   second credential or treg holds it) drives auto-building a callable tool on a successful connect;
-  `needs_extra_credential` covers Google Ads' `developer-token` header (a second binding the operator supplies).
+  `needs_extra_credential` covers a second header the primary slot can't carry: Google Ads'
+  `developer-token` (treg-held, via `extra_credential_setting`) and Tomba's per-user `X-Tomba-Secret`
+  (setting left empty → the user supplies it through `POST /connections/{id}/extra-credential`, which
+  rebuilds the tool with BOTH bindings — the primary half comes from `_provider_bindings`, so it follows
+  the provider's own auth shape rather than assuming OAuth). Tomba's probe (`/v1/usage`) deliberately
+  answers the key alone, so connect-time verification works before the secret is bound.
   **Split-host vendors get one extra Tool per host** (`extra_tools`): GA4 runs reports on
   `analyticsdata` but lists the property ids those reports need on `analyticsadmin` — one scope covers
   both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin
