@@ -141,6 +141,7 @@ except Exception:  # pragma: no cover - exercised by deploys without the extra
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await _backfill_provider_extra_tools()
     await _bootstrap_single_user()
     # One long-lived client for ALL upstream calls (rule 1: keepalive). The pool reuses
     # TCP+TLS connections across requests — the single biggest latency win for a relay.
@@ -7329,11 +7330,20 @@ async def _autoprovision_provider_tool(
             bindings=bindings, health_check=health_check,
             examples=examples,
         ))
-    # Split-host vendors (GA4: reports on analyticsdata, property listing on analyticsadmin) get
-    # one extra Tool per host, bound to the SAME secret — the scope already covers it; only /call/'s
-    # per-host resolution was in the way. Upserted with the same idempotency as the main tool, so a
-    # reconnect heals a connection made before the extra existed instead of duplicating it. Revoke
-    # needs no counterpart: it already deletes any tool whose only binding was this credential.
+    await _upsert_provider_extra_tools(provider, secret, tool_name, pending.owner, db, bindings)
+
+
+async def _upsert_provider_extra_tools(
+    provider, secret: Secret, tool_name: str, owner: str, db: AsyncSession,
+    bindings: list[dict] | None = None,
+) -> int:
+    """Upsert a split-host provider's companion tools; return the number newly created.
+
+    Connect and startup backfill deliberately share this exact write path. A new provider registry
+    `extra_tools` entry therefore heals old connections on their next boot without a one-off migration.
+    """
+    bindings = bindings or _provider_bindings(provider, secret)
+    created = 0
     for extra in getattr(provider, "extra_tools", ()) or ():
         extra_name = f"{tool_name}-{extra['suffix']}"
         extra_probe = (
@@ -7352,11 +7362,52 @@ async def _autoprovision_provider_tool(
                 prior.examples = extra["examples"]
         else:
             db.add(Tool(
-                org_id=secret.org_id, name=extra_name, owner=pending.owner,
+                org_id=secret.org_id, name=extra_name, owner=owner,
                 base_url=extra["base_url"], host=_host_of(extra["base_url"]),
                 bindings=bindings, health_check=extra_probe,
                 examples=extra.get("examples") or [],
             ))
+            created += 1
+    return created
+
+
+async def _backfill_provider_extra_tools() -> int:
+    """Heal provider connections created before their registry entry gained companion tools.
+
+    A connection qualifies only when its provider-attributed Secret still has the expected main
+    Tool and that Tool is bound to the same Secret. This avoids creating orphan companions for a
+    partially-deleted connection while keeping the scan generic across all future `extra_tools`.
+    """
+    async with session_maker() as db:
+        provider_secrets = (await db.execute(
+            select(Secret).where(Secret.provider != "")
+        )).scalars().all()
+        candidates = [
+            (secret, provider)
+            for secret in provider_secrets
+            if (provider := oauth_providers.get(secret.provider)) is not None
+            and (getattr(provider, "extra_tools", ()) or ())
+        ]
+        if not candidates:
+            return 0
+
+        org_ids = {secret.org_id for secret, _ in candidates}
+        tools = (await db.execute(select(Tool).where(Tool.org_id.in_(org_ids)))).scalars().all()
+        by_org_name = {(tool.org_id, tool.name): tool for tool in tools}
+        created = 0
+        for secret, provider in candidates:
+            tool_name = secret.name or provider.service
+            main = by_org_name.get((secret.org_id, tool_name))
+            if main is None or not any(
+                binding.get("secret_id") == secret.id for binding in (main.bindings or [])
+            ):
+                continue
+            created += await _upsert_provider_extra_tools(
+                provider, secret, tool_name, main.owner or secret.owner, db)
+        await db.commit()
+        if created:
+            logging.getLogger("treg").info("backfilled %d provider companion tool(s)", created)
+        return created
 
 
 CATALOG_STAMP_CAP = 12  # a tool's examples are read by a human/agent scanning, not a full API doc

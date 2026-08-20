@@ -165,8 +165,11 @@ module symbols:
   both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin
   path on the data host → Google 404; admin host → treg "no registered tool"; 13 calls/7 orgs observed
   stuck there). The extra (`<connection>-admin`) binds the SAME secret, upserts idempotently on
-  reconnect — which is also how pre-fix connections heal — and revoke already sweeps it (any tool
-  whose only binding was the deleted credential goes). `resource_example` closes the loop from the
+  connect/reconnect, and `_backfill_provider_extra_tools` runs after `init_db()` on every startup to
+  heal older connections automatically. The backfill is registry-generic: it scans provider-attributed
+  Secrets, requires the corresponding main Tool to be bound to that Secret, then calls the same extra
+  upsert, so adding a future `extra_tools` entry needs no one-off migration. Revoke already sweeps the
+  companions (any tool whose only binding was the deleted credential goes). `resource_example` closes the loop from the
   other side: the moment the user picks their property (`POST /connections/{id}/resource`), the
   template renders `{resource}`/`{resource_name}` into a ready-made call stamped into the data tool's
   examples (marker `stamped: resource`, so re-picking replaces instead of piling up).
