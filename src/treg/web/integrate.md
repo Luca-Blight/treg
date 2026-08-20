@@ -214,15 +214,3 @@ token for control.** Start everyone on tags and upgrade the few who need real se
 treg stamps **`X-Treg-Error: 1`** on its own refusals — branch on that header, not on the status code.
 Failed upstream calls are not billed; a `per_call`-priced endpoint does bill a genuine `4xx` caused by
 your own bad input, but never one caused by a credential or quota problem.
-
----
-
-## Commercial note
-
-Embedding the hosted service in a product you sell needs a written agreement with us — the standard
-terms don't cover resale. Talk to us before you launch; it's a short conversation, and 0% markup means
-the numbers are simple.
-
-Alternatively, each of your customers can connect **their own** treg account through our OAuth flow and
-pay treg directly. That needs no agreement and no billing code on your side — but you also don't get
-the per-customer reporting above, because the usage is theirs, not yours.
