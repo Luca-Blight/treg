@@ -265,7 +265,7 @@ endpoints:
       source_url: https://api.fiber.ai/ai-docs/reverseEmailLookup.md
       checked: '2026-08-17'
       confidence: documented
-      note: 2 credits per successful match. A miss is free. Rate limit 3500 req/min — space requests, do not burst.
+      note: "2 credits per successful match — OBSERVED live 2026-08-20 on a resolving address (chargeInfo.creditsCharged 2); the catalogued test_request is a deliberate role-inbox MISS and settled at 0, confirming misses are free. Rate limit 3500 req/min — space requests, do not burst."
     docs_url: https://api.fiber.ai/ai-docs/reverseEmailLookup.md
 
   - id: fiber-ai.companies.search
@@ -391,15 +391,14 @@ endpoints:
         outputType: "linkedin"
     cost:
       type: per_success
-      value: 1
+      value: 5
       currency: credit
       per: 1
       unit: record
-      source: docs
-      source_url: https://api.fiber.ai/ai-docs/githubToLinkedInTrigger.md
-      checked: '2026-08-17'
-      confidence: documented
-      note: "1 credit per person for LinkedIn-only (the test_request). 1 credit for email-only. 2 credits if outputType=both. Charge attaches to the trigger; poll is free. Rate limit 30 req/min."
+      source: observed
+      checked: '2026-08-20'
+      confidence: verified
+      note: "OBSERVED live 2026-08-20: a 1-person LinkedIn-only trigger charged 5 credits (chargeInfo.method charged-for-async-process, creditsCharged 5), matching the account's own rate card (getLiProfileFromGithubUsername = 500 centi-credits; getEmailFromGithubUsername = 300, so email-only is 3). The vendor docs' '1 credit per person' understates 5x — trust the rate card. Charge attaches to the trigger; poll is free. Rate limit 30 req/min."
     docs_url: https://api.fiber.ai/ai-docs/githubToLinkedInTrigger.md
 
   - id: fiber-ai.people.github.to_linkedin.poll
@@ -418,7 +417,7 @@ endpoints:
         pageSize: {type: integer, required: false, note: "1-100, default 10"}
         cursor: {type: string, required: false, note: "nextCursor from the previous poll page"}
       note: "operationId githubToLinkedInPolling. Pair with fiber-ai.people.github.to_linkedin.trigger. Poll no tighter than every 5s (15s across a batch). Status NOT_STARTED|STARTED|DONE|FAILED. Do not re-trigger an in-flight run — that double-charges on success. This is where LinkedIn URLs come back."
-    untestable: requires githubAgentRunId from a prior trigger call; a guessed id 404s and looks like a broken endpoint
+    untestable: "requires githubAgentRunId from a prior trigger call; a guessed id 404s and looks like a broken endpoint. Manually exercised 2026-08-20 with a fresh run id: status DONE, torvalds resolved to linkedin.com/in/linustorvalds at confidence 10/10, chargeInfo confirmed the poll itself is free"
     cost:
       type: free
       value: 0
