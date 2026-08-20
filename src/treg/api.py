@@ -8588,7 +8588,10 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
                         break
             if len(provider_owned) == 1:
                 return provider_owned[0], norm
-            raise HTTPException(status_code=409, detail=f"ambiguous: multiple tools match {host!r}")
+            names = ", ".join(repr(t.name) for t in sorted(top, key=lambda t: t.name))
+            raise HTTPException(status_code=409, detail=(
+                f"ambiguous: multiple tools match {host!r}: {names}; call one by name as "
+                "/call/<name>/<path>"))
         return top[0], norm
 
     name, _, path = rest.partition("/")
@@ -8601,12 +8604,39 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         # near-miss id, most often one segment off. Answering "no tool 'lusha.companies-signals' in
         # this org" describes the wrong half of treg and leaves the caller nothing to try; naming
         # the real id turns the dead end back into the next call.
-        if "." in name and not path and (near := catalog_store.near_ids(name, cat)):
+        if (name not in cat.by_id and "." in name and not path
+                and (near := catalog_store.near_ids(name, cat))):
             raise HTTPException(status_code=404, detail={
                 "error": f"no endpoint {name!r} in the catalog",
                 "hint": "did you mean " + ", ".join(near) + "?",
                 "did_you_mean": near})
         detail = f"no tool {name!r} in this org"
+        # A caller may have mistaken a catalog-looking operation for a path on the connected own
+        # tool. Look only at callable tools inside this org and only on the error path; the first
+        # dotted segment is the provider/tool convention (`google-analytics.report` →
+        # `google-analytics`). Connection
+        # suffixes also count, so an org whose surviving account is `google-analytics-2` still gets
+        # an actionable route. Keep catalog_store.near_ids above provider-local and unchanged.
+        own_tools = (await db.execute(
+            select(Tool).where(Tool.org_id == org_id)
+        )).scalars().all()
+        first_segment = name.partition(".")[0]
+        own_near = sorted({
+            t.name for t in own_tools
+            if _tool_usable(caller, t) and (
+                name.startswith(t.name + ".")
+                or t.name == first_segment
+                or t.name.startswith(first_segment + "-")
+            )
+        }, key=lambda candidate: (-len(candidate), candidate))
+        if own_near:
+            suggested = own_near[0]
+            raise HTTPException(status_code=404, detail={
+                "error": detail,
+                "hint": (f"your org has tool {suggested!r} — call "
+                         f"/call/{suggested}/<path>"),
+                "did_you_mean": own_near,
+            })
         # A bare provider name (`treg call tikhub /path`) stays a miss, but points at the
         # marketplace form instead of dead-ending — its endpoints are callable without a tool.
         if oauth_providers.get(name) is not None or name in cat.provider_meta:
@@ -10324,6 +10354,7 @@ async def call_tool(
 
     drop_params: set[str] = set()
     mk: MarketplaceCall | None = None
+    own_tool_miss: dict | None = None
     try:
         tool, upstream_url = await _resolve_call(rest, caller, db)
     except HTTPException as exc:
@@ -10332,9 +10363,20 @@ async def call_tool(
         ep = _catalog_endpoint_for(rest) if exc.status_code == 404 else None
         if ep is None:
             raise
+        if (isinstance(exc.detail, dict)
+                and str(exc.detail.get("hint", "")).startswith("your org has tool ")):
+            own_tool_miss = exc.detail
         try:
             mk = await _resolve_marketplace_call(ep, request, caller, db)
         except HTTPException as mkexc:
+            # Catalog resolution is allowed to fall through from a named miss, but its own 404 must
+            # not discard the useful fact discovered there: this org already has a nearby own tool.
+            if mkexc.status_code == 404 and own_tool_miss is not None:
+                mkexc.detail = {
+                    "error": mkexc.detail,
+                    "hint": own_tool_miss["hint"],
+                    "did_you_mean": own_tool_miss["did_you_mean"],
+                }
             # A malformed marketplace call (wrong method, missing param, no credential, 502) must
             # still leave a trace — it's exactly the row the caller will come asking about.
             request.state.call_audited = True
