@@ -145,6 +145,11 @@ class OAuthProvider:
     # Settings attribute holding TREG's own value for it. When set, users supply nothing and the
     # tool is provisioned with a platform binding; the per-user prompt is only the fallback.
     extra_credential_setting: str = ""
+    # TIER 4 ONLY: settings attribute holding treg's own second credential for platform-served
+    # calls, when the extra credential is PER-USER (extra_credential_setting stays empty so a
+    # user's connect never rides treg's half of the pair — Tomba rejects a mismatched key/secret).
+    # `_platform_bindings` appends it as a second header binding; user connections are untouched.
+    platform_extra_setting: str = ""
 
     # Some providers bill the OWNER OF THE APP per use, whoever's token made the call — X moved to
     # prepaid pay-per-use in Feb 2026 (per resource read, per post written; no plans). For those,
@@ -1513,6 +1518,7 @@ TOMBA = OAuthProvider(
     extra_credential_label="API secret",
     extra_credential_header="X-Tomba-Secret",
     extra_credential_setting="",  # deliberately unset — see the note above
+    platform_extra_setting="platform_key_tomba_secret",  # tier 4 injects treg's OWN pair
     extra_credential_note=(
         "Tomba signs every request with two values. Paste the API key above, then add your API "
         "secret (ts_…) from the same page — without it only the usage, email-format and "

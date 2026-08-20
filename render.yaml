@@ -130,5 +130,9 @@ services:
         sync: false
       - key: TREG_PLATFORM_KEY_LEADSFORGE         # LeadsForge API key (Authorization: Bearer)
         sync: false
+      - key: TREG_PLATFORM_KEY_TOMBA              # Tomba API key ta_… (X-Tomba-Key)
+        sync: false
+      - key: TREG_PLATFORM_KEY_TOMBA_SECRET       # Tomba API secret ts_… (X-Tomba-Secret) — set BOTH
+        sync: false
       - key: TREG_PLATFORM_PROVIDERS           # e.g. "tikhub,dataforseo,scrapecreators"; "" = tier 4 off
         value: ""

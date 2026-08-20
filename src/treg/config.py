@@ -176,8 +176,9 @@ class Settings(BaseSettings):
     platform_key_branddev: str = ""       # Bearer key
     platform_key_icypeas: str = ""        # raw key (Authorization, no Bearer)
     platform_key_leadsforge: str = ""     # Bearer key
-    # Tomba is NOT slotted: its data routes need a key+secret HEADER PAIR, and the platform-binding
-    # path injects exactly one value. Wire a paired platform binding before offering tomba on tier 4.
+    platform_key_tomba: str = ""          # the API key (ta_…); X-Tomba-Key header
+    platform_key_tomba_secret: str = ""   # the API secret (ts_…); X-Tomba-Secret — BOTH must be set
+    # (tomba's data routes need the header pair; TOMBA.platform_extra_setting names this second slot)
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
