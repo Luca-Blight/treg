@@ -689,7 +689,9 @@ def _haystacks(ep: dict, cat: Catalog) -> list[tuple[int, str]]:
     return [
         (W_CAPABILITY, " ".join((ep["capability"], cat.capabilities.get(ep["capability"], ""),
                                  plat.get("label", ""), ep["platform"])).lower()),
-        (W_SUMMARY, ep["summary"].lower()),
+        # `name` is OURS to word (summary stays the provider's, verbatim) — it is the one
+        # per-endpoint field curation may write search vocabulary into, so it must be searched
+        (W_SUMMARY, " ".join((ep.get("name") or "", ep["summary"])).lower()),
         (W_PATH, " ".join((ep["id"], ep["path"], ep["provider"])).lower()),
     ]
 
@@ -835,7 +837,7 @@ def rank_band(query: str, cat: Catalog, limit: int) -> tuple[list[tuple[dict, fl
 
 
 def rerank(rows: list[tuple[dict, float]], stats: dict[str, dict],
-           cat: Catalog | None = None) -> list[tuple[dict, int]]:
+           cat: Catalog | None = None) -> list[tuple[dict, float]]:
     """Re-order equal-scoring rows by what treg has MEASURED, then by price.
 
     Relevance still decides first — a cheap reliable endpoint that doesn't do the job is not the

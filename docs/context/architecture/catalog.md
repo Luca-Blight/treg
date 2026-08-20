@@ -299,6 +299,32 @@ Three things follow, and they are the whole point of the field:
 
 `catalog_validate.py` only checks the value when present: a stated `kind` must be one of the four.
 
+### Naming — `name` is the search surface we own
+
+`summary` is the provider's text, verbatim; `name` is OURS, and since 2026-08-20 it is searched
+(same weight as summary). That makes it the one per-endpoint field where curation may put the
+words agents type. The formula: **job + the input the caller must hold + top output facets**, ≤60
+characters, and it must read as a natural title — it is the row heading on every surface.
+
+    Linkedin: get company profile (web_v2)   ->  LinkedIn company profile by URL or slug — headcount, industry
+    Get user profile                         ->  TikTok user profile by username — followers, bio, stats
+
+The rules (applied catalog-wide in the 2026-08-20 rewrite; every new provider follows them):
+
+1. Name the JOB in task words — never the vendor's operation title or version codes.
+2. Say the INPUT ("by name", "by domain", "by ASIN", "by LinkedIn URL"). Agents search by what
+   they hold; only the caller knows its inputs — that doctrine applies to naming too.
+3. Say the top OUTPUTS when people search by them ("headcount", "reviews", "hiring signal").
+4. One concept, one word, catalog-wide: always "postings", never sometimes "vacancies";
+   `aliases.yaml` covers the agent's side, our side must be consistent.
+5. Prefer the longer word form — "postings" contains "posting"; substring matching never works
+   backward.
+6. No dead words: "API", "data", "get", "fetch", "endpoint" are soft tokens worth nothing.
+7. No stuffing. If it does not read as a title, it is wrong. Overflow vocabulary belongs in the
+   capability description (weight 3, shared by the group) or `aliases.yaml`, never in the name.
+8. TRUTH over vocabulary: derive the name only from the row's own summary, path and input fields.
+   A name claiming an output the endpoint does not return is a lie an agent will spend money on.
+
 ### Cost — the file keeps the billing unit, the server computes USD
 
 A `cost` block stays in whatever unit the PROVIDER bills in; that is the number that stays correct
