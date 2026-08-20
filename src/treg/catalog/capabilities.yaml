@@ -247,8 +247,9 @@ capabilities:
   # merged from seo-tool + enrichment proposed_capabilities (2026-07-28)
   app-store.search.apps: "Search apps by keyword"
   companies.email_pattern: "Find a company's work-email format"
-  companies.headcount_trend: "Headcount over time & by department"
+  companies.headcount_trend: "Headcount growth over time & by department"
   companies.industry.resolve: "Map free text to industry codes"
+  companies.jobs: "A company's open job postings"
   companies.news: "Recent news & signals about a company"
   companies.reviews: "Read employee reviews of a company"
   google-play.search.apps: "Search apps by keyword"

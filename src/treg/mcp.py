@@ -48,7 +48,7 @@ from mcp.server.mcpserver import Context
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
-from . import catalog_store
+from . import audit, catalog_store
 from .config import PUBLIC_HOST_ALIASES, get_settings
 
 # Every tool must declare what it can DO, and the review process checks these against real behaviour.
@@ -520,6 +520,10 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
                                f"the first {catalog_store.RERANK_BAND} equally-scoring rows — "
                                f"add a word to narrow it")
     if not results:
+        # Same miss log as GET /catalog/search (see models.SearchMiss) — this tool reads the catalog
+        # in-process, so the HTTP route's logging never sees an MCP agent's empty search.
+        if query.strip():
+            audit.record_search_miss(query=query.strip(), source="mcp")
         out["hint"] = (
             f"nothing matches all of {query!r} — drop a word, or try a different way of saying the task. "
             "If the catalog genuinely lacks it, file it with catalog_request(capability=...) — "

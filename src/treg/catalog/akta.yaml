@@ -152,6 +152,7 @@ endpoints:
       queryParams: {company: "canva.com"}
     cost: {type: per_success, value: 2.5, currency: credit, per: 1, unit: call, source: docs, source_url: 'https://docs.akta.pro/getting-started/pricing', checked: '2026-07-28', confidence: documented, note: 2.5 Akta credits per request}
     unverified: "http 403 {\"detail\": \"Your current subscription does not include access to this endpoint.\"} — re-probed 2026-07-31, identical response, so the plan gate has not moved. An account-tier gap, not a call error: every /company/{jobs,posts,website-traffic,employee-reviews,headcount-trends,product-reviews-with-products} route on this key returns the same message, and a 403 consumes no credits"
+    platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
     docs_url: https://docs.akta.pro/api-reference/alternative-data/headcount-trends
 
   - id: akta.companies.reviews
@@ -173,6 +174,7 @@ endpoints:
       queryParams: {company: "canva.com", limit: 1}
     cost: {type: per_result, value: 1.5, currency: credit, per: 50, unit: review, source: docs, source_url: 'https://docs.akta.pro/getting-started/pricing', checked: '2026-07-28', confidence: documented, note: 1.5 Akta credits per 50 reviews returned}
     unverified: "http 403 {\"detail\": \"Your current subscription does not include access to this endpoint.\"} — re-probed 2026-07-31, unchanged. Account-tier gap, same message as the other alternative-data routes; the 403 is free, so re-probing costs nothing"
+    platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
     docs_url: https://docs.akta.pro/api-reference/alternative-data/employee-reviews
 
   - id: akta.companies.industry.resolve

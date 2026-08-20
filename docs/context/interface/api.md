@@ -238,12 +238,18 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   discovery list. Calling it—or asking `/catalog/endpoints/{id}/access` whether it is callable—returns
   an actionable 410. The `/call/` refusal is recorded with `refused_by=retired` and never reaches a
   provider credential or relay.
+  A row can also carry `platform_blocked` — the route works upstream but treg's own subscription
+  cannot serve it (Akta's alternative-data tier). Those rows STAY in discovery (a caller's own key
+  may serve them) but are never platform offers, and the reason string rides on the served row.
   A zero-result search additionally points at **`POST /tool-requests`** (open, per-IP rate-limited,
   fields capped): file what the catalog is missing — stored as a `ToolRequest` row (see
   [data-model](../architecture/data-model.md)) with identity attached only when the caller happens
   to be signed in (token, or same-origin session; a cross-origin cookie POST stores anonymously
   rather than being rejected). The zero-result caller is exactly the demand signal the catalog team
-  wants, so no signup wall.
+  wants, so no signup wall. The miss itself is also logged as a `SearchMiss` row (fire-and-forget
+  via `audit.record_search_miss`, from this route and from the MCP `catalog_search` tool alike) —
+  most missing agents never file a request, and the queries they leave behind are what
+  `scripts/usage_report.py` reports as un-served demand.
 - **Auth — three identity doors** (all resolve to a user via the shared `_find_or_create_user`, so
   first-proof = registration — the **user only, no auto personal org**; a brand-new user lands with zero
   teams and names their first via the mandatory welcome / `treg org create`): **GitHub** — `auth_github` (`GET /auth/github`,
@@ -477,8 +483,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   dashboard's ready-made base64 blob — a blob is detected (strict-decodes to printable text with a `:`)
   and kept as-is instead of being double-encoded. See
   [auth-secrets](../architecture/auth-secrets.md). `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
-  the second credential a provider needs when treg does NOT hold it centrally (rare) and finishes the
-  tool with BOTH bindings. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and
+  the second credential a provider needs when treg does NOT hold it centrally (Tomba's `X-Tomba-Secret`)
+  and finishes the tool with BOTH bindings — the primary half built by `_provider_bindings`, so it
+  follows the provider's own auth shape (pasted key or OAuth) rather than assuming a bearer token. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and
   cleans up: it removes the tool treg auto-provisioned for the provider and drops the dead binding from
   any user-built tool, leaving that tool's other bindings intact. All `require_can_register`
   (member+). Helpers: `_owned_connection`, `_dig` (dotted-path walk).

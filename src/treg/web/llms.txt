@@ -1,7 +1,7 @@
 # treg — the tool catalog for your agent
 
 > **OpenRouter, but for agent tools instead of models.** Point an agent at ONE base URL with ONE
-> token and it can do the *job*: 2,630 catalogued endpoints across 47 providers (SEO and SERP
+> token and it can do the *job*: 2,779 catalogued endpoints across 55 providers (SEO and SERP
 > data, backlinks, social and trends, people and company enrichment, ads, scraping) — plus your
 > own team's keys, skills and CLIs. Every credential is injected **server-side**; nothing
 > sensitive lands on the agent's machine, and every call is audited.
@@ -481,7 +481,7 @@ skills` restrict it (`--dir` sets the location).
 8. **Report the outcome as a doorway, not an install log.** Nobody signed up to read which
    Python version uv picked. Open with ONE line about what they just gained, e.g.:
 
-       treg is live — your agent can now call 2,600+ tools across 47 providers (market data, SEO &
+       treg is live — your agent can now call 2,700+ tools across 55 providers (market data, SEO &
        keywords, social & trends, people/company enrichment, ads, scraping), with $1.00
        of free credit to spend.
 

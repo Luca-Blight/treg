@@ -127,6 +127,13 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   `org_id`/`user_email` — identity is attribution when the caller happens to have one, never a
   requirement, because the usual filer is an agent with zero results and no token. Reviewed by
   querying the table; a Slack notifier may hang off the insert later, but the row is the record.
+- **`SearchMiss`** — a catalog search that returned **nothing**: `query` (capped to 300 chars),
+  `source` (`api` — the HTTP route serving web + CLI + raw API — or `mcp`), `created_at`. The demand
+  signal one step before a `ToolRequest`: most agents that miss never file, so the query text is all
+  they leave. Written fire-and-forget through `audit.record_search_miss` (dropped rows cost
+  analytics, never a search) from both search paths — `GET /catalog/search` and the in-process MCP
+  `catalog_search` tool. Deliberately identity-free; surfaced by `scripts/usage_report.py`, which
+  reads misses against the catalog to split coverage gaps from naming/discovery failures.
 - **`RunRecord`** — the **server-side run** audit row (a `treg run --server` CLI execution — the "kind"
   `server_run` in usage rollups): `org_id`, `user_email`, `bundle_name` (holds the **tool** name since the
   tool-side run unification; column name is historical), `argv` (JSON — never carries a secret value;

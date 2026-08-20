@@ -230,6 +230,16 @@ QUERIES: dict[str, str] = {
       from toolrequest
       where status = 'open' or created_at >= $1
       order by created_at desc limit 300""",
+    # Catalog searches that matched NOTHING, grouped by query — the demand signal one step before a
+    # tool request (most agents that miss never file one; the query text is all they leave behind).
+    # Windowed like the call panels: a miss is a time-series event, not a backlog item — the same
+    # query missing last month and this month should read as two spikes, not one eternal row.
+    "search_misses": """
+      select query, count(*) n, string_agg(distinct source, '/') sources,
+             min(created_at) first_seen, max(created_at) last_seen
+      from searchmiss
+      where created_at >= $1
+      group by 1 order by count(*) desc, max(created_at) desc limit 200""",
     "orgs": BASE + """
       select c.org_id, o.slug, count(*) calls, sum(c.spend) spend,
              sum(case when c.failed then 1 else 0 end) failed,
@@ -293,8 +303,20 @@ async def collect(since: dt.datetime, unit: str = "day") -> dict:
                                      id desc))[1], 220) sent"""
                       if has_evidence else "null::text evidence, null::text sent")
 
+            # Same probe-don't-assume dance as the evidence columns: `searchmiss` arrives with the
+            # zero-result search logging, and until that deploys the table does not exist on prod —
+            # this script must keep working from any branch against exactly that database.
+            has_misses = bool(await conn.fetchval(
+                "select 1 from information_schema.tables where table_name = 'searchmiss'"))
+            if not has_misses:
+                print("  note: no searchmiss table yet — the empty-search panel will be empty "
+                      "until the search-miss logging deploys", file=sys.stderr)
+
             out = {}
             for name, sql in QUERIES.items():
+                if name == "search_misses" and not has_misses:
+                    out[name] = []
+                    continue
                 sql = (sql.replace("{unit}", unit)
                           .replace("{evidence_cols}", ev_cols)
                           .replace("{evidence_agg}", ev_agg))
@@ -382,6 +404,16 @@ def print_summary(data: dict, days: int, top: int) -> None:
                   f"{short(r['capability'], 58)}")
         if len(reqs) > 12:
             print(f"  … {len(reqs) - 12} more (the HTML lists every one)")
+
+    misses = data.get("search_misses") or []
+    if misses:
+        hits = sum(m["n"] for m in misses)
+        print(f"\n\033[1msearches that matched nothing\033[0m  ({len(misses)} distinct queries · "
+              f"{hits} misses in this window)")
+        for m in misses[:12]:
+            print(f"  {m['n']:>5}  {m['sources']:<8} {short(m['query'], 64)}")
+        if len(misses) > 12:
+            print(f"  … {len(misses) - 12} more (the HTML lists every one)")
 
     print("\n\033[1mtop orgs\033[0m")
     for o in data["orgs"][:10]:
@@ -748,6 +780,17 @@ def build_html(data: dict, days: int, top: int, since: dt.datetime, unit: str = 
         "".join(request_row(r) for r in reqs)
         or '<tr><td colspan="4" class="dim">No open requests.</td></tr>')
 
+    misses = data.get("search_misses") or []
+    miss_total = sum(m["n"] for m in misses)
+    misses_html = table(
+        '<th class="r">Misses</th><th>Source</th><th>Query</th><th class="r">Last seen</th>',
+        "".join(f'<tr><td class="r num">{m["n"]:,}</td><td><code>{html.escape(m["sources"])}</code></td>'
+                f'<td class="name">{html.escape(m["query"])}</td>'
+                f'<td class="r num dim">{m["last_seen"]:%Y-%m-%d %H:%M}</td></tr>'
+                for m in misses)
+        or '<tr><td colspan="4" class="dim">No empty searches in this window '
+           '(or the search-miss logging has not deployed yet).</td></tr>')
+
     details: dict[tuple[str, bool], list[dict]] = {}
     for d in data["errdetail"]:
         details.setdefault((d["ep"], d["cataloged"]), []).append(d)
@@ -798,6 +841,16 @@ def build_html(data: dict, days: int, top: int, since: dt.datetime, unit: str = 
     {req_anon} of {len(reqs)} carry neither an email nor a contact — filing is deliberately
     anonymous-friendly, so those asks cannot be answered even when we build the thing.</p>
     {requests_html}</div>
+
+  <div class="card"><h2>Searches that matched nothing — {len(misses)} distinct
+    <span class="dim">· {miss_total} misses</span></h2>
+    <p class="sub" style="margin:-4px 0 12px">Every catalog search in this window that returned
+    zero results, from the API/CLI route and from agents over MCP. This is the demand signal one
+    step <b>before</b> the tool-request queue above — most agents that miss never file, so the
+    query text is all they leave behind.<br/>
+    <b>Read each against the catalog before adding anything:</b> a miss for something treg already
+    serves is a naming/discovery failure — fix the endpoint's words, not the coverage.</p>
+    {misses_html}</div>
 
   <div class="card"><h2>Catalog endpoints — all {len(cataloged)}</h2>
     <p class="sub" style="margin:-4px 0 12px">Calls that resolved to a catalog endpoint. The three
