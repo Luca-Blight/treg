@@ -93,31 +93,38 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   refusal passes through — using the identity stashed in `request.state` (a bad-token 401 records
   anonymously). It is what tells "the provider failed" apart from "we said no": a paywall 402 must not read
   as a provider error, and `endpoint_stats` excludes refused rows entirely.
-  It also carries **`error_request` / `error_response`** (migration A36, nullable) — the redacted,
-  truncated evidence for a **failed PLATFORM-tier call only**, and the one exception to "bodies are
-  never stored". Written when `mk.metered` and the call failed, from three places: the settle path
-  (the provider's own body, since a relayed non-2xx returns as a `Response` and is never raised, plus
+  It also carries **`error_request` / `error_response`** (migration A36, nullable) — redacted,
+  truncated evidence for a **failed relayed call**, and the one exception to "bodies are never
+  stored". PR #139's platform-only policy was deliberately reversed after production showed zero
+  evidence on own-tool failures. The fields are now written for marketplace calls at every tier and
+  for plain own tools, from three places: the response path (the provider's own body, since a relayed
+  non-2xx returns as a `Response` and is never raised, plus
   an **allowlisted set of response headers** — `Retry-After`, `WWW-Authenticate`, the rate-limit
   trio, request/trace ids — because an empty-bodied 401 or 429 is otherwise undiagnosable and those
-  headers *are* the answer); the metered `except HTTPException` branch (treg's own `detail`, covering
+  headers *are* the answer); the `except HTTPException` branch (treg's own `detail`, covering
   the 502s — upstream timeout, failed injection, SSRF refusal — where a bare status says least); and
   the reserve refusal, where `detail` names **which** cap was hit, since every 429 collapses to
   `refused_by='cap'` and that one value spans member, tag, org, platform and trial limits.
-  Never written for a success, for
-  tiers 1–2, or for a non-catalog tool call: a team on its own key is billed by the provider, so
-  keeping their traffic would help nobody — the same line `IdempotentCall.response_body` draws.
-  Redaction is exact-match-first (treg's own platform credential, resolved from the binding's
-  `platform_setting`) and only then pattern-based, because a provider quoting the received key back
-  in a 401 can defeat any regex; masking happens **before** truncation, since truncating first can
-  leave a partial key that no longer matches. The exact match covers every spelling a provider can
-  echo, not only what treg sent: percent-encoded in **both** cases (`quote()` emits uppercase, servers
-  echo lower), `quote_plus`, JSON slash-escaped, and — for the Basic-auth providers whose platform
+  Never written for a success; `/calls` defers and omits both fields, keeping them admin-only.
+  Redaction is exact-match-first for every injected credential: platform settings and decrypted org
+  Secrets. OAuth/secret-file JSON masks the raw blob, injected field, `Bearer` form, and string values
+  under the sensitive-key allowlist (including the binding's `secret_field`), while diagnosis fields
+  such as `scope` and `token_type` survive. Only then do pattern rules run, because a provider quoting
+  the received key back in a 401 can defeat any regex. Masking happens **before** truncation, since
+  truncating first can leave a partial key that no longer matches. Exact matches cover every spelling
+  a provider can echo, not only what treg sent: percent-encoded in **both** cases (`quote()` emits
+  uppercase, servers echo lower), `quote_plus`, JSON-escaped, and — for the Basic-auth providers whose platform
   value is *itself* the base64 of `login:password` (dataforseo, moz; see `config.py`) — the **decoded
   credential and each half**, since a provider that decodes Basic and reports
   `received_username`/`received_password` echoes the key in a form containing neither the blob nor
-  `Basic <blob>`. Behind all of it sits a **fail-closed** check: after masking, a normalised copy
+  `Basic <blob>`. Any credential-rendering error replaces evidence with
+  `'<redacted: could not render credentials for masking>'` instead of risking unmasked content or a
+  500. Behind all of it sits a **fail-closed** check: after masking, a normalised copy
   (percent-decoded, JSON-unescaped, lowercased) is re-scanned, and if a secret survived a transform
-  nobody anticipated the whole snippet is replaced. Losing a message beats leaking the shared key. Aged out to `'<expired>'` after 14 days by
+  nobody anticipated the whole snippet is replaced. Losing a message beats leaking a credential.
+  Unmetered request bodies are cached only with a declared `Content-Length` at or below 64 KiB; failed
+  streaming responses contribute only their first 8 KiB and are replayed byte-for-byte to the caller.
+  Aged out to `'<expired>'` after 14 days by
   `GET /admin/errors` — not on the request path, because `get_session` never commits and a lazy
   marker written there would roll back, leaving the purge to run on every failed call.
 - **`ToolRequest`** — a "the catalog doesn't have X" report (`POST /tool-requests`, open + per-IP
