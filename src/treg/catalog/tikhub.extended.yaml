@@ -20693,7 +20693,7 @@ endpoints:
       subreddit_id:
         type: string
         required: true
-        note: Subreddit ID
+        note: Subreddit FULLNAME — the t5_ prefix is required (t5_2qh0u, not 2qh0u)
         example: t5_2qh0u
       need_format:
         type: boolean
@@ -20728,7 +20728,7 @@ endpoints:
       post_id:
         type: string
         required: true
-        note: Post ID
+        note: 'Reddit post FULLNAME — the t3_ prefix is required (bare ids return 200 with null data and still bill)'
         example: t3_1qmup73
       cursor:
         type: string
@@ -20776,7 +20776,7 @@ endpoints:
       subreddit_id:
         type: string
         required: true
-        note: Subreddit ID
+        note: Subreddit FULLNAME — the t5_ prefix is required (t5_2qh0u, not 2qh0u)
         example: t5_2qh0u
       need_format:
         type: boolean
@@ -20932,7 +20932,7 @@ endpoints:
       filter_posts:
         type: array
         required: false
-        note: Filter out specified post IDs
+        note: Filter out specified posts, by fullname (t3_ prefix)
         example: &id001
         - t3_1ojjquz
         - t3_1ohepm2
@@ -21032,7 +21032,7 @@ endpoints:
       filter_posts:
         type: array
         required: false
-        note: Filter post IDs
+        note: Filter out specified posts, by fullname (t3_ prefix)
       after:
         type: string
         required: false
@@ -21072,7 +21072,7 @@ endpoints:
       post_id:
         type: string
         required: true
-        note: Post ID
+        note: 'Reddit post FULLNAME — the t3_ prefix is required. Build it from the URL: reddit.com/r/.../comments/1v7z1m7/ → t3_1v7z1m7. A bare id answers HTTP 200 with data.postInfoById null and STILL BILLS (see miss).'
         example: t3_1ojnvca
       sort_type:
         type: string
@@ -21093,6 +21093,9 @@ endpoints:
       post_id: t3_1ojnvca
       sort_type: CONFIDENCE
       need_format: false
+  miss:
+    status: 200
+    means: "an unknown or bare (un-prefixed) post_id still answers HTTP 200, with data.postInfoById null — and TikHub bills the call anyway; fix the id (t3_ fullname), do not retry (observed live 2026-08-20)"
   verified: '2026-07-28'
   example_response: examples/tikhub.x.reddit-app-fetch-post-comments.json
   capability: reddit.post.comments
@@ -21118,7 +21121,7 @@ endpoints:
       post_id:
         type: string
         required: true
-        note: Post ID
+        note: 'Reddit post FULLNAME — the t3_ prefix is required (bare ids return 200 with null data and still bill)'
         example: t3_1ojnh50
       include_comment_id:
         type: boolean
@@ -21128,7 +21131,7 @@ endpoints:
       comment_id:
         type: string
         required: false
-        note: Comment ID (when include_comment_id is True)
+        note: Comment FULLNAME, t1_ prefix required (when include_comment_id is True)
       need_format:
         type: boolean
         required: false
@@ -21164,7 +21167,7 @@ endpoints:
       post_ids:
         type: string
         required: true
-        note: Post IDs comma-separated, max 5
+        note: Reddit post FULLNAMES (t3_ prefix required) comma-separated, max 5
         example: t3_1ojnh50,t3_1ok432f,t3_1nwil8j
       include_comment_id:
         type: boolean
@@ -21174,7 +21177,7 @@ endpoints:
       comment_id:
         type: string
         required: false
-        note: Comment ID (when include_comment_id is True)
+        note: Comment FULLNAME, t1_ prefix required (when include_comment_id is True)
       need_format:
         type: boolean
         required: false
@@ -21210,7 +21213,7 @@ endpoints:
       post_ids:
         type: string
         required: true
-        note: Post IDs comma-separated, max 30
+        note: Reddit post FULLNAMES (t3_ prefix required) comma-separated, max 30
         example: t3_1ojnh50,t3_1ok432f,t3_1nwil8j,t3_1oj6vn6,t3_1nuenmd
       include_comment_id:
         type: boolean
@@ -21220,7 +21223,7 @@ endpoints:
       comment_id:
         type: string
         required: false
-        note: Comment ID (when include_comment_id is True)
+        note: Comment FULLNAME, t1_ prefix required (when include_comment_id is True)
       need_format:
         type: boolean
         required: false
@@ -21314,7 +21317,7 @@ endpoints:
       filter_posts:
         type: array
         required: false
-        note: Filter post IDs
+        note: Filter out specified posts, by fullname (t3_ prefix)
       after:
         type: string
         required: false
@@ -21437,7 +21440,7 @@ endpoints:
       subreddit_id:
         type: string
         required: true
-        note: Subreddit ID
+        note: Subreddit FULLNAME — the t5_ prefix is required (t5_2qh0u, not 2qh0u)
         example: t5_2qh0u
       need_format:
         type: boolean
