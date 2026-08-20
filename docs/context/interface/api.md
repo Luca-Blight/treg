@@ -42,6 +42,11 @@ tell treg's 404 ("no tool registered for that host") from the vendor's own 404: 
 some JSON. The [local proxy](../architecture/local-proxy.md) needs that distinction to explain a failure
 without ever rewriting a real vendor response.
 
+Resolution refusals are actionable: a named miss that resembles one of the caller's usable own tools
+returns a structured `detail` with `hint` and `did_you_mean`, including after a real catalog endpoint
+falls through and finds no usable marketplace credential. A genuine URL-passthrough tie returns 409
+with the names of the colliding usable tools and the explicit `/call/<name>/<path>` escape hatch.
+
 ## Auth
 `require_member()` reads the `X-Treg-Token` header, hashes it (`crypto.hash_token`), looks up the
 `Membership` by `token_hash`, and returns a `Caller` (`membership, user, org` + `org_id`/`email`/`role`);

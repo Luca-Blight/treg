@@ -92,6 +92,13 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
   `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
 
+Named misses also inspect the org's caller-usable own tools on the error path. When a dotted operation
+name shares its provider/first segment with one (for example `google-analytics.report` beside the
+connected `google-analytics` tool), the 404 carries `hint` plus `did_you_mean` and points at
+`/call/google-analytics/<path>`. If that dotted name is a real catalog endpoint, the hint follows the
+catalog fall-through and is attached only if the marketplace credential ladder also dead-ends. Catalog
+near-id matching remains provider-local and takes precedence for genuine misspellings.
+
 If both shapes miss with 404, a dotted target gets one final lookup in the endpoint catalog. A live
 row enters `_resolve_marketplace_call` and its credential ladder. `_marketplace_upstream` fills catalog
 path placeholders by percent-encoding raw values, but preserves a value containing a valid `%HH` escape;
@@ -174,7 +181,8 @@ credential; the longest-prefix tiebreak compares rstripped lengths (a trailing-s
 **prefers the registry-provider-backed tool** (one whose binding points at a `Secret` with a `provider`)
 over a hand-registered one that often holds a stale credential — a `409` there would break exactly the
 agent-facing URL-passthrough callers who never typed a tool name; only a genuine ambiguity (neither or
-both provider-owned) still `409`s. Binding validity is checked at **registration** (`_validate_bindings` rejects
+both provider-owned) still `409`s. That 409 names every caller-usable colliding tool and directs the
+caller to the unambiguous `/call/<name>/<path>` form. Binding validity is checked at **registration** (`_validate_bindings` rejects
 an unknown `injector` and a cross-org/dangling `secret_id`; `register_skill` runs the same gate), and
 `call_tool` translates a call-time injector `ValueError` and an upstream `httpx.RequestError` into a
 `502` instead of an unhandled 500 (and audits the failed attempt, not just successes). A binding
