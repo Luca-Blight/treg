@@ -28,16 +28,17 @@ incl. duplicates, headers, cookies, body bytes):
    `credentials:'include'` Try-it would otherwise leak our session token — while keeping other cookies.
 3. **the injected credential(s)** — each binding overwrites only its target header/param.
 
-> **What treg keeps from a call.** Normally nothing: the relay forwards bytes and the audit row
-> records status, size and timing, not content. The single exception is a **failed platform-tier
-> call**, where `CallRecord.error_request` / `error_response` retain a redacted, truncated copy of
-> what the caller sent and what the provider answered — otherwise a failure is a bare status code
-> that cannot be explained afterwards, since `path` holds the catalog's URL rather than the caller's
-> parameters and `params_hash` is one-way. It costs nothing extra on the wire: metered responses are
-> already fully buffered by `_buffer_response` (settling needs the provider's reported cost out of
-> the body), and `force_identity` already asks those responses to arrive uncompressed. Own-key and
-> non-catalog calls keep the original guarantee — nothing of them is retained. See
-> [data-model](data-model.md) for the redaction order and retention.
+> **What treg keeps from a call.** Successes retain no content: the relay forwards bytes and the audit
+> row records status, size and timing. A **failed relayed call** — platform, own-key, or plain own-tool
+> — is the exception: `CallRecord.error_request` / `error_response` retain a redacted, truncated copy
+> of what the caller sent and what the provider (or treg-side 502) answered. Without it a failure is a
+> bare status code: `path` holds the catalog URL rather than the caller's parameters and `params_hash`
+> is one-way. Metered responses are already buffered by `_buffer_response`; `_peek_stream_head` reads
+> only the first 8 KiB of a failed unmetered response and replays every consumed byte before the rest
+> of the original iterator, preserving status, raw headers, streaming, and the upstream-close task.
+> Caller bodies on unmetered paths are cached only when `Content-Length` is declared and at most 64
+> KiB; large/chunked uploads stay streaming and retain only their query-param half. See
+> [data-model](data-model.md) for the redaction order, admin-only access, and retention.
 
 Faithfulness mechanics inside `relay()`:
 - request headers rebuilt from `request.headers.raw` into an `httpx.Headers` multidict (preserves

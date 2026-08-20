@@ -8252,10 +8252,11 @@ _ERROR_EVIDENCE_EXPIRED = "<expired>"
 @app.get("/admin/errors")
 async def admin_errors(
     days: int = 7, limit: int = 100, provider: str | None = None, status: int | None = None,
+    tier: str | None = None,
     _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
 ) -> dict:
-    """Failed PLATFORM calls with the evidence to explain them — the caller's request and the
-    provider's own answer (see models.CallRecord.error_request).
+    """Failed calls with the evidence to explain them — the caller's request and the provider's own
+    answer (see models.CallRecord.error_request).
 
     Superadmin-only and deliberately not mirrored on `/calls`: the rows hold customers' request
     content, so v1 keeps them behind the same door as every other cross-tenant view.
@@ -8269,13 +8270,16 @@ async def admin_errors(
     purged = await _purge_expired_error_evidence()
     since = _utcnow_naive() - timedelta(days=max(1, min(days, 90)))
     q = (select(CallRecord)
-         .where(CallRecord.created_at >= since, CallRecord.credential_tier == "platform",
+         .where(CallRecord.created_at >= since,
                 or_(CallRecord.error_request.is_not(None), CallRecord.error_response.is_not(None)))
          .order_by(CallRecord.id.desc()).limit(max(1, min(limit, 500))))
     if provider:
         q = q.where(CallRecord.provider == provider)
     if status is not None:
         q = q.where(CallRecord.status_code == status)
+    if tier is not None:
+        q = q.where(CallRecord.credential_tier.is_(None) if tier == ""
+                    else CallRecord.credential_tier == tier)
     rows = (await db.execute(q)).scalars().all()
     omap = {o.id: o for o in (await db.execute(
         select(Org).where(Org.id.in_({c.org_id for c in rows if c.org_id is not None})))).scalars().all()}
@@ -8288,7 +8292,8 @@ async def admin_errors(
             # `method` is already on the row and is the whole diagnosis for a real failure class:
             # 47 of apollo.people.enrich's failures were a GET at a POST endpoint. Omitting a field
             # we already store, in the view built to explain failures, was a free loss.
-            "endpoint_id": c.endpoint_id, "provider": c.provider, "status": c.status_code,
+            "endpoint_id": c.endpoint_id, "provider": c.provider, "tier": c.credential_tier,
+            "status": c.status_code,
             "method": c.method, "refused_by": c.refused_by, "duration_ms": c.duration_ms,
             # An aged-out row holds the sentinel, which is a STATE, not content. Returning it as the
             # request/response would have a reader treat the word `<expired>` as the provider's
@@ -9832,14 +9837,18 @@ def _platform_billable(status_code: int, cost_type: str) -> bool:
 
 _PLATFORM_BODY_MAX = 8 * 1024 * 1024  # buffer ceiling for a metered response (API JSON, not downloads)
 
-# ---- failure evidence: what a failed PLATFORM call is allowed to leave behind -------------------
+# ---- failure evidence: what a failed call is allowed to leave behind ----------------------------
 # Sized to hold a real provider error whole — a typical 400 body is 80-300 characters and a verbose
 # JSON one about 800 — while still capping a ~14KB CDN error page and a caller stuck in a retry loop.
 _ERROR_RESPONSE_MAX = 2000
 _ERROR_REQUEST_MAX = 1000
+# Unmetered calls keep streaming unless the caller explicitly declared a small body. Starlette's
+# request cache then lets relay replay those exact bytes without a second read from the socket.
+_ERROR_CALLER_BODY_MAX = 64 * 1024
 # Sliced off the FRONT before any decode, so an 8MB single-line HTML error page never gets decoded or
 # regex-scanned on the request path. Every limit above is characters; this one is bytes.
 _ERROR_BODY_SLICE = 8192
+_ERROR_MASKING_FAILED = "<redacted: could not render credentials for masking>"
 
 # Third-party secret shapes. `_EVIDENCE_SECRET_RE` below covers values that LOOK like a key; these
 # two cover the places a value hides by its NAME instead — in a URL or a JSON body — which
@@ -9875,16 +9884,21 @@ _EVIDENCE_HEADERS = (
 )
 
 
-def _platform_secret_renderings(tool: Tool) -> list[str]:
-    """Every spelling of TREG'S OWN key for this tool, longest first.
+_SENSITIVE_JSON_SECRET_KEYS = {
+    "access_token", "refresh_token", "id_token", "token", "client_secret", "api_key", "secret",
+    "password", "private_key",
+}
 
-    This is the primary defence and the only deterministic one: for a platform call the credential is
-    a named setting, so it can be matched exactly instead of guessed at. That matters because
-    providers routinely quote the offending request back inside a 400/401 body — the header they
-    received, or the full URL including the query — and a key can survive `_EVIDENCE_SECRET_RE` by
-    simply not looking like a known key shape: no recognised prefix, not a JWT. None of that defeats
-    an exact substring match, which is why the deterministic layer carries the weight here and the
-    pattern layer is only a net for third-party secrets.
+
+def _secret_renderings(tool: Tool, secrets: dict[int, Secret]) -> list[str]:
+    """Every spelling of every injected credential for this tool, longest first.
+
+    This is the primary defence and the only deterministic one: platform credentials come from a
+    named setting and org credentials from an encrypted Secret, so both can be matched exactly instead
+    of guessed at. Providers routinely quote the offending request back inside a 400/401 body — the
+    header they received, or the full URL including the query — and a key can survive
+    `_EVIDENCE_SECRET_RE` by simply not looking like a known key shape. Exact substring masking is why
+    the deterministic layer carries the weight here and the pattern layer is only a net.
 
     treg injects the value verbatim, but a PROVIDER may hand it back transformed, and a transform it
     can reverse is one we have to anticipate. Four families, all observed shapes rather than guesses:
@@ -9906,24 +9920,60 @@ def _platform_secret_renderings(tool: Tool) -> list[str]:
         if not value or len(value) < 4:
             return  # too short to mask without redacting half the message
         enc = quote(value, safe="")
-        out.update({value, enc, enc.lower(), quote_plus(value), value.replace("/", "\\/")})
+        out.update({value, enc, enc.lower(), quote_plus(value), value.replace("/", "\\/"),
+                    json.dumps(value, ensure_ascii=False)[1:-1]})
+
+    def add_credential(value: str) -> None:
+        add(value)
+        for part in _basic_credential_parts(value):  # mask what a provider can DECODE
+            add(part)
 
     for binding in tool.bindings or []:
         setting = binding.get("platform_setting")
-        if not setting:
-            continue  # tiers 1-2 carry a secret_id instead; this function is platform-only by design
-        value = getattr(get_settings(), setting, None)
-        if not isinstance(value, str) or not value.strip():
+        if setting:
+            value = getattr(get_settings(), setting, None)
+            if not isinstance(value, str) or not value.strip():
+                continue
+            value = value.strip()
+            add_credential(value)
+            add(str(binding.get("format") or "{secret}").format(secret=value))
             continue
-        value = value.strip()
-        add(value)
-        add(str(binding.get("format") or "{secret}").format(secret=value))
-        for part in _basic_credential_parts(value):  # mask what the provider can DECODE
-            add(part)
+
+        sid = binding.get("secret_id")
+        if sid is None:
+            continue
+        plain = crypto.decrypt(secrets[sid].value)
+        add_credential(plain)
+        injector = binding.get("injector", "env")
+        if injector not in ("oauth", "secret_file"):
+            add(str(binding.get("format") or "{secret}").format(secret=plain.strip()))
+            continue
+
+        field = str(binding.get("secret_field") or "access_token")
+        token = injectors._token_from_json(plain, field)
+        add_credential(token)
+        add(f"Bearer {token}")
+        add(str(binding.get("format") or "{secret}").format(secret=token.strip()))
+        data = json.loads(plain)
+        if not isinstance(data, dict):
+            raise ValueError("JSON credential is not an object")
+        sensitive = _SENSITIVE_JSON_SECRET_KEYS | {field.lower()}
+        for key, value in data.items():
+            if isinstance(key, str) and key.lower() in sensitive and isinstance(value, str):
+                add_credential(value)
     # Longest first so `Bearer abc` is masked as a unit before the bare `abc` inside it turns the
     # line into `Bearer ***` — same result here, but the ordering stops a shorter secret that is a
     # substring of a longer one from fragmenting it into an unmatchable remainder.
     return sorted((s for s in out if len(s) >= 4), key=len, reverse=True)
+
+
+def _safe_secret_renderings(tool: Tool, secrets: dict[int, Secret]) -> list[str] | None:
+    """Render credentials for masking, or signal that evidence must be replaced wholesale."""
+    try:
+        return _secret_renderings(tool, secrets)
+    except Exception as exc:  # noqa: BLE001 — malformed/encrypted credentials must fail closed
+        logging.getLogger("treg").warning("could not render credentials for error masking: %s", exc)
+        return None
 
 
 def _basic_credential_parts(value: str) -> list[str]:
@@ -10018,7 +10068,7 @@ def _redact_snippet(text: str, secrets: list[str], limit: int) -> str:
     if secrets:
         probe = unquote(text.replace("\\/", "/")).lower()
         if any(s.lower() in probe for s in secrets):
-            return "<redacted: a platform credential survived masking>"
+            return "<redacted: a credential survived masking>"
     if len(text) <= limit:
         return text
     # Truncation can expose a partial token at the seam that was safe only while whole.
@@ -10175,6 +10225,53 @@ async def _buffer_response(response: StreamingResponse) -> tuple[Response, bytes
     out.raw_headers = [(k, v) for k, v in response.raw_headers if k.lower() != b"content-length"]
     out.raw_headers.append((b"content-length", str(len(body)).encode()))
     return out, body
+
+
+async def _peek_stream_head(response: StreamingResponse, limit: int) -> tuple[StreamingResponse, bytes]:
+    """Read at most ``limit`` response bytes for evidence, then replay every byte to the caller.
+
+    Unmetered calls retain their streaming contract. The consumed chunks are yielded first by the
+    replacement response, followed by the untouched iterator; the relay's upstream-close background
+    task moves with it and therefore still runs after the caller finishes reading.
+    """
+    iterator = response.body_iterator.__aiter__()
+    consumed: list[bytes] = []
+    head = bytearray()
+    while len(head) < limit:
+        try:
+            chunk = await iterator.__anext__()
+        except StopAsyncIteration:
+            break
+        raw = chunk if isinstance(chunk, bytes) else str(chunk).encode("utf-8", "replace")
+        consumed.append(raw)
+        head.extend(raw[:limit - len(head)])
+
+    async def replay():
+        for chunk in consumed:
+            yield chunk
+        async for chunk in iterator:
+            yield chunk
+
+    out = StreamingResponse(replay(), status_code=response.status_code,
+                            background=response.background)
+    response.background = None
+    out.raw_headers = list(response.raw_headers)
+    return out, bytes(head)
+
+
+def _error_response_evidence(response: Response, body: bytes, secrets: list[str]) -> str:
+    """Build the redacted provider half of a failed-call evidence row."""
+    # Headers first: a 401 or 429 often has an empty or generic body, and `Retry-After` /
+    # `WWW-Authenticate` / the rate-limit trio are then the entire diagnosis.
+    hdrs = " ".join(f"{h}={response.headers[h]}" for h in _EVIDENCE_HEADERS
+                    if response.headers.get(h))
+    evidence = _redact_snippet(
+        (f"[{hdrs}] " if hdrs else "") +
+        _decode_error_body(body[:_ERROR_BODY_SLICE],
+                           response.headers.get("content-encoding", ""),
+                           response.headers.get("content-type", "")),
+        secrets, _ERROR_RESPONSE_MAX)
+    return evidence or "<no response body or headers>"
 
 
 async def _platform_settle(
@@ -10360,14 +10457,22 @@ async def call_tool(
     if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
         await _enforce_public_demo_ip_cap(request, db)  # shared token → meter by client IP, not user
 
-    # The caller's own request bytes, read ONCE and only for a platform call, so a failure can be
-    # explained later (see models.CallRecord.error_request). Starlette caches the body, so the relay
-    # still streams the same bytes — but read it here rather than relying on some other path having
-    # happened to read it first, which would make this silently stop working the day that path moves.
+    # The caller's own request bytes, read ONCE when it is safe to buffer them, so a failure can be
+    # explained later (see models.CallRecord.error_request). Metered JSON calls already require full
+    # buffering. Otherwise only a declared body at or below 64 KiB is cached; large and chunked uploads
+    # keep streaming and still retain their query-param half if they fail. Starlette's request cache
+    # lets relay stream the same bytes after this read.
     # Named `caller_body`: `body` in this function is the buffered RESPONSE, and confusing the two
     # would file the provider's answer as the caller's request.
     caller_body = b""
-    if mk is not None and mk.metered and _may_have_body(request):
+    content_length = request.headers.get("content-length")
+    small_declared_body = False
+    if content_length is not None:
+        try:
+            small_declared_body = 0 <= int(content_length) <= _ERROR_CALLER_BODY_MAX
+        except ValueError:
+            small_declared_body = False
+    if _may_have_body(request) and ((mk is not None and mk.metered) or small_declared_body):
         try:
             caller_body = await request.body()
         except Exception:  # noqa: BLE001 — a caller that hung up must not become a 500 here
@@ -10403,11 +10508,11 @@ async def call_tool(
                 "duration_ms": duration_ms, "response_bytes": response_bytes,
                 "params_hash": mk.params_hash,
             }
-            # The tier gate lives HERE as well as at every call site: this is the one field that
-            # retains content, and a future site that forgets the check must still not be able to
-            # write a team's own-key traffic into it.
-            if mk.metered and (error_request or error_response):
-                telemetry |= {"error_request": error_request, "error_response": error_response}
+        # Sanctioned reversal of PR #139: failed own-key and own-tool calls now retain the same
+        # redacted, admin-only, 14-day evidence as marketplace failures. Successes remain empty and
+        # `/calls` still never exposes these columns.
+        if error_request or error_response:
+            telemetry |= {"error_request": error_request, "error_response": error_response}
         audit.record_call(
             org_id=audit_org_id, user_email=audit_email, tool_name=audit_tool,
             method=request.method, path=upstream_url, status_code=status_code,
@@ -10491,7 +10596,7 @@ async def call_tool(
         # raises MissingGreenlet. Doing it inside the handler below turned the one refusal an agent
         # is most likely to hit into a 500 with no `balance_micro` and no top-up URL. Same reasoning
         # as `block_id` in billing._credit, and the reason that capture is pinned by a test.
-        refusal_secrets = _platform_secret_renderings(tool)
+        refusal_secrets = _safe_secret_renderings(tool, secrets)
         try:
             await _platform_reserve(mk, caller, db, meta=meta, call_ref=call_ref)
         except HTTPException as exc:
@@ -10512,9 +10617,12 @@ async def call_tool(
             # already retains, and it is bounded by the same redaction and 14-day retention.
             _audit(exc.status_code, charged_micro=0,
                    refused_by="balance" if exc.status_code == 402 else "cap",
-                   error_response=_redact_snippet(f"treg: {exc.detail}", refusal_secrets,
-                                                  _ERROR_RESPONSE_MAX))
+                   error_response=(
+                       _ERROR_MASKING_FAILED if refusal_secrets is None else
+                       _redact_snippet(f"treg: {exc.detail}", refusal_secrets,
+                                       _ERROR_RESPONSE_MAX)))
             raise
+    body = b""
     started = _now_ms()
     try:
         # treg keeps oauth tokens fresh: refresh in place if stale, before injecting. Inside the
@@ -10533,6 +10641,10 @@ async def call_tool(
                 # in the body (see _buffer_response). A failure while draining is still an upstream
                 # failure, so it becomes a 502 and the hold goes back.
                 response, body = await _buffer_response(response)
+            elif response.status_code >= 400:
+                # Preserve streaming for own-key and own-tool calls while retaining only the small
+                # diagnostic head. The replacement response replays every consumed byte verbatim.
+                response, body = await _peek_stream_head(response, _ERROR_BODY_SLICE)
         except ValueError as exc:  # a binding/injector mismatch (e.g. non-JSON secret on an oauth binding)
             raise HTTPException(status_code=502, detail=f"credential injection failed: {exc}")
         except httpx.RequestError as exc:  # upstream down/timeout is a gateway fault, not treg's 500
@@ -10540,18 +10652,20 @@ async def call_tool(
     except HTTPException as exc:
         # The provider never produced a billable answer (our own error, a failed injection, an
         # unreachable upstream) → return the hold in full, regardless of the endpoint's billing type.
-        if mk is not None and mk.metered:
+        metered = mk is not None and mk.metered
+        if metered:
             await _platform_settle(mk, None, reason=f"call_failed_{exc.status_code}")
-            # No provider body exists on this branch — `body` is UNBOUND here whenever relay raised,
-            # so it must never be referenced. treg's own detail is the explanation instead, and it is
-            # the one worth keeping: this branch carries the 502s (upstream timeout, connection reset,
-            # failed injection, SSRF refusal, missing platform key) where a bare status says least.
-            _secrets = _platform_secret_renderings(tool)
-            _audit(exc.status_code, charged_micro=0, duration_ms=_now_ms() - started,
-                   error_request=_caller_request_snippet(request, tool, caller_body, _secrets),
-                   error_response=_redact_snippet(f"treg: {exc.detail}", _secrets, _ERROR_RESPONSE_MAX))
-        else:
-            _audit(exc.status_code, duration_ms=_now_ms() - started)  # record the failed attempt
+        # No provider body exists on this branch. treg's own detail is the explanation instead, and
+        # it is the one worth keeping: this branch carries refresh, timeout, injection and SSRF 502s.
+        _renderings = _safe_secret_renderings(tool, secrets)
+        _audit(exc.status_code, charged_micro=0 if metered else None,
+               duration_ms=_now_ms() - started,
+               error_request=(
+                   _ERROR_MASKING_FAILED if _renderings is None else
+                   _caller_request_snippet(request, tool, caller_body, _renderings)),
+               error_response=(
+                   _ERROR_MASKING_FAILED if _renderings is None else
+                   _redact_snippet(f"treg: {exc.detail}", _renderings, _ERROR_RESPONSE_MAX)))
         raise
     except Exception:  # noqa: BLE001 — an unexpected fault is still not the caller's bill
         # The reaper would eventually return this hold anyway; returning it now means a bug in the call
@@ -10574,26 +10688,12 @@ async def call_tool(
         # only place it exists: nothing downstream keeps the body.
         err_request = err_response = None
         if response.status_code >= 400:
-            _secrets = _platform_secret_renderings(tool)
-            err_request = _caller_request_snippet(request, tool, caller_body, _secrets)
-            # Headers first: a 401 or 429 often has an empty or generic body, and `Retry-After` /
-            # `WWW-Authenticate` / the rate-limit trio are then the entire diagnosis — the difference
-            # between a bad credential, the wrong auth scheme, and a quota that returns in 60s.
-            hdrs = " ".join(f"{h}={response.headers[h]}" for h in _EVIDENCE_HEADERS
-                            if response.headers.get(h))
-            err_response = _redact_snippet(
-                (f"[{hdrs}] " if hdrs else "") +
-                _decode_error_body(body[:_ERROR_BODY_SLICE],
-                                   response.headers.get("content-encoding", ""),
-                                   response.headers.get("content-type", "")),
-                _secrets, _ERROR_RESPONSE_MAX)
-            # A failed platform call must ALWAYS leave evidence, even when there is nothing to say.
-            # A bodyless 4xx with none of the allowlisted headers produced "" for both snippets, and
-            # `_audit` only records evidence when one is truthy — so the row dropped out of
-            # `/admin/errors` entirely and the failure looked like it had never been captured.
-            # "Nothing came back" is itself the finding; silence must not be indistinguishable from
-            # the feature not running.
-            err_response = err_response or "<no response body or headers>"
+            _renderings = _safe_secret_renderings(tool, secrets)
+            if _renderings is None:
+                err_request = err_response = _ERROR_MASKING_FAILED
+            else:
+                err_request = _caller_request_snippet(request, tool, caller_body, _renderings)
+                err_response = _error_response_evidence(response, body, _renderings)
         _audit(response.status_code, observed_micro=observed, charged_micro=charged,
                duration_ms=duration_ms, response_bytes=len(body),
                error_request=err_request, error_response=err_response)
@@ -10613,8 +10713,19 @@ async def call_tool(
         response.headers["X-Treg-Cost-Micro"] = str(charged)
         response.headers["X-Treg-Call-Id"] = call_ref
         return response
-    # Fire-and-forget audit — does not block the streaming response (rule #2).
-    _audit(response.status_code, duration_ms=duration_ms)
+    # Fire-and-forget audit — does not block the streaming response (rule #2). A failed unmetered
+    # call has already yielded just enough response bytes to retain redacted evidence; successes
+    # still take the untouched streaming path.
+    err_request = err_response = None
+    if response.status_code >= 400:
+        _renderings = _safe_secret_renderings(tool, secrets)
+        if _renderings is None:
+            err_request = err_response = _ERROR_MASKING_FAILED
+        else:
+            err_request = _caller_request_snippet(request, tool, caller_body, _renderings)
+            err_response = _error_response_evidence(response, body, _renderings)
+    _audit(response.status_code, duration_ms=duration_ms,
+           error_request=err_request, error_response=err_response)
     if idem_key:
         # Unmetered: nothing was billed, so there is nothing to protect. Dropping the claim frees the
         # label at once instead of making the caller wait out the window to reuse it.

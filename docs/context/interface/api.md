@@ -114,8 +114,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   skips the count entirely (zero overhead); the sandbox is exempt. **Soft by design** — it counts the
   best-effort `CallRecord`, so under load it fails *open*, never closed.
 - **Super-admin (cross-tenant, `require_superadmin`):** `/admin/stats|orgs|orgs/{id}|users|tools|calls|
-  errors|health` (reads — `errors` is failed **platform** calls with the captured request/response
-  evidence, and runs the 14-day retention pass; see [super-admin](../architecture/super-admin.md))
+  errors|health` (reads — `errors` is failed calls across every credential tier with captured,
+  admin-only request/response evidence, supports a `tier` filter, and runs the 14-day retention pass;
+  see [super-admin](../architecture/super-admin.md))
   + `/admin/users/{id}/superadmin|suspend`, `DELETE /admin/users/{id}`,
   `/admin/orgs/{id}/suspend`, `DELETE /admin/orgs/{id}` (Phase-2). See
   [super-admin](../architecture/super-admin.md).
