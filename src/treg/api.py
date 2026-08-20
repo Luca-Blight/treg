@@ -10053,9 +10053,16 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
         enrich, an empty `organizations` page on search) and charges nothing for it, so status-based
         billing alone would bill the caller for a response Apollo gave away. The body says whether
         the charged thing came back; when it didn't, the call settles at 0.
-      - hunter (domain search only): DERIVED too, and for the opposite reason — its price is not
+      - hunter (domain search): DERIVED too, and for the opposite reason — its price is not
         per row but one whole SEARCH credit per 10 emails returned, rounded up, with an empty
         domain free. `data.emails` is the only place that number exists.
+      - hunter (email finder): DERIVED, the flat case — one whole SEARCH credit when an email is
+        found, nothing on a miss ("a miss is free", per Hunter's own pricing), yet a miss still
+        answers HTTP 200, so the estimate billed the full credit for a name Hunter had nothing on.
+      - tikhub: REPORTED in prose rather than a number. Every envelope says whether the call is
+        billed; only the explicit no-charge phrasing settles at zero, because TikHub really does
+        charge for a 2xx whose payload is an embedded error (verified live 2026-07-30 — see
+        docs/context/architecture/catalog.md, "the provider decides what counts as success").
 
     Everyone else settles at the estimate. This is the same signal the catalog's `observed_cost`
     harvests, which is what lets phase 5's drift detector compare the two numbers directly."""
@@ -10105,6 +10112,30 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
         if isinstance(emails, list) and rate:
             credits = -(-len(emails) // 10)  # whole credits, rounded up; no emails = no charge
             return int(credits * rate * 1_000_000 + 0.5)
+        return None
+    if provider == "hunter" and mk.endpoint_id == "hunter.people.email.find":
+        # DERIVED, the flat case of the same family: the finder takes ONE whole search credit when
+        # it finds an email and nothing when it doesn't — the catalog note says "a miss is free" in
+        # as many words, yet a miss still answers HTTP 200 with `email: null`, so settling at the
+        # estimate billed the full credit ($0.0245) for a name Hunter had nothing on. A body
+        # without the `email` key (an error shape) still falls back to the estimate.
+        data = doc.get("data")
+        rate = catalog_store.load().credit_rates.get("hunter")
+        if isinstance(data, dict) and "email" in data and rate:
+            return int(rate * 1_000_000 + 0.5) if data["email"] else 0
+        return None
+    if provider == "tikhub":
+        # REPORTED in prose rather than a number: every TikHub envelope states whether the call is
+        # billed. A 2xx whose payload is an embedded error still says "This request will incur a
+        # charge." and TikHub really does charge us for it (verified live 2026-07-30 — see
+        # docs/context/architecture/catalog.md, "the provider decides what counts as success"), so
+        # a dead page settling at the estimate is faithful, not an over-charge. Only the explicit
+        # no-charge phrasing settles at zero; anything else stays at the estimate.
+        msg = doc.get("message")
+        if isinstance(msg, str):
+            low = msg.lower()
+            if "won't be charged" in low or "will not be charged" in low or "not incur" in low:
+                return 0
         return None
     if provider == "apollo":
         # Only the shapes whose billing rule is documented and body-decidable: company enrichment

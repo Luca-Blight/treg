@@ -238,6 +238,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   discovery list. Calling it—or asking `/catalog/endpoints/{id}/access` whether it is callable—returns
   an actionable 410. The `/call/` refusal is recorded with `refused_by=retired` and never reaches a
   provider credential or relay.
+  A row can also carry `platform_blocked` — the route works upstream but treg's own subscription
+  cannot serve it (Akta's alternative-data tier). Those rows STAY in discovery (a caller's own key
+  may serve them) but are never platform offers, and the reason string rides on the served row.
   A zero-result search additionally points at **`POST /tool-requests`** (open, per-IP rate-limited,
   fields capped): file what the catalog is missing — stored as a `ToolRequest` row (see
   [data-model](../architecture/data-model.md)) with identity attached only when the caller happens

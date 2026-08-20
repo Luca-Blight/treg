@@ -49,6 +49,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: documented
     note: 0.0 credits for the product-list-only call (no `products` param); 1.5 credits per 50 reviews returned once `products` is passed — value here is the marginal per-50-reviews rate that applies once billed
+  platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
   docs_url: https://docs.akta.pro/api-reference/alternative-data/product-reviews
   skipped: not called — $1.5000 would exceed this run's $0.12 budget
 - id: akta.x.jobs
@@ -91,6 +92,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: documented
     note: 4 Akta credits per 10 job listings returned (llms-full.txt sample response)
+  platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
   docs_url: https://docs.akta.pro/api-reference/alternative-data/job-posts
   skipped: not called — $4.0000 would exceed this run's $0.12 budget
 - id: akta.x.social-posts
@@ -133,6 +135,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: documented
     note: 1 Akta credit per 10 posts returned (llms-full.txt sample response)
+  platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
   docs_url: https://docs.akta.pro/api-reference/alternative-data/social-posts
   skipped: not called — $1.0000 would exceed this run's $0.12 budget
 - id: akta.x.website-traffic
@@ -165,6 +168,7 @@ endpoints:
     checked: '2026-07-28'
     confidence: documented
     note: 1.5 Akta credits per request (llms-full.txt sample response)
+  platform_blocked: "upstream 403 'Your current subscription does not include access to this endpoint' on treg's shared Akta key (alternative-data tier; re-probed 2026-07-31). Works with your own Akta key on a plan that includes Alternative Signals."
   docs_url: https://docs.akta.pro/api-reference/alternative-data/website-traffic
   skipped: not called — $1.5000 would exceed this run's $0.12 budget
 - id: akta.x.company-addition

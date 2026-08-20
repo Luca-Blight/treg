@@ -116,6 +116,40 @@ endpoints:
       this capability; it is the catalog's ONLY route to tiktok-ads.library.search"
     docs_url: https://apify.com/s-r/tiktok-ads-library
 
+  - id: apify.linkedin.search.jobs
+    capability: linkedin.search.jobs
+    platform: linkedin
+    scope: any_account
+    method: POST
+    path: /actors/harvestapi~linkedin-job-search/run-sync-get-dataset-items
+    name: "Search LinkedIn job postings"
+    summary: "Scrape LinkedIn job postings by title, company, location or filters — the hiring-signal search that also answers 'what is this company hiring for' via the company filter"
+    input:
+      queryParams:
+        maxItems: {type: integer, required: false, note: "SERVER-SIDE result cap for pay-per-result actors — the only hard spend limit; set it on every call", example: 25}
+        maxTotalChargeUsd: {type: number, required: false, note: "alternative hard cap, in dollars", example: 0.05}
+        timeout: {type: integer, required: false, note: "seconds before the synchronous run is cut off; Apify closes the connection at 300s regardless", example: 120}
+      body:
+        jobTitles: {type: "array[string]", required: true, note: "job-search queries; supports boolean operators. To list ALL of one company's openings, pass a broad query here and pin `company`", example: ["software engineer"]}
+        company: {type: "array[string]", required: false, note: "restrict to these companies — names or LinkedIn company URLs", example: ["Netflix"]}
+        locations: {type: "array[string]", required: false, note: "LinkedIn location names; free text must match LinkedIn's autocomplete", example: ["San Francisco"]}
+        workplaceType: {type: "array[string]", required: false, note: "Remote / Hybrid / On-site"}
+        employmentType: {type: "array[string]", required: false, note: "Full-time / Part-time / Contract"}
+        experienceLevel: {type: "array[string]", required: false, note: "Entry / Mid / Senior"}
+        postedLimit: {type: string, required: false, note: "Past hour / Past 24 hours / Past week / Past month"}
+        sortBy: {type: string, required: false, note: "date | relevance"}
+        maxItems: {type: integer, required: false, note: "jobs per query; 0 means every available page (LinkedIn caps at 40 pages ≈ 1,000). Pair with the query-string maxItems, which is the enforced ceiling", example: 25}
+        page: {type: integer, required: false, note: "starting page, 25 jobs per page"}
+      bodyType: json
+      note: "the response is the dataset items array directly — no run envelope. Community actor scraping LinkedIn's public job search: no LinkedIn login needed, but expect the flakiness every LinkedIn scraper shows — retry before concluding a company has no openings"
+    test_request:
+      queryParams: {maxItems: 1, maxTotalChargeUsd: 0.05, timeout: 180}
+      body: {jobTitles: ["attorney"], locations: ["Miami, Florida"], maxItems: 1}
+    cost: {type: per_result, value: 0.001, currency: USD, per: 1, unit: result, source: docs, source_url: 'https://apify.com/harvestapi/linkedin-job-search', checked: '2026-08-20', confidence: documented, note: 'pay-per-event: $1.00 per 1,000 jobs published on the actor page, no platform usage charge on top. Charged per dataset item produced — cap every call with maxItems and read usageTotalUsd from GET /v2/actor-runs after a big pull'}
+    verified: 2026-08-20
+    example_response: examples/apify.linkedin.search.jobs.json
+    docs_url: https://apify.com/harvestapi/linkedin-job-search
+
   - id: apify.web.scrape.job.start
     kind: utility
     capability: web.scrape.job.start

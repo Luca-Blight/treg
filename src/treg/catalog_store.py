@@ -154,6 +154,11 @@ class Catalog:
         # never an offer treg may spend against, even if its historical price remains complete.
         if endpoint.get("status"):
             return False
+        # Blocked on treg's own plan: the route works, the price is real, and the shared key
+        # still cannot serve it — a documented upstream "your subscription does not include this
+        # endpoint". Discovery keeps the row (a caller's own key may serve it); the offer doesn't.
+        if endpoint.get("platform_blocked"):
+            return False
         cost = self.cost_view(endpoint.get("cost"), endpoint.get("provider"))
         if not cost or cost.get("usd") is None:
             return False
@@ -408,6 +413,11 @@ def _normalize(raw: dict, provider: str, directory: Path) -> dict:
         # `by_id`, but remove it from discovery and return the migration story on direct lookup.
         "status": str(raw.get("status") or "").strip().lower(),
         "status_note": str(raw.get("status_note") or "").strip(),
+        # A route that WORKS upstream but that treg's own plan/subscription cannot serve (a
+        # provider tier the shared key lacks). Unlike `status` it stays in discovery — a team's
+        # own key may well serve it — but it is never a platform offer, and the reason rides on
+        # the row so an agent learns "bring your own key" BEFORE the 403, not from it.
+        "platform_blocked": str(raw.get("platform_blocked") or "").strip(),
         "superseded_by": str(raw.get("superseded_by") or "").strip(),
         "docs_url": raw.get("docs_url") or "",
         "example_file": _example_file(raw, directory),
@@ -466,6 +476,9 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # a fact about the row that decides whether the caller needs a credential at all, so it
         # rides on the row rather than being re-derived per client (see `Catalog.platform_eligible`)
         "platform_eligible": cat.platform_eligible(ep) if cat else None,
+        # WHY the platform can't serve an otherwise-working route (plan/tier gap on treg's own
+        # subscription) — so "bring your own key" is said up front instead of discovered via a 403.
+        "platform_blocked": ep.get("platform_blocked") or None,
         # "no match" semantics, when the endpoint has them — an agent that reads `miss` stops
         # treating an expected empty answer as a failed call (and stops retrying it).
         "miss": ep.get("miss"),

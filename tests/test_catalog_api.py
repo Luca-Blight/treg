@@ -61,8 +61,8 @@ async def test_platform_detail_groups_the_same_job_across_providers(clients: Asy
     ep = next(e for e in profile["endpoints"] if e["provider"] == "tikhub")
     assert set(ep) == {"id", "provider", "provider_display", "name", "summary", "method", "path",
                        "scope", "tier", "kind", "domain", "call_template", "cost", "verified", "docs_url",
-                       "has_example", "input", "platform_eligible", "test_request", "miss",
-                       "status", "status_note", "superseded_by"}
+                       "has_example", "input", "platform_eligible", "platform_blocked",
+                       "test_request", "miss", "status", "status_note", "superseded_by"}
     assert ep["kind"] == "data", "an endpoint with no explicit kind is data (the browse surface)"
     assert ep["provider_display"] == P.get("tikhub").display_name
     assert ep["method"] == "GET" and ep["path"].startswith("/")
@@ -485,6 +485,14 @@ async def test_platform_eligibility_refuses_everything_it_cannot_prove():
     # eligible one would put treg's own key behind a route the provider has already removed.
     assert not cat.platform_eligible({**ok, "status": "retired"}), "a retired route is not an offer"
     assert not cat.platform_eligible({**ok, "status": "broken"}), "a broken route is not an offer"
+    # A plan-gated route works upstream but treg's own subscription cannot serve it — a customer
+    # discovered exactly this the hard way, via a run of 403s on akta's alternative-data family.
+    # It stays discoverable (a team's OWN key on a bigger plan serves it) but is never an offer.
+    assert not cat.platform_eligible({**ok, "platform_blocked": "plan gate"}), \
+        "a plan-gated route is not an offer, however well priced"
+    blocked = cat.by_id["akta.companies.headcount_trend"]
+    assert blocked["platform_blocked"], "the akta alt-signals family carries its plan-gate reason"
+    assert not cat.platform_eligible(blocked)
 
 
 async def test_eligibility_rides_on_the_served_row(clients: AsyncClient):

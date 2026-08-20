@@ -259,6 +259,19 @@ search the 20-row default page — $0.0490 for results nobody got, 20x the publi
 while `limit=1` on a domain that did answer settled at a tenth of the credit Hunter actually took.
 Where a provider's real rule is "whole units, rounded up, free on a miss", only the body knows.
 
+The same family carries two more derived rules. **Hunter's email finder** is the flat case: one whole
+search credit when an email comes back, nothing on a miss — Hunter documents a miss as free, but a
+miss still answers HTTP 200 with `email: null`, so the estimate billed the full $0.0245 for a name
+Hunter had nothing on (a customer measured exactly this against the catalog's own "a miss is free"
+note). **TikHub** reports billing in prose instead of a number: its envelope says whether the request
+incurs a charge. A 2xx whose payload is an embedded error ("dead_page", a job listing that
+redirected away) still says it will be charged, and TikHub really does charge us for it — verified
+live 2026-07-30 — so those settle at the estimate *faithfully*; only the explicit no-charge phrasing
+settles at zero. The distinction matters when a caller disputes a dead-page charge: for Hunter the
+old behaviour was an over-charge and is now fixed, for TikHub the charge is a passthrough of a real
+upstream cost, and the answer is to probe with a provider whose misses are free (scrapecreators
+404s cost nothing) before spending TikHub calls on unverified slugs.
+
 Closing the hold runs on its **own session** (the request's may be mid-rollback from the very error
 being released for) and **never raises** — the caller already has their answer, and a ledger hiccup
 must not turn a served call into a 500. A hold that fails to close is not lost money either: the
