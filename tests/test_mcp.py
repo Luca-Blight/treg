@@ -1139,6 +1139,20 @@ async def test_search_survives_missing_a_few_words_of_an_agent_sentence(clients)
     # the words that select ("on", "this" are not evidence about any endpoint)
     rows, _ = cs.search("trending repositories on github this week", cat, 3)
     assert rows and rows[0][0]["id"] == "scrapecreators.x.v1-github-trending-repositories"
+    # single letters can never select: "K&L" must not let k + l decide admission, and the company
+    # job ("enrich by name") must lead instead of 67 rows of noise (logged miss, 2026-08-20)
+    rows, total = cs.search("K&L Gates company lookup", cat, 8)
+    assert 0 < total < 30 and rows[0][0]["capability"].startswith("companies.")
+    # the jobs rows must survive an industry qualifier the catalog never says ("law firm"), via
+    # the openings->postings and firm->company aliases (logged miss, 2026-08-20)
+    rows, total = cs.search("law firm job openings hiring signal", cat, 8)
+    assert total and {"apollo.companies.jobs", "apify.linkedin.search.jobs"} <= {ep["id"] for ep, _ in rows}
+    # a zero-result answer names the rows just under the gate and the exact unmatched words
+    near = cs.near_misses("law firm dinosaur excavation permits", cat)
+    assert all(n["missing"] for n in near) if near else True
+    zero_q = "resolve company name to linkedin slug"
+    if cs.search(zero_q, cat, 1)[1] == 0:
+        assert cs.near_misses(zero_q, cat), "a zero result must surface its near-misses"
 
 
 async def test_search_breaks_ties_on_what_treg_has_MEASURED(clients):

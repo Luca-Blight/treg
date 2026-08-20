@@ -56,7 +56,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /email-search
-    name: "Find a person's work email"
+    name: "Find a work email from a name and domain (async)"
     summary: "Find a single email address from a firstname, a lastname and a company domain name"
     input:
       body:
@@ -89,7 +89,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /email-verification
-    name: "Verify an email address"
+    name: "Verify an email address is deliverable (async)"
     summary: "Check whether a specific email address exists and is deliverable, including catch-all detection"
     input:
       body:
@@ -120,7 +120,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /domain-search
-    name: "Scan a domain for role-based emails"
+    name: "Find role-based emails at a domain — contact@, support@"
     summary: "Discover a company's role-based addresses — contact@, support@, info@, admin@ and the rest"
     input:
       body:
@@ -151,7 +151,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /bulk-single-searchs/read
-    name: "Read search results"
+    name: "Read any search's results by id (the poll route)"
     summary: "Collect the result of any single search, or the rows of a bulk search, by id"
     input:
       body:
@@ -177,7 +177,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /bulk-search
-    name: "Start a bulk email job"
+    name: "Start a bulk email job (up to 5,000 rows)"
     summary: "Queue up to 5,000 rows of email discovery, email verification or domain scanning in one call"
     input:
       body:
@@ -234,7 +234,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /reverse-email-lookup
-    name: "Find the profile behind an email"
+    name: "Reverse email lookup — the person's profile URL"
     summary: "Reverse a professional email address to the person's public professional profile URL"
     input:
       body:
@@ -264,7 +264,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /reverse-email-lookups
-    name: "Find the profiles behind many emails"
+    name: "Reverse up to 50 emails to profile URLs in one call"
     summary: "Reverse up to 50 professional email addresses to their profile URLs in one call"
     input:
       body:
@@ -294,7 +294,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /find-people
-    name: "Search the people database"
+    name: "Search people by title, company, skills or location"
     summary: "Find people by job title, company, seniority, skills, school, location or years of experience"
     input:
       body:
@@ -325,7 +325,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /find-people/count
-    name: "Count people matching a search"
+    name: "Count people matching a search (free)"
     summary: "How many people match a query, before you pay to read any of them"
     input:
       body:
@@ -345,7 +345,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /find-companies
-    name: "Search the company database"
+    name: "Search companies by industry, headcount growth or revenue"
     summary: "Find companies by industry, headcount, headcount growth, revenue, type, location or keyword"
     input:
       body:
@@ -376,7 +376,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /find-companies/count
-    name: "Count companies matching a search"
+    name: "Count companies matching a search (free)"
     summary: "How many companies match a query, before you pay to read any of them"
     input:
       body:
@@ -396,7 +396,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /url-search/profile
-    name: "Find a person's profile URL"
+    name: "Find a person's profile URL from name and company"
     summary: "Resolve a name plus a company or job title to that person's professional profile URL"
     input:
       body:
@@ -429,7 +429,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /url-search/company
-    name: "Find a company's profile URL"
+    name: "Find a company's profile URL from its name or domain"
     summary: "Resolve a company name or domain to its professional profile URL"
     input:
       body:
@@ -459,7 +459,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /url-search
-    name: "Find profile URLs in bulk"
+    name: "Find up to 50 profile URLs in one call"
     summary: "Resolve up to 50 people or 50 companies to their professional profile URLs in one call"
     input:
       body:
@@ -490,7 +490,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /scrape/profile
-    name: "Enrich a person from their profile URL"
+    name: "Enrich a person by profile URL — roles, education"
     summary: "Full professional profile — headline, description, current and past roles, education, languages, location"
     input:
       queryParams:
@@ -520,7 +520,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /scrape/company
-    name: "Enrich a company from its profile URL"
+    name: "Enrich a company by profile URL — headcount and growth"
     summary: "Full company profile — description, headcount and growth, industry, address, website, specialties"
     input:
       queryParams:
@@ -550,7 +550,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /scrape
-    name: "Enrich profiles or companies in bulk"
+    name: "Enrich up to 50 profiles or companies by URL in one call"
     summary: "Read up to 50 people profiles, or up to 50 company profiles, from their URLs in one call"
     input:
       body:

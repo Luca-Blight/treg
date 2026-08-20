@@ -46,7 +46,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/contact-details/single
-    name: "Find a person's work email (standard)"
+    name: "Find a person's work email by LinkedIn URL (standard)"
     summary: "Reveal contact details (standard)"
     input:
       bodyType: json
@@ -80,7 +80,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/contact-details/turbo/sync
-    name: "Find a person's work email (turbo)"
+    name: "Find a person's work email by LinkedIn URL (turbo)"
     summary: "Reveal contact details (turbo)"
     input:
       bodyType: json
@@ -112,7 +112,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/kitchen-sink/person
-    name: "Enrich a person from LinkedIn, email or name"
+    name: "Enrich a person by LinkedIn URL, email or name"
     summary: "Kitchen sink person lookup"
     input:
       bodyType: json
@@ -149,7 +149,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/kitchen-sink/company
-    name: "Enrich a company from domain or LinkedIn"
+    name: "Enrich a company by domain or LinkedIn URL — tech, funding"
     summary: "Kitchen sink company lookup"
     input:
       bodyType: json
@@ -215,7 +215,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/linkedin-live-fetch/company/single
-    name: "Live-fetch a LinkedIn company profile"
+    name: "Live-fetch a LinkedIn company profile — headcount history"
     summary: "Live fetch LinkedIn company"
     input:
       bodyType: json
@@ -246,7 +246,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/email-to-person/single
-    name: "Find a person from their email address"
+    name: "Reverse email lookup — LinkedIn URL, name, title"
     summary: "Find person by email (single)"
     input:
       bodyType: json
@@ -275,7 +275,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/company-search
-    name: "Search companies by industry, size or tech"
+    name: "Search companies with typed filters"
     summary: "Search for companies using filters"
     input:
       bodyType: json
@@ -311,7 +311,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/people-search
-    name: "Search people by role, company or location"
+    name: "Search people by seniority or current employer"
     summary: "Search for people using filters"
     input:
       bodyType: json
@@ -376,7 +376,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/github-to-linkedin/trigger
-    name: "Resolve a GitHub username to LinkedIn"
+    name: "Resolve GitHub usernames to LinkedIn profiles (async)"
     summary: "Start GitHub to LinkedIn lookup"
     input:
       bodyType: json
@@ -408,7 +408,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v1/github-to-linkedin/polling
-    name: "Poll a GitHub-to-LinkedIn lookup"
+    name: "Poll a GitHub-to-LinkedIn lookup job"
     summary: "Poll GitHub to LinkedIn lookup"
     input:
       bodyType: json

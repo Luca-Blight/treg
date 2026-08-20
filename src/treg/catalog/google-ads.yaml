@@ -40,7 +40,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /v25/customers:listAccessibleCustomers
-    name: "List accessible accounts"
+    name: "List the Google Ads accounts your login can reach"
     summary: "List the Google Ads accounts your login can reach"
     input:
       note: "no parameters. Returns {resourceNames: [\"customers/6186675831\", …]} — ids ONLY, no names, which is why treg runs a second GAQL lookup (SELECT customer.descriptive_name FROM customer) per row to label the picker. Still needs the developer-token header"
@@ -56,7 +56,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v25/customers/{customer_id}/googleAds:search
-    name: "Run a custom GAQL query"
+    name: "Run a GAQL query on your Google Ads account"
     summary: "Run a GAQL query against your Google Ads account (campaigns, spend, clicks, conversions)"
     input:
       pathParams:
@@ -82,7 +82,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v25/customers/{customer_id}:generateKeywordIdeas
-    name: "Generate keyword ideas from a seed"
+    name: "Keyword Planner ideas by seed — volume and competition"
     summary: "Related keyword ideas from Google's own Keyword Planner, with volume and competition"
     input:
       pathParams:
@@ -116,7 +116,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v25/customers/{customer_id}:generateKeywordHistoricalMetrics
-    name: "Get historical keyword search volume"
+    name: "Google search volume, competition, bids by keyword list"
     summary: "Get Google search volume, competition and bid range for a list of keywords"
     input:
       pathParams:
@@ -148,7 +148,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v25/customers/{customer_id}/campaignBudgets:mutate
-    name: "Update campaign budget"
+    name: "Change a campaign's daily budget in Google Ads"
     summary: "Change a campaign's daily budget in your Google Ads account"
     input:
       pathParams:

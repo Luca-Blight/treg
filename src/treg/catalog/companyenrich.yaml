@@ -145,7 +145,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /companies/enrich/batch
-    name: "Enrich up to 50 companies in one request"
+    name: "Enrich up to 50 companies by domain in one call"
     summary: "Enriches a list of companies using their domain names — up to 50 domains per request"
     input:
       body:
@@ -177,7 +177,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies
-    name: "Get a company by its id"
+    name: "A company record by CompanyEnrich id"
     summary: "Gets a company information by its CompanyEnrich ID"
     input:
       queryParams:
@@ -239,7 +239,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/autocomplete
-    name: "Autocomplete a company domain"
+    name: "Resolve a company name to its domain (free autocomplete)"
     summary: "Returns a list of companies matching the given partial domain name — up to 10 companies per request"
     input:
       queryParams:
@@ -399,7 +399,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /companies/similar
-    name: "Find companies similar to a seed company"
+    name: "Lookalike companies for a seed domain or id"
     summary: "Finds similar companies to the given company by id or domain — at most 100 companies are returned per request"
     input:
       body:
@@ -436,7 +436,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /companies/similar/scroll
-    name: "Scroll similar-company results past 10,000 rows"
+    name: "Scroll lookalike-company results past 10,000 rows"
     summary: "Finds similar companies with cursor-based pagination — allows paginating into more than 10.000 results"
     input:
       body:
@@ -468,7 +468,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /companies/similar/count
-    name: "Count similar companies (free)"
+    name: "Count lookalike companies for a seed (free)"
     summary: "Returns the total count of similar companies matching the given search criteria without retrieving the actual results"
     input:
       body:
@@ -722,7 +722,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /people
-    name: "Get a person by their id"
+    name: "A person record by CompanyEnrich id"
     summary: "Gets person information by its CompanyEnrich ID"
     input:
       queryParams:
@@ -785,7 +785,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /people/email
-    name: "Resolve a person's work email (beta)"
+    name: "Find a person's work email by person id (beta)"
     summary: "Resolves a work email address for a single person on a specific domain"
     input:
       queryParams:
@@ -1156,7 +1156,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /geo/cities
-    name: "Search cities"
+    name: "Search cities by name"
     summary: "Searches cities by name or country codes — returns up to 100 cities per page"
     input:
       body:

@@ -125,6 +125,7 @@ class SearchOut(TypedDict, total=False):
     total_matches: int | None
     results: list[SearchResult] | None
     ranking_note: str | None     # set when the tie group outran what the evidence sort could weigh
+    near: list[dict] | None      # zero results only: the rows just under the gate + the words they miss
     hint: str | None
     next: str | None
     error: str | None
@@ -524,11 +525,24 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
         # in-process, so the HTTP route's logging never sees an MCP agent's empty search.
         if query.strip():
             audit.record_search_miss(query=query.strip(), source="mcp")
-        out["hint"] = (
-            f"nothing matches {query!r} closely enough — try different task words. "
-            "If the catalog genuinely lacks it, file it with catalog_request(capability=...) — "
-            "requests steer which provider gets added next"
-        )
+        # the zero-result answer carries the rows that JUST missed the gate and which words they
+        # missed — the caller is an LLM, and told exactly what to drop it re-queries correctly
+        near = catalog_store.near_misses(query, cat)
+        if near:
+            out["near"] = near
+            first = near[0]
+            out["hint"] = (
+                f"nothing matches {query!r} closely enough. Nearest: {first['endpoint_id']} "
+                f"matches {', '.join(first['matches'])} but not {', '.join(first['missing'])} — "
+                "drop the unmatched words, or say the task differently. If the catalog genuinely "
+                "lacks it, file it with catalog_request(capability=...)"
+            )
+        else:
+            out["hint"] = (
+                f"nothing matches {query!r} closely enough — try different task words. "
+                "If the catalog genuinely lacks it, file it with catalog_request(capability=...) — "
+                "requests steer which provider gets added next"
+            )
     else:
         out["next"] = "catalog_get(endpoint_id) for parameters and the exact price, then call(...)"
     return out

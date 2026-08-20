@@ -19,7 +19,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v2/aggs/ticker/{ticker}/prev
-    name: "Previous close for a ticker"
+    name: "Previous close by stock ticker — prior day OHLCV bar"
     summary: "The prior trading day's open/high/low/close/volume bar for one ticker"
     input:
       queryParams:
@@ -37,7 +37,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v2/aggs/ticker/{ticker}/range/{multiplier}/{timespan}/{from}/{to}
-    name: "Aggregate bars over a date range"
+    name: "Stock OHLCV bars by ticker and date range, any interval"
     summary: "OHLCV bars for a ticker at any granularity (minute to year) over a date range — Polygon's workhorse endpoint"
     input:
       queryParams:
@@ -61,7 +61,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/open-close/{ticker}/{date}
-    name: "Open and close on a specific date"
+    name: "Daily open and close by stock ticker on one date"
     summary: "One ticker's open, close, high, low, volume and after-hours prices on one date"
     input:
       queryParams:
@@ -80,7 +80,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v3/reference/tickers
-    name: "Search tickers"
+    name: "Search stock and crypto tickers by symbol or name"
     summary: "Search Polygon's reference directory of tickers by symbol or name, filtered by market and type"
     input:
       queryParams:
@@ -101,7 +101,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v3/reference/tickers/{ticker}
-    name: "Ticker details"
+    name: "Company details by stock ticker — market cap, listing date"
     summary: "Company details behind a ticker: name, market cap, listing date, SIC classification, homepage"
     input:
       queryParams:
@@ -118,7 +118,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/marketstatus/now
-    name: "Market status right now"
+    name: "US stock market open or closed right now"
     summary: "Whether US markets and each exchange are open, closed or in extended hours at this moment"
     input:
       note: "no parameters"

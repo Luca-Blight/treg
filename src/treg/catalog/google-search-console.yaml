@@ -29,7 +29,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /webmasters/v3/sites/{siteUrl}/searchAnalytics/query
-    name: "Get search performance metrics"
+    name: "Search performance of your site — clicks, impressions, CTR"
     summary: "Get your site's Google Search performance — clicks, impressions, CTR and top queries"
     input:
       pathParams:
@@ -59,7 +59,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /webmasters/v3/sites
-    name: "List sites"
+    name: "List your Search Console sites"
     summary: "List the sites and domains you have access to in Search Console"
     input:
       note: "no parameters. Returns {siteEntry: [{siteUrl, permissionLevel}]}; permissionLevel siteUnverifiedUser means the property is listed but not readable. This is also the connection's health probe and resource picker"
@@ -75,7 +75,7 @@ endpoints:
     scope: own_account
     method: POST
     path: /v1/urlInspection/index:inspect
-    name: "Inspect a URL's index status"
+    name: "Inspect a URL's Google index status"
     summary: "Check whether a page of your site is indexed by Google, and why it is or isn't"
     input:
       body:
@@ -97,7 +97,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /webmasters/v3/sites/{siteUrl}/sitemaps
-    name: "List submitted sitemaps"
+    name: "List submitted sitemaps for your site"
     summary: "List the sitemaps submitted for your site and how many URLs Google took from each"
     input:
       pathParams:

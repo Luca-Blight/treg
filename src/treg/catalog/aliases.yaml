@@ -11,7 +11,11 @@
 # Curation rules (enforced by scripts/catalog_validate.py check_aliases):
 #   - keys and values are lowercase single words (they pass through the same tokenizer as queries);
 #   - a value must actually occur in the catalog's text, or the alias is dead weight (warning);
-#   - no self-reference.
+#   - no self-reference;
+#   - NOUNS ONLY, and the target must be a selective word. Aliasing a verb to a commoner verb
+#     poisons the key: `lookup: [search, find]` inflated lookup's match set from 27 endpoints to
+#     689 and destroyed its ranking power (found 2026-08-20). Generic verbs are the algorithm's
+#     job (soft tokens), not this file's.
 # Feed: the SearchMiss log (models.SearchMiss) — a logged zero-result query whose words name an
 # existing endpoint in different vocabulary is exactly one row here. Add the word agents USED as
 # the key, the word the catalog HAS as the value.
@@ -35,14 +39,18 @@ aliases:
   screenshot: [screen]
   # people & companies
   person: [people]
+  firm: [company]
+  firms: [company]
   employee: [employees, headcount]
   staff: [employees, headcount]
   firmographic: [company]
   firmographics: [company]
+  # jobs
+  openings: [postings]
+  opening: [postings]
+  vacancies: [postings, jobs]
+  vacancy: [postings, jobs]
   # platform shorthands agents use
   ig: [instagram]
   yt: [youtube]
   fb: [facebook]
-  # actions
-  scrape: [fetch, get]
-  lookup: [search, find]

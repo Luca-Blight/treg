@@ -33,7 +33,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get campaign details and performance'
+  name: "Google Ads campaign stats via GAQL"
   summary: GAQL FROM campaign — Campaigns — name, status, budget, bidding strategy, start/end dates and all campaign-level metrics
   scope: own_account
   cost:
@@ -61,7 +61,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get ad group details and performance'
+  name: "Google Ads ad group stats via GAQL"
   summary: GAQL FROM ad_group — Ad groups — name, status, type, CPC bid and ad-group-level metrics
   scope: own_account
   cost:
@@ -89,7 +89,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get individual ad details and performance'
+  name: "Google Ads individual ads via GAQL — headlines, URLs"
   summary: GAQL FROM ad_group_ad — The individual ads — headlines, descriptions, final URLs, approval status and per-ad metrics
   scope: own_account
   cost:
@@ -117,7 +117,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get ad group targeting and bids'
+  name: "Google Ads ad group targeting and bids via GAQL"
   summary: 'GAQL FROM ad_group_criterion — Everything targeted or excluded in an ad group: keywords, audiences, placements, with bids'
   scope: own_account
   cost:
@@ -145,7 +145,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get keyword performance metrics'
+  name: "Google Ads per-keyword performance via GAQL"
   summary: GAQL FROM keyword_view — Per-keyword performance — the metrics view over ad_group_criterion keywords
   scope: own_account
   cost:
@@ -173,7 +173,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get search terms that triggered ads'
+  name: "Google Ads search terms that triggered ads via GAQL"
   summary: GAQL FROM search_term_view — The actual queries people typed that triggered your ads, and what each cost
   scope: own_account
   cost:
@@ -201,7 +201,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get campaign budget details'
+  name: "Google Ads campaign budgets via GAQL"
   summary: GAQL FROM campaign_budget — Budgets — daily amount, delivery method, and which campaigns share them
   scope: own_account
   cost:
@@ -229,7 +229,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get campaign-level targeting and exclusions'
+  name: "Google Ads campaign targeting, exclusions via GAQL"
   summary: 'GAQL FROM campaign_criterion — Campaign-level targeting and exclusions: locations, languages, devices, negative keywords'
   scope: own_account
   cost:
@@ -257,7 +257,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get account details and metrics'
+  name: "Google Ads account details and metrics via GAQL"
   summary: GAQL FROM customer — The account itself — name, currency, timezone, auto-tagging, and account-level metrics
   scope: own_account
   cost:
@@ -285,7 +285,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'List accounts under a manager account'
+  name: "Accounts under a Google Ads manager (MCC) via GAQL"
   summary: GAQL FROM customer_client — Every account under a manager (MCC), including the hierarchy level and whether it is a manager
   scope: own_account
   cost:
@@ -313,7 +313,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get conversion action settings'
+  name: "Google Ads conversion action settings via GAQL"
   summary: GAQL FROM conversion_action — Conversion actions — what counts as a conversion, its category, value and counting rules
   scope: own_account
   cost:
@@ -341,7 +341,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get recent account change history'
+  name: "Google Ads change history, last 30 days via GAQL"
   summary: GAQL FROM change_event — Who changed what in the account in the last 30 days, old value and new value
   scope: own_account
   cost:
@@ -369,7 +369,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get resources changed since a timestamp'
+  name: "Google Ads resources changed since a timestamp via GAQL"
   summary: GAQL FROM change_status — Which resources changed since a timestamp — the cheap way to poll for edits
   scope: own_account
   cost:
@@ -397,7 +397,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get portfolio bidding strategy details'
+  name: "Google Ads portfolio bidding strategies via GAQL"
   summary: GAQL FROM bidding_strategy — Portfolio bidding strategies and their targets (target CPA, target ROAS, maximise conversions)
   scope: own_account
   cost:
@@ -425,7 +425,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get billing setup and payment accounts'
+  name: "Google Ads billing setups and payment accounts via GAQL"
   summary: GAQL FROM billing_setup — Billing setups and payment accounts attached to the customer
   scope: own_account
   cost:
@@ -453,7 +453,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get account-level budget limits'
+  name: "Google Ads account-level budget limits via GAQL"
   summary: GAQL FROM account_budget — Account-level budgets and their approved spending limits (invoiced accounts)
   scope: own_account
   cost:
@@ -481,7 +481,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: "List assets and where they're used"
+  name: "Google Ads assets and where they are used via GAQL"
   summary: GAQL FROM asset — Assets — images, videos, text, sitelinks, callouts — and where each is used
   scope: own_account
   cost:
@@ -509,7 +509,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get Performance Max asset group metrics'
+  name: "Performance Max asset group metrics via GAQL"
   summary: GAQL FROM asset_group — Asset groups (Performance Max) with their status and per-group metrics
   scope: own_account
   cost:
@@ -537,7 +537,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get assets attached to a campaign'
+  name: "Assets attached to Google Ads campaigns via GAQL"
   summary: GAQL FROM campaign_asset — Which assets are attached to which campaign, and in what field type
   scope: own_account
   cost:
@@ -565,7 +565,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get assets attached to the account'
+  name: "Google Ads account-level assets via GAQL"
   summary: GAQL FROM customer_asset — Assets attached at the account level
   scope: own_account
   cost:
@@ -593,7 +593,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get per-asset performance within an ad'
+  name: "Google Ads per-asset performance in an ad via GAQL"
   summary: GAQL FROM ad_group_ad_asset_view — Per-asset performance inside a specific ad — which headline actually pulled
   scope: own_account
   cost:
@@ -621,7 +621,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'List audiences and their segments'
+  name: "Google Ads audiences and their segments via GAQL"
   summary: GAQL FROM audience — Audiences defined in the account and their segments
   scope: own_account
   cost:
@@ -649,7 +649,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get remarketing and customer match lists'
+  name: "Google Ads remarketing, customer match lists via GAQL"
   summary: GAQL FROM user_list — Remarketing and customer-match lists, their size and eligibility per network
   scope: own_account
   cost:
@@ -677,7 +677,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'List interest and affinity categories'
+  name: "Affinity and in-market interest taxonomy via GAQL"
   summary: GAQL FROM user_interest — The affinity and in-market interest taxonomy available for targeting
   scope: own_account
   cost:
@@ -705,7 +705,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get audience performance by campaign'
+  name: "Google Ads audience performance by campaign via GAQL"
   summary: GAQL FROM campaign_audience_view — Audience performance at campaign level
   scope: own_account
   cost:
@@ -733,7 +733,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get audience performance by ad group'
+  name: "Google Ads audience performance by ad group via GAQL"
   summary: GAQL FROM ad_group_audience_view — Audience performance at ad-group level
   scope: own_account
   cost:
@@ -761,7 +761,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by age bracket'
+  name: "Google Ads performance by age bracket via GAQL"
   summary: GAQL FROM age_range_view — Performance split by the viewer's age bracket
   scope: own_account
   cost:
@@ -789,7 +789,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by gender'
+  name: "Google Ads performance by gender via GAQL"
   summary: GAQL FROM gender_view — Performance split by the viewer's gender
   scope: own_account
   cost:
@@ -817,7 +817,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by parental status'
+  name: "Google Ads performance by parental status via GAQL"
   summary: GAQL FROM parental_status_view — Performance split by parental status
   scope: own_account
   cost:
@@ -845,7 +845,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by household income'
+  name: "Google Ads performance by household income via GAQL"
   summary: GAQL FROM income_range_view — Performance split by household income bracket
   scope: own_account
   cost:
@@ -873,7 +873,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by triggering location'
+  name: "Google Ads performance by triggering location via GAQL"
   summary: GAQL FROM geographic_view — Performance by the location that triggered the ad (physical or interest)
   scope: own_account
   cost:
@@ -901,7 +901,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: "Get performance by user's actual location"
+  name: "Google Ads performance by user's real location via GAQL"
   summary: GAQL FROM user_location_view — Performance by where the user actually was, ignoring location-of-interest
   scope: own_account
   cost:
@@ -929,7 +929,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by targeted location'
+  name: "Google Ads performance by targeted location via GAQL"
   summary: GAQL FROM location_view — Performance per targeted location criterion
   scope: own_account
   cost:
@@ -957,7 +957,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by day and hour'
+  name: "Google Ads performance by day and hour via GAQL"
   summary: GAQL FROM ad_schedule_view — Performance by day of week and hour of day
   scope: own_account
   cost:
@@ -985,7 +985,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get exact URLs and apps ads ran on'
+  name: "Exact URLs and apps your ads ran on via GAQL"
   summary: GAQL FROM detail_placement_view — Exact URLs and apps your Display/Video ads ran on
   scope: own_account
   cost:
@@ -1013,7 +1013,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance of chosen placements'
+  name: "Google Ads managed placements performance via GAQL"
   summary: GAQL FROM managed_placement_view — Performance of placements you chose yourself
   scope: own_account
   cost:
@@ -1041,7 +1041,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get Display topic targeting performance'
+  name: "Google Ads Display topic performance via GAQL"
   summary: GAQL FROM topic_view — Performance of Display topic targeting
   scope: own_account
   cost:
@@ -1069,7 +1069,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get performance by landing page'
+  name: "Google Ads performance by landing page via GAQL"
   summary: GAQL FROM landing_page_view — Performance grouped by the unexpanded final URL
   scope: own_account
   cost:
@@ -1097,7 +1097,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get Shopping performance by product attribute'
+  name: "Shopping ads performance by product attribute via GAQL"
   summary: GAQL FROM shopping_performance_view — Shopping metrics broken down by product attributes (brand, category, item id)
   scope: own_account
   cost:
@@ -1125,7 +1125,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get optimization suggestions and impact'
+  name: "Google Ads optimisation suggestions and impact via GAQL"
   summary: GAQL FROM recommendation — Google's own optimisation suggestions for the account, with their estimated impact
   scope: own_account
   cost:
@@ -1153,7 +1153,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get paid and organic search terms combined'
+  name: "Paid and organic search terms side by side via GAQL"
   summary: GAQL FROM paid_organic_search_term_view — Paid and organic side by side per query — needs Search Console linked
   scope: own_account
   cost:
@@ -1181,7 +1181,7 @@ endpoints:
   platform: google-ads
   method: POST
   path: /v25/customers/{customer_id}/googleAds:searchStream
-  name: 'Get individual clicks with GCLID'
+  name: "Individual ad clicks with GCLID, last 90 days via GAQL"
   summary: GAQL FROM click_view — Individual clicks with GCLID and location, for the last 90 days
   scope: own_account
   cost:

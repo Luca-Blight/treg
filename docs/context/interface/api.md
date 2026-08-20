@@ -220,10 +220,14 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   capability_description, platform, platform_label, score}`. Ranking is plain token containment
   (`catalog_store.search`, no deps, no embeddings): **most** query tokens must match — a query may miss
   one token in three, so a second word still narrows (1–2 words: all required) while an agent's
-  seven-word sentence survives its filler. Function words are dropped first, and a token also matches
-  through its `aliases.yaml` synonyms ("cryptocurrency" → "crypto"), at the same weight. Each matched
+  seven-word sentence survives its filler. Function words, single letters and tokens matching >25%
+  of the catalog are never REQUIRED (the last still score where they match), and a token also matches
+  through its `aliases.yaml` synonyms ("cryptocurrency" → "crypto"), at the same weight. A
+  zero-result answer carries `near` — the rows just under the gate and the exact unmatched words —
+  over MCP, the HTTP route, and as "almost:" lines in `treg catalog search`. Each matched
   token scores its best field weight — capability id/description + platform label/slug (3) >
-  summary (2) > id/path/provider (1) — times its BM25 idf, so rare words decide the order. Ties —
+  summary (2) > id/path/provider (1) — times its BM25 idf, so rare words decide the order (a
+  platform-slug token scores double where it matches — the platform is the caller's hard filter). Ties —
   still the COMMON case, since rows matching the same tokens in the same fields sum identical
   floats — are then settled by `catalog_store.rerank()` over
   the band `rank_band()` returns (the whole equal-scoring group at the cut, capped at `RERANK_BAND`

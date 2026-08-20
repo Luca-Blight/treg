@@ -299,6 +299,32 @@ Three things follow, and they are the whole point of the field:
 
 `catalog_validate.py` only checks the value when present: a stated `kind` must be one of the four.
 
+### Naming — `name` is the search surface we own
+
+`summary` is the provider's text, verbatim; `name` is OURS, and since 2026-08-20 it is searched
+(same weight as summary). That makes it the one per-endpoint field where curation may put the
+words agents type. The formula: **job + the input the caller must hold + top output facets**, ≤60
+characters, and it must read as a natural title — it is the row heading on every surface.
+
+    Linkedin: get company profile (web_v2)   ->  LinkedIn company profile by URL or slug — headcount, industry
+    Get user profile                         ->  TikTok user profile by username — followers, bio, stats
+
+The rules (applied catalog-wide in the 2026-08-20 rewrite; every new provider follows them):
+
+1. Name the JOB in task words — never the vendor's operation title or version codes.
+2. Say the INPUT ("by name", "by domain", "by ASIN", "by LinkedIn URL"). Agents search by what
+   they hold; only the caller knows its inputs — that doctrine applies to naming too.
+3. Say the top OUTPUTS when people search by them ("headcount", "reviews", "hiring signal").
+4. One concept, one word, catalog-wide: always "postings", never sometimes "vacancies";
+   `aliases.yaml` covers the agent's side, our side must be consistent.
+5. Prefer the longer word form — "postings" contains "posting"; substring matching never works
+   backward.
+6. No dead words: "API", "data", "get", "fetch", "endpoint" are soft tokens worth nothing.
+7. No stuffing. If it does not read as a title, it is wrong. Overflow vocabulary belongs in the
+   capability description (weight 3, shared by the group) or `aliases.yaml`, never in the name.
+8. TRUTH over vocabulary: derive the name only from the row's own summary, path and input fields.
+   A name claiming an output the endpoint does not return is a lie an agent will spend money on.
+
 ### Cost — the file keeps the billing unit, the server computes USD
 
 A `cost` block stays in whatever unit the PROVIDER bills in; that is the number that stays correct
@@ -861,15 +887,33 @@ idf — "by" matches 558 endpoints and is worth ~nothing, "postings" matches 4 a
 That asymmetry is also what keeps the miss allowance safe: dropping a rare word costs more score
 than dropping filler, so full-match fluff cannot outrank a near-match on substance. Rows matching
 the same tokens in the same fields still sum identical floats, so the tie band below keeps working.
-Two query-side layers close what scoring alone cannot. Function words ("on", "this", "what") are
-dropped before the miss allowance is computed — they select nothing, but each one raised the number
-of real words a row had to match. And `aliases.yaml` bridges vocabulary: substring containment only
-works in one direction, so "cryptocurrency" never finds the catalog's "crypto" without the map. A
-token matches under its own spelling or any curated alias, same field weight. The file is
+Query-side layers close what scoring alone cannot. Function words ("on", "this", "what") and
+single-letter tokens ("K&L" tokenizes to k + l, df 2,000+) are dropped before the miss allowance is
+computed — they select nothing, but each one raised the number of real words a row had to match.
+Tokens matching over `SOFT_DF_SHARE` (25%) of the catalog ("data" 33%, "api" 50%, "get" 40%) are
+SOFT: they still add score where they match, but a row is never punished for missing them — a
+statistical stopword list no hand list would keep up with. And `aliases.yaml` bridges vocabulary:
+substring containment only works in one direction, so "cryptocurrency" never finds the catalog's
+"crypto" without the map. A token matches under its own spelling or any curated alias, same field
+weight. NOUNS ONLY: aliasing a verb to a commoner verb poisons the key (`lookup: [search, find]`
+inflated lookup's match set 27 → 689 endpoints and destroyed its ranking power). The file is
 query-side only — it rewrites no provider text, survives every re-ingest, and the validator
 (`check_aliases`) rejects entries that could not survive the tokenizer and warns on aliases whose
 target occurs nowhere in the catalog. The SearchMiss log is its feed: a zero-result query whose
 words name an existing endpoint in different vocabulary is one row here.
+
+A query token that IS a platform slug ("tiktok", "linkedin") is the caller's hard filter, but idf
+prices it low — half the catalog serves the big platforms — so rows matching a rarer facet word
+("followers") outranked rows matching the asked-for platform. Platform-slug tokens therefore score
+DOUBLE where they match; rows matching the same tokens in the same fields still sum identical
+floats, so the tie band survives.
+
+A zero-result answer surfaces its `near_misses` — the rows that just missed the admission gate,
+with the exact words each one matched and missed ("apollo.companies.jobs matches job, hiring,
+signal; misses law, firm"). The matcher had already computed this; discarding it and answering
+with prose was the least useful thing the data allowed. Served structured over MCP (`near`), in
+the HTTP route's `near` + a hint line, and as "almost:" lines in the CLI — the caller is usually
+an LLM, and told exactly what to drop it re-queries correctly on the next call.
 
 `scripts/search_bench.py` is the labeled replay (30 agent-shaped queries): sentence-style hit@8 went
 14% → 100% (hit@1 64%, MRR .766) with the 8 short-query regression rows byte-identical. The residue

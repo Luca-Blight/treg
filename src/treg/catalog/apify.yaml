@@ -50,7 +50,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /actors/apify~facebook-ads-scraper/run-sync-get-dataset-items
-    name: "Search Facebook and Instagram ad library"
+    name: "Scrape the Meta ad library by Page or search URL"
     summary: "Scrape publicly running Facebook and Instagram ads for a page or Ad Library search"
     input:
       queryParams:
@@ -83,7 +83,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /actors/s-r~tiktok-ads-library/run-sync-get-dataset-items
-    name: "Search TikTok ad library by keyword"
+    name: "Scrape the TikTok ad library by keyword"
     summary: "Scrape publicly running TikTok ads from TikTok's ad library by keyword or advertiser"
     input:
       queryParams:
@@ -122,7 +122,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /actors/harvestapi~linkedin-job-search/run-sync-get-dataset-items
-    name: "Search LinkedIn job postings"
+    name: "LinkedIn job postings by title, company or location"
     summary: "Scrape LinkedIn job postings by title, company, location or filters — the hiring-signal search that also answers 'what is this company hiring for' via the company filter"
     input:
       queryParams:
@@ -157,7 +157,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /actors/{actor_id}/runs
-    name: "Start a background scraper run"
+    name: "Start an Apify actor run in the background"
     summary: "Start a scraper run in the background and get back its run id"
     input:
       pathParams:
@@ -186,7 +186,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /actor-runs/{run_id}
-    name: "Check scraper run status"
+    name: "Check an Apify actor run by run id"
     summary: "Check whether a background scraper run has finished"
     input:
       pathParams:
@@ -208,7 +208,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /datasets/{dataset_id}/items
-    name: "Download scraper run results"
+    name: "Download an Apify run's results by dataset id"
     summary: "Download the results of a finished scraper run"
     input:
       pathParams:
@@ -235,7 +235,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /users/me
-    name: "Check plan and usage"
+    name: "Your Apify plan, credits and monthly limits"
     summary: "Check your Apify plan, credit usage and remaining monthly limits"
     input:
       note: "no parameters. Returns the account's plan, monthly usage in USD and the limits it is measured against — the pre-flight check before a large pay-per-result pull, and the cheapest way to prove a token is valid (a bad token 401s here)"

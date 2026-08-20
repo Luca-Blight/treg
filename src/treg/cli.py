@@ -4510,6 +4510,9 @@ def _catalog_search(query: str, args, cfg) -> None:
     rows = body.get("results", [])
     if not rows:
         print(f"nothing matches \"{query}\"")
+        for n in (body.get("near") or [])[:3]:
+            _dim(f"  almost: {n['endpoint_id']}  (matches {', '.join(n['matches'])}; "
+                 f"not {', '.join(n['missing'])})")
         _dim("try different task words, or browse the shelves with `treg catalog`")
         _dim(f"still missing? file it: treg catalog request \"{query}\"   # requests steer what gets added next")
         return
