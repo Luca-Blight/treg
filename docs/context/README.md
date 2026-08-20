@@ -18,7 +18,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 |---|---|---|
 | [Google Ads conversion tracking — capture, outbox, upload](architecture/ads-conversions.md) | shipped | adsconv.py, adtrack.js |
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
-| [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog-drift.yml, catalog_drift.py, catalog_validate.py, google-search-console.yaml, … |
+| [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog-drift.yml, catalog_drift.py, catalog_validate.py, aliases.yaml, … |
 | [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | models.py, db.py, referrals.py, audit.py, … |
 | [Local proxy — catch a program's own outgoing calls (`treg <command>`)](architecture/local-proxy.md) | shipped | localproxy.py, server.js |
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
@@ -43,6 +43,12 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Shell mode (treg shell) — transparent CLI interception](interface/shell.md) | shipped | shell.py, cli.py |
 | [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md, mcp_install.py, build_plugin.py, plugin.json, … |
 
+## Guides (how-to)
+
+| Fragment | Status | Covers |
+|---|---|---|
+| [Expanding a marketplace category — the add-a-provider playbook](guides/expanding-a-category.md) | guide | oauth_providers.py, api.py, config.py |
+
 ## Ops (deploy, scale)
 
 | Fragment | Status | Covers |
@@ -54,10 +60,4 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [Glossary](reference/glossary.md) | reference | 2026-06-30-jason-tools-registry.md |
-
-## guides
-
-| Fragment | Status | Covers |
-|---|---|---|
-| [Expanding a marketplace category — the add-a-provider playbook](guides/expanding-a-category.md) | guide | oauth_providers.py, api.py, config.py |
 

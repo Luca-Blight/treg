@@ -273,10 +273,42 @@ def check_fx(errors: list[str]) -> None:
                                 "lives only in prose cannot be computed against")
 
 
+_WORD = re.compile(r"^[a-z0-9]+$")
+
+
+def check_aliases(errors: list[str], warnings: list[str]) -> None:
+    """aliases.yaml — the query-side vocabulary map (catalog_store.search).
+
+    Keys and values ride through the same tokenizer as queries, so anything that is not one
+    lowercase word can never match and is a silent no-op — an error, not a style point. A value
+    that occurs nowhere in the catalog's own text is dead weight (the alias exists to bridge INTO
+    the catalog's vocabulary), flagged as a warning because provider text moves under it."""
+    path = CATALOG / "aliases.yaml"
+    if not path.exists():
+        return
+    doc = yaml.safe_load(path.read_text()) or {}
+    corpus = "\n".join(p.read_text().lower() for p in CATALOG.glob("*.yaml") if p != path)
+    for key, vals in (doc.get("aliases") or {}).items():
+        where = f"aliases.yaml {key}"
+        if not _WORD.match(str(key)):
+            fail(errors, where, "key must be one lowercase word (it must survive the tokenizer)")
+        if not isinstance(vals, list) or not vals:
+            fail(errors, where, "value must be a non-empty list of words")
+            continue
+        for v in vals:
+            if not _WORD.match(str(v)):
+                fail(errors, where, f"alias {v!r} must be one lowercase word")
+            elif str(v) == str(key):
+                fail(errors, where, "alias points at itself")
+            elif str(v) not in corpus:
+                warnings.append(f"{where}: alias {v!r} occurs nowhere in the catalog — dead weight")
+
+
 def main(argv: list[str]) -> int:
     errors: list[str] = []
     warnings: list[str] = []
     check_fx(errors)
+    check_aliases(errors, warnings)
     tax = yaml.safe_load((CATALOG / "capabilities.yaml").read_text())
     platforms = set(tax.get("platforms") or {})
     capabilities = set(tax.get("capabilities") or {})
@@ -285,7 +317,7 @@ def main(argv: list[str]) -> int:
 
     only = set(argv)
     all_files = sorted(p for p in CATALOG.glob("*.yaml")
-                       if p.name not in ("capabilities.yaml", "fx.yaml"))
+                       if p.name not in ("capabilities.yaml", "fx.yaml", "aliases.yaml"))
     # Successors can appear later in the same file or in another provider. Build the reference map
     # before validating any row; a one-pass lookup would make validity depend on filename order.
     endpoint_status: dict[str, str] = {}
