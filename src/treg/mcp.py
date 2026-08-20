@@ -114,7 +114,7 @@ class SearchResult(TypedDict, total=False):
     provider: str | None
     usd_per_call: float | None
     no_key_needed: bool | None
-    score: int | None
+    score: float | None
     works: float | None          # measured success rate, or null when there isn't enough evidence
     samples: int | None          # how many real calls that rate stands on
 
@@ -525,7 +525,7 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
         if query.strip():
             audit.record_search_miss(query=query.strip(), source="mcp")
         out["hint"] = (
-            f"nothing matches all of {query!r} — drop a word, or try a different way of saying the task. "
+            f"nothing matches {query!r} closely enough — try different task words. "
             "If the catalog genuinely lacks it, file it with catalog_request(capability=...) — "
             "requests steer which provider gets added next"
         )

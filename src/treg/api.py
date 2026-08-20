@@ -593,7 +593,7 @@ async def catalog_search(q: str = "", limit: int = 25,
         # become. One source for this whole route — web, CLI and raw API all arrive here, and
         # guessing which from headers would be a made-up column.
         audit.record_search_miss(query=q.strip(), source="api")
-        hints = [f"nothing matches all of {q!r} — drop a word, or browse `treg catalog` for the platform shelves",
+        hints = [f"nothing matches {q!r} closely enough — try different task words, or browse `treg catalog` for the platform shelves",
                  "still missing? POST /tool-requests {\"capability\": \"<what you need>\"} — "
                  "requests steer which provider gets added next"]
     else:

@@ -839,9 +839,27 @@ Five rules worth keeping:
   removed. "Never worked" is read off `ok_rate == 0`, which is computed from DECIDED samples only,
   so no volume of caller errors can produce it.
 
+### Search scoring — most words must match, and the rare ones decide
+
+`catalog_store.search` demanded EVERY query token match (AND). Right for the 2–3 word refinement
+("tiktok comments" must not return every tiktok endpoint), and fatal for how agents actually query:
+the day the SearchMiss log shipped it recorded "company job postings hiring open jobs linkedin" → 0
+results while three endpoints matched 6 of the 7 words. The only misses were "linkedin" on rows
+shelved under `companies` (the agent names where the data lives, the catalog names what it is), and
+"open" on the row shelved under `linkedin`. Since 2026-08-20 a query may miss one token in every
+three (1–2 words: all still required), and each matched token scores its field weight times its BM25
+idf — "by" matches 558 endpoints and is worth ~nothing, "postings" matches 4 and decides the order.
+That asymmetry is also what keeps the miss allowance safe: dropping a rare word costs more score
+than dropping filler, so full-match fluff cannot outrank a near-match on substance. Rows matching
+the same tokens in the same fields still sum identical floats, so the tie band below keeps working.
+`scripts/search_bench.py` is the labeled replay (30 agent-shaped queries): sentence-style hit@8 went
+14% → 73% with the short-query rows unchanged. What it still cannot do is bridge vocabulary — 
+"cryptocurrency" does not contain "crypto", "software" is not "technologies" — which is the
+enrichment/aliases work, not a scoring knob.
+
 ### The evidence decides the ORDER, not just the detail page
 
-Token scoring ties by the dozen — all 24 `"ad library"` matches score 6 — so "which 8 do I show?"
+Token scoring ties by the dozen — all 24 `"ad library"` matches score alike — so "which 8 do I show?"
 was answered by file order. That returned seven near-duplicate tikhub rows (one of them the
 uncallable one above) and cut off `scrapecreators.x.v1-tiktok-ad-library-search`, cheaper and 17 for
 17 measured. `catalog_store.rerank()` now settles equal scores over the band `rank_band()` returns, on

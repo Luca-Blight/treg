@@ -16,6 +16,7 @@ serving no endpoints is a worse product, not a broken server.
 from __future__ import annotations
 
 import json
+import math
 import re
 import shlex
 from dataclasses import dataclass, field
@@ -88,6 +89,8 @@ class Catalog:
     platforms: dict[str, dict] = field(default_factory=dict)     # slug -> {label, category}
     capabilities: dict[str, str] = field(default_factory=dict)   # id -> description
     endpoints: list[dict] = field(default_factory=list)          # normalized endpoint dicts
+    # lazy per-instance search index (see _search_fields) — never part of identity or repr
+    _search_fields: list | None = field(default=None, init=False, repr=False, compare=False)
     by_id: dict[str, dict] = field(default_factory=dict)
     provider_meta: dict[str, dict] = field(default_factory=dict)  # service -> {limits, pricing_url, docs}
 
@@ -675,27 +678,57 @@ def _haystacks(ep: dict, cat: Catalog) -> list[tuple[int, str]]:
     ]
 
 
-def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, int]], int]:
+def _search_fields(cat: Catalog) -> list[tuple[dict, list[tuple[int, str]]]]:
+    """Every endpoint's weighted haystacks, built once per Catalog instance — search runs two
+    passes (document frequency, then scoring) and rebuilding the joined strings per query per
+    pass was the only real cost in either."""
+    cached = cat._search_fields
+    if cached is None:
+        cached = [(ep, _haystacks(ep, cat)) for ep in cat.endpoints]
+        object.__setattr__(cat, "_search_fields", cached)  # frozen dataclass, deliberate
+    return cached
+
+
+def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, float]], int]:
     """`(ranked [(endpoint, score)], total_matches)` for a free-text query.
 
-    EVERY token must match somewhere (AND, not OR): a query is a refinement, so "tiktok comments"
-    must not return every tiktok endpoint. Score sums each token's best field weight; ties break to
-    core-before-extended, then verified-before-not, then id — so the ordering is total and stable.
+    MOST tokens must match — a query is a refinement, so "tiktok comments" must not return every
+    tiktok endpoint, but agents write sentences, and demanding every word zeroed real queries on
+    their filler: "company job postings hiring open jobs linkedin" found nothing while three
+    endpoints matched 6 of its 7 words (see models.SearchMiss — the log this rule was read from).
+    A query may miss one token in every three (2 words → both required, unchanged; 7 → 5 must hit).
+
+    Each matched token scores its best field weight times its BM25 idf, so a word that matches half
+    the catalog ("by": 558 endpoints) is worth almost nothing and a rare one ("postings": 4) decides
+    the order — which is also what keeps the miss allowance safe: dropping a rare token costs more
+    score than dropping filler, so a 7-of-7 fluff match cannot outrank a 6-of-7 match on substance.
+    Rows matching the same tokens in the same fields still tie EXACTLY (same floats from the same
+    sums), which `rank_band`'s tie sweep and the evidence rerank both depend on. Remaining ties
+    break to core-before-extended, then verified-before-not, then id — total and stable.
     """
     tokens = _tokens(query)
     if not tokens:
         return [], 0
-    scored: list[tuple[dict, int]] = []
-    for ep in cat.endpoints:
-        fields = _haystacks(ep, cat)
-        score = 0
-        for tok in tokens:
-            best = max((w for w, text in fields if tok in text), default=0)
-            if not best:
-                break
-            score += best
-        else:
-            scored.append((ep, score))
+    rows = _search_fields(cat)
+    total = len(rows)
+    # pass 1 — per (endpoint, token): the best field weight; per token: how many endpoints match
+    best: list[list[int]] = []
+    df = [0] * len(tokens)
+    for _, fields in rows:
+        per_tok = [max((w for w, text in fields if tok in text), default=0) for tok in tokens]
+        best.append(per_tok)
+        for i, w in enumerate(per_tok):
+            if w:
+                df[i] += 1
+    idf = [math.log(1 + (total - d + 0.5) / (d + 0.5)) for d in df]
+    # pass 2 — admit rows missing at most one token in three, scored over what DID match
+    need = len(tokens) - len(tokens) // 3
+    scored: list[tuple[dict, float]] = []
+    for (ep, _), per_tok in zip(rows, best):
+        matched = sum(1 for w in per_tok if w)
+        if matched < need:
+            continue
+        scored.append((ep, round(sum(w * idf[i] for i, w in enumerate(per_tok)), 4)))
     scored.sort(key=lambda row: (-row[1], row[0]["tier"] != "core", not row[0]["verified"], row[0]["id"]))
     return scored[:max(limit, 0)], len(scored)
 
@@ -713,7 +746,7 @@ def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, 
 RERANK_BAND = 250
 
 
-def rank_band(query: str, cat: Catalog, limit: int) -> tuple[list[tuple[dict, int]], int, bool]:
+def rank_band(query: str, cat: Catalog, limit: int) -> tuple[list[tuple[dict, float]], int, bool]:
     """`(rows, total_matches, tie_truncated)` — the candidates the evidence sort gets to reorder.
 
     Takes `limit` rows, then keeps taking while the score stays equal to the last one kept: a cut
@@ -739,7 +772,7 @@ def rank_band(query: str, cat: Catalog, limit: int) -> tuple[list[tuple[dict, in
     return kept, total, len(group) > len(kept)
 
 
-def rerank(rows: list[tuple[dict, int]], stats: dict[str, dict],
+def rerank(rows: list[tuple[dict, float]], stats: dict[str, dict],
            cat: Catalog | None = None) -> list[tuple[dict, int]]:
     """Re-order equal-scoring rows by what treg has MEASURED, then by price.
 
