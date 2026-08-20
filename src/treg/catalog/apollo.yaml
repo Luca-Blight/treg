@@ -39,7 +39,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /people/match
-    name: "Enrich a person by email or LinkedIn"
+    name: "Enrich a person by email, LinkedIn URL or name + company"
     summary: "Enrich a person from an email, LinkedIn URL or name + company — title, contact details"
     input:
       queryParams:
@@ -78,7 +78,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /mixed_people/api_search
-    name: "Search contacts by title, company or location"
+    name: "Search people by title, seniority, company or location"
     summary: "Search Apollo's 200M+ contacts by title, seniority, company, location or tech (free)"
     input:
       queryParams:
@@ -105,7 +105,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /organizations/enrich
-    name: "Enrich a company by domain or name"
+    name: "Enrich a company by domain, name or LinkedIn URL"
     summary: "Enrich a company from domain, name or LinkedIn — industry, headcount, revenue, funding"
     input:
       queryParams:
@@ -134,7 +134,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /mixed_companies/search
-    name: "Search companies by industry, size or tech"
+    name: "Search companies by industry or tech — headcount growth"
     summary: "Search Apollo's companies by industry, headcount, revenue, funding or technology — hits carry 6/12/24-month headcount growth, the hiring/growth signal"
     input:
       queryParams:
@@ -170,7 +170,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /organizations/{organization_id}/job_postings
-    name: "List a company's open job postings"
+    name: "A company's job postings by Apollo id — hiring signal"
     summary: "List a company's open job postings — title, location and posting dates — the direct hiring signal"
     input:
       pathParams:
@@ -204,7 +204,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /news_articles/search
-    name: "Search news about companies"
+    name: "News about a company by Apollo id — hires, funding"
     summary: "Search news articles about specific companies — hires, funding and other signal categories"
     input:
       queryParams:
@@ -239,7 +239,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /people/bulk_match
-    name: "Enrich multiple people in one batch"
+    name: "Bulk-enrich up to 10 people by email, LinkedIn URL or name"
     summary: "Enrich up to 10 people in one call, using the same identifiers as single-person enrichment"
     input:
       bodyType: json

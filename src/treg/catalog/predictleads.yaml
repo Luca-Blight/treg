@@ -104,7 +104,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{company_id_or_domain}/similar_companies
-    name: "Find similar companies"
+    name: "Lookalike companies for a domain, with reasons"
     summary: "Returns a list of a company's Similar Companies and, for the top 20, provides a reason why they are considered similar."
     input:
       pathParams:
@@ -128,7 +128,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{company_id_or_domain}/job_openings
-    name: "A company's job openings"
+    name: "A company's job postings by domain — hiring signal"
     summary: "Returns a list of company's Job Openings."
     input:
       pathParams:
@@ -162,7 +162,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /job_openings/{id}
-    name: "Get a job opening by ID"
+    name: "Get a job posting by id"
     summary: "Returns a single Job Opening."
     input:
       pathParams:
@@ -181,7 +181,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /discover/job_openings
-    name: "Search job openings across all companies"
+    name: "Search job postings by occupation code and location"
     summary: "Returns a list of Job Openings filtered by a given profession using O*NET occupation codes and/or location of the company."
     input:
       queryParams:
@@ -208,7 +208,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{company_id_or_domain}/technology_detections
-    name: "A company's technology stack"
+    name: "A company's tech stack by domain, with evidence"
     summary: "Returns Technologies used by a specific Company as a list of Technology Detections."
     input:
       pathParams:
@@ -236,7 +236,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /discover/technologies/{technology_id_or_fuzzy_name}/technology_detections
-    name: "Companies using a given technology"
+    name: "Companies using a given technology — reverse tech lookup"
     summary: "Returns Companies using a specific Technology as a list of Technology Detections, ordered by first_seen_at descending."
     input:
       pathParams:
@@ -264,7 +264,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /technologies
-    name: "Browse tracked technologies"
+    name: "Browse the ~54,000 tracked technologies"
     summary: "Returns a list of all tracked Technologies."
     input:
       queryParams:
@@ -325,7 +325,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{company_id_or_domain}/news_events
-    name: "A company's news events"
+    name: "A company's classified news events by domain"
     summary: "Returns a list of company's News Events."
     input:
       pathParams:
@@ -396,7 +396,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{company_id_or_domain}/financing_events
-    name: "A company's funding rounds"
+    name: "A company's funding rounds by domain"
     summary: "Returns a list of company's Financing Events."
     input:
       pathParams:
@@ -422,7 +422,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /discover/financing_events
-    name: "Browse funding rounds across all companies"
+    name: "Browse funding rounds — the who-just-raised feed"
     summary: "Returns a list of Financing Events, optionally filtered by normalized financing type and company's location, ordered by updated date."
     input:
       queryParams:
@@ -445,7 +445,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{company_id_or_domain}/sec_filings
-    name: "A company's SEC filings"
+    name: "A company's SEC filings by domain, with full text"
     summary: "Returns a list of company's SEC Filings, ordered by filed_at descending."
     input:
       pathParams:
@@ -491,7 +491,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{company_id_or_domain}/connections
-    name: "A company's partners, customers and investors"
+    name: "A company's partners, customers and investors by domain"
     summary: "Returns a list of company's Connections."
     input:
       pathParams:
@@ -569,7 +569,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{company_id_or_domain}/github_repositories
-    name: "A company's public GitHub repositories"
+    name: "A company's public GitHub repositories by domain"
     summary: "Returns a list of company's Github Repositories."
     input:
       pathParams:
@@ -595,7 +595,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /companies/{company_id_or_domain}/products
-    name: "A company's products and services"
+    name: "A company's products and services by domain"
     summary: "Returns a list of company's Products."
     input:
       pathParams:
@@ -665,7 +665,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /discover/startup_platform_posts
-    name: "Latest startup-platform launch posts"
+    name: "Latest startup launch posts, resolved to company domains"
     summary: "Returns a list of latest posts on popular startup platforms by companies that are hiring or launching new products."
     input:
       queryParams:

@@ -42,7 +42,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /search
-    name: "Search B2B leads"
+    name: "Search people by company, industry or tech — ids only"
     summary: "Search leads. Accepts the full person filter set."
     input:
       queryParams:
@@ -129,7 +129,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /enrichment/email
-    name: "Find a work email (synchronous)"
+    name: "Find a work email by LinkedIn URL or name + company"
     summary: "Enrich a single person's work email and return the result in the same response, no polling."
     input:
       body:
@@ -165,7 +165,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /enrichment/phone
-    name: "Find a mobile phone number (synchronous)"
+    name: "Find a mobile number by LinkedIn URL or name + company"
     summary: "Enrich a single person's phone number and return the result in the same response, no polling."
     input:
       body:
@@ -274,7 +274,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /enrichment/linkedin
-    name: "Start a bulk LinkedIn-profile job"
+    name: "Start a bulk job — name + company to LinkedIn URL"
     summary: "Request linkedin profile finding."
     input:
       headers:
@@ -407,7 +407,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /lookalikes/preview
-    name: "Preview lookalike companies (free)"
+    name: "Preview lookalike companies for seed domains (free)"
     summary: "Free, uncharged preview of companies similar to the provided domains."
     input:
       body:
@@ -440,7 +440,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /lookalikes/search
-    name: "Search lookalike companies"
+    name: "Find lookalike companies for seed domains"
     summary: "Search for companies similar to the provided domains."
     input:
       headers:
@@ -479,7 +479,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /company-followers/search
-    name: "Start a company-followers job"
+    name: "List a LinkedIn company page's followers (async job)"
     summary: "Starts an async company followers search for a LinkedIn company page"
     input:
       headers:

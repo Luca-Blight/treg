@@ -37,7 +37,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/retrieve
-    name: "Brand profile by domain"
+    name: "Brand profile by domain — logos, colors, socials, headcount"
     summary: "Retrieve logos, colors, fonts, slogan, description, socials, address, headcount and industry for a domain"
     input:
       queryParams:
@@ -60,7 +60,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/retrieve-simplified
-    name: "Brand assets by domain (logos & colors only)"
+    name: "Brand logos, colors and backdrops by domain"
     summary: "The visual half of the brand record — logos, backdrops and the color palette — without the description, socials or firmographics"
     input:
       queryParams:
@@ -81,7 +81,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/retrieve-by-name
-    name: "Brand profile by company name"
+    name: "Brand profile by company name — logos, colors, socials"
     summary: "Resolve a company name to its domain and return the full brand record — logos, colors, description, socials, industry"
     input:
       queryParams:
@@ -104,7 +104,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/retrieve-by-email
-    name: "Brand profile from a work email"
+    name: "Company brand profile by work email"
     summary: "Turn a work email address into the employer's brand record — the signup-form enrichment call"
     input:
       queryParams:
@@ -126,7 +126,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/retrieve-by-ticker
-    name: "Brand profile by stock ticker"
+    name: "Brand profile by stock ticker — logo and colors"
     summary: "Resolve a listed company's ticker to its domain and brand record — logo and colors for a portfolio or watchlist UI"
     input:
       queryParams:
@@ -148,7 +148,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/retrieve-by-isin
-    name: "Brand profile by ISIN"
+    name: "Brand profile by ISIN security identifier"
     summary: "Resolve an ISIN security identifier to the issuing company's domain and brand record"
     input:
       queryParams:
@@ -190,7 +190,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/naics
-    name: "Classify a company into NAICS codes"
+    name: "NAICS industry codes by domain or description"
     summary: "Map a domain or a free-text company description to 2022 NAICS industry codes with a confidence label"
     input:
       queryParams:
@@ -210,7 +210,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/styleguide
-    name: "Extract a website's design system"
+    name: "Extract a website's design system by domain — CSS"
     summary: "Colors, type scale, spacing, shadows and component styles (button, card, input) lifted from a live site, each with ready-to-paste CSS"
     input:
       queryParams:
@@ -231,7 +231,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/fonts
-    name: "Detect the fonts a website uses"
+    name: "Detect a website's fonts by domain — files per weight"
     summary: "Every font family a site loads, with fallback stacks, share of elements and words, and direct links to the font files by weight"
     input:
       queryParams:
@@ -252,7 +252,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /brand/screenshot
-    name: "Screenshot a company's website"
+    name: "Screenshot a company's website by domain"
     summary: "A 1920x1080 viewport or full-page PNG of a company's site, returned as a cached CDN URL"
     input:
       queryParams:
@@ -275,7 +275,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /brand/ai/query
-    name: "Ask for named datapoints about a company"
+    name: "Extract named datapoints from a company site by domain"
     summary: "Define the fields you want — name, description, type and an example each — and get them extracted from the company's own website, with the URLs used"
     input:
       body:
@@ -301,7 +301,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /brand/ai/products
-    name: "Extract a company's products and prices"
+    name: "Extract products and prices from a company site by domain"
     summary: "Build a structured product/plan catalog from a company's site — name, price, currency, billing frequency, pricing model, features, audience and URL"
     input:
       body:

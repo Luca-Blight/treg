@@ -112,7 +112,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/author-finder
-    name: "Find an article author's email"
+    name: "Find an article author's email from its URL"
     summary: "Article or blog-post URL → the byline author's name and work email"
     input:
       queryParams:
@@ -142,7 +142,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/email-verifier/{email}
-    name: "Verify an email address"
+    name: "Verify an email address is deliverable"
     summary: "Deliverability status, score, MX/SMTP checks, catch-all, disposable, gibberish and role-address flags for one address"
     input:
       pathParams:
@@ -171,7 +171,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/enrich
-    name: "Enrich a person from their email"
+    name: "Enrich a person by email — name, role, social profiles"
     summary: "Email address → full person record: name, company, position, department, seniority, country, gender, social profiles and the pages the address was found on"
     input:
       queryParams:
@@ -200,7 +200,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/people/find
-    name: "Enrich a person (Clearbit-shaped response)"
+    name: "Enrich a person by email (Clearbit-shaped response)"
     summary: "Email address → a person record in the classic Person-API shape: name object, geo, employment, and per-network social handles"
     input:
       queryParams:
@@ -230,7 +230,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/companies/find
-    name: "Enrich a company from its domain"
+    name: "Enrich a company by domain — headcount, revenue, SIC"
     summary: "Company domain → firmographics: legal name, sector and SIC/NAICS codes, headcount, revenue range, founding year, address, socials and known email addresses"
     input:
       queryParams:
@@ -259,7 +259,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/combined/find
-    name: "Enrich a person AND their company in one call"
+    name: "Enrich a person and their company by email, in one call"
     summary: "Email address → both the person record and the full company record, in one response"
     input:
       queryParams:
@@ -288,7 +288,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/phone-finder
-    name: "Find a direct phone number"
+    name: "Find a direct phone number by email, domain or LinkedIn"
     summary: "Email, domain or LinkedIn URL → a direct phone number with country, line type, carrier, region and timezone"
     input:
       queryParams:
@@ -384,7 +384,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/email-count
-    name: "Count the emails known for a domain"
+    name: "Count the emails known for a domain (free)"
     summary: "Company domain → how many addresses Tomba holds, split personal vs generic and broken down by department and seniority — a free way to size a domain before paying to search it"
     input:
       queryParams:
@@ -413,7 +413,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/email-format
-    name: "Find a company's email format"
+    name: "A company's email address patterns by domain"
     summary: "Company domain → the address patterns in use ({first}, {first}.{last}, {f}{last}…) with the share of the company's addresses on each"
     input:
       queryParams:
@@ -443,7 +443,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/location
-    name: "Where a company's contacts are"
+    name: "Where a company's contacts are — a per-country tally"
     summary: "Company domain → a per-country tally of the contacts Tomba holds for it"
     input:
       queryParams:
@@ -501,7 +501,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/technology
-    name: "Technologies a website runs"
+    name: "Detect a website's tech stack by domain"
     summary: "Website domain → the detected tech stack: each technology's name, vendor site, description and category (CMS, analytics, payments…)"
     input:
       queryParams:
@@ -530,7 +530,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/similar
-    name: "Find similar companies"
+    name: "Find lookalike companies from a seed domain"
     summary: "Company domain → comparable companies with their domain, name and industry — competitor and lookalike discovery from one seed"
     input:
       queryParams:

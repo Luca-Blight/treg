@@ -71,7 +71,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /search/business-profile
-    name: "Find a work email from a business profile URL"
+    name: "Find a work email from a LinkedIn profile URL"
     summary: "Find someone's verified professional email from their public professional-network profile URL"
     input:
       body:
@@ -163,7 +163,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /search/company
-    name: "Enrich a company"
+    name: "Enrich a company by domain, name or LinkedIn URL — size"
     summary: "Firmographics for a company from its domain, name or professional-network URL — size, industry, description"
     input:
       body:
@@ -194,7 +194,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /search/phone
-    name: "Find a mobile phone number"
+    name: "Find a mobile phone number by LinkedIn URL"
     summary: "Find a person's direct phone number from their public professional profile URL"
     input:
       body:
@@ -223,7 +223,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /search/reverse-email
-    name: "Reverse-lookup a person from their email"
+    name: "Reverse email lookup — the person's LinkedIn profile"
     summary: "Resolve an email address back to the person's professional profile, optionally with the full profile"
     input:
       body:
@@ -253,7 +253,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /verify
-    name: "Verify an email address"
+    name: "Verify an email address is deliverable"
     summary: "Check whether an email address is deliverable, and which mail provider hosts it"
     input:
       body:
@@ -283,7 +283,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /technologies
-    name: "Detect a company's tech stack"
+    name: "Detect a company's tech stack by domain"
     summary: "The technologies detected on a company's domain, each with category and a last-detected timestamp"
     input:
       body:
@@ -334,7 +334,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /lookalike/search
-    name: "Find companies similar to a seed company"
+    name: "Find lookalike companies from a seed domain"
     summary: "Build a list of companies that look like a seed company, optionally constrained to the same country or size"
     input:
       body:
@@ -439,7 +439,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /signals
-    name: "Read detected buying signals"
+    name: "Buying signals from your monitors — hiring, job postings"
     summary: "Signals your monitors have detected — job posts, hiring and other intent events, with the company and contact attached"
     input:
       queryParams:

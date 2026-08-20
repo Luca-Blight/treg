@@ -66,7 +66,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v2/enrich/company
-    name: "Enrich a company"
+    name: "Enrich a company — web traffic, tech stack, headcount"
     summary: "Match a company with our database and enrich it with additional information"
     input:
       body:
@@ -98,7 +98,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v2/lookup/companies
-    name: "Look up companies by domain (bulk)"
+    name: "Enrich up to 1,000 companies by domain in one call"
     summary: "Lookup and enrich multiple companies by domain (max 1000). This endpoint provides simple, per-result pricing"
     input:
       body:
@@ -161,7 +161,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v2/warmup/companies
-    name: "Warm up company coverage"
+    name: "Check which domains are covered before enriching (free)"
     summary: "Check available companies in Ocean's database and trigger process of data gathering for the missing ones"
     input:
       body:
@@ -182,7 +182,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v2/enrich/person
-    name: "Enrich a person"
+    name: "Enrich a person — role, work history, skills, LinkedIn"
     summary: "Match a person with our database and enrich it with additional information"
     input:
       body:
@@ -215,7 +215,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v2/lookup/people
-    name: "Look up people by LinkedIn handle (bulk)"
+    name: "Enrich up to 1,000 people by LinkedIn handle in one call"
     summary: "Lookup and enrich multiple people by LinkedIn handle or Ocean ID (max 1000). This endpoint provides simple, per-result pricing"
     input:
       body:
@@ -278,7 +278,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v3/search/companies
-    name: "Search companies (with lookalike)"
+    name: "Search companies by industry, technology or region"
     summary: "Search companies using filters"
     input:
       body:
@@ -315,7 +315,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v3/search/companies
-    name: "Find lookalike companies"
+    name: "Find lookalike companies from seed domains"
     summary: "Search companies using filters — seeded with lookalikeDomains, this returns companies similar to your seeds"
     input:
       body:
@@ -351,7 +351,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v3/search/people
-    name: "Search people"
+    name: "Search people by job title, skills or company filters"
     summary: "Search people using filters and/or people Ids"
     input:
       body:
@@ -391,7 +391,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v2/reveal/emails
-    name: "Reveal verified emails (async, webhook)"
+    name: "Reveal verified work emails for person ids (async)"
     summary: "Get emails and email statuses for people"
     input:
       body:
@@ -422,7 +422,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v2/reveal/phones
-    name: "Reveal direct phone numbers (async, webhook)"
+    name: "Reveal direct phone numbers for person ids (async)"
     summary: "Get phones and phone statuses for people"
     input:
       body:
@@ -454,7 +454,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v2/segmentation
-    name: "Start an ICP segmentation"
+    name: "Start an ICP segmentation from a list of domains"
     summary: "Create a new segmentation from a list of company domains"
     input:
       body:
@@ -522,7 +522,7 @@ endpoints:
     scope: any_account
     method: POST
     path: /v2/segmentation/{segmentation_id}/attribute-domains
-    name: "Attribute companies to a segment"
+    name: "Assign domains to the closest segment, with match score"
     summary: "Assign each input domain to the closest segment in a segmentation, with a 0-1 match score"
     input:
       pathParams:
