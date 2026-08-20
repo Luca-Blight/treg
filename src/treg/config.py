@@ -176,6 +176,7 @@ class Settings(BaseSettings):
     platform_key_branddev: str = ""       # Bearer key
     platform_key_icypeas: str = ""        # raw key (Authorization, no Bearer)
     platform_key_leadsforge: str = ""     # Bearer key
+    platform_key_fiber_ai: str = ""       # Fiber AI key (x-api-key header, sk_live_…)
     platform_key_tomba: str = ""          # the API key (ta_…); X-Tomba-Key header
     platform_key_tomba_secret: str = ""   # the API secret (ts_…); X-Tomba-Secret — BOTH must be set
     # (tomba's data routes need the header pair; TOMBA.platform_extra_setting names this second slot)
