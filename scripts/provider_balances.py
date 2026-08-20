@@ -237,7 +237,19 @@ async def _leadsforge(c, key):
                     f"email {d.get('emailEnrichmentPrice')} / phone {d.get('phoneNumberEnrichmentPrice')} credits"}
 
 
+async def _fiber_ai(c, key):
+    # GET /v1/get-org-credits is Fiber's free registry probe (documented in catalog/fiber-ai.yaml);
+    # it is not a catalog endpoint. `usagePeriodResetsOn` sits a century out on the trial pool, so
+    # treat `available` as a prepaid balance, not a monthly quota.
+    d = await _get(c, "https://api.fiber.ai/v1/get-org-credits", headers={"x-api-key": key})
+    org = (d.get("output") or [{}])[0]
+    resets = (org.get("usagePeriodResetsOn") or "")[:10]
+    return {"value": org.get("available"), "unit": "credits",
+            "note": f"{org.get('used')} of {org.get('max')} used; period resets {resets}"}
+
+
 BALANCE_ROUTES = {
+    "fiber_ai": _fiber_ai,
     "apollo": _apollo,
     "branddev": _branddev,
     "companyenrich": _companyenrich,
