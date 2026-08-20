@@ -145,6 +145,11 @@ class OAuthProvider:
     # Settings attribute holding TREG's own value for it. When set, users supply nothing and the
     # tool is provisioned with a platform binding; the per-user prompt is only the fallback.
     extra_credential_setting: str = ""
+    # TIER 4 ONLY: settings attribute holding treg's own second credential for platform-served
+    # calls, when the extra credential is PER-USER (extra_credential_setting stays empty so a
+    # user's connect never rides treg's half of the pair — Tomba rejects a mismatched key/secret).
+    # `_platform_bindings` appends it as a second header binding; user connections are untouched.
+    platform_extra_setting: str = ""
 
     # Some providers bill the OWNER OF THE APP per use, whoever's token made the call — X moved to
     # prepaid pay-per-use in Feb 2026 (per resource read, per post written; no plans). For those,
@@ -1414,6 +1419,345 @@ LEADMAGIC = OAuthProvider(
     probe_path="/v1/credits",  # free — no credits consumed
 )
 
+
+# ---- more Enrichment API-key providers (2026-08 category expansion) ---------------------------
+# Eight providers added together to deepen Enrichment: company/people enrichment with prospecting
+# search (CompanyEnrich, Ocean.io), email finding & verification (Tomba, Findymail, Icypeas,
+# LeadsForge), company signals — funding, hiring, technographics (PredictLeads), and brand assets
+# (Brand.dev). Every entry below was live-verified against the real API on 2026-08-20, including
+# the bogus-key rejection each probe comment records.
+
+COMPANYENRICH = OAuthProvider(
+    service="companyenrich",
+    display_name="CompanyEnrich",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your CompanyEnrich API key",
+    # Authorization: Bearer {secret} — these are the defaults, spelled out because the API accepts
+    # the key in NO other place: there is no query-param form and no alternate header.
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://app.companyenrich.com",
+    setup_action_label="Get your CompanyEnrich API key",
+    setup_steps=(
+        "Sign up at app.companyenrich.com — new accounts start with 500 free credits.",
+        "Open the dashboard and create an API token.",
+        "Copy the token and paste it here.",
+    ),
+    setup_note=(
+        "Enrichment, search and email lookups spend credits; counts, autocompletes, geo lookups, "
+        "job status and the balance check are free."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary=(
+        "Enrich and search companies and people — firmographics, tech stack, funding, "
+        "department headcount, lookalike accounts and work emails."
+    ),
+    base_url="https://api.companyenrich.com",
+    docs_url="https://docs.companyenrich.com",
+    # /me is free (spends no credits), needs auth, and returns the credit balance — the natural key
+    # check. VERIFIED live 2026-08-20: a valid key gets 200 with {credits:{used,total}}; the key
+    # "bogus123" gets a clean HTTP 401 with an application/problem+json body
+    # ({"title":"Unauthorized","status":401,"detail":"Invalid or no authorization token provided..."}),
+    # as does a request with no Authorization header at all. No status-lies-about-the-key problem
+    # here, so none of token_verify_field / token_ok_field / token_reject_field is needed, and the
+    # default reject-on-status behavior is correct.
+    probe_path="/me",
+)
+
+
+OCEANIO = OAuthProvider(
+    service="oceanio",
+    display_name="Ocean.io",
+    auth_kind="key",
+    token_label="API token",
+    token_placeholder="your Ocean.io API token",
+    # The token rides in its own header, spelled `X-Api-Token` in the docs and `x-api-token` in the
+    # OpenAPI spec; HTTP header names are case-insensitive and both were confirmed live. A query form
+    # `?apiToken=<token>` ALSO works, but that would put the token in a URL the proxy records, so the
+    # header wins — and sending BOTH at once is a documented 400 ("Conflicting API tokens provided in
+    # query parameters and headers"), which is another reason to inject exactly one form.
+    # `Authorization: Bearer <token>` is NOT accepted — it 403s exactly like a bogus token.
+    token_header="X-Api-Token",
+    token_format="{secret}",
+    setup_url="https://app.ocean.io/settings/api-tokens",
+    setup_action_label="Get your Ocean.io API token",
+    setup_steps=(
+        "Sign in to Ocean.io and open Account Settings → API Tokens.",
+        "Click Generate new token and copy it — it is shown only once.",
+    ),
+    setup_note="API access is a paid-plan feature. Search, enrich, lookup, reveal and autocomplete all spend credits from one pool; the data-fields, warm-up and balance routes are free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Company and people data with web traffic, tech stack and headcount growth — plus lookalike search from seed domains.",
+    base_url="https://api.ocean.io",
+    docs_url="https://app.ocean.io/docs/",
+    # Free — GET /v2/data-fields returns the searchable industry/technology/region taxonomy and
+    # consumes no credits. A bogus token gets a clean HTTP 403 here (body:
+    # {"detail":"Current API token is not registered in our database"}), and a missing token gets
+    # 403 {"detail":"API token should be provided in headers or query parameters"}, so the default
+    # reject-on-status verify is enough — no token_verify_field / probe_reject_statuses needed.
+    probe_path="/v2/data-fields",
+)
+
+
+TOMBA = OAuthProvider(
+    service="tomba",
+    display_name="Tomba",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Tomba API key (ta_…)",
+    token_header="X-Tomba-Key",
+    token_format="{secret}",
+    # The SECOND half of Tomba's credential pair. Without it only three routes answer.
+    extra_credential_label="API secret",
+    extra_credential_header="X-Tomba-Secret",
+    extra_credential_setting="",  # deliberately unset — see the note above
+    platform_extra_setting="platform_key_tomba_secret",  # tier 4 injects treg's OWN pair
+    extra_credential_note=(
+        "Tomba signs every request with two values. Paste the API key above, then add your API "
+        "secret (ts_…) from the same page — without it only the usage, email-format and "
+        "email-count routes will answer."
+    ),
+    setup_url="https://app.tomba.io/api",
+    setup_action_label="Get your Tomba API key and secret",
+    setup_steps=(
+        "Sign in to Tomba and open the dashboard's API page.",
+        "Copy BOTH the API key (ta_…) and the API secret (ts_…) — Tomba needs the pair.",
+    ),
+    setup_note=(
+        "Finder, verification, enrichment and search calls spend credits (phone lookups cost 5); "
+        "the usage check is free. A search that finds nothing is free, and a repeated identical "
+        "search costs nothing for the rest of the month."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary=(
+        "Find and verify work emails and phone numbers, and enrich people and companies — from a "
+        "name, a domain, a LinkedIn URL or an article byline."
+    ),
+    base_url="https://api.tomba.io",
+    docs_url="https://docs.tomba.io/api",
+    # /v1/usage is free, answers the KEY ALONE (so connect-time verification works before the
+    # secret is bound), and rejects a bogus key. Observed live 2026-08-20:
+    #   valid key  -> 200 {"data":[{"id":…,"search":0,"verifier":0,…}], "total":{…}}
+    #   bogus key  -> 400 {"errors":{"type":"authentication_failed",
+    #                                "message":"Please enter a valid KEY.","code":400}}
+    # A non-2xx is enough, so no token_verify_field / token_reject_field is needed. Do NOT probe
+    # /v1/me or /v1/account: /v1/me 400s without the secret (and its body leaks the account's
+    # secret_token), and /v1/account 401s with "Invalid or expired JWT" even for a good pair.
+    probe_path="/v1/usage",
+)
+
+
+PREDICTLEADS = OAuthProvider(
+    service="predictleads",
+    display_name="PredictLeads",
+    auth_kind="key",
+    token_label="API key : API token pair",
+    token_placeholder="key:token — both values from Your Subscription Plans, joined by a colon",
+    # PredictLeads authenticates with TWO secrets and BOTH must be present on every request
+    # (verified live 2026-08-20: key-only -> 401, token-only -> 401, both -> 200). The documented
+    # transports are the X-Api-Key + X-Api-Token headers or api_key/api_token query params — but the
+    # API ALSO accepts standard HTTP Basic with `key:token` (verified live: 200 with the real pair,
+    # 401 for a bogus pair), which fits the one-slot pasted credential exactly like DataForSEO's
+    # login:password. Base64 is handled at paste time (token_encode), so `Basic {secret}` renders
+    # the same at connect and on every proxy call, and neither value ever rides in a URL.
+    token_format="Basic {secret}",
+    token_encode="base64",
+    setup_url="https://predictleads.com/subscription_plans",
+    setup_action_label="Get your PredictLeads API key and token",
+    setup_steps=(
+        "Sign in to PredictLeads and open Your Subscription Plans.",
+        "Copy BOTH the API key and the API token.",
+        "Paste them here as one value joined by a colon: KEY:TOKEN",
+    ),
+    setup_note=(
+        "Data calls spend credits (1 per request; discovery routes bill 1 per company returned). "
+        "The subscription check is free, and new accounts get 100 credits a month at no cost."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary=(
+        "Company signals from 120M company websites — hiring, tech stack, news, funding, "
+        "products, partners and website changes, all point-in-time."
+    ),
+    base_url="https://predictleads.com/api/v3",
+    docs_url="https://docs.predictleads.com/v3/api_endpoints",
+    # FREE — spends no credits (verified live 2026-08-20: three consecutive calls left
+    # monthly_credits_used unchanged). A bad pair returns a clean 401 with
+    # {"error":{"type":"unauthorized","message":"Authentication failed."}} — no body-field
+    # trickery needed.
+    probe_path="/api_subscription",
+)
+
+
+FINDYMAIL = OAuthProvider(
+    service="findymail",
+    display_name="Findymail",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Findymail API key",
+    # Authorization: Bearer {secret} — the defaults; confirmed live 2026-08-20.
+    # The app is behind a bot wall for anonymous requests (every path answers 403), so the exact
+    # deep link to the key page could not be confirmed from outside a session — this points at the
+    # app root, which is always correct. Deep-link it once someone with a session checks.
+    setup_url="https://app.findymail.com/",
+    setup_action_label="Get your Findymail API key",
+    setup_steps=(
+        "Sign in to Findymail and open Settings → API.",
+        "Create an API key and copy it.",
+    ),
+    setup_note=(
+        "Finding emails, phones and company data spends finder credits; verifying an address spends a "
+        "separate verifier pool. Misses are free, and the credit check itself costs nothing."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and verify B2B work emails, phones, company profiles and tech stacks — you only pay for verified results.",
+    base_url="https://app.findymail.com/api",
+    docs_url="https://app.findymail.com/docs/",
+    # /credits is free and returns both credit pools.
+    #
+    # THE LOAD-BEARING QUIRK: Findymail is a Laravel app that only speaks JSON when asked. Our probe
+    # sends no `Accept` header, so a BAD key does not 401 — it 302-redirects to the HTML login page.
+    # 302 is < 400, so the default "any >=400 is a bad key" rule would have ACCEPTED a garbage key.
+    # Two gates close it, both verified live on 2026-08-20:
+    #   probe_reject_statuses names 302 explicitly (with Accept: application/json the same request
+    #       returns 401 {"message":"Unauthenticated."}, so both statuses are listed), and
+    #   token_verify_field reads `email` off the JSON body — the account's login address, present on
+    #       every valid response and absent from the redirect (empty payload) — so a wrong path or an
+    #       unexpected status cannot slip through either.
+    # Do NOT use `credits` as the verify field: an account that has spent its allowance returns 0,
+    # which is falsy, and a valid key would be rejected.
+    probe_path="/credits",
+    probe_reject_statuses=(302, 401, 403),
+    token_verify_field="email",
+)
+
+
+BRANDDEV = OAuthProvider(
+    service="branddev",
+    display_name="Brand.dev",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Brand.dev API key",
+    # token_header / token_format default to Authorization: Bearer {secret} — which is exactly
+    # what this API wants (verified live 2026-08-20).
+    setup_url="https://brand.dev",
+    setup_action_label="Get your Brand.dev API key",
+    setup_steps=(
+        "Create a Brand.dev account — a work email gets the larger free credit grant.",
+        "Open the dashboard's API keys page and copy your key.",
+    ),
+    setup_note="Brand lookups spend credits (10 per brand record, 5 for fonts, 1 for a "
+               "screenshot); credits are charged only on a successful response, and "
+               "malformed requests are free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Turn a domain, company name, work email, ticker or card descriptor into a brand "
+            "profile — logos, colors, fonts, styleguide, slogan, socials and industry codes.",
+    base_url="https://api.brand.dev/v1",
+    docs_url="https://docs.brand.dev",
+    # There is NO free account/usage route on this API (every /v1/account, /v1/usage, /v1/key
+    # guess answers 403 "does not exist"). The probe is therefore the Coresignal pattern: call
+    # the data route with NO parameters. Observed live 2026-08-20:
+    #   valid key   -> 400 {"error_code":"INPUT_VALIDATION_ERROR", ... credits_consumed: 0}
+    #   bogus key   -> 401 {"error_code":"NOT_FOUND","message":"API key not found …"}
+    # so 400 must count as "key accepted" and only 401/403 as a rejection. The probe is FREE.
+    probe_path="/brand/retrieve",
+    probe_reject_statuses=(401, 403),
+)
+
+
+ICYPEAS = OAuthProvider(
+    service="icypeas",
+    display_name="Icypeas",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Icypeas API key",
+    # The key rides RAW in the Authorization header — no "Bearer", no scheme prefix. The account
+    # also exposes an API *secret*, but that only signs INBOUND webhooks; no request needs it, so a
+    # single pasted key serves every endpoint.
+    token_header="Authorization",
+    token_format="{secret}",
+    setup_url="https://app.icypeas.com",
+    setup_action_label="Get your Icypeas API key",
+    setup_steps=(
+        "Sign in to Icypeas and open the API section in the sidebar.",
+        "Enable API access, then copy your API key.",
+    ),
+    setup_note="Email finding, scraping and lead-database rows spend credits; counting matches and reading results are free.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and verify work emails, scan domains, reverse-lookup profiles, and search a people and company database.",
+    base_url="https://app.icypeas.com/api",
+    docs_url="https://api-doc.icypeas.com/",
+    # The results-read route is free and needs no prior search: with a valid key it answers
+    # 200 {"success":true,...}; with a garbage key it answers a clean
+    # 401 {"error":"UserNotFoundError","code":"user_not_found_error"} (observed live 2026-08-20).
+    # It is a POST, so the probe carries a body.
+    probe_path="/bulk-single-searchs/read",
+    probe_method="POST",
+    probe_json={"limit": 1},
+)
+
+
+LEADSFORGE = OAuthProvider(
+    service="leadsforge",
+    display_name="LeadsForge",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your LeadsForge API key",
+    # The vendor's Swagger declares a bare `apiKey` in the Authorization header, and the API accepts
+    # BOTH the raw key and `Bearer <key>` (both returned 200 on /balance, 2026-08-20). We send the
+    # Bearer form — these are the transport defaults, spelled out here because the spec is ambiguous.
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://app.leadsforge.ai/",
+    setup_action_label="Get your LeadsForge API key",
+    setup_steps=(
+        "Sign in to LeadsForge at app.leadsforge.ai.",
+        "Open Settings → API and create an API key.",
+        "Copy the key.",
+    ),
+    setup_note=(
+        "Lead search and the filter lists are free; you spend credits only to reveal a contact "
+        "channel (1 credit an email or LinkedIn URL, 10 a mobile number). New accounts get 100 "
+        "free credits."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Search 500M+ B2B contacts and reveal their work email, mobile number or LinkedIn profile.",
+    # The /public/v1 prefix is load-bearing: the bare host answers 200 with an EMPTY body and every
+    # unprefixed path 404s {"message":"Not Found"}, which is why an unprefixed probe looks alive but
+    # verifies nothing.
+    base_url="https://api.leadsforge.ai/public/v1",
+    docs_url="https://api.leadsforge.ai/public/swagger/doc.json",
+    # Free, and it rejects cleanly: a bogus key returns 401 {"message":"invalid api key",
+    # "code":"invalid_api_key"} and a missing key 401 {"message":"missing api key"} (verified live
+    # 2026-08-20). No token_verify_field / probe_reject_statuses needed — the status alone is honest.
+    probe_path="/balance",
+)
+
+
 # ---- Advertising API-key providers (ad intelligence) -----------------------------------------
 
 # ---- Market data API-key providers -------------------------------------------------------------
@@ -1842,6 +2186,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers
         LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC,
+        COMPANYENRICH, OCEANIO, TOMBA, PREDICTLEADS, FINDYMAIL, BRANDDEV, ICYPEAS, LEADSFORGE,
         # Market data API-key providers
         COINGECKO, POLYGON, FINNHUB, TWELVEDATA, FMP, EODHD, MARKETSTACK, TIINGO,
         # Advertising: API-key ad intelligence + unconfigured OAuth ad platforms

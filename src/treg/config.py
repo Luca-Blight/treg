@@ -167,6 +167,18 @@ class Settings(BaseSettings):
     platform_key_finnhub: str = ""      # FREE-tier key — trial pool, 50 calls/team/day
     platform_key_twelvedata: str = ""   # FREE Basic key (800/day TOTAL) — trial pool, 20 calls/team/day
     platform_key_tiingo: str = ""       # FREE Starter key (1,000/day total) — trial pool, 20 calls/team/day
+    # ---- Enrichment expansion (2026-08-20). Slots only — fund the accounts and set the keys before
+    # naming any of these in TREG_PLATFORM_PROVIDERS.
+    platform_key_companyenrich: str = ""  # Bearer key
+    platform_key_oceanio: str = ""        # X-Api-Token; fx.yaml usd is null so tier 4 stays refused until priced
+    platform_key_predictleads: str = ""   # base64 of "api_key:api_token" (HTTP Basic, like dataforseo)
+    platform_key_findymail: str = ""      # Bearer key
+    platform_key_branddev: str = ""       # Bearer key
+    platform_key_icypeas: str = ""        # raw key (Authorization, no Bearer)
+    platform_key_leadsforge: str = ""     # Bearer key
+    platform_key_tomba: str = ""          # the API key (ta_…); X-Tomba-Key header
+    platform_key_tomba_secret: str = ""   # the API secret (ts_…); X-Tomba-Secret — BOTH must be set
+    # (tomba's data routes need the header pair; TOMBA.platform_extra_setting names this second slot)
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the

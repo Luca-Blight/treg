@@ -7994,9 +7994,11 @@ async def set_extra_credential(
     else:  # re-supplying replaces it — the usual reason is a rotated token
         extra.value = crypto.encrypt(value)
 
-    bindings = [
-        {"secret_id": secret.id, "injector": "oauth", "location": "header",
-         "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token"},
+    # The primary binding must match how THIS provider authenticates — OAuth bearer for Google Ads,
+    # but a pasted-key provider (Tomba's X-Tomba-Key + X-Tomba-Secret pair) injects a plain header.
+    # Hardcoding the OAuth shape here gave a key provider a binding that JSON-parses a bare key and
+    # fails on every call, so build the primary half with the same helper the connect flow uses.
+    bindings = _provider_bindings(provider, secret) + [
         {"secret_id": extra.id, "injector": "env", "location": "header",
          "name": provider.extra_credential_header, "format": "{secret}"},
     ]
@@ -8910,10 +8912,19 @@ def _platform_bindings(provider) -> list[dict]:
     `api.py`'s cross-org secret check would reject it anyway)."""
     setting = platform_setting_name(provider.service)
     if provider.token_location == "query":
-        return [{"platform_setting": setting, "injector": "env", "location": "query",
-                 "name": provider.token_param, "format": provider.token_format}]
-    return [{"platform_setting": setting, "injector": "env", "location": "header",
-             "name": provider.token_header, "format": provider.token_format}]
+        bindings = [{"platform_setting": setting, "injector": "env", "location": "query",
+                     "name": provider.token_param, "format": provider.token_format}]
+    else:
+        bindings = [{"platform_setting": setting, "injector": "env", "location": "header",
+                     "name": provider.token_header, "format": provider.token_format}]
+    # A per-user credential PAIR (Tomba's key+secret headers) needs treg's own second half on
+    # tier 4. platform_extra_setting is tier-4-only by design: extra_credential_setting would also
+    # ride user connects, pairing a user's key with treg's secret — a pair the provider rejects.
+    if provider.needs_extra_credential and provider.platform_extra_setting:
+        bindings.append({"platform_setting": provider.platform_extra_setting, "injector": "env",
+                         "location": "header", "name": provider.extra_credential_header,
+                         "format": "{secret}"})
+    return bindings
 
 
 def _platform_offer(ep: dict, provider, org: Org) -> dict | None:
