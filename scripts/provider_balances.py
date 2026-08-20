@@ -300,7 +300,11 @@ async def _provider_balance(provider: str) -> dict:
         return {"provider": provider, "value": None, "unit": "",
                 "note": f"no TREG_{setting.upper()} in the env"}
     if provider in NO_BALANCE_API:
-        return {"provider": provider, "value": None, "unit": "", "note": NO_BALANCE_API[provider]}
+        # `no_api` is the machine-readable half of the note: the balance gate must not read a
+        # provider that publishes no meter as a broken key, and a set duplicated in the gate drifts
+        # the moment a provider lands here (icypeas did, 2026-08-20).
+        return {"provider": provider, "value": None, "unit": "", "no_api": True,
+                "note": NO_BALANCE_API[provider]}
     fetch = BALANCE_ROUTES.get(provider)
     if fetch is None:
         return {"provider": provider, "value": None, "unit": "", "note": "no fetcher written yet"}
