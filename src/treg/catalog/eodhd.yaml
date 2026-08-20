@@ -17,7 +17,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /eod/{symbol}
-    name: "End-of-day price history"
+    name: "End-of-day stock prices by ticker — OHLCV, 70+ exchanges"
     summary: "Daily OHLCV for a symbol across 70+ global exchanges — symbol carries the exchange suffix (AAPL.US, BMW.XETRA)"
     input:
       queryParams:
@@ -38,7 +38,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /real-time/{symbol}
-    name: "Delayed live quote"
+    name: "Delayed stock quote by ticker — price, day change"
     summary: "The current (15-20min delayed) quote for a symbol, with day change"
     input:
       queryParams:
@@ -56,7 +56,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /exchanges-list/
-    name: "Exchange directory"
+    name: "Stock exchange directory — codes, countries, currencies"
     summary: "Every exchange EODHD covers, with code, country and currency — the suffix directory for the symbol format"
     input:
       queryParams:

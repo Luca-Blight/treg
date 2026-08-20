@@ -15,7 +15,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /quote
-    name: "Quote for a symbol"
+    name: "Stock, forex or crypto quote by symbol — 52-week range"
     summary: "Current quote with open/high/low/close, volume, change and 52-week range — stocks, forex and crypto symbols alike"
     input:
       queryParams:
@@ -33,7 +33,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /time_series
-    name: "Time series for a symbol"
+    name: "Stock OHLCV time series by symbol — 1min to 1month"
     summary: "OHLCV series at any interval from 1min to 1month — the workhorse for charts and analysis"
     input:
       queryParams:
@@ -54,7 +54,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /price
-    name: "Just the price"
+    name: "Current price of a symbol — one number only"
     summary: "One number: the current price of a symbol — the cheapest possible check"
     input:
       queryParams:
@@ -71,7 +71,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /symbol_search
-    name: "Search symbols"
+    name: "Search stock, forex and crypto symbols by name"
     summary: "Resolve a name or fragment to symbols across stocks, forex and crypto, with exchange info"
     input:
       queryParams:

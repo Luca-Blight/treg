@@ -18,7 +18,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /eod
-    name: "End-of-day price history"
+    name: "End-of-day stock prices by ticker — OHLCV, date range"
     summary: "Daily open/high/low/close/volume for one or more tickers, with date range and adjusted values — 70+ exchanges worldwide"
     input:
       queryParams:
@@ -40,7 +40,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /eod/latest
-    name: "Latest end-of-day prices"
+    name: "Latest closing price by stock ticker — end-of-day bar"
     summary: "The most recent end-of-day bar for one or more tickers — the quick 'what did it close at'"
     input:
       queryParams:
@@ -57,7 +57,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /intraday
-    name: "Intraday prices"
+    name: "Intraday stock price bars by ticker — hourly to 1-minute"
     summary: "Intraday bars for a ticker (hourly by default). On the Basic plan this is DELAYED data, not real-time"
     input:
       queryParams:
@@ -78,7 +78,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /tickers
-    name: "Find tickers"
+    name: "Search stock tickers by company name or symbol"
     summary: "Search 300,000+ tickers by name or symbol and see which exchange each trades on — the symbol-resolver for the other endpoints"
     input:
       queryParams:
@@ -97,7 +97,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /exchanges
-    name: "Stock exchange directory"
+    name: "Stock exchange directory — MIC codes, countries"
     summary: "The exchanges marketstack covers, each with MIC code, country and timezone"
     input:
       queryParams:
@@ -116,7 +116,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /splits
-    name: "Stock split history"
+    name: "Stock split history by ticker — dates and ratios"
     summary: "Split events for a ticker with date and ratio"
     input:
       queryParams:
@@ -136,7 +136,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /dividends
-    name: "Dividend history"
+    name: "Dividend history by stock ticker — ex-dates, amounts"
     summary: "Dividend payments for a ticker with ex-date and amount"
     input:
       queryParams:

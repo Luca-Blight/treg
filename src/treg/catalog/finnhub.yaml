@@ -16,7 +16,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /quote
-    name: "Real-time quote"
+    name: "Real-time stock quote by ticker — price, day change"
     summary: "Current price, day change, open/high/low and previous close for a US ticker"
     input:
       queryParams:
@@ -33,7 +33,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /stock/profile2
-    name: "Company profile"
+    name: "Company profile by stock ticker — industry, market cap"
     summary: "Company behind a ticker: name, industry, market cap, IPO date, logo and weburl"
     input:
       queryParams:
@@ -50,7 +50,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /search
-    name: "Search symbols"
+    name: "Search stock ticker symbols by company name"
     summary: "Resolve a company name or fragment to tradable symbols"
     input:
       queryParams:
@@ -67,7 +67,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /company-news
-    name: "Company news"
+    name: "Company news by stock ticker over a date range"
     summary: "News articles for one company over a date range"
     input:
       queryParams:
@@ -86,7 +86,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /stock/metric
-    name: "Fundamental metrics"
+    name: "Stock fundamentals by ticker — P/E, margins, 52-week range"
     summary: "Valuation, margin, growth and per-share metrics for a ticker (P/E, 52-week range, beta and more)"
     input:
       queryParams:

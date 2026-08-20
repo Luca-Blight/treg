@@ -15,7 +15,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /tiingo/daily/{ticker}
-    name: "Ticker metadata"
+    name: "Ticker metadata by symbol — name, exchange, date range"
     summary: "Name, description, exchange and the date range Tiingo has data for — 30+ years for many tickers"
     input:
       queryParams:
@@ -32,7 +32,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /tiingo/daily/{ticker}/prices
-    name: "End-of-day price history"
+    name: "End-of-day stock prices by ticker — adjusted, 30+ years"
     summary: "Daily OHLCV with split/dividend-adjusted values, back 30+ years"
     input:
       queryParams:
@@ -52,7 +52,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /iex/{ticker}
-    name: "Latest IEX quote"
+    name: "Latest stock quote by ticker from the IEX feed"
     summary: "The latest top-of-book quote from the IEX feed for a ticker"
     input:
       queryParams:
@@ -69,7 +69,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /tiingo/crypto/prices
-    name: "Crypto price bars"
+    name: "Crypto OHLCV bars by currency pair — 1min to daily"
     summary: "OHLCV bars for crypto pairs (btcusd, ethusd …) at any resample frequency"
     input:
       queryParams:

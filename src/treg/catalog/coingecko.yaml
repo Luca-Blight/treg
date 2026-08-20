@@ -20,7 +20,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /simple/price
-    name: "Live price of one or more coins"
+    name: "Current crypto price by coin id — market cap, 24h change"
     summary: "Current price for up to hundreds of coins at once, in any quote currency, with optional market cap, 24h volume and 24h change"
     input:
       queryParams:
@@ -42,7 +42,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /simple/supported_vs_currencies
-    name: "List supported quote currencies"
+    name: "List supported quote currencies (fiat, BTC, ETH)"
     summary: "Every vs_currency the price endpoints accept (fiat, BTC, ETH and more)"
     input:
       note: "no parameters"
@@ -59,7 +59,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /coins/markets
-    name: "Top coins with market data"
+    name: "Top crypto coins ranked by market cap — price, 24h change"
     summary: "Coins ranked by market cap (or volume), each with price, market cap, 24h change, supply and ATH — the one-call market overview"
     input:
       queryParams:
@@ -82,7 +82,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /coins/{coin_id}
-    name: "Full profile of one coin"
+    name: "Full crypto coin profile by coin id — links, market data"
     summary: "Everything about one coin: description, links, market data, supply, ATH/ATL — heavy response, use the flags to slim it"
     input:
       queryParams:
@@ -105,7 +105,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /coins/{coin_id}/market_chart
-    name: "Price history of a coin"
+    name: "Crypto price history by coin id — market cap, volume series"
     summary: "Historical price, market cap and volume series for a coin over N days (auto granularity: 5-minutely under 1 day, hourly under 90, daily beyond)"
     input:
       queryParams:
@@ -126,7 +126,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /coins/{coin_id}/history
-    name: "Coin snapshot on a specific date"
+    name: "Crypto coin snapshot on a date — price, market cap, volume"
     summary: "Price, market cap and volume of a coin on one historical date"
     input:
       queryParams:
@@ -146,7 +146,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /coins/{coin_id}/ohlc
-    name: "OHLC candles for a coin"
+    name: "Crypto OHLC candles by coin id over N days"
     summary: "Open/high/low/close candles over N days (30-minutely under 2 days, 4-hourly to 30, daily beyond)"
     input:
       queryParams:
@@ -166,7 +166,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /search
-    name: "Search coins, exchanges and categories"
+    name: "Search crypto coins and exchanges by name or ticker"
     summary: "Resolve a name or ticker to CoinGecko ids — the id-lookup for every other endpoint"
     input:
       queryParams:
@@ -184,7 +184,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /search/trending
-    name: "Trending coins right now"
+    name: "Trending crypto coins and NFTs — most searched in 24h"
     summary: "The coins, NFTs and categories most searched on CoinGecko in the last 24 hours"
     input:
       note: "no parameters"
@@ -201,7 +201,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /global
-    name: "Global crypto market stats"
+    name: "Global crypto market stats — total cap, BTC dominance"
     summary: "Total market cap, 24h volume, BTC dominance and active coin count across the whole market"
     input:
       note: "no parameters"
@@ -218,7 +218,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /exchanges
-    name: "Crypto exchanges with volume and trust"
+    name: "Crypto exchanges ranked by trust score — volume, country"
     summary: "Exchanges ranked by trust score, each with 24h BTC volume, country and year established"
     input:
       queryParams:
