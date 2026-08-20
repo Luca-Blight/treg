@@ -17,8 +17,9 @@ related:
 # The API
 
 FastAPI `app` in `src/treg/api.py`. Everything the CLI + skill do is one HTTP call over this. `lifespan`
-runs `init_db()` and creates the shared keepalive `httpx.AsyncClient` at `app.state.http` (and
-`audit.drain()`s on shutdown). It also starts the Google Ads conversion uploader (`adsconv.worker`) as
+runs `init_db()`, then `_backfill_provider_extra_tools()` (the idempotent repair for provider registry
+`extra_tools` added after a connection was created), and creates the shared keepalive
+`httpx.AsyncClient` at `app.state.http` (and `audit.drain()`s on shutdown). It also starts the Google Ads conversion uploader (`adsconv.worker`) as
 a background task, but only when `adsconv.enabled()` — see
 [ads-conversions](../architecture/ads-conversions.md).
 
@@ -40,6 +41,11 @@ are untouched, and a client that ignores the header sees what it always saw. Wit
 tell treg's 404 ("no tool registered for that host") from the vendor's own 404: both are a status and
 some JSON. The [local proxy](../architecture/local-proxy.md) needs that distinction to explain a failure
 without ever rewriting a real vendor response.
+
+Resolution refusals are actionable: a named miss that resembles one of the caller's usable own tools
+returns a structured `detail` with `hint` and `did_you_mean`, including after a real catalog endpoint
+falls through and finds no usable marketplace credential. A genuine URL-passthrough tie returns 409
+with the names of the colliding usable tools and the explicit `/call/<name>/<path>` escape hatch.
 
 ## Auth
 `require_member()` reads the `X-Treg-Token` header, hashes it (`crypto.hash_token`), looks up the
@@ -114,8 +120,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   skips the count entirely (zero overhead); the sandbox is exempt. **Soft by design** — it counts the
   best-effort `CallRecord`, so under load it fails *open*, never closed.
 - **Super-admin (cross-tenant, `require_superadmin`):** `/admin/stats|orgs|orgs/{id}|users|tools|calls|
-  errors|health` (reads — `errors` is failed **platform** calls with the captured request/response
-  evidence, and runs the 14-day retention pass; see [super-admin](../architecture/super-admin.md))
+  errors|health` (reads — `errors` is failed calls across every credential tier with captured,
+  admin-only request/response evidence, supports a `tier` filter, and runs the 14-day retention pass;
+  see [super-admin](../architecture/super-admin.md))
   + `/admin/users/{id}/superadmin|suspend`, `DELETE /admin/users/{id}`,
   `/admin/orgs/{id}/suspend`, `DELETE /admin/orgs/{id}` (Phase-2). See
   [super-admin](../architecture/super-admin.md).
@@ -452,12 +459,17 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   provider gets an `env` header binding, an oauth one gets a `Bearer {access_token}` binding; a provider
   needing treg's own second credential — Google Ads' developer token — also gets a **platform binding**,
   see [proxy-model](../architecture/proxy-model.md)) and `_record_connected_identity` best-effort asks
-  the provider who connected. See [auth-secrets](../architecture/auth-secrets.md).
+  the provider who connected. `_upsert_provider_extra_tools` is shared by this connect path and the
+  startup backfill, so companions use the same `(org_id, name)` upsert and binding shape in both cases.
+  See [auth-secrets](../architecture/auth-secrets.md).
   The tool's `examples` come from `_provider_tool_examples`: the registry's hand-written ones first,
   then the endpoint catalog's **verified core** endpoints for that provider (`catalog_store.tool_examples`
   → `{method, path, note}` where the note carries the summary, required params and capability),
   de-duplicated by (method, path) and capped at `CATALOG_STAMP_CAP` (12). Unverified endpoints are never
   stamped — an example is a promise the call works, and the `verified` date is the only evidence of that.
+  Search Console's hand-written example additionally documents that direct own-tool path substitution
+  takes a `site_url` encoded exactly once; catalog calls accept either raw values or existing `%HH`
+  escapes and prevent the latter from being encoded a second time.
 - **Connections (the marketplace's dashboard surface):** `list_connections` (`GET /connections`) returns
   every OAuth/registry credential in the org — metadata only, no token material — with health, expiry,
   and (for a known provider) `capabilities`/`missing_capabilities` + extra-credential notes. The filter

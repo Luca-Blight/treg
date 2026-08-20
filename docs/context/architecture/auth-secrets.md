@@ -97,6 +97,9 @@ The Meta pair carries three tiers — read / post / **manage** (comments + DMs o
 visitor content, metadata/webhooks, Messenger, Page video, leads_retrieval + its required
 pages_manage_ads rider, and catalog_management on Facebook Pages) — sized for the 2026-08 App Review
 bundle; `default_capability` is the broadest tier by design, so a plain Connect asks for manage.
+Google Search Console's hand-written tool example calls out its distinct direct-tool convention:
+substitute `{site_url}` with a value encoded exactly once (`sc-domain%3Aexample.com`), and never encode
+again a property identifier returned by the sites list.
 
 Each entry is a frozen `OAuthProvider` dataclass; `REGISTRY` is the `{service: provider}` map. Key
 module symbols:
@@ -170,8 +173,11 @@ module symbols:
   both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin
   path on the data host → Google 404; admin host → treg "no registered tool"; 13 calls/7 orgs observed
   stuck there). The extra (`<connection>-admin`) binds the SAME secret, upserts idempotently on
-  reconnect — which is also how pre-fix connections heal — and revoke already sweeps it (any tool
-  whose only binding was the deleted credential goes). `resource_example` closes the loop from the
+  connect/reconnect, and `_backfill_provider_extra_tools` runs after `init_db()` on every startup to
+  heal older connections automatically. The backfill is registry-generic: it scans provider-attributed
+  Secrets, requires the corresponding main Tool to be bound to that Secret, then calls the same extra
+  upsert, so adding a future `extra_tools` entry needs no one-off migration. Revoke already sweeps the
+  companions (any tool whose only binding was the deleted credential goes). `resource_example` closes the loop from the
   other side: the moment the user picks their property (`POST /connections/{id}/resource`), the
   template renders `{resource}`/`{resource_name}` into a ready-made call stamped into the data tool's
   examples (marker `stamped: resource`, so re-picking replaces instead of piling up).

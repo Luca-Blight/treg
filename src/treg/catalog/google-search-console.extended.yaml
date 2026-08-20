@@ -58,7 +58,7 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: The URI of the property as defined in Search Console. **Examples:** `http://www.example.com/` or `sc-domain:example.com`.
+        note: Pass the raw property URI; treg encodes it. **Examples:** `http://www.example.com/` or `sc-domain:example.com`.
 - id: google-search-console.x.webmasters-sites-get
   tier: extended
   platform: search-console
@@ -74,7 +74,7 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: The URI of the property as defined in Search Console. **Examples:** `http://www.example.com/` or `sc-domain:example.com`.
+        note: Pass the raw property URI; treg encodes it. **Examples:** `http://www.example.com/` or `sc-domain:example.com`.
 - id: google-search-console.x.webmasters-sites-add
   kind: account
   tier: extended
@@ -91,7 +91,7 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: The URL of the site to add.
+        note: Pass the raw site URL/property id; treg encodes it.
 - id: google-search-console.x.webmasters-sitemaps-delete
   kind: account
   tier: extended
@@ -112,7 +112,7 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: 'The site''s URL, including protocol. For example: `http://www.example.com/`.'
+        note: 'Pass the raw property id; treg encodes it. For example: `http://www.example.com/` or `sc-domain:example.com`.'
 - id: google-search-console.x.webmasters-sitemaps-get
   tier: extended
   platform: search-console
@@ -132,7 +132,7 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: 'The site''s URL, including protocol. For example: `http://www.example.com/`.'
+        note: 'Pass the raw property id; treg encodes it. For example: `http://www.example.com/` or `sc-domain:example.com`.'
 - id: google-search-console.x.webmasters-sitemaps-submit
   kind: account
   tier: extended
@@ -153,4 +153,4 @@ endpoints:
       siteUrl:
         type: string
         required: true
-        note: 'The site''s URL, including protocol. For example: `http://www.example.com/`.'
+        note: 'Pass the raw property id; treg encodes it. For example: `http://www.example.com/` or `sc-domain:example.com`.'

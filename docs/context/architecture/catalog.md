@@ -5,6 +5,8 @@ sources:
   - .github/workflows/catalog-drift.yml
   - scripts/catalog_drift.py
   - scripts/catalog_validate.py
+  - src/treg/catalog/google-search-console.yaml
+  - src/treg/catalog/google-search-console.extended.yaml
   - src/treg/catalog/justoneapi.extended.yaml
   - src/treg/catalog/tikhub.extended.yaml
   - src/treg/catalog_store.py
@@ -32,6 +34,11 @@ The catalog adds that operations layer:
   compare TikHub vs JustOneAPI for one job, and a future router can fail over between them.
 - **verified example responses** → captured during live testing, because docs show request params
   but choosing an API comes down to what actually comes back.
+
+Path placeholders are substituted by the marketplace caller. Raw values are percent-encoded; a value
+that already contains a valid `%HH` escape is kept verbatim so callers can safely reuse encoded resource
+names returned by an upstream API. An invalid/literal `%` is still encoded as `%25`. Search Console's
+`siteUrl` examples deliberately use the raw `sc-domain:example.com` form to demonstrate the default path.
 
 ## Where things live
 

@@ -28,16 +28,17 @@ incl. duplicates, headers, cookies, body bytes):
    `credentials:'include'` Try-it would otherwise leak our session token — while keeping other cookies.
 3. **the injected credential(s)** — each binding overwrites only its target header/param.
 
-> **What treg keeps from a call.** Normally nothing: the relay forwards bytes and the audit row
-> records status, size and timing, not content. The single exception is a **failed platform-tier
-> call**, where `CallRecord.error_request` / `error_response` retain a redacted, truncated copy of
-> what the caller sent and what the provider answered — otherwise a failure is a bare status code
-> that cannot be explained afterwards, since `path` holds the catalog's URL rather than the caller's
-> parameters and `params_hash` is one-way. It costs nothing extra on the wire: metered responses are
-> already fully buffered by `_buffer_response` (settling needs the provider's reported cost out of
-> the body), and `force_identity` already asks those responses to arrive uncompressed. Own-key and
-> non-catalog calls keep the original guarantee — nothing of them is retained. See
-> [data-model](data-model.md) for the redaction order and retention.
+> **What treg keeps from a call.** Successes retain no content: the relay forwards bytes and the audit
+> row records status, size and timing. A **failed relayed call** — platform, own-key, or plain own-tool
+> — is the exception: `CallRecord.error_request` / `error_response` retain a redacted, truncated copy
+> of what the caller sent and what the provider (or treg-side 502) answered. Without it a failure is a
+> bare status code: `path` holds the catalog URL rather than the caller's parameters and `params_hash`
+> is one-way. Metered responses are already buffered by `_buffer_response`; `_peek_stream_head` reads
+> only the first 8 KiB of a failed unmetered response and replays every consumed byte before the rest
+> of the original iterator, preserving status, raw headers, streaming, and the upstream-close task.
+> Caller bodies on unmetered paths are cached only when `Content-Length` is declared and at most 64
+> KiB; large/chunked uploads stay streaming and retain only their query-param half. See
+> [data-model](data-model.md) for the redaction order, admin-only access, and retention.
 
 Faithfulness mechanics inside `relay()`:
 - request headers rebuilt from `request.headers.raw` into an `httpx.Headers` multidict (preserves
@@ -91,8 +92,18 @@ same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the pe
   `base_url + path`. **No path → the base URL itself, without a trailing slash** — a tool pinned to a
   full resource (`.../v1/charges`) must relay as-is, since Stripe `404`s `/v1/charges/`.
 
+Named misses also inspect the org's caller-usable own tools on the error path. When a dotted operation
+name shares its provider/first segment with one (for example `google-analytics.report` beside the
+connected `google-analytics` tool), the 404 carries `hint` plus `did_you_mean` and points at
+`/call/google-analytics/<path>`. If that dotted name is a real catalog endpoint, the hint follows the
+catalog fall-through and is attached only if the marketplace credential ladder also dead-ends. Catalog
+near-id matching remains provider-local and takes precedence for genuine misspellings.
+
 If both shapes miss with 404, a dotted target gets one final lookup in the endpoint catalog. A live
-row enters `_resolve_marketplace_call` and its credential ladder. A `retired`/`broken` tombstone is
+row enters `_resolve_marketplace_call` and its credential ladder. `_marketplace_upstream` fills catalog
+path placeholders by percent-encoding raw values, but preserves a value containing a valid `%HH` escape;
+this prevents an already encoded Search Console property id such as `sc-domain%3Aexample.com` becoming
+double-encoded as `%253A`. Literal/invalid percent signs remain encoded. A `retired`/`broken` tombstone is
 instead refused with 410, its `status_note`, and its optional `superseded_by`, before credentials are
 selected or the relay can run; the refusal is audited as `refused_by=retired`. This ordering is
 deliberate: an org's own tool named exactly like the old catalog id already resolved above and is not
@@ -170,7 +181,8 @@ credential; the longest-prefix tiebreak compares rstripped lengths (a trailing-s
 **prefers the registry-provider-backed tool** (one whose binding points at a `Secret` with a `provider`)
 over a hand-registered one that often holds a stale credential — a `409` there would break exactly the
 agent-facing URL-passthrough callers who never typed a tool name; only a genuine ambiguity (neither or
-both provider-owned) still `409`s. Binding validity is checked at **registration** (`_validate_bindings` rejects
+both provider-owned) still `409`s. That 409 names every caller-usable colliding tool and directs the
+caller to the unambiguous `/call/<name>/<path>` form. Binding validity is checked at **registration** (`_validate_bindings` rejects
 an unknown `injector` and a cross-org/dangling `secret_id`; `register_skill` runs the same gate), and
 `call_tool` translates a call-time injector `ValueError` and an upstream `httpx.RequestError` into a
 `502` instead of an unhandled 500 (and audits the failed attempt, not just successes). A binding

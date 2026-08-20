@@ -1,4 +1,4 @@
-"""Evidence kept for a FAILED platform-tier call: what the caller sent, and what the provider said.
+"""Admin-only evidence kept for a failed relayed call: caller input and provider/treg explanation.
 
 Until this existed a failure recorded a status code and nothing else, so it could not be explained
 afterwards — the provider's message was never stored and the caller's parameters survived only inside
@@ -7,8 +7,7 @@ returned 80 identical 400s across 6 orgs and none of them could be diagnosed.
 
 Three properties are load-bearing here, and each has its own test below:
 
-1. It is PLATFORM-ONLY. A team calling on its own key is billed by the provider; keeping their
-   traffic would help nobody and is the line `IdempotentCall.response_body` already draws.
+1. It is FAILURE-ONLY. Successful calls never retain request or response content.
 2. It never retains treg's own credential. That key is shared across every tenant, so a leak is not
    one customer's problem — and providers routinely quote the offending request back in a 400/401.
 3. It captures BOTH failure shapes: the provider answering badly, and treg failing to reach it.
@@ -36,7 +35,7 @@ EP_POST = "dataforseo.web.page.audit"         # POST — the only shape whose pa
 # Keys chosen so ONLY the exact-substring mask can catch them. `_ARGV_SECRET_RE` matches known
 # prefixes, JWTs, and any 24+ run of [A-Za-z0-9_-]; a short key containing a '.' matches none of
 # those, because the dot breaks the word boundary. Verified by disabling
-# `_platform_secret_renderings` and watching these tests fail — with a longer key they passed on the
+# `_secret_renderings` and watching these tests fail — with a longer key they passed on the
 # regex fallback alone and proved nothing about the defence they exist to cover.
 PLATFORM_KEY = "tk.9f2a-Q1"
 SPYFU_KEY = "sp.4b7c-Z8"
@@ -87,6 +86,22 @@ async def _row(clients: AsyncClient) -> dict:
     return {c: getattr(row, c) for c in (
         "status_code", "tool_name", "credential_tier", "refused_by",
         "error_request", "error_response")}
+
+
+async def _own_tool(clients: AsyncClient, *, name: str = "own-tool", value: str = "own.key-Q7",
+                    kind: str = "env", injector: str = "env", secret_field: str | None = None) -> int:
+    secret = (await clients.post("/secrets", json={
+        "name": f"{name}-secret", "value": value, "kind": kind,
+    })).json()
+    binding = {"secret_id": secret["id"], "injector": injector,
+               "name": "Authorization", "format": "Bearer {secret}"}
+    if secret_field:
+        binding["secret_field"] = secret_field
+    r = await clients.post("/tools", json={
+        "name": name, "base_url": "http://upstream", "bindings": [binding],
+    })
+    assert r.status_code == 200, r.text
+    return secret["id"]
 
 
 # ---- the happy path stores nothing --------------------------------------------------------------
@@ -141,22 +156,128 @@ async def test_treg_s_own_502_is_explained_too(clients: AsyncClient, platform_on
     assert "aweme_id=7" in row["error_request"]
 
 
-# ---- the tier gate ------------------------------------------------------------------------------
-# The gate is STRUCTURAL: the capture code sits inside `if mk is not None and mk.metered:` in
-# `call_tool`, so a non-platform call cannot reach it at all. The extra `mk.metered` check inside
-# `_audit` is redundant insurance for a future call site, and is therefore NOT pinned by the test
-# below — removing it leaves this test passing (verified). Kept anyway: it costs nothing, and this
-# is the one column set where a mistake would retain a team's own traffic.
-async def test_an_own_key_failure_stores_nothing(clients: AsyncClient, monkeypatch):
-    """Tier 2: the org's own credential paid, so the traffic is theirs and treg keeps none of it."""
-    await clients.post("/secrets", json={"name": "tikhub", "value": "THEIR-OWN-KEY"})
-    monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"error":"their own failure"}'))
+# ---- own credentials now receive the same failure-only evidence -------------------------------
+async def test_an_own_key_failure_keeps_redacted_evidence(clients: AsyncClient, monkeypatch):
+    """Tier 2 failures retain evidence, but an echoed org credential never survives."""
+    own_key = "org.own-Q7"
+    await clients.post("/secrets", json={"name": "tikhub", "value": own_key})
+    monkeypatch.setattr(A, "relay", _fake_relay(
+        400, f'{{"error":"their own failure","received":"{own_key}"}}'.encode()))
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 400
     row = await _row(clients)
     assert row["credential_tier"] == "credential"
-    assert row.get("error_request") is None
-    assert row.get("error_response") is None, "own-key traffic must never be retained"
+    assert "aweme_id=7" in row["error_request"]
+    assert "their own failure" in row["error_response"]
+    assert own_key not in row["error_response"]
+
+
+async def test_oauth_blob_masks_tokens_but_keeps_scope(clients: AsyncClient, monkeypatch):
+    access, refresh = "oauth.access-Q7", "oauth.refresh-Z8"
+    blob = json.dumps({"access_token": access, "refresh_token": refresh,
+                       "scope": "webmasters.readonly", "token_type": "Bearer"})
+    await _own_tool(clients, name="oauth-mask", value=blob, kind="oauth", injector="oauth",
+                    secret_field="access_token")
+    monkeypatch.setattr(A, "relay", _fake_relay(403, json.dumps({
+        "error": "invalid grant", "scope": "webmasters.readonly",
+        "access_token": access, "refresh_token": refresh, "token_type": "Bearer",
+    }).encode()))
+    r = await clients.get("/call/oauth-mask/sites")
+    assert r.status_code == 403
+    row = await _row(clients)
+    assert access not in row["error_response"]
+    assert refresh not in row["error_response"]
+    assert "webmasters.readonly" in row["error_response"]
+
+
+async def test_plain_own_tool_failure_keeps_evidence(clients: AsyncClient, monkeypatch):
+    await _own_tool(clients, name="plain-own")
+    monkeypatch.setattr(A, "relay", _fake_relay(422, b'{"error":"missing report dimensions"}'))
+    r = await clients.get("/call/plain-own/reports?property=123")
+    assert r.status_code == 422
+    row = await _row(clients)
+    assert row["credential_tier"] is None
+    assert "property=123" in row["error_request"]
+    assert "missing report dimensions" in row["error_response"]
+
+
+async def test_oauth_provisioned_own_tool_failure_keeps_evidence(
+        clients: AsyncClient, monkeypatch):
+    monkeypatch.setenv("TREG_GOOGLE_CLIENT_ID", "treg-google-cid")
+    monkeypatch.setenv("TREG_GOOGLE_CLIENT_SECRET", "treg-google-csec")
+    get_settings.cache_clear()
+    state = (await clients.post("/oauth/start", json={
+        "provider": "google-search-console", "name": "google-search-console",
+        "client_id": "cid", "client_secret": "csec",
+        "auth_uri": "http://provider/auth", "token_uri": "http://upstream/token",
+        "scopes": ["https://www.googleapis.com/auth/webmasters.readonly"],
+    })).json()["state"]
+    callback = await clients.get(f"/oauth/callback?code=AUTHCODE&state={state}")
+    assert callback.status_code == 200, callback.text
+
+    monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"error":"invalid siteUrl"}'))
+    r = await clients.get("/call/google-search-console/sites?siteUrl=sc-domain%3Aexample.com")
+    assert r.status_code == 400
+    row = await _row(clients)
+    assert row["credential_tier"] is None
+    assert "siteUrl=sc-domain:example.com" in row["error_request"]
+    assert "invalid siteUrl" in row["error_response"]
+
+
+async def test_masking_render_failure_is_redacted_not_a_500(clients: AsyncClient, monkeypatch):
+    await _own_tool(clients, name="masking-fails")
+    monkeypatch.setattr(A, "_secret_renderings", lambda *args: (_ for _ in ()).throw(ValueError("bad")))
+    monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"error":"credential echoed here"}'))
+    r = await clients.get("/call/masking-fails/fail?case=render")
+    assert r.status_code == 400
+    row = await _row(clients)
+    assert row["error_request"] == A._ERROR_MASKING_FAILED
+    assert row["error_response"] == A._ERROR_MASKING_FAILED
+
+
+async def test_streaming_4xx_reaches_caller_byte_for_byte_and_keeps_evidence(
+        clients: AsyncClient, monkeypatch):
+    await _own_tool(clients, name="stream-own")
+    chunks = [b'{"error":', b'"split across chunks"}', b"\n"]
+
+    async def chunked(*args, **kwargs):
+        async def stream():
+            for chunk in chunks:
+                yield chunk
+        return StreamingResponse(stream(), status_code=400,
+                                 headers={"x-request-id": "req-stream-1"})
+
+    monkeypatch.setattr(A, "relay", chunked)
+    r = await clients.get("/call/stream-own/fail?part=all")
+    assert r.status_code == 400
+    assert r.content == b"".join(chunks)
+    row = await _row(clients)
+    assert "split across chunks" in row["error_response"]
+    assert "req-stream-1" in row["error_response"]
+
+
+async def test_large_unmetered_body_keeps_query_only(clients: AsyncClient, monkeypatch):
+    await _own_tool(clients, name="large-own")
+    monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"error":"too large"}'))
+    body = b"body-marker-" + b"x" * A._ERROR_CALLER_BODY_MAX
+    r = await clients.post("/call/large-own/fail?request_id=query-only", content=body)
+    assert r.status_code == 400
+    row = await _row(clients)
+    assert "request_id=query-only" in row["error_request"]
+    assert "body-marker" not in row["error_request"]
+
+
+async def test_treg_side_502_keeps_own_tool_evidence(clients: AsyncClient, monkeypatch):
+    import httpx
+
+    await _own_tool(clients, name="broken-own")
+    monkeypatch.setattr(A, "relay", _fake_relay(
+        502, raises=httpx.ConnectError("connection reset by peer")))
+    r = await clients.get("/call/broken-own/fail?request_id=502-case")
+    assert r.status_code == 502
+    row = await _row(clients)
+    assert "request_id=502-case" in row["error_request"]
+    assert "upstream request failed" in row["error_response"]
 
 
 async def test_a_treg_refusal_stores_nothing(clients: AsyncClient):
@@ -189,7 +310,7 @@ async def test_the_platform_key_never_reaches_the_columns_query_injected(
     from urllib.parse import quote
     # The key appears TWICE, deliberately: once inside a URL, which the query-shaped rule masks on its
     # own, and once in prose, where nothing but the exact-substring mask will find it. Without the
-    # second copy this test passes with `_platform_secret_renderings` disabled entirely — verified.
+    # second copy this test passes with `_secret_renderings` disabled entirely — verified.
     echoed = (f'{{"error":"key {SPYFU_KEY} is not valid for this endpoint",'
               f'"url":"https://api.spyfu.com/x?api_key={quote(SPYFU_KEY, safe="")}&domain=a.com"}}')
     monkeypatch.setattr(A, "relay", _fake_relay(403, echoed.encode()))
@@ -448,22 +569,34 @@ async def test_the_columns_are_not_exposed_to_the_team_yet(clients: AsyncClient,
 
 
 # ---- the admin view, and ageing ------------------------------------------------------------------
-async def test_admin_errors_lists_only_failed_platform_calls(clients: AsyncClient, platform_on,
-                                                             monkeypatch):
+async def test_admin_errors_lists_all_failed_tiers_and_filters_them(clients: AsyncClient, platform_on,
+                                                                   monkeypatch):
     monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"error":"aweme_id must be numeric"}'))
     await clients.get(f"/call/{EP}?aweme_id=bad")
+
+    await clients.post("/secrets", json={"name": "tikhub", "value": "org.own-Q7"})
+    monkeypatch.setattr(A, "relay", _fake_relay(401, b'{"error":"own key rejected"}'))
+    await clients.get(f"/call/{EP}?aweme_id=own")
+
+    await _own_tool(clients, name="admin-own")
+    monkeypatch.setattr(A, "relay", _fake_relay(422, b'{"error":"own tool rejected"}'))
+    await clients.get("/call/admin-own/fail?case=own-tool")
+
     monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"ok":true}'))
-    await clients.get(f"/call/{EP}?aweme_id=7")          # a success must not appear
+    await clients.get("/call/admin-own/success")          # a success must not appear
     from treg import audit
     await audit.drain()
 
     d = (await clients.get("/admin/errors", headers=ADMIN)).json()
     assert d["retention_days"] == A._ERROR_EVIDENCE_TTL_DAYS
-    assert len(d["errors"]) == 1, "only the failure carries evidence"
-    e = d["errors"][0]
-    assert e["status"] == 400 and e["provider"] == "tikhub"
-    assert "aweme_id must be numeric" in e["response"]
-    assert "aweme_id=bad" in e["request"]
+    assert len(d["errors"]) == 3, "only failures carry evidence, across every tier"
+    assert {e["tier"] for e in d["errors"]} == {"platform", "credential", None}
+
+    credential = (await clients.get(
+        "/admin/errors?tier=credential", headers=ADMIN)).json()["errors"]
+    assert len(credential) == 1 and credential[0]["tier"] == "credential"
+    own = (await clients.get("/admin/errors?tier=", headers=ADMIN)).json()["errors"]
+    assert len(own) == 1 and own[0]["tier"] is None
 
 
 async def test_evidence_ages_out_but_the_audit_row_survives(clients: AsyncClient, platform_on,
