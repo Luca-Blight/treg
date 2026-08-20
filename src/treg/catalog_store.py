@@ -724,13 +724,18 @@ def _match(query: str, cat: Catalog):
     if not tokens:
         return None
     variants = [[tok, *cat.aliases.get(tok, ())] for tok in tokens]
+    # A token that IS a platform slug ("tiktok", "linkedin") is the caller's hard filter, but idf
+    # prices it low — half the catalog serves the big platforms — so rows matching a rarer facet
+    # word ("followers") outranked rows matching the asked-for platform. Double the weight where a
+    # platform token matches: same-pattern rows still sum identical floats, ties survive.
+    boost = [2 if tok in cat.platforms else 1 for tok in tokens]
     rows = _search_fields(cat)
     total = len(rows)
     best: list[list[int]] = []
     df = [0] * len(tokens)
     for _, fields in rows:
-        per_tok = [max((w for w, text in fields if any(v in text for v in vs)), default=0)
-                   for vs in variants]
+        per_tok = [b * max((w for w, text in fields if any(v in text for v in vs)), default=0)
+                   for vs, b in zip(variants, boost)]
         best.append(per_tok)
         for i, w in enumerate(per_tok):
             if w:

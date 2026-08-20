@@ -279,10 +279,13 @@ async def test_search_finds_the_job_across_providers_best_first(clients: AsyncCl
         "scrapecreators.tiktok.video.comments",
     }
     assert all(e["tier"] == "core" and e["verified"] for e in rows[:3])
-    # rank is total and stable: score desc, then core before extended, then verified before not
+    # rank is total and stable: score desc, then core before extended WITHIN a score tie — tier
+    # never outranks relevance, so a strong extended match may sit above a weak core one
     scores = [e["score"] for e in rows]
     assert scores == sorted(scores, reverse=True)
-    assert [e["tier"] for e in rows] == sorted((e["tier"] for e in rows), key=lambda t: t != "core")
+    for score in set(scores):
+        group = [e["tier"] for e in rows if e["score"] == score]
+        assert group == sorted(group, key=lambda t: t != "core")
 
     first = rows[0]
     assert first["capability"] == "tiktok.video.comments" and first["capability_description"]

@@ -902,6 +902,12 @@ query-side only — it rewrites no provider text, survives every re-ingest, and 
 target occurs nowhere in the catalog. The SearchMiss log is its feed: a zero-result query whose
 words name an existing endpoint in different vocabulary is one row here.
 
+A query token that IS a platform slug ("tiktok", "linkedin") is the caller's hard filter, but idf
+prices it low — half the catalog serves the big platforms — so rows matching a rarer facet word
+("followers") outranked rows matching the asked-for platform. Platform-slug tokens therefore score
+DOUBLE where they match; rows matching the same tokens in the same fields still sum identical
+floats, so the tie band survives.
+
 A zero-result answer surfaces its `near_misses` — the rows that just missed the admission gate,
 with the exact words each one matched and missed ("apollo.companies.jobs matches job, hiring,
 signal; misses law, firm"). The matcher had already computed this; discarding it and answering

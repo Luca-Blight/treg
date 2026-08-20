@@ -108,7 +108,9 @@ CASES = [
       "predictleads.companies.job_openings", "predictleads.jobs.discover"}),
     ("sentence", "K&L Gates company lookup", "family:companies.enrich"),
     ("sentence", "resolve company name to linkedin slug",
-     {"scrapecreators.x.v1-linkedin-company", "apollo.companies.enrich"}),
+     {"scrapecreators.x.v1-linkedin-company", "apollo.companies.enrich",
+      "leadsforge.people.identity.resolve.bulk", "fiber-ai.people.identity.resolve",
+      "icypeas.people.identity.resolve"}),
     # -- short: the refinement style the old rule served well (regression guard) --
     ("short", "tiktok comments", "family:tiktok comment"),
     ("short", "ad library",

@@ -226,7 +226,8 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   zero-result answer carries `near` — the rows just under the gate and the exact unmatched words —
   over MCP, the HTTP route, and as "almost:" lines in `treg catalog search`. Each matched
   token scores its best field weight — capability id/description + platform label/slug (3) >
-  summary (2) > id/path/provider (1) — times its BM25 idf, so rare words decide the order. Ties —
+  summary (2) > id/path/provider (1) — times its BM25 idf, so rare words decide the order (a
+  platform-slug token scores double where it matches — the platform is the caller's hard filter). Ties —
   still the COMMON case, since rows matching the same tokens in the same fields sum identical
   floats — are then settled by `catalog_store.rerank()` over
   the band `rank_band()` returns (the whole equal-scoring group at the cut, capped at `RERANK_BAND`
