@@ -483,8 +483,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   dashboard's ready-made base64 blob — a blob is detected (strict-decodes to printable text with a `:`)
   and kept as-is instead of being double-encoded. See
   [auth-secrets](../architecture/auth-secrets.md). `set_extra_credential` (`POST /connections/{id}/extra-credential`) stores
-  the second credential a provider needs when treg does NOT hold it centrally (rare) and finishes the
-  tool with BOTH bindings. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and
+  the second credential a provider needs when treg does NOT hold it centrally (Tomba's `X-Tomba-Secret`)
+  and finishes the tool with BOTH bindings — the primary half built by `_provider_bindings`, so it
+  follows the provider's own auth shape (pasted key or OAuth) rather than assuming a bearer token. `revoke_connection` (`DELETE /connections/{id}`) deletes the credential and
   cleans up: it removes the tool treg auto-provisioned for the provider and drops the dead binding from
   any user-built tool, leaving that tool's other bindings intact. All `require_can_register`
   (member+). Helpers: `_owned_connection`, `_dig` (dotted-path walk).
