@@ -41,7 +41,7 @@ endpoints:
     scope: own_account
     method: GET
     path: /2/users/me
-    name: "Get your connected X profile"
+    name: "Your connected X account profile — handle, followers"
     summary: "Get the profile of the connected X account (handle, name, follower counts)"
     input:
       queryParams:
@@ -64,6 +64,7 @@ endpoints:
     method: GET
     path: /2/users/by/username/{username}
     summary: "Get any public X user's profile by handle"
+    name: "X user profile by username — followers, bio, verified"
     input:
       pathParams:
         username: {type: string, required: true, note: "handle without the '@'", example: "elonmusk"}
@@ -84,7 +85,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /2/users/{id}/tweets
-    name: "List a user's recent posts"
+    name: "Recent tweets of a user by user id — engagement metrics"
     summary: "List the recent posts of an X user (your own or any public account)"
     input:
       pathParams:
@@ -122,6 +123,7 @@ endpoints:
     method: POST
     path: /2/tweets
     summary: "Publish a post to your own X account"
+    name: "Post a tweet to your own X account"
     input:
       body:
         text: {type: string, required: true, note: "the post text — 280 characters on a standard account, 25,000 on X Premium. Every link counts as 23 characters whatever its length", example: "Shipping something new today."}
@@ -145,6 +147,7 @@ endpoints:
     method: POST
     path: /2/tweets
     summary: "Reply to an X post, or continue your own thread"
+    name: "Reply to a tweet or continue your thread by post id"
     input:
       body:
         text: {type: string, required: true, example: "One more thing —"}
