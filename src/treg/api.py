@@ -7994,9 +7994,11 @@ async def set_extra_credential(
     else:  # re-supplying replaces it — the usual reason is a rotated token
         extra.value = crypto.encrypt(value)
 
-    bindings = [
-        {"secret_id": secret.id, "injector": "oauth", "location": "header",
-         "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token"},
+    # The primary binding must match how THIS provider authenticates — OAuth bearer for Google Ads,
+    # but a pasted-key provider (Tomba's X-Tomba-Key + X-Tomba-Secret pair) injects a plain header.
+    # Hardcoding the OAuth shape here gave a key provider a binding that JSON-parses a bare key and
+    # fails on every call, so build the primary half with the same helper the connect flow uses.
+    bindings = _provider_bindings(provider, secret) + [
         {"secret_id": extra.id, "injector": "env", "location": "header",
          "name": provider.extra_credential_header, "format": "{secret}"},
     ]
