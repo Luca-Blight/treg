@@ -169,8 +169,83 @@ async def _apollo(c, key):
                     f"ai {d.get('effective_num_ai_credits')} left"}
 
 
+async def _companyenrich(c, key):
+    d = await _get(c, "https://api.companyenrich.com/me",
+                   headers={"Authorization": f"Bearer {key}"})
+    cr = d.get("credits", {})
+    used, total = cr.get("used"), cr.get("total")
+    left = (total - used) if isinstance(total, (int, float)) and isinstance(used, (int, float)) else None
+    return {"value": left, "unit": "credits left", "note": f"{used}/{total} used"}
+
+
+async def _oceanio(c, key):
+    d = await _get(c, "https://api.ocean.io/v2/credits/balance", headers={"X-Api-Token": key})
+    cr = d.get("credits", {})
+    one, rec = cr.get("oneTime", 0) or 0, cr.get("recurrent", 0) or 0
+    return {"value": one + rec, "unit": "credits",
+            "note": f"{one:g} one-time + {rec:g} recurring, "
+                    f"{d.get('dailyLimitRateLeft')} daily-rate calls left"}
+
+
+async def _tomba(c, key):
+    # Tomba's meaningful routes need the key AND the secret header; the secret rides its own
+    # platform slot (TOMBA.platform_extra_setting) rather than being packed into one value.
+    secret = get_settings().platform_key_tomba_secret or ""
+    d = await _get(c, "https://api.tomba.io/v1/me",
+                   headers={"X-Tomba-Key": key, "X-Tomba-Secret": secret})
+    d = d.get("data", d)
+    req = d.get("requests", {})
+    dom, ver = req.get("domains", {}), req.get("verifications", {})
+    return {"value": (dom.get("available", 0) - dom.get("used", 0)), "unit": "searches left",
+            "note": f"verifications {ver.get('available', 0) - ver.get('used', 0)} left, "
+                    f"plan {((d.get('pricing') or {}).get('name', '?'))}"}
+
+
+async def _predictleads(c, key):
+    # The platform slot holds base64("api_key:api_token") for HTTP Basic — pass it straight through.
+    d = await _get(c, "https://predictleads.com/api/v3/api_subscription",
+                   headers={"Authorization": f"Basic {key}"})
+    attrs = ((d.get("data") or [{}])[0]).get("attributes", {})
+    quota, used = attrs.get("monthly_credits_quota"), attrs.get("monthly_credits_used")
+    left = (quota - used) if isinstance(quota, (int, float)) and isinstance(used, (int, float)) else None
+    return {"value": left, "unit": "credits left this month",
+            "note": f"{used}/{quota} used, subscription {attrs.get('status', '?')}"}
+
+
+async def _findymail(c, key):
+    d = await _get(c, "https://app.findymail.com/api/credits",
+                   headers={"Authorization": f"Bearer {key}", "Accept": "application/json"})
+    return {"value": d.get("credits"), "unit": "finder credits",
+            "note": f"verifier {d.get('verifier_credits')} left (separate pool)"}
+
+
+async def _branddev(c, key):
+    # No free account route exists — but a deliberate no-param call is a FREE validation error
+    # (400, credits_consumed 0) whose body still carries key_metadata.credits_remaining.
+    r = await c.get("https://api.brand.dev/v1/brand/retrieve",
+                    headers={"Authorization": f"Bearer {key}"})
+    meta = (r.json() or {}).get("key_metadata", {}) if r.status_code < 500 else {}
+    return {"value": meta.get("credits_remaining"), "unit": "credits",
+            "note": "read from the free validation-error response (no account endpoint exists)"}
+
+
+async def _leadsforge(c, key):
+    d = await _get(c, "https://api.leadsforge.ai/public/v1/balance",
+                   headers={"Authorization": f"Bearer {key}"})
+    return {"value": d.get("availableCredits"), "unit": "credits",
+            "note": f"{d.get('reservedCredits', 0)} reserved; "
+                    f"email {d.get('emailEnrichmentPrice')} / phone {d.get('phoneNumberEnrichmentPrice')} credits"}
+
+
 BALANCE_ROUTES = {
     "apollo": _apollo,
+    "branddev": _branddev,
+    "companyenrich": _companyenrich,
+    "findymail": _findymail,
+    "leadsforge": _leadsforge,
+    "oceanio": _oceanio,
+    "predictleads": _predictleads,
+    "tomba": _tomba,
     "dataforseo": _dataforseo,
     "tikhub": _tikhub,
     "scrapecreators": _scrapecreators,
@@ -198,14 +273,21 @@ NO_BALANCE_API = {
     "pdl": "no balance endpoint published — credits visible in dashboard only",
     "coresignal": "GET /v2/subscriptions answers but is empty for a credits-pack account — "
                   "credits visible in dashboard only",
+    "icypeas": "no balance endpoint published (probed /credits, /user, /users/me 2026-08-20) — "
+               "dashboard only",
 }
+
+# platform_key_* slots that are the SECOND half of a provider's credential pair, not a provider of
+# their own (see OAuthProvider.platform_extra_setting) — they must not become report rows.
+AUX_SLOTS = {"tomba_secret"}
 
 
 def _all_platform_providers() -> list[str]:
     """Every provider with a platform-key slot in Settings — the population this report is about."""
     return sorted(name.removeprefix("platform_key_")
                   for name in type(get_settings()).model_fields
-                  if name.startswith("platform_key_"))
+                  if name.startswith("platform_key_")
+                  and name.removeprefix("platform_key_") not in AUX_SLOTS)
 
 
 async def _provider_balance(provider: str) -> dict:
