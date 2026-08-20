@@ -47,7 +47,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/company/enrichment/
-    name: "Enrich a company from its website"
+    name: "Company enrichment by website — firmographics, tech stack"
     summary: "Enrich a company from its website — firmographics, financials, tech stack, management"
     input:
       queryParams:
@@ -78,7 +78,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/company/search/
-    name: "Look up a company's Akta id"
+    name: "Company name or domain to Akta id — free lookup"
     summary: "Look up a company by name or domain for its Akta id (free — costs 0 credits)"
     input:
       queryParams:
@@ -98,7 +98,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/news/
-    name: "Get recent company or industry news"
+    name: "Recent company or industry news, scored for sentiment"
     summary: "Get recent news about a company or industry, scored for sentiment and significance"
     input:
       queryParams:
@@ -142,7 +142,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/company/headcount-trends/
-    name: "Get company headcount trends by department"
+    name: "Company headcount trend by website — department split"
     summary: "See how a company's headcount has moved over time and how staff split across departments"
     input:
       queryParams:
@@ -162,7 +162,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/company/employee-reviews/
-    name: "Get company employee reviews"
+    name: "Employee reviews and ratings for a company by website"
     summary: "Read employee reviews and ratings for a company"
     input:
       queryParams:
@@ -184,7 +184,7 @@ endpoints:
     scope: any_account
     method: GET
     path: /v1/industry/search/
-    name: "Resolve industry text to Akta codes"
+    name: "Resolve industry text to Akta industry codes — free"
     summary: "Turn a free-text industry description into Akta's standard industry codes (free)"
     input:
       queryParams:
