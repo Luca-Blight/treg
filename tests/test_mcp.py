@@ -1118,8 +1118,10 @@ async def test_search_survives_missing_a_few_words_of_an_agent_sentence(clients)
     assert total > 0
     assert {"apollo.companies.jobs", "apify.linkedin.search.jobs",
             "leadmagic.x.jobs-search-v3"} <= {ep["id"] for ep, _ in rows}
+    # rank 1 must be the JOB (a companies.search row), never pinned to one provider — any newly
+    # added provider of the same capability may legitimately outscore the incumbents
     rows, _ = cs.search("company search filter by location industry headcount growth", cat, 8)
-    assert rows and rows[0][0]["id"] == "apollo.companies.search"
+    assert rows and rows[0][0]["capability"] == "companies.search"
     # the refinement property the old rule protected still holds: with one or two words there is no
     # miss allowance, so "tiktok comments" must not return every tiktok endpoint
     _, both = cs.search("tiktok comments", cat, 1)
