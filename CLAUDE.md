@@ -5,7 +5,7 @@ job — without owning the API keys.
 
 Two halves answer the same token, through the same `/call/`:
 
-- **The catalog** — ~2,800 curated external endpoints across ~56 providers (SEO and backlinks, social
+- **The catalog** — ~2,850 curated external endpoints across ~57 providers (SEO and backlinks, social
   and trends, people and company enrichment, ads, scraping). treg can serve eligible ones **on its own
   key**, metered per call from the team's prepaid balance ($1.00 free per new team). No provider signup.
 - **Your own tools** — what a teammate registered: a paid API account, an OAuth connection, a vendor

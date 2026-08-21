@@ -86,13 +86,19 @@ async def _moz(c, key):
 
 
 async def _seranking(c, key):
-    d = await _get(c, "https://api.seranking.com/v1/account/subscription",
+    # Two pools: the monthly subscription bucket AND a non-expiring top-up wallet. The old
+    # /account/subscription call only saw the first, reporting "0 left" while 248k sat in the
+    # wallet (2026-08-20). /account/credits reports both plus which one is granting access.
+    d = await _get(c, "https://api.seranking.com/v1/account/credits",
                    headers={"Authorization": f"Token {key}"})
-    info = d.get("subscription_info", {})
-    status = info.get("status", "?")
-    return {"value": info.get("units_left"), "unit": "units left",
-            "note": "" if status == "active" else f"subscription {status.upper()} "
-                    f"(expires {info.get('expiraton_date', '?')})"}
+    t = d.get("totals", {})
+    sub, wallet = t.get("subscription", {}), t.get("wallet", {})
+    total = (sub.get("remaining") or 0) + (wallet.get("remaining") or 0)
+    reason = (d.get("access") or {}).get("primary_reason", "?")
+    return {"value": total, "unit": "credits left",
+            "note": f"wallet {wallet.get('remaining', 0):,} (non-expiring) + subscription "
+                    f"{sub.get('remaining', 0):,}/{sub.get('total', 0):,} (resets "
+                    f"{sub.get('expire_at', '?')}); access via {reason}"}
 
 
 async def _hunter(c, key):
