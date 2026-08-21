@@ -1435,13 +1435,15 @@ async def use_case_job_page(request: Request, category: str, job: str,
     if raw != key:
         return RedirectResponse(f"/use-cases/{key[0]}/{key[1]}" + (".md" if as_md else ""),
                                 status_code=301)
-    category, job = key
+    # Fresh names on purpose: rebinding the parameters themselves does not read as a taint kill to
+    # CodeQL, and the request's spelling must not be what the page prints.
+    cat_slug, job_slug = key
     spec = agent_pages.USE_CASE_PAGES[key]
     cat = catalog_store.load()
     base = get_settings().public_url.rstrip("/")
     agent_slug, agent_name = _uc_agent()
-    cat_label = next((c for c, _ in agent_pages.USE_CASES if agent_pages.category_slug(c) == category), category)
-    caps = _use_case_caps(category, spec["label"])
+    cat_label = next((c for c, _ in agent_pages.USE_CASES if agent_pages.category_slug(c) == cat_slug), cat_slug)
+    caps = _use_case_caps(cat_slug, spec["label"])
     eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
     if not eps:
         raise HTTPException(status_code=404, detail="no endpoints for this job")
@@ -1551,7 +1553,7 @@ async def use_case_job_page(request: Request, category: str, job: str,
         md += ["", f"## {spec.get('what_is_heading', 'What is this?')}", "", spec["what_is"], "", "## Questions", ""]
         for q, a in spec["faq"]:
             md += [f"**{q}** {a}", ""]
-        md += [f"HTML version: {base}/use-cases/{category}/{job}"]
+        md += [f"HTML version: {base}/use-cases/{cat_slug}/{job_slug}"]
         return PlainTextResponse("\n".join(md), media_type="text/markdown; charset=utf-8",
                                  headers={"Cache-Control": "public, max-age=600"})
 
@@ -1736,7 +1738,7 @@ async def use_case_job_page(request: Request, category: str, job: str,
         f'<h1>{_esc_html(spec["sentence"])}</h1>'
         f'<div class="lede">{_esc_html(lede)}</div>'
         '<div class="ctas">'
-        f'<a class="candy" href="/app?ref=uc-{_esc_html(job)}">Start free</a>'
+        f'<a class="candy" href="/app?ref=uc-{_esc_html(job_slug)}">Start free</a>'
         '<a class="ghostbtn" href="#bts">See the comparison</a></div>'
         f'<div class="trust">$1.00 of free credit on every new team &middot; no provider signup &middot; no card</div>'
         f'<div class="subline">{n_ver} of {len(eps)} endpoints on this page are live-verified against the provider.</div>'
@@ -1782,17 +1784,17 @@ async def use_case_job_page(request: Request, category: str, job: str,
             {"@type": "ListItem", "position": 3, "name": cat_label,
              "item": f"{base}/agents/{agent_slug}#{agent_pages.category_slug(cat_label)}"},
             {"@type": "ListItem", "position": 4, "name": spec["sentence"],
-             "item": f"{base}/use-cases/{category}/{job}"}]},
+             "item": f"{base}/use-cases/{cat_slug}/{job_slug}"}]},
         {"@context": "https://schema.org", "@type": "ItemList", "name": title, "numberOfItems": len(provs),
          "itemListElement": [{"@type": "ListItem", "position": i, "name": p["name"],
-                              "url": f"{base}/use-cases/{category}/{job}#compare"}
+                              "url": f"{base}/use-cases/{cat_slug}/{job_slug}#compare"}
                              for i, p in enumerate(provs, 1)]},
         {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
             {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
             for q, a in spec["faq"]]},
     ]
-    return _page(title, desc[:300], f"/use-cases/{category}/{job}", body, ld,
-                 head_extra=_MD_ALT.format(href=f"{base}/use-cases/{category}/{job}.md"),
+    return _page(title, desc[:300], f"/use-cases/{cat_slug}/{job_slug}", body, ld,
+                 head_extra=_MD_ALT.format(href=f"{base}/use-cases/{cat_slug}/{job_slug}.md"),
                  css="usecase.css")
 
 
