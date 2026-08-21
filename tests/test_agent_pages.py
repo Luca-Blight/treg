@@ -354,3 +354,17 @@ async def test_titles_and_descriptions_fit_a_search_result(clients: AsyncClient,
     assert len(title) <= 65, f"{path}: title {len(title)} chars: {title}"
     assert len(desc) <= 160, f"{path}: description {len(desc)} chars"
     assert desc.rstrip().endswith((".", "?", "!")), f"{path}: description cut mid-sentence: …{desc[-40:]}"
+
+
+async def test_non_canonical_casing_redirects_to_the_one_spelling(clients: AsyncClient):
+    """Lookups are case-insensitive, but the request's own bytes must never be rendered into the
+    canonical / alternate / breadcrumb (CodeQL py/reflective-xss) — and `/agents/ChatGPT` serving a
+    200 with a canonical to itself is a duplicate page. One 301 to the lowercase slug instead."""
+    r = await clients.get("/agents/ChatGPT", follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == "/agents/chatgpt"
+    r = await clients.get("/agents/ChatGPT.md", follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == "/agents/chatgpt.md"
+    cat, job = next(iter(agent_pages.USE_CASE_PAGES))
+    r = await clients.get(f"/use-cases/{cat.upper()}/{job}", follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == f"/use-cases/{cat}/{job}"
+    assert (await clients.get("/agents/<script>")).status_code == 404

@@ -1150,10 +1150,18 @@ async def agent_page(request: Request, agent: str):
     taxonomy the use-case pages hang from, so the agent page is the map of the whole site.
     `/agents/<agent>.md` is the same page as Markdown, for agents and answer engines."""
     as_md = request.url.path.endswith(".md")
-    agent = agent[:-3] if agent.endswith(".md") else agent
-    spec = agent_pages.AGENTS.get(agent.lower())
-    if not spec or not _hosted():
+    raw = agent[:-3] if agent.endswith(".md") else agent
+    # Resolve to the dict's OWN key, never the request's bytes: `agent` is interpolated into the
+    # canonical, the rel=alternate href and the JSON-LD breadcrumb below, and a path parameter
+    # must not reach those unescaped (CodeQL py/reflective-xss). The lookup is case-insensitive,
+    # so a differently-cased URL would otherwise serve a 200 whose canonical points at itself: a
+    # duplicate page. Send it to the one spelling instead.
+    agent = next((k for k in agent_pages.AGENTS if k == raw.lower()), None)
+    if agent is None or not _hosted():
         raise HTTPException(status_code=404, detail="unknown agent")
+    if raw != agent:
+        return RedirectResponse(f"/agents/{agent}" + (".md" if as_md else ""), status_code=301)
+    spec = agent_pages.AGENTS[agent]
     cat = catalog_store.load()
     base = get_settings().public_url.rstrip("/")
     n_eps, n_plats = _catalog_census()
@@ -1417,10 +1425,18 @@ async def use_case_job_page(request: Request, category: str, job: str,
     `DEFAULT_AGENT`, so writing page two is data entry. `.md` serves the same page as Markdown.
     """
     as_md = request.url.path.endswith(".md")
-    job = job[:-3] if job.endswith(".md") else job
-    spec = agent_pages.USE_CASE_PAGES.get((category.lower(), job.lower()))
-    if not spec or not _hosted():
+    raw = (category, job[:-3] if job.endswith(".md") else job)
+    # Same rule as `agent_page`: the slugs reach the canonical and the JSON-LD, so they come from
+    # the table's own key, and a differently-cased URL is redirected rather than duplicated.
+    key = next((k for k in agent_pages.USE_CASE_PAGES
+                if k == (raw[0].lower(), raw[1].lower())), None)
+    if key is None or not _hosted():
         raise HTTPException(status_code=404, detail="unknown use case")
+    if raw != key:
+        return RedirectResponse(f"/use-cases/{key[0]}/{key[1]}" + (".md" if as_md else ""),
+                                status_code=301)
+    category, job = key
+    spec = agent_pages.USE_CASE_PAGES[key]
     cat = catalog_store.load()
     base = get_settings().public_url.rstrip("/")
     agent_slug, agent_name = _uc_agent()

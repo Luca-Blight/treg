@@ -249,6 +249,13 @@ silently dropping a row. Never a row per endpoint — that is the banned page-pe
 grant — none of which is true of a self-hosted registry. `_hosted()` checks `public_url` against
 `PUBLIC_HOST_ALIASES`; elsewhere the route 404s and the sitemap omits the rows, rather than lie.
 
+**One spelling per page.** Lookups are case-insensitive, but both routes resolve the slug to the
+table's own key and 301 any other casing to it (`/agents/ChatGPT` → `/agents/chatgpt`). Two
+reasons: a differently-cased URL would otherwise serve a 200 whose canonical points at itself, a
+duplicate page; and the slug reaches the canonical, the `rel=alternate` href and the JSON-LD
+breadcrumb unescaped, so it must come from the table, never from the request (CodeQL
+`py/reflective-xss` flagged exactly this).
+
 **`Disallow: /app` is a prefix rule** and would have blocked `/agents/…` too. `robots.txt` carries an
 explicit `Allow: /apps/`; the longer match wins. The test asserts the Allow line exists.
 
