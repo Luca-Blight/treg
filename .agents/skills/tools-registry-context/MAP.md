@@ -12,6 +12,7 @@ Regenerate via `scripts/build-map.py`.
 |---|---|
 | `.claude-plugin/marketplace.json` | interface/skill.md |
 | `.claude-plugin/plugin.json` | interface/skill.md |
+| `.github/workflows/catalog-drift.yml` | architecture/catalog.md |
 | `README.md` | foundation/charter.md |
 | `assets/brand/og-card.html` | interface/seo.md |
 | `dsh/cordis.patch.yml` | interface/skill.md |
@@ -23,13 +24,21 @@ Regenerate via `scripts/build-map.py`.
 | `plugins/treg/.cursor-plugin/plugin.json` | interface/skill.md |
 | `render.yaml` | ops/deploy.md |
 | `scripts/build_plugin.py` | interface/skill.md |
+| `scripts/catalog_drift.py` | architecture/catalog.md |
+| `scripts/catalog_validate.py` | architecture/catalog.md |
 | `src/treg/__main__.py` | ops/deploy.md |
 | `src/treg/adsconv.py` | architecture/ads-conversions.md |
+| `src/treg/agent_pages.py` | interface/seo.md |
 | `src/treg/agents.py` | interface/cli.md |
 | `src/treg/analytics.py` | architecture/data-model.md |
 | `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
+| `src/treg/catalog/aliases.yaml` | architecture/catalog.md |
+| `src/treg/catalog/google-search-console.extended.yaml` | architecture/catalog.md |
+| `src/treg/catalog/google-search-console.yaml` | architecture/catalog.md |
+| `src/treg/catalog/justoneapi.extended.yaml` | architecture/catalog.md |
+| `src/treg/catalog/tikhub.extended.yaml` | architecture/catalog.md |
 | `src/treg/catalog_store.py` | architecture/catalog.md, interface/api.md |
 | `src/treg/cli.py` | interface/cli.md, interface/onboarding.md, interface/shell.md |
 | `src/treg/config.py` | architecture/super-admin.md, guides/expanding-a-category.md, ops/deploy.md |
@@ -86,7 +95,7 @@ Regenerate via `scripts/build-map.py`.
 |---|---|
 | `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
-| `architecture/catalog.md` | `catalog_store.py`, `endpoint_stats.py` |
+| `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py` |
 | `architecture/data-model.md` | `models.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
@@ -104,7 +113,7 @@ Regenerate via `scripts/build-map.py`.
 | `interface/env-import.md` | `providers.py`, `skills.py` |
 | `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `demo.py`, `cli.py`, `index.html` |
-| `interface/seo.md` | `api.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
+| `interface/seo.md` | `api.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js` |
 | `ops/deploy.md` | `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |

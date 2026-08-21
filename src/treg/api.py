@@ -18,6 +18,7 @@ import hashlib
 import html as _html
 from functools import lru_cache
 import hmac
+import html as html_mod
 import json
 import logging
 import os
@@ -52,7 +53,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 from sqlmodel import select
 
-from . import adsconv, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
+from . import adsconv, agent_pages, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, referrals, runner, sandbox as demo_sandbox, session as sess
 from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
@@ -726,23 +727,43 @@ def _price_label(cost: dict | None) -> str:
     return f"{_usd_short(usd)}/{unit}"
 
 
-def _css_stamp() -> str:
-    """catalog.css's own mtime, stamped onto its URL. The stylesheet is served with a real max-age
-    (it is static and every page pulls it), so without a stamp an edited skin keeps rendering from
-    the browser's copy until the cache expires — the same trap `/tutorial.js` already guards."""
-    f = _WEB_DIR / "catalog.css"
+def _css_stamp(name: str = "catalog.css") -> str:
+    """The stylesheet's own mtime, stamped onto its URL. Skins are served with a real max-age
+    (they are static and every page pulls them), so without a stamp an edited skin keeps rendering
+    from the browser's copy until the cache expires — the trap `/tutorial.js` already guards."""
+    f = _WEB_DIR / name
     try:
         return str(int(f.stat().st_mtime))
     except OSError:
         return "0"
 
 
+def _serp_desc(text: str, limit: int = 155) -> str:
+    """A meta description Google will print whole. Past ~155 characters it truncates mid-sentence,
+    so cut at the last sentence that fits, then at the last word."""
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    for sep in (". ", "? ", "! "):
+        i = cut.rfind(sep)
+        if i > limit * 0.5:
+            return cut[:i + 1]
+    return cut[:cut.rfind(" ")].rstrip(",;:") + "."
+
+
 def _page(title: str, description: str, path: str, body: str, ld: list[dict],
-          *, nav_current: str = "") -> HTMLResponse:
+          *, nav_current: str = "", head_extra: str = "", css: str = "catalog.css") -> HTMLResponse:
     """The shared shell for every server-rendered page. One place that owns <title>, the meta
     description, the canonical, the og/twitter card and the JSON-LD, so a new page cannot ship
-    without them — that omission is exactly what left the landing page bare for a year."""
+    without them — that omission is exactly what left the landing page bare for a year.
+
+    The "Start free" CTA carries `?ref=<page>`: a logged-out visit to bare `/app` is bounced to the
+    marketing landing with nothing open, which loses the page the visitor was reading. With `ref`
+    the app keeps them and opens sign-in in place (see the boot in index.html), and the page that
+    produced the signup is recorded."""
     base = get_settings().public_url.rstrip("/")
+    ref = quote(path.strip("/").replace("/", "-") or "home", safe="")
     t, d = _esc_html(title), _esc_html(description)
     url = _esc_html(base + path)  # `path` reaches attribute context — escape it like title/description
     # `<` escaped to its \u form inside the JSON: a catalog label containing "</script>" would
@@ -773,7 +794,7 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
 <meta property="og:image" content="{base}/media/og.png"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
-<meta property="og:image:alt" content="treg — one unified key for 2,600+ agent tools, priced per call"/>
+<meta property="og:image:alt" content="treg.to: one key for the whole tool catalog, priced per call"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="{t}"/>
 <meta name="twitter:description" content="{d}"/>
@@ -781,7 +802,8 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/catalog.css?v={_css_stamp()}"/>
+<link rel="stylesheet" href="/{css}?v={_css_stamp(css)}"/>
+{head_extra}
 {blocks}
 </head>
 <body>
@@ -792,14 +814,14 @@ def _page(title: str, description: str, path: str, body: str, ld: list[dict],
     {navlink("/tutorial", "Tutorial")}
     {navlink("/docs", "API")}
     <a class="hidem" href="{_GH}" target="_blank" rel="noopener">GitHub ↗</a>
-    <a class="candy" href="/app">Start free</a>
+    <a class="candy" href="/app?ref={ref}">Start free</a>
   </div>
 </nav></div>
 {body}
 <footer>
   <div class="foot-in">
     <div class="brand"><span class="glyph">▚</span> treg</div>
-    <span style="font-family:var(--mono);font-size:12px">— 100% open source</span>
+    <span style="font-family:var(--mono);font-size:12px">· 100% open source</span>
     <span class="sp"></span>
     <a href="/catalog">catalog</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a
     ><a href="{_GH}" target="_blank" rel="noopener">github ↗</a><a href="/docs">api</a
@@ -1027,6 +1049,780 @@ async def catalog_page(slug: str):
     ]
     return _spa_catalog_page(f"{label} API — {len(eps)} endpoints, priced per call | treg",
                              desc[:300], f"/catalog/{slug}", ld, prerender)
+
+
+# --------------------------------------------------------------------------- /agents/<agent>
+
+def _hosted() -> bool:
+    """True on the reference deployment only. The agent pages describe treg.to's own listings (the
+    ChatGPT plugin, the OAuth connector, the free grant), none of which is true of a self-hosted
+    registry, so off these hosts the pages do not exist rather than lie."""
+    host = (urlsplit(get_settings().public_url).hostname or "").lower()
+    return host in PUBLIC_HOST_ALIASES
+
+
+def _catalog_census() -> tuple[int, int]:
+    """(browse-surface endpoint count, platform count): the two numbers the agent pages state."""
+    cat = catalog_store.load()
+    browse = [e for e in cat.endpoints if e["kind"] not in catalog_store.HIDDEN_KINDS]
+    return len(browse), len({e["platform"] for e in browse})
+
+
+def _anchor(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def _logo(domain: str | None, alt: str) -> str:
+    """A 20px brand mark from the favicon service the landing uses, or the treg glyph when the
+    brand is unknown (never a wrong logo)."""
+    if not domain:
+        return '<span class="lg lg-none" aria-hidden="true">▚</span>'
+    return (f'<img class="lg" src="https://www.google.com/s2/favicons?domain={_esc_html(domain)}&amp;sz=64" '
+            f'alt="{_esc_html(alt)}" width="20" height="20" loading="lazy"/>')
+
+
+def _use_case_page_for(category: str, label: str) -> str | None:
+    """The spoke URL for a job on the agent page, or None when no page has been written for it."""
+    cslug = agent_pages.category_slug(category)
+    for (c, j), spec in agent_pages.USE_CASE_PAGES.items():
+        if c == cslug and spec["label"] == label:
+            return f"/use-cases/{c}/{j}"
+    return None
+
+
+def _use_case_caps(category_slug: str, label: str) -> tuple[str, ...]:
+    for category, jobs in agent_pages.USE_CASES:
+        if agent_pages.category_slug(category) == category_slug:
+            for lbl, caps in jobs:
+                if lbl == label:
+                    return caps
+    return ()
+
+
+def _menu_rows(cat, category: str, jobs) -> list[dict]:
+    """The use-case menu for one category, priced from the catalog. Shared by the HTML and the
+    Markdown renderings of the agent page so the two can never list different jobs."""
+    rows = []
+    for label, caps in jobs:
+        eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+        if not eps:  # the test forbids this, but a page must never render an empty promise
+            continue
+        prices = [c["usd"] for e in eps if (c := cat.cost_view(e.get("cost"), e.get("provider"))) and c["usd"]]
+        plats, seen = [], set()
+        for cid in caps:
+            ceps = [e for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+            if not ceps:
+                continue
+            slug = ceps[0]["platform"]
+            plats.append({"cap": cid, "slug": slug, "dup": slug in seen,
+                          "label": (cat.platforms.get(slug) or {}).get("label") or slug,
+                          "domain": agent_pages.PLATFORM_DOMAINS.get(slug)})
+            seen.add(slug)
+        rows.append({"label": label, "caps": caps, "platforms": plats,
+                     "providers": len({e["provider"] for e in eps}),
+                     "verified": sum(1 for e in eps if e["verified"]),
+                     "from_usd": min(prices) if prices else None,
+                     # no priced endpoint at all = the team's own account does the job, unmetered
+                     "own_account": not prices,
+                     "page": _use_case_page_for(category, label)})
+    return rows
+
+
+_COPY_JS = """
+<script>
+document.querySelectorAll('button[data-copy]').forEach(function(b){
+  b.addEventListener('click', async function(){
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent='copied'; b.classList.add('done');
+          setTimeout(function(){ b.textContent='copy'; b.classList.remove('done'); }, 1400); } catch(e) {}
+  });
+});
+</script>"""
+
+_MD_ALT = '<link rel="alternate" type="text/markdown" href="{href}"/>'
+
+
+@app.get("/agents/{agent}.md", include_in_schema=False)
+@app.get("/agents/{agent}", include_in_schema=False)
+async def agent_page(request: Request, agent: str):
+    """One client: "I use ChatGPT, what can it do now?" A rotating "The ChatGPT plugin for <role>"
+    hero, the install steps for that client, then the use-case menu: plain-words jobs under buyer
+    categories, each priced from the catalog. The menu is `agent_pages.USE_CASES`, the same
+    taxonomy the use-case pages hang from, so the agent page is the map of the whole site.
+    `/agents/<agent>.md` is the same page as Markdown, for agents and answer engines."""
+    as_md = request.url.path.endswith(".md")
+    agent = agent[:-3] if agent.endswith(".md") else agent
+    spec = agent_pages.AGENTS.get(agent.lower())
+    if not spec or not _hosted():
+        raise HTTPException(status_code=404, detail="unknown agent")
+    cat = catalog_store.load()
+    base = get_settings().public_url.rstrip("/")
+    n_eps, n_plats = _catalog_census()
+    n, p = f"{n_eps:,}", str(n_plats)
+    name = spec["name"]
+    title = spec["title"].format(n=n, p=p)
+    desc = _serp_desc(spec["description"].format(n=n, p=p))
+    definition = spec["definition"].format(n=n, p=p)
+    menu = [(category, agent_pages.CATEGORY_PROMPTS.get(category, ""), _menu_rows(cat, category, jobs))
+            for category, jobs in agent_pages.USE_CASES]
+    steps_text = [re.sub(r"<[^>]+>", "", st) for st in spec["install_steps"]]
+
+    if as_md:
+        md = [f"# {title}", "", definition, "", f"## Install in {name}", ""]
+        md += [f"{i}. {html_mod.unescape(st)}" for i, st in enumerate(steps_text, 1)]
+        md += ["", f"## What {name} can do now", "",
+               "One row per job. Prices are the provider's own rate with $0.000 markup; rows marked FREE run on your own account and are never metered.", ""]
+        for category, prompt, rows in menu:
+            md += [f"### {category}", ""]
+            if prompt:
+                md += [f"Try: \"{prompt}\"", ""]
+            for r in rows:
+                plats = ", ".join(pl["label"] for pl in r["platforms"] if not pl["dup"])
+                price = "FREE with your own account" if r["own_account"] else f"from {_usd_short(r['from_usd'])}"
+                link = f"{base}{r['page']}" if r["page"] else f"{base}/catalog/{r['platforms'][0]['slug']}"
+                md.append(f"- [{r['label']}]({link}): {plats}. {r['providers']} provider{'s' if r['providers'] != 1 else ''}, {price}.")
+            md.append("")
+        md += ["## Questions", ""]
+        for q, a in spec["faq"]:
+            md += [f"**{q}** {a}", ""]
+        md += [f"HTML version: {base}/agents/{agent}", f"Setup line for any agent: {agent_pages.SETUP_LINE.format(base=base)}"]
+        return PlainTextResponse("\n".join(md), media_type="text/markdown; charset=utf-8",
+                                 headers={"Cache-Control": "public, max-age=600"})
+
+    # Only the FIRST role is in the H1 markup: a crawler reads "…plugin for SEO experts", not nine
+    # roles run together. The rest ride in a JSON block and the script appends them.
+    roles = f'<span class="ri on">{_esc_html(agent_pages.ROLES[0])}</span>'
+    more_roles = json.dumps(list(agent_pages.ROLES[1:])).replace("<", "\\u003c")
+    steps = "".join(
+        f'<div class="steplabel"><span class="n">{i}</span><b>{st}</b></div>'
+        for i, st in enumerate(spec["install_steps"], 1))
+    shot = (f'<div class="sample"><div class="sbar">{_esc_html(spec.get("install_image_bar") or name)}</div>'
+            f'<img src="{_esc_html(spec["install_image"])}" alt="{_esc_html(spec["install_image_alt"])}" '
+            f'loading="lazy" style="display:block;width:100%"/>'
+            + (f'<div class="sbar" style="border-top:1px solid var(--line);border-bottom:0">'
+               f'{_esc_html(spec["install_image_caption"])}</div>' if spec.get("install_image_caption") else "")
+            + '</div>' if spec.get("install_image") else "")
+
+    # the platform marks in the hero: the busiest shelves, deduped by brand
+    hero_tiles, seen_brand = [], set()
+    for _cat_name, _prompt, rows in menu:
+        for r in rows:
+            for pl in r["platforms"]:
+                root = ".".join((pl["domain"] or "").split(".")[-2:])
+                if pl["domain"] and root not in seen_brand and len(hero_tiles) < 14:
+                    seen_brand.add(root)
+                    hero_tiles.append(f'<span class="ptile" title="{_esc_html(pl["label"])}">'
+                                      f'{_logo(pl["domain"], pl["label"])}</span>')
+
+    cards, sections = [], []
+    for category, prompt, rows in menu:
+        anchor = _anchor(category)
+        priced = [r["from_usd"] for r in rows if r["from_usd"]]
+        free_all = all(r["own_account"] for r in rows)
+        meta = (f'{len(rows)} jobs &middot; <b style="color:var(--green)">free</b> on your account' if free_all
+                else f'{len(rows)} jobs &middot; from {_esc_html(_usd_short(min(priced)))}' if priced
+                else f"{len(rows)} jobs")
+        blurb = agent_pages.CATEGORY_BLURBS.get(category, "").format(agent=name)
+        cards.append(f'<a class="card" href="#{anchor}"><h4>{_esc_html(category)}</h4>'
+                     f'<p>{_esc_html(blurb)}</p>'
+                     f'<p style="font-family:var(--mono);font-size:11.5px;color:var(--muted2)">{meta}</p></a>')
+        body_rows = []
+        for r in rows:
+            chips, seen_p = [], set()
+            for pl in r["platforms"]:
+                if pl["slug"] in seen_p:
+                    body_rows.append("")  # keep data-cap discoverable below
+                    continue
+                seen_p.add(pl["slug"])
+                chips.append(f'<a href="/catalog/{_esc_html(pl["slug"])}#{_esc_html(pl["cap"])}" '
+                             f'data-cap="{_esc_html(pl["cap"])}">{_logo(pl["domain"], pl["label"])}{_esc_html(pl["label"])}</a>')
+            hidden = "".join(f'<span data-cap="{_esc_html(pl["cap"])}" hidden></span>'
+                             for pl in r["platforms"] if pl["dup"])
+            price = ('<span style="color:var(--green)">free, your account</span>' if r["own_account"]
+                     else f'{_esc_html(_usd_short(r["from_usd"]))}')
+            name_cell = (f'<a href="{r["page"]}"><b>{_esc_html(r["label"])}</b></a>' if r["page"]
+                         else f'<b>{_esc_html(r["label"])}</b>')
+            body_rows.append(
+                f'<tr><td>{name_cell}{hidden}</td>'
+                f'<td style="color:var(--muted)">{" &middot; ".join(chips)}</td>'
+                f'<td>{r["providers"]}</td><td>{price}</td></tr>')
+        sections.append(
+            f'<section id="{anchor}"><div class="wrap"><div class="seclab">{_esc_html(category)}</div>'
+            f'<h2>{_esc_html(blurb)}</h2>'
+            + (f'<p>Try: <i>&ldquo;{_esc_html(prompt)}&rdquo;</i></p>' if prompt else "")
+            + '<div class="tablewrap"><table><thead><tr><th>Job</th><th>Where</th><th>Providers</th>'
+              '<th>From</th></tr></thead><tbody>'
+            + "".join(body_rows) + '</tbody></table></div></div></section>')
+
+    faq_html = "".join(f'<h3>{_esc_html(q)}</h3><p>{_esc_html(a)}</p>' for q, a in spec["faq"])
+
+    body = (
+        '<div class="hero"><div class="wrap">'
+        f'<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / '
+        f'<a href="/agents/{_esc_html(agent)}">{_esc_html(name)}</a></div>'
+        f'<div class="kicker">{n} endpoints &middot; {p} platforms &middot; $0.000 markup</div>'
+        f'<h1>The {_esc_html(name)} plugin for <span class="roleslot" id="roleslot">'
+        f'<span class="rw" id="rolewheel">{roles}</span></span></h1>'
+        f'<script type="application/json" id="roles-more">{more_roles}</script>'
+        f'<div class="lede">{_esc_html(definition)}</div>'
+        '<div class="ctas">'
+        f'<a class="candy" href="/app?ref=agents-{_esc_html(agent)}">Start free</a>'
+        '<a class="ghostbtn" href="#use-cases">See what it can do</a></div>'
+        '<div class="trust">$1.00 of free credit on every new team &middot; no provider signup &middot; no card</div>'
+        f'<div class="subline">Your own keys always win and are never metered. '
+        f'{_esc_html(name)} sees the price before it spends.</div>'
+        + (f'<div class="provstrip"><div class="pl">a few of the {p} platforms</div>'
+           f'<div class="ptiles">{"".join(hero_tiles)}</div></div>' if hero_tiles else "")
+        + '</div></div>'
+
+        f'<section id="install"><div class="wrap"><div class="seclab">Get started</div>'
+        f'<h2>Install in {_esc_html(name)}</h2>{steps}{shot}</div></section>'
+
+        '<section id="use-cases"><div class="wrap"><div class="seclab">The menu</div>'
+        f'<h2>What {_esc_html(name)} can do now</h2>'
+        '<p>By job, not by endpoint. The price is the lowest provider&rsquo;s own rate with $0.000 added by '
+        'treg.to; <b>free</b> means the job runs on an account you already own and is never metered. Where '
+        f'several providers do one job, {_esc_html(name)} sees them side by side and choosing is yours.</p>'
+        f'<div class="cards">{"".join(cards)}</div>'
+        f'<p style="margin-top:20px"><a href="/catalog">Browse all {n} endpoints &rarr;</a> &middot; '
+        f'<a href="/use-cases">read the job guides &rarr;</a></p></div></section>'
+
+        + "".join(sections)
+
+        + f'<section id="faq"><div class="wrap"><div class="seclab">Questions</div>'
+          f'<h2>Before you install</h2>{faq_html}</div></section>'
+
+        + '<div class="final"><div class="wrap">'
+          f'<h2>Give {_esc_html(name)} the tools</h2>'
+          f'<a class="candy" href="/app?ref=agents-{_esc_html(agent)}-final">Start free</a>'
+          '<div class="trust">$1.00 of calls free per new team &middot; '
+          '<a href="/catalog">browse the catalog</a></div></div></div>'
+
+        + """
+<style>
+.hero h1{line-height:1.16}
+.roleslot{display:inline-block;height:1.16em;overflow:hidden;vertical-align:bottom;position:relative}
+.roleslot .rw{display:flex;flex-direction:column;align-items:flex-start;transition:transform .62s cubic-bezier(.2,.7,.2,1)}
+.roleslot .ri{height:1.16em;line-height:1.16;flex:none;white-space:nowrap;transition:opacity .4s}
+.roleslot .ri:not(.on){opacity:.25}
+@media (prefers-reduced-motion:reduce){.roleslot .rw{transition:none}}
+</style>
+<script>
+(function(){
+  var w=document.getElementById('rolewheel'); if(!w) return;
+  try { JSON.parse((document.getElementById('roles-more')||{}).textContent||'[]').forEach(function(r){
+    var s=document.createElement('span'); s.className='ri'; s.textContent=r; w.appendChild(s); }); } catch(e) {}
+  var items=w.children, i=0, slot=document.getElementById('roleslot');
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  function fit(){ slot.style.width=items[i].getBoundingClientRect().width+'px'; }
+  fit(); addEventListener('resize', fit);
+  setInterval(function(){
+    if(scrollY>innerHeight*.8) return;
+    i=(i+1)%items.length; w.style.transform='translateY(-'+(i*1.16)+'em)';
+    for(var k=0;k<items.length;k++) items[k].classList.toggle('on',k===i);
+    fit();
+  },3000);
+})();
+</script>""")
+
+    ld = [
+        {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "treg.to",
+         "applicationCategory": "DeveloperApplication", "operatingSystem": "Web",
+         "url": base + "/", "description": desc,
+         "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD",
+                    "description": "Free to install. Calls are metered per call from a prepaid balance at the "
+                                   "provider's own rate with no markup; every new team starts with $1.00 free."}},
+        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
+            {"@type": "ListItem", "position": 2, "name": name, "item": f"{base}/agents/{agent}"}]},
+        {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+            {"@type": "Question", "name": q,
+             "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in spec["faq"]]},
+    ]
+    return _page(title, desc[:300], f"/agents/{agent}", body, ld,
+                 head_extra=_MD_ALT.format(href=f"{base}/agents/{agent}.md"), css="usecase.css")
+
+
+def _uc_agent() -> tuple[str, str]:
+    """(slug, display name) of the client the use-case pages use as the example."""
+    slug = agent_pages.DEFAULT_AGENT
+    return slug, agent_pages.AGENTS[slug]["name"]
+
+
+_UNIT_WORDS = {"per_success": "found", "per_call": "call", "per_result": "result"}
+
+
+def _uc_providers(cat, eps: list[dict], obs: dict) -> list[dict]:
+    """One row per provider for this job: cheapest priced endpoint, best-sampled observed stats,
+    the union of its accepted inputs, and the platform it serves."""
+    def usd(e):
+        cv = cat.cost_view(e.get("cost"), e.get("provider"))
+        return cv["usd"] if cv and cv["usd"] else None
+
+    # Keyed by (provider, platform), not provider alone: one provider often serves several
+    # platforms for the same job (ScrapeCreators does Instagram AND YouTube), and collapsing those
+    # into one row silently drops a whole platform from a multi-platform page.
+    out = []
+    for prov, plat in sorted({(e["provider"], e["platform"]) for e in eps}):
+        peps = [e for e in eps if e["provider"] == prov and e["platform"] == plat]
+        priced = sorted([(usd(e), e) for e in peps if usd(e)], key=lambda t: t[0])
+        cheapest_e = priced[0][1] if priced else None
+        stats = [(obs.get(e["id"]) or {}) for e in peps]
+        best = max((st for st in stats if st.get("samples")), key=lambda st: st["samples"], default=None)
+        ins = []
+        for e in peps:
+            inp = e.get("input") or {}
+            for section in ("queryParams", "pathParams", "body", "headers"):
+                for k, v in (inp.get(section) or {}).items():
+                    if isinstance(v, dict) and k not in ins:
+                        ins.append(k)
+        slug = plat
+        out.append({
+            "id": prov, "name": _provider_display(prov), "eps": peps,
+            "domain": agent_pages.PROVIDER_DOMAINS.get(prov),
+            "platform": slug, "platform_label": (cat.platforms.get(slug) or {}).get("label") or slug,
+            "usd": priced[0][0] if priced else None,
+            "unit": _UNIT_WORDS.get((cheapest_e.get("cost") or {}).get("type"), "call") if cheapest_e else "",
+            "cheapest_ep": cheapest_e, "inputs": ins[:6],
+            "verified": max((e.get("verified") or "" for e in peps), default=""),
+            "ok_rate": best.get("ok_rate") if best else None,
+            "p50": best.get("p50_ms") if best else None,
+            "samples": best.get("samples") if best else 0,
+        })
+    return out
+
+
+def _uc_call(e: dict) -> str:
+    tr = e.get("test_request") or {}
+    q = " ".join(f"--query {k}={v}" for k, v in (tr.get("queryParams") or {}).items())
+    parts = [f"treg call {e['id']}"]
+    if q:
+        parts.append(q)
+    if tr.get("body"):
+        parts.append("--data '" + json.dumps(tr["body"], separators=(",", ":")) + "'")
+    return " ".join(parts)
+
+
+@app.get("/use-cases/{category}/{job}.md", include_in_schema=False)
+@app.get("/use-cases/{category}/{job}", include_in_schema=False)
+async def use_case_job_page(request: Request, category: str, job: str,
+                            db: AsyncSession = Depends(get_session)):
+    """One job. The reader does one thing, the prompt; everything else is what the agent sees
+    before it calls. The page takes one of three FORMS, chosen from the data rather than by hand:
+
+      short      one provider, so there is nothing to compare (all of "connect your own accounts")
+      platforms  the job spans several platforms, which are not alternatives to one another
+      compare    several providers doing one job on one platform: the full comparison
+
+    Everything job-specific comes from `agent_pages.USE_CASE_PAGES`; the example client comes from
+    `DEFAULT_AGENT`, so writing page two is data entry. `.md` serves the same page as Markdown.
+    """
+    as_md = request.url.path.endswith(".md")
+    job = job[:-3] if job.endswith(".md") else job
+    spec = agent_pages.USE_CASE_PAGES.get((category.lower(), job.lower()))
+    if not spec or not _hosted():
+        raise HTTPException(status_code=404, detail="unknown use case")
+    cat = catalog_store.load()
+    base = get_settings().public_url.rstrip("/")
+    agent_slug, agent_name = _uc_agent()
+    cat_label = next((c for c, _ in agent_pages.USE_CASES if agent_pages.category_slug(c) == category), category)
+    caps = _use_case_caps(category, spec["label"])
+    eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+    if not eps:
+        raise HTTPException(status_code=404, detail="no endpoints for this job")
+    obs = await _observed_or_empty(db, [e["id"] for e in eps])
+    provs = _uc_providers(cat, eps, obs)
+
+    def usd_of(e):
+        cv = cat.cost_view(e.get("cost"), e.get("provider"))
+        return cv["usd"] if cv and cv["usd"] else None
+
+    platforms = sorted({p["platform_label"] for p in provs})
+    form = "short" if len(provs) == 1 else ("platforms" if len(platforms) > 1 else "compare")
+    # data-provider must stay unique in the DOM when one provider appears under two platforms
+    for pr in provs:
+        pr["row_id"] = pr["id"] if form != "platforms" else f'{pr["id"]}-{pr["platform"]}'
+    noun = spec.get("result_noun", "result")
+
+    # Cheapest is claimed PER BILLING UNIT. A per-call endpoint that returns a thousand rows is not
+    # dearer than a per-result one, and ranking them together names the wrong winner: 38 of the 66
+    # jobs on the menu mix units.
+    cheapest_by_unit: dict[str, dict] = {}
+    for pr in provs:
+        u = pr["unit"]
+        if pr["usd"] and (u not in cheapest_by_unit or pr["usd"] < cheapest_by_unit[u]["usd"]):
+            cheapest_by_unit[u] = pr
+    units = list(cheapest_by_unit)
+    headline = cheapest_by_unit[units[0]] if units else None
+    reliable = sorted([p for p in provs if p["samples"] and p["ok_rate"] is not None],
+                      key=lambda p: (-p["ok_rate"], p["p50"] or 9e9, -p["samples"]))
+    n = str(len({p["id"] for p in provs}))
+    n_ver = sum(1 for e in eps if e.get("verified"))
+    latest_verified = max((e.get("verified") or "" for e in eps), default="")
+    setup = agent_pages.SETUP_LINE.format(base=base)
+
+    def money(x):
+        return _usd_short(x)
+
+    def pct(x):
+        return f"{round(x * 100)}%" if x is not None else ""
+
+    def ms(x):
+        return (f"{x/1000:.1f}s" if x >= 1000 else f"{int(x)}ms") if x else ""
+
+    def unit_plural(u: str) -> str:
+        return {"found": f"{noun}s found", "result": "results"}.get(u, "calls")
+
+    title = spec.get("title", "{sentence}: {n} providers | treg.to").format(
+        sentence=spec["sentence"], n=n, agent=agent_name,
+        cheapest=money(headline["usd"]) if headline else "free on your own account")
+    lede = spec["lede"].format(n=n, agent=agent_name,
+                               cheapest=money(headline["usd"]) if headline else "free on your own account")
+    bits_desc = [spec["sentence"] + "."]
+    if form == "short":
+        bits_desc.append("Runs on the account you already own, so treg.to never meters it.")
+    elif headline:
+        bits_desc.append(f"{n} providers compared, cheapest {money(headline['usd'])} per {headline['unit']}.")
+    bits_desc.append(f"The prompt that works in {agent_name}, with the price shown before the call.")
+    desc = _serp_desc(" ".join(bits_desc))
+
+    if as_md:
+        md = [f"# {spec['sentence']}", "", lede, "",
+              f"## What's the best way to ask {agent_name}?", "",
+              f"Setup line (paste into any agent): `{setup}`", "",
+              f'Then ask: "{spec["prompt"]}"', ""]
+        md += [f"- **{t}** {d}" for t, d in spec["prompt_why"]]
+        md += ["", "## Why go through treg.to", ""] + [f"- **{t}** {d}" for t, d in agent_pages.WHY_TREG]
+        if form == "short":
+            e0 = provs[0]["eps"][0]
+            md += ["", "## How it works", "",
+                   f"One provider does this job: {provs[0]['name']} (`{e0['id']}`), on the account you already own. "
+                   "You connect it once, treg.to keeps the token server side, and the call is never metered.",
+                   "", f"    {_uc_call(e0)}", ""]
+        else:
+            md += ["", f"## Behind the scenes: what {agent_name} sees before it calls", "",
+                   f"treg.to does not choose for you. It hands {agent_name} this comparison and it picks, "
+                   "or you tell it how.", ""]
+            if units:
+                md += [f"### {spec.get('q_cheapest', 'Which is cheapest?')}", ""]
+                for u in units:
+                    pu = cheapest_by_unit[u]
+                    md.append(f"- Cheapest per {u}: {pu['name']} at {money(pu['usd'])} (`{pu['cheapest_ep']['id']}`)")
+                if len(units) > 1:
+                    md += ["", "Those units are not interchangeable: one call can return many results, "
+                               "so compare on the unit you will actually be billed in."]
+            if reliable:
+                md += ["", f"### {spec.get('q_reliable', 'Which is the most reliable?')}", ""]
+                md += [f"- {p['name']}: {pct(p['ok_rate'])} over {p['samples']} calls, {ms(p['p50'])} median"
+                       for p in reliable[:6]]
+                md += ["", "Measured on treg.to traffic; not a controlled benchmark."]
+            md += ["", f"### {spec.get('q_compare', 'How do they compare?')}", ""]
+            for plat in (platforms if form == "platforms" else [None]):
+                rows_ = [p for p in provs if plat is None or p["platform_label"] == plat]
+                if plat:
+                    md += [f"#### {plat}", ""]
+                md += ["| Provider | Price | Accepts | Verified |", "|---|---|---|---|"]
+                for p in sorted(rows_, key=lambda p: (p["usd"] is None, p["usd"] or 0)):
+                    price = f"{money(p['usd'])} per {p['unit']}" if p["usd"] else "own account, free"
+                    md.append(f"| {p['name']} | {price} | {', '.join(p['inputs'])} | {p['verified'] or 'unverified'} |")
+                md.append("")
+        md += ["Endpoints:", ""] + [f"- `{e['id']}`: {_uc_call(e)}" for e in eps]
+        if spec.get("voices"):
+            md += ["", "## What people actually struggle with", "", spec["voices_intro"], ""]
+            for head, quote, who, url, answer in spec["voices"]:
+                md += [f"**{head}**", "", f'> "{quote}" ({who}: {url})', "",
+                       f"What this page can do about it: {answer}", ""]
+        md += ["", "## What actually differs", ""] + [f"- {x}" for x in spec["notes"]]
+        md += ["", f"## {spec.get('what_is_heading', 'What is this?')}", "", spec["what_is"], "", "## Questions", ""]
+        for q, a in spec["faq"]:
+            md += [f"**{q}** {a}", ""]
+        md += [f"HTML version: {base}/use-cases/{category}/{job}"]
+        return PlainTextResponse("\n".join(md), media_type="text/markdown; charset=utf-8",
+                                 headers={"Cache-Control": "public, max-age=600"})
+
+    # ---------------------------------------------------------------- html (landing-page skin)
+    ptiles = "".join(
+        f'<span class="ptile" title="{_esc_html(p["name"])}">{_logo(p["domain"], p["name"])}</span>'
+        for p in provs[:12] if p["domain"])
+    provstrip = (f'<div class="provstrip"><div class="pl">compared on this page</div>'
+                 f'<div class="ptiles">{ptiles}</div></div>' if ptiles else "")
+    agent_icons = "".join(
+        f'<span class="ptile" title="{_esc_html(label)}">'
+        f'<img src="https://unpkg.com/@lobehub/icons-static-png@latest/light/{icon}.png" alt="{_esc_html(label)}" loading="lazy"/></span>'
+        for aid, label, icon in agent_pages.AGENT_ICONS[:6])
+    hero_price = (f"from {_esc_html(money(headline['usd']))} per {headline['unit']}"
+                  if headline else "free on the account you already own")
+
+    def promptbox(label: str, text: str) -> str:
+        return ('<div class="promptbox"><div class="ph">'
+                f'<span>{_esc_html(label)}</span>'
+                f'<button class="copybtn" data-copy="{_esc_html(text)}">copy</button></div>'
+                f'<pre>{_esc_html(text)}</pre></div>')
+
+    why_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
+                        for t, d in spec["prompt_why"])
+    treg_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
+                         for t, d in agent_pages.WHY_TREG)
+
+    def price_cell(p: dict) -> str:
+        return (f'{_esc_html(money(p["usd"]))} <span style="color:var(--muted2)">per {p["unit"]}</span>'
+                if p["usd"] else '<span style="color:var(--green)">free, your own account</span>')
+
+    def rel_cell(p: dict) -> str:
+        return (f'{pct(p["ok_rate"])} <span style="color:var(--muted2)">({p["samples"]} calls)</span>'
+                if p["samples"] else '<span style="color:var(--muted2)">not yet measured</span>')
+
+    def prov_table(rows_: list[dict]) -> str:
+        body_rows = "".join(
+            f'<tr data-provider="{_esc_html(p["id"])}">'
+            f'<td><b>{_logo(p["domain"], p["name"])}{_esc_html(p["name"])}</b></td>'
+            f'<td>{price_cell(p)}</td>'
+            f'<td style="color:var(--muted)">{_esc_html(", ".join(p["inputs"]) or "see endpoints")}</td>'
+            f'<td>{rel_cell(p)}</td>'
+            f'<td style="color:var(--muted2)">{_esc_html(p["verified"] or "unverified")}</td>'
+            '</tr>' for p in rows_)
+        return ('<div class="tablewrap"><table><thead><tr>'
+                '<th>Provider</th><th>Price</th><th>Accepts</th><th>Success rate</th><th>Verified</th>'
+                f'</tr></thead><tbody>{body_rows}</tbody></table></div>')
+
+    sections = []
+    if form == "short":
+        p0, e0 = provs[0], provs[0]["eps"][0]
+        sections.append(
+            '<section id="how"><div class="wrap"><div class="seclab">How it works</div>'
+            f'<h2>One provider, on the account you already own</h2>'
+            f'<p>{_logo(p0["domain"], p0["name"])}<b>{_esc_html(p0["name"])}</b> answers this job. You connect it once, '
+            'treg.to keeps the token server side, and the call is never metered.</p>'
+            f'<div class="sample"><div class="sbar">the call</div><pre>{_esc_html(_uc_call(e0))}</pre></div>'
+            f'<p style="font-size:12.5px;color:var(--muted)">Every endpoint on this connection is listed on the '
+            f'<a href="/catalog/{_esc_html(e0["platform"])}">{_esc_html((cat.platforms.get(e0["platform"]) or {}).get("label") or e0["platform"])} shelf</a>.</p>'
+            + '</div></section>')
+    else:
+        inner = [f'<p>treg.to does not choose for you. It hands {_esc_html(agent_name)} this comparison, with the '
+                 f'price shown before any call, and {_esc_html(agent_name)} picks. Or you <b>tell it how</b>: '
+                 '"cheapest", "most reliable", "the one that takes what I have", or a provider by name.</p>']
+        if headline:
+            cheap_cards = "".join(
+                f'<div class="card"><h4>Cheapest per {_esc_html(u)}</h4>'
+                f'<p>{_logo(cheapest_by_unit[u]["domain"], cheapest_by_unit[u]["name"])}'
+                f'<b>{_esc_html(cheapest_by_unit[u]["name"])}</b> at {_esc_html(money(cheapest_by_unit[u]["usd"]))}'
+                + (f' &middot; {_esc_html(cheapest_by_unit[u]["platform_label"])}' if form == "platforms" else "")
+                + '</p></div>' for u in units)
+            inner.append(f'<h3 id="cheapest">{_esc_html(spec.get("q_cheapest", "Which is cheapest?"))}</h3>'
+                         f'<div class="cards">{cheap_cards}</div>')
+            if len(units) > 1:
+                inner.append('<blockquote>Those units are not interchangeable: one call can return many results, '
+                             'so compare on the unit you will actually be billed in.</blockquote>')
+        if reliable:
+            rel_rows = "".join(
+                f'<tr><td><b>{_logo(p["domain"], p["name"])}{_esc_html(p["name"])}</b></td>'
+                f'<td>{pct(p["ok_rate"])}</td><td>{ms(p["p50"])}</td><td style="color:var(--muted2)">{p["samples"]} calls</td></tr>'
+                for p in reliable[:6])
+            inner.append(f'<h3 id="reliable">{_esc_html(spec.get("q_reliable", "Which is the most reliable?"))}</h3>'
+                         '<div class="tablewrap"><table><thead><tr><th>Provider</th><th>Success</th><th>Median</th>'
+                         f'<th>Sample</th></tr></thead><tbody>{rel_rows}</tbody></table></div>'
+                         '<blockquote>Measured on treg.to traffic: real calls, real inputs, and sample sizes differ '
+                         'by provider. Live reliability, not a controlled benchmark.</blockquote>')
+        inner.append(f'<h3 id="compare">{_esc_html(spec.get("q_compare", "How do they compare?"))}</h3>')
+        if form == "platforms":
+            for plat in platforms:
+                rows_ = sorted([p for p in provs if p["platform_label"] == plat],
+                               key=lambda p: (p["usd"] is None, p["usd"] or 0))
+                inner.append(f'<h4 data-platform-group="{_esc_html(plat)}">{_esc_html(plat)}</h4>' + prov_table(rows_))
+        else:
+            inner.append(prov_table(sorted(provs, key=lambda p: (p["usd"] is None, p["usd"] or 0))))
+        if headline and headline["cheapest_ep"]:
+            shelves = ", ".join(
+                f'<a href="/catalog/{_esc_html(sl)}">{_esc_html((cat.platforms.get(sl) or {}).get("label") or sl)}</a>'
+                for sl in sorted({p["platform"] for p in provs}))
+            inner.append(
+                '<h3>Run one</h3>'
+                f'<div class="sample"><div class="sbar">the cheapest verified call</div>'
+                f'<pre>{_esc_html(_uc_call(headline["cheapest_ep"]))}</pre></div>'
+                f'<p style="font-size:12.5px;color:var(--muted)">Swap the id for any provider above. '
+                f'All {len(eps)} endpoints behind this job, with their parameters and captured responses, '
+                f'are on the {shelves} shelf.</p>')
+        inner.append(
+            '<h3>How these numbers are made</h3>'
+            '<div class="who">'
+            '<div><b>Prices</b>Each provider&rsquo;s own published rate, converted to US dollars for one chargeable '
+            'event of the unit they bill in. treg.to adds $0.000. Where a provider bills in credits, the conversion '
+            'uses the rate on their public pricing page'
+            + (f', last checked {_esc_html(latest_verified)}.' if latest_verified else '.') + '</div>'
+            '<div><b>Success rate</b>treg.to&rsquo;s own served calls over the last 30 days: 2xx counts as a success, '
+            '5xx and timeouts as a failure. A 4xx is excluded, because it usually means the caller sent bad '
+            'parameters and one bad query should not make a healthy endpoint look broken.</div>'
+            '<div><b>What this is not</b>A controlled benchmark. These are real calls with real inputs, so sample '
+            'sizes and the difficulty of what was asked differ by provider. Treat the rates as live reliability, '
+            'not a like-for-like test.</div>'
+            '<div><b>Verified</b>The date treg.to last called the endpoint end to end and confirmed the shape of '
+            'its response and the price it charged.</div>'
+            '</div>')
+        sections.append(f'<section id="bts"><div class="wrap"><div class="seclab">Behind the scenes</div>'
+                        f'<h2>What {_esc_html(agent_name)} sees before it calls</h2>'
+                        + "".join(inner) + '</div></section>')
+
+    voices_html = "".join(
+        f'<h3>{_esc_html(head)}</h3>'
+        f'<blockquote>&ldquo;{_esc_html(quote)}&rdquo; '
+        f'<a href="{_esc_html(url)}" rel="nofollow noopener" target="_blank">{_esc_html(who)}</a></blockquote>'
+        f'<p><b>What this page can do about it:</b> {_esc_html(answer)}</p>'
+        for head, quote, who, url, answer in spec.get("voices", []))
+    voices_section = ('<section id="voices"><div class="wrap"><div class="seclab">From the field</div>'
+                      '<h2>What people actually struggle with</h2>'
+                      f'<p>{_esc_html(spec.get("voices_intro", ""))}</p>{voices_html}</div></section>'
+                      if spec.get("voices") else "")
+    notes = "".join(f'<h4>{_esc_html(x.split(".")[0])}.</h4><p>{_esc_html(x.split(".", 1)[1].strip())}</p>'
+                    if "." in x else f"<p>{_esc_html(x)}</p>" for x in spec["notes"])
+    related = "".join(
+        f'<a class="card" href="{_use_case_page_for(cat_label, lbl) or ("/agents/" + agent_slug + "#" + agent_pages.category_slug(cat_label))}">'
+        f'<h4>{_esc_html(lbl)}</h4><p>Another job in {_esc_html(cat_label.lower())}.</p></a>'
+        for lbl in spec.get("related", ()))
+    faq_html = "".join(f'<h3>{_esc_html(q)}</h3><p>{_esc_html(a)}</p>' for q, a in spec["faq"])
+
+    # The "instead of" anchor: what the same job costs on subscriptions from the providers on this
+    # page whose plan prices are recorded in marketing/landing/_facts.md, against a real run here.
+    # Only sourced figures are named; with none, the anchor is the catalog's own spread.
+    plans = [(p["name"], agent_pages.PLAN_PRICES[p["id"]]) for p in provs
+             if p["id"] in agent_pages.PLAN_PRICES]
+    pricewall = ""
+    if headline:
+        run_n = 100
+        run_cost = headline["usd"] * run_n
+        if plans:
+            plans = sorted(plans, key=lambda t: -t[1])[:2]
+            old_total = sum(v for _, v in plans)
+            old_note = " + ".join(f"{k} ${v}/mo" for k, v in plans) + ", at list"
+            old_v, old_k = f"${old_total}/mo", "instead of"
+        else:
+            dearest = max((p for p in provs if p["usd"]), key=lambda p: p["usd"])
+            old_total = dearest["usd"] * run_n
+            old_note = f"{dearest['name']}, the dearest here, for the same {run_n}"
+            old_v, old_k = f"${old_total:,.2f}", "the wide end"
+        pricewall = (
+            '<section id="cost"><div class="wrap"><div class="seclab">The economics</div>'
+            f'<h2>What {run_n} of these actually costs</h2>'
+            '<div class="pricewall">'
+            f'<div class="pw old"><div class="k">{old_k}</div><div class="v">{old_v}</div>'
+            f'<div class="s">{_esc_html(old_note)}</div></div>'
+            '<div class="arrow">&rarr;</div>'
+            f'<div class="pw new"><div class="k">you pay</div><div class="v">${run_cost:,.2f}</div>'
+            f'<div class="s">{run_n} &times; {_esc_html(money(headline["usd"]))} at {_esc_html(headline["name"])}, '
+            'metered per call</div></div></div>'
+            '<p style="font-size:12.5px;color:var(--muted)">Subscription figures are provider list prices recorded in '
+            'treg.to&rsquo;s own catalog grid; per-call prices are what treg.to charges today, with $0.000 added.</p>'
+            '</div></section>')
+
+    body = (
+        '<div class="hero"><div class="wrap">'
+        f'<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / <a href="/use-cases">Use cases</a> / '
+        f'<a href="/agents/{agent_slug}#{agent_pages.category_slug(cat_label)}">{_esc_html(cat_label)}</a></div>'
+        f'<div class="kicker">{n} providers &middot; {hero_price} &middot; $0.000 markup</div>'
+        f'<h1>{_esc_html(spec["sentence"])}</h1>'
+        f'<div class="lede">{_esc_html(lede)}</div>'
+        '<div class="ctas">'
+        f'<a class="candy" href="/app?ref=uc-{_esc_html(job)}">Start free</a>'
+        '<a class="ghostbtn" href="#bts">See the comparison</a></div>'
+        f'<div class="trust">$1.00 of free credit on every new team &middot; no provider signup &middot; no card</div>'
+        f'<div class="subline">{n_ver} of {len(eps)} endpoints on this page are live-verified against the provider.</div>'
+        f'{provstrip}</div></div>'
+
+        + pricewall +
+        '<section id="ask"><div class="wrap"><div class="seclab">Try it</div>'
+        f'<h2>What&rsquo;s the best way to ask {_esc_html(agent_name)}?</h2>'
+        f'<div class="steplabel"><span class="n">1</span><b>Set your agent up, once</b></div>'
+        + promptbox("in your agent's chat", setup)
+        + f'<div class="steplabel"><span class="n">2</span><b>Ask for the job</b></div>'
+        + promptbox("the prompt", spec["prompt"])
+        + f'<div class="provstrip"><div class="pl">works in</div><div class="ptiles">{agent_icons}</div></div>'
+        + f'<h3>Why this prompt works</h3><div class="cards">{why_cards}</div>'
+        + (f'<div class="sample"><div class="sbar">{_esc_html(agent_name)}</div>'
+           f'<img src="{_esc_html(spec["result_image"])}" alt="{_esc_html(agent_name)} answering" '
+           'style="display:block;width:100%"/></div>' if spec.get("result_image") else "")
+        + '</div></section>'
+
+        '<section id="why"><div class="wrap"><div class="seclab">Why treg.to</div>'
+        '<h2>Why go through treg.to</h2>'
+        f'<div class="cards">{treg_cards}</div></div></section>'
+
+        + "".join(sections) + voices_section
+
+        + '<section id="notes"><div class="wrap"><div class="seclab">The detail</div>'
+          f'<h2>What actually differs</h2>{notes}</div></section>'
+
+        + f'<section id="what"><div class="wrap"><div class="seclab">Background</div>'
+          f'<h2>{_esc_html(spec.get("what_is_heading", "What is this?"))}</h2>'
+          f'<p>{_esc_html(spec["what_is"])}</p></div></section>'
+
+        + f'<section id="faq"><div class="wrap"><div class="seclab">Questions</div>'
+          f'<h2>Before you start</h2>{faq_html}</div></section>'
+
+        + (f'<section id="related"><div class="wrap"><div class="seclab">Related</div>'
+           f'<h2>Other jobs your agent can do</h2><div class="cards">{related}</div></div></section>' if related else "")
+        + _COPY_JS)
+    ld = [
+        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
+            {"@type": "ListItem", "position": 2, "name": "Use cases", "item": base + "/use-cases"},
+            {"@type": "ListItem", "position": 3, "name": cat_label,
+             "item": f"{base}/agents/{agent_slug}#{agent_pages.category_slug(cat_label)}"},
+            {"@type": "ListItem", "position": 4, "name": spec["sentence"],
+             "item": f"{base}/use-cases/{category}/{job}"}]},
+        {"@context": "https://schema.org", "@type": "ItemList", "name": title, "numberOfItems": len(provs),
+         "itemListElement": [{"@type": "ListItem", "position": i, "name": p["name"],
+                              "url": f"{base}/use-cases/{category}/{job}#compare"}
+                             for i, p in enumerate(provs, 1)]},
+        {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+            {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
+            for q, a in spec["faq"]]},
+    ]
+    return _page(title, desc[:300], f"/use-cases/{category}/{job}", body, ld,
+                 head_extra=_MD_ALT.format(href=f"{base}/use-cases/{category}/{job}.md"),
+                 css="usecase.css")
+
+
+@app.get("/use-cases", include_in_schema=False)
+async def use_cases_hub():
+    """The hub the spokes hang from. A sitemap is not a crawl path: before this existed, the only
+    link into a use-case page was one row on one agent page's menu."""
+    if not _hosted():
+        raise HTTPException(status_code=404, detail="not found")
+    cat = catalog_store.load()
+    base = get_settings().public_url.rstrip("/")
+    _, agent_name = _uc_agent()
+    by_cat: dict[str, list[str]] = {}
+    for (c, j), spec in agent_pages.USE_CASE_PAGES.items():
+        label = next((cl for cl, _ in agent_pages.USE_CASES if agent_pages.category_slug(cl) == c), c)
+        caps = _use_case_caps(c, spec["label"])
+        eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+        nprov = len({e["provider"] for e in eps})
+        prices = [cv["usd"] for e in eps if (cv := cat.cost_view(e.get("cost"), e.get("provider"))) and cv["usd"]]
+        meta = (f"{nprov} provider{'s' if nprov != 1 else ''} &middot; from {_esc_html(_usd_short(min(prices)))}"
+                if prices else "free on your own account")
+        blurb = spec["lede"].format(n=nprov, agent=agent_name,
+                                    cheapest=_usd_short(min(prices)) if prices else "free")
+        by_cat.setdefault(label, []).append(
+            f'<a class="pcard" href="/use-cases/{c}/{j}"><h3>{_esc_html(spec["sentence"])}</h3>'
+            f'<p>{_esc_html(blurb[:140])}</p><div class="meta">{meta}</div></a>')
+    blocks = "".join(f'<section class="cat"><h2 id="{_anchor(c)}">{_esc_html(c)}</h2>'
+                     f'<div class="grid">{"".join(v)}</div></section>' for c, v in by_cat.items())
+    body = (
+        '<main class="wrap"><div class="phead">'
+        '<div class="crumbs"><a href="/">treg.to</a> / <a href="/use-cases">Use cases</a></div>'
+        '<h1>What you can have your agent do</h1>'
+        '<p class="lede">One page per job: the prompt that works, what the call costs, and every provider '
+        'that does it. All of it through one treg.to key, at the provider&rsquo;s own rate with $0.000 markup.</p>'
+        '</div>' + blocks
+        + '<section class="cat"><h2>Everything else</h2><div class="cap"><p style="margin:0">These are the jobs '
+          'written up so far. The full menu is on the agent pages, and the whole catalog is at '
+          '<a href="/catalog">/catalog</a>.</p></div></section></main>')
+    ld = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
+        {"@type": "ListItem", "position": 2, "name": "Use cases", "item": base + "/use-cases"}]}]
+    return _page("What you can have your agent do | treg.to",
+                 "One page per job: the prompt that works in ChatGPT or Claude, what the call costs, and "
+                 "every provider that does it, compared. One treg.to key, no markup.",
+                 "/use-cases", body, ld)
+
 
 @app.get("/catalog.css", include_in_schema=False)
 async def catalog_css():
@@ -2231,6 +3027,15 @@ async def sitemap_xml():
         add(path, day, priority)
     for row in _platform_rows():
         add(f"/catalog/{row['slug']}", cat_day, "0.6")
+    # The agent pages exist only on the hosted deployment (see `_hosted`); their lastmod follows the
+    # hand-written copy, which is what changes between deploys.
+    if _hosted():
+        copy_day = _iso_day(Path(agent_pages.__file__).stat().st_mtime)
+        for slug in agent_pages.AGENTS:
+            add(f"/agents/{slug}", copy_day, "0.8")
+        add("/use-cases", copy_day, "0.8")
+        for (c, j) in agent_pages.USE_CASE_PAGES:
+            add(f"/use-cases/{c}/{j}", copy_day, "0.7")
     out.append("</urlset>")
     return Response("\n".join(out), media_type="application/xml; charset=utf-8",
                     headers={"Cache-Control": "max-age=3600"})

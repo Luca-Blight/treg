@@ -3,6 +3,7 @@ title: Search surfaces — robots, sitemap, the crawlable catalog, and the socia
 status: shipped
 sources:
   - src/treg/api.py
+  - src/treg/agent_pages.py
   - src/treg/web/robots.txt
   - src/treg/web/catalog.css
   - src/treg/web/index.html
@@ -205,6 +206,107 @@ favicon only resolves at 16px and falls back to a generic globe at 64.
 
 Per-platform cards (`/media/og/<slug>.png`) are a deliberate follow-up. Until then every catalog page
 points at the shared one.
+
+## The agent pages — `/agents/<agent>`
+
+"I use ChatGPT — what can it do now?" answered on one server-rendered URL per client. The first is
+`/agents/chatgpt`; the set is the keys of `agent_pages.AGENTS`, and nothing else (an unknown agent
+404s). They came out of the programmatic-SEO plan in `marketing/pseo-build-spec.md`: the measured
+demand is for the *agent* ("chatgpt connectors") and the *platform* ("linkedin api pricing"), never
+for "how to <job> in chatgpt", so the job list lives on the agent page as rows, not as URLs.
+
+**One skin for both page types.** The agent and use-case pages render with `usecase.css`, the
+landing-page skin the five outcome pages already use, passed to `_page(css=...)`: centered hero with
+a kicker pill and CTAs, `seclab` labels above each `h2`, real `<table>` comparisons in a `tablewrap`,
+the dark `promptbox` with a copy button, `steplabel` numbered steps, `cards` grids, `pricewall` for
+the money, and the dark `final` band. The stack of `.ep` rows the first cut used is gone: a job menu
+and a provider comparison are tables, and the endpoint inventory belongs on the catalog shelf, which
+the pages link to rather than reprint.
+
+**The economics block** (`pricewall`) anchors a per-call price against a subscription: "instead of
+$34/mo (Hunter, at list) → you pay $0.89 for 100". Plan prices come only from
+`agent_pages.PLAN_PRICES`, which mirrors `marketing/landing/_facts.md` F-20..F-23 and records where
+each figure was sourced; a page names a provider's plan price only if it is listed there. With none
+listed the anchor falls back to the catalog's own spread (dearest vs cheapest for the same 100
+calls), because an invented subscription number is worse than no anchor.
+
+**Two halves, one rule each.** The hand-written half lives in `src/treg/agent_pages.py` — a module
+with no heavy imports so it costs the light CLI nothing and can be reviewed without reading routing
+code. It holds `ROLES` (the rotating "ChatGPT for *SEO experts / social media managers / SDRs*…"
+hero; the first role is server-rendered in the H1 so a crawler reads a full sentence), the install
+steps and screenshot, one example prompt per category, the FAQ, and `USE_CASES`: the buyer's menu —
+plain-words jobs ("Find professional emails", "Find creators by keyword") under buyer categories
+(Data enrichment & sales, Social, SEO, E-commerce, Advertising, Market research), each mapped to
+the capability ids that do it. That taxonomy is the map of the whole site: the use-case pages will
+hang from the same categories, and a row links to its page once one exists. The route projects
+the rest from `catalog_store.load()` per request — the union of providers, the lowest USD price
+via `cost_view`, verified counts, one chip per platform — and the counts in the title are computed.
+`tests/test_agent_pages.py` asserts every capability id in `USE_CASES` exists in the catalog, so a
+job the catalog cannot do cannot be advertised and a renamed capability fails the suite instead of
+silently dropping a row. Never a row per endpoint — that is the banned page-per-endpoint in list form.
+
+**Hosted only.** The copy describes treg.to's own listings — the ChatGPT Plugins entry, the $1.00
+grant — none of which is true of a self-hosted registry. `_hosted()` checks `public_url` against
+`PUBLIC_HOST_ALIASES`; elsewhere the route 404s and the sitemap omits the rows, rather than lie.
+
+**`Disallow: /app` is a prefix rule** and would have blocked `/agents/…` too. `robots.txt` carries an
+explicit `Allow: /apps/`; the longer match wins. The test asserts the Allow line exists.
+
+**The shell's CTA now carries `?ref=<page>`.** `_page()`'s "Start free" used to link bare `/app`,
+which bounces a logged-out visitor to the landing with nothing open — the dead end this fragment
+already documents for the catalog pages. The app boot treats `ref` as a use-case CTA (no bounce,
+sign-in opens in place), so every server-rendered page now gets that behaviour and the page that
+produced the signup is recorded. Schema on the page: `SoftwareApplication`, `BreadcrumbList`, and
+a `FAQPage` whose questions are asserted to appear verbatim in the body.
+
+## The use-case pages — `/use-cases/<category>/<job>`, and the hub at `/use-cases`
+
+The spokes. **The reader does one thing, the prompt; everything else is what the agent sees before
+it calls.** Above the fold: the setup line, one prompt with a copy button, four "why this prompt
+works" cards, an optional screenshot. Then "Why go through treg.to" (`WHY_TREG`, six cards).
+
+The page then takes one of **three forms, chosen from the catalog rather than by hand** — this is
+what makes it a template rather than one page's prose:
+
+| Form | Condition | Renders |
+|---|---|---|
+| `short` | one provider | "How it works": the one call, on the reader's own account. No comparison |
+| `platforms` | the job spans several platforms | providers grouped per platform, cheapest claimed per platform |
+| `compare` | several providers, one platform | the full comparison |
+
+Of the 66 jobs on the menu, 19 are single-provider and 19 span several platforms, so two thirds of
+the eventual pages are not the plain comparison the first page was built for.
+
+**Cheapest is claimed per billing unit, never overall.** 38 of the 66 jobs mix per-call, per-result
+and per-success endpoints, and ranking those by USD per chargeable event names the wrong winner: one
+call returning a thousand rows is not dearer than one row. The page prints "cheapest per found",
+"cheapest per call" and so on, and says the units are not interchangeable when more than one appears.
+
+**Providers are keyed by (provider, platform), not provider.** ScrapeCreators serves Instagram and
+YouTube for the same job; collapsing on provider alone silently dropped a whole platform from a
+multi-platform page.
+
+**The reliability section renders only when there is traffic.** `endpoint_stats.observed` is empty
+for most endpoints, and an empty promise is worse than no section. When it does render it names
+per-vendor success rate, median latency and sample size (publication approved by Jason 2026-08-21)
+with the "live traffic, not a controlled benchmark" caveat.
+
+**Nothing job-specific or agent-specific is in the route.** The example client is
+`agent_pages.DEFAULT_AGENT`; the job's own words, result noun, "what is X" heading, notes, FAQ and
+`voices` all come from `USE_CASE_PAGES`, keyed by `(category slug, job slug)`. A spec's `label` must
+match a row of `USE_CASES` exactly (tested), which is how the agent page knows to link the row to
+its page. `tests/test_agent_pages.py` asserts the route source contains no job-specific string.
+
+**`voices`** is the section that cannot be regenerated: real questions from Reddit and X, quoted
+verbatim with a link, each followed by what the page can honestly do about it (including "no
+comparison table can answer this"). The `.agents/skills/treg-page` skill runs that research with
+`agent-reach` before any page is written, and documents how to spot the vendor astroturf that
+dominates these searches.
+
+Nested under the category on purpose: the five flat ad pages keep their URLs and `build_html.py`
+ownership, and `test_legacy_flat_use_case_pages_still_answer` proves the nested route cannot shadow
+them. `/use-cases` is the crawlable hub they hang from; before it existed the only link into a spoke
+was one row on one agent page. All hosted-only, sitemapped and `.md`-mirrored like the agent pages.
 
 ## Counts
 

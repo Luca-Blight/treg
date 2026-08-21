@@ -158,3 +158,53 @@ footer{border-top:1px solid var(--line);margin-top:46px;padding:26px 0 40px}
   .eph .price{margin-left:0}
   .phead{padding:22px 0 18px}
 }
+
+/* ---------- "give this to your agent" — the setup line + copy, as on the landing ---------- */
+.givebox{max-width:560px;margin:34px auto 0;border-radius:var(--r);position:relative;z-index:2;
+  background:var(--surface);box-shadow:var(--shadow-lg);padding:14px 14px 12px}
+.givebox .gb-h{display:flex;align-items:center;justify-content:center;gap:10px;
+  font-size:13.5px;font-weight:600;color:var(--ink);padding:2px 4px 12px}
+.givebox .gb-h .agicons{display:flex;gap:5px}
+.givebox .gb-h img{width:19px;height:19px;display:block}
+.givebox .gb-h a:hover img{transform:translateY(-1px)}
+.givebox .gb-cmd{display:flex;align-items:center;gap:10px;background:var(--inverse);border-radius:var(--rb);
+  padding:13px 14px;text-align:left}
+.givebox .gb-cmd .ps{color:#7fdcae;flex:none;font-size:13px;font-family:var(--mono)}
+.givebox .gb-cmd code{font-family:var(--mono);font-size:12.5px;color:var(--inverse-ink);
+  white-space:nowrap;overflow-x:auto;scrollbar-width:none;flex:1}
+.givebox .gb-cmd code::-webkit-scrollbar{display:none}
+.givebox .gb-cmd button{flex:none;border:1px solid #ffffff33;background:transparent;
+  color:#d9d9d6;font-family:var(--sans);font-weight:500;font-size:11px;letter-spacing:.04em;
+  border-radius:7px;padding:5px 11px;cursor:pointer;transition:color .12s,border-color .12s}
+.givebox .gb-cmd button:hover{color:#fff;border-color:#ffffff66}
+.givebox .gb-cmd button.done{color:#7fdcae;border-color:#7fdcae66}
+
+/* ---------- brand chips + FREE badge on the agent / use-case pages ---------- */
+.tag.brand{display:inline-flex;align-items:center;gap:6px;background:var(--surface);
+  box-shadow:var(--shadow-sm);color:var(--ink);padding:4px 9px 4px 6px}
+.tag.brand:hover{text-decoration:none;box-shadow:var(--shadow-md)}
+.lg{width:18px;height:18px;border-radius:4px;display:inline-block;vertical-align:middle;margin-right:6px;object-fit:contain}
+.tag.brand .lg{margin-right:0}
+.lg-none{display:inline-grid;place-items:center;background:var(--inverse);color:var(--inverse-ink);font-size:10px}
+.price.free{color:var(--green);background:#1184530f;border-radius:6px;padding:2px 8px}
+.price .free,.free{color:var(--green)}
+details summary::-webkit-details-marker{color:var(--muted2)}
+
+/* ---------- a screenshot presented as a screenshot: browser chrome + caption ---------- */
+.shot{margin:16px 0 0;border-radius:var(--r);overflow:hidden;background:var(--panel);
+  box-shadow:var(--shadow-lg);border:1px solid var(--line)}
+.shot-bar{display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--panel2);
+  border-bottom:1px solid var(--line)}
+.shot-bar span{width:9px;height:9px;border-radius:50%;background:var(--line2);flex:none}
+.shot-bar code{margin-left:10px;font-family:var(--mono);font-size:11.5px;color:var(--muted2);
+  background:var(--surface);border-radius:6px;padding:3px 10px;flex:1;text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shot img{display:block;width:100%;height:auto}
+.shot figcaption{padding:10px 14px;font-size:12.5px;color:var(--muted);background:var(--surface);
+  border-top:1px solid var(--line)}
+
+/* ---------- mini fact cards: a short bold lead + one line, two or three per row ---------- */
+.minigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}
+.mini{background:var(--panel);border-radius:var(--rb);padding:11px 13px;line-height:1.5}
+.mini b{display:block;font-size:13.5px;font-weight:650;letter-spacing:-.01em;margin-bottom:3px}
+.mini span{display:block;font-size:13px;color:var(--muted)}
