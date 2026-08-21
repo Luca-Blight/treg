@@ -260,6 +260,17 @@ refused even with a key until `fx.yaml` gets a real `usd` rate (its plan price i
 Tomba has NO slot on purpose: its data routes need a key+secret header pair and the platform-binding
 path injects one value — wire a paired platform binding before offering tomba on tier 4.
 
+## Creator-data platform key (2026-08-21)
+
+`TREG_PLATFORM_KEY_INFLUENCERSCLUB` — the dashboard API key (a JWT), sent as `Authorization: Bearer`.
+Declared in `config.py` and `render.yaml`; the catalog's 12 priced routes are platform-eligible
+(`fx.yaml` $0.23/credit from the vendor's own API-tier figure, every per-route credit count
+observed live). Turn on by funding the account (the trial key has 10 credits — it verified the
+catalog and is nearly spent), setting the env var, and adding `influencersclub` to
+`TREG_PLATFORM_PROVIDERS`. Mind the 60s gateway 504 on cold enrichment calls: under `per_success`
+settlement a 504 relays as a failure and settles at 0, but the vendor charged two of ours — a small,
+bounded leak on the 0.03 tier, worth watching in the first reconcile report.
+
 ## A db.py change needs a Postgres-shaped deploy plan
 
 SQLite cannot catch this class: it has no connection pool and no lock queue. Two rules, both from the
