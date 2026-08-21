@@ -264,9 +264,9 @@ path injects one value — wire a paired platform binding before offering tomba 
 
 `TREG_PLATFORM_KEY_INFLUENCERSCLUB` — the dashboard API key (a JWT), sent as `Authorization: Bearer`.
 Declared in `config.py` and `render.yaml`; the catalog's 12 priced routes are platform-eligible
-(`fx.yaml` $0.23/credit from the vendor's own API-tier figure, every per-route credit count
-observed live). Turn on by funding the account (the trial key has 10 credits — it verified the
-catalog and is nearly spent), setting the env var, and adding `influencersclub` to
+(`fx.yaml` $0.598/credit = our own $299/mo-for-500-credits plan, bought 2026-08-21; the public
+page's "as low as $0.23" is the top of the volume slider, not what we pay. Every per-route credit
+count was observed live). The account is FUNDED: set the env var and add `influencersclub` to
 `TREG_PLATFORM_PROVIDERS`. Mind the 60s gateway 504 on cold enrichment calls: under `per_success`
 settlement a 504 relays as a failure and settles at 0, but the vendor charged two of ours — a small,
 bounded leak on the 0.03 tier, worth watching in the first reconcile report.
