@@ -254,8 +254,82 @@ async def _fiber_ai(c, key):
             "note": f"{org.get('used')} of {org.get('max')} used; period resets {resets}"}
 
 
+async def _coingecko(c, key):
+    # /key is the Pro API's free usage route (Basic plan and up); the quota is calls per billing month.
+    d = await _get(c, "https://pro-api.coingecko.com/api/v3/key", headers={"x-cg-pro-api-key": key})
+    return {"value": d.get("current_remaining_monthly_calls"), "unit": "calls left this month",
+            "note": f"plan {d.get('plan')}, {d.get('current_total_monthly_calls')}/"
+                    f"{d.get('monthly_call_credit')} used, {d.get('rate_limit_request_per_minute')} rpm"}
+
+
+async def _twelvedata(c, key):
+    # Twelve Data meters per MINUTE, not per month: plan_limit is the credits/min cap. The call
+    # itself costs 1 credit — trivial, but not zero like the others.
+    d = await _get(c, "https://api.twelvedata.com/api_usage", params={"apikey": key})
+    used, cap = d.get("current_usage"), d.get("plan_limit")
+    left = (cap - used) if isinstance(cap, (int, float)) and isinstance(used, (int, float)) else None
+    daily = d.get("daily_usage")
+    return {"value": left, "unit": "credits left this minute",
+            "note": f"{used}/{cap} per-minute credits used" + (f", {daily} used today" if daily is not None else "")}
+
+
+async def _influencersclub(c, key):
+    # Plural `accounts` + trailing slash is the path that answers; the guides page's
+    # /account/credits spelling 404s (probed 2026-08-22). Credits are a carry-over balance.
+    d = await _get(c, "https://api-dashboard.influencers.club/public/v1/accounts/credits/",
+                   headers={"Authorization": f"Bearer {key}"})
+    return {"value": d.get("credits_available"), "unit": "credits",
+            "note": f"{d.get('credits_used')} used to date"}
+
+
+async def _spyfu(c, key):
+    # The Account API was missed on the 2026-08-12 sweep; it reports the month's included units
+    # (rows) against usage, plus the overage cost in USD. Month is UTC.
+    from datetime import datetime, timezone
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    d = await _get(c, f"https://api.spyfu.com/apis/accounts_api/v2/usage/month/{month}",
+                   params={"api_key": key})
+    base, used = d.get("baseUnits"), d.get("unitsUsed")
+    left = (base - used) if isinstance(base, (int, float)) and isinstance(used, (int, float)) else None
+    return {"value": left, "unit": "units left this month",
+            "note": f"{used}/{base} used, {d.get('requestCount')} requests, "
+                    f"overage ${d.get('finalCost', 0)} ({d.get('serviceLevelName')})"}
+
+
+async def _icypeas(c, key):
+    # Raw key in Authorization (no Bearer); an empty body returns the key owner's own record.
+    r = await c.post("https://app.icypeas.com/api/a/actions/subscription-information",
+                     headers={"Authorization": key}, json={})
+    r.raise_for_status()
+    d = r.json()
+    return {"value": d.get("credits"), "unit": "credits",
+            "note": f"status {d.get('status')}, plan {d.get('plan') or '-'}, "
+                    f"daily quota {(d.get('quotas') or {}).get('daily')}"}
+
+
+async def _pdl(c, key):
+    # No account route (/v5/account 404s) — but a param-less enrich call is a FREE 400
+    # (x-call-credits-spent: 0) that still carries the x-totallimit-* balance headers.
+    r = await c.get("https://api.peopledatalabs.com/v5/person/enrich", headers={"X-Api-Key": key})
+    h = r.headers
+    spent = h.get("x-call-credits-spent")
+    if spent not in (None, "0"):
+        return {"value": None, "unit": "", "note": f"probe unexpectedly charged {spent} credits"}
+    val = h.get("x-totallimit-remaining")
+    return {"value": float(val) if val else None, "unit": "credits (enrich meter)",
+            "note": f"purchased {h.get('x-totallimit-purchased-remaining')} + overage "
+                    f"{h.get('x-totallimit-overages-remaining')}, lifetime used {h.get('x-lifetime-used')}; "
+                    "read from the free 400's headers"}
+
+
 BALANCE_ROUTES = {
     "fiber_ai": _fiber_ai,
+    "spyfu": _spyfu,
+    "icypeas": _icypeas,
+    "pdl": _pdl,
+    "coingecko": _coingecko,
+    "twelvedata": _twelvedata,
+    "influencersclub": _influencersclub,
     "apollo": _apollo,
     "branddev": _branddev,
     "companyenrich": _companyenrich,
@@ -279,20 +353,23 @@ BALANCE_ROUTES = {
     "thecompaniesapi": _thecompaniesapi,
 }
 
-# Verified to publish NO balance/credits API (2026-08-12) — the dashboard is the only meter. Kept
+# Verified to publish NO balance/credits API (re-checked 2026-08-22) — the dashboard is the only meter. Kept
 # explicit so the report names them instead of silently skipping, and so a future probe has a list
 # of what to re-check. brightdata is one permission grant away from graduating into BALANCE_ROUTES.
 NO_BALANCE_API = {
+    "finnhub": "no account/usage endpoint and no rate-limit headers (checked 2026-08-22) — "
+               "per-minute limits only, nothing to read back",
+    "marketstack": "no usage endpoint (checked 2026-08-22) — monthly quota in the dashboard, "
+                   "email alerts at 75/90/100%",
+    "tiingo": "no usage API (api/account/usage 404s, 2026-08-22) — tiingo.com/account/usage is "
+              "a logged-in HTML page only",
     "brightdata": "GET api.brightdata.com/customer/balance exists but our token lacks the billing "
                   "permission — grant it at brightdata.com/cp/setting/users",
     "justoneapi": "no balance endpoint published — dashboard only",
-    "spyfu": "no balance endpoint published — plan + overage billing, dashboard only",
     "akta": "no balance endpoint published — dashboard only",
-    "pdl": "no balance endpoint published — credits visible in dashboard only",
-    "coresignal": "GET /v2/subscriptions answers but is empty for a credits-pack account — "
-                  "credits visible in dashboard only",
-    "icypeas": "no balance endpoint published (probed /credits, /user, /users/me 2026-08-20) — "
-               "dashboard only",
+    "coresignal": "GET /v2/subscriptions answers but is empty for a credits-pack account; the "
+                  "x-credits-remaining header rides only on BILLED 200s (a free 422 has none, "
+                  "2026-08-22) — dashboard only",
 }
 
 # platform_key_* slots that are the SECOND half of a provider's credential pair, not a provider of
