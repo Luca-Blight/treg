@@ -15,7 +15,9 @@ related:
 How we grew **SEO**, **Enrichment** and **Advertising** from a handful of entries to ten each — and then
 Enrichment again by eight providers in one pass (2026-08-20: companyenrich, oceanio, tomba, predictleads,
 findymail, branddev, icypeas, leadsforge). This is the repeatable process — follow it whenever a
-category needs more providers.
+category needs more providers. Creator/influencer data (influencers.club, 2026-08-21) was the first
+provider added under the vendor-listing skill end to end: registry + 15-endpoint catalog, every price
+reconciled against the provider's own credit meter.
 
 Everything lives in **`oauth_providers.py`** (the `REGISTRY` of `OAuthProvider` entries). Connecting,
 verifying and auto-provisioning a pasted-key provider is **`connect_with_token`** (`POST /connections/token`)
@@ -96,6 +98,17 @@ rejects on HTTP status by default.
 - **API accepts ANY key** (returns success for garbage). You cannot validate at connect — **drop it**; don't
   ship a provider whose key can't be checked. ScrapeCreators.
 - **Cheapest check is off-host** → `probe_url`. Semrush, Diffbot.
+- **A gateway 504 that still bills.** influencers.club (2026-08-21) fronts slow enrichment with an nginx
+  60s cutoff: the first call for a handle took 54–61s, several came back as a 504 HTML page, and the
+  backend finished anyway — two of those 504s were charged, one was not. Record it in the catalog
+  file's header (retry once, warm answers in 2–5s) rather than stamping the route `unverified`; and
+  give `catalog_verify.py` a second pass for the routes that timed out instead of widening its timeout.
+- **Django trailing slash.** influencers.club's slash-less paths 301 with the body dropped; the Akta
+  fix (slash IN `probe_path`) applies to every catalog `path` too.
+- **A cross-platform provider needs its own platform slug.** influencers.club enriches a handle on any
+  of 11 networks through a `platform` body field, so no single social slug is honest; it got a
+  `creators` platform on the Enrichment shelf (2026-08-21). Platforms cannot be proposed from a
+  provider file — add the slug to `capabilities.yaml` and propose only the capabilities.
 
 ## Selection heuristics (what makes a provider worth adding)
 - **Self-serve API-key first** — sign up, get a key, no sales call. That is the entire speed advantage; anything

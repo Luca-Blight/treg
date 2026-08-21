@@ -1788,6 +1788,44 @@ LEADSFORGE = OAuthProvider(
 )
 
 
+# ---- Creator / influencer data (Enrichment shelf, 2026-08-21) ---------------------------------
+
+INFLUENCERSCLUB = OAuthProvider(
+    service="influencersclub",
+    display_name="influencers.club",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your influencers.club API key (a JWT, eyJ…)",
+    # `Authorization: Bearer <key>` — the transport defaults. The key is a long-lived JWT minted in
+    # the dashboard; the API's own OAuth credentials ride the same header, but treg only takes the key.
+    token_header="Authorization",
+    token_format="Bearer {secret}",
+    setup_url="https://dashboard.influencers.club/api",
+    setup_action_label="Get your influencers.club API key",
+    setup_steps=(
+        "Sign in to influencers.club and open the dashboard's API page.",
+        "Create an API key and copy it (it is shown once).",
+    ),
+    setup_note=(
+        "Credits are spent only when data comes back: discovery is 0.01 credit per creator returned, "
+        "a profile enrich 0.2, analytics 0.8, a full enrich 1. The dictionaries and the credit check "
+        "are free. New accounts get 10 free credits."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary="Find and enrich creators across Instagram, YouTube, TikTok, Twitch, X and OnlyFans — filters or a plain-language brief, then profile, audience, email, posts and lookalikes.",
+    base_url="https://api-dashboard.influencers.club",
+    docs_url="https://docs.influencers.club/",
+    # Free and rejects cleanly: a bogus key answers 401 {"detail":"Token is invalid",
+    # "code":"authentication_failed"}, a missing one 401 "Authentication credentials were not
+    # provided." (verified live 2026-08-21). THE TRAILING SLASH IS LOAD-BEARING: it is a Django app,
+    # and the slash-less path 301s, which the probe would read as "not a 401" (the Akta trap).
+    probe_path="/public/v1/accounts/credits/",
+)
+
+
 # ---- Advertising API-key providers (ad intelligence) -----------------------------------------
 
 # ---- Market data API-key providers -------------------------------------------------------------
@@ -2217,6 +2255,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         # more Enrichment API-key providers
         LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC, FIBER_AI,
         COMPANYENRICH, OCEANIO, TOMBA, PREDICTLEADS, FINDYMAIL, BRANDDEV, ICYPEAS, LEADSFORGE,
+        INFLUENCERSCLUB,
         # Market data API-key providers
         COINGECKO, POLYGON, FINNHUB, TWELVEDATA, FMP, EODHD, MARKETSTACK, TIINGO,
         # Advertising: API-key ad intelligence + unconfigured OAuth ad platforms
