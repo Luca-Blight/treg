@@ -289,6 +289,11 @@ key - share access.
 
 ## MCP — connect an assistant
 
+Using ChatGPT? The plugin is in ChatGPT's Plugins directory (search "treg" → Install); the page
+{BASE}/agents/chatgpt lists what it can do by job, with prices, and {BASE}/agents/chatgpt.md is the
+same page as Markdown.
+
+
 treg is also an **MCP server** at `{BASE}/mcp/`, two ways to authenticate it:
 
 - **Header (headless, no browser):** `treg mcp install` registers it into every supported agent

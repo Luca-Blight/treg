@@ -279,3 +279,10 @@ p.stephint{margin:8px 0 0;font-size:13.5px;color:var(--muted)}
 @media(prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
 }
+
+/* Inline provider mark inside a table cell or card, from the server-rendered use-case pages. */
+.lg{width:16px;height:16px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:7px}
+.lg-none{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:4px;
+  background:var(--inverse);color:var(--inverse-ink);font-size:9px;vertical-align:-3px;margin-right:7px}
+.ptile .lg,.ptile .lg-none{margin-right:0;width:22px;height:22px}
+td code{font-family:var(--mono);font-size:11.5px;color:var(--muted)}

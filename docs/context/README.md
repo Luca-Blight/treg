@@ -39,15 +39,9 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Import — scan a .env AND/OR a skills dir, auto-register as tools + bundles](interface/env-import.md) | in-progress | providers.py, skills.py |
 | [Landing sandbox studio — anonymous try-it, hosted skills, CLI installer](interface/landing-sandbox.md) | shipped | sandbox.py, pubfeed.py, api.py, index.html, … |
 | [Onboarding — the first-run demo team (dashboard + CLI)](interface/onboarding.md) | shipped | demo.py, cli.py, index.html |
-| [Search surfaces — robots, sitemap, the crawlable catalog, and the social card](interface/seo.md) | shipped | api.py, robots.txt, catalog.css, index.html, … |
+| [Search surfaces — robots, sitemap, the crawlable catalog, and the social card](interface/seo.md) | shipped | api.py, agent_pages.py, robots.txt, catalog.css, … |
 | [Shell mode (treg shell) — transparent CLI interception](interface/shell.md) | shipped | shell.py, cli.py |
 | [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md, mcp_install.py, build_plugin.py, plugin.json, … |
-
-## Guides (how-to)
-
-| Fragment | Status | Covers |
-|---|---|---|
-| [Expanding a marketplace category — the add-a-provider playbook](guides/expanding-a-category.md) | guide | oauth_providers.py, api.py, config.py |
 
 ## Ops (deploy, scale)
 
@@ -60,4 +54,10 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [Glossary](reference/glossary.md) | reference | 2026-06-30-jason-tools-registry.md |
+
+## guides
+
+| Fragment | Status | Covers |
+|---|---|---|
+| [Expanding a marketplace category — the add-a-provider playbook](guides/expanding-a-category.md) | guide | oauth_providers.py, api.py, config.py |
 
