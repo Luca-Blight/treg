@@ -1452,3 +1452,46 @@ def test_marketplace_resolution_carries_the_per_row_price():
     that can't see the row price can only ever bill the estimate."""
     cv = {"type": "per_result", "usd": 0.0015}
     assert A._usd_to_micro(cv["usd"]) == 1500
+
+
+async def test_brightdata_sync_scrape_settles_per_record_through_the_ledger(
+        clients: AsyncClient, platform_on, monkeypatch):
+    """End-to-end: a 1-url sync scrape that DELIVERS five records debits five records' worth —
+    the settle counts the response, the hold's 1-record estimate is an overrun, and the ledger
+    charges what was delivered ($13.61-vs-$0.35 incident, 2026-08-24)."""
+    records = [{"url": f"https://x/{i}", "title": f"r{i}"} for i in range(5)]
+    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(records).encode()))
+    before = await _balance(clients)
+    r = await clients.post("/call/brightdata.web.scrape.structured?dataset_id=gd_x",
+                           json=[{"url": "https://x/0"}])
+    assert r.status_code == 200, r.text
+    assert await _balance(clients) == before - 5 * 1500, "five records at $0.0015 each"
+    assert (await _telemetry(clients))["cost_observed_micro"] == 5 * 1500
+
+
+async def test_brightdata_sync_timeout_202_charges_nothing(
+        clients: AsyncClient, platform_on, monkeypatch):
+    """The >60s sync fallback answers 202 + snapshot_id: zero records delivered HERE, so the hold
+    releases to a zero charge — the records bill when the snapshot is downloaded. Before the fix
+    this billed the estimate while the job kept running (and billing) upstream."""
+    monkeypatch.setattr(A, "relay", _fake_relay(202, b'{"snapshot_id": "sd_test123"}'))
+    before = await _balance(clients)
+    r = await clients.post("/call/brightdata.web.scrape.structured?dataset_id=gd_x",
+                           json=[{"url": "https://x/0"}])
+    assert r.status_code == 202, r.text
+    assert await _balance(clients) == before, "a snapshot handoff must not charge"
+    assert (await _telemetry(clients))["cost_observed_micro"] == 0
+
+
+async def test_brightdata_snapshot_download_bills_the_jobs_records(
+        clients: AsyncClient, platform_on, monkeypatch):
+    """The async job's records bill at the snapshot download — the endpoint that was cataloged
+    `free` while $9.09 of Google Play reviews rode through it unbilled."""
+    records = [{"review": f"r{i}"} for i in range(40)]
+    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(records).encode()))
+    before = await _balance(clients)
+    r = await clients.get("/call/brightdata.web.scrape.job.results"
+                          "?snapshot_id=sd_test123&format=json")
+    assert r.status_code == 200, r.text
+    assert await _balance(clients) == before - 40 * 1500, "40 records at $0.0015 each"
+    assert (await _telemetry(clients))["cost_observed_micro"] == 40 * 1500
