@@ -272,6 +272,20 @@ old behaviour was an over-charge and is now fixed, for TikHub the charge is a pa
 upstream cost, and the answer is to probe with a provider whose misses are free (scrapecreators
 404s cost nothing) before spending TikHub calls on unverified slugs.
 
+**Bright Data** is the derived rule in the other direction — the UNDER-charge, and the largest one
+found: it bills $1.50 per 1000 records *delivered*, reports no charge field, and one call can
+deliver thousands of records, so settling per_result calls at the estimate billed a ~6,000-record
+Google Play reviews job as one record. Three weeks of traffic consumed $13.61 upstream and billed
+orgs $0.35 (2026-08-24, a 39x gap). `_brightdata_record_count` counts the response instead — a
+JSON array or csv/ndjson lines are the records; any JSON *object* is zero records (the >60s sync
+fallback's and /trigger's `snapshot_id` handoff, an early download's `status: running`), because
+the async job's records bill when `brightdata.web.scrape.job.results` downloads them (that
+endpoint's price moved from free to per_result for exactly this — which also means re-downloading
+a snapshot bills the caller again; the catalog note says to download once). A gzipped
+(`compress=true`) or buffer-truncated body settles at the estimate: when we cannot count, the
+estimate is the honest number. This needed `unit_micro` (the per-ROW price) to ride the
+`MarketplaceCall` on every tier, where before only oauth-billed calls carried it.
+
 Closing the hold runs on its **own session** (the request's may be mid-rollback from the very error
 being released for) and **never raises** — the caller already has their answer, and a ledger hiccup
 must not turn a served call into a 500. A hold that fails to close is not lost money either: the

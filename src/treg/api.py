@@ -10374,7 +10374,13 @@ async def _resolve_marketplace_call(
     info_est = _platform_estimate_micro(cv, request.query_params, body) if cv else 0
     common = dict(upstream=upstream, consumed=consumed, endpoint_id=ep["id"], provider=service,
                   params_hash=phash, cost_type=str((ep.get("cost") or {}).get("type") or ""),
-                  estimate_micro=info_est)
+                  estimate_micro=info_est,
+                  # The per-ROW price, carried on every tier (settle only reads it on metered calls):
+                  # a `per_result` settle that can't count rows can only ever bill the estimate,
+                  # which is how 6,000 delivered Bright Data records once billed as one (2026-08-24).
+                  unit_micro=(_usd_to_micro(cv["usd"])
+                              if cv and cv.get("type") in ("per_result", "quota_rows") and cv.get("usd")
+                              else 0))
     try:  # tier 1 — the org registered this provider: their tool, their bindings, their ACLs
         tool, resolved = await _resolve_call(upstream, caller, db)
         return MarketplaceCall(tool=tool, tier="tool", **{**common, "upstream": resolved})
@@ -11007,6 +11013,52 @@ def _redact_snippet(text: str, secrets: list[str], limit: int) -> str:
     return re.sub(r"[A-Za-z0-9_\-+/=.]{8,}$", "***", text[:limit]) + "…"
 
 
+
+def _brightdata_record_count(body: bytes) -> int | None:
+    """How many RECORDS a Bright Data Web Scraper response delivered, or None for "settle at the
+    estimate". Bright Data bills $1.50/1000 records *delivered* and reports no charge field, so the
+    response body is the only bill we will ever see. Counting it is what closed the 39x gap found
+    2026-08-24: $13.61 consumed upstream in three weeks vs $0.35 billed, because a per_result call
+    always settled as ONE record — a Google Play reviews job that delivered ~6,000 records billed
+    $0.0015.
+
+    Shapes, per docs + live traffic:
+      - sync /scrape and /snapshot downloads, format=json → a JSON ARRAY, one element per record;
+      - the >60s sync fallback and /trigger → a JSON OBJECT carrying `snapshot_id` — zero records
+        HERE; the job's records bill when the snapshot is downloaded (its catalog entry is priced
+        per_result for exactly that reason);
+      - format=ndjson → one JSON object per line; format=csv → header line + one line per record.
+    A body that STARTS like JSON but does not parse is treated as truncated (the metered buffer
+    caps at _PLATFORM_BODY_MAX and drops the tail) → None, settle at the estimate, never a
+    line-count guess over a partial payload. Any other unrecognised shape → None for the same
+    reason: when we cannot count, the estimate is the honest number."""
+    if body[:2] == b"\x1f\x8b":  # compress=true gzips the download — we can't count, estimate wins
+        return None
+    text = body.decode("utf-8", "replace").strip()
+    if not text:
+        return None
+    try:
+        doc = json.loads(text)
+    except ValueError:
+        lines = [ln for ln in text.splitlines() if ln.strip()]
+        try:  # ndjson: every line is its own record — EVERY line must parse, or it isn't ndjson
+            for ln in lines:
+                json.loads(ln)
+            return len(lines)
+        except ValueError:
+            pass
+        if text[0] in "[{":  # JSON that broke mid-stream: the 8MB buffer truncated it
+            return None
+        return len(lines) - 1 if len(lines) > 1 else None  # csv: header + rows
+    if isinstance(doc, list):
+        return len(doc)
+    if isinstance(doc, dict):
+        # Zero records delivered, whatever the object says: the async handoff (`snapshot_id` — the
+        # records bill at the snapshot download), an early download's {"status": "running"}, or any
+        # other envelope. Pay-per-success means an answer with no records costs nothing.
+        return 0
+    return None
+
 def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
     """The provider's OWN reported charge for this call, in micro-USD, or None when it doesn't say.
 
@@ -11051,6 +11103,11 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
     provider = mk.provider
     if not body:
         return None
+    if provider == "brightdata" and mk.cost_type == "per_result" and mk.unit_micro > 0:
+        # DERIVED by counting records — Bright Data's bill is per record delivered and the body is
+        # the only place that number exists (see _brightdata_record_count for the shapes).
+        n = _brightdata_record_count(body)
+        return None if n is None else n * mk.unit_micro
     try:
         doc = json.loads(body)
     except (ValueError, UnicodeDecodeError):
