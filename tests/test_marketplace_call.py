@@ -1420,3 +1420,35 @@ async def test_a_byo_x_connection_is_never_metered(clients: AsyncClient, x_bille
     r = await clients.get("/call/x.x.get-webhooks")
     assert r.status_code == 200, r.text
     assert await _balance(clients) == before, "a BYO app's bill is the org's, not ours"
+
+
+def test_observed_cost_counts_brightdata_records():
+    """Bright Data bills per record DELIVERED and reports no charge field — the body is the bill.
+    Before this settled-by-count existed, every per_result call settled as one record: $13.61
+    consumed upstream vs $0.35 billed over three weeks (2026-08-24)."""
+    bd = _mk("brightdata", cost_type="per_result", unit_micro=1500)
+    # sync scrape / snapshot download, format=json: an array, one element per record
+    assert A._observed_cost_micro(bd, b'[{"url": "a"}, {"url": "b"}, {"url": "c"}]') == 4500
+    assert A._observed_cost_micro(bd, b"[]") == 0
+    # the >60s sync fallback and /trigger hand back a snapshot id: zero records HERE — they bill
+    # when the snapshot is downloaded
+    assert A._observed_cost_micro(bd, b'{"snapshot_id": "sd_x"}') == 0
+    # an early snapshot download answers the job's state, not rows: nothing delivered, nothing billed
+    assert A._observed_cost_micro(bd, b'{"status": "running", "message": "not ready"}') == 0
+    # ndjson: one record per line
+    assert A._observed_cost_micro(bd, b'{"url": "a"}\n{"url": "b"}\n') == 3000
+    # csv: header + rows
+    assert A._observed_cost_micro(bd, b"url,name\na,x\nb,y\n") == 3000
+    # a payload the 8MB metered buffer truncated must settle at the estimate, never a partial count
+    assert A._observed_cost_micro(bd, b'[{"url": "a"}, {"url"') is None
+    # gzipped (compress=true): can't count, estimate wins
+    assert A._observed_cost_micro(bd, b"\x1f\x8b\x08\x00junk") is None
+    # a free management route (progress polls) never reaches the counter
+    assert A._observed_cost_micro(_mk("brightdata", cost_type="free"), b'{"status": "ready"}') is None
+
+
+def test_marketplace_resolution_carries_the_per_row_price():
+    """`unit_micro` must ride the MarketplaceCall on every tier for per_result endpoints — a settle
+    that can't see the row price can only ever bill the estimate."""
+    cv = {"type": "per_result", "usd": 0.0015}
+    assert A._usd_to_micro(cv["usd"]) == 1500
