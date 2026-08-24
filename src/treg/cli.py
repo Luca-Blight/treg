@@ -58,12 +58,14 @@ _JSON_OVERRIDE: bool = False
 
 
 # ---- config (identity-first: one bearer token + an active org slug) -----------------------
+PRODUCTION_BASE_URL = "https://treg.to"
+
 def _load_config() -> dict:
     try:
         raw = json.loads(CONFIG_PATH.read_text()) if CONFIG_PATH.exists() else {}
     except (json.JSONDecodeError, OSError):
         raw = {}  # a corrupt/half-written config must not brick every command (incl. login/logout)
-    base = raw.get("base_url", "http://localhost:18790")
+    base = raw.get("base_url", PRODUCTION_BASE_URL)
     if "orgs" in raw:  # migrate legacy multi-org config → the active org's token as the bearer
         active = raw.get("active_org")
         tok = (raw.get("orgs", {}).get(active) or {}).get("token")
@@ -149,6 +151,13 @@ def _pin_token_to_active_org(cfg: dict) -> None:
 
 def _effective_org(cfg: dict) -> str | None:
     return _ORG_OVERRIDE or os.environ.get("TREG_ORG") or cfg.get("active_org")
+
+
+def _is_loopback_url(url: str) -> bool:
+    """True if the URL points to a loopback address (localhost, 127.x.x.x, [::1]).
+    Used to detect a misconfigured first-run where the CLI defaults to a local dev server that isn't running."""
+    host = urlsplit(url).hostname or ""
+    return host in ("localhost", "127.0.0.1", "::1") or host.startswith("127.")
 
 
 class _RegistryClient(httpx.Client):
@@ -373,22 +382,37 @@ def cmd_login(args, cfg) -> None:
     # /login?cli=… link — can't be approved into a token for them. If the server is too old to know
     # /start, fall back to a locally-minted id (no code) so login still works.
     code = None
+    start_exc = None
     try:
         st = httpx.post(f"{base}/auth/cli/start", headers={"ngrok-skip-browser-warning": "1"}, timeout=10)
         if st.status_code == 200:
             j = st.json(); lid = j["login_id"]; code = j.get("code")
         else:
             lid = _secrets.token_urlsafe(18)
-    except Exception:
+    except Exception as exc:
+        start_exc = exc
         lid = _secrets.token_urlsafe(18)
+    # Detect localhost-with-nothing-listening: the install.sh sets base_url but if that failed, the
+    # default is production treg.to. If someone explicitly points at localhost (for local dev) and
+    # nothing is there, fail early with a helpful message rather than opening a dead browser page.
+    if start_exc and _is_loopback_url(base):
+        sys.exit(
+            f"Cannot reach {base} — is a local treg server running?\n"
+            f"  If you meant to use the production registry, run:\n"
+            f"    treg config --base-url {PRODUCTION_BASE_URL}\n"
+            f"  then retry `treg login`.\n"
+            f"  (error: {start_exc})"
+        )
     # The code rides in the URL FRAGMENT (never sent to the server, so it stays out of request logs):
     # the /login page displays it for a visual match against this terminal instead of making the user
     # type it. The server still validates the code at approve time — the guard itself is unchanged.
     url = f"{base}/login?cli={lid}" + (f"#code={code}" if code else "")
-    print(f"Opening your browser to sign in…\nIf it doesn't open, visit:\n  {url}\n")
+    # flush=True for non-TTY agent shells where stdout is block-buffered — the pairing code must
+    # appear immediately so an agent driving a browser can see and verify it.
+    print(f"Opening your browser to sign in…\nIf it doesn't open, visit:\n  {url}\n", flush=True)
     if code:
-        print(f"  The sign-in page shows this code — check it matches:  {_B}{_TEAL}{code}{_R}\n")
-    print("Waiting for authorization…")
+        print(f"  The sign-in page shows this code — check it matches:  {_B}{_TEAL}{code}{_R}\n", flush=True)
+    print("Waiting for authorization…", flush=True)
     try:
         webbrowser.open(url)
     except Exception:
@@ -3429,6 +3453,20 @@ def cmd_mcp_use_team(args, cfg) -> None:
     _dim(f"  {body.get('note', '')}")
 
 
+def _is_transient_network_error(exc: Exception) -> bool:
+    """True if the exception looks like a transient SSL/connection error that a retry might fix.
+    Covers SSL handshake failures, connection refused, timeouts, and similar network glitches."""
+    import ssl
+    if isinstance(exc, ssl.SSLError):
+        return True
+    if isinstance(exc, (ConnectionError, TimeoutError, OSError)):
+        return True
+    if isinstance(exc, httpx.TransportError):
+        return True
+    exc_str = str(exc).lower()
+    return any(s in exc_str for s in ("ssl", "connection", "timeout", "refused", "reset"))
+
+
 def cmd_mcp_install(args, cfg) -> None:
     """Register the treg MCP server into every supported agent on this machine, header-authed with
     the logged-in token (which bakes in the team, so no org to pass). The MCP sibling of
@@ -3444,11 +3482,29 @@ def cmd_mcp_install(args, cfg) -> None:
     # whichever agent tries a call — looking like a provider problem, not a setup one. `_client`
     # applies the same TREG_TOKEN-beats-config precedence used above, so this validates exactly the
     # token that would be written.
-    try:
-        with _client(cfg) as c:
-            who = c.get("/auth/me")
-    except Exception as exc:  # noqa: BLE001 — network/DNS: report, don't write a maybe-bad token
-        sys.exit(f"Could not reach {cfg['base_url']} to verify the token: {exc}")
+    #
+    # Retry transient SSL/connection errors: the SSL: WRONG_VERSION_NUMBER bug often clears on a
+    # second attempt (TLS handshake race, proxy hiccup). Max 3 tries with 1s/2s backoff.
+    who = None
+    last_exc = None
+    for attempt in range(3):
+        try:
+            with _client(cfg) as c:
+                who = c.get("/auth/me")
+            break  # success
+        except Exception as exc:  # noqa: BLE001 — network/DNS: report, don't write a maybe-bad token
+            last_exc = exc
+            if attempt < 2 and _is_transient_network_error(exc):
+                time.sleep(1 << attempt)  # 1s, 2s
+                continue
+            break
+    if who is None:
+        base = cfg.get("base_url") or PRODUCTION_BASE_URL
+        sys.exit(
+            f"Could not reach {base} to verify the token: {last_exc}\n"
+            f"  If this is an SSL or connection error, retry in a moment.\n"
+            f"  If it persists, check your network or try: curl -I {base}"
+        )
     if who.status_code == 401:
         sys.exit("That token was rejected (401 invalid token) — nothing was written. It's expired "
                  "or from a different server; run `treg login` (or copy a fresh token from the "
