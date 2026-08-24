@@ -187,8 +187,10 @@ The API builds a single-binding tool from flat fields via `_flat_binding()`; inj
 [auth-secrets](auth-secrets.md).
 
 ## Async DB (`db.py`)
-One async SQLAlchemy engine (`_engine`) + a public `session_maker` (the audit writer opens its own
-session here). `init_db()` creates tables **and runs the guarded orgs migration** (`_migrate_to_orgs` —
+One async SQLAlchemy engine (`_engine`, Postgres pool 5 + 10 overflow per instance, `pool_timeout=5`)
++ a public `session_maker` (the audit writer opens its own session here; so do the post-relay
+bookkeeping steps of `/call/` — the request session is committed before the relay so none of them
+ever waits on it, see [proxy-model](proxy-model.md) § Connection discipline). `init_db()` creates tables **and runs the guarded orgs migration** (`_migrate_to_orgs` —
 see [multi-tenancy](multi-tenancy.md)); that migration also does the small additive `ADD COLUMN` steps for
 columns added after a table shipped (e.g. `tool.examples`, `tool.cli` for local runs, `org.public_demo`
 (A15), the seven `secret` connection-metadata columns (A16), and the eight `pendingoauth` marketplace/quirk

@@ -77,6 +77,27 @@ body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would
 `Accept-Encoding: gzip` and hand a plain HTTP client / agent compressed bytes it never requested. Asking
 for `identity` keeps what the caller receives matching what the caller requested.
 
+## Connection discipline: a call in flight holds no DB connection
+`call_tool` ends its DB phase with an explicit `await db.commit()` immediately before `relay()` (and
+before `_relay_live_demo()`), so from the moment the upstream is called until the settle, the request
+holds **zero** pooled connections. Everything after the relay — `_platform_settle`, `_record_first_call`,
+`_store_idempotent` — already runs on its own short-lived session, and the request session is
+`expire_on_commit=False`, so `tool`, `secrets` and `caller.org` stay usable without a reload.
+
+Why this is load-bearing: `ledger.reserve` commits, but the org refresh after it, the secret loads and
+an OAuth token refresh each auto-begin a fresh transaction on the request session, and SQLAlchemy keeps
+that transaction's connection checked out until the next commit — i.e. for the entire upstream round
+trip. `_platform_settle` then needs a second connection from its own session. Two per in-flight call
+against the 15-slot pool (`db.py`: 5 + 10 overflow) deadlocked at 15 concurrent calls: every settle
+waited on a slot that only another waiting call could free, until `pool_timeout` killed one (a bare
+500, or a settle that forfeited its charge and left the hold to the reaper) and the rest cascaded — so
+every call in a burst "took 30 s" while the provider had answered in under a second. Reproduced live
+2026-08-24 from a customer's parallel-agent workload (13–29 calls per `Promise.all`), and the pool is
+per instance and shared by every org, so one team's burst stalled everyone's settles. The pool now
+bounds concurrent DB *phases* (milliseconds), not concurrent calls; there is no per-token or per-team
+concurrency limit, and `llms.txt` says so. `tests/test_call_pool_discipline.py` pins the invariant
+(`_engine.pool.checkedout() == 0` at relay time, metered and own-key) and a 20-call burst.
+
 ## Tool resolution (`_resolve_call` in api.py)
 `* /call/{rest:path}` → `call_tool()` → `_resolve_call(rest, caller, db)` returns
 `(tool, upstream_url)`. **Both shapes are scoped to the caller's org** (`Tool.org_id == org_id`), so two

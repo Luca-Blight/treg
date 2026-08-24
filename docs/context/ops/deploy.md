@@ -27,8 +27,13 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`.
   SQLite, `init_db` raises (an ephemeral key would make every stored secret undecryptable after a
   restart — silent total loss). On SQLite dev it only logs a warning.
 - **Postgres pool hygiene:** for non-SQLite URLs the async engine adds `pool_pre_ping=True`,
-  `pool_recycle=300`, and sizing (`pool_size=20`, `max_overflow=40`) — avoids post-idle dropped-connection
-  500s and pool starvation against the relay's 200-concurrency client.
+  `pool_recycle=300`, sizing (`pool_size=5`, `max_overflow=10` — per instance; a rolling deploy runs two
+  against a basic-plan Postgres ceiling of ~100, the 2026-08-15 outage) and `pool_timeout=5`. A request
+  that gets no slot in 5 s is answered `503 {"treg_saturated": true}` with `Retry-After: 2` (api.py
+  `_pool_saturated`) instead of SQLAlchemy's default 30 s wait and an anonymous 500. 15 slots is plenty
+  because a `/call/` holds no connection during its upstream round trip — `call_tool` commits before
+  `relay()`; holding one there deadlocked 15 concurrent calls for 30 s on 2026-08-24 (see
+  [proxy-model](../architecture/proxy-model.md) § Connection discipline).
 
 ## Config (`config.py`)
 `Settings` (pydantic-settings, env prefix `TREG_`, reads `.env`), cached via `get_settings()`:
