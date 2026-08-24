@@ -5,12 +5,23 @@ from __future__ import annotations
 import asyncio
 
 from httpx import AsyncClient
+from sqlmodel import select
 
 from treg import audit, ledger
 from treg.db import session_maker
 from treg.ledger import with_margin
+from treg.models import CallRecord
 
-from test_marketplace_call import EP, EP_MICRO, EP_PATH, PLATFORM_KEYS
+from test_marketplace_call import (
+    EP,
+    EP_CALL,
+    EP_CALL_MICRO,
+    EP_DFS,
+    EP_DFS_MICRO,
+    EP_MICRO,
+    EP_PATH,
+    PLATFORM_KEYS,
+)
 
 from .asserts import Expect, assert_outcome, snapshot
 from .provider import FakeProvider
@@ -441,3 +452,318 @@ async def test_d4_failure_releases_key_for_retry(
             audit={"refused_by": None, "cost_charged_micro": with_margin(EP_MICRO)},
         ),
     )
+
+
+# B group: every upstream failure closes the hold according to the endpoint's billing rule.
+
+
+async def _latest_call_record() -> CallRecord:
+    await audit.drain()
+    async with session_maker() as db:
+        return (await db.execute(
+            select(CallRecord).order_by(CallRecord.id.desc()).limit(1),
+        )).scalars().one()
+
+
+async def test_b1_per_success_500_refunds(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    before = await snapshot(matrix_clients, fake_provider)
+    body = b'{"error":"provider exploded"}'
+
+    response = await matrix_clients.get(
+        f"/call/{EP}?aweme_id=7",
+        headers={"X-Fake-Status": "500", "X-Fake-Body": body.decode()},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=500,
+            body=body,
+            cost_micro=0,
+            ledger_kinds=("release", "reserve"),
+            ledger_reason="call_failed_500",
+            audit={"refused_by": None, "cost_charged_micro": 0},
+        ),
+    )
+
+
+async def test_b2_per_success_404_refunds(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    before = await snapshot(matrix_clients, fake_provider)
+    body = b'{"error":"not found"}'
+
+    response = await matrix_clients.get(
+        f"/call/{EP}?aweme_id=missing",
+        headers={"X-Fake-Status": "404", "X-Fake-Body": body.decode()},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=404,
+            body=body,
+            cost_micro=0,
+            ledger_kinds=("release", "reserve"),
+            audit={"refused_by": None, "cost_charged_micro": 0},
+        ),
+    )
+
+
+async def test_b3_per_call_400_is_billable(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    before = await snapshot(matrix_clients, fake_provider)
+    charged = with_margin(EP_CALL_MICRO)
+    body = b'{"error":"bad caller input"}'
+
+    response = await matrix_clients.get(
+        f"/call/{EP_CALL}?group_id=1",
+        headers={"X-Fake-Status": "400", "X-Fake-Body": body.decode()},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=400,
+            body=body,
+            cost_micro=charged,
+            balance_delta=-charged,
+            ledger_kinds=("settle", "reserve"),
+            audit={"refused_by": None, "cost_charged_micro": charged},
+        ),
+    )
+
+
+async def test_b4_per_call_429_refunds(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    before = await snapshot(matrix_clients, fake_provider)
+    body = b'{"error":"rate limited"}'
+
+    response = await matrix_clients.get(
+        f"/call/{EP_CALL}?group_id=1",
+        headers={"X-Fake-Status": "429", "X-Fake-Body": body.decode()},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=429,
+            body=body,
+            cost_micro=0,
+            ledger_kinds=("release", "reserve"),
+            audit={"refused_by": None, "cost_charged_micro": 0},
+        ),
+    )
+
+
+async def test_b5_read_timeout_refunds_and_keeps_evidence(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.get(
+        f"/call/{EP}?aweme_id=7", headers={"X-Fake-Net": "timeout"},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=502,
+            cost_micro=0,
+            treg_error=True,
+            ledger_kinds=("release", "reserve"),
+            ledger_reason="call_failed_502",
+            audit={"refused_by": None, "cost_charged_micro": 0},
+            upstream_hits=0,
+        ),
+    )
+    record = await _latest_call_record()
+    assert record.error_request and "aweme_id" in record.error_request
+    assert record.error_response and "timeout" in record.error_response.lower()
+
+
+async def test_b6_connect_error_refunds_and_keeps_evidence(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.get(
+        f"/call/{EP}?aweme_id=7", headers={"X-Fake-Net": "connect"},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=502,
+            cost_micro=0,
+            treg_error=True,
+            ledger_kinds=("release", "reserve"),
+            ledger_reason="call_failed_502",
+            audit={"refused_by": None, "cost_charged_micro": 0},
+            upstream_hits=0,
+        ),
+    )
+    record = await _latest_call_record()
+    assert record.error_response and "connection" in record.error_response.lower()
+
+
+async def test_b7_metered_stream_interruption_is_call_failed(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.get(
+        f"/call/{EP}?aweme_id=7",
+        headers={"X-Fake-Net": "stream", "X-Fake-Body": '{"partial":true}'},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=502,
+            cost_micro=0,
+            treg_error=True,
+            ledger_kinds=("release", "reserve"),
+            ledger_reason="call_failed_502",
+            audit={"refused_by": None, "cost_charged_micro": 0},
+        ),
+    )
+
+
+# C group: settlement chooses a trustworthy observed cost or the catalog estimate.
+
+
+async def test_c1_reported_cost_below_estimate_refunds_difference(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    observed = 50
+    charged = with_margin(observed)
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.post(
+        f"/call/{EP_DFS}",
+        json=[{"url": "https://example.com/"}],
+        headers={"X-Fake-Cost": "0.00005"},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=200,
+            cost_micro=charged,
+            balance_delta=-charged,
+            ledger_kinds=("settle", "reserve"),
+            audit={
+                "cost_estimated_micro": EP_DFS_MICRO,
+                "cost_observed_micro": observed,
+                "cost_charged_micro": charged,
+            },
+        ),
+    )
+
+
+async def test_c2_missing_reported_cost_falls_back_to_estimate(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    charged = with_margin(EP_DFS_MICRO)
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.post(
+        f"/call/{EP_DFS}",
+        json=[{"url": "https://example.com/"}],
+        headers={"X-Fake-Body": '{"tasks":[]}'},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=200,
+            cost_micro=charged,
+            balance_delta=-charged,
+            ledger_kinds=("settle", "reserve"),
+            audit={"cost_observed_micro": None, "cost_charged_micro": charged},
+        ),
+    )
+
+
+async def test_c3_malformed_reported_cost_falls_back_to_estimate(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    charged = with_margin(EP_DFS_MICRO)
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.post(
+        f"/call/{EP_DFS}",
+        json=[{"url": "https://example.com/"}],
+        headers={"X-Fake-Cost": '"garbage"'},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=200,
+            cost_micro=charged,
+            balance_delta=-charged,
+            ledger_kinds=("settle", "reserve"),
+            audit={"cost_observed_micro": None, "cost_charged_micro": charged},
+        ),
+    )
+
+
+async def test_c4_gzip_reported_cost_falls_back_to_estimate(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    charged = with_margin(EP_DFS_MICRO)
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.post(
+        f"/call/{EP_DFS}",
+        json=[{"url": "https://example.com/"}],
+        headers={"X-Fake-Cost": "0.00005", "X-Fake-Gzip": "1"},
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=200,
+            cost_micro=charged,
+            balance_delta=-charged,
+            ledger_kinds=("settle", "reserve"),
+            audit={"cost_observed_micro": None, "cost_charged_micro": charged},
+        ),
+    )
+    assert fake_provider.hits[-1].headers["accept-encoding"] == "identity"
+
+
+async def test_c5_gzip_4xx_body_is_decoded_for_evidence(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    before = await snapshot(matrix_clients, fake_provider)
+    body = b'{"error":"compressed bad request"}'
+
+    response = await matrix_clients.post(
+        f"/call/{EP_DFS}",
+        json=[{"url": "https://example.com/"}],
+        headers={
+            "X-Fake-Status": "400",
+            "X-Fake-Body": body.decode(),
+            "X-Fake-Gzip": "1",
+        },
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(
+            status=400,
+            body=body,
+            cost_micro=0,
+            ledger_kinds=("release", "reserve"),
+            audit={"refused_by": None, "cost_charged_micro": 0},
+        ),
+    )
+    record = await _latest_call_record()
+    assert record.error_response and "compressed bad request" in record.error_response
