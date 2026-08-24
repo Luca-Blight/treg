@@ -198,7 +198,7 @@ columns (A17–A20) — guarded by a column-existence check, so it is idempotent
 **Postgres BOOLEAN default fix:** boolean columns added here use `DEFAULT false`, never `DEFAULT 0` —
 Postgres rejects an integer default on a `BOOLEAN` column (SQLite accepts both, so the test suite alone
 cannot catch it), which is why `pendingoauth.long_lived_exchange` is spelled `BOOLEAN NOT NULL DEFAULT
-false`. `reset_db()` is test-only (drop +
+false`. `reset_db()` is test-only (dispose the loop-bound pool, then drop +
 recreate); `get_session()` is the FastAPI dependency. SQLite locally (`aiosqlite`), Postgres on Render, same code. **Timestamps are
 naive UTC:** `_now()` (the `created_at` default) drops tzinfo because the columns are `TIMESTAMP WITHOUT
 TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout
