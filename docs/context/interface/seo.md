@@ -43,6 +43,7 @@ FastAPI's stock Swagger shell — a kilobyte of JavaScript to anything that does
 | `/docs` | Server-rendered API reference built from `app.openapi()`. |
 | `/docs/api` | FastAPI's Swagger UI, moved here and `Disallow`ed. ReDoc is off. |
 | `/media/og.png` | The 1200×630 social card, served by the pre-existing `/media` mount. |
+| `/media/brand/*` | Stable hot-linkable brand files — `logo.png` (512² square mark, the Organization JSON-LD `logo` and the apple-touch-icon), `logotype.png` (white wordmark), `wordmark-black.png`, `mark-{black,white}.svg`, `avatar-*`. Copies of `assets/brand/twitter/`; the favicon is the same mono mark. |
 | `/catalog.css` | Skin for `/docs`. The catalog URLs need none — they ship the dashboard's own stylesheet, because they ship the dashboard. |
 
 `_page()` in `api.py` is the shell for the standalone server-rendered pages (`/docs`) — it owns
