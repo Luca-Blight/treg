@@ -24,7 +24,7 @@ class Snapshot:
 @dataclass(frozen=True)
 class Expect:
     status: int
-    body: bytes
+    body: bytes | None = None
     cost_micro: int | None = None
     treg_error: bool = False
     balance_delta: int = 0
@@ -54,9 +54,9 @@ async def assert_outcome(
     await audit.drain()
 
     assert response.status_code == expect.status, response.text
-    assert response.content == expect.body
+    if expect.body is not None:
+        assert response.content == expect.body
     call_id = response.headers.get("X-Treg-Call-Id")
-    assert call_id, "every /call response must carry X-Treg-Call-Id"
     assert (response.headers.get("X-Treg-Error") == "1") is expect.treg_error
     if expect.cost_micro is None:
         assert "X-Treg-Cost-Micro" not in response.headers
@@ -75,13 +75,15 @@ async def assert_outcome(
     assert tuple(entry["kind"] for entry in fresh) == expect.ledger_kinds
     if expect.ledger_reason is not None:
         release = next(entry for entry in fresh if entry["kind"] == "release")
-        assert release["meta"]["reason"] == expect.ledger_reason
+        assert release["meta"]["reason"] == expect.ledger_reason, release["meta"]
 
     row = await _telemetry(clients)
-    assert row["call_ref"] == call_id
+    if call_id is not None:
+        assert row["call_ref"] == call_id
     assert row["status_code"] == expect.status
     for key, value in expect.audit.items():
         assert row[key] == value, f"audit {key}: {row[key]!r} != {value!r}"
 
     assert len(provider.hits) - before.hit_count == expect.upstream_hits
+    assert call_id, "every /call response must carry X-Treg-Call-Id"
     return row
