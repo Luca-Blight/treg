@@ -606,6 +606,7 @@ async def reset_db() -> None:
     """Drop + recreate all tables. Test-only: gives each test a clean registry."""
     from . import models  # noqa: F401
 
+    await _engine.dispose()
     async with _engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)

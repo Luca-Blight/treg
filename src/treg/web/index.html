@@ -363,7 +363,7 @@ addEventListener('load', function(){
   .tswitch .knob{width:30px;height:17px;border-radius:9px;background:var(--line);position:relative;transition:background .15s;flex:none}
   .tswitch .knob::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
   .tswitch input:checked+.knob{background:var(--accent)} .tswitch input:checked+.knob::after{transform:translateX(13px);background:#fff}
-  /* Billing: the four one-click top-up amounts. Each card IS the buy button - no dropdown. */
+  /* Billing: one-click top-up amounts. Each card IS the buy button - no dropdown. */
   .fundgrid{display:grid;grid-template-columns:repeat(4,minmax(86px,1fr));gap:8px;max-width:460px}
   .fundcard{background:var(--panel2);border:1px solid var(--line);border-radius:var(--rb);padding:13px 8px 11px;text-align:center;cursor:pointer;color:var(--ink);font-family:var(--mono);transition:border-color .12s,transform .12s}
   .fundcard:hover:not(:disabled){border-color:var(--accent);transform:translateY(-1px)}
