@@ -214,7 +214,7 @@ class Settings(BaseSettings):
     # float). $5 minimum is fee math, not policy: at 2.9% + $0.30 a $1 top-up loses 33% to fees.
     topup_min_usd: int = 5
     topup_default_usd: int = 10
-    topup_presets: list[int] = [5, 10, 25, 50]
+    topup_presets: list[int] = [5, 10, 25, 50, 100, 200, 300, 400]
     # Auto-top-up defaults, applied when an org enables it without naming its own numbers. The
     # threshold is deliberately above the $1 promo grant's tail: at agent call rates a $2 floor is one
     # burst away from empty, and an off-session charge takes seconds to land.
