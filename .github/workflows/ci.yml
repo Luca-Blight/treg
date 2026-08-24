@@ -56,3 +56,27 @@ jobs:
         # the lockfile on purpose: it is a CI-only concern, and the team's older uv rewrites
         # uv.lock's whole format on any touch.
         run: uv run --with pytest-xdist pytest -n auto -q
+
+  # RESTORED 2026-08-24. This job is a REQUIRED check on main, and the CI rewrite in 528383d
+  # dropped it while keeping the requirement — so for three weeks every pull request waited on a
+  # check that could never report, and only an admin bypass moved anything. It never skips (see
+  # the docs-only note in `test`: a skipped required check blocks a merge forever), and it scans
+  # the FULL history, because a secret removed from the tip still lives in the commit that added
+  # it. `.gitleaks.toml` allowlists the deliberately-fake placeholders in the tests and the demo
+  # sandbox; everything else is a real finding.
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # scan the full history of the push/PR, not just the tip
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: "8.21.2"
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+      - name: Scan for secrets
+        run: gitleaks detect --source . --config .gitleaks.toml --verbose --redact
