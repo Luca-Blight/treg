@@ -377,3 +377,20 @@ async def test_no_page_ships_an_unsubstituted_base(clients: AsyncClient):
     """`{BASE}` reaching a browser means a canonical or og:url is pointing at nothing."""
     for path in ("/", "/support", "/terms", "/privacy", "/tutorial", "/catalog"):
         assert "{BASE}" not in (await clients.get(path)).text, path
+
+
+# ----------------------------------------------------------------------------------------- brand
+
+@pytest.mark.parametrize("path,ctype", [("/media/brand/logo.png", "image/png"),
+                                        ("/media/brand/logotype.png", "image/png"),
+                                        ("/media/brand/mark-white.svg", "image/svg+xml")])
+async def test_brand_files_are_hot_linkable(clients: AsyncClient, path: str, ctype: str):
+    """Directories and partners embed these URLs; the landing's JSON-LD `logo` is one of them."""
+    r = await clients.get(path)
+    assert r.status_code == 200, path
+    assert r.headers["content-type"].startswith(ctype)
+
+
+async def test_favicon_is_the_mono_mark(clients: AsyncClient):
+    body = (await clients.get("/favicon.svg")).text
+    assert 'fill="#000000"' in body and 'fill="#ffffff"' in body
