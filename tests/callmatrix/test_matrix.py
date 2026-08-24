@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 
 from httpx import AsyncClient
 from sqlmodel import select
@@ -21,6 +22,8 @@ from test_marketplace_call import (
     EP_MICRO,
     EP_PATH,
     PLATFORM_KEYS,
+    _balance,
+    _entries,
 )
 
 from .asserts import Expect, assert_outcome, snapshot
@@ -767,3 +770,109 @@ async def test_c5_gzip_4xx_body_is_decoded_for_evidence(
     )
     record = await _latest_call_record()
     assert record.error_response and "compressed bad request" in record.error_response
+
+
+# F group: the relay preserves caller bytes while stripping treg's own session boundary.
+
+
+async def test_f1_duplicate_query_parameters_keep_order(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider,
+) -> None:
+    await _register_echo(matrix_clients)
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.get("/call/echo/search?tag=a&tag=b")
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(status=200, body=b"{}", audit={"refused_by": None}),
+    )
+    assert fake_provider.hits[-1].query == (("tag", "a"), ("tag", "b"))
+
+
+async def test_f2_encoded_slash_survives_in_raw_path(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider,
+) -> None:
+    await _register_echo(matrix_clients)
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.get("/call/echo/a%2fb")
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(status=200, body=b"{}", audit={"refused_by": None}),
+    )
+    assert fake_provider.hits[-1].raw_path.lower() == b"/a%2fb"
+
+
+async def test_f3_treg_cookie_is_scrubbed_both_directions(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider,
+) -> None:
+    await _register_echo(matrix_clients)
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.get(
+        "/call/echo/cookies",
+        headers={
+            "Cookie": "treg_session=caller-secret; ordinary=keep-me",
+            "X-Custom-Proof": "kept",
+            "X-Fake-Set-Cookie": "treg_session=evil; Path=/; HttpOnly",
+        },
+    )
+
+    await assert_outcome(
+        matrix_clients, fake_provider, response, before,
+        Expect(status=200, body=b"{}", audit={"refused_by": None}),
+    )
+    hit = fake_provider.hits[-1]
+    assert hit.headers["x-custom-proof"] == "kept"
+    assert "ordinary=keep-me" in hit.headers["cookie"]
+    assert "treg_session" not in hit.headers["cookie"]
+    assert all("treg_session" not in value.lower() for value in response.headers.get_list("set-cookie"))
+
+
+# G group: the balance's conditional update chooses exactly three winners under concurrency.
+
+
+async def test_g1_ten_concurrent_calls_compete_for_three_call_balance(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, platform_on,
+) -> None:
+    charged = with_margin(EP_MICRO)
+    org_id = (await matrix_clients.get("/orgs")).json()[0]["org_id"]
+    current = await _balance(matrix_clients)
+    target = 3 * charged
+    assert current > target
+    async with session_maker() as db:
+        trim = await ledger.reserve(db, org_id, "matrix-g1-trim", current - target)
+        await ledger.settle(db, trim, current - target)
+    assert await _balance(matrix_clients) == target
+    before = await snapshot(matrix_clients, fake_provider)
+
+    responses = await asyncio.gather(*(
+        matrix_clients.get(
+            f"/call/{EP}?aweme_id={index}", headers={"X-Fake-Sleep": "0.05"},
+        )
+        for index in range(10)
+    ))
+    await audit.drain()
+
+    statuses = Counter(response.status_code for response in responses)
+    assert statuses == Counter({402: 7, 200: 3})
+    assert all(response.headers.get("X-Treg-Error") != "1" for response in responses if response.status_code == 200)
+    assert all(response.headers.get("X-Treg-Error") == "1" for response in responses if response.status_code == 402)
+    assert all(response.headers.get("X-Treg-Cost-Micro") == str(charged)
+               for response in responses if response.status_code == 200)
+    assert await _balance(matrix_clients) == 0
+
+    balance_view = await matrix_clients.get(f"/orgs/{org_id}/balance")
+    assert balance_view.json()["holds"] == []
+    fresh = [entry for entry in await _entries(matrix_clients) if entry["id"] not in before.entry_ids]
+    assert Counter(entry["kind"] for entry in fresh) == Counter({"reserve": 3, "settle": 3})
+    assert len(fake_provider.hits) - before.hit_count == 3
+
+    rows = (await matrix_clients.get("/calls")).json()
+    assert Counter(row["status_code"] for row in rows) == Counter({402: 7, 200: 3})
+    assert all(row["cost_charged_micro"] == charged for row in rows if row["status_code"] == 200)
+    assert all(row["cost_charged_micro"] == 0 for row in rows if row["status_code"] == 402)
+    assert all(response.headers.get("X-Treg-Call-Id") for response in responses), (
+        "every concurrent outcome must carry X-Treg-Call-Id")

@@ -54,6 +54,8 @@ class FakeProvider:
         status = int(headers.get("x-fake-status", "200"))
         response_body = self._response_body(request, headers)
         response_headers: dict[str, str] = {}
+        if cookie := headers.get("x-fake-set-cookie"):
+            response_headers["Set-Cookie"] = cookie
         if headers.get("x-fake-gzip", "").lower() in {"1", "true", "yes"}:
             response_body = gzip.compress(response_body)
             response_headers["Content-Encoding"] = "gzip"
