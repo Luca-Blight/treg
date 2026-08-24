@@ -39,8 +39,7 @@ async def test_j1_signup_to_topup_and_recovery(
     platform_on,
     monkeypatch,
 ) -> None:
-    # Register through the email door. A new identity names its first team explicitly; that team is
-    # the signup tenant and receives the advertised $1 promotional balance.
+    # Register by email, create the first team, and verify its $1 promotional balance.
     email = "journey-owner@example.com"
     start = await matrix_clients.post("/auth/email/start", json={"email": email})
     assert start.status_code == 200, start.text
@@ -65,7 +64,7 @@ async def test_j1_signup_to_topup_and_recovery(
         ("grant", 1_000_000),
     ]
 
-    # Store a write-only credential, register an own tool, then prove the proxy injected it.
+    # Register an own tool and prove its write-only credential was injected.
     secret = await matrix_clients.post(
         "/secrets", headers=owner_headers,
         json={"name": "journey-key", "value": "JOURNEY-SECRET"},
@@ -87,7 +86,7 @@ async def test_j1_signup_to_topup_and_recovery(
     assert own_call.status_code == 200 and own_call.json() == {"own": "ok"}
     assert fake_provider.hits[-1].headers["authorization"] == "Bearer JOURNEY-SECRET"
 
-    # The catalog call takes treg's platform key, reserves its estimate, and settles the same amount.
+    # A catalog call uses treg's key and settles its reserved estimate.
     before_platform = balance.json()["balance_micro"]
     platform_call = await matrix_clients.get(
         f"/call/{EP}?aweme_id=journey", headers=owner_headers,
@@ -111,9 +110,7 @@ async def test_j1_signup_to_topup_and_recovery(
     assert by_name[EP]["status_code"] == 200
     assert by_name[EP]["cost_charged_micro"] == charged
 
-    # A viewer is deliberately read-only in this journey contract: the attempted call must stop at
-    # treg and never reach the provider. Keep evaluating the remaining money path before asserting
-    # this result so one role-policy mismatch cannot hide failures in top-up recovery.
+    # A viewer with an empty tool ACL must be refused before the provider.
     invite = await matrix_clients.post(
         f"/orgs/{org_id}/invites", headers=owner_headers,
         json={
@@ -134,8 +131,7 @@ async def test_j1_signup_to_topup_and_recovery(
     )
     viewer_reached_provider = len(fake_provider.hits) != hits_before_viewer
 
-    # Spend the remaining promo through a real catalog settlement. A deliberately expensive
-    # provider-reported DataForSEO task consumes the available block without any direct ledger edit.
+    # Drain the promo through a provider-reported catalog cost, without direct ledger access.
     drain = await matrix_clients.post(
         f"/call/{EP_DFS}", headers={**owner_headers, "X-Fake-Cost": "10.0"},
         json=[{"url": "https://example.com/"}],
@@ -153,8 +149,7 @@ async def test_j1_signup_to_topup_and_recovery(
     assert detail["estimated_cost_micro"] == EP_MICRO
     assert detail["topup_url"] == "/app#billing"
 
-    # Stripe's signed webhook is the sole HTTP door that converts a payment into balance. Deliver it
-    # twice to prove the PaymentIntent is credited exactly once, then retry the original call.
+    # Deliver one signed payment twice, verify one credit, then retry the call.
     settings = get_settings()
     monkeypatch.setattr(settings, "stripe_webhook_secret", _WEBHOOK_SECRET, raising=False)
     event = {"id": "evt_journey_topup", "type": "payment_intent.succeeded", "data": {"object": {

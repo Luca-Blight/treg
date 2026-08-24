@@ -364,9 +364,8 @@ async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     resp = await http_exception_handler(request, exc)
     if request.url.path.startswith("/call/"):
         resp.headers["X-Treg-Error"] = "1"
-        # The join key is a property of the attempt, including a refusal. Most call-path failures
-        # happen after call_tool minted the id; dependency failures can happen before its body runs,
-        # so mint the fallback here. The audit row and response must always receive the SAME value.
+        # A refusal still needs one shared join key in its response and audit row. Dependency
+        # failures may run before call_tool, so mint a fallback here when needed.
         call_ref = getattr(request.state, "call_ref", "") or uuid.uuid4().hex
         request.state.call_ref = call_ref
         resp.headers["X-Treg-Call-Id"] = call_ref
@@ -11705,8 +11704,7 @@ async def call_tool(
         metered = mk is not None and mk.metered
         if metered:
             await _platform_settle(mk, None, reason=f"call_failed_{exc.status_code}")
-            # The response is built by the shared HTTPException handler. Preserve the metered-call
-            # contract there even though no provider response exists to carry a cost header.
+            # The shared exception handler builds the response and adds this zero-cost result.
             request.state.call_cost_micro = 0
         # No provider body exists on this branch. treg's own detail is the explanation instead, and
         # it is the one worth keeping: this branch carries refresh, timeout, injection and SSRF 502s.
