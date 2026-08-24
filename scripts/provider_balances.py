@@ -166,13 +166,21 @@ async def _thecompaniesapi(c, key):
 
 
 async def _apollo(c, key):
-    # api_profile with include_credit_usage returns the caller's remaining balances directly;
-    # num_credits_remaining is the (lead) credit pool the search/enrich endpoints draw from.
+    # api_profile with include_credit_usage returns the caller's remaining balances directly.
+    # `num_credits_remaining` is the LEGACY field and went stale at 0 on 2026-08-24 while the
+    # account was still fine: a live 1-credit /people/match returned a verified email (200) with
+    # the field still reading 0, and only `total_unified_credits_used` moved. Apollo has moved
+    # this account to unified credits, so derive what is left from the granted lead pool minus
+    # unified usage, and keep the legacy field as a fallback for accounts still on the old model.
     d = await _get(c, "https://api.apollo.io/api/v1/users/api_profile",
                    params={"include_credit_usage": "true"}, headers={"X-Api-Key": key})
-    return {"value": d.get("num_credits_remaining"), "unit": "credits",
-            "note": f"direct-dial {d.get('effective_num_direct_dial_credits')} left, "
-                    f"ai {d.get('effective_num_ai_credits')} left"}
+    granted, used = d.get("effective_num_lead_credits"), d.get("total_unified_credits_used")
+    left = (granted - used if isinstance(granted, (int, float)) and isinstance(used, (int, float))
+            else d.get("num_credits_remaining"))
+    return {"value": left, "unit": "credits",
+            "note": f"lead pool {granted} granted / {used} unified credits used, "
+                    f"direct-dial {d.get('effective_num_direct_dial_credits')}, "
+                    f"ai {d.get('effective_num_ai_credits')}"}
 
 
 async def _companyenrich(c, key):
