@@ -515,7 +515,10 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
 - **The proxy:** `call_tool` (`* /call/{rest:path}`) → `_resolve_call` → (on a dotted 404,
   catalog lookup + retirement gate + credential ladder) → `_enforce_daily_cap` (the
   per-user daily cap; 429 when over) → (public-demo token → `_enforce_public_demo_ip_cap`) → load secrets
-  (+ `ensure_fresh`) → `relay()` → `audit.record_call`. A **platform binding** carries no `secret_id`
+  (+ `ensure_fresh`) → **`db.commit()` — the DB phase ends here; a call in flight holds no pooled
+  connection** → `relay()` → `audit.record_call`. A pool that has no slot within 5 s answers
+  `503 {"treg_saturated": true}` + `Retry-After: 2` (`_pool_saturated`, the handler for
+  `sqlalchemy.exc.TimeoutError`) rather than a 30 s wait and an anonymous 500. A **platform binding** carries no `secret_id`
   (its value comes from settings at relay time), so secret-loading now skips `secret_id is None`. Detail
   in [proxy-model](../architecture/proxy-model.md).
 

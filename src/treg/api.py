@@ -49,6 +49,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 from sqlmodel import select
@@ -323,6 +324,19 @@ async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse
     # A huge all-digit path param (e.g. /secrets/999…) overflows SQLite's 64-bit INTEGER at bind
     # time; that's a non-existent id, not a server fault — surface a 404 instead of a 500.
     return JSONResponse({"detail": "identifier out of range"}, status_code=404)
+
+
+@app.exception_handler(PoolTimeoutError)
+async def _pool_saturated(request: Request, exc: PoolTimeoutError) -> JSONResponse:
+    """The DB pool had no connection to give within `pool_timeout` (db.py). That is treg being
+    saturated, not the caller's fault and not the provider's — so say so, typed, and fast. Before this
+    handler the same condition surfaced as a bare `500 Internal Server Error` after a 30 s wait (the
+    exception escaped the router and Starlette's BaseHTTPMiddleware reported "No response returned"),
+    which an agent cannot tell from a provider bug. `treg_saturated` is the key a retrying client
+    should branch on; `Retry-After` is how long to wait before doing so."""
+    return JSONResponse(
+        {"detail": "treg's database pool is saturated — retry in a moment", "treg_saturated": True},
+        status_code=503, headers={"Retry-After": "2"})
 
 
 def _refusal_kind(status_code: int) -> str | None:
@@ -11283,16 +11297,27 @@ async def _platform_settle(
     observed = _observed_cost_micro(mk, body) if billable else None
     call_id, mk.call_id = mk.call_id, None  # closing is once-only, even if two paths try
     charged = 0
-    try:
+
+    async def _close() -> int:
         async with session_maker() as db:
             if billable:
-                charged = await ledger.settle(db, call_id, observed, meta={
+                return await ledger.settle(db, call_id, observed, meta={
                     "provider": mk.provider, "status_code": status_code, "cost_type": mk.cost_type,
                     "cost_source": "provider" if observed is not None else "estimate"})
-            else:
-                await ledger.release(db, call_id, reason=reason or f"not_billable_{status_code}",
-                                     meta={"provider": mk.provider, "cost_type": mk.cost_type,
-                                           "status_code": status_code})
+            await ledger.release(db, call_id, reason=reason or f"not_billable_{status_code}",
+                                 meta={"provider": mk.provider, "cost_type": mk.cost_type,
+                                       "status_code": status_code})
+            return 0
+
+    try:
+        try:
+            charged = await _close()
+        except PoolTimeoutError:
+            # No pool slot within `pool_timeout`: a transient wait, not a broken ledger. A settle that
+            # gives up here forfeits the charge (the hold is reaped in the org's favour) — real revenue,
+            # so one short retry is worth it. Anything else falls straight through to the log.
+            await asyncio.sleep(0.5)
+            charged = await _close()
     except Exception as exc:  # noqa: BLE001 — loudly, but never into the caller's response
         logging.getLogger("treg.ledger").error(
             "settle/release failed for call %s (%s, status %s): %s",
@@ -11540,6 +11565,7 @@ async def call_tool(
         live_key = get_settings().demo_stripe_key
         if live_key and demo_sandbox.is_live_tool(tool) and request.method in ("GET", "POST"):
             await _enforce_public_demo_ip_cap(request, db)  # one shared wire → meter by client IP
+            await db.commit()  # end the DB phase before network I/O (see the same call before relay())
             try:
                 response = await _relay_live_demo(
                     request, upstream_url, live_key, demo_sandbox.visitor_name(caller.org.slug))
@@ -11633,6 +11659,18 @@ async def call_tool(
                 await oauth.ensure_fresh(secret, db, request.app.state.http)
             except Exception as exc:  # noqa: BLE001 — surface a clear 502 instead of injecting a dead token
                 raise HTTPException(status_code=502, detail=f"oauth refresh failed: {exc}")
+        # END THE DB PHASE BEFORE NETWORK I/O. From here until the settle this request must hold NO
+        # pooled connection. `ledger.reserve` already committed, but the org refresh after it, the
+        # secret loads and a token refresh each auto-began a fresh transaction on this session, and
+        # SQLAlchemy keeps that transaction's connection checked out until commit — i.e. for the whole
+        # upstream round trip. `_platform_settle` then opens its OWN session for a second connection.
+        # Two per in-flight call against a 15-slot pool (db.py) deadlocked at 15 concurrent calls: every
+        # settle waited on a slot only another waiting call could free, until `pool_timeout` killed one
+        # (a bare 500, or a settle that forfeited its charge) and the rest cascaded — every call in a
+        # burst "took 30 s" (2026-08-24, reproduced from bootoshi's #9/#10). Nothing below reads `db`
+        # (settle, first-call and the idempotent store all run on their own sessions), and the session
+        # is `expire_on_commit=False`, so `tool`/`secrets`/`caller.org` stay usable without a reload.
+        await db.commit()
         try:
             response = await relay(request, upstream_url, tool, secrets, request.app.state.http,
                                    drop_params=drop_params or None,

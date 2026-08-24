@@ -289,7 +289,12 @@ estimate is the honest number. This needed `unit_micro` (the per-ROW price) to r
 Closing the hold runs on its **own session** (the request's may be mid-rollback from the very error
 being released for) and **never raises** — the caller already has their answer, and a ledger hiccup
 must not turn a served call into a 500. A hold that fails to close is not lost money either: the
-reaper releases it, which errs in the org's favour.
+reaper releases it, which errs in the org's favour. That "errs in the org's favour" is still forfeited
+revenue, so the one failure that is transient by nature — no pool slot within `pool_timeout`
+(`sqlalchemy.exc.TimeoutError`) — gets exactly one retry after 0.5 s before the log line; anything else
+falls straight through. The request session itself is committed before the relay precisely so this
+second session never has to wait on the first (see [proxy-model](proxy-model.md) § Connection
+discipline).
 
 ## Shared-plan pricing: flat-fee providers, and the rate treg sets
 

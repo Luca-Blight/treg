@@ -29,7 +29,15 @@ if "sqlite" not in _db_url:
     # ceiling of ~100, so a deploy could starve the database with no bug anywhere. 15 is generous for
     # an async app on this plan; saturation now surfaces as our own pool queueing (visible, bounded)
     # rather than Postgres refusing connections for everyone (the 2026-08-15 outage).
-    _engine_kwargs.update(pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=10)
+    #
+    # `pool_timeout` 5 s, not SQLAlchemy's default 30: a request that cannot get a slot is treg
+    # saturated, and the caller should hear that fast and typed (api.py maps the TimeoutError to a
+    # `503 treg_saturated` with Retry-After) rather than sit 30 s and receive an anonymous 500. The
+    # slot count itself only bounds concurrent DB PHASES, which are milliseconds — a /call/ holds no
+    # connection during its upstream round trip (call_tool commits before relay()). Holding one
+    # there is what turned 15 concurrent calls into a 30 s deadlock on 2026-08-24.
+    _engine_kwargs.update(pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=10,
+                          pool_timeout=5)
 _engine = create_async_engine(_db_url, **_engine_kwargs)
 # Public: the audit writer opens its own session here (off the request path — rule #2).
 session_maker = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
