@@ -637,8 +637,9 @@ Up to 5 pairs; keys `[a-z0-9_]{1,32}`, values ≤128 chars, whole header ≤512 
 **422 before anything is relayed** (so a malformed bag costs nothing and does not burn an
 `Idempotency-Key`). Values containing `@` are refused: tags land in an append-only ledger.
 
-Every response carries **`X-Treg-Call-Id`**, the join key for your own records. Metered responses also
-carry `X-Treg-Cost-Micro`.
+Every response carries **`X-Treg-Call-Id`**, including failures raised before the relay. The same id
+is written to the audit row, making it the join key for your own records. Metered responses also carry
+`X-Treg-Cost-Micro`; a reserved call that fails before a provider answer carries an explicit `0`.
 
 | Route | Does |
 |---|---|

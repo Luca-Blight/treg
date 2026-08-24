@@ -77,6 +77,11 @@ swallows exceptions, which is right for analytics and fatal for money.
 | `settle` | blocks down by the observed cost, hold closed, difference refunded |
 | `release` | hold closed, balance refunded in full (upstream failure — not billable) |
 
+Release metadata distinguishes a failed call from a normal non-billable provider response. Provider
+5xx and transport failures use `call_failed_<status>`; excluded provider statuses such as a
+per-success 400 retain `not_billable_<status>`. This lets the journal explain why the full reserve
+returned without inspecting transient response evidence.
+
 **The gate is one statement**, which is the heart of the design:
 
 ```sql

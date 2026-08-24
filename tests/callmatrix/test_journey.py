@@ -116,7 +116,11 @@ async def test_j1_signup_to_topup_and_recovery(
     # this result so one role-policy mismatch cannot hide failures in top-up recovery.
     invite = await matrix_clients.post(
         f"/orgs/{org_id}/invites", headers=owner_headers,
-        json={"email": "journey-viewer@example.com", "role": "viewer"},
+        json={
+            "email": "journey-viewer@example.com",
+            "role": "viewer",
+            "tool_access": [],
+        },
     )
     assert invite.status_code == 200, invite.text
     accepted = await matrix_clients.post(

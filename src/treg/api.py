@@ -364,6 +364,14 @@ async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     resp = await http_exception_handler(request, exc)
     if request.url.path.startswith("/call/"):
         resp.headers["X-Treg-Error"] = "1"
+        # The join key is a property of the attempt, including a refusal. Most call-path failures
+        # happen after call_tool minted the id; dependency failures can happen before its body runs,
+        # so mint the fallback here. The audit row and response must always receive the SAME value.
+        call_ref = getattr(request.state, "call_ref", "") or uuid.uuid4().hex
+        request.state.call_ref = call_ref
+        resp.headers["X-Treg-Call-Id"] = call_ref
+        if (cost_micro := getattr(request.state, "call_cost_micro", None)) is not None:
+            resp.headers["X-Treg-Cost-Micro"] = str(cost_micro)
         # Refusals that raised before the handler's own audit ran (bad token, unknown tool, ACL,
         # deny rule, daily cap) would otherwise leave NO row — the funnel's early friction was
         # invisible until this. Identity comes from request.state (stashed at handler entry); a
@@ -374,7 +382,8 @@ async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
             audit.record_call(
                 org_id=org_id, user_email=email, tool_name=rest.split("/", 1)[0] or "—",
                 method=request.method, path=request.url.path, status_code=exc.status_code,
-                client=_client_of(request), refused_by=_refusal_kind(exc.status_code))
+                client=_client_of(request), refused_by=_refusal_kind(exc.status_code),
+                telemetry={"call_ref": call_ref})
         # A failed call must not keep its idempotency label. The claim is taken before the upstream
         # call, and a request that dies anywhere after that — a bad parameter, a deny rule, an empty
         # balance — would otherwise hold the label for the whole window and answer every retry with
@@ -11405,6 +11414,7 @@ async def call_tool(
     # metered call, lands on the audit row, and goes back as X-Treg-Call-Id — so a builder can join
     # our records to theirs on a single value.
     call_ref = uuid.uuid4().hex
+    request.state.call_ref = call_ref
     # Blocked status and the per-tag call count, BEFORE the replay below: a blocked user must neither
     # take an idempotency lock nor be handed an answer this team cached before they were blocked.
     await _enforce_tag_budgets(caller, meta, db)
@@ -11465,7 +11475,8 @@ async def call_tool(
                 org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
                 method=request.method, path=rest, status_code=mkexc.status_code,
                 client=_client_of(request), refused_by=_refusal_kind(mkexc.status_code),
-                telemetry={"endpoint_id": ep["id"], "provider": ep.get("provider"),
+                telemetry={"call_ref": call_ref,
+                           "endpoint_id": ep["id"], "provider": ep.get("provider"),
                            **_tag_telemetry(meta)})
             analytics.capture(caller.email, "tool_called",
                 {"tool_name": ep["id"], "status_code": mkexc.status_code,
@@ -11694,6 +11705,9 @@ async def call_tool(
         metered = mk is not None and mk.metered
         if metered:
             await _platform_settle(mk, None, reason=f"call_failed_{exc.status_code}")
+            # The response is built by the shared HTTPException handler. Preserve the metered-call
+            # contract there even though no provider response exists to carry a cost header.
+            request.state.call_cost_micro = 0
         # No provider body exists on this branch. treg's own detail is the explanation instead, and
         # it is the one worth keeping: this branch carries refresh, timeout, injection and SSRF 502s.
         _renderings = _safe_secret_renderings(tool, secrets)
@@ -11721,7 +11735,10 @@ async def call_tool(
     if 200 <= response.status_code < 400 and caller.org_id and caller.org.first_call_at is None:
         await _record_first_call(caller.org_id)
     if mk is not None and mk.metered:
-        charged, observed = await _platform_settle(mk, response.status_code, body)
+        charged, observed = await _platform_settle(
+            mk, response.status_code, body,
+            reason=(f"call_failed_{response.status_code}" if response.status_code >= 500 else ""),
+        )
         # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
         # (see _refusal_kind). So this is where the provider's own explanation is captured, and the
         # only place it exists: nothing downstream keeps the body.
