@@ -203,10 +203,11 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
     argv deny patterns with their source (skill vs catalog), under a line naming all three deny
     layers — HTTP rules, argv patterns, OS sandbox — so the whole "what is blocked" picture is one
     screen.
-  - **Billing** (admin+) — balance, eight one-click top-up presets ($5, $10, $25, $50, $100, $200,
-    $300, $400), the auto-top-up toggle with its verbatim PSD2/SCA mandate text, and below them **Payment
-    history**: date, amount, an `auto` marker, and one link per row — *Invoice* when Stripe issued one
-    (manual top-ups do; automatic ones can't), else
+  - **Billing** (admin+) — balance, one-click top-up cards rendered from `billing.topup.presets` (the
+    reference defaults live in [deployment config](../ops/deploy.md#config-configpy)), the auto-top-up
+    toggle with its verbatim PSD2/SCA mandate text, and below them **Payment history**: date, amount, an
+    `auto` marker, and one link per row — *Invoice* when Stripe issued one (manual top-ups do; automatic
+    ones can't), else
     *Receipt*, else an em dash. Amounts come from our own ledger and the links from Stripe, so when
     Stripe is unreachable the table still renders and a line under it says the links, not the numbers,
     are missing. A **Manage billing** button opens Stripe's hosted portal (card, billing address, tax
