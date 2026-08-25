@@ -656,8 +656,11 @@ and in a merged row's provider sub-row, because both paths share the one `.lep` 
 one-line setup (`epTrySetupLine`, with team + token embedded **here only**, a copy-and-run-now context;
 the setup line everywhere else stays clean) plus a ready "Use treg to call `<id>` — `<summary>`" prompt
 (`epTryAgentUse`); **CLI** — install/login, `treg catalog get <id>`, and the filled `treg call <id>
---query …` (`epTryCliCall`); **API** — the `curl {BASE}/call/<id>?<query>` passthrough with the token
-header (`epTryCurl`, adding `X-Treg-Org` in session mode since the minted token is an identity token);
+--query …` (`epTryCliCall`), with `--method` and a shell-quoted `--data` JSON body for non-GET
+requests; **API** — the `curl -X <method> {BASE}/call/<id>?<query>` passthrough with the token header
+(`epTryCurl`, adding `X-Treg-Org` in session mode since the minted token is an identity token), plus
+`Content-Type: application/json` and the same shell-quoted, editable `epTryBody` for a non-GET request
+that has a body;
 and **Manual** — the live test form (params + `❯ Run`, disabled with a reason when the access dry-run
 says this org can't call it) that the drawer used to be by itself.
 
