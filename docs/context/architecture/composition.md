@@ -3,7 +3,9 @@ title: Application composition and deployment roles
 status: shipped
 sources:
   - src/treg/bootstrap.py
+  - scripts/dump_surface.py
 related:
+  - architecture/import-boundaries.md
   - interface/api.md
   - architecture/mcp-oauth.md
   - ops/deploy.md
@@ -44,3 +46,7 @@ Each factory call must produce an independent app whose dependency overrides bel
 at the new FastAPI instance, and rebuilds its request handler. This also avoids the internal
 `_IncludedRouter` wrapper added by the current FastAPI `include_router()` implementation, which would
 otherwise change route inspection and the committed surface snapshot.
+
+`scripts.dump_surface._lifespan` records the optional MCP lifespan condition against
+`treg.bootstrap._mcp`, where optional MCP composition now lives. This is a documentation-only snapshot
+correction; the mounted lifespan behavior is unchanged.

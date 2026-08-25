@@ -132,7 +132,7 @@ def _lifespan() -> dict[str, Any]:
         ],
         "mounted_lifespans": [
             {
-                "condition": "treg.api._mcp is not None",
+                "condition": "treg.bootstrap._mcp is not None",
                 "task": "treg.mcp.mcp_lifespan",
             }
         ],

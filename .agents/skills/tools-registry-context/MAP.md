@@ -13,6 +13,7 @@ Regenerate via `scripts/build-map.py`.
 | `.claude-plugin/marketplace.json` | interface/skill.md |
 | `.claude-plugin/plugin.json` | interface/skill.md |
 | `.github/workflows/catalog-drift.yml` | architecture/catalog.md |
+| `.github/workflows/ci.yml` | architecture/import-boundaries.md |
 | `README.md` | foundation/charter.md |
 | `alembic.ini` | architecture/data-model.md |
 | `alembic/env.py` | architecture/data-model.md |
@@ -25,11 +26,12 @@ Regenerate via `scripts/build-map.py`.
 | `package.json` | interface/skill.md |
 | `plugin/.codex-plugin/plugin.json` | interface/skill.md |
 | `plugins/treg/.cursor-plugin/plugin.json` | interface/skill.md |
-| `pyproject.toml` | ops/deploy.md |
+| `pyproject.toml` | architecture/import-boundaries.md, ops/deploy.md |
 | `render.yaml` | ops/deploy.md |
 | `scripts/build_plugin.py` | interface/skill.md |
 | `scripts/catalog_drift.py` | architecture/catalog.md |
 | `scripts/catalog_validate.py` | architecture/catalog.md |
+| `scripts/dump_surface.py` | architecture/composition.md |
 | `src/treg/__main__.py` | ops/deploy.md |
 | `src/treg/adsconv.py` | architecture/ads-conversions.md |
 | `src/treg/agent_pages.py` | interface/seo.md |
@@ -93,6 +95,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/tutorial.js` | interface/dashboard.md |
 | `src/treg/web/vendor/README.md` | interface/dashboard.md |
 | `src/treg/web/vendor/vue-3.5.41.global.prod.js` | interface/dashboard.md |
+| `tests/test_import_lightness.py` | architecture/import-boundaries.md |
 
 ## Fragment → sources
 
@@ -101,8 +104,9 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
 | `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py` |
-| `architecture/composition.md` | `bootstrap.py` |
+| `architecture/composition.md` | `bootstrap.py`, `dump_surface.py` |
 | `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `models.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
+| `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `test_import_lightness.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `mcp.py`, `mcp_oauth.py`, `connect-demo.html` |

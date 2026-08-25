@@ -66,10 +66,64 @@ Issues = "https://github.com/superdesigndev/treg/issues"
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.13",
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "tools-registry[server]",   # the test suite imports the server (api, models, …), so dev pulls it in
 ]
+
+[tool.importlinter]
+root_package = "treg"
+include_external_packages = true
+exclude_type_checking_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Lightweight CLI modules do not import server dependencies"
+type = "forbidden"
+source_modules = [
+    "treg.cli",
+    "treg.convert",
+    "treg.skills",
+    "treg.providers",
+    "treg.localrun",
+    "treg.shell",
+    "treg.agents",
+    "treg.egress",
+    "treg.fsjail",
+]
+forbidden_modules = [
+    "aiosqlite",
+    "alembic",
+    "asyncpg",
+    "cryptography",
+    "fastapi",
+    "mcp",
+    "pydantic",
+    "pydantic_core",
+    "pydantic_settings",
+    "sqlalchemy",
+    "sqlmodel",
+    "starlette",
+    "stripe",
+    "uvicorn",
+    "yaml",
+]
+ignore_imports = [
+    # ensure_proxy_dependency imports this only after the user invokes the optional proxy feature.
+    "treg.cli -> cryptography",
+    # render_grant is a server-only path and imports SQLModel only when the server calls it.
+    "treg.localrun -> sqlmodel",
+]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "error"
+as_packages = false
+
+[[tool.importlinter.contracts]]
+name = "Ledger does not depend on best-effort audit"
+type = "forbidden"
+source_modules = ["treg.ledger"]
+forbidden_modules = ["treg.audit"]
+as_packages = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
