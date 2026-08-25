@@ -2033,11 +2033,15 @@ async def tools_provider(service: str):
     all_eps = cat.for_provider(service)
     if not all_eps:
         raise HTTPException(status_code=404, detail=f"unknown provider {service!r}")
+    # Fresh name on purpose: from here on the page prints the CATALOG's spelling of the provider,
+    # never the request's. (Same idiom as the use-case pages; it is also what reads as a taint
+    # kill to CodeQL, which cannot see _esc_html as a sanitizer.)
+    svc = all_eps[0]["provider"]
     eps = [e for e in all_eps if e["kind"] not in catalog_store.HIDDEN_KINDS] or all_eps
-    display = _provider_display(service)
+    display = _provider_display(svc)
     esc_d = _esc_html(display)
     base = get_settings().public_url.rstrip("/")
-    reg = oauth_providers.get(service)
+    reg = oauth_providers.get(svc)
     category = (getattr(reg, "category", "") or "") if reg else ""
     blurb = (getattr(reg, "summary", "") or "") if reg else ""
     base_api = (getattr(reg, "base_url", "") or "") if reg else ""
@@ -2096,7 +2100,7 @@ async def tools_provider(service: str):
         f'<div class="kicker">{kicker}</div>'
         f"<h1>{esc_d} MCP for AI agents</h1>"
         f'<div class="lede">{lede}</div>'
-        f'<div class="ctas"><a class="candy" href="/app?ref=tool-{_esc_html(service)}">Start free</a>'
+        f'<div class="ctas"><a class="candy" href="/app?ref=tool-{_esc_html(svc)}">Start free</a>'
         f'<a class="ghostbtn" href="#tools">See all {len(eps)} tools</a>'
         + (f'<a class="ghostbtn" href="{_esc_html(docs_url)}" target="_blank" rel="noopener">API docs ↗</a>'
            if docs_url else "") + "</div>"
@@ -2126,7 +2130,7 @@ async def tools_provider(service: str):
         + '<div class="c" style="opacity:.55">$ _</div></div>'
         '<div class="ar">→</div>'
         '<div class="fp"><div class="ph2">'
-        f'<img src="/logos/{_esc_html(service)}.svg" alt="" aria-hidden="true" '
+        f'<img src="/logos/{_esc_html(svc)}.svg" alt="" aria-hidden="true" '
         'onerror="this.style.display=\'none\'"/>'
         f'<b>{esc_d}</b><span class="bdg">{badge}</span></div>'
         f'<div class="sm">{_esc_html(blurb) or esc_d + " through one treg.to token."}</div>'
@@ -2179,7 +2183,7 @@ async def tools_provider(service: str):
         "</div></section>")
 
     alt_names = sorted({e["provider"] for e in cat.endpoints
-                        if e["capability"] in cap_counts and e["provider"] != service})
+                        if e["capability"] in cap_counts and e["provider"] != svc})
     why = (
         '<section id="why"><div class="wrap"><div class="seclab">Why treg.to</div>'
         f"<h2>Why call {esc_d} through treg.to</h2>"
@@ -2295,7 +2299,7 @@ async def tools_provider(service: str):
             {"@type": "ListItem", "position": 1, "name": "treg", "item": base + "/"},
             {"@type": "ListItem", "position": 2, "name": "Catalog", "item": base + "/catalog"},
             {"@type": "ListItem", "position": 3, "name": display,
-             "item": f"{base}/tools/{service}"}]},
+             "item": f"{base}/tools/{svc}"}]},
         {"@context": "https://schema.org", "@type": "ItemList",
          "name": f"{display} tools on treg.to", "numberOfItems": len(groups),
          "itemListElement": [
@@ -2316,7 +2320,7 @@ async def tools_provider(service: str):
              {"@type": "HowToStep", "position": 3, "name": f"Call {display}",
               "text": f"Ask your agent, or call {base}/call/{sample_id} over HTTP."}]},
     ]
-    return _page(title, desc[:300], f"/tools/{service}", body, ld,
+    return _page(title, desc[:300], f"/tools/{svc}", body, ld,
                  nav_current="/catalog", css="usecase.css")
 
 
