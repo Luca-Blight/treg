@@ -165,6 +165,8 @@ def check_cost(cost: dict, where: str, errors: list[str], warnings: list[str]) -
     per = cost.get("per")
     if per is not None and (not isinstance(per, int) or isinstance(per, bool) or per < 1):
         fail(errors, where, f"cost.per '{per}' must be a positive integer (the quantity `value` covers)")
+    if (settle := cost.get("settle")) is not None and settle != "base":
+        fail(errors, where, "cost.settle currently supports only 'base'")
     modifiers = cost.get("modifiers")
     if modifiers is not None:
         if not isinstance(modifiers, dict) or not modifiers:

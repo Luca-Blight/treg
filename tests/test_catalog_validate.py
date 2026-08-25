@@ -8,7 +8,7 @@ def test_cost_modifiers_accept_only_supported_declarative_credit_rules():
         "checked": "2026-08-25", "confidence": "documented",
     }
     errors: list[str] = []
-    validator.check_cost(base | {"modifiers": {
+    validator.check_cost(base | {"settle": "base", "modifiers": {
         "preview": {"location": "query", "when": "truthy", "set_credits": 0},
         "email": {"location": "lookups", "when": "present", "add_credits": 3},
         "enrich": {"location": "query", "when": "truthy", "add_credits_per_result": 1},
@@ -24,6 +24,10 @@ def test_cost_modifiers_accept_only_supported_declarative_credit_rules():
     assert any("set_credits currently supports only the free value 0" in error for error in broken)
     assert any("needs exactly one credit effect" in error for error in broken)
     assert any("add_credits must be a non-negative number" in error for error in broken)
+
+    bad_settle: list[str] = []
+    validator.check_cost(base | {"settle": "estimate"}, "catalog:test", bad_settle, [])
+    assert any("cost.settle currently supports only 'base'" in error for error in bad_settle)
 
 
 def test_status_marker_references_must_exist_and_end_at_a_live_endpoint():

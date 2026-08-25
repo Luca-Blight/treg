@@ -592,7 +592,7 @@ endpoints:
         currentTitles: {type: "array[string]", required: false}
         currentCompanyNames: {type: "array[string]", required: false}
         skills: {type: "array[string]", required: false, note: "all specified skills must be present"}
-      note: "Use enrich=false for discovery. enrich=true explicitly costs 1 Aviato person credit per result."
+      note: "Use enrich=false for discovery. Aviato documents enrich=true at +1 credit/result, but repeat live probes returned id-only rows and charged only the base."
     test_request:
       queryParams: {page: 1, perPage: 1, enrich: false, fullName: "Satya Nadella"}
     verified: '2026-08-25'
@@ -606,9 +606,10 @@ endpoints:
       source: observed
       checked: '2026-08-25'
       confidence: verified
+      settle: base
       modifiers:
         enrich: {location: query, when: truthy, add_credits_per_result: 1}
-      note: "0.25 credits per successful search call, confirmed with enrich=false and a one-row enrich=true probe on 2026-08-25. The one-row probe is not evidence for larger pages. Aviato reports no exact per-call charge, so treg reserves and settles the documented 1-credit-per-result enrichment rider until a multi-row balance delta proves a lower charge is safe. No numeric route limit is published."
+      note: "0.25 credits per successful search call. Aviato documents enrich=true at +1 credit/result, so treg keeps that rider in the reserve. Live 5-row and 3-row enrich=true probes on 2026-08-25 returned unenriched id-only rows and each charged only the 0.25-credit base; treg therefore settles at the base and releases the rider. No numeric route limit is published."
     docs_url: https://docs.data.aviato.co/api-reference/person/simple-search
 
   - id: aviato.linkedin.company.posts
@@ -707,7 +708,7 @@ endpoints:
       source: observed
       checked: '2026-08-25'
       confidence: verified
-      note: "2 credits confirmed by a live balance change from 935.75 to 933.75 on 2026-08-25. The public post returned 1 of 104 reactors; identities are omitted from the example. Current route limit: 60 requests/minute and 1,000/hour."
+      note: "2 credits confirmed by a live balance change from 935.75 to 933.75 on 2026-08-25. The public post returned 1 of 104 reactors; identity values are replaced with placeholders in the example. Current route limit: 60 requests/minute and 1,000/hour."
     docs_url: https://docs.data.aviato.co/api-reference/social/get-post-reactions
 
   - id: aviato.linkedin.post.reposts
@@ -740,7 +741,7 @@ endpoints:
       source: observed
       checked: '2026-08-25'
       confidence: verified
-      note: "2 credits confirmed by a live balance change from 933.75 to 931.75 on 2026-08-25. The public post returned 1 of 8 reshares; identities are omitted from the example. Aviato calls these reshares; the shared capability calls the same job reposts. Current route limit: 60 requests/minute and 1,000/hour."
+      note: "2 credits confirmed by a live balance change from 933.75 to 931.75 on 2026-08-25. A later response returned 1 of 9 reshares; identity and content values are replaced with placeholders in the example. Aviato calls these reshares; the shared capability calls the same job reposts. Current route limit: 60 requests/minute and 1,000/hour."
     docs_url: https://docs.data.aviato.co/api-reference/social/get-post-reshares
 
   - id: aviato.linkedin.post.comments
@@ -774,5 +775,5 @@ endpoints:
       source: observed
       checked: '2026-08-25'
       confidence: verified
-      note: "2 credits confirmed by a live balance change from 931.75 to 929.75 on 2026-08-25. The public post returned 1 of 6 comments; comment text and identities are omitted from the example. Current route limit: 60 requests/minute and 1,000/hour."
+      note: "2 credits confirmed by a live balance change from 931.75 to 929.75 on 2026-08-25. A later response returned 1 of 7 comments; identity and content values are replaced with placeholders in the example. Current route limit: 60 requests/minute and 1,000/hour."
     docs_url: https://docs.data.aviato.co/api-reference/social/get-post-comments

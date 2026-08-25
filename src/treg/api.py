@@ -9947,8 +9947,9 @@ def _marketplace_pricing(
         raw = query.get("perPage")
         asked = int(raw) if raw is not None and str(raw).isdigit() else _PLATFORM_PAGE_DEFAULT
         asked = max(1, min(asked, _PLATFORM_PAGE_MAX))
-        # Aviato reports no exact per-call charge. Keep the documented rider in the reserve AND
-        # settlement until a multi-row balance delta proves a lower charge is safe.
+        # The documented rider stays in the safety hold. A catalog `settle: base` rule can release
+        # it after the response when multi-row balance evidence proves that the provider did not
+        # charge or deliver the add-on.
         return credit_micro(credits + asked * per_result), 0
     if cost.get("modifiers"):
         return credit_micro(credits), 0
@@ -11358,6 +11359,14 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
     Everyone else settles at the estimate. This is the same signal the catalog's `observed_cost`
     harvests, which is what lets phase 5's drift detector compare the two numbers directly."""
     provider = mk.provider
+    catalog = catalog_store.load()
+    ep = catalog.by_id.get(mk.endpoint_id)
+    cost = catalog.cost_view(ep.get("cost"), provider) if ep else None
+    if cost and cost.get("settle") == "base" and cost.get("usd") is not None:
+        # The reserve can include documented request riders while the observed settlement remains
+        # the catalog base. Aviato simple search earned this rule from two multi-row live probes:
+        # enrich=true returned only id rows and charged the same 0.25-credit base both times.
+        return _usd_to_micro(float(cost["usd"]))
     if provider == "crustdata" and headers is not None:
         raw = headers.get("x-credits-used")
         rate = catalog_store.load().credit_rates.get("crustdata")

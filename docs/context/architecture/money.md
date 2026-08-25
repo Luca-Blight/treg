@@ -291,9 +291,10 @@ estimate is the honest number. This needed `unit_micro` (the per-ROW price) to r
 estimate; catalog `cost.modifiers` make preview, email and rescrape flags change the reserve before relay; synchronous bulk
 enrichment settles from the number of successful records in the response. Simple people search
 reserves its fixed 0.25-credit base and, when `enrich=true`, the documented one-credit-per-result
-add-on. Aviato gives no exact charge in the response, and one one-row probe is not enough to prove
-the cost of larger pages. Settlement therefore keeps the documented reserve until a multi-row
-balance delta proves a lower charge is safe. Crustdata differs because it
+add-on. Two multi-row `enrich=true` probes returned only id rows and each consumed the 0.25-credit
+base. The endpoint's catalog `settle: base` rule therefore releases the reserve rider after a
+successful response. The hold stays conservative while the final charge follows observed vendor
+behavior. Crustdata differs because it
 reports the complete answer directly: `_platform_settle` passes response headers to
 `_observed_cost_micro`, which converts `X-Credits-Used` through the same `fx.yaml` rate used by the
 catalog.

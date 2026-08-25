@@ -102,6 +102,9 @@ A `cost.modifiers` rule names a parameter location (`query`, `body`, or `lookups
 (`truthy` or `present`), and exactly one credit effect: make the call free, add fixed credits, or add
 credits per requested result. The validator rejects any other shape. This keeps vendor numbers in
 catalog YAML while the billing code reads the rules without provider-specific credit constants.
+An optional `cost.settle: base` keeps documented riders in the reserve but settles the successful
+call at the catalog base when repeat live evidence proves that the provider neither bills nor
+delivers those riders.
 
 A verification stamp proves the request shape, response shape, and paid behavior that the evidence
 actually observed. A placeholder path value or a free miss does not prove a paid hit. Such rows keep
