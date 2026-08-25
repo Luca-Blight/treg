@@ -72,6 +72,11 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# asyncpg connections are bound to the event loop that created them. The test engine is module-level,
+# so keep async tests and fixtures on one loop per pytest process instead of returning pooled Postgres
+# connections to a new function-scoped loop. xdist workers remain isolated processes with their own loop.
+asyncio_default_test_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "session"
 # `scripts/` is standalone tooling, not part of the shipped package (the wheel is `src/treg` only),
 # but tests import from it — `from scripts import catalog_drift`. Only `python -m pytest` puts the
 # working directory on sys.path; CI runs plain `uv run pytest`, where that import is a

@@ -1271,9 +1271,11 @@ async def test_another_orgs_usage_never_burns_MY_trial(clients: AsyncClient, tri
     wrong."""
     from treg.models import CallRecord
 
+    other = await clients.post("/orgs", json={"name": "another-trial-team"})
+    assert other.status_code == 200, other.text
     async with session_maker() as db:
         for i in range(50):
-            db.add(CallRecord(org_id=424242, user_email="other@example.com",
+            db.add(CallRecord(org_id=other.json()["org_id"], user_email="other@example.com",
                               tool_name="finnhub.quote", method="GET", path="/quote",
                               status_code=200))
         await db.commit()

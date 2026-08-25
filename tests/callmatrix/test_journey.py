@@ -41,10 +41,18 @@ async def test_j1_signup_to_topup_and_recovery(
 ) -> None:
     # Register by email, create the first team, and verify its $1 promotional balance.
     email = "journey-owner@example.com"
+    delivered_codes: dict[str, str] = {}
+
+    async def capture_otp(address: str, code: str, *, ttl_minutes: int) -> bool:
+        delivered_codes[address] = code
+        return True
+
+    monkeypatch.setattr("treg.email.send_otp", capture_otp)
     start = await matrix_clients.post("/auth/email/start", json={"email": email})
     assert start.status_code == 200, start.text
+    code = start.json().get("dev_code") or delivered_codes[email]
     verify = await matrix_clients.post(
-        "/auth/email/verify", json={"email": email, "code": start.json()["dev_code"]},
+        "/auth/email/verify", json={"email": email, "code": code},
     )
     assert verify.status_code == 200, verify.text
     identity_token = verify.json()["token"]
