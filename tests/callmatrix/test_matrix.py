@@ -8,6 +8,7 @@ from collections import Counter
 from httpx import AsyncClient
 from sqlmodel import select
 
+from treg import api as A
 from treg import audit, ledger
 from treg.db import session_maker
 from treg.ledger import with_margin
@@ -364,10 +365,13 @@ async def test_d2_concurrent_same_key_loser_gets_409(
     first_task = asyncio.create_task(
         matrix_clients.get(f"/call/{EP}?aweme_id=7", headers=headers),
     )
-    await fake_provider.wait_for_hits(before.hit_count + 1)
-
-    loser = await matrix_clients.get(f"/call/{EP}?aweme_id=7", headers=headers)
-    winner = await first_task
+    try:
+        # The winner must be mid-flight when the loser knocks: that is the race being pinned.
+        await fake_provider.wait_for_hits(before.hit_count + 1)
+        loser = await matrix_clients.get(f"/call/{EP}?aweme_id=7", headers=headers)
+        winner = await first_task
+    finally:
+        first_task.cancel()  # a failure above must not leave the winner running into teardown
 
     assert loser.status_code == 409, loser.text
     assert loser.headers["X-Treg-Error"] == "1"
@@ -429,7 +433,7 @@ async def test_d4_failure_releases_key_for_retry(
             body=b'{"error":"temporary"}',
             cost_micro=0,
             ledger_kinds=("release", "reserve"),
-            ledger_reason="call_failed_500",
+            ledger_reason="provider_failed_500",
             audit={"refused_by": None, "cost_charged_micro": 0},
         ),
     )
@@ -482,7 +486,7 @@ async def test_b1_per_success_500_refunds(
             body=body,
             cost_micro=0,
             ledger_kinds=("release", "reserve"),
-            ledger_reason="call_failed_500",
+            ledger_reason="provider_failed_500",
             audit={"refused_by": None, "cost_charged_micro": 0},
         ),
     )
@@ -838,10 +842,23 @@ async def test_g1_ten_concurrent_calls_compete_for_three_call_balance(
     current = await _balance(matrix_clients)
     target = 3 * charged
     assert current > target
+    # `ledger.reserve` margins whatever it is handed, so the drain is the largest RAW amount whose
+    # margined cost still leaves `target` behind — the same reason `_drain_balance_below` searches
+    # rather than subtracting. Handing it `current - target` overdraws the moment margin is on.
+    low, high = 0, current - target
+    while low < high:
+        middle = (low + high + 1) // 2
+        if with_margin(middle) <= current - target:
+            low = middle
+        else:
+            high = middle - 1
     async with session_maker() as db:
-        trim = await ledger.reserve(db, org_id, "matrix-g1-trim", current - target)
-        await ledger.settle(db, trim, current - target)
-    assert await _balance(matrix_clients) == target
+        trim = await ledger.reserve(db, org_id, "matrix-g1-trim", low)
+        await ledger.settle(db, trim, low)
+    # The margin can make `target` itself undrainable-to; what is left is target plus the remainder
+    # no reserve can shave off, which is far below one call's price and so still buys exactly three.
+    remaining = await _balance(matrix_clients)
+    assert target <= remaining < target + charged
     before = await snapshot(matrix_clients, fake_provider)
 
     responses = await asyncio.gather(*(
@@ -858,7 +875,7 @@ async def test_g1_ten_concurrent_calls_compete_for_three_call_balance(
     assert all(response.headers.get("X-Treg-Error") == "1" for response in responses if response.status_code == 402)
     assert all(response.headers.get("X-Treg-Cost-Micro") == str(charged)
                for response in responses if response.status_code == 200)
-    assert await _balance(matrix_clients) == 0
+    assert await _balance(matrix_clients) == remaining - 3 * charged
 
     balance_view = await matrix_clients.get(f"/orgs/{org_id}/balance")
     assert balance_view.json()["holds"] == []
@@ -872,3 +889,40 @@ async def test_g1_ten_concurrent_calls_compete_for_three_call_balance(
     assert all(row["cost_charged_micro"] == 0 for row in rows if row["status_code"] == 402)
     assert all(response.headers.get("X-Treg-Call-Id") for response in responses), (
         "every concurrent outcome must carry X-Treg-Call-Id")
+
+
+# H group: the exits that answer a call without ever reaching call_tool's own bookkeeping.
+
+
+async def test_h1_saturation_503_still_carries_a_call_id_and_a_row(
+    matrix_clients: AsyncClient, fake_provider: FakeProvider, monkeypatch,
+) -> None:
+    """A burst that exhausts the DB pool is the one failure a caller cannot cause and cannot avoid
+    (#181). It is answered by `_pool_saturated`, not by the refusal handler, so it needs its own
+    join key and audit row — otherwise the shape a real overload produces is the one shape `/calls`
+    cannot show. Same trigger as test_call_pool_discipline's typed-503 case: the timeout surfaces
+    inside the call, which is where a real one does."""
+    await _register_echo(matrix_clients)
+
+    async def _no_slot(*args, **kwargs):
+        raise A.PoolTimeoutError("QueuePool limit of size 5 overflow 10 reached, connection timed out")
+
+    monkeypatch.setattr(A, "_resolve_call", _no_slot)
+    before = await snapshot(matrix_clients, fake_provider)
+
+    response = await matrix_clients.get("/call/echo/ping")
+    await audit.drain()
+
+    assert response.status_code == 503
+    assert response.json()["treg_saturated"] is True
+    assert response.headers["Retry-After"] == "2"
+    call_id = response.headers.get("X-Treg-Call-Id")
+    assert call_id, "a saturation 503 must still carry X-Treg-Call-Id"
+    assert len(fake_provider.hits) == before.hit_count, "nothing was relayed"
+
+    rows = (await matrix_clients.get("/calls")).json()
+    row = next(row for row in rows if row["status_code"] == 503)
+    assert row["call_ref"] == call_id
+    assert row["tool_name"] == "echo"
+    # A 5xx is treg failing, not treg refusing — `_refusal_kind` maps it to None.
+    assert row["refused_by"] is None

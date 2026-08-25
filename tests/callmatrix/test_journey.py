@@ -146,7 +146,9 @@ async def test_j1_signup_to_topup_and_recovery(
     detail = refused.json()["detail"]
     assert detail["error"] == "insufficient_balance"
     assert detail["balance_micro"] == 0
-    assert detail["estimated_cost_micro"] == EP_MICRO
+    # The margined figure, which is what `ledger.reserve` needs and therefore what the 402 quotes.
+    # `EP_MICRO` passes only while TREG_PLATFORM_MARGIN is 0.
+    assert detail["estimated_cost_micro"] == charged
     assert detail["topup_url"] == "/app#billing"
 
     # Deliver one signed payment twice, verify one credit, then retry the call.

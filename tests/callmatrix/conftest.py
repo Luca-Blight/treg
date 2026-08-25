@@ -6,9 +6,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from treg.api import app
-from treg.config import get_settings
 
-from test_marketplace_call import PLATFORM_KEYS
+from test_marketplace_call import platform_on  # noqa: F401 — fixture reuse, one roster for both
 
 from .provider import FakeProvider
 from .transport import FaultTransport
@@ -32,15 +31,3 @@ async def matrix_clients(clients: AsyncClient, fake_provider: FakeProvider):
     finally:
         app.state.http = previous
         await upstream.aclose()
-
-
-@pytest.fixture
-def platform_on(monkeypatch):
-    for name, value in PLATFORM_KEYS.items():
-        monkeypatch.setenv(f"TREG_PLATFORM_KEY_{name}", value)
-    monkeypatch.setenv(
-        "TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,brightdata",
-    )
-    get_settings.cache_clear()
-    yield
-    get_settings.cache_clear()

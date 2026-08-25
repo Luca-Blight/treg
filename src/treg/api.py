@@ -334,9 +334,45 @@ async def _pool_saturated(request: Request, exc: PoolTimeoutError) -> JSONRespon
     exception escaped the router and Starlette's BaseHTTPMiddleware reported "No response returned"),
     which an agent cannot tell from a provider bug. `treg_saturated` is the key a retrying client
     should branch on; `Retry-After` is how long to wait before doing so."""
-    return JSONResponse(
+    resp = JSONResponse(
         {"detail": "treg's database pool is saturated — retry in a moment", "treg_saturated": True},
         status_code=503, headers={"Retry-After": "2"})
+    # A saturation 503 is answered HERE, not through `_mark_treg_own_errors`, so it needs its own
+    # join key, row and label release. Without them the one failure mode a burst actually produces
+    # (#181) is the one a caller cannot report and `/calls` cannot show. `X-Treg-Error` stays off:
+    # the typed `treg_saturated` flag above is this exit's signal, and the header is documented as
+    # the HTTPException handler's (interface/api.md).
+    if request.url.path.startswith("/call/"):
+        await _stamp_call_exit(request, resp, 503)
+    return resp
+
+
+async def _stamp_call_exit(request: Request, resp: Response, status_code: int) -> None:
+    """Give one `/call/` exit the three things every other exit gets: the id that joins the response
+    to the audit row, the row itself, and the release of any idempotency label the request took.
+
+    Shared by the two handlers that answer a call without reaching `call_tool`'s own bookkeeping.
+    Identity comes from `request.state` (stashed at handler entry); an exit that failed before the
+    caller was resolved records an anonymous row, which is still the fact that someone knocked."""
+    call_ref = getattr(request.state, "call_ref", "") or uuid.uuid4().hex
+    request.state.call_ref = call_ref
+    resp.headers["X-Treg-Call-Id"] = call_ref
+    if (cost_micro := getattr(request.state, "call_cost_micro", None)) is not None:
+        resp.headers["X-Treg-Cost-Micro"] = str(cost_micro)
+    if not getattr(request.state, "call_audited", False):
+        org_id, email = getattr(request.state, "call_identity", (None, ""))
+        rest = request.url.path[len("/call/"):]
+        audit.record_call(
+            org_id=org_id, user_email=email, tool_name=rest.split("/", 1)[0] or "—",
+            method=request.method, path=request.url.path, status_code=status_code,
+            client=_client_of(request), refused_by=_refusal_kind(status_code),
+            telemetry={"call_ref": call_ref})
+    # A failed call must not keep its idempotency label. The claim is taken before the upstream
+    # call, and a request that dies anywhere after that — a bad parameter, a deny rule, an empty
+    # balance, a saturated pool — would otherwise hold the label for the whole window and answer
+    # every retry with 409. Worse than the problem this feature exists to solve, and found by the
+    # test for it.
+    await _release_idempotent_claim(request)
 
 
 def _refusal_kind(status_code: int) -> str | None:
@@ -364,33 +400,12 @@ async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     resp = await http_exception_handler(request, exc)
     if request.url.path.startswith("/call/"):
         resp.headers["X-Treg-Error"] = "1"
-        # A refusal still needs one shared join key in its response and audit row. Dependency
-        # failures may run before call_tool, so mint a fallback here when needed.
-        call_ref = getattr(request.state, "call_ref", "") or uuid.uuid4().hex
-        request.state.call_ref = call_ref
-        resp.headers["X-Treg-Call-Id"] = call_ref
-        if (cost_micro := getattr(request.state, "call_cost_micro", None)) is not None:
-            resp.headers["X-Treg-Cost-Micro"] = str(cost_micro)
         # Refusals that raised before the handler's own audit ran (bad token, unknown tool, ACL,
-        # deny rule, daily cap) would otherwise leave NO row — the funnel's early friction was
-        # invisible until this. Identity comes from request.state (stashed at handler entry); a
-        # bad-token 401 never had one, and an anonymous row is still the fact that someone knocked.
-        if not getattr(request.state, "call_audited", False):
-            org_id, email = getattr(request.state, "call_identity", (None, ""))
-            rest = request.url.path[len("/call/"):]
-            audit.record_call(
-                org_id=org_id, user_email=email, tool_name=rest.split("/", 1)[0] or "—",
-                method=request.method, path=request.url.path, status_code=exc.status_code,
-                client=_client_of(request), refused_by=_refusal_kind(exc.status_code),
-                telemetry={"call_ref": call_ref})
-        # A failed call must not keep its idempotency label. The claim is taken before the upstream
-        # call, and a request that dies anywhere after that — a bad parameter, a deny rule, an empty
-        # balance — would otherwise hold the label for the whole window and answer every retry with
-        # 409. Worse than the problem this feature exists to solve, and found by the test for it.
-        #
-        # Here because this is the ONE place every refusal passes through; the handler has a dozen
-        # raise points and releasing at each would be a dozen chances to miss one.
-        await _release_idempotent_claim(request)
+        # deny rule, daily cap) would otherwise leave NO row, and no id to report — the funnel's
+        # early friction was invisible until this. Here because this is the ONE place every refusal
+        # passes through; the handler has a dozen raise points and stamping at each would be a dozen
+        # chances to miss one.
+        await _stamp_call_exit(request, resp, exc.status_code)
     return resp
 
 _WEB_DIR = Path(__file__).parent / "web"
@@ -11735,7 +11750,11 @@ async def call_tool(
     if mk is not None and mk.metered:
         charged, observed = await _platform_settle(
             mk, response.status_code, body,
-            reason=(f"call_failed_{response.status_code}" if response.status_code >= 500 else ""),
+            # `provider_failed_`, not `call_failed_`: the latter is the branch above, where treg
+            # never got an answer (timeout, SSRF refusal, a failed oauth refresh). Both release a
+            # 502 the same way, so a shared prefix would make the two indistinguishable in the
+            # journal once the 14-day error evidence expires — and they need different fixes.
+            reason=(f"provider_failed_{response.status_code}" if response.status_code >= 500 else ""),
         )
         # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
         # (see _refusal_kind). So this is where the provider's own explanation is captured, and the
