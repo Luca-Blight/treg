@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the MiniMax plugin at `minimax/` against the marketplace's intake rules, and zip it.
+"""Validate the MiniMax plugin at `plugins/minimax/` against the marketplace's intake rules, and zip it.
 
 The rules are MiniMax's (docs/MINIMAX-PLUGIN.md carries the source): `.minimax-plugin/plugin.json`
 at the package root with no wrapper directory; ASCII-only paths; no symlinks, hardlinks, install
@@ -21,7 +21,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PLUGIN = ROOT / "minimax"
+PLUGIN = ROOT / "plugins" / "minimax"
 MANIFEST = PLUGIN / ".minimax-plugin" / "plugin.json"
 
 CATEGORIES = {"Office", "Studio", "Design & Sites", "Code", "Business", "Sales", "Productivity",

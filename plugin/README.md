@@ -12,7 +12,7 @@ searching the plugin directory that ChatGPT and Codex share.
 > disabled until there is a token. All of them are rendered by the same `scripts/build_plugin.py`
 > from the same source; they differ only in the prepended bootstrap. See
 > [`docs/CLAUDE-PLUGIN.md`](../docs/CLAUDE-PLUGIN.md), [`docs/DSH-PLUGIN.md`](../docs/DSH-PLUGIN.md)
-> and [`docs/MINIMAX-PLUGIN.md`](../docs/MINIMAX-PLUGIN.md) (skills-only, from `minimax/`).
+> and [`docs/MINIMAX-PLUGIN.md`](../docs/MINIMAX-PLUGIN.md) (skills-only, from `plugins/minimax/`).
 
     plugin/
     ├── .codex-plugin/plugin.json     the manifest + the listing copy

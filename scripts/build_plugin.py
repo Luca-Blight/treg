@@ -15,7 +15,7 @@ Five shop windows, four bootstraps, one source:
   connector AND the CLI path in one install: the MCP row is disabled until `TREG_TOKEN` exists, so
   its bootstrap has to cover both states and steer away from `treg mcp install`, which cannot write
   a dsh profile. See docs/DSH-PLUGIN.md.
-- **minimax** -> `minimax/skills/treg/SKILL.md` — skills-only (MiniMax forbids credentials in the
+- **minimax** -> `plugins/minimax/skills/treg/SKILL.md` — skills-only (MiniMax forbids credentials in the
   package), CLI bootstrap with NO `treg mcp install` step. See docs/MINIMAX-PLUGIN.md.
 
 The Claude variant sits at the REPO ROOT rather than under `plugin/` because that one path is
@@ -70,9 +70,9 @@ CURSOR_TARGET = ROOT / "plugins" / "treg" / "skills" / "treg" / "SKILL.md"
 DSH_TARGET = ROOT / "dsh" / "skills" / "treg" / "SKILL.md"
 # MiniMax (MiniMax Code desktop + MiniMax Agent cloud) prescribes `.minimax-plugin/plugin.json` at
 # the plugin root and forbids credentials anywhere in the package, so it ships skills-only from its
-# own root — submitted as the GitHub subdirectory `minimax/`, or zipped from inside it. See
+# own root — submitted as the GitHub subdirectory `plugins/minimax/`, or zipped from inside it. See
 # docs/MINIMAX-PLUGIN.md.
-MINIMAX_TARGET = ROOT / "minimax" / "skills" / "treg" / "SKILL.md"
+MINIMAX_TARGET = ROOT / "plugins" / "minimax" / "skills" / "treg" / "SKILL.md"
 
 CODEX_BOOTSTRAP = """
 ## First, check which treg you have

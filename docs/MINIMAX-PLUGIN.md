@@ -14,18 +14,18 @@ login; the rules that matter are encoded in `scripts/minimax_plugin.py`.
 ## What is where
 
 ```
-minimax/
+plugins/minimax/
 ├── .minimax-plugin/plugin.json   the manifest (schemaVersion 1)
 ├── icon.png                      512×512, the ▚ mark — same file as plugin/assets/icon.png
 └── skills/treg/SKILL.md          GENERATED — never edit by hand
 scripts/minimax_plugin.py         validator (--check) and ZIP builder (--zip OUT)
 ```
 
-`minimax/` is the **plugin root**: `.minimax-plugin/plugin.json` sits directly inside it, which is
+`plugins/minimax/` is the **plugin root** (a sibling of the Cursor root `plugins/treg/`; each store needs its own root because the manifests and generated bootstraps differ): `.minimax-plugin/plugin.json` sits directly inside it, which is
 what MiniMax requires of a ZIP root or a GitHub subdirectory. Manifest `name` is `treg`; the skill is
 exposed at runtime as `treg:treg`.
 
-**Never edit `minimax/skills/treg/SKILL.md`.** Change `src/treg/web/skill.md` and regenerate:
+**Never edit `plugins/minimax/skills/treg/SKILL.md`.** Change `src/treg/web/skill.md` and regenerate:
 
 ```bash
 python3 scripts/build_plugin.py            # regenerate ALL plugins
@@ -79,7 +79,7 @@ use one the team keeps, the *same* account must query status later):
 | Source | GitHub |
 | Repo | `https://github.com/superdesigndev/treg` |
 | Ref | `main` (or the release tag, e.g. `v0.12.1`) |
-| Plugin subdirectory | `minimax` |
+| Plugin subdirectory | `plugins/minimax` |
 | Email | jason@superdesign.dev |
 
 ZIP alternative — built deterministically, no wrapper directory:
