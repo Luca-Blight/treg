@@ -95,6 +95,7 @@ Regenerate via `scripts/build-map.py`.
 | Fragment | Sources |
 |---|---|
 | `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
+| `interface/api.md` (+dashboard, data-model) | `sitetrack.js` — first-touch utm/referrer attribution |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
 | `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py` |
 | `architecture/data-model.md` | `models.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
