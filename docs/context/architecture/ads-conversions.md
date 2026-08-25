@@ -174,7 +174,8 @@ for the full four-places-at-once list and the two-failure-modes note (a dead ver
 
 ## Testing hazard: the shared test database
 
-The suite's default SQLite file is `./treg-test.db`, and `reset_db()` (test-only) drops and recreates
+The suite's default SQLite files live under `$TMPDIR/treg-tests/` (per-xdist-worker, out of the repo
+tree so file watchers stay quiet), and `reset_db()` (test-only) drops and recreates
 every table. Two pytest runs against the same file concurrently corrupt each other — one run's
 `reset_db()` mid-flight drops a table the other run is about to query — and the failure surfaces as a
 misleading `no such table` error that looks like a flake, not a concurrency bug. This cost this

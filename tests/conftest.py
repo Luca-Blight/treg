@@ -8,6 +8,7 @@ The `clients` fixture also registers a user and authes the client by default.
 from __future__ import annotations
 
 import os
+import tempfile
 
 # Isolate the test DB from any .env / running dev server BEFORE importing treg (the engine is
 # built at import time). A real env var overrides the .env file in pydantic-settings.
@@ -18,7 +19,11 @@ import os
 # one sqlite file drop each other's tables mid-test (1,022 errors on the first parallel run). An
 # explicit TREG_TEST_DB_URL wins untouched, for single-process runs against something specific.
 _worker = os.environ.get("PYTEST_XDIST_WORKER", "")
-_default = f"sqlite+aiosqlite:///./treg-test{'-' + _worker if _worker else ''}.db"
+# The files live under the system temp dir, NOT the repo root: sixteen 600 KB databases rewritten
+# on every run kept editors' file watchers busy re-indexing the working tree.
+_db_dir = os.path.join(tempfile.gettempdir(), "treg-tests")
+os.makedirs(_db_dir, exist_ok=True)
+_default = f"sqlite+aiosqlite:///{_db_dir}/treg-test{'-' + _worker if _worker else ''}.db"
 os.environ["TREG_DATABASE_URL"] = os.environ.get("TREG_TEST_DB_URL", _default)
 os.environ["TREG_EMAIL_DEV_MODE"] = "true"  # tests need the returned OTP code (prod default is now False)
 os.environ["TREG_RESEND_API_KEY"] = ""  # never fire a real Resend send from the test suite (send_otp/send_invite skip when empty)
