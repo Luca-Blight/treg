@@ -168,6 +168,14 @@ module symbols:
   rebuilds the tool with BOTH bindings — the primary half comes from `_provider_bindings`, so it follows
   the provider's own auth shape rather than assuming OAuth). Tomba's probe (`/v1/usage`) deliberately
   answers the key alone, so connect-time verification works before the secret is bound.
+  `required_headers` carries fixed provider protocol headers that must accompany the credential on
+  every request (Crustdata pins `x-api-version: 2025-11-01`). The connect probe sends them too, and
+  `_provider_bindings` turns each into an ordinary constant-format binding over the same secret
+  reference. The generic injector therefore overwrites a stale caller value without teaching the
+  proxy which provider it is relaying. `_platform_bindings` mirrors the same constants when tier 4
+  is enabled, so a platform key cannot silently lose a required protocol header. The metadata alone
+  still does not opt a provider into tier 4; pricing, a configured platform-key setting, and the
+  deployment allow-list remain separate gates.
   **Split-host vendors get one extra Tool per host** (`extra_tools`): GA4 runs reports on
   `analyticsdata` but lists the property ids those reports need on `analyticsadmin` — one scope covers
   both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin

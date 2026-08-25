@@ -246,7 +246,8 @@ are admin-scale windows over a bounded number of metered calls, the same tradeof
             → settle at the observed cost when the provider reports one
               (dataforseo `cost`, scrapecreators `credits_charged`, akta `credits_consumed` —
               the last is what makes akta's per-section enrich billable: the estimate is an
-              upper bound, the settle is the real charge), else at the estimate;
+              upper bound, the settle is the real charge; Crustdata reports `X-Credits-Used` in
+              a response header), else at the estimate;
               release instead when the call was not billable
 
 Two providers do not report a charge but have a rule the RESPONSE decides, so `_observed_cost_micro`
@@ -285,6 +286,16 @@ a snapshot bills the caller again; the catalog note says to download once). A gz
 (`compress=true`) or buffer-truncated body settles at the estimate: when we cannot count, the
 estimate is the honest number. This needed `unit_micro` (the per-ROW price) to ride the
 `MarketplaceCall` on every tier, where before only oauth-billed calls carried it.
+
+**Aviato** adds another derived family without changing the relay: fixed route prices settle at the
+estimate; preview, email and rescrape flags change the reserve before relay; synchronous bulk
+enrichment settles from the number of successful records in the response. Simple people search
+reserves its fixed 0.25-credit base and, when `enrich=true`, the documented one-credit-per-result
+add-on. Aviato gives no exact charge in the response, and the live `enrich=true` probe consumed only
+the base, so settlement charges the observed base and not the possible rider. Crustdata differs because it
+reports the complete answer directly: `_platform_settle` passes response headers to
+`_observed_cost_micro`, which converts `X-Credits-Used` through the same `fx.yaml` rate used by the
+catalog.
 
 Closing the hold runs on its **own session** (the request's may be mid-rollback from the very error
 being released for) and **never raises** — the caller already has their answer, and a ledger hiccup

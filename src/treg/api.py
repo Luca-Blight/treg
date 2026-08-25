@@ -8128,6 +8128,14 @@ def _provider_bindings(provider, secret: Secret) -> list[dict]:
             "secret_id": secret.id, "injector": "oauth", "location": "header",
             "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
         }]
+    # A provider-required protocol header is a constant-format binding over the same encrypted
+    # secret reference. `format` deliberately contains no {secret}: the existing injector stamps
+    # the literal value after caller headers are copied, so a caller cannot accidentally select a
+    # different API version. The relay remains provider-blind.
+    source = {k: v for k, v in bindings[0].items()
+              if k in ("secret_id", "platform_setting", "injector", "secret_field")}
+    bindings.extend({**source, "location": "header", "name": name, "format": value}
+                    for name, value in provider.required_headers)
     if provider.needs_extra_credential and provider.extra_credential_is_platform:
         bindings.append({
             "platform_setting": provider.extra_credential_setting, "injector": "env",
@@ -8766,6 +8774,7 @@ async def connect_with_token(
         headers, params = {}, {provider.token_param: rendered}
     else:
         headers, params = {provider.token_header: rendered}, {}
+    headers.update(dict(provider.required_headers))
     probe_url = provider.probe_url or f"{provider.base_url.rstrip('/')}{provider.probe_path}"
     # httpx REPLACES a URL's own query string when `params=` is passed, so a probe_path like
     # `/autocomplete?field=title&text=data` (PDL, Akta, JustOneAPI, SpyFu) silently lost its required
@@ -9725,6 +9734,89 @@ def _usd_to_micro(usd: float) -> int:
     return whole + 1 if raw > whole else whole
 
 
+def _truthy(value) -> bool:
+    """Provider query/body booleans arrive as strings or JSON booleans; interpret both."""
+    return value is True or (isinstance(value, str) and value.strip().lower() in ("1", "true", "yes"))
+
+
+def _json_object(body: bytes) -> dict:
+    try:
+        doc = json.loads(body) if body else {}
+    except (ValueError, UnicodeDecodeError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _input_count(doc: dict, keys: tuple[str, ...]) -> int:
+    """Count request records without mistaking field-selection arrays for billable inputs."""
+    sizes = [len(doc[k]) for k in keys if isinstance(doc.get(k), list)]
+    return max(sizes, default=1)
+
+
+def _marketplace_pricing(
+    provider: str, endpoint_id: str, cost: dict | None, query, body: bytes
+) -> tuple[int, int]:
+    """Return (reserve estimate, response-count unit), in raw micro-USD.
+
+    The catalog remains the price source. This helper only models provider rules that one fixed
+    scalar cannot express: Crustdata batch-shaped single calls and Aviato preview/add-on/bulk modes.
+    `unit` is non-zero only when the response must decide the final charge.
+    """
+    if not cost:
+        return 0, 0
+    estimate = _platform_estimate_micro(cost, query, body)
+    unit = (_usd_to_micro(cost["usd"])
+            if cost.get("type") in ("per_result", "quota_rows") and cost.get("usd") else 0)
+    if provider == "crustdata" and endpoint_id in (
+        "crustdata.companies.enrich", "crustdata.people.enrich"
+    ):
+        doc = _json_object(body)
+        count = _input_count(doc, (
+            "domains", "names", "professional_network_profile_urls", "business_emails"
+        ))
+        return _usd_to_micro(float(cost.get("usd") or 0) * count), unit
+    if provider != "aviato":
+        return estimate, unit
+
+    rate = catalog_store.load().credit_rates.get("aviato")
+    if not rate:
+        return estimate, unit
+    def credit_micro(credits):
+        return _usd_to_micro(float(credits) * rate)
+
+    if endpoint_id == "aviato.companies.enrich":
+        if _truthy(query.get("preview")):
+            return 0, 0
+        credits = 15 + (5 if _truthy(query.get("rescrape")) else 0)
+        return credit_micro(credits), 0
+    if endpoint_id == "aviato.people.enrich":
+        if _truthy(query.get("preview")):
+            return 0, 0
+        credits = 5 + (3 if query.get("email") else 0) + (2 if _truthy(query.get("rescrape")) else 0)
+        return credit_micro(credits), 0
+    if endpoint_id in ("aviato.companies.enrich.bulk", "aviato.people.enrich.bulk"):
+        doc = _json_object(body)
+        if _truthy(doc.get("preview")):
+            return 0, 0
+        lookups = doc.get("lookups") if isinstance(doc.get("lookups"), list) else []
+        credits = 15 if endpoint_id == "aviato.companies.enrich.bulk" else 5
+        if endpoint_id == "aviato.people.enrich.bulk" and any(
+            isinstance(item, dict) and item.get("email") for item in lookups
+        ):
+            credits += 3
+        if _truthy(doc.get("rescrape")):
+            credits += 5 if endpoint_id == "aviato.companies.enrich.bulk" else 2
+        per_record = credit_micro(credits)
+        return per_record * max(1, len(lookups)), per_record
+    if endpoint_id == "aviato.people.search.simple" and _truthy(query.get("enrich")):
+        raw = query.get("perPage")
+        asked = int(raw) if raw is not None and str(raw).isdigit() else _PLATFORM_PAGE_DEFAULT
+        asked = max(1, min(asked, _PLATFORM_PAGE_MAX))
+        add_on = credit_micro(1)
+        return estimate + asked * add_on, add_on
+    return estimate, 0
+
+
 def _oauth_billed_provider(secrets: dict[int, Secret]):
     """The flagged OAuthProvider whose registry connect this call's bindings ride, or None.
     Three gates: the secret is a REGISTRY connect (`secret.provider` is only ever set by the
@@ -9850,6 +9942,13 @@ def _platform_bindings(provider) -> list[dict]:
     else:
         bindings = [{"platform_setting": setting, "injector": "env", "location": "header",
                      "name": provider.token_header, "format": provider.token_format}]
+    # Keep tier 4 protocol-identical to BYOK. Required provider headers are constants, but they
+    # still use the same platform setting reference so the normal binding validator and injector
+    # own the whole shape. Crustdata's x-api-version pin is the first provider that needs this.
+    source = {k: v for k, v in bindings[0].items()
+              if k in ("platform_setting", "injector", "secret_field")}
+    bindings.extend({**source, "location": "header", "name": name, "format": value}
+                    for name, value in provider.required_headers)
     # A per-user credential PAIR (Tomba's key+secret headers) needs treg's own second half on
     # tier 4. platform_extra_setting is tier-4-only by design: extra_credential_setting would also
     # ride user connects, pairing a user's key with treg's secret — a pair the provider rejects.
@@ -10385,16 +10484,15 @@ async def _resolve_marketplace_call(
     # the org's own account; Activity shows "estimated") and the reserve amount on tier 4 only
     # (`metered` gates the ledger, so this never charges a balance for an own-key call).
     cv = catalog_store.load().cost_view(ep.get("cost"), service) if ep.get("cost") else None
-    info_est = _platform_estimate_micro(cv, request.query_params, body) if cv else 0
+    info_est, info_unit = _marketplace_pricing(
+        service, ep["id"], cv, request.query_params, body)
     common = dict(upstream=upstream, consumed=consumed, endpoint_id=ep["id"], provider=service,
                   params_hash=phash, cost_type=str((ep.get("cost") or {}).get("type") or ""),
                   estimate_micro=info_est,
                   # The per-ROW price, carried on every tier (settle only reads it on metered calls):
                   # a `per_result` settle that can't count rows can only ever bill the estimate,
                   # which is how 6,000 delivered Bright Data records once billed as one (2026-08-24).
-                  unit_micro=(_usd_to_micro(cv["usd"])
-                              if cv and cv.get("type") in ("per_result", "quota_rows") and cv.get("usd")
-                              else 0))
+                  unit_micro=info_unit)
     try:  # tier 1 — the org registered this provider: their tool, their bindings, their ACLs
         tool, resolved = await _resolve_call(upstream, caller, db)
         return MarketplaceCall(tool=tool, tier="tool", **{**common, "upstream": resolved})
@@ -10421,7 +10519,7 @@ async def _resolve_marketplace_call(
         )
         return MarketplaceCall(tool=virtual, tier="platform", **{
             **common, "cost_type": str(cost.get("type") or "per_call"),
-            "estimate_micro": _platform_estimate_micro(cost, request.query_params, body)})
+            "estimate_micro": info_est, "unit_micro": info_unit})
     raise _marketplace_no_credential(service, ep["id"], provider, ep)
 
 
@@ -11073,7 +11171,7 @@ def _brightdata_record_count(body: bytes) -> int | None:
         return 0
     return None
 
-def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
+def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int | None:
     """The provider's OWN reported charge for this call, in micro-USD, or None when it doesn't say.
 
     For an oauth-billed `per_result` call (X reads), the response body IS the bill: X charges per
@@ -11115,6 +11213,15 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
     Everyone else settles at the estimate. This is the same signal the catalog's `observed_cost`
     harvests, which is what lets phase 5's drift detector compare the two numbers directly."""
     provider = mk.provider
+    if provider == "crustdata" and headers is not None:
+        raw = headers.get("x-credits-used")
+        rate = catalog_store.load().credit_rates.get("crustdata")
+        try:
+            credits = float(raw)
+        except (TypeError, ValueError):
+            credits = -1
+        if credits >= 0 and rate:
+            return _usd_to_micro(credits * rate)
     if not body:
         return None
     if provider == "brightdata" and mk.cost_type == "per_result" and mk.unit_micro > 0:
@@ -11126,7 +11233,26 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
         doc = json.loads(body)
     except (ValueError, UnicodeDecodeError):
         return None
+    if provider == "aviato" and mk.endpoint_id == "aviato.people.enrich.bulk":
+        if isinstance(doc, list) and mk.unit_micro > 0:
+            return sum(item is not None for item in doc) * mk.unit_micro
+        return None
     if not isinstance(doc, dict):
+        return None
+    if provider == "aviato" and mk.endpoint_id == "aviato.companies.enrich.bulk":
+        rows = doc.get("companies")
+        if isinstance(rows, list) and mk.unit_micro > 0:
+            return sum(item is not None for item in rows) * mk.unit_micro
+        return None
+    if provider == "aviato" and mk.endpoint_id == "aviato.people.search.simple" and mk.unit_micro > 0:
+        rows = doc.get("items")
+        if isinstance(rows, list):
+            base = catalog_store.load().cost_view(
+                catalog_store.load().by_id[mk.endpoint_id].get("cost"), "aviato")
+            # Aviato documents a possible enrich rider, so the reserve includes it. The live
+            # enrich=true probe consumed only the 0.25-credit base, however, and the response gives
+            # no exact charge. Settle at the observed base instead of billing an unobserved rider.
+            return _usd_to_micro(float(base["usd"]))
         return None
     if mk.billed_oauth and mk.cost_type == "per_result" and mk.unit_micro > 0:
         data = doc.get("data")
@@ -11278,7 +11404,8 @@ def _error_response_evidence(response: Response, body: bytes, secrets: list[str]
 
 
 async def _platform_settle(
-    mk: MarketplaceCall, status_code: int | None, body: bytes = b"", *, reason: str = ""
+    mk: MarketplaceCall, status_code: int | None, body: bytes = b"", *, headers=None,
+    reason: str = ""
 ) -> tuple[int, int | None]:
     """Close the hold for a metered call → (charged_micro, observed_micro). `charged_micro` is what
     actually hit the org's balance (0 on a release) — the number the Activity feed must show, because
@@ -11294,7 +11421,7 @@ async def _platform_settle(
     if not mk.metered or not mk.call_id:
         return 0, None
     billable = status_code is not None and _platform_billable(status_code, mk.cost_type)
-    observed = _observed_cost_micro(mk, body) if billable else None
+    observed = _observed_cost_micro(mk, body, headers) if billable else None
     call_id, mk.call_id = mk.call_id, None  # closing is once-only, even if two paths try
     charged = 0
 
@@ -11721,7 +11848,8 @@ async def call_tool(
     if 200 <= response.status_code < 400 and caller.org_id and caller.org.first_call_at is None:
         await _record_first_call(caller.org_id)
     if mk is not None and mk.metered:
-        charged, observed = await _platform_settle(mk, response.status_code, body)
+        charged, observed = await _platform_settle(
+            mk, response.status_code, body, headers=response.headers)
         # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
         # (see _refusal_kind). So this is where the provider's own explanation is captured, and the
         # only place it exists: nothing downstream keeps the body.

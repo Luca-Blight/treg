@@ -1126,7 +1126,7 @@ a:hover{text-decoration-color:var(--muted)}
     <section class="lp-hero">
       <div class="lp-eyebrow">the tool catalog for your agent</div>
       <h1 class="lp-h1">Give your agent the tools for the job, <span style="color:var(--accent)">without buying the seats</span>.</h1>
-      <p class="lp-lead">~2,600 endpoints across ~40 providers — SEO and backlinks, social and trends,
+      <p class="lp-lead">2,800+ endpoints across 59 providers — SEO and backlinks, social and trends,
         people and company enrichment, ads — <b>priced per call, from a cent</b>, with no provider signup.
         Plus your own team's keys and skills, callable by every teammate's agent, with the credential
         never leaving the server.</p>
@@ -1275,7 +1275,7 @@ a:hover{text-decoration-color:var(--muted)}
 
     <section class="lp-section" style="text-align:center">
       <div class="lp-head" style="margin:0 auto"><h2>Share your team's keys and skills, <span style="color:var(--accent)">without sharing your keys</span>.</h2>
-        <p>Your team's tools and your agents' skills, all one revocable token away, and no key ever on a machine — alongside the ~2,600 catalog tools you don't need a key for at all.</p></div>
+        <p>Your team's tools and your agents' skills, all one revocable token away, and no key ever on a machine — alongside the 2,800+ catalog tools you don't need a key for at all.</p></div>
       <div class="lp-cta" style="margin-top:24px">
         <button class="btn primary lg" @click="demo.signin=true">Get started, free</button>
         <a class="btn lg" href="/tutorial">Read the docs →</a>
@@ -1393,7 +1393,7 @@ a:hover{text-decoration-color:var(--muted)}
         <!-- TOOLS -->
         <template v-if="view==='connections'">
           <div class="tut-head">
-            <div><h1>2,600+ tools for agents</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
+            <div><h1>2,800+ tools for agents</h1><p class="sub" style="margin:0">Connect an account once. treg holds the credential server-side and injects it on every call — nothing lands on your machine.</p></div>
             <!-- (The balance pill lives in the side nav, above the account block.) -->
             <div class="tut-actions">
               <button class="btn sm" @click="openToolRequest()" title="Missing a tool or provider? Tell us — requests steer what gets added next"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg>Request a tool</button>
@@ -1976,7 +1976,7 @@ a:hover{text-decoration-color:var(--muted)}
           <p v-if="!loading && !hasAnyTools" class="sub">Nothing here{{q?' matches "'+q+'"':' yet'}}.<template v-if="!q && isPersonal(activeOrg) && myOrgs.some(o=>!isPersonal(o))"> This is your <b>personal</b> space - your team's tools live under another org. <a href="#" @click.prevent="jumpToTeam()">Switch to a team →</a></template></p>
           <div v-if="!loading && !hasAnyTools && !q && canRegister" style="margin-top:14px">
           <div style="max-width:660px;border:1px solid var(--line);border-radius:16px;padding:20px 22px;background:var(--panel2)">
-            <h3 style="margin:0 0 6px;font-size:15px">Nothing of your own yet — but you can already call ~2,600 tools</h3>
+            <h3 style="margin:0 0 6px;font-size:15px">Nothing of your own yet — but you can already call 2,800+ tools</h3>
             <p class="sub" style="margin:0 0 12px">Your team starts with <b>$1.00 of free credit</b>, so the catalog works before you register anything: find a tool by what it does, see the price, call it. <a href="#" @click.prevent="go('connections')">Browse the catalog →</a><br>When you're ready to add your <i>own</i> keys and skills — your <span class="mono">.env</span> and skill folders — load them here and they become callable tools for the whole team.</p>
             <div class="seg" style="margin-bottom:10px">
               <button :class="{on:emptyTab==='agent'}" @click="emptyTab='agent'">Agent instruction</button>
@@ -2905,7 +2905,7 @@ treg catalog, then open a PR.</pre>
             </div>
 
             <div v-show="buildTab==='platform'" style="max-width:720px">
-              <p class="sub">Give <i>your</i> users 2,600+ tools without owning the keys — and bill each of your customers for what they used. Covers the call methods (HTTP, MCP, CLI), per-customer tagging, spend limits and invoicing.</p>
+              <p class="sub">Give <i>your</i> users 2,800+ tools without owning the keys — and bill each of your customers for what they used. Covers the call methods (HTTP, MCP, CLI), per-customer tagging, spend limits and invoicing.</p>
               <div class="lc-codewrap" style="margin-top:8px">
                 <button class="lc-cp" @click="copyStart('Read '+proxy+'/integrate.md and integrate treg into our product, including per-customer usage tracking and billing.','intg')">{{startCopied==='intg'?'✓ copied':'copy'}}</button>
                 <pre>Read <span class="hl-str">{{proxy}}/integrate.md</span> and integrate treg into our
@@ -2924,7 +2924,7 @@ product, including per-customer usage tracking and billing.</pre>
 
           <!-- TAB · Access the catalog — agent instruction first, then the manual CLI walkthrough -->
           <div v-show="startTab==='access'" style="max-width:720px">
-            <p class="sub">~2,600 catalogued endpoints: SEO and backlinks, social and trends, people and company enrichment, ads. Find one by what it <i>does</i>, see its price, call it — no provider signup. Your team's <b>$1.00 free credit</b> covers hundreds of calls.</p>
+            <p class="sub">2,800+ catalogued endpoints: SEO and backlinks, social and trends, people and company enrichment, ads. Find one by what it <i>does</i>, see its price, call it — no provider signup. Your team's <b>$1.00 free credit</b> covers hundreds of calls.</p>
 
             <div class="lbl" style="margin-top:16px">▸ Set up with your agent <span class="muted" style="font-weight:400">— paste &amp; go</span></div>
             <p class="sub">One line, token included — your agent reads llms.txt and does the rest: installs the CLI, signs in as you, and makes its first call.</p>

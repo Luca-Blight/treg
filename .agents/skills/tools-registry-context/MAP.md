@@ -21,11 +21,13 @@ Regenerate via `scripts/build-map.py`.
 | `external:meetings/2026-06-30-jason-tools-registry.md` | foundation/charter.md, reference/glossary.md |
 | `package.json` | interface/skill.md |
 | `plugin/.codex-plugin/plugin.json` | interface/skill.md |
+| `plugins/minimax/.minimax-plugin/plugin.json` | interface/skill.md |
 | `plugins/treg/.cursor-plugin/plugin.json` | interface/skill.md |
 | `render.yaml` | ops/deploy.md |
 | `scripts/build_plugin.py` | interface/skill.md |
 | `scripts/catalog_drift.py` | architecture/catalog.md |
 | `scripts/catalog_validate.py` | architecture/catalog.md |
+| `scripts/minimax_plugin.py` | interface/skill.md |
 | `src/treg/__main__.py` | ops/deploy.md |
 | `src/treg/adsconv.py` | architecture/ads-conversions.md |
 | `src/treg/agent_pages.py` | interface/seo.md |
@@ -35,11 +37,15 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
 | `src/treg/catalog/aliases.yaml` | architecture/catalog.md |
+| `src/treg/catalog/aviato.yaml` | architecture/catalog.md |
+| `src/treg/catalog/capabilities.yaml` | interface/catalog-review-proposal.md |
+| `src/treg/catalog/crustdata.yaml` | architecture/catalog.md |
+| `src/treg/catalog/fx.yaml` | architecture/catalog.md |
 | `src/treg/catalog/google-search-console.extended.yaml` | architecture/catalog.md |
 | `src/treg/catalog/google-search-console.yaml` | architecture/catalog.md |
 | `src/treg/catalog/justoneapi.extended.yaml` | architecture/catalog.md |
 | `src/treg/catalog/tikhub.extended.yaml` | architecture/catalog.md |
-| `src/treg/catalog_store.py` | architecture/catalog.md, interface/api.md |
+| `src/treg/catalog_store.py` | architecture/catalog.md, interface/api.md, interface/catalog-review-proposal.md |
 | `src/treg/cli.py` | interface/cli.md, interface/onboarding.md, interface/shell.md |
 | `src/treg/config.py` | architecture/super-admin.md, guides/expanding-a-category.md, ops/deploy.md |
 | `src/treg/convert.py` | interface/cli.md |
@@ -95,7 +101,7 @@ Regenerate via `scripts/build-map.py`.
 |---|---|
 | `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
-| `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py` |
+| `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `fx.yaml`, `aviato.yaml`, `crustdata.yaml`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py` |
 | `architecture/data-model.md` | `models.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
@@ -107,7 +113,7 @@ Regenerate via `scripts/build-map.py`.
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |
 | `guides/expanding-a-category.md` | `oauth_providers.py`, `api.py`, `config.py` |
 | `interface/api.md` | `api.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
-| `interface/catalog-review-proposal.md` | _(no source files — narrative/reference)_ |
+| `interface/catalog-review-proposal.md` | `catalog_store.py`, `capabilities.yaml` |
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
 | `interface/dashboard.md` | `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `session.py` |
 | `interface/env-import.md` | `providers.py`, `skills.py` |
@@ -115,6 +121,6 @@ Regenerate via `scripts/build-map.py`.
 | `interface/onboarding.md` | `demo.py`, `cli.py`, `index.html` |
 | `interface/seo.md` | `api.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
-| `interface/skill.md` | `skill.md`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js` |
+| `interface/skill.md` | `skill.md`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |
 | `ops/deploy.md` | `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |
 | `reference/glossary.md` | `2026-06-30-jason-tools-registry.md` |

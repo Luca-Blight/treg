@@ -279,6 +279,15 @@ count was observed live). The account is FUNDED: set the env var and add `influe
 settlement a 504 relays as a failure and settles at 0, but the vendor charged two of ours — a small,
 bounded leak on the 0.03 tier, worth watching in the first reconcile report.
 
+## Crustdata and Aviato platform keys (2026-08-25)
+
+`TREG_PLATFORM_KEY_CRUSTDATA` and `TREG_PLATFORM_KEY_AVIATO` are funded pay-as-you-go keys. Add both
+services to `TREG_PLATFORM_PROVIDERS` to serve them on tier 4. Crustdata's platform binding also
+injects the provider metadata pin `x-api-version: 2025-11-01`; Aviato uses its normal Bearer header.
+The `fx.yaml` rates are the replacement costs configured on the accounts: Crustdata $150/500 credits
+($0.30), Aviato $10/1,000 credits ($0.01). Crustdata settles from `X-Credits-Used`; Aviato fixed and
+conditional prices are derived from the authenticated rate card plus request/response shape.
+
 ## A db.py change needs a Postgres-shaped deploy plan
 
 SQLite cannot catch this class: it has no connection pool and no lock queue. Two rules, both from the

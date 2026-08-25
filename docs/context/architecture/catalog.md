@@ -6,6 +6,9 @@ sources:
   - scripts/catalog_drift.py
   - scripts/catalog_validate.py
   - src/treg/catalog/aliases.yaml
+  - src/treg/catalog/fx.yaml
+  - src/treg/catalog/aviato.yaml
+  - src/treg/catalog/crustdata.yaml
   - src/treg/catalog/google-search-console.yaml
   - src/treg/catalog/google-search-console.extended.yaml
   - src/treg/catalog/justoneapi.extended.yaml
@@ -35,6 +38,33 @@ The catalog adds that operations layer:
   compare TikHub vs JustOneAPI for one job, and a future router can fail over between them.
 - **verified example responses** → captured during live testing, because docs show request params
   but choosing an API comes down to what actually comes back.
+
+Crustdata and Aviato support both BYOK and treg's platform-key tier. Their catalog costs stay in the
+vendors' native credits; `fx.yaml` converts the actual replacement rates treg pays ($0.30 per
+Crustdata credit from the configured 500-for-$150 auto-top-up, $0.01 per Aviato credit from the
+configured 1,000-for-$10 recharge and paid receipt). Every paid row therefore has a computable USD
+price and is platform-eligible when the deployment keys and allow-list are set.
+
+Their core catalogs use only existing marketplace platforms. Crustdata has eight live-verified,
+single-call operations: five on Company data and three on People & contact data. Batch routes are
+omitted because they can create unexpectedly large jobs and costs; sales-enabled routes that the
+connected account cannot verify are also omitted. Its generic web search and page fetch are not placed on the `web` platform because that
+marketplace card currently means backlinks, authority and domain metrics. Aviato has 21 curated
+operations: nine on Company data, seven on People & contact data, and five on LinkedIn social. Both
+Aviato people-search forms remain: the POST route exposes the full DSL, while the GET route is a
+separate simple-query workflow.
+
+Bulk behavior stays inside the faithful relay. Crustdata batch operations are not catalogued.
+Aviato company and person bulk enrichment are synchronous JSON calls. No provider-specific
+buffering, callback receiver, or proxy branch is added. Crustdata's required
+`x-api-version: 2025-11-01` header remains provider metadata and is bound on every BYOK and
+platform-key call.
+
+Variable prices use the existing reserve→settle path. Crustdata reserves the documented maximum
+for the requested record count and settles the exact `X-Credits-Used` response header. Aviato's
+preview calls reserve zero; email/rescrape add-ons are derived from request flags; synchronous bulk
+calls reserve per lookup and settle per returned successful record. Simple people search reserves
+its 0.25-credit base plus the documented one-credit-per-result enrichment add-on when requested.
 
 Path placeholders are substituted by the marketplace caller. Raw values are percent-encoded; a value
 that already contains a valid `%HH` escape is kept verbatim so callers can safely reuse encoded resource

@@ -63,6 +63,11 @@ class OAuthProvider:
     # `?key=…`, not a header. Drives both the connect-time probe and the provisioned tool's binding.
     token_location: str = "header"  # "header" | "query"
     token_param: str = ""  # query-param name when token_location == "query" (Semrush: "key")
+    # Provider protocol headers that are required on EVERY request but are not credentials. The
+    # provisioner turns these into ordinary constant-format bindings, so the generic proxy still
+    # only applies bindings and never learns provider-specific behavior. A tuple keeps this frozen
+    # dataclass immutable and makes accidental process-wide mutation impossible.
+    required_headers: tuple[tuple[str, str], ...] = ()
     # Shown on the provider page and in the capability modal, i.e. everywhere Connect can be
     # clicked, BEFORE the consent popup opens. For providers whose consent screen names something
     # the user has not seen on treg: the Meta app is registered as "Crewlet", a sibling product, so
@@ -1450,6 +1455,63 @@ FIBER_AI = OAuthProvider(
 )
 
 
+CRUSTDATA = OAuthProvider(
+    service="crustdata",
+    display_name="Crustdata",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Crustdata API key",
+    required_headers=(("x-api-version", "2025-11-01"),),
+    setup_url="https://app.crustdata.com/team",
+    setup_action_label="Get your Crustdata API key",
+    setup_steps=(
+        "Sign in to Crustdata and open your team.",
+        "Open API Keys, create a key, and copy it.",
+    ),
+    setup_note=(
+        "Search and enrichment spend credits from your Crustdata account; permissions and the "
+        "credit-balance check are free."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary=(
+        "Search and enrich companies, people and jobs, resolve identities, and retrieve live web data."
+    ),
+    base_url="https://api.crustdata.com",
+    docs_url="https://docs.crustdata.com",
+    probe_path="/account/credits",
+)
+
+
+AVIATO = OAuthProvider(
+    service="aviato",
+    display_name="Aviato",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Aviato API key",
+    setup_url="https://data.aviato.co/",
+    setup_action_label="Get your Aviato API key",
+    setup_steps=(
+        "Sign in to Aviato Data and open Teams.",
+        "Select your team, open API Keys, create a key, and copy it.",
+    ),
+    setup_note="Search, enrichment and contact-data calls spend credits from your Aviato team balance.",
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="Enrichment",
+    summary=(
+        "Search and enrich people and companies, including employees, founders, funding, "
+        "investments and contact data."
+    ),
+    base_url="https://data.api.aviato.co",
+    docs_url="https://docs.data.aviato.co",
+    probe_path="/billing/balance",
+)
+
+
 # ---- more Enrichment API-key providers (2026-08 category expansion) ---------------------------
 # Eight providers added together to deepen Enrichment: company/people enrichment with prospecting
 # search (CompanyEnrich, Ocean.io), email finding & verification (Tomba, Findymail, Icypeas,
@@ -2253,7 +2315,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         # SEO API-key providers
         DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
         # more Enrichment API-key providers
-        LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC, FIBER_AI,
+        LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC, FIBER_AI, CRUSTDATA, AVIATO,
         COMPANYENRICH, OCEANIO, TOMBA, PREDICTLEADS, FINDYMAIL, BRANDDEV, ICYPEAS, LEADSFORGE,
         INFLUENCERSCLUB,
         # Market data API-key providers
