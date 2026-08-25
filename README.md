@@ -3,7 +3,7 @@
 ![treg — the tool catalog for your agent](docs/assets/treg-hero.png)
 
 **OpenRouter, but for agent tools instead of models.** Point an agent at one base URL with one token
-and it can do the job: **~2,850 catalogued endpoints across ~57 providers** — SEO and backlinks,
+and it can do the job: **2,835 catalogued endpoints across 59 providers** — SEO and backlinks,
 social and trends, people and company enrichment, ads, scraping — **priced per call, from a cent**,
 with no provider signup. Plus your own team's keys, skills and CLIs, callable by every teammate's
 agent without the credential ever leaving the server.
@@ -80,7 +80,8 @@ Installs with no token and no configuration. The skill loads as `treg:treg` and,
 walks your agent through the rest — the CLI, sign-in, then `treg mcp install` — so you end up with
 the command line **and** treg's tools. Other agents: `npx skills add superdesigndev/treg -s treg`
 (the `-s` matters — without it you also get this repo's internal dev skills).
-See [docs/CLAUDE-PLUGIN.md](docs/CLAUDE-PLUGIN.md).
+See [docs/CLAUDE-PLUGIN.md](docs/CLAUDE-PLUGIN.md). MiniMax Code / MiniMax Agent users: the same
+skill ships via the MiniMax Plugin Marketplace ([docs/MINIMAX-PLUGIN.md](docs/MINIMAX-PLUGIN.md)).
 
 ## Call a tool you don't have a key for
 

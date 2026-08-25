@@ -9,6 +9,7 @@
      canonical pointing at someone else's domain tells a crawler the real page is not here. -->
 <link rel="canonical" href="{BASE}/"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="apple-touch-icon" href="/media/brand/logo.png"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="treg"/>
 <meta property="og:url" content="{BASE}/"/>
@@ -544,7 +545,7 @@ footer{margin-top:150px;border-top:1px solid var(--line);position:relative;overf
   "@type": "Organization",
   "name": "treg",
   "url": "{BASE}/",
-  "logo": "{BASE}/media/og.png",
+  "logo": "{BASE}/media/brand/logo.png",
   "description": "The tool catalog for AI agents — one key for 2,630 API endpoints, plus your own keys and skills.",
   "sameAs": ["https://github.com/superdesigndev/treg"]
 }
@@ -1279,6 +1280,7 @@ async function emailVerify(){
   }).catch(function(){});
 })();
 </script>
+<script src="/sitetrack.js"></script>
 <script src="/adtrack.js"></script>
 </body>
 </html>

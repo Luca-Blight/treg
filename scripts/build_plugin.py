@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate every plugin's SKILL.md from the one source: `src/treg/web/skill.md`.
 
-Four shop windows, three bootstraps, one source:
+Five shop windows, four bootstraps, one source:
 
 - **codex**  -> `plugin/skills/treg/SKILL.md` — ships an MCP connector, so its bootstrap points at
   the five tools and tells the reader NOT to reach for a terminal.
@@ -15,6 +15,8 @@ Four shop windows, three bootstraps, one source:
   connector AND the CLI path in one install: the MCP row is disabled until `TREG_TOKEN` exists, so
   its bootstrap has to cover both states and steer away from `treg mcp install`, which cannot write
   a dsh profile. See docs/DSH-PLUGIN.md.
+- **minimax** -> `plugins/minimax/skills/treg/SKILL.md` — skills-only (MiniMax forbids credentials in the
+  package), CLI bootstrap with NO `treg mcp install` step. See docs/MINIMAX-PLUGIN.md.
 
 The Claude variant sits at the REPO ROOT rather than under `plugin/` because that one path is
 simultaneously what Claude Code's plugin loader auto-discovers, what `npx skills add` resolves, and
@@ -66,6 +68,11 @@ CURSOR_TARGET = ROOT / "plugins" / "treg" / "skills" / "treg" / "SKILL.md"
 # `dsh.bundle`, and `dsh/cordis.patch.yml` mounts `dsh/index.js` as a `ctx.skills` provider over
 # this tree. See docs/DSH-PLUGIN.md.
 DSH_TARGET = ROOT / "dsh" / "skills" / "treg" / "SKILL.md"
+# MiniMax (MiniMax Code desktop + MiniMax Agent cloud) prescribes `.minimax-plugin/plugin.json` at
+# the plugin root and forbids credentials anywhere in the package, so it ships skills-only from its
+# own root — submitted as the GitHub subdirectory `plugins/minimax/`, or zipped from inside it. See
+# docs/MINIMAX-PLUGIN.md.
+MINIMAX_TARGET = ROOT / "plugins" / "minimax" / "skills" / "treg" / "SKILL.md"
 
 CODEX_BOOTSTRAP = """
 ## First, check which treg you have
@@ -182,7 +189,35 @@ a directory dsh also scans. Harmless, but redundant with this bundle.
 ---
 """
 
-# variant -> (target, bootstrap, stamp_version). One source, four shop windows.
+# MiniMax forbids any credential in the package and gates authenticated MCP behind its own
+# App/Connector program, so this plugin is skills-only — and unlike Claude Code / Cursor there is no
+# step 3: `treg mcp install` writes configs for Claude Code, Cursor and opencode, none of which is a
+# MiniMax profile, so telling the agent to run it would be a silent no-op. CLI only.
+MINIMAX_BOOTSTRAP = """
+## First run: install the CLI
+
+This plugin ships the skill, so you have this page — but not yet the `treg` command. Set it up
+**once**:
+
+```bash
+curl -fsSL {BASE}/install.sh | sh   # 1. the CLI (skip if `treg --version` already works)
+treg login                                   # 2. sign in — opens a browser
+```
+
+A new team starts with **$1.00 of free balance**, so there is nothing to pay before the first call.
+If sign-in is needed, say so plainly and stop — never ask the human for a provider's API key, which
+is the thing treg exists to avoid.
+
+Do **not** run `treg mcp install` here: it writes configs for other agents, not for MiniMax.
+Everything on this page works through the CLI.
+
+Step 1 also installs this same skill into the agent's own skills directory, which duplicates what
+the plugin already gives you — worth mentioning to the human, who can remove it.
+
+---
+"""
+
+# variant -> (target, bootstrap, stamp_version). One source, five shop windows.
 #
 # Claude Code and Cursor share CLI_BOOTSTRAP: both give the agent a terminal, neither ships a
 # connector, and `treg mcp install` writes a verified config for both (mcp_install.py). Keeping one
@@ -197,6 +232,7 @@ VARIANTS = {
     "claude": (CLAUDE_TARGET, CLI_BOOTSTRAP, True),
     "cursor": (CURSOR_TARGET, CLI_BOOTSTRAP, True),
     "dsh": (DSH_TARGET, DSH_BOOTSTRAP, False),
+    "minimax": (MINIMAX_TARGET, MINIMAX_BOOTSTRAP, True),
 }
 
 
