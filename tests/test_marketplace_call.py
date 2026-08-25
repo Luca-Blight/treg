@@ -24,7 +24,7 @@ from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 
-from treg import api as A
+from treg import api as A, audit
 from treg.config import get_settings
 from treg.db import session_maker
 from treg.models import Org
@@ -68,6 +68,7 @@ async def _entries(clients: AsyncClient) -> list[dict]:
 
 async def _telemetry(clients: AsyncClient) -> dict:
     """The newest audit row, with the marketplace/spend columns."""
+    await audit.drain()
     rows = (await clients.get("/calls")).json()
     return rows[0]
 
@@ -104,8 +105,7 @@ async def test_tier2_org_credential_no_tool(clients: AsyncClient):
 async def test_tier2_audits_the_endpoint_id(clients: AsyncClient):
     await clients.post("/secrets", json={"name": "tikhub", "value": "MKKEY"})
     await clients.get(f"/call/{EP}?aweme_id=7")
-    rows = (await clients.get("/calls")).json()
-    assert rows and rows[0]["tool_name"] == EP
+    assert (await _telemetry(clients))["tool_name"] == EP
 
 
 async def test_tier1_registered_tool_wins(clients: AsyncClient):
@@ -117,8 +117,7 @@ async def test_tier1_registered_tool_wins(clients: AsyncClient):
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 200, r.text
     assert r.json()["auth"] == "Bearer OWN"
-    rows = (await clients.get("/calls")).json()
-    assert rows[0]["tool_name"] == "our-tikhub"
+    assert (await _telemetry(clients))["tool_name"] == "our-tikhub"
 
 
 async def test_tier3_no_credential_is_an_actionable_404(clients: AsyncClient):
@@ -1338,9 +1337,11 @@ async def test_another_orgs_usage_never_burns_MY_trial(clients: AsyncClient, tri
     wrong."""
     from treg.models import CallRecord
 
+    other = await clients.post("/orgs", json={"name": "another-trial-team"})
+    assert other.status_code == 200, other.text
     async with session_maker() as db:
         for i in range(50):
-            db.add(CallRecord(org_id=424242, user_email="other@example.com",
+            db.add(CallRecord(org_id=other.json()["org_id"], user_email="other@example.com",
                               tool_name="finnhub.quote", method="GET", path="/quote",
                               status_code=200))
         await db.commit()
