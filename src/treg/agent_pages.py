@@ -2999,3 +2999,95 @@ USE_CASE_PAGES["read-and-post-in-your-slack-channels"] = {
                 "Google Analytics: traffic and behaviour reports",
                 "Search Console: clicks, impressions and top queries"),
 }
+
+USE_CASE_PAGES["is-this-page-indexed-and-why-not"] = {
+    "label": "Is this page indexed, and why not",
+    "sentence": "Google index checker: is this page indexed, and why not, from the URL Inspection API",
+    "title": "Google index checker: URL Inspection API for {agent} | treg.to",
+    "lede": (
+        "Connect the Search Console property you already own and your agent can ask Google, per "
+        "URL, the question the UI answers one click at a time: is it indexed, when was it last "
+        "crawled, which canonical did Google choose, and if it is not indexed, which bucket it "
+        "sits in. It runs on your own Google account, so treg.to never meters it, and it is the "
+        "same URL Inspection data the Search Console panel shows, without the clicking."),
+    "prompt": "Using treg, take every URL in our sitemap, inspect each one in Search Console, and "
+              "give me a table of the ones that are not indexed with the coverage state, last "
+              "crawl date and the canonical Google picked.",
+    "prompt_why": [
+        ("Connect once", "One OAuth click for the property you own. treg.to holds the token, not you."),
+        ("Give it the property string", "The URL must sit under the property you name, sc-domain or URL-prefix. A mismatch is a permission error, not a result."),
+        ("Mind the quota", "Google allows 2,000 inspections per property per day, and nothing lifts it. A 5,000-page site is three days."),
+        ("It costs nothing", "Your own account, so the call is never metered."),
+    ],
+    "result_image": None,
+    "what_is_heading": "What is the URL Inspection API?",
+    "what_is": (
+        "The URL Inspection API is the Search Console endpoint behind the URL Inspection tool. "
+        "For one URL on a property you own it returns Google's index verdict, the coverage "
+        "state (indexed, crawled but not indexed, discovered but not indexed, and the rest), the "
+        "last crawl date, the robots and indexing state, the canonical you declared against the "
+        "one Google chose, and the mobile and rich-result checks. It is a read. It does not ask "
+        "Google to index anything, and it is not the Indexing API, which is a different endpoint "
+        "restricted to job postings and live-broadcast pages."),
+    "notes": [
+        "The quota is Google's and it is hard: 2,000 inspections per property per day. treg.to "
+        "does not pool, rotate or route around it, and the forum's tales of getting past it "
+        "involve multiple properties or policy violations. Inspect the pages that matter, keep "
+        "the verdicts, and diff them week to week; that is where the tool earns its place.",
+        "This is the fresher of the two Search Console answers. The Page Indexing report lags and "
+        "its validations can sit for months, which is why people see it disagree with the URL "
+        "Inspection panel. The API reads the inspection side, so a scripted check gives the "
+        "per-URL answer without waiting for the report to catch up.",
+        "Two things this page does not do. It does not request indexing: that button has no API "
+        "and its own small daily limit. And it is not the Indexing API, which Google restricts to "
+        "JobPosting and BroadcastEvent pages; using it for anything else is against policy and "
+        "returns a cheerful 200 that changes nothing.",
+    ],
+    "faq": [
+        ("Does this cost anything?",
+         "No. Search Console runs on your own Google account, so treg.to relays the call and meters "
+         "nothing. Only calls on treg.to's own provider keys are billed."),
+        ("Can it make Google index my page?",
+         "No. The URL Inspection API reads Google's verdict; it does not submit anything. It "
+         "tells you which bucket a page is in and why, which is the part you can act on."),
+        ("Is this the Google Indexing API?",
+         "No. The Indexing API is for job postings and live-broadcast pages only. Most people "
+         "searching for it want what this page does: check whether a URL is indexed, in bulk, "
+         "and see the reason when it is not."),
+        ("How many URLs can I check a day?",
+         "2,000 per Search Console property per day, set by Google. The agent can loop a sitemap "
+         "and stop at the quota, then carry on the next day."),
+    ],
+    "voices_intro": (
+        "Indexing is a queue of people waiting on Google and a shelf of tools promising to jump "
+        "it: about a dozen index-checker and indexing-service pitches sat among ~70 on-topic "
+        "Reddit and X posts in August 2026. These four are people checking their own pages."),
+    "voices": [
+        ("The two Search Console reports disagree",
+         "URL Inspection says Indexed, but Page Indexing says 'Crawled – currently not indexed.'... Which status should we trust more?",
+         "r/SEO, 12 points", "https://www.reddit.com/r/SEO/comments/1ume4w0/",
+         "The inspection side is the fresher one, and it is what the API reads. A scripted "
+         "pass over the affected URLs gives you the current verdict per page instead of a "
+         "report that updates on its own schedule."),
+        ("Crawled, not indexed, for months, and validation never finishes",
+         "Crawled - currently not indexed for almost 2 months. Validation Started - Started: 5/29/26 and still nothing.",
+         "r/TechSEO, 70 points", "https://www.reddit.com/r/TechSEO/comments/1uzt1t0/",
+         "No API makes Google decide faster, and this page will not claim one does. What it "
+         "gives you is the per-URL state, the last crawl date and the canonical Google chose, "
+         "kept over time, so you can see which pages moved and which did not."),
+        ("The Indexing API turns out to be for job postings",
+         "Google Search API can not be used because it only supports categories related to broadcasting and job postings.",
+         "r/SEO, 32 points", "https://www.reddit.com/r/SEO/comments/1robehb/",
+         "Correct, and it is why the most-searched term for this job names the wrong API. The "
+         "URL Inspection API is the one that answers 'is this indexed', for any page on a "
+         "property you own."),
+        ("The 2,000 a day quota is the whole constraint",
+         "The big limitation of the insufferable URL inspection API is the 2,000 daily quota.",
+         "@iannuttall on X", "https://x.com/i/status/1734591329953276340",
+         "It is, and it is per property, set by Google. treg.to relays the call as it is, so the "
+         "quota is yours to spend well: inspect the pages that changed, not the whole site every "
+         "morning."),
+    ],
+    "related": ("Search Console: clicks, impressions and top queries", "Keywords a domain ranks for",
+                "On-page audit of a URL", "Google results for a keyword"),
+}
