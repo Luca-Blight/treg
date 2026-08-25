@@ -125,6 +125,13 @@ source_modules = ["treg.ledger"]
 forbidden_modules = ["treg.audit"]
 as_packages = false
 
+[[tool.importlinter.contracts]]
+name = "Routers do not depend on the legacy API module"
+type = "forbidden"
+source_modules = ["treg.routers"]
+forbidden_modules = ["treg.api"]
+as_packages = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 # asyncpg connections are bound to the event loop that created them. The test engine is module-level,

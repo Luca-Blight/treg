@@ -4,6 +4,7 @@ status: shipped
 sources:
   - src/treg/api.py
   - src/treg/routers/__init__.py
+  - src/treg/routers/admin.py
   - src/treg/routers/catalog.py
   - src/treg/routers/dependencies.py
   - src/treg/routers/web.py
@@ -22,9 +23,10 @@ related:
 # The API
 
 Route definitions live on `api.router`; the open Catalog JSON block is defined in
-`routers.catalog`, and the three presentation blocks are defined in `routers.web`. `api.py` attaches
-each block at its original registration point. `bootstrap.create_app()` assembles the combined route
-table into FastAPI roles.
+`routers.catalog`, the three presentation blocks are defined in `routers.web`, and the two
+cross-tenant admin read/report blocks are defined in `routers.admin`. `api.py` attaches each block at
+its original registration point. `bootstrap.create_app()` assembles the combined route table into
+FastAPI roles.
 `api.app` remains the deployed, backward-compatible `all` role. Everything the CLI + skill do is one
 HTTP call over this. The factory lifespan
 runs `init_db()`, then `_backfill_provider_extra_tools()` (the idempotent repair for provider registry

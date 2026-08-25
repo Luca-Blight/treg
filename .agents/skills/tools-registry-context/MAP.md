@@ -75,6 +75,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/reconcile.py` | architecture/money.md |
 | `src/treg/referrals.py` | architecture/data-model.md, architecture/money.md |
 | `src/treg/routers/__init__.py` | interface/api.md |
+| `src/treg/routers/admin.py` | architecture/composition.md, architecture/money.md, architecture/super-admin.md, interface/api.md |
 | `src/treg/routers/catalog.py` | architecture/catalog.md, interface/api.md |
 | `src/treg/routers/dependencies.py` | architecture/multi-tenancy.md, architecture/super-admin.md, interface/api.md |
 | `src/treg/routers/web.py` | architecture/composition.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
@@ -110,19 +111,19 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
 | `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py`, `catalog.py` |
-| `architecture/composition.md` | `bootstrap.py`, `web.py`, `dump_surface.py` |
+| `architecture/composition.md` | `bootstrap.py`, `admin.py`, `web.py`, `dump_surface.py` |
 | `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `models.py`, `timeutil.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
 | `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `test_import_lightness.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `mcp.py`, `mcp_oauth.py`, `connect-demo.html` |
-| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `reconcile.py`, `referrals.py`, `api.py` |
+| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `reconcile.py`, `referrals.py`, `api.py`, `admin.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `dependencies.py`, `db.py`, `test_router_dependencies.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
-| `architecture/super-admin.md` | `api.py`, `dependencies.py`, `config.py` |
+| `architecture/super-admin.md` | `api.py`, `admin.py`, `dependencies.py`, `config.py` |
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |
 | `guides/expanding-a-category.md` | `oauth_providers.py`, `api.py`, `config.py` |
-| `interface/api.md` | `api.py`, `__init__.py`, `catalog.py`, `dependencies.py`, `web.py`, `timeutil.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
+| `interface/api.md` | `api.py`, `__init__.py`, `admin.py`, `catalog.py`, `dependencies.py`, `web.py`, `timeutil.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
 | `interface/catalog-review-proposal.md` | _(no source files — narrative/reference)_ |
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
 | `interface/dashboard.md` | `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `web.py`, `session.py` |
