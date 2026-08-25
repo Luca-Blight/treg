@@ -21,7 +21,8 @@ related:
 ## Entry point (`__main__.py`)
 `python -m treg` → `main()` → `uvicorn.run("treg.api:app", host="0.0.0.0", port=int($PORT or 18790))`
 (`--reload` optional). It honors `$PORT` (Render/Heroku route + health-check that port). `python -m treg
-keygen` prints a Fernet key for `TREG_SECRET_KEY`.
+keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
+`bootstrap.create_app(role="all")`; the compatibility import and deployed behavior are unchanged.
 
 ## Startup safety (`db.py init_db`)
 - **Migration execution is unchanged:** Alembic ships in the `[server]` extra and has a validated

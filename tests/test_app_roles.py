@@ -1,0 +1,103 @@
+"""Explicit manifests for the phase-1 application roles."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+from fastapi.routing import APIRoute
+from starlette.routing import Mount
+
+from treg import api
+from treg.bootstrap import create_app
+
+
+_SNAPSHOT = Path(__file__).parent / "snapshots" / "routes.json"
+_CALL_ROUTE = "DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT /call/{rest:path}"
+
+
+def _all_routes() -> list[str]:
+    rows = json.loads(_SNAPSHOT.read_text())
+    result = []
+    for row in rows:
+        if row["kind"] == "Mount":
+            result.append(f"MOUNT {row['path']}")
+        else:
+            result.append(f"{','.join(row['methods'])} {row['path']}")
+    return result
+
+
+_ALL_ROUTES = _all_routes()
+_EXPECTED_ROUTES = {
+    "all": _ALL_ROUTES,
+    "dataplane": [_CALL_ROUTE],
+    "control": [route for route in _ALL_ROUTES if route != _CALL_ROUTE],
+}
+_EXPECTED_BACKGROUND_TASKS = {
+    "all": ["treg.adsconv.worker"],
+    "dataplane": [],
+    "control": ["treg.adsconv.worker"],
+}
+_EXPECTED_STARTUP_CHECKS = {
+    "all": [
+        "treg.db.init_db",
+        "treg.api._backfill_provider_extra_tools",
+        "treg.api._bootstrap_single_user",
+        "app.state.http",
+        "treg.mcp.mcp_lifespan",
+    ],
+    "dataplane": [
+        "treg.db.init_db",
+        "treg.api._backfill_provider_extra_tools",
+        "app.state.http",
+    ],
+    "control": [
+        "treg.db.init_db",
+        "treg.api._backfill_provider_extra_tools",
+        "treg.api._bootstrap_single_user",
+        "app.state.http",
+        "treg.mcp.mcp_lifespan",
+    ],
+}
+
+
+def _actual_routes(app) -> list[str]:
+    result = []
+    for route in app.routes:
+        if isinstance(route, Mount):
+            result.append(f"MOUNT {route.path}")
+        else:
+            methods = ",".join(sorted(getattr(route, "methods", ()) or ()))
+            result.append(f"{methods} {route.path}")
+    return result
+
+
+@pytest.mark.parametrize("role", ["all", "dataplane", "control"])
+def test_role_manifests_are_explicit_and_match_the_created_app(role):
+    app = create_app(role)
+    expected = {
+        "routes": _EXPECTED_ROUTES[role],
+        "background_tasks": _EXPECTED_BACKGROUND_TASKS[role],
+        "startup_checks": _EXPECTED_STARTUP_CHECKS[role],
+    }
+
+    assert app.state.role == role
+    assert app.state.role_manifest == expected
+    assert _actual_routes(app) == expected["routes"]
+
+
+def test_api_app_remains_the_all_role_compatibility_entrypoint():
+    assert api.app.state.role == "all"
+    assert _actual_routes(api.app) == _EXPECTED_ROUTES["all"]
+
+
+def test_factory_routes_bind_dependency_overrides_to_the_created_app():
+    app = create_app("dataplane")
+    route = next(route for route in app.routes if isinstance(route, APIRoute))
+    assert route.dependency_overrides_provider is app
+
+
+def test_unknown_role_is_refused():
+    with pytest.raises(ValueError, match="unknown app role"):
+        create_app("worker")

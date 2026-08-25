@@ -38,6 +38,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
+| `src/treg/bootstrap.py` | architecture/composition.md |
 | `src/treg/catalog/aliases.yaml` | architecture/catalog.md |
 | `src/treg/catalog/google-search-console.extended.yaml` | architecture/catalog.md |
 | `src/treg/catalog/google-search-console.yaml` | architecture/catalog.md |
@@ -100,6 +101,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
 | `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py` |
+| `architecture/composition.md` | `bootstrap.py` |
 | `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `models.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |

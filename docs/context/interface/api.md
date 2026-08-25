@@ -16,7 +16,9 @@ related:
 
 # The API
 
-FastAPI `app` in `src/treg/api.py`. Everything the CLI + skill do is one HTTP call over this. `lifespan`
+Route definitions live on `api.router`; `bootstrap.create_app()` assembles them into FastAPI roles.
+`api.app` remains the deployed, backward-compatible `all` role. Everything the CLI + skill do is one
+HTTP call over this. The factory lifespan
 runs `init_db()`, then `_backfill_provider_extra_tools()` (the idempotent repair for provider registry
 `extra_tools` added after a connection was created), and creates the shared keepalive
 `httpx.AsyncClient` at `app.state.http` (and `audit.drain()`s on shutdown). It also starts the Google Ads conversion uploader (`adsconv.worker`) as
