@@ -33,6 +33,14 @@ from test_marketplace_call import EP, EP_MICRO, platform_on  # noqa: F401 — fi
 PoolTimeoutError = A.PoolTimeoutError
 
 
+@pytest.fixture
+async def dispose_exhausted_pool_on_its_own_loop():
+    """A pool wait binds its asyncio queue to this test's loop; do not leak it to the next test."""
+    yield
+    await audit.drain()
+    await _engine.dispose()
+
+
 def _relay_that_checks_the_pool(seen: list[int]):
     """The real relay, with the pool's checked-out count sampled at the moment the upstream is
     called. Recorded rather than asserted here: an assertion inside the relay would surface as a
@@ -72,7 +80,7 @@ async def test_an_own_key_call_holds_no_db_connection_while_upstream_is_called(
 
 
 async def test_a_burst_larger_than_the_pool_settles_every_call_at_provider_speed(
-    clients: AsyncClient, platform_on, monkeypatch,
+    clients: AsyncClient, platform_on, monkeypatch, dispose_exhausted_pool_on_its_own_loop,
 ):
     """20 metered calls, all forced INTO the upstream window at once (each waits at the relay until
     every one has arrived). The pool has 15 slots (5 + 10 overflow, the same defaults the test engine
