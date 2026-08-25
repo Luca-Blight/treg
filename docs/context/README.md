@@ -34,7 +34,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [The API — the only brain (FastAPI)](interface/api.md) | shipped | api.py, __init__.py, dependencies.py, timeutil.py, … |
+| [The API — the only brain (FastAPI)](interface/api.md) | shipped | api.py, __init__.py, catalog.py, dependencies.py, … |
 | [catalog-review-proposal](interface/catalog-review-proposal.md) | ? | — |
 | [The CLI (treg) + skill scaffolding](interface/cli.md) | shipped | cli.py, convert.py, agents.py |
 | [The web dashboard (Ledger, served from FastAPI)](interface/dashboard.md) | shipped | index.html, README.md, vue-3.5.41.global.prod.js, tutorial.js, … |

@@ -12,6 +12,7 @@ sources:
   - src/treg/catalog/tikhub.extended.yaml
   - src/treg/catalog_store.py
   - src/treg/endpoint_stats.py
+  - src/treg/routers/catalog.py
 related:
   - architecture/money.md
   - architecture/proxy-model.md
@@ -58,11 +59,12 @@ scripts/
   catalog_verify_extended.py  # the same for the extended tier, in bulk, under a spend cap
   catalog_ingest.py           # bulk-generates the extended tier from provider specs
   catalog_cost_provenance.py  # backfills cost units + provenance; re-run after any re-ingest
+src/treg/routers/catalog.py    # open Catalog JSON routes, attached in legacy registration order
 ```
 
-Data files are YAML (curation-friendly); nothing in the app imports them yet. Serving them
-(`GET /catalog/platforms/…`), stamping provisioned tools' `examples`, the dashboard view, and the
-capability router are later phases (see the plan in this doc's history / PR description).
+Data files are YAML (curation-friendly) and loaded through `catalog_store`. The open JSON handlers
+live in `routers.catalog`; `api.py` attaches their router at the original position so the specific
+Catalog API paths continue to precede the later `/catalog/{slug}` page route.
 
 ## Two tiers
 
