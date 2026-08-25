@@ -2,6 +2,9 @@
 title: Data model — the registry tables, async DB, audit writer
 status: shipped
 sources:
+  - alembic.ini
+  - alembic/env.py
+  - alembic/versions/0001_baseline_current_schema.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/db.py
@@ -210,6 +213,20 @@ recreate); `get_session()` is the FastAPI dependency. SQLite locally (`aiosqlite
 naive UTC:** `_now()` (the `created_at` default) drops tzinfo because the columns are `TIMESTAMP WITHOUT
 TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout
 (`api._utcnow_naive` / `_as_naive`).
+
+## Alembic baseline
+
+`alembic/versions/0001_baseline_current_schema.py` is the migration baseline for the current
+`SQLModel.metadata` schema. `alembic/env.py` uses the same async SQLite or Postgres URL as the server
+and exposes that metadata for future revision generation. The baseline is validation-only in refactor
+stage 1: application startup still calls `db.init_db()`, existing databases are not stamped, and the
+execution switch remains stage 5 work.
+
+`tests/test_alembic_baseline.py` creates a fresh database through each path and compares every
+application table's columns, primary and foreign keys, unique and check constraints, and indexes. It
+runs on SQLite in the full suite and on Postgres in the `test-postgres` CI subset. The comparison
+excludes only Alembic's own `alembic_version` bookkeeping table. Until stage 5, each schema change must
+update both the guarded startup migration and an Alembic revision while this parity test stays green.
 
 ## Audit writer (`audit.py`)
 `record_call(**fields)` (a `CallRecord`, now including `org_id`) and `record_run(**fields)` (a

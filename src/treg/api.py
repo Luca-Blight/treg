@@ -29,7 +29,6 @@ import tempfile
 import time
 import uuid
 import zlib
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, quote, quote_plus, unquote, urlsplit, urlunsplit
@@ -41,11 +40,9 @@ INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 import httpx
 from pathlib import Path
 
-from fastapi import Cookie, Depends, FastAPI, Form, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Cookie, Depends, Form, Header, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
-from fastapi.routing import APIRoute
-from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
@@ -58,7 +55,7 @@ from . import adsconv, agent_pages, analytics, audit, billing, catalog_store, cr
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, referrals, runner, sandbox as demo_sandbox, session as sess
 from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
-from .db import get_session, init_db, session_maker
+from .db import get_session, session_maker
 from .models import (ROLE_RANK, AdConversion, Bundle, CallRecord, CapabilityPin, CreditBlock,
                      DenyRule, Hold, IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient,
                      OAuthCode, OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, Referral,
@@ -131,51 +128,10 @@ async def _local_owner(db: AsyncSession) -> User | None:
     return (await db.execute(select(User).where(User.email == LOCAL_USER_EMAIL))).scalar_one_or_none()
 
 
-# The MCP front door is OPTIONAL at import time. It lives in the `[server]` extra, and a deploy that
-# has not picked the dependency up yet must still serve the API — a missing optional feature is not a
-# reason for the whole registry to refuse to boot.
-try:
-    from . import mcp as _mcp
-except Exception:  # pragma: no cover - exercised by deploys without the extra
-    _mcp = None
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_db()
-    await _backfill_provider_extra_tools()
-    await _bootstrap_single_user()
-    # One long-lived client for ALL upstream calls (rule 1: keepalive). The pool reuses
-    # TCP+TLS connections across requests — the single biggest latency win for a relay.
-    limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
-    app.state.http = httpx.AsyncClient(limits=limits, timeout=httpx.Timeout(float(get_settings().call_timeout_s)))
-    # Off unless configured (adsconv.enabled() requires the customer id, developer token and OAuth
-    # org slug) — keeps the test suite and self-hosted instances completely inert by default.
-    ads_task = asyncio.create_task(adsconv.worker(session_maker, app.state.http)) \
-        if adsconv.enabled() else None
-    try:
-        if _mcp is None:
-            yield
-        else:
-            # `app.mount()` does NOT run a mounted app's lifespan, and the streamable-HTTP session
-            # manager builds its task group there. Without entering it here, every /mcp request fails
-            # with "Task group is not initialized" — silently, and only under real traffic.
-            async with _mcp.mcp_lifespan():
-                yield
-    finally:
-        if ads_task is not None:
-            ads_task.cancel()
-        await audit.drain()  # flush pending audit writes before tearing down
-        await analytics.drain()  # best-effort flush of queued analytics events
-        await app.state.http.aclose()
-
-
-# `/docs` is OURS — a server-rendered reference (see `docs_page`). FastAPI's stock Swagger UI moves
-# to `/docs/api`: it is a 1 KB JavaScript shell to anything that does not run scripts, it was titled
-# "tools-registry - Swagger UI" with FastAPI's own favicon, and it was the only thing we offered a
-# crawler looking for our API. ReDoc is off — two consoles for one schema is one too many.
-app = FastAPI(title="treg", version="0.0.1", lifespan=lifespan,
-              docs_url="/docs/api", redoc_url=None)
+# Route definitions stay in this module until refactor stage 2. `bootstrap.create_app` consumes this
+# router after import and owns every concrete assembly decision around it.
+router = APIRouter()
+app = router  # temporary decorator target; replaced by the compatibility FastAPI app at EOF
 
 
 # The pre-treg.to hostnames must keep answering the API forever — every installed CLI, skill.md
@@ -217,7 +173,6 @@ def _login_callback_base(request: Request) -> str:
     return get_settings().public_url.rstrip("/")
 
 
-@app.middleware("http")
 async def _legacy_host_redirect(request: Request, call_next):
     """Redirect marketing pages (301) and auth entries (302) from a legacy host to the canonical
     host. Auth entries get a temporary redirect: their URLs carry one-shot OAuth parameters, and a
@@ -238,7 +193,6 @@ async def _legacy_host_redirect(request: Request, call_next):
     return await call_next(request)
 
 
-@app.middleware("http")
 async def _security_headers(request: Request, call_next):
     """The dashboard is an authenticated app; ship the baseline hardening headers it was missing —
     nosniff, clickjacking protection (X-Frame-Options), and a tight Referrer-Policy. `setdefault`
@@ -316,17 +270,12 @@ class _BodyDecodeMiddleware:
         return await self.app(new_scope, receive_decoded, send)
 
 
-app.add_middleware(_BodyDecodeMiddleware)
-
-
-@app.exception_handler(OverflowError)
 async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse:
     # A huge all-digit path param (e.g. /secrets/999…) overflows SQLite's 64-bit INTEGER at bind
     # time; that's a non-existent id, not a server fault — surface a 404 instead of a 500.
     return JSONResponse({"detail": "identifier out of range"}, status_code=404)
 
 
-@app.exception_handler(PoolTimeoutError)
 async def _pool_saturated(request: Request, exc: PoolTimeoutError) -> JSONResponse:
     """The DB pool had no connection to give within `pool_timeout` (db.py). That is treg being
     saturated, not the caller's fault and not the provider's — so say so, typed, and fast. Before this
@@ -388,7 +337,6 @@ def _refusal_kind(status_code: int) -> str | None:
             429: "cap"}.get(status_code, "request")
 
 
-@app.exception_handler(StarletteHTTPException)
 async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     """Tag treg's OWN refusals on `/call/` with `X-Treg-Error`, then answer exactly as before.
 
@@ -4749,21 +4697,15 @@ async def tutorial_page():
 # second registration step — drop the file in and it appears. Public and unauthenticated: they are
 # brand marks, not data, and the dashboard renders them before the caller is known.
 _LOGO_DIR = _WEB_DIR / "logos"
-if _LOGO_DIR.exists():
-    app.mount("/logos", StaticFiles(directory=str(_LOGO_DIR)), name="logos")
 
 
 # Demo recordings — the plugin-directory submission requires a publicly reachable video URL, and
 # hosting it ourselves means no third-party account decides whether reviewers can watch it.
 _MEDIA_DIR = _WEB_DIR / "media"
-if _MEDIA_DIR.exists():
-    app.mount("/media", StaticFiles(directory=str(_MEDIA_DIR)), name="media")
 
 
 # The interactive dashboard tour (matted screenshots) — served + its WebP images, at /dashboard-tour/.
 _TOUR_DIR = _WEB_DIR / "tour"
-if _TOUR_DIR.exists():
-    app.mount("/dashboard-tour", StaticFiles(directory=str(_TOUR_DIR), html=True), name="dashboard-tour")
 
 
 # Third-party front-end libraries, vendored rather than pulled from a CDN at page load. The
@@ -4774,22 +4716,7 @@ if _TOUR_DIR.exists():
 # origin: whoever served the page can serve its runtime. It also closes the supply-chain hole in
 # the old floating `vue@3` tag, which let whatever npm published next run in an authed session.
 # Filenames carry their version, so a bump is a visible one-line change and caches never collide.
-class _ImmutableStatic(StaticFiles):
-    """StaticFiles that says out loud what its filenames already promise.
-
-    Every file here is version-stamped, so a given URL's bytes never change — a new version is a
-    new URL. Without the header a browser still caches, but heuristically, on its own guess; being
-    explicit means a returning visitor re-fetches nothing and a bump is picked up instantly.
-    """
-    def file_response(self, *args, **kwargs):
-        resp = super().file_response(*args, **kwargs)
-        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-        return resp
-
-
 _VENDOR_DIR = _WEB_DIR / "vendor"
-if _VENDOR_DIR.exists():
-    app.mount("/vendor", _ImmutableStatic(directory=str(_VENDOR_DIR)), name="vendor")
 
 
 # ---- caller auth (token = a Membership; open registration) --------------------------------
@@ -12733,57 +12660,7 @@ async def _bundle_view(bundle_id: int, db: AsyncSession) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------------------------
-# HEAD, everywhere GET is answered
-# ---------------------------------------------------------------------------------------------
-# FastAPI's APIRoute pins `methods` to {"GET"} and, unlike Starlette's plain Route, never adds HEAD
-# (fastapi/routing.py: `if methods is None: methods = ["GET"]`). So every page on the site answered
-# 405 to the HEAD probe that crawlers, link unfurlers and uptime checks send first — including `/`.
-# Widened once, here, rather than by editing ~120 decorators: this runs after every route is
-# registered, and only touches routes that are GET-only (a POST route keeps refusing HEAD, rightly).
-#
-# Sending the body is not a concern: ASGI servers drop it for HEAD per RFC 9110, and Starlette's
-# FileResponse already checks the scope method and sends headers only.
-_HEAD_WIDENED: list[APIRoute] = []
-for _route in app.routes:
-    if isinstance(_route, APIRoute) and _route.methods == {"GET"}:
-        _route.methods = {"GET", "HEAD"}
-        _HEAD_WIDENED.append(_route)
+# Deployment and imports keep using `treg.api:app`; the concrete assembly now lives in bootstrap.
+from .bootstrap import create_app  # noqa: E402
 
-
-_fastapi_openapi = app.openapi
-
-
-def _openapi_without_head():
-    """The generated schema, minus the HEAD the loop above just added to every GET route.
-
-    Without this the widening leaks into a PUBLIC artifact: FastAPI derives one operation per
-    (path, method), so /openapi.json grew 58 duplicate HEAD entries — each warning "Duplicate
-    Operation ID" at generation and each doubling its operation on the /docs page. HEAD is a
-    transport detail that HTTP already implies wherever GET is answered; it is not an API operation
-    anyone reads about. So the routes are narrowed for the duration of generation and put back.
-    Routes that declared HEAD themselves (the /call proxy) are untouched and still documented.
-    """
-    if app.openapi_schema:
-        return app.openapi_schema
-    for r in _HEAD_WIDENED:
-        r.methods = {"GET"}
-    try:
-        app.openapi_schema = _fastapi_openapi()
-    finally:
-        for r in _HEAD_WIDENED:
-            r.methods = {"GET", "HEAD"}
-    return app.openapi_schema
-
-
-app.openapi = _openapi_without_head
-
-
-# ---------------------------------------------------------------------------------------------
-# The MCP front door
-# ---------------------------------------------------------------------------------------------
-# Mounted LAST so it cannot shadow a route, and guarded so a deploy without the `[server]` extra's
-# `mcp` dependency still serves everything else. Its lifespan is entered in `lifespan` above — a
-# mounted app's own lifespan never runs, and this one builds the transport's task group there.
-if _mcp is not None:
-    app.mount("/mcp", _mcp.mcp_app)
+app = create_app()

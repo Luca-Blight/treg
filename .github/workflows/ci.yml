@@ -48,7 +48,10 @@ jobs:
           python-version: "3.13"
       - name: Install dependencies
         if: steps.docs.outputs.only != 'true'
-        run: uv sync
+        run: uv sync --frozen
+      - name: Enforce import boundaries
+        if: steps.docs.outputs.only != 'true'
+        run: uv run --frozen lint-imports
       - name: Run tests
         if: steps.docs.outputs.only != 'true'
         # -n auto: the suite is 1,700+ small independent tests — serial execution is what let a
@@ -93,6 +96,7 @@ jobs:
           tests/test_ledger_claim_review.py
           tests/test_migration.py
           tests/test_migration_ddl.py
+          tests/test_alembic_baseline.py
           tests/test_call_pool_discipline.py
           tests/test_marketplace_call.py
           tests/test_billing.py

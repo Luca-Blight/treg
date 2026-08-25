@@ -19,7 +19,9 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Google Ads conversion tracking — capture, outbox, upload](architecture/ads-conversions.md) | shipped | adsconv.py, adtrack.js |
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
 | [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog-drift.yml, catalog_drift.py, catalog_validate.py, aliases.yaml, … |
-| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | sitetrack.js, models.py, db.py, referrals.py, … |
+| [Application composition and deployment roles](architecture/composition.md) | shipped | bootstrap.py, dump_surface.py |
+| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | alembic.ini, env.py, 0001_baseline_current_schema.py, sitetrack.js, … |
+| [Enforced import boundaries](architecture/import-boundaries.md) | shipped | pyproject.toml, ci.yml, test_import_lightness.py |
 | [Local proxy — catch a program's own outgoing calls (`treg <command>`)](architecture/local-proxy.md) | shipped | localproxy.py, server.js |
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
 | [MCP — the front door for assistants, and treg as an OAuth authorization server](architecture/mcp-oauth.md) | shipped | mcp.py, mcp_oauth.py, connect-demo.html |
@@ -47,7 +49,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [Running & deploying the server](ops/deploy.md) | shipped | __main__.py, selfhost.sh, config.py, db.py, … |
+| [Running & deploying the server](ops/deploy.md) | shipped | pyproject.toml, __main__.py, selfhost.sh, config.py, … |
 
 ## Reference
 
