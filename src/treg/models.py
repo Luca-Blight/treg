@@ -97,6 +97,17 @@ class Org(SQLModel, table=True):
     ad_click_id_type: str | None = Field(default=None)  # gclid | gbraid | wbraid
     ad_click_at: datetime | None = Field(default=None)
     ad_landing: str | None = Field(default=None)  # utm_content — the landing page id (p1…p5)
+    # ---- traffic-source attribution (see web/sitetrack.js) --------------------------------------
+    # First-touch `utm_*` + referring host, captured as the first-party `treg_utm` cookie on the
+    # visitor's FIRST page and persisted here at signup, in both signup doors. Answers "how many
+    # teams did campaign X bring, and did they call anything" — a question the Google-only
+    # `ad_*` columns above cannot. Set once, never overwritten; NULL = organic/unknown.
+    utm_source: str | None = Field(default=None)
+    utm_medium: str | None = Field(default=None)
+    utm_campaign: str | None = Field(default=None)
+    utm_term: str | None = Field(default=None)
+    utm_content: str | None = Field(default=None)
+    utm_referrer: str | None = Field(default=None)  # referring hostname, e.g. botdirectory.ai
     # Set ONCE, by a guarded UPDATE in the /call/ handler. Deliberately not derived from CallRecord:
     # audit.py sheds rows past its queue bound, so a derived value undercounts exactly under load.
     first_call_at: datetime | None = Field(default=None)
