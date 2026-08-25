@@ -17,7 +17,7 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse, PlainTe
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import adsconv, agent_pages, catalog_store, referrals
+from .. import adsconv, agent_pages, catalog_store, oauth_providers, referrals
 from .. import session as sess
 from ..config import PUBLIC_HOST_ALIASES, get_settings
 from ..db import get_session
@@ -2094,6 +2094,7 @@ _SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
     # (path, source file for lastmod — "" means use the catalog's, priority)
     ("/", "landing.html", "1.0"),
     ("/catalog", "", "0.9"),
+    ("/pricing", "", "0.8"),
     ("/tutorial", "tutorial.html", "0.8"),
     ("/docs", "", "0.7"),
     ("/resources", "resources.html", "0.8"),

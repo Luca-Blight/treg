@@ -125,7 +125,10 @@ from .routers.web import (
     _WEB_DIR,
     _esc_html,
     _local_owner,
+    _provider_rows,
+    _related_link,
     _usd_short,
+    _use_case_page_for,
     use_case_job_page,
 )
 from .timeutil import as_naive as _as_naive
