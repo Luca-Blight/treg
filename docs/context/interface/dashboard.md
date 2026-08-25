@@ -2,6 +2,7 @@
 title: The web dashboard (Ledger, served from FastAPI)
 status: shipped
 sources:
+  - src/treg/web/sitetrack.js
   - src/treg/web/index.html
   - src/treg/web/vendor/README.md
   - src/treg/web/vendor/vue-3.5.41.global.prod.js
@@ -49,7 +50,12 @@ template until Vue mounts, which is precisely what made #137 silent — so the g
 `#app` is still cloaked ~1.5s after `load` and, if it is, replaces the blank with a readable message,
 a reload button, and the issues link. Anything that stops Vue mounting now says so on screen.
 
-`index.html`'s closing `<script src="/adtrack.js">` loads the first-party ad-click capture script on
+`index.html`'s closing `<script src="/sitetrack.js">` (also on `landing.html`, every `usecase-*.html`,
+`resources.html`, `tutorial.html`) sets the first-touch `treg_utm` cookie and initialises PostHog with
+pageviews on; `initAnalytics()` in the SPA defers to it (`window.__phInit`) and only identifies, keeping
+its inline init as the fallback for a stale bundle. Landing-page visitors used to be invisible to
+analytics — PostHog first met them on `/app` after OAuth, as `$direct` — so this ordering is the whole
+point. The next `<script src="/adtrack.js">` loads the first-party ad-click capture script on
 every page render (dashboard included, since a visitor can arrive on `/app` from an ad) — no Google
 tag, first-party cookie only; see [ads-conversions](../architecture/ads-conversions.md).
 
