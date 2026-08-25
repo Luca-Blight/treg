@@ -4,6 +4,12 @@ status: shipped
 sources:
   - src/treg/web/sitetrack.js
   - src/treg/api.py
+  - src/treg/routers/__init__.py
+  - src/treg/routers/admin.py
+  - src/treg/routers/catalog.py
+  - src/treg/routers/dependencies.py
+  - src/treg/routers/web.py
+  - src/treg/timeutil.py
   - src/treg/catalog_store.py
   - src/treg/email.py
   - src/treg/runner.py
@@ -17,7 +23,11 @@ related:
 
 # The API
 
-Route definitions live on `api.router`; `bootstrap.create_app()` assembles them into FastAPI roles.
+Route definitions live on `api.router`; the open Catalog JSON block is defined in
+`routers.catalog`, the three presentation blocks are defined in `routers.web`, and the two
+cross-tenant admin read/report blocks are defined in `routers.admin`. `api.py` attaches each block at
+its original registration point. `bootstrap.create_app()` assembles the combined route table into
+FastAPI roles.
 `api.app` remains the deployed, backward-compatible `all` role. Everything the CLI + skill do is one
 HTTP call over this. The factory lifespan
 runs `init_db()`, then `_backfill_provider_extra_tools()` (the idempotent repair for provider registry
@@ -51,7 +61,9 @@ falls through and finds no usable marketplace credential. A genuine URL-passthro
 with the names of the colliding usable tools and the explicit `/call/<name>/<path>` escape hatch.
 
 ## Auth
-`require_member()` reads the `X-Treg-Token` header, hashes it (`crypto.hash_token`), looks up the
+The shared HTTP dependency family is defined in `routers.dependencies` and re-exported by `api.py`
+during the staged route migration. `require_member()` reads the `X-Treg-Token` header, hashes it
+(`crypto.hash_token`), looks up the
 `Membership` by `token_hash`, and returns a `Caller` (`membership, user, org` + `org_id`/`email`/`role`);
 401 on missing/invalid. Every scoped endpoint depends on it **except** `POST /users` + `POST
 /invites/accept` (open, self-registering) and `GET /oauth/callback` (browser-hit, protected by `state`).

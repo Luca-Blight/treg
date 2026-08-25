@@ -18,7 +18,7 @@ job installs the hand-maintained lock with `uv sync --frozen`, then runs
 `uv run --frozen lint-imports` before the test suite. Keeping the check in that job reuses the
 development environment and avoids a second install for a fast static architecture check.
 
-Stage 1 activates two contracts:
+Stage 1 activated the first two contracts:
 
 - The explicit lightweight CLI module list cannot directly import any server-extra package, including
   FastAPI, SQLModel, SQLAlchemy, Alembic, database drivers, MCP, Stripe, or cryptography. Imports guarded
@@ -28,9 +28,11 @@ Stage 1 activates two contracts:
 - `treg.ledger` cannot import `treg.audit`. Money correctness never flows through the best-effort audit
   path, whose writes may be shed under load.
 
-Router, application, and domain layer contracts remain intentionally absent until those packages exist
-in later refactor stages. Adding them early would describe a target tree rather than enforce the current
-one.
+Stage 2 adds a third contract: the complete `treg.routers` package cannot import `treg.api`, directly or
+indirectly. `as_packages = true` makes the source cover every current and future router submodule.
+`api.py` remains the compatibility exporter and ordered route-table host, so the allowed direction is
+API to routers. Application and domain layer contracts remain absent until those packages are migrated
+in later stages. Activating them earlier would describe a target tree rather than enforce the current one.
 
 Two direct edges are precise exceptions. `cli.ensure_proxy_dependency` imports `cryptography` only after
 the user invokes the optional proxy feature and offers to install the proxy extra first.

@@ -8,6 +8,7 @@ sources:
   - src/treg/reconcile.py
   - src/treg/referrals.py
   - src/treg/api.py
+  - src/treg/routers/admin.py
 related:
   - architecture/catalog.md
   - architecture/proxy-model.md

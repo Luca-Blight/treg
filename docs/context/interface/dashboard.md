@@ -11,6 +11,7 @@ sources:
   - src/treg/web/tour/tour.js
   - src/treg/web/tour/index.html
   - src/treg/api.py
+  - src/treg/routers/web.py
   - src/treg/session.py
 related:
   - interface/api.md
@@ -24,13 +25,13 @@ related:
 # Web dashboard (Phase 1)
 
 A single-file Vue 3 dashboard in `src/treg/web/index.html`, served **same-origin** by the API
-(`GET /` → `FileResponse`, `dashboard()` in `api.py`, via `_WEB_DIR`). Same origin = no CORS and it
+(`GET /app` → `FileResponse`, `dashboard()` in `routers.web`, via `_WEB_DIR`). Same origin = no CORS and it
 ships with the server (Render/Fly). Design language: **Ledger** (warm charcoal + clay accent,
 mono-forward, dark default + light toggle) — see `docs/style-board.html` / `docs/DASHBOARD-PLAN.md`.
 
 ### Vue is vendored, not fetched from a CDN
 There is no bundler, so Vue arrives as a plain `<script src>` — but from **`/vendor/`**, served off
-`src/treg/web/vendor/` by an `_ImmutableStatic` mount in `api.py`, never from unpkg. It used to come
+`src/treg/web/vendor/` by an `_ImmutableStatic` mount in `bootstrap.py`, never from unpkg. It used to come
 from `unpkg.com/vue@3`, and a visitor whose network could not reach unpkg got a **blank signed-in
 dashboard with no error** ([#137](https://github.com/superdesigndev/treg/issues/137): mainland-China
 `ERR_CONNECTION_CLOSED`, then `Vue is not defined`). The landing has no external scripts at all, so

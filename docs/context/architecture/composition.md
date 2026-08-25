@@ -3,6 +3,8 @@ title: Application composition and deployment roles
 status: shipped
 sources:
   - src/treg/bootstrap.py
+  - src/treg/routers/admin.py
+  - src/treg/routers/web.py
   - scripts/dump_surface.py
 related:
   - architecture/import-boundaries.md
@@ -13,8 +15,9 @@ related:
 
 # Application composition
 
-`bootstrap.create_app(role)` is the FastAPI composition root. `api.py` still defines every route on
-one `APIRouter` until refactor stage 2, then calls the factory once at EOF so the deployed and
+`bootstrap.create_app(role)` is the FastAPI composition root. `api.py` hosts the ordered route table;
+the Catalog, web, and admin modules define concern-specific `APIRouter` blocks that `api.py` appends
+at their legacy registration points. It then calls the factory once at EOF so the deployed and
 documented `treg.api:app` import path remains the default `all` role.
 
 The factory owns concrete assembly: the three middleware registrations, five exception handlers,

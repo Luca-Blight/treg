@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,9 @@ from typing import Any
 def _configure_test_environment() -> None:
     """Match tests/conftest.py before importing treg, whose settings load at import time."""
     worker = os.environ.get("PYTEST_XDIST_WORKER", "")
-    default_db = f"sqlite+aiosqlite:///./treg-test{'-' + worker if worker else ''}.db"
+    db_dir = os.path.join(tempfile.gettempdir(), "treg-tests")
+    os.makedirs(db_dir, exist_ok=True)
+    default_db = f"sqlite+aiosqlite:///{db_dir}/treg-test{'-' + worker if worker else ''}.db"
     os.environ["TREG_DATABASE_URL"] = os.environ.get("TREG_TEST_DB_URL", default_db)
     os.environ["TREG_EMAIL_DEV_MODE"] = "true"
     os.environ["TREG_RESEND_API_KEY"] = ""

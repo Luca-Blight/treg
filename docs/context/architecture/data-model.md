@@ -7,6 +7,7 @@ sources:
   - alembic/versions/0001_baseline_current_schema.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
+  - src/treg/timeutil.py
   - src/treg/db.py
   - src/treg/referrals.py
   - src/treg/audit.py
@@ -211,8 +212,9 @@ cannot catch it), which is why `pendingoauth.long_lived_exchange` is spelled `BO
 false`. `reset_db()` is test-only (dispose the loop-bound pool, then drop +
 recreate); `get_session()` is the FastAPI dependency. SQLite locally (`aiosqlite`), Postgres on Render, same code. **Timestamps are
 naive UTC:** `_now()` (the `created_at` default) drops tzinfo because the columns are `TIMESTAMP WITHOUT
-TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout
-(`api._utcnow_naive` / `_as_naive`).
+TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout.
+Shared request-time conversions live in `timeutil.utcnow_naive` and `timeutil.as_naive`, re-exported
+temporarily as `api._utcnow_naive` and `api._as_naive` during the staged router migration.
 
 ## Alembic baseline
 
