@@ -73,6 +73,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/shell.py` | interface/shell.md |
 | `src/treg/skills.py` | interface/env-import.md |
 | `src/treg/web/adtrack.js` | architecture/ads-conversions.md |
+| `src/treg/web/sitetrack.js` | interface/api.md, interface/dashboard.md, architecture/data-model.md |
 | `src/treg/web/catalog.css` | interface/seo.md |
 | `src/treg/web/connect-demo.html` | architecture/mcp-oauth.md |
 | `src/treg/web/index.html` | interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md, interface/seo.md |
