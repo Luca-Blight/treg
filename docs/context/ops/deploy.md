@@ -2,6 +2,7 @@
 title: Running & deploying the server
 status: shipped
 sources:
+  - pyproject.toml
   - src/treg/__main__.py
   - src/treg/web/selfhost.sh
   - src/treg/config.py
@@ -23,6 +24,9 @@ related:
 keygen` prints a Fernet key for `TREG_SECRET_KEY`.
 
 ## Startup safety (`db.py init_db`)
+- **Migration execution is unchanged:** Alembic ships in the `[server]` extra and has a validated
+  current-schema baseline, but startup still runs `init_db`. No existing database is stamped or
+  upgraded through Alembic in stage 1; that execution switch is reserved for refactor stage 5.
 - **Fails loud on a missing key + real DB:** if `TREG_SECRET_KEY` is empty and `database_url` isn't
   SQLite, `init_db` raises (an ephemeral key would make every stored secret undecryptable after a
   restart — silent total loss). On SQLite dev it only logs a warning.

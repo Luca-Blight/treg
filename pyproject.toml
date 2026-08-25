@@ -33,6 +33,7 @@ dependencies = [
 # The registry SERVER — host your own. The FastAPI app, the DB drivers, and encryption. Not needed to
 # USE the CLI against a hosted registry, only to RUN one. Install with: pip install "tools-registry[server]"
 server = [
+    "alembic>=1.16.5",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "sqlmodel>=0.0.22",
