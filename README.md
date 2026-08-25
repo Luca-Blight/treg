@@ -80,7 +80,8 @@ Installs with no token and no configuration. The skill loads as `treg:treg` and,
 walks your agent through the rest — the CLI, sign-in, then `treg mcp install` — so you end up with
 the command line **and** treg's tools. Other agents: `npx skills add superdesigndev/treg -s treg`
 (the `-s` matters — without it you also get this repo's internal dev skills).
-See [docs/CLAUDE-PLUGIN.md](docs/CLAUDE-PLUGIN.md).
+See [docs/CLAUDE-PLUGIN.md](docs/CLAUDE-PLUGIN.md). MiniMax Code / MiniMax Agent users: the same
+skill ships via the MiniMax Plugin Marketplace ([docs/MINIMAX-PLUGIN.md](docs/MINIMAX-PLUGIN.md)).
 
 ## Call a tool you don't have a key for
 
