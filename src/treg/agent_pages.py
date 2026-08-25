@@ -2704,3 +2704,102 @@ AGENTS["grok-bot"] = {
          "between them automatically."),
     ],
 }
+
+USE_CASE_PAGES["tiktok-shop-products-and-reviews"] = {
+    "label": "TikTok Shop products and reviews",
+    "sentence": "TikTok Shop API: search products by keyword and read a product's reviews, without a seller account",
+    "title": "TikTok Shop API: {n} providers compared, from {cheapest} | treg.to",
+    "lede": (
+        "Give your agent a keyword and a region and get TikTok Shop's product results back as "
+        "rows: title, price, seller and product id, then the reviews on any of them by id or URL. "
+        "{n} providers read the public storefront through one treg.to key, from {cheapest} a call, "
+        "at the provider's own rate with no markup. None of them is the seller-side Partner API, "
+        "so there is no shop, no sandbox and no app review to get through first."),
+    "prompt": "Using treg, search TikTok Shop US for \"matcha whisk\", show me the price per call "
+              "first, then give me the top 20 products by sales with seller, price and rating, and "
+              "pull the last 50 reviews on the best seller.",
+    "prompt_why": [
+        ("Name the region", "Every provider takes a region code and US is the one they all list as reliable. Say which market you mean."),
+        ("Ask for the price first", "treg.to returns the cost before the call, so the agent can say what a 20-page pull will spend."),
+        ("Go id to id", "Search returns product ids; the reviews call takes one. Two calls, no browser, no login."),
+        ("Bring the analysis", "The rows carry sales counts, prices and review text. Ranking and reading them is the agent's job."),
+    ],
+    "result_noun": "product",
+    "result_image": None,
+    "q_cheapest": "Which TikTok Shop API is cheapest?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do the providers compare?",
+    "what_is_heading": "What is a TikTok Shop API?",
+    "what_is": (
+        "TikTok's own Shop API is for sellers and their partners: it needs a seller account, an "
+        "app that passes review and, for many applicants, a US representative, and it manages "
+        "orders and inventory rather than answering questions about the market. What buyers "
+        "usually mean by a TikTok Shop API is the other thing: a way to read the public "
+        "storefront as data, search results by keyword and the reviews on a product, without "
+        "owning a shop. That is what the providers here do, per call, in JSON."),
+    "notes": [
+        "The three providers cover the job differently. TikHub and ScrapeCreators do both halves, "
+        "keyword search and product reviews; JustOneAPI does search only and bills per successful "
+        "call, so an error costs nothing there. TikHub's reviews call also takes a star filter and "
+        "a sort rule, which saves paging through five-star noise to reach the complaints.",
+        "Region is a real parameter, not a default to ignore. JustOneAPI lists nine markets, "
+        "ScrapeCreators says in its own docs that US is the reliable region for reviews and that "
+        "other regions may come back thin or inconsistent, and TikHub takes a region code on "
+        "every call. Ask for the market you sell in and read the count that comes back.",
+        "This is the public storefront, so it moves. TikTok changes the page and fights scrapers, "
+        "and the providers here have had public outages when it did. treg.to shows each provider's "
+        "measured success rate on live traffic where there is enough of it, and the agent picks; "
+        "treg.to does not fail over between them on its own.",
+    ],
+    "faq": [
+        ("Do I need a TikTok Shop seller account or Partner API access?",
+         "No. These providers read the public storefront, not the seller-side API, so there is no "
+         "seller account, sandbox, app review or US representative involved. What you cannot do "
+         "this way is anything seller-side: orders, inventory, your own shop's analytics."),
+        ("How much does a TikTok Shop search cost?",
+         "A fraction of a cent per call at the cheapest provider, and the live rate is at the top "
+         "of this page. treg.to bills the provider's own rate with $0.000 markup from your team's "
+         "prepaid balance, and JustOneAPI bills only when the call succeeds."),
+        ("Can I get a product's reviews?",
+         "Yes, by product id or product URL, paged. Two of the three providers do reviews, and "
+         "one lets you filter by star rating. Reviews TikTok has removed from the page are gone "
+         "from here too."),
+        ("Which provider should my agent use?",
+         "Ask for the price first and let it pick, or name one. treg.to shows the providers side "
+         "by side with the rate and the measured success rate; it compares, it does not route or "
+         "fail over for you."),
+    ],
+    "voices_intro": (
+        "TikTok Shop is sold harder than it is discussed: of ~140 Reddit and X posts in August "
+        "2026, about seventeen vendors were pitching, including one MCP launched by five accounts "
+        "reading the same script inside thirty hours. These four are people blocked at the "
+        "official door or paying for a dashboard they cannot export."),
+    "voices": [
+        ("The official API needs a shop before it will let you test",
+         "We're stuck in a loop: our app keeps getting rejected in review... but to test that authorization flow we need a sandbox test account",
+         "r/TikTokshop", "https://www.reddit.com/r/TikTokshop/comments/1ufgdy3/tiktok_shop_partner_center_create_test_account/",
+         "That loop is the Partner API's, and the providers here never enter it. They read the "
+         "public storefront, so the first call is a keyword and a region, and the $1.00 a new "
+         "team starts with is enough to see live results before deciding anything."),
+        ("Everything built on it is priced for agencies",
+         "Been looking into the TikTok Shop API but.... I only find those tools meant for agencies.",
+         "r/TikTokshop", "https://www.reddit.com/r/TikTokshop/comments/1vhwoph/is_the_tiktok_shop_api_worth_learning_if_you_just/",
+         "Per-call metering is the answer to a monthly plan you would use twice. A search is a "
+         "fraction of a cent and there is no subscription, so a one-off market check costs what "
+         "it costs and nothing the month after."),
+        ("The dashboards will show you the data but not give it to you",
+         "built a TikTok Shop research tool in Claude Code that replaces your $99/mo Kalodata subscription",
+         "@mikefutia on X, 305 likes", "https://x.com/i/status/2068043305292886465",
+         "The most-liked on-topic post in the research is someone doing exactly this page's job "
+         "with an agent. The rows come back as JSON, so sorting by sales, price or rating and "
+         "keeping the output is yours, not a plan tier."),
+        ("A seller's full product list is a different question",
+         "we are struggling to find a way of programmatically obtaining all product IDs for a particular seller",
+         "r/webscraping", "https://www.reddit.com/r/webscraping/comments/1e7042c/tiktok_shop_product_link_scraping/",
+         "This page is keyword search and reviews by product id. Search results carry the seller, "
+         "so an agent can filter to one shop, but a complete catalogue for a seller is not a call "
+         "on this page and it would be wrong to pretend otherwise."),
+    ],
+    "related": ("Amazon product detail by ASIN", "Product reviews", "Find creators by keyword",
+                "A creator's profile and stats"),
+}

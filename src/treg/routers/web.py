@@ -943,8 +943,14 @@ async def use_case_job_page(request: Request, job: str,
     lede = spec["lede"].format(n=n, agent=agent_name,
                                cheapest=money(headline["usd"]) if headline else free_words)
     bits_desc = [spec["sentence"] + "."]
-    metered_single = form == "short" and not provs[0]["free"]
-    if metered_single:
+    # A single provider is one of three facts, not two: an own-account connection (free), a metered
+    # row on treg.to's key, or a trial pool (no USD, a daily allowance on treg.to's free-tier key,
+    # then the reader's own key). The trial case fell into `metered_single` and claimed a bill.
+    trial_single = form == "short" and not provs[0]["free"] and bool(provs[0]["trial"])
+    metered_single = form == "short" and not provs[0]["free"] and not trial_single
+    if trial_single:
+        bits_desc.append(f"One provider, free for {provs[0]['trial']} calls a day on treg.to's key, then your own key.")
+    elif metered_single:
         bits_desc.append(f"One provider, {money(headline['usd'])} per {headline['unit']} on treg.to's key, no signup."
                          if headline else "One provider, served on treg.to's key.")
     elif form == "short":
@@ -961,7 +967,14 @@ async def use_case_job_page(request: Request, job: str,
               f'Then ask: "{spec["prompt"]}"', ""]
         md += [f"- **{t}** {d}" for t, d in spec["prompt_why"]]
         md += ["", "## Why go through treg.to", ""] + [f"- **{t}** {d}" for t, d in agent_pages.WHY_TREG]
-        if metered_single:
+        if trial_single:
+            e0 = provs[0]["eps"][0]
+            md += ["", "## How it works", "",
+                   f"One provider does this job: {provs[0]['name']} (`{e0['id']}`), free for {provs[0]['trial']} "
+                   "calls a day per team on treg.to's own free-tier key. Past the allowance the call is refused "
+                   "with a hint to connect your own key, and on your own key it is never metered.",
+                   "", f"    {_uc_call(e0)}", ""]
+        elif metered_single:
             e0 = provs[0]["cheapest_ep"] or provs[0]["eps"][0]
             md += ["", "## How it works", "",
                    f"One provider does this job: {provs[0]['name']} (`{e0['id']}`), served on treg.to's own key at "
@@ -1070,7 +1083,19 @@ async def use_case_job_page(request: Request, job: str,
                 f'</tr></thead><tbody>{body_rows}</tbody></table></div>')
 
     sections = []
-    if metered_single:
+    if trial_single:
+        p0, e0 = provs[0], provs[0]["eps"][0]
+        sections.append(
+            '<section id="how"><div class="wrap"><div class="seclab">How it works</div>'
+            f'<h2>One provider, free for {p0["trial"]} calls a day on treg.to\'s key</h2>'
+            f'<p>{_logo(p0["domain"], p0["name"])}<b>{_esc_html(p0["name"])}</b> answers this job, served on treg.to\'s '
+            f'own free-tier key with an allowance of {p0["trial"]} calls a day per team. Past the allowance the call is '
+            'refused with a hint to connect your own key, and on your own key it is never metered.</p>'
+            f'<div class="sample"><div class="sbar">the call</div><pre>{_esc_html(_uc_call(e0))}</pre></div>'
+            f'<p style="font-size:12.5px;color:var(--muted)">Every endpoint on this shelf is listed on the '
+            f'<a href="/catalog/{_esc_html(e0["platform"])}">{_esc_html((cat.platforms.get(e0["platform"]) or {}).get("label") or e0["platform"])} shelf</a>.</p>'
+            + '</div></section>')
+    elif metered_single:
         p0 = provs[0]
         e0 = p0["cheapest_ep"] or p0["eps"][0]
         rate = f'{_esc_html(money(p0["usd"]))} per {p0["unit"]}, ' if p0["usd"] else ""
