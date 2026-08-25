@@ -134,7 +134,7 @@ async def test_agent_pages_are_hosted_only(monkeypatch):
 
 # ------------------------------------------------------------------ use-case pages (the spokes)
 
-USECASE = "/use-cases/data-enrichment-sales/find-professional-emails"
+USECASE = "/use-cases/find-professional-emails"
 
 
 async def test_use_case_page_is_served_with_the_crawler_essentials(clients: AsyncClient):
@@ -213,8 +213,11 @@ async def test_use_case_page_prices_come_from_the_catalog(clients: AsyncClient):
 
 
 async def test_unknown_use_case_404s(clients: AsyncClient):
-    assert (await clients.get("/use-cases/data-enrichment-sales/teleport")).status_code == 404
-    assert (await clients.get("/use-cases/nope/find-professional-emails")).status_code == 404
+    assert (await clients.get("/use-cases/teleport")).status_code == 404
+    assert (await clients.get("/use-cases/nope/teleport")).status_code == 404
+    # the nested form is kept ONLY as a 301 for the URLs that already shipped
+    r = await clients.get("/use-cases/anything/find-professional-emails", follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == "/use-cases/find-professional-emails"
 
 
 async def test_use_case_page_is_in_the_sitemap_and_linked_from_the_agent_page(clients: AsyncClient):
@@ -231,9 +234,9 @@ async def test_legacy_flat_use_case_pages_still_answer(clients: AsyncClient):
 def test_every_use_case_page_is_a_row_on_the_menu():
     """A spoke's label must match a job in USE_CASES exactly, or the agent page cannot link to it
     and the page has no capabilities to render."""
-    menu = {(agent_pages.category_slug(c), lbl) for c, jobs in agent_pages.USE_CASES for lbl, _ in jobs}
-    for (c, _), spec in agent_pages.USE_CASE_PAGES.items():
-        assert (c, spec["label"]) in menu, (c, spec["label"])
+    menu = {lbl for _c, jobs in agent_pages.USE_CASES for lbl, _ in jobs}
+    for slug, spec in agent_pages.USE_CASE_PAGES.items():
+        assert spec["label"] in menu, (slug, spec["label"])
 
 
 # ------------------------------------------------------------------------------- markdown mirrors
@@ -275,8 +278,8 @@ async def test_no_em_dashes_in_the_hand_written_copy():
 
 # --------------------------------------------------- template fitness for the other 65 jobs
 
-SINGLE = "/use-cases/connect-your-own-accounts/search-console-queries"
-MULTI = "/use-cases/social/find-creators-by-keyword"
+SINGLE = "/use-cases/search-console-queries"
+MULTI = "/use-cases/find-creators-by-keyword"
 
 
 async def test_cheapest_is_only_claimed_within_one_billing_unit(clients: AsyncClient):
@@ -336,8 +339,8 @@ async def test_use_cases_hub_lists_every_written_page(clients: AsyncClient):
     r = await clients.get("/use-cases")
     assert r.status_code == 200, r.text[:200]
     html = r.text
-    for (c, j), spec in agent_pages.USE_CASE_PAGES.items():
-        assert f'href="/use-cases/{c}/{j}"' in html, (c, j)
+    for j, spec in agent_pages.USE_CASE_PAGES.items():
+        assert f'href="/use-cases/{j}"' in html, j
         assert html_mod.escape(spec["sentence"], quote=True) in html or spec["label"] in html
     assert f"{_base()}/use-cases" in (await clients.get("/sitemap.xml")).text
     assert '<a href="/use-cases">' in (await clients.get(USECASE)).text   # breadcrumb points here
@@ -346,7 +349,7 @@ async def test_use_cases_hub_lists_every_written_page(clients: AsyncClient):
 # Every page that ships, not a hand-kept list: this set grows by 59 as the use-case pages land, and
 # a title that overflows is invisible in exactly the way nobody notices during review.
 ALL_PAGES = ([f"/agents/{a}" for a in agent_pages.AGENTS] + ["/use-cases"]
-             + [f"/use-cases/{c}/{j}" for c, j in agent_pages.USE_CASE_PAGES])
+             + [f"/use-cases/{j}" for j in agent_pages.USE_CASE_PAGES])
 
 
 @pytest.mark.parametrize("path", ALL_PAGES)
@@ -369,9 +372,9 @@ async def test_non_canonical_casing_redirects_to_the_one_spelling(clients: Async
     assert r.status_code == 301 and r.headers["location"] == "/agents/chatgpt"
     r = await clients.get("/agents/ChatGPT.md", follow_redirects=False)
     assert r.status_code == 301 and r.headers["location"] == "/agents/chatgpt.md"
-    cat, job = next(iter(agent_pages.USE_CASE_PAGES))
-    r = await clients.get(f"/use-cases/{cat.upper()}/{job}", follow_redirects=False)
-    assert r.status_code == 301 and r.headers["location"] == f"/use-cases/{cat}/{job}"
+    job = next(iter(agent_pages.USE_CASE_PAGES))
+    r = await clients.get(f"/use-cases/{job.upper()}", follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == f"/use-cases/{job}"
     assert (await clients.get("/agents/<script>")).status_code == 404
 @pytest.mark.parametrize("key", list(agent_pages.USE_CASE_PAGES))
 def test_no_use_case_page_ships_with_an_empty_section(key):
@@ -412,7 +415,7 @@ def test_related_cards_resolve_to_the_job_s_own_category():
         for lbl in spec["related"]:
             href, cat = _related_link(lbl, "chatgpt")
             assert cat == owner[lbl], (key, lbl, cat)
-            assert href == (_use_case_page_for(owner[lbl], lbl)
+            assert href == (_use_case_page_for(lbl)
                             or f"/agents/chatgpt#{agent_pages.category_slug(owner[lbl])}"), (key, lbl)
 
 
@@ -421,7 +424,7 @@ async def test_a_provider_with_no_dollar_rate_is_not_labelled_free(clients: Asyn
     keyword jobs in pre-bought API units, so its `cost_view` carries no USD, and the price cell
     read "free, your own account" for what is in fact the dearest option on the page."""
     cat = catalog_store.load()
-    page = "/use-cases/seo/google-results-for-a-keyword"
+    page = "/use-cases/google-results-for-a-keyword"
     eps = [e for e in cat.for_capability("google.serp.organic")
            if e["kind"] not in catalog_store.HIDDEN_KINDS]
     unpriced = [e for e in eps
@@ -432,3 +435,56 @@ async def test_a_provider_with_no_dollar_rate_is_not_labelled_free(clients: Asyn
         assert "no dollar rate published" in text
         assert "free, your own account" not in text
         assert "own account, free" not in text
+
+
+# ------------------------------------------------------------------ the taxonomy, and its URLs
+
+def test_one_axis_only_no_access_mode_categories():
+    """Categories are cut by what the job is ABOUT. "Connect your own accounts" was cut by how you
+    authenticate, and the mixed axis leaked: reviews appeared twice split by whose account they
+    were, Search Console sat outside SEO, and one job existed twice under two names with identical
+    capabilities. Running on the team's own key is a property (the FREE badge), never a category."""
+    cats = [c for c, _ in agent_pages.USE_CASES]
+    assert "Connect your own accounts" not in cats
+    for c in cats:
+        assert "your own account" not in c.lower() and "connect" not in c.lower(), c
+
+
+def test_no_job_appears_in_two_categories_and_no_two_jobs_share_capabilities():
+    """The duplicate that started this: "Google Ads and Meta Ads campaign performance" and "Your own
+    campaign performance" were two menu rows with identical capabilities in two categories."""
+    seen_label, seen_caps = {}, {}
+    for c, jobs in agent_pages.USE_CASES:
+        for lbl, caps in jobs:
+            assert lbl not in seen_label, (lbl, c, seen_label.get(lbl))
+            seen_label[lbl] = c
+            key = tuple(sorted(caps))
+            assert key not in seen_caps, (lbl, seen_caps.get(key), key)
+            seen_caps[key] = lbl
+
+
+def test_use_case_urls_are_flat_so_a_recut_never_moves_them():
+    """Category is metadata, not a path segment. Composio files every blueprint at a flat
+    /use-case/<slug> and renders the category as a chip; re-cutting their taxonomy costs nothing.
+    Ours cost a round of redirects to learn the same thing, so the shape is now fixed."""
+    for slug in agent_pages.USE_CASE_PAGES:
+        assert "/" not in slug, slug
+
+
+def test_every_grouped_job_is_on_its_category_menu():
+    """CATEGORY_GROUPS gives the enrichment section its sub-headings. A group naming a job that is
+    not on that category's menu renders a heading over nothing."""
+    for category, groups in agent_pages.CATEGORY_GROUPS.items():
+        menu = {lbl for c, jobs in agent_pages.USE_CASES if c == category for lbl, _ in jobs}
+        assert menu, category
+        grouped = [lbl for _, labels in groups for lbl in labels]
+        for lbl in grouped:
+            assert lbl in menu, (category, lbl)
+        assert len(grouped) == len(set(grouped)), category
+        assert set(grouped) == menu, (category, sorted(menu - set(grouped)))
+
+
+def test_every_category_has_a_blurb_and_a_prompt():
+    for c, _ in agent_pages.USE_CASES:
+        assert agent_pages.CATEGORY_BLURBS.get(c), c
+        assert agent_pages.CATEGORY_PROMPTS.get(c), c

@@ -19,32 +19,8 @@ from __future__ import annotations
 # The rotating word in the hero: "ChatGPT for <role>". The first is what crawlers and no-JS
 # readers see, so it is the broadest.
 # One line per category for the overview cards on the agent page. "{agent}" is the client's name.
-CATEGORY_BLURBS: dict[str, str] = {
-    "Connect your own accounts": "Search Console, GA4, Google Ads, Meta Ads, Business Profile, Slack. Your data, read by {agent}, free.",
-    "Data enrichment & sales": "Work emails, phone numbers, people search, company lists and signals for outbound.",
-    "Social": "Creators, trends, posts, hashtags and comments across LinkedIn, Instagram, TikTok, X, Reddit.",
-    "YouTube & video": "Transcripts, channel stats, search, trending and comments.",
-    "Finance & markets": "Quotes, price history, fundamentals, dividends and crypto.",
-    "Local businesses & reviews": "Find businesses by keyword and location, read their reviews.",
-    "SEO": "Keyword volume, SERPs, rankings, backlinks, audits and AI-answer visibility.",
-    "E-commerce": "Amazon, TikTok Shop and app-store product data and reviews.",
-    "Advertising": "What competitors are running, what a domain bids on, your own campaign numbers.",
-    "Market research": "Job postings, employee reviews, GitHub trends.",
-}
-
-CATEGORY_PROMPTS: dict[str, str] = {
-    "Connect your own accounts": "Using treg, which queries is treg.to ranking 8–15 for in Search Console, and did traffic drop this week in GA4?",
-    "YouTube & video": "Using treg, get the transcript of this YouTube video and pull the 10 most-liked comments.",
-    "Finance & markets": "Using treg, get the current price of AAPL, its last 30 days of closes, and any dividends this year.",
-    "Local businesses & reviews": "Using treg, find 20 plumbers in Austin on Yelp with rating and review count, and pull the latest reviews for the top 3.",
-    "Data enrichment & sales": "Using treg, find the work email of the VP of Marketing at stripe.com and tell me what the call cost.",
-    "Social": "Using treg, find 20 TikTok creators posting about home espresso with 50k–500k followers.",
-    "SEO": "Using treg, how many people search “reddit api pricing” per month in the US, and who ranks top 10?",
-    "E-commerce": "Using treg, pull the top 10 Amazon best sellers in espresso machines with price and rating.",
-    "Advertising": "Using treg, show me every ad Notion is running on Meta right now.",
-    "Market research": "Using treg, list companies hiring a Head of SEO this month, with headcount trend.",
-}
-
+# The rotating word in the hero: "ChatGPT for <role>". The first is what crawlers and no-JS
+# readers see, so it is the broadest.
 ROLES: tuple[str, ...] = (
     "SEO experts",
     "social media managers",
@@ -57,43 +33,160 @@ ROLES: tuple[str, ...] = (
     "media buyers",
 )
 
-# category → [(job in the buyer's words, [capability ids that do it])]. Order is the page order.
-# A job may span platforms (one id per platform); the page shows the union of providers and the
-# lowest price across them, and links each platform. Each category carries one example prompt —
-# what asking looks like; the per-job prompts live on the use-case pages.
+# One axis, and only one: what the job is ABOUT. Never how you authenticate for it, never which
+# platform serves it. The earlier cut had nine categories on the domain axis and one ("Connect your
+# own accounts") on the access axis, and the mixed axis leaked: reviews appeared in two categories
+# split by whose account they were, Search Console was filed away from SEO, and one job existed
+# twice under two names with identical capabilities. Running on the team's own key is a PROPERTY,
+# rendered as the FREE badge, and gathered into a cross-cutting list on the agent pages.
+#
+# Enrichment is the killer use case and keeps ONE category with sub-headings (CATEGORY_GROUPS)
+# rather than five. Find / contacts / enrich are stages of one motion: as five cards they read as
+# the same thing, and they would have committed four more URL segments to a distinction that only
+# exists in a practitioner's head. Signals are separate because they answer a different question:
+# not "who is this" but "when should I act".
+CATEGORY_GROUPS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
+    "Data enrichment": (
+        ("Find companies", (
+            "Build a company list by industry, size or tech",
+            "Find companies similar to your best customers",
+            "Find companies that use a given technology",
+            "Browse a VC or accelerator's portfolio",
+            "Count the matches before you pay for rows",
+        )),
+        ("Find people", (
+            "Find people by role, company or location",
+            "Rank a company's decision makers",
+            "List a company's employees",
+            "Find contacts similar to your best ones",
+        )),
+        ("Contact details", (
+            "Find professional emails",
+            "Verify an email before you send",
+            "Find phone numbers",
+            "Check a phone number is real",
+            "A company's email format",
+            "Every work email on a company domain",
+            "Where on the web an email was seen",
+        )),
+        ("Enrich a record", (
+            "Enrich a person from an email or LinkedIn URL",
+            "Enrich a company from its domain",
+            "Resolve an email or profile to the same person elsewhere",
+            "Get a LinkedIn profile",
+            "Get a company's LinkedIn page",
+            "What technology a company runs",
+            "A company's products, plans and prices",
+            "A company's logo, colours and fonts",
+            "Extract named fields from a company's website",
+        )),
+    ),
+}
+
+CATEGORY_BLURBS: dict[str, str] = {
+    "Data enrichment": "Work emails, phone numbers, people search, company lists, technographics and full records.",
+    "Buying signals": "Job changes, funding, hiring, news and intent: the moments worth acting on.",
+    "Search & rankings": "Keyword volume, SERPs, rankings, backlinks, audits, AI-answer visibility and your own Search Console.",
+    "Analytics & campaigns": "GA4, Google Ads and Meta Ads performance on the accounts you already own. Free.",
+    "Advertising intelligence": "What competitors are running, and what a domain bids on.",
+    "Social listening": "Creators, trends, posts, hashtags and comments across LinkedIn, Instagram, TikTok, X, Reddit.",
+    "Publishing": "Post to the accounts you own, on every platform, from one prompt.",
+    "YouTube & video": "Transcripts, channel stats, search, trending and comments.",
+    "E-commerce": "Amazon, TikTok Shop and app-store product data and reviews.",
+    "Local businesses & reviews": "Find businesses by keyword and location, read their reviews, and manage your own listing.",
+    "Finance & markets": "Quotes, price history, fundamentals, dividends and crypto.",
+    "Web & scraping": "Fetch any page as data, and audit one you own.",
+    "Workspace": "Read and post in the team tools you already use.",
+    "Market research": "Job postings, employee reviews and what developers are starring.",
+}
+
+CATEGORY_PROMPTS: dict[str, str] = {
+    "Data enrichment": "Using treg, find the work email of the VP of Marketing at stripe.com and tell me what the call cost.",
+    "Buying signals": "Using treg, which of these 30 companies raised money or started hiring salespeople in the last 90 days?",
+    "Search & rankings": "Using treg, which queries is treg.to ranking 8 to 15 for in Search Console, and who outranks us?",
+    "Analytics & campaigns": "Using treg, compare last week's Google Ads and Meta Ads spend and conversions against the week before.",
+    "Advertising intelligence": "Using treg, show me every ad Notion is running on Meta right now.",
+    "Social listening": "Using treg, find 20 TikTok creators posting about home espresso with 50k to 500k followers.",
+    "Publishing": "Using treg, post this to my LinkedIn and X accounts, and tell me what each one returned.",
+    "YouTube & video": "Using treg, get the transcript of this YouTube video and pull the 10 most-liked comments.",
+    "E-commerce": "Using treg, pull these 15 ASINs into a table with title, price and rating.",
+    "Local businesses & reviews": "Using treg, find 20 plumbers in Austin with a 4-plus rating, and read the latest reviews for the top 3.",
+    "Finance & markets": "Using treg, get the current price of AAPL, its last 30 days of closes, and any dividends this year.",
+    "Web & scraping": "Using treg, fetch these 10 URLs as clean text and tell me which ones mention pricing.",
+    "Workspace": "Using treg, summarise what happened in our #support Slack channel this week.",
+    "Market research": "Using treg, who is hiring salespeople this month, and what do their employees say about working there?",
+}
+
 USE_CASES: tuple[tuple[str, tuple[tuple[str, tuple[str, ...]], ...]], ...] = (
-    # The biggest demand cluster in the X/Reddit research (2026-08-21): people want their agent on
-    # THEIR data. All own-key, so never metered.
-    ("Connect your own accounts", (
-        ("Search Console: clicks, impressions and top queries", ("search-console.performance",)),
-        ("Is this page indexed, and why not", ("search-console.url_inspection",)),
-        ("Google Analytics: traffic and behaviour reports", ("google-analytics.report",)),
-        ("Realtime visitors on your site", ("google-analytics.realtime",)),
-        ("Google Ads: the search terms triggering your ads", ("google-ads.search_terms",)),
-        ("Google Ads and Meta Ads campaign performance", ("google-ads.campaigns.performance",
-                                                          "meta-ads.insights")),
-        ("Your Google Business Profile reviews, and reply to them", ("google-business.reviews",
-                                                                     "google-business.review.reply")),
-        ("Search terms that surfaced your listing on Maps", ("google-business.insights.keywords",)),
-        ("Your Instagram and Facebook page insights", ("instagram.account.insights",
-                                                       "facebook.page.insights")),
-        ("Read and post in your Slack channels", ("slack.messages.history", "slack.message.send")),
-    )),
-    ("Data enrichment & sales", (
+    ("Data enrichment", (
+        # Find companies
+        ("Build a company list by industry, size or tech", ("companies.search",)),
+        ("Find companies similar to your best customers", ("companies.similar", "companies.lookalike")),
+        ("Find companies that use a given technology", ("companies.tech_stack.users",)),
+        ("Browse a VC or accelerator's portfolio", ("companies.investors.portfolio",)),
+        ("Count the matches before you pay for rows", ("companies.search.count", "people.search.count")),
+        # Find people
+        ("Find people by role, company or location", ("people.search", "linkedin.search.people")),
+        ("Rank a company's decision makers", ("people.decision_makers",)),
+        ("List a company's employees", ("linkedin.company.people",)),
+        ("Find contacts similar to your best ones", ("people.lookalike",)),
+        # Contact details
         ("Find professional emails", ("people.email.find",)),
         ("Verify an email before you send", ("people.email.verify",)),
-        ("Find people by role, company or location", ("people.search", "linkedin.search.people")),
-        ("Get a LinkedIn profile", ("linkedin.user.profile",)),
-        ("Enrich a person from an email or LinkedIn URL", ("people.enrich",)),
         ("Find phone numbers", ("people.phone.find",)),
-        ("Enrich a company from its domain", ("companies.enrich",)),
-        ("Build a company list by industry, size or tech", ("companies.search",)),
+        ("Check a phone number is real", ("people.phone.verify",)),
         ("A company's email format", ("companies.email_pattern",)),
+        ("Every work email on a company domain", ("companies.emails.list", "companies.emails.role")),
+        ("Where on the web an email was seen", ("people.email.sources",)),
+        # Enrich a record
+        ("Enrich a person from an email or LinkedIn URL", ("people.enrich",)),
+        ("Enrich a company from its domain", ("companies.enrich",)),
+        ("Resolve an email or profile to the same person elsewhere", ("people.identity.resolve",)),
+        ("Get a LinkedIn profile", ("linkedin.user.profile",)),
+        ("Get a company's LinkedIn page", ("linkedin.company.profile",)),
+        ("What technology a company runs", ("companies.tech_stack",)),
+        ("A company's products, plans and prices", ("companies.products",)),
+        ("A company's logo, colours and fonts", ("companies.brand.assets",)),
+        ("Extract named fields from a company's website", ("companies.website.extract",)),
+    )),
+    ("Buying signals", (
+        ("Job changes and promotions", ("people.signals",)),
+        ("A company's funding rounds", ("companies.funding",)),
         ("Hiring, headcount and news signals", ("companies.jobs", "companies.headcount_trend",
                                                 "companies.news")),
-        ("A company's funding rounds", ("companies.funding",)),
+        ("Buying and intent signals", ("companies.signals",)),
+        ("Partners, customers, vendors and investors", ("companies.connections",)),
+        ("A company's SEC filings", ("companies.sec_filings",)),
+        ("New startup launches and their hiring posts", ("companies.launch_posts",)),
+        ("Pages appearing and disappearing on a website", ("companies.website_evolution",)),
     )),
-    ("Social", (
+    ("Search & rankings", (
+        ("Keyword volume, CPC and competition", ("google.keywords.volume",)),
+        ("Keyword ideas from a seed", ("google.keywords.ideas",)),
+        ("Google results for a keyword", ("google.serp.organic",)),
+        ("Keywords a domain ranks for", ("google.domain.ranked_keywords",)),
+        ("Backlink profile of a domain", ("web.backlinks.summary",)),
+        ("List backlinks and find link gaps", ("web.backlinks.list", "web.backlinks.intersect")),
+        ("How AI answers mention your brand", ("ai-search.mentions.summary",
+                                                "ai-search.chatgpt.answer",
+                                                "ai-search.perplexity.answer")),
+        ("Search Console: clicks, impressions and top queries", ("search-console.performance",)),
+        ("Is this page indexed, and why not", ("search-console.url_inspection",)),
+    )),
+    ("Analytics & campaigns", (
+        ("Google Analytics: traffic and behaviour reports", ("google-analytics.report",)),
+        ("Realtime visitors on your site", ("google-analytics.realtime",)),
+        ("Your own campaign performance", ("google-ads.campaigns.performance", "meta-ads.insights")),
+        ("Google Ads: the search terms triggering your ads", ("google-ads.search_terms",)),
+        ("Your Instagram and Facebook page insights", ("instagram.account.insights",
+                                                       "facebook.page.insights")),
+    )),
+    ("Advertising intelligence", (
+        ("Ads a competitor is running now", ("meta-ads.library.search", "meta-ads.library.advertiser",
+                                             "google.ads.transparency", "linkedin.search.ads")),
+        ("Keywords a domain bids on", ("google.domain.paid_keywords",)),
+    )),
+    ("Social listening", (
         ("Find creators by keyword", ("instagram.search.users", "tiktok.search.users",
                                      "youtube.search.channels", "x.search.users")),
         ("A creator's profile and stats", ("instagram.user.profile", "tiktok.user.profile",
@@ -104,16 +197,17 @@ USE_CASES: tuple[tuple[str, tuple[tuple[str, tuple[str, ...]], ...]], ...] = (
                                      "linkedin.search.posts", "tiktok.search.videos")),
         ("Posts under a hashtag", ("instagram.hashtag.posts", "tiktok.hashtag.videos")),
         ("Mine the comments", ("instagram.post.comments", "youtube.video.comments",
-                               "reddit.post.comments")),
+                               "reddit.post.comments", "linkedin.post.comments")),
         ("A competitor's recent posts", ("x.user.posts", "linkedin.company.posts",
-                                         "threads.user.posts")),
+                                         "threads.user.posts", "linkedin.user.posts")),
+        ("Podcast episodes and shows", ("spotify.search", "spotify.podcast.episodes")),
+    )),
+    ("Publishing", (
         ("Publish to your own accounts", ("instagram.post.create", "linkedin.user.post.create",
                                           "x.post.create", "tiktok.video.publish",
                                           "youtube.video.upload")),
-        ("Podcast episodes and shows", ("spotify.search", "spotify.podcast.episodes")),
+        ("Post to your Google Business Profile", ("google-business.posts.create",)),
     )),
-    # The single most-asked job in the research was YouTube transcripts (16 posts), and people
-    # keep failing to self-host it.
     ("YouTube & video", (
         ("Get a video's transcript", ("youtube.video.captions",)),
         ("Video details, views and stats", ("youtube.video.detail",)),
@@ -122,6 +216,24 @@ USE_CASES: tuple[tuple[str, tuple[tuple[str, tuple[str, ...]], ...]], ...] = (
         ("Trending videos", ("youtube.trending.videos",)),
         ("A video's comments", ("youtube.video.comments",)),
         ("Transcripts of X and Facebook video posts", ("x.post.transcript", "facebook.post.transcript")),
+    )),
+    ("E-commerce", (
+        ("Amazon product detail by ASIN", ("amazon.product.detail",)),
+        ("Amazon search and best sellers", ("amazon.search.products", "amazon.bestsellers.list")),
+        ("TikTok Shop products and reviews", ("tiktok-shop.search.products",
+                                              "tiktok-shop.product.reviews")),
+        ("App store search", ("app-store.search.apps", "google-play.search.apps")),
+        ("Product reviews", ("walmart.product.reviews", "tiktok-shop.product.reviews")),
+    )),
+    ("Local businesses & reviews", (
+        ("Find local businesses by keyword and location", ("yelp.business.search",
+                                                           "tripadvisor.search.businesses")),
+        ("A business's reviews", ("yelp.business.reviews", "tripadvisor.business.reviews",
+                                  "trustpilot.business.reviews")),
+        ("Your Google Business Profile reviews, and reply to them", ("google-business.reviews",
+                                                                     "google-business.review.reply")),
+        ("Search terms that surfaced your listing on Maps", ("google-business.insights.keywords",)),
+        ("Hotel listing details", ("tripadvisor.hotel.detail",)),
     )),
     ("Finance & markets", (
         ("Current quote for a ticker", ("stocks.quote.live",)),
@@ -133,38 +245,13 @@ USE_CASES: tuple[tuple[str, tuple[tuple[str, tuple[str, ...]], ...]], ...] = (
         ("Live crypto prices and history", ("crypto.price.current", "crypto.price.history")),
         ("Coins trending right now", ("crypto.market.trending",)),
     )),
-    ("Local businesses & reviews", (
-        ("Find local businesses by keyword and location", ("yelp.business.search",
-                                                           "tripadvisor.search.businesses")),
-        ("A business's reviews", ("yelp.business.reviews", "tripadvisor.business.reviews",
-                                  "trustpilot.business.reviews")),
-        ("Hotel listing details", ("tripadvisor.hotel.detail",)),
-        ("Product reviews", ("walmart.product.reviews", "tiktok-shop.product.reviews")),
-    )),
-    ("SEO", (
-        ("Keyword volume, CPC and competition", ("google.keywords.volume",)),
-        ("Keyword ideas from a seed", ("google.keywords.ideas",)),
-        ("Google results for a keyword", ("google.serp.organic",)),
-        ("Keywords a domain ranks for", ("google.domain.ranked_keywords",)),
-        ("Backlink profile of a domain", ("web.backlinks.summary",)),
-        ("List backlinks and find link gaps", ("web.backlinks.list", "web.backlinks.intersect")),
+    ("Web & scraping", (
+        ("Fetch any page as clean data", ("web.scrape.job.start",)),
         ("On-page audit of a URL", ("web.page.audit",)),
-        ("How AI answers mention your brand", ("ai-search.mentions.summary",
-                                                "ai-search.chatgpt.answer",
-                                                "ai-search.perplexity.answer")),
     )),
-    ("E-commerce", (
-        ("Amazon product detail by ASIN", ("amazon.product.detail",)),
-        ("Amazon search and best sellers", ("amazon.search.products", "amazon.bestsellers.list")),
-        ("TikTok Shop products and reviews", ("tiktok-shop.search.products",
-                                              "tiktok-shop.product.reviews")),
-        ("App store search", ("app-store.search.apps", "google-play.search.apps")),
-    )),
-    ("Advertising", (
-        ("Ads a competitor is running now", ("meta-ads.library.search", "meta-ads.library.advertiser",
-                                             "google.ads.transparency", "linkedin.search.ads")),
-        ("Keywords a domain bids on", ("google.domain.paid_keywords",)),
-        ("Your own campaign performance", ("google-ads.campaigns.performance", "meta-ads.insights")),
+    ("Workspace", (
+        ("Read and post in your Slack channels", ("slack.messages.history", "slack.message.send")),
+        ("Read a Telegram channel", ("telegram.channel.posts", "telegram.channel.search")),
     )),
     ("Market research", (
         ("Job postings across companies", ("companies.jobs.search", "linkedin.search.jobs")),
@@ -174,8 +261,6 @@ USE_CASES: tuple[tuple[str, tuple[tuple[str, tuple[str, ...]], ...]], ...] = (
     )),
 )
 
-# The clients the onboarding supports, with their icon (lobehub static set, as the landing and the
-# dashboard already use). An entry links to `/agents/<id>` only once that page exists in AGENTS.
 AGENT_ICONS: tuple[tuple[str, str, str], ...] = (
     ("chatgpt", "ChatGPT", "openai"),
     ("claude", "Claude", "claude-color"),
@@ -308,8 +393,8 @@ def category_slug(category: str) -> str:
 # Keyed by (category slug, job slug). A job without an entry here has no page — the agent page
 # links it into the catalog instead — so a page cannot exist without a person having written its
 # sentence and prompt. `label` must match the row in USE_CASES exactly; a test enforces it.
-USE_CASE_PAGES: dict[tuple[str, str], dict] = {
-    ("data-enrichment-sales", "find-professional-emails"): {
+USE_CASE_PAGES: dict[str, dict] = {
+    "find-professional-emails": {
         "label": "Find professional emails",
         # The H1, in the buyer's words; the title is built from it plus live catalog numbers.
         # H1 and title carry the words people type ("email finder", "linkedin email finder", "api");
@@ -419,7 +504,7 @@ USE_CASE_PAGES: dict[tuple[str, str], dict] = {
     },
 }
 
-USE_CASE_PAGES[("connect-your-own-accounts", "search-console-queries")] = {
+USE_CASE_PAGES["search-console-queries"] = {
     "label": "Search Console: clicks, impressions and top queries",
     "sentence": "Google Search Console API: clicks, impressions and top queries, read by your agent",
     "title": "Search Console API for {agent}: queries and clicks | treg.to",
@@ -467,7 +552,7 @@ USE_CASE_PAGES[("connect-your-own-accounts", "search-console-queries")] = {
                 "Keyword volume, CPC and competition", "Google results for a keyword"),
 }
 
-USE_CASE_PAGES[("social", "find-creators-by-keyword")] = {
+USE_CASE_PAGES["find-creators-by-keyword"] = {
     "label": "Find creators by keyword",
     "sentence": "Find creators by keyword on Instagram, TikTok, YouTube and X",
     "title": "Creator search API: 4 platforms compared | treg.to",
@@ -636,7 +721,7 @@ AGENTS["cursor"] = {
         ],
 }
 
-USE_CASE_PAGES[("data-enrichment-sales", "verify-an-email")] = {
+USE_CASE_PAGES["verify-an-email"] = {
     "label": "Verify an email before you send",
     "sentence": "Email verification API: is this address deliverable, before you send",
     "title": "Email verification API: {n} verifiers compared | treg.to",
@@ -730,7 +815,7 @@ USE_CASE_PAGES[("data-enrichment-sales", "verify-an-email")] = {
                 "A company's email format", "Find people by role, company or location"),
 }
 
-USE_CASE_PAGES[("data-enrichment-sales", "enrich-a-person")] = {
+USE_CASE_PAGES["enrich-a-person"] = {
     "label": "Enrich a person from an email or LinkedIn URL",
     "sentence": "Person enrichment API: a full profile from an email or LinkedIn URL",
     "title": "Person enrichment API: {n} providers compared | treg.to",
@@ -818,7 +903,7 @@ USE_CASE_PAGES[("data-enrichment-sales", "enrich-a-person")] = {
                 "Find people by role, company or location", "Enrich a company from its domain"),
 }
 
-USE_CASE_PAGES[("data-enrichment-sales", "people-search")] = {
+USE_CASE_PAGES["people-search"] = {
     "label": "Find people by role, company or location",
     "sentence": "People search API: find people by job title, company or location",
     "title": "People search API: {n} providers compared | treg.to",
@@ -904,7 +989,7 @@ USE_CASE_PAGES[("data-enrichment-sales", "people-search")] = {
                 "Build a company list by industry, size or tech", "Get a LinkedIn profile"),
 }
 
-USE_CASE_PAGES[("data-enrichment-sales", "enrich-a-company")] = {
+USE_CASE_PAGES["enrich-a-company"] = {
     "label": "Enrich a company from its domain",
     "sentence": "Company enrichment API: firmographics from a domain",
     "title": "Company enrichment API: {n} providers compared | treg.to",
@@ -990,7 +1075,7 @@ USE_CASE_PAGES[("data-enrichment-sales", "enrich-a-company")] = {
 }
 
 
-USE_CASE_PAGES[("youtube-video", "get-a-video-s-transcript")] = {
+USE_CASE_PAGES["get-a-video-s-transcript"] = {
     "label": "Get a video's transcript",
     "sentence": "YouTube transcript API: a video's captions as plain text",
     "title": "YouTube transcript API: {n} providers compared | treg.to",
@@ -1092,7 +1177,7 @@ USE_CASE_PAGES[("youtube-video", "get-a-video-s-transcript")] = {
                 "Transcripts of X and Facebook video posts", "Search videos and channels by keyword"),
 }
 
-USE_CASE_PAGES[("youtube-video", "video-details-views-and-stats")] = {
+USE_CASE_PAGES["video-details-views-and-stats"] = {
     "label": "Video details, views and stats",
     "sentence": "YouTube video statistics: views, likes and metadata by video id",
     "title": "YouTube video statistics API: {n} providers | treg.to",
@@ -1190,7 +1275,7 @@ USE_CASE_PAGES[("youtube-video", "video-details-views-and-stats")] = {
                 "A channel's profile and lifetime stats", "Search videos and channels by keyword"),
 }
 
-USE_CASE_PAGES[("youtube-video", "a-channel-s-profile-and-lifetime-stats")] = {
+USE_CASE_PAGES["a-channel-s-profile-and-lifetime-stats"] = {
     "label": "A channel's profile and lifetime stats",
     "sentence": "YouTube channel stats API: subscribers, total views and profile",
     "title": "YouTube channel stats API: {n} providers | treg.to",
@@ -1289,7 +1374,7 @@ USE_CASE_PAGES[("youtube-video", "a-channel-s-profile-and-lifetime-stats")] = {
                 "A creator's profile and stats", "Get a video's transcript"),
 }
 
-USE_CASE_PAGES[("youtube-video", "search-videos-and-channels-by-keyword")] = {
+USE_CASE_PAGES["search-videos-and-channels-by-keyword"] = {
     "label": "Search videos and channels by keyword",
     "sentence": "YouTube search API: find videos and channels by keyword",
     "title": "YouTube search API: {n} providers compared | treg.to",
@@ -1387,7 +1472,7 @@ USE_CASE_PAGES[("youtube-video", "search-videos-and-channels-by-keyword")] = {
                 "Trending videos", "Find creators by keyword"),
 }
 
-USE_CASE_PAGES[("youtube-video", "a-video-s-comments")] = {
+USE_CASE_PAGES["a-video-s-comments"] = {
     "label": "A video's comments",
     "sentence": "YouTube comment scraper: every comment on a video, as data",
     "title": "YouTube comment scraper API: {n} providers | treg.to",
@@ -1484,7 +1569,7 @@ USE_CASE_PAGES[("youtube-video", "a-video-s-comments")] = {
 }
 
 
-USE_CASE_PAGES[("seo", "google-results-for-a-keyword")] = {
+USE_CASE_PAGES["google-results-for-a-keyword"] = {
     "label": "Google results for a keyword",
     "sentence": "SERP API: Google organic results for a keyword",
     "title": "SERP API: {n} providers compared, from {cheapest} | treg.to",
@@ -1607,7 +1692,7 @@ USE_CASE_PAGES[("seo", "google-results-for-a-keyword")] = {
 }
 
 
-USE_CASE_PAGES[("advertising", "your-own-campaign-performance")] = {
+USE_CASE_PAGES["your-own-campaign-performance"] = {
     "label": "Your own campaign performance",
     "sentence": "Google Ads API and Meta Ads API: your own campaign numbers",
     "title": "Google Ads API and Meta Ads API, free | treg.to",
@@ -1724,7 +1809,7 @@ USE_CASE_PAGES[("advertising", "your-own-campaign-performance")] = {
 }
 
 
-USE_CASE_PAGES[("e-commerce", "amazon-product-detail-by-asin")] = {
+USE_CASE_PAGES["amazon-product-detail-by-asin"] = {
     "label": "Amazon product detail by ASIN",
     "sentence": "Amazon product API: any product's detail by ASIN",
     "title": "Amazon product API: {n} providers from {cheapest} | treg.to",
@@ -1846,7 +1931,7 @@ USE_CASE_PAGES[("e-commerce", "amazon-product-detail-by-asin")] = {
 }
 
 
-USE_CASE_PAGES[("local-businesses-reviews", "find-local-businesses-by-keyword-and-location")] = {
+USE_CASE_PAGES["find-local-businesses-by-keyword-and-location"] = {
     "label": "Find local businesses by keyword and location",
     "sentence": "Yelp API and Tripadvisor API: local businesses by keyword",
     "title": "Yelp API and Tripadvisor API, from {cheapest} | treg.to",
@@ -1972,7 +2057,7 @@ USE_CASE_PAGES[("local-businesses-reviews", "find-local-businesses-by-keyword-an
 }
 
 
-USE_CASE_PAGES[("seo", "keywords-a-domain-ranks-for")] = {
+USE_CASE_PAGES["keywords-a-domain-ranks-for"] = {
     "label": "Keywords a domain ranks for",
     "sentence": "Rank tracking API: the keywords a domain ranks for",
     "title": "Rank tracking API: {n} providers from {cheapest} | treg.to",
@@ -2098,7 +2183,7 @@ USE_CASE_PAGES[("seo", "keywords-a-domain-ranks-for")] = {
                 "Backlink profile of a domain", "Keywords a domain bids on"),
 }
 
-USE_CASE_PAGES[("seo", "how-ai-answers-mention-your-brand")] = {
+USE_CASE_PAGES["how-ai-answers-mention-your-brand"] = {
     "label": "How AI answers mention your brand",
     "sentence": "AI visibility tracking: how ChatGPT and Perplexity answers mention your brand, run by your agent",
     "title": "AI visibility tracking API, from {cheapest} a check | treg.to",
@@ -2201,7 +2286,7 @@ USE_CASE_PAGES[("seo", "how-ai-answers-mention-your-brand")] = {
                 "Backlink profile of a domain", "Search Console: clicks, impressions and top queries"),
 }
 
-USE_CASE_PAGES[("connect-your-own-accounts", "your-google-business-profile-reviews-and-reply-to-them")] = {
+USE_CASE_PAGES["your-google-business-profile-reviews-and-reply-to-them"] = {
     "label": "Your Google Business Profile reviews, and reply to them",
     "sentence": "Google Business Profile API: your Google reviews, read and replied to by your agent",
     "title": "Google Business Profile API: read and reply to reviews | treg.to",
@@ -2289,7 +2374,7 @@ USE_CASE_PAGES[("connect-your-own-accounts", "your-google-business-profile-revie
                 "Search terms that surfaced your listing on Maps", "Search Console: clicks, impressions and top queries"),
 }
 
-USE_CASE_PAGES[("local-businesses-reviews", "a-business-s-reviews")] = {
+USE_CASE_PAGES["a-business-s-reviews"] = {
     "label": "A business's reviews",
     "sentence": "Review scraper API: a business's reviews from Tripadvisor, Trustpilot and Yelp, as data",
     "title": "Tripadvisor, Trustpilot and Yelp reviews API | treg.to",
@@ -2382,7 +2467,7 @@ USE_CASE_PAGES[("local-businesses-reviews", "a-business-s-reviews")] = {
                 "Product reviews", "Hotel listing details"),
 }
 
-USE_CASE_PAGES[("connect-your-own-accounts", "google-analytics-traffic-and-behaviour-reports")] = {
+USE_CASE_PAGES["google-analytics-traffic-and-behaviour-reports"] = {
     "label": "Google Analytics: traffic and behaviour reports",
     "sentence": "Google Analytics MCP or API: GA4 traffic and behaviour reports, read by your agent",
     "title": "Google Analytics API for {agent}: any GA4 report | treg.to",
@@ -2476,7 +2561,7 @@ USE_CASE_PAGES[("connect-your-own-accounts", "google-analytics-traffic-and-behav
                 "Is this page indexed, and why not", "Your own campaign performance"),
 }
 
-USE_CASE_PAGES[("finance-markets", "current-quote-for-a-ticker")] = {
+USE_CASE_PAGES["current-quote-for-a-ticker"] = {
     "label": "Current quote for a ticker",
     "sentence": "Stock price API: the current quote for a ticker from four providers, free to start",
     "title": "Stock price API: {n} providers, free to try | treg.to",
