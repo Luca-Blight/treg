@@ -77,10 +77,18 @@ swallows exceptions, which is right for analytics and fatal for money.
 | `settle` | blocks down by the observed cost, hold closed, difference refunded |
 | `release` | hold closed, balance refunded in full (upstream failure — not billable) |
 
-Release metadata distinguishes a failed call from a normal non-billable provider response. Provider
-5xx and transport failures use `call_failed_<status>`; excluded provider statuses such as a
-per-success 400 retain `not_billable_<status>`. This lets the journal explain why the full reserve
-returned without inspecting transient response evidence.
+Release metadata distinguishes a failed call from a normal non-billable provider response, and says
+which side failed. A provider that answered 5xx releases as `provider_failed_<status>`; a call treg
+never got an answer for (timeout, connect error, SSRF refusal, a failed oauth refresh) releases as
+`call_failed_<status>`; excluded provider statuses such as a per-success 400 retain
+`not_billable_<status>`. Both failure kinds are usually a 502, so the prefix is what tells them
+apart — and it has to, because the error evidence that would otherwise explain the difference is
+purged after 14 days while the journal is permanent.
+
+A release that itself fails is logged and left to the reaper (`_platform_settle` never raises).
+The response still reports `X-Treg-Cost-Micro: 0`, which is what the call ends up costing — but the
+balance only catches up when the hold is reaped, so a caller reading its balance immediately after
+a failed call may still see the reserve withheld.
 
 **The gate is one statement**, which is the heart of the design:
 
