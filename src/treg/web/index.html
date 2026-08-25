@@ -4288,15 +4288,21 @@ createApp({
     // Try-it drawer: the filled query string + the three "how to run it" recipes (agent / CLI / API)
     epTryQuery(){ return (this.epTryParams||[]).filter(p=>p.value!=='' && p.value!=null)
       .map(p=>encodeURIComponent(p.name)+'='+encodeURIComponent(p.value)).join('&'); },
+    epTryShellBody(){ return "'"+String(this.epTryBody).replace(/'/g,"'\"'\"'")+"'"; },
     epTryCliCall(){ if(!this.epTry) return '';
       const args=(this.epTryParams||[]).filter(p=>p.value!=='' && p.value!=null)
         .map(p=>`--query ${p.name}=${/\s/.test(String(p.value))?JSON.stringify(String(p.value)):p.value}`).join(' ');
-      return `treg call ${this.epTry.id}${args?' '+args:''}`; },
+      const method=(this.epTry.method||'GET').toUpperCase();
+      let s=`treg call ${this.epTry.id}${args?' '+args:''}`;
+      if(method!=='GET') s+=` --method ${method}`;
+      if(method!=='GET' && this.epTryBody.trim()) s+=` --data ${this.epTryShellBody}`;
+      return s; },
     epTryCurl(){ if(!this.epTry) return '';
       const q=this.epTryQuery; const url=`${this.proxy}/call/${this.epTry.id}${q?'?'+q:''}`;
-      const tok=this.myToken||'$TREG_TOKEN';
-      let s=`curl "${url}" \\\n  -H "X-Treg-Token: ${tok}"`;
+      const tok=this.myToken||'$TREG_TOKEN', method=(this.epTry.method||'GET').toUpperCase();
+      let s=`curl -X ${method} "${url}" \\\n  -H "X-Treg-Token: ${tok}"`;
       if(this.sessionMode && this.activeSlugNow) s+=` \\\n  -H "X-Treg-Org: ${this.activeSlugNow}"`;  // minted identity token needs the org header
+      if(method!=='GET' && this.epTryBody.trim()) s+=` \\\n  -H "Content-Type: application/json" \\\n  --data ${this.epTryShellBody}`;
       return s; },
     // token + team embedded HERE ONLY (a copy-and-run-now context) — the setup line elsewhere stays clean
     epTrySetupLine(){ const S=this.activeSlugNow||'<team-slug>', T=this.myToken||'<YOUR_TOKEN>';

@@ -818,6 +818,25 @@ def test_the_run_actions_lead_the_expansion_tab_bar():
     assert ".ltabs-r .btn.primary{background:var(--inverse)" in INDEX
 
 
+def test_try_it_post_snippets_carry_the_method_and_shell_safe_body():
+    """The drawer must copy the request shown in Manual, not silently turn every endpoint into GET."""
+    block = INDEX[INDEX.index("epTryShellBody(){") : INDEX.index("epTrySetupLine(){")]
+    assert "replace(/'/g,\"'\\\"'\\\"'\")" in block
+    assert "if(method!=='GET') s+=` --method ${method}`" in block
+    assert "--data ${this.epTryShellBody}" in block
+    assert "curl -X ${method}" in block
+    assert '-H "Content-Type: application/json"' in block
+
+
+def test_try_it_get_snippets_keep_query_and_auth_without_a_body():
+    """GET stays explicit in curl, keeps query and org selection, and does not gain body options."""
+    block = INDEX[INDEX.index("epTryQuery(){") : INDEX.index("epTrySetupLine(){")]
+    assert "const q=this.epTryQuery" in block and "${q?'?'+q:''}" in block
+    assert "curl -X ${method}" in block
+    assert "if(this.sessionMode && this.activeSlugNow)" in block
+    assert block.count("method!=='GET' && this.epTryBody.trim()") == 2
+
+
 def test_provider_page_links_into_the_catalog():
     """Navigation runs both ways: an integration page names the platforms its catalog covers."""
     assert _enclosing_views('v-for="pl in mkPlatforms"') == ["provider"]
