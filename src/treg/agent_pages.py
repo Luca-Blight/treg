@@ -2803,3 +2803,105 @@ USE_CASE_PAGES["tiktok-shop-products-and-reviews"] = {
     "related": ("Amazon product detail by ASIN", "Product reviews", "Find creators by keyword",
                 "A creator's profile and stats"),
 }
+
+USE_CASE_PAGES["ads-a-competitor-is-running-now"] = {
+    "label": "Ads a competitor is running now",
+    "sentence": "Meta Ad Library API, Google Ads Transparency Center and LinkedIn ads: what a competitor is running right now",
+    "title": "Meta Ad Library API and Google Ads Transparency data | treg.to",
+    "lede": (
+        "Give your agent a competitor's Page, advertiser or company and get their live ads back "
+        "as rows: creative text, link titles, start dates, platforms and the snapshot URL. Meta, "
+        "Google and LinkedIn answer through one treg.to key, from {cheapest} a call at the "
+        "provider's own rate with no markup, or free on the Meta Ad Library token you set up "
+        "yourself. The three libraries are not alternatives to each other; the network is the "
+        "choice."),
+    "prompt": "Using treg, list every Facebook and Instagram ad this Page has run in the US in the "
+              "last 30 days, show me the price first, then group them by landing page and tell me "
+              "which creatives have been live longest.",
+    "prompt_why": [
+        ("Give the Page id, not the name", "Many Pages share a brand name. A Page id or URL returns one advertiser; a name returns false positives."),
+        ("Say the country", "The Meta library asks which country the ad reached, and US-only can miss half of a global brand's actives. Say ALL when you mean all."),
+        ("Read longevity, not spend", "Meta publishes spend only for political ads. How long a creative has run is the signal everyone uses instead."),
+        ("Ask for the price first", "treg.to returns the cost before the call, so the agent can say what a full library pull will spend."),
+    ],
+    "result_noun": "ad",
+    "result_image": None,
+    "q_cheapest": "Which ad library API is cheapest?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do the providers compare, per network?",
+    "what_is_heading": "What is the Meta Ad Library API?",
+    "what_is": (
+        "The Meta Ad Library is the public record of every ad running on Facebook and Instagram, "
+        "and the Ad Library API is its official query interface: search by keyword or by Page, "
+        "filter by country, date and status, and get the creative, the delivery dates and the "
+        "platforms back as data. Google's equivalent is the Ads Transparency Center, which has "
+        "no official API and lists ads per advertiser; LinkedIn's is its ad library. The "
+        "providers here answer all three, either through the official API on your own token or "
+        "by reading the public library pages."),
+    "notes": [
+        "The official Meta route is free and it is yours to set up: a one-time government-ID "
+        "verification at Facebook, then a Meta app and an access token, which you register with "
+        "treg.to as your own key. The forum wait for verification runs from days to never. The "
+        "two scraper providers on the Meta row need none of that and bill per call or per ad, "
+        "which is why most people start there and register a token later, if ever.",
+        "Spend is not on the page for ordinary ads. Meta publishes spend and impression ranges "
+        "for political and issue ads only, and richer fields for ads reaching the EU under the "
+        "DSA, so a European pull carries more than a US one. For everything else the working "
+        "signals are how long a creative has run and how many variants a Page is testing.",
+        "Google is a lookup, not a search. The Transparency Center lists what one advertiser runs, "
+        "by advertiser or domain, and that is what the SerpApi engine here returns, with region, "
+        "format and date filters. There is no keyword search across every advertiser, which is a "
+        "limit of the Center, and the copy of a search ad comes back as text only where Google "
+        "renders it as text.",
+    ],
+    "faq": [
+        ("Do I need Meta Ad Library API access?",
+         "Not to start. ScrapeCreators and Apify read the public library without any Meta app, "
+         "billed per call or per ad. If you have completed Meta's identity verification and hold "
+         "a token, register it and the official calls run free on your own key, never metered."),
+        ("Can I see how much a competitor is spending?",
+         "Only for political and issue ads, where Meta publishes ranges. For everything else no "
+         "provider has the number, and this page will not invent one. Run length, variant count "
+         "and the platforms an ad reaches are what the data does carry."),
+        ("Does this cover Google Ads?",
+         "Yes, per advertiser, through the Ads Transparency Center engine at SerpApi's flat "
+         "per-search rate. You look up an advertiser or a domain; searching every advertiser for "
+         "a keyword is not something the Center offers."),
+        ("Which provider should my agent use?",
+         "The network decides the shelf; on Meta, the cheapest verified row or your own token. "
+         "treg.to shows the rows side by side with the rate and measured success; it compares, "
+         "it does not route or fail over for you."),
+    ],
+    "voices_intro": (
+        "Ad intelligence is a crowded shelf: about seventeen tools were pitched across the ~65 "
+        "on-topic posts on Reddit and X in August 2026, including one founder posting a dozen "
+        "times. These four are people who tried the official libraries first."),
+    "voices": [
+        ("Meta's identity check is the first wall, and it does not always answer",
+         "I've sent my id however 4 days passed and there is no answer. It is still \"in progress\".",
+         "r/FacebookAds", "https://www.reddit.com/r/FacebookAds/comments/1vr13ds/",
+         "The official API waits on that check; the scraper rows do not. Start on a per-call "
+         "provider today, and register your own Meta token when the verification lands so the "
+         "official calls run free."),
+        ("There is no spend number, so people watch launch velocity instead",
+         "Meta doesn't expose dollar spend for non-political ads, so \"velocity\" = ad-launch volume not actual budget",
+         "r/FacebookAds", "https://www.reddit.com/r/FacebookAds/comments/1t045tp/",
+         "True, and no provider here changes it. What the rows do carry is start date, stop date "
+         "and platform per ad, which is enough for an agent to count new creatives a week and "
+         "flag the ones that have survived a month."),
+        ("Google only lets you look at one advertiser at a time",
+         "Today Google only lets you look up one advertiser at a time. There's no way to answer \"who is running ads on roof repair right now?\"",
+         "r/marketingagency", "https://www.reddit.com/r/marketingagency/comments/1ve8pke/",
+         "Still the case through the API, because it is the Center's own shape. The honest "
+         "workaround is a list: give the agent the advertisers you already know and let it "
+         "loop, at a flat rate per lookup."),
+        ("The library gives you data, not intelligence",
+         "The Ad Library gives you data, but not much intelligence. You end up opening hundreds of ads manually",
+         "r/FacebookAds", "https://www.reddit.com/r/FacebookAds/comments/1vi52qj/",
+         "The rows come back as JSON with the creative text, so grouping by landing page, "
+         "clustering hooks and ranking by run length is the agent's job on top, and it is the "
+         "part that used to be a weekend of tabs."),
+    ],
+    "related": ("Your own campaign performance", "Keywords a domain bids on",
+                "A competitor's recent posts", "Google results for a keyword"),
+}
