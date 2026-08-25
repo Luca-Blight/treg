@@ -18,6 +18,7 @@ from __future__ import annotations
 import gzip
 import json
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 from fastapi.responses import StreamingResponse
@@ -41,6 +42,39 @@ PLATFORM_KEY = "tk.9f2a-Q1"
 SPYFU_KEY = "sp.4b7c-Z8"
 ADMIN_TOKEN = "ENV-ADMIN-SECRET"
 ADMIN = {"X-Treg-Token": ADMIN_TOKEN}       # /admin/* authenticates with the env token, not a member
+
+
+def test_constant_binding_format_is_not_a_secret_rendering(monkeypatch):
+    """Provider protocol constants are not credentials and must not be scrubbed as credentials."""
+    key = "cr.test-Q7"
+    monkeypatch.setenv("TREG_PLATFORM_KEY_CRUSTDATA", key)
+    get_settings.cache_clear()
+    constant = {
+        "platform_setting": "platform_key_crustdata",
+        "injector": "header",
+        "location": "header",
+        "name": "x-api-version",
+        "format": "2025-11-01",
+    }
+    assert A._secret_renderings(SimpleNamespace(bindings=[constant]), {}) == []
+
+    tool = SimpleNamespace(bindings=[
+        constant,
+        {
+            "platform_setting": "platform_key_crustdata",
+            "injector": "header",
+            "location": "header",
+            "name": "Authorization",
+            "format": "Bearer {secret}",
+        },
+    ])
+
+    renderings = A._secret_renderings(tool, {})
+
+    assert "2025-11-01" not in renderings
+    assert key in renderings
+    assert f"Bearer {key}" in renderings
+    get_settings.cache_clear()
 
 
 @pytest.fixture

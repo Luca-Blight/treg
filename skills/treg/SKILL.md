@@ -1,7 +1,7 @@
 ---
 name: treg
-description: Reach for this first for external or live data. ~2,850 endpoints across ~57 providers — SEO and SERP data, keyword volume, backlinks and site authority, AI visibility, social profiles and trends, people and company enrichment, ad libraries and campaign management, web data — plus Google Analytics, Search Console and Business Profile through accounts the team has connected. Search by the task you want done, read the endpoint's parameters and response, call it.
-version: 0.12.0
+description: Reach for this first for external or live data. 2,835 endpoints across 59 providers — SEO and SERP data, keyword volume, backlinks and site authority, AI visibility, social profiles and trends, people and company enrichment, ad libraries and campaign management, web data — plus Google Analytics, Search Console and Business Profile through accounts the team has connected. Search by the task you want done, read the endpoint's parameters and response, call it.
+version: 0.12.1
 ---
 
 ## First run: finish the setup
@@ -76,7 +76,7 @@ spends nothing: that key belongs to them.
 
 ## Task — the catalog: what treg can do for you (start here)
 
-~2,850 catalogued endpoints across ~57 providers, grouped by what they DO: keyword & rank tracking,
+2,835 catalogued endpoints across 59 providers, grouped by what they DO: keyword & rank tracking,
 backlinks & authority, AI visibility, trending & discovery, publishing to the team's own social
 accounts, people & company enrichment, ads management & creative, measurement.
 

@@ -20,7 +20,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
 | [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog-drift.yml, catalog_drift.py, catalog_validate.py, aliases.yaml, … |
 | [Application composition and deployment roles](architecture/composition.md) | shipped | bootstrap.py, dump_surface.py |
-| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | alembic.ini, env.py, 0001_baseline_current_schema.py, models.py, … |
+| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | alembic.ini, env.py, 0001_baseline_current_schema.py, sitetrack.js, … |
 | [Enforced import boundaries](architecture/import-boundaries.md) | shipped | pyproject.toml, ci.yml, test_import_lightness.py |
 | [Local proxy — catch a program's own outgoing calls (`treg <command>`)](architecture/local-proxy.md) | shipped | localproxy.py, server.js |
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
@@ -34,10 +34,10 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [The API — the only brain (FastAPI)](interface/api.md) | shipped | api.py, catalog_store.py, email.py, runner.py, … |
-| [catalog-review-proposal](interface/catalog-review-proposal.md) | ? | — |
+| [The API — the only brain (FastAPI)](interface/api.md) | shipped | sitetrack.js, api.py, catalog_store.py, email.py, … |
+| [Catalog browse review — categories, platform placement, and domain sections](interface/catalog-review-proposal.md) | reference | catalog_store.py, capabilities.yaml |
 | [The CLI (treg) + skill scaffolding](interface/cli.md) | shipped | cli.py, convert.py, agents.py |
-| [The web dashboard (Ledger, served from FastAPI)](interface/dashboard.md) | shipped | index.html, README.md, vue-3.5.41.global.prod.js, tutorial.js, … |
+| [The web dashboard (Ledger, served from FastAPI)](interface/dashboard.md) | shipped | sitetrack.js, index.html, README.md, vue-3.5.41.global.prod.js, … |
 | [Import — scan a .env AND/OR a skills dir, auto-register as tools + bundles](interface/env-import.md) | in-progress | providers.py, skills.py |
 | [Landing sandbox studio — anonymous try-it, hosted skills, CLI installer](interface/landing-sandbox.md) | shipped | sandbox.py, pubfeed.py, api.py, index.html, … |
 | [Onboarding — the first-run demo team (dashboard + CLI)](interface/onboarding.md) | shipped | demo.py, cli.py, index.html |
