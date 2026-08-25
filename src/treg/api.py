@@ -2297,7 +2297,7 @@ async def tools_provider(service: str):
             {"@type": "ListItem", "position": 3, "name": display,
              "item": f"{base}/tools/{service}"}]},
         {"@context": "https://schema.org", "@type": "ItemList",
-         "name": f"{display} tools on treg.to", "numberOfItems": len(eps),
+         "name": f"{display} tools on treg.to", "numberOfItems": len(groups),
          "itemListElement": [
              {"@type": "ListItem", "position": i, "name": plat_label.get(sl, sl),
               "url": f"{base}/catalog/{sl}"}
@@ -3487,7 +3487,13 @@ async def dashboard_marketplace(
     visitor is sent to the provider's PUBLIC page instead — /tools/<service> is the same subject
     with the member actions replaced by sign-in CTAs (and it is the URL crawlers get)."""
     if not treg_session:
-        return RedirectResponse(f"/tools/{service}", status_code=302)
+        # Redirect on the CATALOG's spelling of the provider, never the request's: an unknown
+        # service 404s here rather than bouncing into a 404, and the redirect target is a value
+        # we own (which is also what keeps this off CodeQL's url-redirection list).
+        known = next((r["service"] for r in _provider_rows() if r["service"] == service), None)
+        if known is None:
+            raise HTTPException(status_code=404, detail=f"unknown provider {service!r}")
+        return RedirectResponse(f"/tools/{known}", status_code=302)
     return await dashboard(request, treg_session, db)
 
 
