@@ -2,6 +2,7 @@
 title: Data model — the registry tables, async DB, audit writer
 status: shipped
 sources:
+  - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/db.py
   - src/treg/referrals.py

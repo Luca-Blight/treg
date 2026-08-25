@@ -132,6 +132,10 @@ services:
         sync: false
       - key: TREG_PLATFORM_KEY_INFLUENCERSCLUB    # influencers.club dashboard API key, a JWT (Authorization: Bearer)
         sync: false
+      - key: TREG_PLATFORM_KEY_CRUSTDATA          # Crustdata API key; x-api-version is injected from provider metadata
+        sync: false
+      - key: TREG_PLATFORM_KEY_AVIATO             # Aviato API key (Authorization: Bearer)
+        sync: false
       - key: TREG_PLATFORM_KEY_FIBER_AI           # Fiber AI key (x-api-key)
         sync: false
       - key: TREG_PLATFORM_KEY_TOMBA              # Tomba API key ta_… (X-Tomba-Key)

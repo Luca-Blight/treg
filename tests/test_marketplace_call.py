@@ -443,6 +443,56 @@ def test_observed_cost_only_trusts_a_real_number():
     assert A._observed_cost_micro(_mk("akta"), b'{"credits_charged": 2}') is None, "wrong field name means we never learned it"
 
 
+def test_crustdata_settles_from_the_response_credit_header():
+    """Crustdata's body has no billing field; X-Credits-Used is the exact call charge."""
+    mk = _mk("crustdata", endpoint_id="crustdata.companies.search")
+    assert A._observed_cost_micro(
+        mk, b'{"rows": []}', httpx.Headers({"X-Credits-Used": "0.03"})) == 9_000
+    assert A._observed_cost_micro(mk, b'{"rows": []}', httpx.Headers()) is None
+    assert A._observed_cost_micro(
+        mk, b'{"rows": []}', httpx.Headers({"X-Credits-Used": "not-a-number"})) is None
+
+
+def test_aviato_conditional_prices_follow_live_balance_deltas():
+    cat = A.catalog_store.load()
+
+    def price(endpoint_id, query=None, body=None):
+        ep = cat.by_id[endpoint_id]
+        cv = cat.cost_view(ep["cost"], "aviato")
+        return A._marketplace_pricing(
+            "aviato", endpoint_id, cv, query or {}, json.dumps(body or {}).encode())
+
+    assert price("aviato.companies.enrich", {"preview": "true"}) == (0, 0)
+    assert price("aviato.companies.enrich", {"rescrape": "true"}) == (200_000, 150_000)
+    assert price("aviato.people.enrich", {"email": "a@example.com", "rescrape": "true"}) == (100_000, 80_000)
+    assert price("aviato.companies.enrich.bulk", body={
+        "lookups": [{"website": "a.com"}, {"website": "b.com"}], "rescrape": True,
+    }) == (400_000, 150_000)
+    assert price("aviato.people.enrich.bulk", body={
+        "lookups": [{"email": "a@example.com"}, {"email": "b@example.com"}], "rescrape": True,
+    }) == (200_000, 70_000)
+    assert price("aviato.people.search.simple", {"perPage": "3", "enrich": "false"}) == (2_500, 0)
+    assert price("aviato.people.search.simple", {"perPage": "3", "enrich": "true"}) == (32_500, 0)
+    assert price("aviato.people.search.simple", {"perPage": "5", "enrich": "true"}) == (52_500, 0)
+
+
+def test_aviato_bulk_settles_from_counts_and_simple_search_releases_unbilled_rider():
+    companies = _mk("aviato", endpoint_id="aviato.companies.enrich.bulk", unit_micro=150_000)
+    assert A._observed_cost_micro(companies, b'{"companies": [{"id": "1"}, null]}') == 150_000
+    people = _mk("aviato", endpoint_id="aviato.people.enrich.bulk", unit_micro=70_000)
+    assert A._observed_cost_micro(people, b'[{"id": "1"}, null]') == 70_000
+    simple = _mk("aviato", endpoint_id="aviato.people.search.simple", unit_micro=0)
+    assert A._observed_cost_micro(simple, b'{"items": [{"id":"1"},{"id":"2"},{"id":"3"},'
+                                                  b'{"id":"4"},{"id":"5"}]}') == 2_500
+
+
+def test_aviato_single_enrich_releases_documented_but_live_unbilled_riders():
+    company = _mk("aviato", endpoint_id="aviato.companies.enrich", unit_micro=150_000)
+    assert A._observed_cost_micro(company, b'{"id":"company"}') == 150_000
+    person = _mk("aviato", endpoint_id="aviato.people.enrich", unit_micro=80_000)
+    assert A._observed_cost_micro(person, b'{"id":"person"}') == 80_000
+
+
 def test_observed_cost_counts_resources_for_billed_oauth_reads():
     """An oauth-billed per_result call settles against the RESPONSE — X bills per resource returned,
     so `data`'s length is the bill: 7 posts back on a 100-post ask settles at 7, an empty page at
@@ -728,6 +778,23 @@ def test_brightdata_platform_key_injects_as_bearer(platform_on):
     assert A._platform_bindings(A.oauth_providers.get("brightdata")) == [
         {"platform_setting": "platform_key_brightdata", "injector": "env", "location": "header",
          "name": "Authorization", "format": "Bearer {secret}"}]
+
+
+def test_crustdata_platform_key_keeps_the_required_version_header():
+    """Tier 4 must speak the same provider protocol as BYOK, not only inject the key."""
+    assert A._platform_bindings(A.oauth_providers.get("crustdata")) == [
+        {"platform_setting": "platform_key_crustdata", "injector": "env", "location": "header",
+         "name": "Authorization", "format": "Bearer {secret}"},
+        {"platform_setting": "platform_key_crustdata", "injector": "env", "location": "header",
+         "name": "x-api-version", "format": "2025-11-01"},
+    ]
+
+
+def test_crustdata_and_aviato_catalogs_are_platform_priced():
+    cat = A.catalog_store.load()
+    rows = cat.for_provider("crustdata") + cat.for_provider("aviato")
+    assert len(rows) == 29
+    assert all(cat.platform_eligible(ep) for ep in rows)
 
 
 def test_brightdata_estimate_counts_the_body_array():
