@@ -10,7 +10,8 @@ pricing_url: https://docs.data.aviato.co/api-reference/billing/get-balance
 # establish $0.01/credit in fx.yaml. Endpoint credit counts come from the authenticated Limits &
 # Pricing page; the differently named company-investments and person-email routes were also checked
 # against live balance deltas. Preview-mode company/person enrichment is free. All 21 endpoints were
-# live verified on 2026-08-25, with captured and reviewed example responses.
+# live verified on 2026-08-25, with captured and reviewed example responses. Live balance deltas
+# are authoritative where the authenticated price page and the API's actual billing differ.
 
 proposed_capabilities:
   companies.employees: "List a company's employees"
@@ -54,14 +55,15 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://data.aviato.co/
-      checked: '2026-08-24'
-      confidence: documented
+      checked: '2026-08-25'
+      confidence: verified
+      settle: modifiers
       modifiers:
         preview: {location: query, when: truthy, set_credits: 0}
-        rescrape: {location: query, when: truthy, add_credits: 5}
-      note: "15 credits for a normal successful enrichment; rescrape=true adds 5. preview=true and a require-driven 404 are free. The live test used preview=true, so the paid 15-credit hit remains documented but unobserved."
+        rescrape: {location: query, when: truthy, add_credits: 5, reserve_only: true}
+      note: "15 credits per successful enrichment; preview=true and a require-driven miss are free. Two live rescrape=true probes on different companies each charged 15 credits, not the documented 20. Treg holds the documented 20-credit maximum and settles the observed 15-credit charge."
     docs_url: https://docs.data.aviato.co/api-reference/company/enrich
 
   - id: aviato.companies.enrich.bulk
@@ -91,13 +93,14 @@ endpoints:
       currency: credit
       per: 1
       unit: record
-      source: docs
+      source: observed
       source_url: https://data.aviato.co/
       checked: '2026-08-25'
-      confidence: documented
+      confidence: verified
+      settle: modifiers
       modifiers:
-        rescrape: {location: body, when: truthy, add_credits: 5}
-      note: "15 credits per successfully enriched company; rescrape=true adds 5 per success. A lookup that fails the require gate is free."
+        rescrape: {location: body, when: truthy, add_credits: 5, reserve_only: true}
+      note: "15 credits per successfully enriched company. Live one-row and mixed two-row rescrape=true probes charged 15 credits per successful row, not the documented 20. Treg holds 20 per input and settles 15 per successful row. A failed lookup is free."
     docs_url: https://docs.data.aviato.co/api-reference/company/bulk-enrich
 
   - id: aviato.companies.search
@@ -372,15 +375,16 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://data.aviato.co/
-      checked: '2026-08-24'
-      confidence: documented
+      checked: '2026-08-25'
+      confidence: verified
+      settle: modifiers
       modifiers:
         preview: {location: query, when: truthy, set_credits: 0}
         email: {location: query, when: present, add_credits: 3}
-        rescrape: {location: query, when: truthy, add_credits: 2}
-      note: "5 credits for a normal successful enrichment; lookup by email adds 3 and rescrape=true adds 2. preview=true and a require-driven 404 are free. The live test used preview=true, so the paid 5-credit hit remains documented but unobserved."
+        rescrape: {location: query, when: truthy, add_credits: 2, reserve_only: true}
+      note: "5 credits for profile-based enrichment; an email lookup costs 8 credits; preview=true and a require-driven miss are free. Live profile and email rescrape probes stayed at 5 and 8 credits. Treg holds the documented 2-credit rescrape rider and releases it during settlement."
     docs_url: https://docs.data.aviato.co/api-reference/person/enrich
 
   - id: aviato.people.enrich.bulk
@@ -411,15 +415,16 @@ endpoints:
       currency: credit
       per: 1
       unit: record
-      source: docs
+      source: observed
       source_url: https://data.aviato.co/
       checked: '2026-08-25'
-      confidence: documented
+      confidence: verified
+      settle: modifiers
       modifiers:
         preview: {location: body, when: truthy, set_credits: 0}
-        email: {location: lookups, when: present, add_credits: 3}
+        email: {location: lookups, when: present, add_credits: 3, reserve_only: true}
         rescrape: {location: body, when: truthy, add_credits: 2}
-      note: "5 credits per successfully enriched person; an email lookup adds 3 and rescrape=true adds 2 per success. preview=true is free. The live test used preview=true, so a paid hit remains documented but unobserved."
+      note: "5 credits per successfully enriched person; rescrape=true adds 2 per successful row and preview=true is free. Live email-only bulk probes charged 5 credits per success, not the documented 8, while rescrape probes charged 7. Treg holds the documented email rider and releases it during settlement. Failed rows are free."
     docs_url: https://docs.data.aviato.co/api-reference/person/bulk-enrich
 
   - id: aviato.people.contact.get
@@ -455,11 +460,11 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://data.aviato.co/
       checked: '2026-08-25'
-      confidence: documented
-      note: "8 credits per successful hit from Aviato's rate card. The live test was a miss ({phones: []}) and consumed 0 credits, which proves that a miss is free; the 8-credit hit remains unobserved. Current route limit: 100 requests/5 seconds and 72,000/hour."
+      confidence: verified
+      note: "8 credits per successful hit, confirmed by a live two-email response and an 8-credit balance delta. A miss is free. Current route limit: 100 requests/5 seconds and 72,000/hour."
     docs_url: https://docs.data.aviato.co/api-reference/person/pull-contact-info
 
   - id: aviato.people.email.find
@@ -515,7 +520,7 @@ endpoints:
         id: {type: string, required: false, note: "Aviato person id"}
         linkedinID: {type: string, required: false}
         linkedinEntityId: {type: string, required: false}
-        linkedinURL: {type: string, required: false, note: "public, Sales Navigator or Recruiter URL", example: "https://www.linkedin.com/in/satyanadella"}
+        linkedinURL: {type: string, required: false, note: "public, Sales Navigator or Recruiter URL", example: "https://www.linkedin.com/in/williamhgates"}
         twitterID: {type: string, required: false}
         crunchbaseID: {type: string, required: false}
         angelListID: {type: string, required: false}
@@ -524,7 +529,7 @@ endpoints:
         email: {type: string, required: false}
       note: "supply one person identifier"
     test_request:
-      queryParams: {linkedinURL: "https://www.linkedin.com/in/satyanadella"}
+      queryParams: {linkedinURL: "https://www.linkedin.com/in/williamhgates"}
     verified: '2026-08-25'
     example_response: examples/aviato.people.phone.find.json
     cost:
@@ -533,11 +538,11 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
+      source: observed
       source_url: https://data.aviato.co/
       checked: '2026-08-25'
-      confidence: documented
-      note: "8 credits per successful call. Current route limit: 100 requests/5 seconds and 72,000/hour."
+      confidence: verified
+      note: "8 credits per successful hit, confirmed by a live two-phone response and an 8-credit balance delta. Three live misses each cost 0. Current route limit: 100 requests/5 seconds and 72,000/hour."
     docs_url: https://docs.data.aviato.co/api-reference/person/get-phone
 
   - id: aviato.people.search

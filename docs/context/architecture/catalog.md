@@ -91,12 +91,16 @@ platform-key call.
 
 Variable prices use the existing reserve→settle path. Crustdata reserves the documented maximum
 for the requested record count and settles the exact `X-Credits-Used` response header. Aviato's
-preview calls reserve zero; email/rescrape add-ons are declared in each endpoint's generic
+preview calls reserve zero; observed email/rescrape add-ons are declared in each endpoint's generic
 `cost.modifiers` map and derived from request flags; synchronous bulk
 calls reserve per lookup and settle per returned successful record. Simple people search reserves
-and settles its 0.25-credit base plus the documented one-credit-per-result enrichment add-on when
-requested. A lower settlement needs multi-row balance evidence because Aviato does not return the
-exact call charge.
+the documented one-credit-per-result enrichment add-on but settles its observed 0.25-credit base.
+A lower price needs repeat balance evidence because Aviato does not return the exact call charge.
+That evidence showed that company single and bulk rescrape, person single rescrape, and person bulk
+email riders are not billed, although the authenticated price page lists them. Person single email
+and person bulk rescrape riders are billed. A `reserve_only: true` modifier keeps each documented
+but unbilled rider in the temporary hold. `settle: modifiers` then uses only the measured modifiers
+for the final charge. This protects treg from a documented maximum without overcharging the caller.
 
 A `cost.modifiers` rule names a parameter location (`query`, `body`, or `lookups`), a match rule
 (`truthy` or `present`), and exactly one credit effect: make the call free, add fixed credits, or add

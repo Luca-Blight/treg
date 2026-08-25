@@ -288,13 +288,17 @@ estimate is the honest number. This needed `unit_micro` (the per-ROW price) to r
 `MarketplaceCall` on every tier, where before only oauth-billed calls carried it.
 
 **Aviato** adds another derived family without changing the relay: fixed route prices settle at the
-estimate; catalog `cost.modifiers` make preview, email and rescrape flags change the reserve before relay; synchronous bulk
-enrichment settles from the number of successful records in the response. Simple people search
+estimate; catalog `cost.modifiers` make observed preview, email and rescrape flags change the reserve
+before relay; synchronous bulk enrichment settles from the number of successful records in the response. Simple people search
 reserves its fixed 0.25-credit base and, when `enrich=true`, the documented one-credit-per-result
 add-on. Two multi-row `enrich=true` probes returned only id rows and each consumed the 0.25-credit
 base. The endpoint's catalog `settle: base` rule therefore releases the reserve rider after a
 successful response. The hold stays conservative while the final charge follows observed vendor
-behavior. Crustdata differs because it
+behavior. Repeated balance probes also showed that company single and bulk rescrape, person single
+rescrape, and person bulk email riders listed on the authenticated price page are not charged.
+Person single email and person bulk rescrape riders are charged. The YAML models the measured rules
+with `reserve_only` on the documented but live-unbilled riders. The hold remains conservative;
+`settle: modifiers` releases those riders and charges only the measured combination. Crustdata differs because it
 reports the complete answer directly: `_platform_settle` passes response headers to
 `_observed_cost_micro`, which converts `X-Credits-Used` through the same `fx.yaml` rate used by the
 catalog.

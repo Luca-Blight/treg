@@ -9866,16 +9866,17 @@ def _input_count(doc: dict, keys: tuple[str, ...]) -> int:
     return max(sizes, default=1)
 
 
-def _credit_modifiers(cost: dict, query, doc: dict) -> tuple[bool, float, float]:
-    """Return (free, added credits, added credits per requested result) from catalog rules.
+def _credit_modifiers(cost: dict, query, doc: dict) -> tuple[bool, float, float, float]:
+    """Return (free, reserve add, settle add, add per requested result) from catalog rules.
 
     The request SHAPE stays provider-aware, but every credit NUMBER stays in the provider YAML.
+    A documented but live-unbilled rider can stay in the safety hold with `reserve_only: true`.
     This prevents a rate-card edit from leaving hardcoded arithmetic in the billing path.
     """
-    free, added, per_result = False, 0.0, 0.0
+    free, added, settled_added, per_result = False, 0.0, 0.0, 0.0
     modifiers = cost.get("modifiers")
     if not isinstance(modifiers, dict):
-        return free, added, per_result
+        return free, added, settled_added, per_result
     for name, rule in modifiers.items():
         if not isinstance(rule, dict):
             continue
@@ -9898,9 +9899,11 @@ def _credit_modifiers(cost: dict, query, doc: dict) -> tuple[bool, float, float]
             free = True
         if isinstance(rule.get("add_credits"), (int, float)):
             added += float(rule["add_credits"])
+            if not rule.get("reserve_only"):
+                settled_added += float(rule["add_credits"])
         if isinstance(rule.get("add_credits_per_result"), (int, float)):
             per_result += float(rule["add_credits_per_result"])
-    return free, added, per_result
+    return free, added, settled_added, per_result
 
 
 def _marketplace_pricing(
@@ -9935,14 +9938,15 @@ def _marketplace_pricing(
         return _usd_to_micro(float(credits) * rate)
 
     doc = _json_object(body)
-    free, added, per_result = _credit_modifiers(cost, query, doc)
+    free, added, settled_added, per_result = _credit_modifiers(cost, query, doc)
     if free:
         return 0, 0
     credits = float(cost.get("value") or 0) + added
+    settled_credits = float(cost.get("value") or 0) + settled_added
     if endpoint_id in ("aviato.companies.enrich.bulk", "aviato.people.enrich.bulk"):
         lookups = doc.get("lookups") if isinstance(doc.get("lookups"), list) else []
         per_record = credit_micro(credits)
-        return per_record * max(1, len(lookups)), per_record
+        return per_record * max(1, len(lookups)), credit_micro(settled_credits)
     if per_result:
         raw = query.get("perPage")
         asked = int(raw) if raw is not None and str(raw).isdigit() else _PLATFORM_PAGE_DEFAULT
@@ -9952,7 +9956,8 @@ def _marketplace_pricing(
         # charge or deliver the add-on.
         return credit_micro(credits + asked * per_result), 0
     if cost.get("modifiers"):
-        return credit_micro(credits), 0
+        settle_unit = credit_micro(settled_credits) if added != settled_added else 0
+        return credit_micro(credits), settle_unit
     return estimate, 0
 
 
@@ -11398,6 +11403,10 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
         if isinstance(rows, list) and mk.unit_micro > 0:
             return sum(item is not None for item in rows) * mk.unit_micro
         return None
+    if provider == "aviato" and cost and cost.get("settle") == "modifiers" and mk.unit_micro > 0:
+        # The request-time unit excludes catalog modifiers marked reserve_only. Bulk routes above
+        # multiply that unit by successful rows; a single route settles one such unit.
+        return mk.unit_micro
     if mk.billed_oauth and mk.cost_type == "per_result" and mk.unit_micro > 0:
         data = doc.get("data")
         n = len(data) if isinstance(data, list) else (1 if data else 0)

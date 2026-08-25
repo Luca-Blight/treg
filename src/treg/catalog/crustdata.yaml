@@ -130,9 +130,9 @@ endpoints:
       unit: record
       source: docs
       source_url: https://docs.crustdata.com/general/pricing
-      checked: '2026-08-24'
+      checked: '2026-08-25'
       confidence: documented
-      note: "Maximum 4 credits per matched company: base enrichment is 2; technographics adds 2 only when requested data is returned. Platform billing settles the exact X-Credits-Used response header."
+      note: "Maximum 4 credits per matched company: base enrichment is 2; technographics adds 2 only when requested data is returned. A two-company live call charged 4 credits total. The current platform key returned 403 for a technographics request, so that optional rider remains documented. Platform billing settles the exact X-Credits-Used response header."
     docs_url: https://docs.crustdata.com/company-docs/enrichment/introduction
 
   - id: crustdata.people.search
@@ -222,9 +222,9 @@ endpoints:
       unit: record
       source: docs
       source_url: https://docs.crustdata.com/general/pricing
-      checked: '2026-08-24'
+      checked: '2026-08-25'
       confidence: documented
-      note: "Maximum 7 credits per matched person: base profile 1, business email +1, personal email +2, phone +2 and developer-platform data +1. Platform billing settles the exact X-Credits-Used response header."
+      note: "Maximum 7 credits per matched person: base profile 1, business email +1, personal email +2, phone +2 and developer-platform data +1. Live calls confirmed the base, business-email, personal-email and developer riders. Phone requests with no returned phone charged only the base; the paid phone rider remains data-dependent and unobserved. Platform billing settles the exact X-Credits-Used response header."
     docs_url: https://docs.crustdata.com/person-docs/enrichment/introduction
 
   - id: crustdata.companies.jobs.search
