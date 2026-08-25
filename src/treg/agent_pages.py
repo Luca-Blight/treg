@@ -2890,7 +2890,7 @@ USE_CASE_PAGES["ads-a-competitor-is-running-now"] = {
          "and platform per ad, which is enough for an agent to count new creatives a week and "
          "flag the ones that have survived a month."),
         ("Google only lets you look at one advertiser at a time",
-         "Today Google only lets you look up one advertiser at a time. There's no way to answer \"who is running ads on roof repair right now?\"",
+         "Google only lets you look up one advertiser at a time. There's no way to answer \"who is running ads on roof repair right now?\"",
          "r/marketingagency", "https://www.reddit.com/r/marketingagency/comments/1ve8pke/",
          "Still the case through the API, because it is the Center's own shape. The honest "
          "workaround is a list: give the agent the advertisers you already know and let it "
@@ -2904,4 +2904,98 @@ USE_CASE_PAGES["ads-a-competitor-is-running-now"] = {
     ],
     "related": ("Your own campaign performance", "Keywords a domain bids on",
                 "A competitor's recent posts", "Google results for a keyword"),
+}
+
+USE_CASE_PAGES["read-and-post-in-your-slack-channels"] = {
+    "label": "Read and post in your Slack channels",
+    "sentence": "Slack bot API: your agent reads your channels and posts in them, on your own workspace",
+    "title": "Slack MCP and bot API for {agent}: read and post | treg.to",
+    "lede": (
+        "Install one bot in the Slack workspace you already run and your agent can read a "
+        "channel's recent messages and post replies into it, as the bot, with no token in the "
+        "agent's hands. It is your own workspace, so treg.to never meters it; and the scopes, the "
+        "manifest and the bot-versus-user-token question are settled before you start, which is "
+        "where most of the forum threads stall."),
+    "prompt": "Using treg, read the last two days of #support, summarise the open questions with "
+              "who asked each one, and post the summary to #support-digest as a single message.",
+    "prompt_why": [
+        ("Install once", "A pre-filled manifest creates the bot with a fixed scope set. You paste one bot token; the agent never sees it."),
+        ("Invite the bot first", "A bot reads only channels it is a member of. It can post to any public channel without joining."),
+        ("Read in windows", "History comes back in pages with a cap per call and a rate tier per minute. Ask for a window, not the archive."),
+        ("It costs nothing", "Your own workspace, so the call is never metered."),
+    ],
+    "result_image": None,
+    "what_is_heading": "What is the Slack bot API?",
+    "what_is": (
+        "The Slack Web API is how an app reads and writes a workspace as data: list channels, "
+        "read a channel's message history, post a message or a threaded reply. A bot token is "
+        "the credential an installed app holds, scoped to that one workspace and to the "
+        "permissions its manifest asked for, and everything it does shows up as the bot, not as "
+        "you. That is the token this connection uses, so the agent reads what the bot can see "
+        "and posts under the bot's name, never under yours."),
+    "notes": [
+        "Reading history on a new, unlisted app is rationed. Apps created after May 2025 that "
+        "are not listed in the Slack Marketplace get one history request a minute and fifteen "
+        "messages a call, and the bot you install from treg.to's manifest is one of those apps. "
+        "Nothing here lifts that; treg.to relays the call and the 429 as they are. A daily "
+        "digest of a busy channel is fine; a backfill of a year is not this tool.",
+        "Membership is the read permission. The bot reads only channels it has been invited to, "
+        "and direct messages need their own scopes, which the manifest does not request. Posting "
+        "is broader: the write scope lets it post into any public channel without joining. "
+        "Slack answers a dead channel or a missing scope with HTTP 200 and ok: false, so read "
+        "the body, not the status.",
+        "History returns top-level messages with authors as user ids, so a readable digest needs "
+        "the users call to resolve names, and thread replies live behind a separate replies call. "
+        "Ask the agent for a summary with names and it will make those calls; ask for the raw "
+        "rows and it will hand you ids.",
+    ],
+    "faq": [
+        ("Does this cost anything?",
+         "No. Slack runs on your own workspace, so treg.to relays the call and meters nothing. "
+         "Only calls on treg.to's own provider keys are billed."),
+        ("Does my agent post as me or as a bot?",
+         "As the bot, always. The connection holds a bot token, which is what makes it "
+         "auditable: every message it writes carries the bot's name, and it cannot read your "
+         "DMs or anything a channel you did not invite it to."),
+        ("Why is reading history slow?",
+         "Slack rate-tiers history reads on unlisted apps: one request a minute, fifteen messages "
+         "each. That is Slack's rule for every app created outside the Marketplace since 2025, "
+         "and treg.to does not get around it. Ask for windows and let the agent page."),
+        ("What if my workspace restricts app installs?",
+         "Then an admin has to approve the install, the same as any app. treg.to gives you the "
+         "manifest to submit; it cannot approve it for you."),
+    ],
+    "voices_intro": (
+        "Slack posts in August 2026 were four-fifths agent launches and MCP listicles; about "
+        "twenty tools were pitched across ~170 posts, one with zero-width characters in the "
+        "text. These four are people trying to read their own workspace."),
+    "voices": [
+        ("Slack cut history reads to one a minute, and it applies to internal apps",
+         "For accessing messages, you can now only make 1 request per minute, with a maximum of 15 messages",
+         "@grinich on X, 1,951 likes", "https://x.com/i/status/1946391052489028082",
+         "Still the rule for any unlisted app, and this connection is one. The page says so "
+         "rather than implying a way round it: a summary of a channel's last day fits the "
+         "allowance, and that is the job most people are actually asking for."),
+        ("All anyone wants is the morning summary, and the easy path got switched off",
+         "All I want is to get a summary of my Slack messages and with a list of action items every morning.",
+         "r/AI_Agents", "https://www.reddit.com/r/AI_Agents/comments/1txzeow/",
+         "The same poster found the Claude Slack connector disabled by IT and was unsure they "
+         "could create an app at all. A manifest install is still an app install, so an admin "
+         "may have to say yes; after that the digest is one read and one post a day."),
+        ("The bot has to be in the room",
+         "Turns out the bot needs to be a member of the channel first.",
+         "r/indiehackers, 18 points", "https://www.reddit.com/r/indiehackers/comments/1vryo4q/",
+         "True here too, and the manifest keeps it that way on purpose: read what you invited it "
+         "to, post where you point it. The same thread had DM scopes rejected in review as too "
+         "much access, which is why this connection does not ask for them."),
+        ("Pasting bot tokens into code is where the audit trail goes",
+         "pasting bot tokens into your code... less great when you need to know exactly what your agent can touch",
+         "@Mai_Builds on X", "https://x.com/i/status/2091946621504311753",
+         "The token sits with treg.to, the agent holds one team token that works for every tool, "
+         "and what it can touch is the manifest's scope list, which is fixed and readable. Revoke "
+         "the bot and the agent's access is gone with it."),
+    ],
+    "related": ("Read a Telegram channel", "Publish to your own accounts",
+                "Google Analytics: traffic and behaviour reports",
+                "Search Console: clicks, impressions and top queries"),
 }
