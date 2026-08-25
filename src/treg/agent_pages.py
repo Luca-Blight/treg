@@ -2811,7 +2811,7 @@ USE_CASE_PAGES["ads-a-competitor-is-running-now"] = {
     "lede": (
         "Give your agent a competitor's Page, advertiser or company and get their live ads back "
         "as rows: creative text, link titles, start dates, platforms and the snapshot URL. Meta, "
-        "Google and LinkedIn answer through one treg.to key, from {cheapest} a call at the "
+        "Google and LinkedIn answer through one treg.to key, from {cheapest} at the "
         "provider's own rate with no markup, or free on the Meta Ad Library token you set up "
         "yourself. The three libraries are not alternatives to each other; the network is the "
         "choice."),
