@@ -2,6 +2,7 @@
 title: The web dashboard (Ledger, served from FastAPI)
 status: shipped
 sources:
+  - src/treg/web/sitetrack.js
   - src/treg/web/index.html
   - src/treg/web/vendor/README.md
   - src/treg/web/vendor/vue-3.5.41.global.prod.js

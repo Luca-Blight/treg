@@ -2,6 +2,7 @@
 title: The API — the only brain (FastAPI)
 status: shipped
 sources:
+  - src/treg/web/sitetrack.js
   - src/treg/api.py
   - src/treg/catalog_store.py
   - src/treg/email.py
