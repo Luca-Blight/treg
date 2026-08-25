@@ -181,6 +181,8 @@ class Settings(BaseSettings):
     platform_key_tomba_secret: str = ""   # the API secret (ts_…); X-Tomba-Secret — BOTH must be set
     # (tomba's data routes need the header pair; TOMBA.platform_extra_setting names this second slot)
     platform_key_influencersclub: str = ""  # Bearer key (dashboard JWT); creator discovery + enrichment, fx.yaml $0.598/credit (our $299/500 plan)
+    platform_key_crustdata: str = ""  # Bearer key; every call also needs the pinned x-api-version header
+    platform_key_aviato: str = ""     # Bearer key; $10 auto-top-up buys 1,000 credits
     # The KILL SWITCH, and the reason a key alone isn't enough: a provider serves tier 4 only if it is
     # named here AND its key is set. Empty (the default) = tier 4 is entirely off, so a deploy that
     # happens to hold a key can't start spending it by accident. `TREG_PLATFORM_PROVIDERS=""` in the
@@ -214,7 +216,7 @@ class Settings(BaseSettings):
     # float). $5 minimum is fee math, not policy: at 2.9% + $0.30 a $1 top-up loses 33% to fees.
     topup_min_usd: int = 5
     topup_default_usd: int = 10
-    topup_presets: list[int] = [5, 10, 25, 50]
+    topup_presets: list[int] = [5, 10, 25, 50, 100, 200, 300, 400]
     # Auto-top-up defaults, applied when an org enables it without naming its own numbers. The
     # threshold is deliberately above the $1 promo grant's tail: at agent call rates a $2 floor is one
     # burst away from empty, and an off-session charge takes seconds to land.

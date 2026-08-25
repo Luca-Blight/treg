@@ -152,7 +152,8 @@ async def test_billing_get_reports_state_for_an_admin(c: AsyncClient, monkeypatc
     assert body["configured"] is True and body["customer"] is False and body["card_on_file"] is False
     assert body["balance_micro"] == get_settings().promo_grant_micro
     assert body["autotopup"]["enabled"] is False and body["autotopup"]["consented_at"] is None
-    assert body["topup"]["min_usd"] == 5 and body["topup"]["presets"] == [5, 10, 25, 50]
+    assert body["topup"]["min_usd"] == 5
+    assert body["topup"]["presets"] == [5, 10, 25, 50, 100, 200, 300, 400]
 
 
 async def test_billing_is_503_when_stripe_is_not_configured(c: AsyncClient, monkeypatch):

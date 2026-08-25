@@ -131,7 +131,7 @@
       "GET",
       "HEAD"
     ],
-    "name": "use_case_job_page",
+    "name": "use_case_job_page_nested",
     "path": "/use-cases/{category}/{job}"
   },
   {
@@ -140,8 +140,26 @@
       "GET",
       "HEAD"
     ],
-    "name": "use_case_job_page",
+    "name": "use_case_job_page_nested",
     "path": "/use-cases/{category}/{job}.md"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "use_case_job_page",
+    "path": "/use-cases/{job}"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "use_case_job_page",
+    "path": "/use-cases/{job}.md"
   },
   {
     "kind": "APIRoute",
@@ -160,6 +178,24 @@
     ],
     "name": "catalog_css",
     "path": "/catalog.css"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "tools_provider",
+    "path": "/tools/{service}"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "pricing_page",
+    "path": "/pricing"
   },
   {
     "kind": "APIRoute",
@@ -538,6 +574,15 @@
       "GET",
       "HEAD"
     ],
+    "name": "sitetrack_js",
+    "path": "/sitetrack.js"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
     "name": "resources_page",
     "path": "/resources"
   },
@@ -549,15 +594,6 @@
     ],
     "name": "usecase_css",
     "path": "/usecase.css"
-  },
-  {
-    "kind": "APIRoute",
-    "methods": [
-      "GET",
-      "HEAD"
-    ],
-    "name": "use_case_page",
-    "path": "/use-cases/{slug}"
   },
   {
     "kind": "APIRoute",

@@ -2,6 +2,7 @@
 title: The web dashboard (Ledger, served from FastAPI)
 status: shipped
 sources:
+  - src/treg/web/sitetrack.js
   - src/treg/web/index.html
   - src/treg/web/vendor/README.md
   - src/treg/web/vendor/vue-3.5.41.global.prod.js
@@ -50,7 +51,12 @@ template until Vue mounts, which is precisely what made #137 silent — so the g
 `#app` is still cloaked ~1.5s after `load` and, if it is, replaces the blank with a readable message,
 a reload button, and the issues link. Anything that stops Vue mounting now says so on screen.
 
-`index.html`'s closing `<script src="/adtrack.js">` loads the first-party ad-click capture script on
+`index.html`'s closing `<script src="/sitetrack.js">` (also on `landing.html`, every `usecase-*.html`,
+`resources.html`, `tutorial.html`) sets the first-touch `treg_utm` cookie and initialises PostHog with
+pageviews on; `initAnalytics()` in the SPA defers to it (`window.__phInit`) and only identifies, keeping
+its inline init as the fallback for a stale bundle. Landing-page visitors used to be invisible to
+analytics — PostHog first met them on `/app` after OAuth, as `$direct` — so this ordering is the whole
+point. The next `<script src="/adtrack.js">` loads the first-party ad-click capture script on
 every page render (dashboard included, since a visitor can arrive on `/app` from an ad) — no Google
 tag, first-party cookie only; see [ads-conversions](../architecture/ads-conversions.md).
 
@@ -204,9 +210,11 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
     argv deny patterns with their source (skill vs catalog), under a line naming all three deny
     layers — HTTP rules, argv patterns, OS sandbox — so the whole "what is blocked" picture is one
     screen.
-  - **Billing** (admin+) — balance, the top-up presets, the auto-top-up toggle with its verbatim
-    PSD2/SCA mandate text, and below them **Payment history**: date, amount, an `auto` marker, and one
-    link per row — *Invoice* when Stripe issued one (manual top-ups do; automatic ones can't), else
+  - **Billing** (admin+) — balance, one-click top-up cards rendered from `billing.topup.presets` (the
+    reference defaults live in [deployment config](../ops/deploy.md#config-configpy)), the auto-top-up
+    toggle with its verbatim PSD2/SCA mandate text, and below them **Payment history**: date, amount, an
+    `auto` marker, and one link per row — *Invoice* when Stripe issued one (manual top-ups do; automatic
+    ones can't), else
     *Receipt*, else an em dash. Amounts come from our own ledger and the links from Stripe, so when
     Stripe is unreachable the table still renders and a line under it says the links, not the numbers,
     are missing. A **Manage billing** button opens Stripe's hosted portal (card, billing address, tax
@@ -394,6 +402,15 @@ page (Connect looked dead).
 > There is no second implementation of any of this; see [seo](seo.md) for why, and for the `#prerender`
 > fallback that carries the text to crawlers that run no scripts. `index.html`'s own `robots: noindex`
 > is stripped on those two URLs only.
+>
+> **The Platform tab fills for signed-out visitors too.** The public-catalog boot branch calls
+> `loadConnections()`, not just `loadPlatforms()` — `/oauth/providers` is an open endpoint, and the
+> `/connections` half fails and is caught. (It once called only `loadPlatforms()`, and an incognito
+> visitor who reached the tab saw "Platform 0" and a blank shelf.) In public mode the shelf's
+> actions swap: "Add key"/"Connect" opens the sign-in dialog, and a provider row navigates to the
+> server-rendered public page at `/tools/<service>` via `goPublicTool` — a real method, because a
+> Vue template expression cannot reach the `location` global (not on the expression allowlist; an
+> inline `location.href=` fails silently).
 
 The marketplace's second browse surface answers "what data can I actually pull?" rather than "whose
 account can I attach?" — see `architecture/catalog.md` for the data behind it, and it is the marketplace's

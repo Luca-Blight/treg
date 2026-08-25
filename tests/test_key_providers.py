@@ -22,7 +22,7 @@ def test_key_providers_are_offerable_without_deployment_credentials():
                 "justoneapi", "dataforseo", "seranking", "moz", "majestic", "serpstat",
                 "lusha", "coresignal", "diffbot", "thecompaniesapi", "leadmagic", "fiber-ai",
                 "companyenrich", "oceanio", "tomba", "predictleads", "findymail", "branddev",
-                "icypeas", "leadsforge", "influencersclub",
+                "icypeas", "leadsforge", "influencersclub", "crustdata", "aviato",
                 "spyfu", "apify", "meta-ad-library", "serpapi",
                 "coingecko", "polygon", "finnhub", "twelvedata", "fmp", "eodhd", "marketstack",
                 "tiingo"):
@@ -62,6 +62,27 @@ async def test_key_connect_provisions_a_header_binding(clients: AsyncClient, mon
     assert b["injector"] == "env" and b["location"] == "header"
     assert b["name"] == "X-Api-Key" and b["format"] == "{secret}"
     assert "secret_field" not in b or b.get("secret_field") in (None, "")
+
+
+async def test_required_provider_header_is_probed_bound_and_caller_proof(clients: AsyncClient, monkeypatch):
+    """A protocol header is provider metadata, not proxy behavior. It must be present during the
+    connect probe and become a constant binding that overwrites a caller's stale version."""
+    monkeypatch.setitem(P.REGISTRY, "crustdata", dataclasses.replace(
+        P.REGISTRY["crustdata"], base_url="http://upstream", probe_path="/requires-version"))
+    r = await clients.post("/connections/token", json={"provider": "crustdata", "token": "cr-key"})
+    assert r.status_code == 200, r.text
+
+    tool = next(t for t in (await clients.get("/tools")).json() if t["name"] == "crustdata")
+    assert tool["bindings"] == [
+        {"secret_id": tool["bindings"][0]["secret_id"], "injector": "env", "location": "header",
+         "name": "Authorization", "format": "Bearer {secret}"},
+        {"secret_id": tool["bindings"][0]["secret_id"], "injector": "env", "location": "header",
+         "name": "x-api-version", "format": "2025-11-01"},
+    ]
+    called = await clients.get(
+        "/call/crustdata/requires-version", headers={"x-api-version": "stale-version"})
+    assert called.status_code == 200, called.text
+    assert called.json()["version"] == "2025-11-01"
 
 
 async def test_key_connect_supports_a_query_param_key(clients: AsyncClient, monkeypatch):
