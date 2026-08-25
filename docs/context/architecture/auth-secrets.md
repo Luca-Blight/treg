@@ -175,7 +175,10 @@ module symbols:
   proxy which provider it is relaying. `_platform_bindings` mirrors the same constants when tier 4
   is enabled, so a platform key cannot silently lose a required protocol header. The metadata alone
   still does not opt a provider into tier 4; pricing, a configured platform-key setting, and the
-  deployment allow-list remain separate gates.
+  deployment allow-list remain separate gates. Secret-evidence scrubbing ignores a binding whose
+  format has no `{secret}` placeholder. This keeps a protocol constant such as `2025-11-01` out of
+  the secret-spelling set while the real credential and its rendered authorization value remain
+  scrubbed.
   **Split-host vendors get one extra Tool per host** (`extra_tools`): GA4 runs reports on
   `analyticsdata` but lists the property ids those reports need on `analyticsadmin` — one scope covers
   both, but `/call/` resolution is per-HOST, so without a second row the agent is walled off (admin

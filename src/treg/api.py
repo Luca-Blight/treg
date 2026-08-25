@@ -9819,6 +9819,43 @@ def _input_count(doc: dict, keys: tuple[str, ...]) -> int:
     return max(sizes, default=1)
 
 
+def _credit_modifiers(cost: dict, query, doc: dict) -> tuple[bool, float, float]:
+    """Return (free, added credits, added credits per requested result) from catalog rules.
+
+    The request SHAPE stays provider-aware, but every credit NUMBER stays in the provider YAML.
+    This prevents a rate-card edit from leaving hardcoded arithmetic in the billing path.
+    """
+    free, added, per_result = False, 0.0, 0.0
+    modifiers = cost.get("modifiers")
+    if not isinstance(modifiers, dict):
+        return free, added, per_result
+    for name, rule in modifiers.items():
+        if not isinstance(rule, dict):
+            continue
+        location = rule.get("location", "query")
+        if location == "query":
+            values = [query.get(name)]
+        elif location == "body":
+            values = [doc.get(name)]
+        elif location == "lookups":
+            lookups = doc.get("lookups") if isinstance(doc.get("lookups"), list) else []
+            values = [item.get(name) for item in lookups if isinstance(item, dict)]
+        else:
+            continue
+        when = rule.get("when", "truthy")
+        matches = (any(value not in (None, "") for value in values)
+                   if when == "present" else any(_truthy(value) for value in values))
+        if not matches:
+            continue
+        if rule.get("set_credits") == 0:
+            free = True
+        if isinstance(rule.get("add_credits"), (int, float)):
+            added += float(rule["add_credits"])
+        if isinstance(rule.get("add_credits_per_result"), (int, float)):
+            per_result += float(rule["add_credits_per_result"])
+    return free, added, per_result
+
+
 def _marketplace_pricing(
     provider: str, endpoint_id: str, cost: dict | None, query, body: bytes
 ) -> tuple[int, int]:
@@ -9850,36 +9887,24 @@ def _marketplace_pricing(
     def credit_micro(credits):
         return _usd_to_micro(float(credits) * rate)
 
-    if endpoint_id == "aviato.companies.enrich":
-        if _truthy(query.get("preview")):
-            return 0, 0
-        credits = 15 + (5 if _truthy(query.get("rescrape")) else 0)
-        return credit_micro(credits), 0
-    if endpoint_id == "aviato.people.enrich":
-        if _truthy(query.get("preview")):
-            return 0, 0
-        credits = 5 + (3 if query.get("email") else 0) + (2 if _truthy(query.get("rescrape")) else 0)
-        return credit_micro(credits), 0
+    doc = _json_object(body)
+    free, added, per_result = _credit_modifiers(cost, query, doc)
+    if free:
+        return 0, 0
+    credits = float(cost.get("value") or 0) + added
     if endpoint_id in ("aviato.companies.enrich.bulk", "aviato.people.enrich.bulk"):
-        doc = _json_object(body)
-        if _truthy(doc.get("preview")):
-            return 0, 0
         lookups = doc.get("lookups") if isinstance(doc.get("lookups"), list) else []
-        credits = 15 if endpoint_id == "aviato.companies.enrich.bulk" else 5
-        if endpoint_id == "aviato.people.enrich.bulk" and any(
-            isinstance(item, dict) and item.get("email") for item in lookups
-        ):
-            credits += 3
-        if _truthy(doc.get("rescrape")):
-            credits += 5 if endpoint_id == "aviato.companies.enrich.bulk" else 2
         per_record = credit_micro(credits)
         return per_record * max(1, len(lookups)), per_record
-    if endpoint_id == "aviato.people.search.simple" and _truthy(query.get("enrich")):
+    if per_result:
         raw = query.get("perPage")
         asked = int(raw) if raw is not None and str(raw).isdigit() else _PLATFORM_PAGE_DEFAULT
         asked = max(1, min(asked, _PLATFORM_PAGE_MAX))
-        add_on = credit_micro(1)
-        return estimate + asked * add_on, add_on
+        # Aviato reports no exact per-call charge. Keep the documented rider in the reserve AND
+        # settlement until a multi-row balance delta proves a lower charge is safe.
+        return credit_micro(credits + asked * per_result), 0
+    if cost.get("modifiers"):
+        return credit_micro(credits), 0
     return estimate, 0
 
 
@@ -11045,6 +11070,13 @@ def _secret_renderings(tool: Tool, secrets: dict[int, Secret]) -> list[str]:
             add(part)
 
     for binding in tool.bindings or []:
+        fmt = str(binding.get("format") or "{secret}")
+        # A constant provider header can share the binding's credential reference so the normal
+        # injector owns the whole protocol shape, but it does not inject that credential. Treating
+        # its literal format as a secret spelling masked ordinary dates such as Crustdata's API
+        # version from every failure-evidence snippet.
+        if "{secret}" not in fmt:
+            continue
         setting = binding.get("platform_setting")
         if setting:
             value = getattr(get_settings(), setting, None)
@@ -11052,7 +11084,7 @@ def _secret_renderings(tool: Tool, secrets: dict[int, Secret]) -> list[str]:
                 continue
             value = value.strip()
             add_credential(value)
-            add(str(binding.get("format") or "{secret}").format(secret=value))
+            add(fmt.format(secret=value))
             continue
 
         sid = binding.get("secret_id")
@@ -11062,14 +11094,14 @@ def _secret_renderings(tool: Tool, secrets: dict[int, Secret]) -> list[str]:
         add_credential(plain)
         injector = binding.get("injector", "env")
         if injector not in ("oauth", "secret_file"):
-            add(str(binding.get("format") or "{secret}").format(secret=plain.strip()))
+            add(fmt.format(secret=plain.strip()))
             continue
 
         field = str(binding.get("secret_field") or "access_token")
         token = injectors._token_from_json(plain, field)
         add_credential(token)
         add(f"Bearer {token}")
-        add(str(binding.get("format") or "{secret}").format(secret=token.strip()))
+        add(fmt.format(secret=token.strip()))
         data = json.loads(plain)
         if not isinstance(data, dict):
             raise ValueError("JSON credential is not an object")
@@ -11309,16 +11341,6 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
         rows = doc.get("companies")
         if isinstance(rows, list) and mk.unit_micro > 0:
             return sum(item is not None for item in rows) * mk.unit_micro
-        return None
-    if provider == "aviato" and mk.endpoint_id == "aviato.people.search.simple" and mk.unit_micro > 0:
-        rows = doc.get("items")
-        if isinstance(rows, list):
-            base = catalog_store.load().cost_view(
-                catalog_store.load().by_id[mk.endpoint_id].get("cost"), "aviato")
-            # Aviato documents a possible enrich rider, so the reserve includes it. The live
-            # enrich=true probe consumed only the 0.25-credit base, however, and the response gives
-            # no exact charge. Settle at the observed base instead of billing an unobserved rider.
-            return _usd_to_micro(float(base["usd"]))
         return None
     if mk.billed_oauth and mk.cost_type == "per_result" and mk.unit_micro > 0:
         data = doc.get("data")

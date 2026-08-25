@@ -58,7 +58,10 @@ endpoints:
       source_url: https://data.aviato.co/
       checked: '2026-08-24'
       confidence: documented
-      note: "15 credits for a normal successful enrichment; rescrape=true adds 5. preview=true and a require-driven 404 are free."
+      modifiers:
+        preview: {location: query, when: truthy, set_credits: 0}
+        rescrape: {location: query, when: truthy, add_credits: 5}
+      note: "15 credits for a normal successful enrichment; rescrape=true adds 5. preview=true and a require-driven 404 are free. The live test used preview=true, so the paid 15-credit hit remains documented but unobserved."
     docs_url: https://docs.data.aviato.co/api-reference/company/enrich
 
   - id: aviato.companies.enrich.bulk
@@ -92,6 +95,8 @@ endpoints:
       source_url: https://data.aviato.co/
       checked: '2026-08-25'
       confidence: documented
+      modifiers:
+        rescrape: {location: body, when: truthy, add_credits: 5}
       note: "15 credits per successfully enriched company; rescrape=true adds 5 per success. A lookup that fails the require gate is free."
     docs_url: https://docs.data.aviato.co/api-reference/company/bulk-enrich
 
@@ -371,7 +376,11 @@ endpoints:
       source_url: https://data.aviato.co/
       checked: '2026-08-24'
       confidence: documented
-      note: "5 credits for a normal successful enrichment; lookup by email adds 3 and rescrape=true adds 2. preview=true and a require-driven 404 are free."
+      modifiers:
+        preview: {location: query, when: truthy, set_credits: 0}
+        email: {location: query, when: present, add_credits: 3}
+        rescrape: {location: query, when: truthy, add_credits: 2}
+      note: "5 credits for a normal successful enrichment; lookup by email adds 3 and rescrape=true adds 2. preview=true and a require-driven 404 are free. The live test used preview=true, so the paid 5-credit hit remains documented but unobserved."
     docs_url: https://docs.data.aviato.co/api-reference/person/enrich
 
   - id: aviato.people.enrich.bulk
@@ -406,7 +415,11 @@ endpoints:
       source_url: https://data.aviato.co/
       checked: '2026-08-25'
       confidence: documented
-      note: "5 credits per successfully enriched person; an email lookup adds 3 and rescrape=true adds 2 per success. preview=true is free."
+      modifiers:
+        preview: {location: body, when: truthy, set_credits: 0}
+        email: {location: lookups, when: present, add_credits: 3}
+        rescrape: {location: body, when: truthy, add_credits: 2}
+      note: "5 credits per successfully enriched person; an email lookup adds 3 and rescrape=true adds 2 per success. preview=true is free. The live test used preview=true, so a paid hit remains documented but unobserved."
     docs_url: https://docs.data.aviato.co/api-reference/person/bulk-enrich
 
   - id: aviato.people.contact.get
@@ -446,7 +459,7 @@ endpoints:
       source_url: https://data.aviato.co/
       checked: '2026-08-25'
       confidence: documented
-      note: "8 credits per successful call. Current route limit: 100 requests/5 seconds and 72,000/hour."
+      note: "8 credits per successful hit from Aviato's rate card. The live test was a miss ({phones: []}) and consumed 0 credits, which proves that a miss is free; the 8-credit hit remains unobserved. Current route limit: 100 requests/5 seconds and 72,000/hour."
     docs_url: https://docs.data.aviato.co/api-reference/person/pull-contact-info
 
   - id: aviato.people.email.find
@@ -593,7 +606,9 @@ endpoints:
       source: observed
       checked: '2026-08-25'
       confidence: verified
-      note: "0.25 credits per successful search call, confirmed with enrich=false and enrich=true on 2026-08-25. The route docs state enrich=true can add 1 person credit per result, so treg reserves that possible add-on. Aviato reports no exact per-call charge and the live enrich=true call used only the base, so treg settles at the base. No numeric route limit is published."
+      modifiers:
+        enrich: {location: query, when: truthy, add_credits_per_result: 1}
+      note: "0.25 credits per successful search call, confirmed with enrich=false and a one-row enrich=true probe on 2026-08-25. The one-row probe is not evidence for larger pages. Aviato reports no exact per-call charge, so treg reserves and settles the documented 1-credit-per-result enrichment rider until a multi-row balance delta proves a lower charge is safe. No numeric route limit is published."
     docs_url: https://docs.data.aviato.co/api-reference/person/simple-search
 
   - id: aviato.linkedin.company.posts
@@ -673,13 +688,13 @@ endpoints:
     summary: "List people who reacted to a LinkedIn post"
     input:
       pathParams:
-        postUrn: {type: string, required: true, note: "LinkedIn post URN returned by a posts endpoint", example: "urn:li:activity:0000000000000000000"}
+        postUrn: {type: string, required: true, note: "LinkedIn post URN returned by a posts endpoint", example: "urn:li:ugcPost:7496332962049933312"}
       queryParams:
         page: {type: integer, required: false, note: "default 1", example: 1}
         perPage: {type: integer, required: false, note: "0-100, default 10", example: 1}
         reactionType: {type: string, required: false, note: "LIKE, EMPATHY, INTEREST, PRAISE or APPRECIATION"}
     test_request:
-      pathParams: {postUrn: "urn:li:activity:0000000000000000000"}
+      pathParams: {postUrn: "urn:li:ugcPost:7496332962049933312"}
       queryParams: {page: 1, perPage: 1}
     verified: '2026-08-25'
     example_response: examples/aviato.linkedin.post.reactions.json
@@ -689,11 +704,10 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
-      source_url: https://data.aviato.co/
+      source: observed
       checked: '2026-08-25'
-      confidence: documented
-      note: "2 credits per successful call. Current route limit: 60 requests/minute and 1,000/hour."
+      confidence: verified
+      note: "2 credits confirmed by a live balance change from 935.75 to 933.75 on 2026-08-25. The public post returned 1 of 104 reactors; identities are omitted from the example. Current route limit: 60 requests/minute and 1,000/hour."
     docs_url: https://docs.data.aviato.co/api-reference/social/get-post-reactions
 
   - id: aviato.linkedin.post.reposts
@@ -707,13 +721,13 @@ endpoints:
     summary: "List reshares of a LinkedIn post"
     input:
       pathParams:
-        postUrn: {type: string, required: true, note: "LinkedIn post URN returned by a posts endpoint", example: "urn:li:activity:0000000000000000000"}
+        postUrn: {type: string, required: true, note: "LinkedIn post URN returned by a posts endpoint", example: "urn:li:ugcPost:7496332962049933312"}
       queryParams:
         page: {type: integer, required: false, note: "default 1", example: 1}
         perPage: {type: integer, required: false, note: "0-100, default 10", example: 1}
         paginationToken: {type: string, required: false, note: "token returned by the prior page"}
     test_request:
-      pathParams: {postUrn: "urn:li:activity:0000000000000000000"}
+      pathParams: {postUrn: "urn:li:ugcPost:7496332962049933312"}
       queryParams: {page: 1, perPage: 1}
     verified: '2026-08-25'
     example_response: examples/aviato.linkedin.post.reposts.json
@@ -723,11 +737,10 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
-      source_url: https://data.aviato.co/
+      source: observed
       checked: '2026-08-25'
-      confidence: documented
-      note: "2 credits per successful call. Aviato calls these reshares; the shared capability calls the same job reposts. Current route limit: 60 requests/minute and 1,000/hour."
+      confidence: verified
+      note: "2 credits confirmed by a live balance change from 933.75 to 931.75 on 2026-08-25. The public post returned 1 of 8 reshares; identities are omitted from the example. Aviato calls these reshares; the shared capability calls the same job reposts. Current route limit: 60 requests/minute and 1,000/hour."
     docs_url: https://docs.data.aviato.co/api-reference/social/get-post-reshares
 
   - id: aviato.linkedin.post.comments
@@ -741,14 +754,14 @@ endpoints:
     summary: "List comments and selected replies for a LinkedIn post"
     input:
       pathParams:
-        postUrn: {type: string, required: true, note: "LinkedIn post URN returned by a posts endpoint", example: "urn:li:activity:0000000000000000000"}
+        postUrn: {type: string, required: true, note: "LinkedIn post URN returned by a posts endpoint", example: "urn:li:ugcPost:7496332962049933312"}
       queryParams:
         page: {type: integer, required: false, note: "default 1", example: 1}
         perPage: {type: integer, required: false, note: "0-100, default 10", example: 1}
         numReplies: {type: integer, required: false, note: "0-100 replies per comment, default 1", example: 1}
         sortOrder: {type: string, required: false, note: "CHRONOLOGICAL or RELEVANCE; relevance can return a curated subset", example: "CHRONOLOGICAL"}
     test_request:
-      pathParams: {postUrn: "urn:li:activity:0000000000000000000"}
+      pathParams: {postUrn: "urn:li:ugcPost:7496332962049933312"}
       queryParams: {page: 1, perPage: 1, numReplies: 1, sortOrder: "CHRONOLOGICAL"}
     verified: '2026-08-25'
     example_response: examples/aviato.linkedin.post.comments.json
@@ -758,9 +771,8 @@ endpoints:
       currency: credit
       per: 1
       unit: call
-      source: docs
-      source_url: https://data.aviato.co/
+      source: observed
       checked: '2026-08-25'
-      confidence: documented
-      note: "2 credits per successful call. Current route limit: 60 requests/minute and 1,000/hour."
+      confidence: verified
+      note: "2 credits confirmed by a live balance change from 931.75 to 929.75 on 2026-08-25. The public post returned 1 of 6 comments; comment text and identities are omitted from the example. Current route limit: 60 requests/minute and 1,000/hour."
     docs_url: https://docs.data.aviato.co/api-reference/social/get-post-comments

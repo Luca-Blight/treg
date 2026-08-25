@@ -472,16 +472,16 @@ def test_aviato_conditional_prices_reserve_the_documented_upper_bound():
         "lookups": [{"email": "a@example.com"}, {"email": "b@example.com"}], "rescrape": True,
     }) == (200_000, 100_000)
     assert price("aviato.people.search.simple", {"perPage": "3", "enrich": "false"}) == (2_500, 0)
-    assert price("aviato.people.search.simple", {"perPage": "3", "enrich": "true"}) == (32_500, 10_000)
+    assert price("aviato.people.search.simple", {"perPage": "3", "enrich": "true"}) == (32_500, 0)
 
 
-def test_aviato_bulk_settles_from_response_counts_and_simple_search_from_observed_base():
+def test_aviato_bulk_settles_from_response_counts_and_simple_search_keeps_estimate():
     companies = _mk("aviato", endpoint_id="aviato.companies.enrich.bulk", unit_micro=200_000)
     assert A._observed_cost_micro(companies, b'{"companies": [{"id": "1"}, null]}') == 200_000
     people = _mk("aviato", endpoint_id="aviato.people.enrich.bulk", unit_micro=100_000)
     assert A._observed_cost_micro(people, b'[{"id": "1"}, null]') == 100_000
-    simple = _mk("aviato", endpoint_id="aviato.people.search.simple", unit_micro=10_000)
-    assert A._observed_cost_micro(simple, b'{"items": [{}, {}]}') == 2_500
+    simple = _mk("aviato", endpoint_id="aviato.people.search.simple", unit_micro=0)
+    assert A._observed_cost_micro(simple, b'{"items": [{}, {}]}') is None
 
 
 def test_observed_cost_counts_resources_for_billed_oauth_reads():

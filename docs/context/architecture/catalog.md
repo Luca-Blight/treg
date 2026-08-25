@@ -9,6 +9,35 @@ sources:
   - src/treg/catalog/fx.yaml
   - src/treg/catalog/aviato.yaml
   - src/treg/catalog/crustdata.yaml
+  - src/treg/catalog/examples/aviato.companies.acquisitions.json
+  - src/treg/catalog/examples/aviato.companies.employees.json
+  - src/treg/catalog/examples/aviato.companies.enrich.bulk.json
+  - src/treg/catalog/examples/aviato.companies.enrich.json
+  - src/treg/catalog/examples/aviato.companies.founders.json
+  - src/treg/catalog/examples/aviato.companies.funding_rounds.json
+  - src/treg/catalog/examples/aviato.companies.investments.json
+  - src/treg/catalog/examples/aviato.companies.outbound_investments.json
+  - src/treg/catalog/examples/aviato.companies.search.json
+  - src/treg/catalog/examples/aviato.linkedin.company.posts.json
+  - src/treg/catalog/examples/aviato.linkedin.post.comments.json
+  - src/treg/catalog/examples/aviato.linkedin.post.reactions.json
+  - src/treg/catalog/examples/aviato.linkedin.post.reposts.json
+  - src/treg/catalog/examples/aviato.linkedin.user.posts.json
+  - src/treg/catalog/examples/aviato.people.contact.get.json
+  - src/treg/catalog/examples/aviato.people.email.find.json
+  - src/treg/catalog/examples/aviato.people.enrich.bulk.json
+  - src/treg/catalog/examples/aviato.people.enrich.json
+  - src/treg/catalog/examples/aviato.people.phone.find.json
+  - src/treg/catalog/examples/aviato.people.search.json
+  - src/treg/catalog/examples/aviato.people.search.simple.json
+  - src/treg/catalog/examples/crustdata.companies.autocomplete.json
+  - src/treg/catalog/examples/crustdata.companies.enrich.json
+  - src/treg/catalog/examples/crustdata.companies.identify.json
+  - src/treg/catalog/examples/crustdata.companies.jobs.search.json
+  - src/treg/catalog/examples/crustdata.companies.search.json
+  - src/treg/catalog/examples/crustdata.people.autocomplete.json
+  - src/treg/catalog/examples/crustdata.people.enrich.json
+  - src/treg/catalog/examples/crustdata.people.search.json
   - src/treg/catalog/google-search-console.yaml
   - src/treg/catalog/google-search-console.extended.yaml
   - src/treg/catalog/justoneapi.extended.yaml
@@ -62,9 +91,22 @@ platform-key call.
 
 Variable prices use the existing reserve→settle path. Crustdata reserves the documented maximum
 for the requested record count and settles the exact `X-Credits-Used` response header. Aviato's
-preview calls reserve zero; email/rescrape add-ons are derived from request flags; synchronous bulk
+preview calls reserve zero; email/rescrape add-ons are declared in each endpoint's generic
+`cost.modifiers` map and derived from request flags; synchronous bulk
 calls reserve per lookup and settle per returned successful record. Simple people search reserves
-its 0.25-credit base plus the documented one-credit-per-result enrichment add-on when requested.
+and settles its 0.25-credit base plus the documented one-credit-per-result enrichment add-on when
+requested. A lower settlement needs multi-row balance evidence because Aviato does not return the
+exact call charge.
+
+A `cost.modifiers` rule names a parameter location (`query`, `body`, or `lookups`), a match rule
+(`truthy` or `present`), and exactly one credit effect: make the call free, add fixed credits, or add
+credits per requested result. The validator rejects any other shape. This keeps vendor numbers in
+catalog YAML while the billing code reads the rules without provider-specific credit constants.
+
+A verification stamp proves the request shape, response shape, and paid behavior that the evidence
+actually observed. A placeholder path value or a free miss does not prove a paid hit. Such rows keep
+the documented price and say which paid behavior remains unobserved. Captured examples use public
+records and omit private identities or content when counts are enough to prove the response shape.
 
 Path placeholders are substituted by the marketplace caller. Raw values are percent-encoded; a value
 that already contains a valid `%HH` escape is kept verbatim so callers can safely reuse encoded resource

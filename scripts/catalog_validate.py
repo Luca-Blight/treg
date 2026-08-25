@@ -165,6 +165,30 @@ def check_cost(cost: dict, where: str, errors: list[str], warnings: list[str]) -
     per = cost.get("per")
     if per is not None and (not isinstance(per, int) or isinstance(per, bool) or per < 1):
         fail(errors, where, f"cost.per '{per}' must be a positive integer (the quantity `value` covers)")
+    modifiers = cost.get("modifiers")
+    if modifiers is not None:
+        if not isinstance(modifiers, dict) or not modifiers:
+            fail(errors, where, "cost.modifiers must be a non-empty mapping")
+        else:
+            for name, rule in modifiers.items():
+                mwhere = f"{where}:cost.modifiers.{name}"
+                if not isinstance(name, str) or not name or not isinstance(rule, dict):
+                    fail(errors, mwhere, "modifier name and rule must be mappings keyed by parameter name")
+                    continue
+                if rule.get("location", "query") not in ("query", "body", "lookups"):
+                    fail(errors, mwhere, "location must be query, body, or lookups")
+                if rule.get("when", "truthy") not in ("truthy", "present"):
+                    fail(errors, mwhere, "when must be truthy or present")
+                effects = [key for key in ("set_credits", "add_credits", "add_credits_per_result")
+                           if key in rule]
+                if len(effects) != 1:
+                    fail(errors, mwhere, "needs exactly one credit effect")
+                for key in effects:
+                    amount = rule[key]
+                    if (not isinstance(amount, (int, float)) or isinstance(amount, bool) or amount < 0):
+                        fail(errors, mwhere, f"{key} must be a non-negative number")
+                    if key == "set_credits" and amount != 0:
+                        fail(errors, mwhere, "set_credits currently supports only the free value 0")
     # `currency: unit` means "the provider's own meter" — which meter is the only thing that makes
     # the number convertible, and it is `unit` that names it.
     if cur == "unit" and unit not in COST_UNITS:
