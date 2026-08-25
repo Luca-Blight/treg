@@ -47,6 +47,7 @@ from fastapi import FastAPI, Request  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 
+from treg import audit  # noqa: E402
 from treg.api import app  # noqa: E402
 from treg.db import reset_db  # noqa: E402
 
@@ -193,15 +194,22 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
 
 @pytest.fixture
 async def clients():
+    # Postgres needs a session-scoped event loop so asyncpg can safely pool connections. That also
+    # lets fire-and-forget audit writes survive between tests, so drain both sides of reset_db():
+    # before it, to keep an old write out of the new schema, and after the test, to finish its own.
+    await audit.drain()
     await reset_db()
     app.state.hook_hits = []  # webhook POSTs the upstream received (for alerting assertions)
     app.state.http = AsyncClient(transport=ASGITransport(app=make_upstream(app.state.hook_hits)), base_url="http://upstream")
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
-        r = await c.post("/users", json={"email": "tim@superdesign.dev"})  # open registration
-        assert r.status_code == 200, r.text
-        c.headers["X-Treg-Token"] = r.json()["token"]  # authed by default from here on
-        yield c
-    await app.state.http.aclose()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
+            r = await c.post("/users", json={"email": "tim@superdesign.dev"})  # open registration
+            assert r.status_code == 200, r.text
+            c.headers["X-Treg-Token"] = r.json()["token"]  # authed by default from here on
+            yield c
+    finally:
+        await audit.drain()
+        await app.state.http.aclose()
 
 
 @pytest.fixture(autouse=True)
