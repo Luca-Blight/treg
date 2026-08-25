@@ -3312,6 +3312,25 @@ async def adtrack_js():
     return FileResponse(f, media_type="application/javascript", headers=headers)
 
 
+@app.get("/sitetrack.js", include_in_schema=False)
+async def sitetrack_js():
+    """First-touch traffic-source capture (`treg_utm` cookie, always on — first-party, no PII) plus
+    the PostHog bootstrap, with the public project key templated in. Loaded by every public page
+    so the visitor's FIRST hop — the one carrying `utm_*` and the referrer — is the one analytics
+    sees; before this the landing page loaded nothing and every signup looked `$direct`. With no
+    `TREG_POSTHOG_KEY` the analytics half is inert (empty key) and only the cookie half runs."""
+    f = _WEB_DIR / "sitetrack.js"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="sitetrack.js not bundled")
+    s = get_settings()
+    js = (f.read_text(encoding="utf-8")
+          .replace("{POSTHOG_KEY}", s.posthog_key if s.posthog_key else "")
+          .replace("{POSTHOG_HOST}", s.posthog_host.rstrip("/") if s.posthog_key else ""))
+    # no-cache, same reasoning as adtrack.js: a bare `<script src>` with no version query.
+    return Response(content=js, media_type="application/javascript",
+                    headers={"Cache-Control": "no-cache"})
+
+
 @app.get("/resources", include_in_schema=False)
 async def resources_page():
     """The hub for the outcome pages. It exists for two reasons beyond navigation: without it the
@@ -4953,6 +4972,30 @@ def _ad_attribution_from(request: Request) -> tuple[str, str, str]:
     return click_field, click_id.strip()[:255], landing.strip()[:64]
 
 
+_UTM_FIELDS = ("utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_referrer")
+
+
+def _utm_attribution_from(request: Request) -> dict[str, str]:
+    """First-touch traffic source from the `treg_utm` cookie (set by web/sitetrack.js):
+    `source|medium|campaign|term|content|referring-host`, URL-encoded. Missing/short cookies yield
+    fewer fields; anything unparseable yields nothing. Values are capped so a hostile cookie cannot
+    bloat the row."""
+    raw = request.cookies.get("treg_utm") or ""
+    if not raw:
+        return {}
+    parts = [p.strip()[:100] for p in unquote(raw).split("|")]
+    out = {k: v for k, v in zip(_UTM_FIELDS, parts) if v}
+    return out
+
+
+def _stamp_utm(org: Org, request: Request) -> None:
+    """Persist the first-touch source on a brand-new team. Independent of the Google-Ads `treg_ad`
+    path: a sponsor link or a newsletter has no click id, and this is what lets us count its
+    signups. Called from both signup doors, like `_ad_attribution_from`."""
+    for k, v in _utm_attribution_from(request).items():
+        setattr(org, k, v)
+
+
 # ---- users (open registration; personal org + owner membership; token shown once) ---------
 @app.post("/users")
 async def register_user(body: UserIn, request: Request, db: AsyncSession = Depends(get_session)) -> dict:
@@ -4979,6 +5022,8 @@ async def register_user(body: UserIn, request: Request, db: AsyncSession = Depen
         org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
                                             # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
         db.add(org)
+    _stamp_utm(org, request)
+    db.add(org)
     try:
         await db.commit()
     except IntegrityError:
@@ -5053,6 +5098,8 @@ async def create_org(
             org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
                                                 # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
             db.add(org)
+        _stamp_utm(org, request)
+        db.add(org)
         try:
             await db.commit()
             break

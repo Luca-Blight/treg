@@ -12,7 +12,19 @@ related:
   - ops/deploy.md
 ---
 
+> Scope note: this fragment is the **Google click-id** path (`treg_ad` → `Org.ad_*` → conversion
+> upload). Generic traffic-source attribution — `utm_*` and referrer for sponsor links, newsletters,
+> directories — is the separate `treg_utm` → `Org.utm_*` path in `web/sitetrack.js`, documented in
+> [data-model](data-model.md) and [api](../interface/api.md). The two are independent; a Google ad
+> click with utm tags populates both.
+
 # Google Ads conversion tracking
+
+> Scope note: this fragment is the **Google click-id** path (`treg_ad` → `Org.ad_*` → conversion
+> upload). Generic traffic-source attribution — `utm_*` and referrer for sponsor links, newsletters,
+> directories — is the separate `treg_utm` → `Org.utm_*` path in `web/sitetrack.js`, documented in
+> [data-model](data-model.md) and [api](../interface/api.md). The two are independent; a Google ad
+> click with utm tags populates both.
 
 Off unless `google_ads_customer_id` and `ads_conv_refresh_token` are both set (`adsconv.enabled()`) —
 keeps the test suite and self-hosted instances from starting machinery that cannot upload. When off,

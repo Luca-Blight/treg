@@ -183,6 +183,7 @@ AGENT_ICONS: tuple[tuple[str, str, str], ...] = (
     ("codex", "Codex", "codex-color"),
     ("cursor", "Cursor", "cursor"),
     ("gemini-cli", "Gemini CLI", "gemini-color"),
+    ("grok-bot", "Grok Bot", "grok"),
     ("openclaw", "OpenClaw", "openclaw-color"),
     ("hermes", "Hermes Agent", "hermesagent"),
     ("opencode", "opencode", "opencode"),
@@ -2572,4 +2573,49 @@ USE_CASE_PAGES[("finance-markets", "current-quote-for-a-ticker")] = {
     ],
     "related": ("Daily price history", "News for a ticker",
                 "Live crypto prices and history", "Company profile and fundamentals behind a ticker"),
+}
+
+AGENTS["grok-bot"] = {
+    "name": "Grok Bot",
+    "title": "Grok Bot plugin: call {n} APIs without keys | treg.to",
+    "description": (
+        "treg.to is a Grok Bot plugin that lets Grok call {n} APIs across {p} platforms: find work "
+        "emails, LinkedIn profiles, creators, keyword volumes, backlinks, competitor ads. Priced "
+        "per call at the provider's own rate, with no markup and no provider signup."),
+    "definition": (
+        "treg.to is a Grok Bot plugin (and MCP server) that gives Grok {n} ready-to-call APIs "
+        "across {p} platforms: SEO data, LinkedIn and people enrichment, Reddit, YouTube, ads and "
+        "e-commerce. Calls run on treg.to's own keys and are metered from a prepaid balance at the "
+        "provider's rate with $0.000 markup. Every new team starts with $1.00 free, and there are "
+        "no provider accounts to open."),
+    "install_steps": [
+        "In Grok Bot, click <b>Plugins</b> at the bottom of the left sidebar.",
+        "Search for <b>treg</b> and click <b>Add</b>. It is listed as “Treg: give your agent "
+        "2,600+ external API endpoints”, under the <b>MCP</b> category.",
+        "Sign in when it asks; your first team starts with $1.00 of free calls.",
+        "Ask for what you want done in any chat. Grok searches the catalog, tells you the price, "
+        "and calls the endpoint. You never hold a provider key.",
+    ],
+    "install_image": "/media/install/grok-bot-plugins.png",
+    "install_image_alt": "Grok Bot's Plugins dialog with “treg” searched and the Treg plugin added",
+    "install_image_bar": "Grok Bot  ·  Plugins",
+    "install_image_caption": "Steps 1 and 2: Plugins in the sidebar, search treg, Add.",
+    "faq": [
+        ("Is treg.to free to use in Grok Bot?",
+         "Adding it is free and every new team starts with $1.00 of calls. After that, each call is "
+         "metered from the team's prepaid balance at the provider's own rate, with no markup and no "
+         "subscription. Calls on your team's own keys are free."),
+        ("Do I need API keys from the providers?",
+         "No. treg.to makes the upstream request on its own key and relays the answer, so Grok never "
+         "holds a provider credential. If your team already pays for a provider, register that key "
+         "and those calls are never metered."),
+        ("Is this an MCP server or a plugin?",
+         "Both, and they are the same thing here. Grok Bot installs it from its plugin directory; "
+         "underneath it is the same MCP server that Claude, ChatGPT, Cursor and the rest connect "
+         "to, answering the same token and the same catalog."),
+        ("Does treg.to pick the provider for me?",
+         "No. Where several providers do the same job they are shown side by side with prices and "
+         "measured reliability, and Grok (or you) chooses. treg.to does not route or fail over "
+         "between them automatically."),
+    ],
 }
