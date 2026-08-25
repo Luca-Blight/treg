@@ -1523,7 +1523,8 @@ a:hover{text-decoration-color:var(--muted)}
               <tr v-for="p in g.items" :key="p.service" :id="'prov-'+p.service" class="prov-row"
                   :class="{focus:byokFocus===p.service}" tabindex="0" role="button"
                   :aria-label="'Open '+p.display_name"
-                  @click="openProvider(p.service)" @keyup.enter="openProvider(p.service)">
+                  @click="publicCatalog ? goPublicTool(p.service) : openProvider(p.service)"
+                  @keyup.enter="publicCatalog ? goPublicTool(p.service) : openProvider(p.service)">
                 <td class="tn prov-n">
                   <!-- Flex on a wrapper INSIDE the cell, never on the <td> — see the ledger rows. -->
                   <span class="prov-n-i">
@@ -1540,7 +1541,7 @@ a:hover{text-decoration-color:var(--muted)}
                 </td>
                 <td class="tx" @click.stop>
                   <button v-if="p.configured" class="btn sm" :class="{primary:!connCount[p.service]}"
-                          @click="startConnect(p)"
+                          @click="publicCatalog ? openSignin() : startConnect(p)"
                           :title="p.auth_kind==='key'||p.auth_kind==='token' ? 'Paste your own '+p.display_name+' credential — treg keeps it server-side' : 'Connect '+p.display_name+' — approve on their site'">
                     {{connCount[p.service] ? 'Add account' : (p.auth_kind==='key'||p.auth_kind==='token' ? 'Add key' : 'Connect')}}</button>
                 </td>
@@ -5533,6 +5534,10 @@ createApp({
     // integration a key can be pasted into — rather than a single provider's detail page. With a
     // service, the shelf scrolls to that provider's row and flashes it; the flash clears itself so
     // a later visit to the tab doesn't replay a stale highlight.
+    // A signed-out visitor who opens a provider goes to its PUBLIC page (/tools/<service>) — a
+    // real navigation, as a method because Vue template expressions cannot reach the `location`
+    // global (it is not on the template-expression allowlist, so an inline use fails silently).
+    goPublicTool(service){ location.href='/tools/'+encodeURIComponent(service); },
     goByok(service){
       this.mkTab='platform'; this.mkCat='';
       this.byokFocus=service||null; this.epTry=null;
@@ -6195,7 +6200,11 @@ createApp({
     // is the SAME marketplace UI a member sees, minus what needs a session — not a second build of
     // it. This is the branch that makes the catalog crawlable.
     if(catRoute){
-      if(catRoute.slug) this.openPlatform(catRoute.slug, true); else { this.view='connections'; this.loadPlatforms(); }
+      // loadConnections, not just loadPlatforms: /oauth/providers is an open endpoint, so the
+      // Platform tab (the provider shelf) fills for a signed-out visitor too — only /connections
+      // needs a session, and its failure is caught. Without this the tab reads "Platform 0" and
+      // renders blank in an incognito window.
+      if(catRoute.slug) this.openPlatform(catRoute.slug, true); else { this.view='connections'; this.loadConnections(); }
       return; }
     if(!inv && !linkOrg && !route && !qs.get('invite_expired') && !qs.get('ref')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door. `ref` is NOT a plain visit: it is a use-case page's CTA (/app?ref=p1), and bouncing that visitor to the front door throws away the page they arrived on — on a paid click, the one we bought.
     if(route){ this.shareGate=route; this.demo.signin=true; }  // shared link while logged out: the focused gate (no sandbox mint, no tour); after sign-in the boot lands on it (email verify reloads in place; OAuth restores via the treg-next stash)
