@@ -399,6 +399,16 @@ def _migrate_to_orgs(conn) -> None:
             if col not in org_cols:
                 conn.execute(text(f"ALTER TABLE org ADD COLUMN {col} {ddl}"))
 
+    # (A40) additive: org.utm_* — first-touch traffic-source attribution (web/sitetrack.js →
+    # `treg_utm` cookie → signup). All nullable; nothing to backfill, the source of a pre-existing
+    # team was never captured anywhere.
+    if "org" in tables:
+        org_cols = {c["name"] for c in insp.get_columns("org")}
+        for col in ("utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+                    "utm_referrer"):
+            if col not in org_cols:
+                conn.execute(text(f"ALTER TABLE org ADD COLUMN {col} VARCHAR"))
+
     # (A38) additive: durable retry/dead-letter state for the Ads conversion outbox. The table may
     # already exist from the first conversion-tracking deploy; create_all does not add new columns.
     if "adconversion" in tables:
@@ -606,6 +616,7 @@ async def reset_db() -> None:
     """Drop + recreate all tables. Test-only: gives each test a clean registry."""
     from . import models  # noqa: F401
 
+    await _engine.dispose()
     async with _engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)

@@ -2,6 +2,7 @@
 title: The API — the only brain (FastAPI)
 status: shipped
 sources:
+  - src/treg/web/sitetrack.js
   - src/treg/api.py
   - src/treg/catalog_store.py
   - src/treg/email.py
@@ -355,6 +356,12 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `web/llms.txt` as `text/plain` with `{BASE}` templated from `public_url` — the [llms.txt](https://llmstxt.org)
   agent-onboarding file (call protocol + discovery + auth + CLI + skills + doc links). See [dashboard](dashboard.md).
   `install_sh` (`GET /install.sh`, `{BASE}`-templated) serves the CLI installer (`web/install.sh`).
+  `sitetrack_js` (`GET /sitetrack.js`, no-cache) serves `web/sitetrack.js` with `{POSTHOG_KEY}` /
+  `{POSTHOG_HOST}` templated from settings: the always-on first-party `treg_utm` first-touch cookie
+  (utm_* + referring host, read by `_utm_attribution_from` / `_stamp_utm` in BOTH signup doors, `/users`
+  and `/orgs`) plus the PostHog bootstrap with pageviews ON. Loaded by every public page — landing,
+  use-case pages, resources, tutorial, and the SPA — so analytics sees the visitor's first hop rather
+  than the post-OAuth `/app` landing. Without a key the analytics half is inert (empty string).
   `adtrack_js` (`GET /adtrack.js`, no-cache) serves the first-party ad-click capture script loaded by
   `index.html`'s `<script src="/adtrack.js">`; it returns an empty script when conversion tracking is
   disabled, so unconfigured deployments do not collect advertising cookies. See

@@ -177,6 +177,15 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
             return JSONResponse({"message": "field is required"}, status_code=400)
         return {"ok": True}
 
+    @up.get("/requires-version")
+    async def requires_version(request: Request):
+        # Crustdata requires this protocol header on every route, including its free credential
+        # probe. The provisioner must stamp it without asking each caller to remember it.
+        if request.headers.get("x-api-version") != "2025-11-01":
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"message": "x-api-version is required"}, status_code=400)
+        return {"ok": True, "version": request.headers["x-api-version"]}
+
     @up.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
     async def echo(request: Request) -> dict:
         body = (await request.body()).decode()
