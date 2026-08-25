@@ -71,6 +71,12 @@ def upgrade() -> None:
     sa.Column('ad_click_id_type', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('ad_click_at', sa.DateTime(), nullable=True),
     sa.Column('ad_landing', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('utm_source', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('utm_medium', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('utm_campaign', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('utm_term', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('utm_content', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('utm_referrer', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('first_call_at', sa.DateTime(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id')
