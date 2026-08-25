@@ -237,15 +237,30 @@ with no heavy imports so it costs the light CLI nothing and can be reviewed with
 code. It holds `ROLES` (the rotating "ChatGPT for *SEO experts / social media managers / SDRs*…"
 hero; the first role is server-rendered in the H1 so a crawler reads a full sentence), the install
 steps and screenshot, one example prompt per category, the FAQ, and `USE_CASES`: the buyer's menu —
-plain-words jobs ("Find professional emails", "Find creators by keyword") under buyer categories
-(Data enrichment & sales, Social, SEO, E-commerce, Advertising, Market research), each mapped to
-the capability ids that do it. That taxonomy is the map of the whole site: the use-case pages will
-hang from the same categories, and a row links to its page once one exists. The route projects
+plain-words jobs ("Find professional emails", "Find creators by keyword") under fourteen buyer
+categories, each mapped to the capability ids that do it. That taxonomy is the map of the whole
+site, and it is re-cut whenever the catalog grows, so **it is metadata and never a URL** (see the
+use-case pages below). A row links to its page once one exists. The route projects
 the rest from `catalog_store.load()` per request — the union of providers, the lowest USD price
 via `cost_view`, verified counts, one chip per platform — and the counts in the title are computed.
 `tests/test_agent_pages.py` asserts every capability id in `USE_CASES` exists in the catalog, so a
 job the catalog cannot do cannot be advertised and a renamed capability fails the suite instead of
 silently dropping a row. Never a row per endpoint — that is the banned page-per-endpoint in list form.
+
+**One axis per category, and sub-headings where the buyer needs depth.** The first cut mixed two
+axes: "Connect your own accounts" named an *access mode*, so Google Analytics sat beside Business
+Profile reviews for the only reason that both authenticate with the team's own key, while the buyer
+looking for either was reading a different page. A category now names one thing only: what the job
+is about. `test_one_axis_only_no_access_mode_categories` holds that, and two more tests hold that no
+job appears in two categories and no two jobs share a capability set (which is how a genuine
+duplicate was found).
+
+Data enrichment is the killer use case, so it carries twenty-five of the ninety jobs, and its four
+stages — find companies, find people, contact details, enrich a record — render as sub-headings
+inside the one section, driven by `CATEGORY_GROUPS`. They are **not** categories: they are stages of
+one motion, and promoting them would have committed four URL segments to a distinction that only
+exists in a practitioner's head. The section builder orders rows by group and prints a divider row
+before each; the `.md` mirror sorts by the same order.
 
 **Hosted only.** The copy describes treg.to's own listings — the ChatGPT Plugins entry, the $1.00
 grant — none of which is true of a self-hosted registry. `_hosted()` checks `public_url` against
@@ -268,7 +283,7 @@ sign-in opens in place), so every server-rendered page now gets that behaviour a
 produced the signup is recorded. Schema on the page: `SoftwareApplication`, `BreadcrumbList`, and
 a `FAQPage` whose questions are asserted to appear verbatim in the body.
 
-## The use-case pages — `/use-cases/<category>/<job>`, and the hub at `/use-cases`
+## The use-case pages — `/use-cases/<job>`, and the hub at `/use-cases`
 
 The spokes. **The reader does one thing, the prompt; everything else is what the agent sees before
 it calls.** Above the fold: the setup line, one prompt with a copy button, four "why this prompt
@@ -283,10 +298,18 @@ what makes it a template rather than one page's prose:
 | `platforms` | the job spans several platforms | providers grouped per platform, cheapest claimed per platform |
 | `compare` | several providers, one platform | the full comparison |
 
-Of the 66 jobs on the menu, 19 are single-provider and 19 span several platforms, so two thirds of
-the eventual pages are not the plain comparison the first page was built for.
+Of the 90 jobs on the menu, roughly a third are single-provider and a third span several platforms,
+so two thirds of the eventual pages are not the plain comparison the first page was built for.
 
-**Cheapest is claimed per billing unit, never overall.** 38 of the 66 jobs mix per-call, per-result
+**The URL is flat, and the category is metadata.** `/use-cases/<job>`, with the category carried only
+in the breadcrumb, the hub heading and the agent-page section. This is the whole point: the taxonomy
+gets re-cut as providers arrive, and **a re-cut must never move a page Google has indexed**. The
+nested form that shipped first (`/use-cases/<category>/<job>`) is live and indexed, so it 301s to the
+flat form rather than 404s, and `test_use_case_urls_are_flat_so_a_recut_never_moves_them` holds the
+shape. Composio's pSEO does the same thing for the same reason. The category breadcrumb points at
+`/use-cases#<category>`, so the hub is the parent of its own cluster rather than the ChatGPT page.
+
+**Cheapest is claimed per billing unit, never overall.** Most jobs mix per-call, per-result
 and per-success endpoints, and ranking those by USD per chargeable event names the wrong winner: one
 call returning a thousand rows is not dearer than one row. The page prints "cheapest per found",
 "cheapest per call" and so on, and says the units are not interchangeable when more than one appears.
@@ -302,7 +325,7 @@ with the "live traffic, not a controlled benchmark" caveat.
 
 **Nothing job-specific or agent-specific is in the route.** The example client is
 `agent_pages.DEFAULT_AGENT`; the job's own words, result noun, "what is X" heading, notes, FAQ and
-`voices` all come from `USE_CASE_PAGES`, keyed by `(category slug, job slug)`. A spec's `label` must
+`voices` all come from `USE_CASE_PAGES`, keyed by the job slug alone. A spec's `label` must
 match a row of `USE_CASES` exactly (tested), which is how the agent page knows to link the row to
 its page. `tests/test_agent_pages.py` asserts the route source contains no job-specific string.
 
@@ -363,9 +386,9 @@ branches on the row's `free` flag: `metered_single` states the rate and the mark
 description does not claim "never metered". Both were found the same way as the Semrush one: by
 reading the stock and AI-visibility pages after the tests went green.
 
-Nested under the category on purpose: the five flat ad pages keep their URLs and `build_html.py`
-ownership, and `test_legacy_flat_use_case_pages_still_answer` proves the nested route cannot shadow
-them. `/use-cases` is the crawlable hub they hang from; before it existed the only link into a spoke
+The five flat ad pages predate all of this, keep their URLs and their `build_html.py` ownership, and
+are served first by the same flat handler; `test_legacy_flat_use_case_pages_still_answer` proves a
+rendered job page cannot shadow one. `/use-cases` is the crawlable hub they hang from; before it existed the only link into a spoke
 was one row on one agent page. All hosted-only, sitemapped and `.md`-mirrored like the agent pages.
 
 ## Counts
