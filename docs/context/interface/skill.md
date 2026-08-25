@@ -12,6 +12,8 @@ sources:
   - package.json
   - dsh/cordis.patch.yml
   - dsh/index.js
+  - minimax/.minimax-plugin/plugin.json
+  - scripts/minimax_plugin.py
 related:
   - interface/cli.md
   - interface/api.md
@@ -53,6 +55,7 @@ served**, because a second copy of the product's most-read page is a copy that r
 | Codex/ChatGPT plugin | `plugin/.codex-plugin/` + generated `plugin/skills/treg/SKILL.md` | the directory ChatGPT and Codex share |
 | Cursor plugin | `.cursor-plugin/marketplace.json` + generated `plugins/treg/skills/treg/SKILL.md` | the Cursor marketplace (plugin root is never the repo root) |
 | DeepSeek Harness bundle | root `package.json` (`dsh.bundle`) + `dsh/cordis.patch.yml` + generated `dsh/skills/treg/SKILL.md` | `dsh plugin --profile <name> add github:superdesigndev/treg` |
+| MiniMax plugin | `minimax/.minimax-plugin/plugin.json` + generated `minimax/skills/treg/SKILL.md`; `scripts/minimax_plugin.py` pre-runs their validator and builds the ZIP | the MiniMax Plugin Marketplace (MiniMax Code + MiniMax Agent), submitted by form as GitHub subdir `minimax`; skills-only because the package may hold no credential and the bootstrap omits `treg mcp install`, which cannot write a MiniMax config. See [docs/MINIMAX-PLUGIN.md](../../MINIMAX-PLUGIN.md) |
 | the domain itself | `GET /.well-known/skills/index.json` + `/.well-known/skills/treg/SKILL.md` | anything speaking the agentskills.io convention (Hermes reads this directly) |
 
 `scripts/build_plugin.py` renders every plugin copy from the one source and `--check` fails if any is
