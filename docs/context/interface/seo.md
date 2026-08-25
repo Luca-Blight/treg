@@ -3,6 +3,7 @@ title: Search surfaces — robots, sitemap, the crawlable catalog, and the socia
 status: shipped
 sources:
   - src/treg/api.py
+  - src/treg/routers/web.py
   - src/treg/agent_pages.py
   - src/treg/web/robots.txt
   - src/treg/web/catalog.css
@@ -45,7 +46,7 @@ FastAPI's stock Swagger shell — a kilobyte of JavaScript to anything that does
 | `/media/og.png` | The 1200×630 social card, served by the pre-existing `/media` mount. |
 | `/catalog.css` | Skin for `/docs`. The catalog URLs need none — they ship the dashboard's own stylesheet, because they ship the dashboard. |
 
-`_page()` in `api.py` is the shell for the standalone server-rendered pages (`/docs`) — it owns
+`_page()` in `routers.web` is the shell for the standalone server-rendered pages (`/docs`) — it owns
 `<title>`, the meta description, the canonical, the og/twitter card and the JSON-LD, so a new page
 cannot ship missing them. That omission is exactly what left the landing bare.
 

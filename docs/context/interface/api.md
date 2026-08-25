@@ -6,6 +6,7 @@ sources:
   - src/treg/routers/__init__.py
   - src/treg/routers/catalog.py
   - src/treg/routers/dependencies.py
+  - src/treg/routers/web.py
   - src/treg/timeutil.py
   - src/treg/catalog_store.py
   - src/treg/email.py
@@ -21,8 +22,9 @@ related:
 # The API
 
 Route definitions live on `api.router`; the open Catalog JSON block is defined in
-`routers.catalog` and attached at its original registration point. `bootstrap.create_app()` assembles
-the combined route table into FastAPI roles.
+`routers.catalog`, and the three presentation blocks are defined in `routers.web`. `api.py` attaches
+each block at its original registration point. `bootstrap.create_app()` assembles the combined route
+table into FastAPI roles.
 `api.app` remains the deployed, backward-compatible `all` role. Everything the CLI + skill do is one
 HTTP call over this. The factory lifespan
 runs `init_db()`, then `_backfill_provider_extra_tools()` (the idempotent repair for provider registry

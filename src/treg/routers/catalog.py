@@ -13,6 +13,7 @@ from .. import audit, catalog_store, endpoint_stats, oauth_providers
 from ..db import get_session
 
 
+# The app alias preserves the moved handlers' original @app.get decorator text byte-for-byte.
 app = APIRouter()
 public_router = app
 
