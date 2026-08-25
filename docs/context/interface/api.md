@@ -3,6 +3,9 @@ title: The API — the only brain (FastAPI)
 status: shipped
 sources:
   - src/treg/api.py
+  - src/treg/routers/__init__.py
+  - src/treg/routers/dependencies.py
+  - src/treg/timeutil.py
   - src/treg/catalog_store.py
   - src/treg/email.py
   - src/treg/runner.py
@@ -50,7 +53,9 @@ falls through and finds no usable marketplace credential. A genuine URL-passthro
 with the names of the colliding usable tools and the explicit `/call/<name>/<path>` escape hatch.
 
 ## Auth
-`require_member()` reads the `X-Treg-Token` header, hashes it (`crypto.hash_token`), looks up the
+The shared HTTP dependency family is defined in `routers.dependencies` and re-exported by `api.py`
+during the staged route migration. `require_member()` reads the `X-Treg-Token` header, hashes it
+(`crypto.hash_token`), looks up the
 `Membership` by `token_hash`, and returns a `Caller` (`membership, user, org` + `org_id`/`email`/`role`);
 401 on missing/invalid. Every scoped endpoint depends on it **except** `POST /users` + `POST
 /invites/accept` (open, self-registering) and `GET /oauth/callback` (browser-hit, protected by `state`).

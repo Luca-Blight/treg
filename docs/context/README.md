@@ -26,15 +26,15 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
 | [MCP — the front door for assistants, and treg as an OAuth authorization server](architecture/mcp-oauth.md) | shipped | mcp.py, mcp_oauth.py, connect-demo.html |
 | [Money — prepaid balance, the ledger, Stripe, and the reports that check it](architecture/money.md) | shipped | ledger.py, models.py, billing.py, reconcile.py, … |
-| [Multi-tenancy — orgs, memberships, invites, per-org scoping](architecture/multi-tenancy.md) | shipped | models.py, api.py, db.py |
+| [Multi-tenancy — orgs, memberships, invites, per-org scoping](architecture/multi-tenancy.md) | shipped | models.py, api.py, dependencies.py, db.py, … |
 | [The proxy — faithful credential-injecting relay + tool resolution](architecture/proxy-model.md) | shipped | proxy.py, api.py |
-| [Super-admin — cross-tenant read + control](architecture/super-admin.md) | shipped | api.py, config.py |
+| [Super-admin — cross-tenant read + control](architecture/super-admin.md) | shipped | api.py, dependencies.py, config.py |
 
 ## Interfaces (API · CLI · skill)
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [The API — the only brain (FastAPI)](interface/api.md) | shipped | api.py, catalog_store.py, email.py, runner.py, … |
+| [The API — the only brain (FastAPI)](interface/api.md) | shipped | api.py, __init__.py, dependencies.py, timeutil.py, … |
 | [catalog-review-proposal](interface/catalog-review-proposal.md) | ? | — |
 | [The CLI (treg) + skill scaffolding](interface/cli.md) | shipped | cli.py, convert.py, agents.py |
 | [The web dashboard (Ledger, served from FastAPI)](interface/dashboard.md) | shipped | index.html, README.md, vue-3.5.41.global.prod.js, tutorial.js, … |

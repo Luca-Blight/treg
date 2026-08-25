@@ -3,6 +3,7 @@ title: Super-admin — cross-tenant read + control
 status: shipped
 sources:
   - src/treg/api.py
+  - src/treg/routers/dependencies.py
   - src/treg/config.py
 related:
   - architecture/multi-tenancy.md
@@ -14,7 +15,7 @@ related:
 Everything else is org-scoped; super-admin is the one capability that sees **across all orgs**. It's
 deliberately separate from org roles.
 
-## Authorization (`require_superadmin` in api.py) — hybrid
+## Authorization (`require_superadmin` in `routers.dependencies`) — hybrid
 A caller is a super-admin if EITHER:
 - the presented `X-Treg-Token` equals the env `admin_token` (`get_settings().admin_token`, from
   `TREG_ADMIN_TOKEN`), compared with `hmac.compare_digest` → principal `"env-admin"`; OR
@@ -23,6 +24,9 @@ A caller is a super-admin if EITHER:
 
 Otherwise 403. The env key bootstraps; `POST /admin/users/{id}/superadmin` then grants named users the
 flag (so a web portal can log in with either). Returns a principal string (for audit).
+
+`api.py` re-exports this dependency during the staged router migration, so the existing admin route
+definitions and compatibility imports still refer to the same function object.
 
 ## Suspension enforcement (in `require_member`)
 Two flags gate the **org-scoped** path: `require_member` raises 403 if `user.suspended` ("account

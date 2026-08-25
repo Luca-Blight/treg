@@ -28,9 +28,10 @@ Stage 1 activates two contracts:
 - `treg.ledger` cannot import `treg.audit`. Money correctness never flows through the best-effort audit
   path, whose writes may be shed under load.
 
-Router, application, and domain layer contracts remain intentionally absent until those packages exist
-in later refactor stages. Adding them early would describe a target tree rather than enforce the current
-one.
+The router package now contains shared HTTP dependencies, but its no-import-from-`api` contract remains
+scheduled for the final Stage 2 movement commit. Application and domain layer contracts remain absent
+until those packages are migrated in later stages. Activating them earlier would describe a target tree
+rather than enforce the current one.
 
 Two direct edges are precise exceptions. `cli.ensure_proxy_dependency` imports `cryptography` only after
 the user invokes the optional proxy feature and offers to install the proxy extra first.
