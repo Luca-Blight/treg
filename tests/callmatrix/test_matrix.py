@@ -364,11 +364,7 @@ async def test_d2_concurrent_same_key_loser_gets_409(
     first_task = asyncio.create_task(
         matrix_clients.get(f"/call/{EP}?aweme_id=7", headers=headers),
     )
-    for _ in range(1_000):
-        if len(fake_provider.hits) > before.hit_count:
-            break
-        await asyncio.sleep(0)
-    assert len(fake_provider.hits) == before.hit_count + 1, "first call never reached fake provider"
+    await fake_provider.wait_for_hits(before.hit_count + 1)
 
     loser = await matrix_clients.get(f"/call/{EP}?aweme_id=7", headers=headers)
     winner = await first_task

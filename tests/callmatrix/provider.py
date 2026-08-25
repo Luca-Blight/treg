@@ -29,11 +29,33 @@ class FakeProvider:
 
     def __init__(self) -> None:
         self.hits: list[Hit] = []
+        self._arrived = asyncio.Event()
         self.app = FastAPI()
         self.app.add_api_route(
             "/{path:path}", self._respond,
             methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         )
+
+    async def wait_for_hits(self, count: int, timeout: float = 30.0) -> None:
+        """Block until ``count`` requests have arrived, or fail the wait.
+
+        Callers racing an in-flight call must wait on this rather than yielding
+        the event loop a fixed number of times: an idle loop returns from
+        ``sleep(0)`` immediately, so a yield budget is spent at a rate set by
+        the machine, not by the call's progress.
+        """
+        try:
+            async with asyncio.timeout(timeout):
+                while True:
+                    self._arrived.clear()
+                    if len(self.hits) >= count:
+                        return
+                    await self._arrived.wait()
+        except TimeoutError:
+            raise AssertionError(
+                f"only {len(self.hits)} of {count} calls reached the fake provider "
+                f"in {timeout}s",
+            ) from None
 
     async def _respond(self, request: Request) -> Response:
         body = await request.body()
@@ -47,6 +69,7 @@ class FakeProvider:
             headers=headers,
             body=body,
         ))
+        self._arrived.set()
 
         if delay := headers.get("x-fake-sleep"):
             await asyncio.sleep(float(delay))
