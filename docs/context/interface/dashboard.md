@@ -401,6 +401,15 @@ page (Connect looked dead).
 > There is no second implementation of any of this; see [seo](seo.md) for why, and for the `#prerender`
 > fallback that carries the text to crawlers that run no scripts. `index.html`'s own `robots: noindex`
 > is stripped on those two URLs only.
+>
+> **The Platform tab fills for signed-out visitors too.** The public-catalog boot branch calls
+> `loadConnections()`, not just `loadPlatforms()` — `/oauth/providers` is an open endpoint, and the
+> `/connections` half fails and is caught. (It once called only `loadPlatforms()`, and an incognito
+> visitor who reached the tab saw "Platform 0" and a blank shelf.) In public mode the shelf's
+> actions swap: "Add key"/"Connect" opens the sign-in dialog, and a provider row navigates to the
+> server-rendered public page at `/tools/<service>` via `goPublicTool` — a real method, because a
+> Vue template expression cannot reach the `location` global (not on the expression allowlist; an
+> inline `location.href=` fails silently).
 
 The marketplace's second browse surface answers "what data can I actually pull?" rather than "whose
 account can I attach?" — see `architecture/catalog.md` for the data behind it, and it is the marketplace's
