@@ -1095,12 +1095,23 @@ def _logo(domain: str | None, alt: str) -> str:
             f'alt="{_esc_html(alt)}" width="20" height="20" loading="lazy"/>')
 
 
-def _use_case_page_for(category: str, label: str) -> str | None:
-    """The spoke URL for a job on the agent page, or None when no page has been written for it."""
-    cslug = agent_pages.category_slug(category)
-    for (c, j), spec in agent_pages.USE_CASE_PAGES.items():
-        if c == cslug and spec["label"] == label:
-            return f"/use-cases/{c}/{j}"
+def _job_category(label: str) -> str:
+    """The category a job belongs to, looked up by label. Category is METADATA, never part of the
+    URL: Composio files every blueprint at a flat /use-case/<slug> and renders the category as a
+    chip, which is why re-cutting their taxonomy costs them nothing. Ours does the same now, after
+    one re-cut taught us the price of putting it in the path."""
+    for category, jobs in agent_pages.USE_CASES:
+        for lbl, _ in jobs:
+            if lbl == label:
+                return category
+    return ""
+
+
+def _use_case_page_for(label: str) -> str | None:
+    """The flat URL for a job, or None when no page has been written for it."""
+    for slug, spec in agent_pages.USE_CASE_PAGES.items():
+        if spec["label"] == label:
+            return f"/use-cases/{slug}"
     return None
 
 
@@ -1115,17 +1126,16 @@ def _related_link(label: str, agent_slug: str) -> tuple[str, str]:
     for category, jobs in agent_pages.USE_CASES:
         for lbl, _ in jobs:
             if lbl == label:
-                return (_use_case_page_for(category, label)
+                return (_use_case_page_for(label)
                         or f"/agents/{agent_slug}#{agent_pages.category_slug(category)}"), category
     return f"/agents/{agent_slug}", ""
 
 
-def _use_case_caps(category_slug: str, label: str) -> tuple[str, ...]:
-    for category, jobs in agent_pages.USE_CASES:
-        if agent_pages.category_slug(category) == category_slug:
-            for lbl, caps in jobs:
-                if lbl == label:
-                    return caps
+def _use_case_caps(label: str) -> tuple[str, ...]:
+    for _category, jobs in agent_pages.USE_CASES:
+        for lbl, caps in jobs:
+            if lbl == label:
+                return caps
     return ()
 
 
@@ -1154,7 +1164,7 @@ def _menu_rows(cat, category: str, jobs) -> list[dict]:
                      "from_usd": min(prices) if prices else None,
                      # no priced endpoint at all = the team's own account does the job, unmetered
                      "own_account": not prices,
-                     "page": _use_case_page_for(category, label)})
+                     "page": _use_case_page_for(label)})
     return rows
 
 
@@ -1213,6 +1223,10 @@ async def agent_page(request: Request, agent: str):
             md += [f"### {category}", ""]
             if prompt:
                 md += [f"Try: \"{prompt}\"", ""]
+            groups = agent_pages.CATEGORY_GROUPS.get(category)
+            order = ([l for _g, labels in groups for l in labels] if groups else None)
+            if order:
+                rows = sorted(rows, key=lambda r: order.index(r["label"]) if r["label"] in order else 999)
             for r in rows:
                 plats = ", ".join(pl["label"] for pl in r["platforms"] if not pl["dup"])
                 price = "FREE with your own account" if r["own_account"] else f"from {_usd_short(r['from_usd'])}"
@@ -1263,7 +1277,7 @@ async def agent_page(request: Request, agent: str):
         cards.append(f'<a class="card" href="#{anchor}"><h4>{_esc_html(category)}</h4>'
                      f'<p>{_esc_html(blurb)}</p>'
                      f'<p style="font-family:var(--mono);font-size:11.5px;color:var(--muted2)">{meta}</p></a>')
-        body_rows = []
+        body_rows, by_label = [], {}
         for r in rows:
             chips, seen_p = [], set()
             for pl in r["platforms"]:
@@ -1279,10 +1293,23 @@ async def agent_page(request: Request, agent: str):
                      else f'{_esc_html(_usd_short(r["from_usd"]))}')
             name_cell = (f'<a href="{r["page"]}"><b>{_esc_html(r["label"])}</b></a>' if r["page"]
                          else f'<b>{_esc_html(r["label"])}</b>')
-            body_rows.append(
-                f'<tr><td>{name_cell}{hidden}</td>'
-                f'<td style="color:var(--muted)">{" &middot; ".join(chips)}</td>'
-                f'<td>{r["providers"]}</td><td>{price}</td></tr>')
+            row_html = (f'<tr><td>{name_cell}{hidden}</td>'
+                        f'<td style="color:var(--muted)">{" &middot; ".join(chips)}</td>'
+                        f'<td>{r["providers"]}</td><td>{price}</td></tr>')
+            by_label[r["label"]] = row_html
+            body_rows.append(row_html)
+        # A category with sub-headings orders its rows by group and prints a divider row before
+        # each. Enrichment is 25 jobs and the groups are how a buyer reads them; they are NOT
+        # categories, because find / contacts / enrich are stages of one motion and would have
+        # committed four more URL segments to a distinction that only exists in a practitioner's head.
+        groups = agent_pages.CATEGORY_GROUPS.get(category)
+        if groups:
+            body_rows = []
+            for gname, labels in groups:
+                body_rows.append(
+                    f'<tr><td colspan="4" style="padding-top:20px"><span class="seclab" '
+                    f'style="margin:0">{_esc_html(gname)}</span></td></tr>')
+                body_rows += [by_label[l] for l in labels if l in by_label]
         sections.append(
             f'<section id="{anchor}"><div class="wrap"><div class="seclab">{_esc_html(category)}</div>'
             f'<h2>{_esc_html(blurb)}</h2>'
@@ -1451,7 +1478,20 @@ def _uc_call(e: dict) -> str:
 
 @app.get("/use-cases/{category}/{job}.md", include_in_schema=False)
 @app.get("/use-cases/{category}/{job}", include_in_schema=False)
-async def use_case_job_page(request: Request, category: str, job: str,
+async def use_case_job_page_nested(category: str, job: str):
+    """The URLs the first pages shipped under, when the category was a path segment. They are live
+    and indexed, so they 301 to the flat form rather than 404. Keep this forever: a moved URL that
+    answers is free, and a moved URL that does not is the whole cost of a taxonomy change."""
+    md = job.endswith(".md")
+    slug = job[:-3] if md else job
+    if slug not in agent_pages.USE_CASE_PAGES:
+        raise HTTPException(status_code=404, detail="unknown use case")
+    return RedirectResponse(f"/use-cases/{slug}{'.md' if md else ''}", status_code=301)
+
+
+@app.get("/use-cases/{job}.md", include_in_schema=False)
+@app.get("/use-cases/{job}", include_in_schema=False)
+async def use_case_job_page(request: Request, job: str,
                             db: AsyncSession = Depends(get_session)):
     """One job. The reader does one thing, the prompt; everything else is what the agent sees
     before it calls. The page takes one of three FORMS, chosen from the data rather than by hand:
@@ -1464,25 +1504,32 @@ async def use_case_job_page(request: Request, category: str, job: str,
     `DEFAULT_AGENT`, so writing page two is data entry. `.md` serves the same page as Markdown.
     """
     as_md = request.url.path.endswith(".md")
-    raw = (category, job[:-3] if job.endswith(".md") else job)
-    # Same rule as `agent_page`: the slugs reach the canonical and the JSON-LD, so they come from
+    raw = job[:-3] if job.endswith(".md") else job
+    # The five ad landing pages are static HTML on this same path shape. One handler owns the path,
+    # so serve them before anything else; `_USE_CASES` stays the one source for which they are.
+    legacy = _USE_CASES.get(raw.strip("/").lower())
+    if legacy and not as_md:
+        page = _WEB_DIR / legacy
+        if not page.exists():
+            raise HTTPException(status_code=404, detail=f"{legacy} not bundled")
+        # no-cache: these are edited against live campaign data and must never serve stale.
+        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    # Same rule as `agent_page`: the slug reaches the canonical and the JSON-LD, so it comes from
     # the table's own key, and a differently-cased URL is redirected rather than duplicated.
-    key = next((k for k in agent_pages.USE_CASE_PAGES
-                if k == (raw[0].lower(), raw[1].lower())), None)
+    key = next((k for k in agent_pages.USE_CASE_PAGES if k == raw.lower()), None)
     if key is None or not _hosted():
         raise HTTPException(status_code=404, detail="unknown use case")
     if raw != key:
-        return RedirectResponse(f"/use-cases/{key[0]}/{key[1]}" + (".md" if as_md else ""),
-                                status_code=301)
-    # Fresh names on purpose: rebinding the parameters themselves does not read as a taint kill to
+        return RedirectResponse(f"/use-cases/{key}" + (".md" if as_md else ""), status_code=301)
+    # Fresh name on purpose: rebinding the parameter itself does not read as a taint kill to
     # CodeQL, and the request's spelling must not be what the page prints.
-    cat_slug, job_slug = key
+    job_slug = key
     spec = agent_pages.USE_CASE_PAGES[key]
     cat = catalog_store.load()
     base = get_settings().public_url.rstrip("/")
     agent_slug, agent_name = _uc_agent()
-    cat_label = next((c for c, _ in agent_pages.USE_CASES if agent_pages.category_slug(c) == cat_slug), cat_slug)
-    caps = _use_case_caps(cat_slug, spec["label"])
+    cat_label = _job_category(spec["label"])
+    caps = _use_case_caps(spec["label"])
     eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
     if not eps:
         raise HTTPException(status_code=404, detail="no endpoints for this job")
@@ -1611,7 +1658,7 @@ async def use_case_job_page(request: Request, category: str, job: str,
         md += ["", f"## {spec.get('what_is_heading', 'What is this?')}", "", spec["what_is"], "", "## Questions", ""]
         for q, a in spec["faq"]:
             md += [f"**{q}** {a}", ""]
-        md += [f"HTML version: {base}/use-cases/{cat_slug}/{job_slug}"]
+        md += [f"HTML version: {base}/use-cases/{job_slug}"]
         return PlainTextResponse("\n".join(md), media_type="text/markdown; charset=utf-8",
                                  headers={"Cache-Control": "public, max-age=600"})
 
@@ -1813,7 +1860,7 @@ async def use_case_job_page(request: Request, category: str, job: str,
     body = (
         '<div class="hero"><div class="wrap">'
         f'<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / <a href="/use-cases">Use cases</a> / '
-        f'<a href="/agents/{agent_slug}#{agent_pages.category_slug(cat_label)}">{_esc_html(cat_label)}</a></div>'
+        f'<a href="/use-cases#{agent_pages.category_slug(cat_label)}">{_esc_html(cat_label)}</a></div>'
         f'<div class="kicker">{n} providers &middot; {hero_price} &middot; $0.000 markup</div>'
         f'<h1>{_esc_html(spec["sentence"])}</h1>'
         f'<div class="lede">{_esc_html(lede)}</div>'
@@ -1862,19 +1909,19 @@ async def use_case_job_page(request: Request, category: str, job: str,
             {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
             {"@type": "ListItem", "position": 2, "name": "Use cases", "item": base + "/use-cases"},
             {"@type": "ListItem", "position": 3, "name": cat_label,
-             "item": f"{base}/agents/{agent_slug}#{agent_pages.category_slug(cat_label)}"},
+             "item": f"{base}/use-cases#{agent_pages.category_slug(cat_label)}"},
             {"@type": "ListItem", "position": 4, "name": spec["sentence"],
-             "item": f"{base}/use-cases/{cat_slug}/{job_slug}"}]},
+             "item": f"{base}/use-cases/{job_slug}"}]},
         {"@context": "https://schema.org", "@type": "ItemList", "name": title, "numberOfItems": len(provs),
          "itemListElement": [{"@type": "ListItem", "position": i, "name": p["name"],
-                              "url": f"{base}/use-cases/{cat_slug}/{job_slug}#compare"}
+                              "url": f"{base}/use-cases/{job_slug}#compare"}
                              for i, p in enumerate(provs, 1)]},
         {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
             {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
             for q, a in spec["faq"]]},
     ]
-    return _page(title, desc[:300], f"/use-cases/{cat_slug}/{job_slug}", body, ld,
-                 head_extra=_MD_ALT.format(href=f"{base}/use-cases/{cat_slug}/{job_slug}.md"),
+    return _page(title, desc[:300], f"/use-cases/{job_slug}", body, ld,
+                 head_extra=_MD_ALT.format(href=f"{base}/use-cases/{job_slug}.md"),
                  css="usecase.css")
 
 
@@ -1888,9 +1935,9 @@ async def use_cases_hub():
     base = get_settings().public_url.rstrip("/")
     _, agent_name = _uc_agent()
     by_cat: dict[str, list[str]] = {}
-    for (c, j), spec in agent_pages.USE_CASE_PAGES.items():
-        label = next((cl for cl, _ in agent_pages.USE_CASES if agent_pages.category_slug(cl) == c), c)
-        caps = _use_case_caps(c, spec["label"])
+    for j, spec in agent_pages.USE_CASE_PAGES.items():
+        label = _job_category(spec["label"])
+        caps = _use_case_caps(spec["label"])
         eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
         nprov = len({e["provider"] for e in eps})
         prices = [cv["usd"] for e in eps if (cv := cat.cost_view(e.get("cost"), e.get("provider"))) and cv["usd"]]
@@ -1899,7 +1946,7 @@ async def use_cases_hub():
         blurb = spec["lede"].format(n=nprov, agent=agent_name,
                                     cheapest=_usd_short(min(prices)) if prices else "free")
         by_cat.setdefault(label, []).append(
-            f'<a class="pcard" href="/use-cases/{c}/{j}"><h3>{_esc_html(spec["sentence"])}</h3>'
+            f'<a class="pcard" href="/use-cases/{j}"><h3>{_esc_html(spec["sentence"])}</h3>'
             f'<p>{_esc_html(blurb[:140])}</p><div class="meta">{meta}</div></a>')
     blocks = "".join(f'<section class="cat"><h2 id="{_anchor(c)}">{_esc_html(c)}</h2>'
                      f'<div class="grid">{"".join(v)}</div></section>' for c, v in by_cat.items())
@@ -3132,8 +3179,8 @@ async def sitemap_xml():
         for slug in agent_pages.AGENTS:
             add(f"/agents/{slug}", copy_day, "0.8")
         add("/use-cases", copy_day, "0.8")
-        for (c, j) in agent_pages.USE_CASE_PAGES:
-            add(f"/use-cases/{c}/{j}", copy_day, "0.7")
+        for j in agent_pages.USE_CASE_PAGES:
+            add(f"/use-cases/{j}", copy_day, "0.7")
     out.append("</urlset>")
     return Response("\n".join(out), media_type="application/xml; charset=utf-8",
                     headers={"Cache-Control": "max-age=3600"})
@@ -3351,19 +3398,11 @@ async def usecase_css():
     return FileResponse(f, media_type="text/css", headers={"Cache-Control": "no-cache"})
 
 
-@app.get("/use-cases/{slug}", include_in_schema=False)
-async def use_case_page(slug: str):
-    """One outcome page. Unlike the root landing this does NOT redirect a signed-in visitor to
-    /app: these are ad destinations, and bouncing a returning user away from the page they paid
-    to reach would make the campaign data unreadable."""
-    name = _USE_CASES.get(slug.strip("/").lower())
-    if not name:
-        raise HTTPException(status_code=404, detail="unknown use case")
-    page = _WEB_DIR / name
-    if not page.exists():
-        raise HTTPException(status_code=404, detail=f"{name} not bundled")
-    # no-cache: these are edited against live campaign data and must never serve stale.
-    return FileResponse(page, headers={"Cache-Control": "no-cache"})
+# The five ad landing pages used to be served here, on their own `/use-cases/{slug}` route. They
+# share that path shape with the job pages, and two routes on one path means the first registered
+# wins and the second is dead code. `use_case_job_page` above owns the path and serves both: the
+# static file for a slug in `_USE_CASES`, the rendered job page otherwise. `_USE_CASES` stays the
+# one source for which ad pages exist, and the sitemap still spreads it.
 
 
 class OAuthClientRegistration(BaseModel):
