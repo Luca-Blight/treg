@@ -56,3 +56,46 @@ jobs:
         # the lockfile on purpose: it is a CI-only concern, and the team's older uv rewrites
         # uv.lock's whole format on any touch.
         run: uv run --with pytest-xdist pytest -n auto -q
+
+  test-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: treg
+          POSTGRES_PASSWORD: treg
+          POSTGRES_DB: treg_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U treg -d treg_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TREG_TEST_DB_URL: postgresql+asyncpg://treg:treg@127.0.0.1:5432/treg_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Run Postgres tests serially
+        # Never add xdist here. Every worker would share this one database while reset_db() drops
+        # and recreates its tables, reproducing the 1,022-error cross-worker failure shape.
+        run: >-
+          uv run --frozen python -m pytest -q
+          tests/callmatrix
+          tests/test_ledger.py
+          tests/test_ledger_claim_review.py
+          tests/test_migration.py
+          tests/test_migration_ddl.py
+          tests/test_call_pool_discipline.py
+          tests/test_marketplace_call.py
+          tests/test_billing.py
+          tests/test_orgs.py
+          tests/test_orgs_isolation.py
+          tests/test_orgs_mgmt.py
