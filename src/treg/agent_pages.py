@@ -3091,3 +3091,100 @@ USE_CASE_PAGES["is-this-page-indexed-and-why-not"] = {
     "related": ("Search Console: clicks, impressions and top queries", "Keywords a domain ranks for",
                 "On-page audit of a URL", "Google results for a keyword"),
 }
+
+USE_CASE_PAGES["news-for-a-ticker"] = {
+    "label": "News for a ticker",
+    "sentence": "Stock news API: the headlines on a ticker over a date range, as rows your agent can read",
+    "title": "Stock news API for {agent}: headlines by ticker | treg.to",
+    "lede": (
+        "Give your agent a ticker and a date range and get the news on that company back as "
+        "rows: headline, source, summary, time and the link. Finnhub answers it, {cheapest}, so "
+        "the first question of every forum thread, which free news API is worth trying, costs "
+        "nothing to settle. What comes back is headlines and summaries, not full text and not a "
+        "sentiment score; the reading is the agent's job, and it is the part it is good at."),
+    "prompt": "Using treg, get the news on NVDA from the last seven days, drop anything that is not "
+              "about the company itself, and give me the five stories that matter with one line "
+              "each and the source link.",
+    "prompt_why": [
+        ("Give a symbol and two dates", "The call takes a ticker and a from and to date. A week is a page; a year is a lot of pages."),
+        ("Ask it to filter", "Finnhub tags stories to a symbol and the tagging is loose. Ask the agent to drop the ones that only mention the sector."),
+        ("Score it yourself", "The rows carry the headline and summary. Sentiment, themes and 'does this matter' are the agent's to judge."),
+        ("Try free, run on your key", "The daily allowance is for finding out whether the feed suits you. A bot that polls all day needs your own Finnhub key, never metered."),
+    ],
+    "result_image": None,
+    "what_is_heading": "What is a stock news API?",
+    "what_is": (
+        "A stock news API returns the news articles tagged to a company as data, by ticker and "
+        "date range, so a program can read them instead of a person scrolling a feed. Each row is "
+        "a headline, the source, a summary, a timestamp and the article's URL. It is not the "
+        "article itself, which stays on the publisher's site, and it is not a verdict on whether "
+        "the news is good; providers that sell sentiment scores layer that on top, and this "
+        "endpoint does not."),
+    "notes": [
+        "The free allowance is a trial, not a plan. treg.to serves Finnhub's company news on its "
+        "own free-tier key at 50 calls a day per team; past that the call is refused with a hint "
+        "to connect your own key, and on your own key nothing is metered. Finnhub's free tier "
+        "carries its own rate limit and, per Finnhub's own docs, this endpoint covers North "
+        "American companies, so a UK or Indian ticker is not this tool's job.",
+        "Symbol tagging is Finnhub's, and it is generous. A story about the chip sector arrives "
+        "under every chip ticker, and at least one builder in the research shipped wrong-symbol "
+        "rows by trusting the scoping. Ask the agent to check that the headline is about the "
+        "company, and to keep the article URL so a human can verify the ones that count.",
+        "This is headlines and summaries, delivered after publication, not a real-time wire. "
+        "The forum wants full text from the paywalled sources and a sentiment number; no free "
+        "feed gives either, and this page will not pretend to. What the rows are good for is "
+        "the morning brief, the earnings-week watch, and a pre-trade sanity check on what "
+        "happened overnight.",
+    ],
+    "faq": [
+        ("Is the stock news API free?",
+         "50 calls a day per team on treg.to's own Finnhub key, free, which is enough to try it "
+         "and to run a daily brief on a handful of tickers. Beyond that, register your own "
+         "Finnhub key and the calls are never metered by treg.to."),
+        ("Does it include sentiment?",
+         "No. The rows are headline, source, summary, time and URL. Sentiment is the agent's "
+         "reading, or a separate provider's product; this endpoint returns the news, not a "
+         "score on it."),
+        ("Do I get the full article?",
+         "No. You get the headline, a summary and the link. Full text from paywalled outlets is "
+         "not something any news API on the free side hands out, and the link is there so a "
+         "person can read the ones that matter."),
+        ("Can I build a trading bot on it?",
+         "Not on the free allowance, which is a daily trial, and not as a real-time signal: the "
+         "feed is post-publication. On your own key a polling bot is between you and Finnhub's "
+         "limits; the news is an input for the agent to reason over, not a trigger."),
+    ],
+    "voices_intro": (
+        "Stock news threads are half vendors: about 30 of the ~190 Reddit and X posts in August "
+        "2026 were news APIs pitching themselves, two of them in five subreddits each with the "
+        "same 'I polled the free ones and then found this' arc. These four are people building "
+        "on their own."),
+    "voices": [
+        ("The first thing the model admits is that it cannot see the market",
+         "Then on the second day ChatGPT told me, \"Uh... I can't actually see live stock prices.\"",
+         "r/ClaudeAI, 432 points", "https://www.reddit.com/r/ClaudeAI/comments/1r35gpb/",
+         "That poster spent eight months wiring data in by hand, and Finnhub's news was one of "
+         "the feeds. One setup line gives the agent the same call, with the price of every "
+         "other tool shown before it spends anything."),
+        ("Free tiers are for trying, not for the backtest",
+         "Their free tiers don't provide enough history for a proper multi-year backtest.",
+         "r/algotrading, 13 points", "https://www.reddit.com/r/algotrading/comments/1vp74rb/",
+         "True of this one as well. The allowance settles whether the feed fits; a multi-year "
+         "pull is your own key and Finnhub's plan, and the page says so instead of hiding the "
+         "cliff behind a free badge."),
+        ("Nobody knows which news feed is actually current",
+         "I have seen some reviews of Polygon.io saying their news feed is outdated by months",
+         "r/algotrading, 17 points", "https://www.reddit.com/r/algotrading/comments/1i0ghfd/",
+         "No comparison table can answer that honestly for your tickers. The cheap test is the "
+         "point of the allowance: pull last week on five symbols today and read the timestamps "
+         "yourself."),
+        ("The tagging puts stories under the wrong symbol",
+         "company news sometimes gets tagged with the wrong symbol because I'm trusting Finnhub's endpoint scoping instead of double-checking it.",
+         "X", "https://x.com/i/status/2078351559344128383",
+         "A known property of the feed, so make the agent do the double-checking: keep the "
+         "headline and summary, drop what is not about the company, and carry the URL for "
+         "anything it flags as material."),
+    ],
+    "related": ("Current quote for a ticker", "Daily price history",
+                "Company profile and fundamentals behind a ticker", "A company's SEC filings"),
+}
