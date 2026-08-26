@@ -21,6 +21,8 @@ sources:
   - src/treg/domain/governance/usage.py
   - src/treg/domain/identity/__init__.py
   - src/treg/domain/money/__init__.py
+  - src/treg/infra/upstream/__init__.py
+  - src/treg/infra/upstream/injectors.py
   - tests/test_import_lightness.py
 related:
   - architecture/composition.md

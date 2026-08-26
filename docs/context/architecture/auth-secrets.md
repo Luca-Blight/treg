@@ -3,6 +3,8 @@ title: Auth & secrets — injectors, encryption, OAuth freshness, health
 status: shipped
 sources:
   - src/treg/injectors.py
+  - src/treg/infra/upstream/injectors.py
+  - src/treg/infra/upstream/ssrf.py
   - src/treg/crypto.py
   - src/treg/oauth.py
   - src/treg/oauth_providers.py
@@ -21,7 +23,7 @@ related:
 The hard part: match every credential shape a real skill uses, keep it encrypted, and keep OAuth tokens
 alive, without the proxy ever branching on shape.
 
-## Injectors — the seam (`injectors.py`)
+## Injectors — the seam (`infra/upstream/injectors.py`)
 The proxy calls `inject(headers, params, binding, secret)`, which dispatches on `binding["injector"]`
 through the `INJECTORS` registry (populated by the `@register(name)` decorator). Four shapes, two
 mechanics:
@@ -276,4 +278,5 @@ shared-key tool they may run but not read) requires the **runner proof** (`X-Tre
 `TREG_RUN_PROOF`, held only by the root-installed `treg-run` runner) — so a direct member call can't read
 someone else's key value. A tool's `base_url` is validated against the internal-address block-list (loopback/private/link-local/
 metadata, incl. numeric IP encodings) at registration AND the proxy re-resolves the host at call time
-(`health.host_is_public`, gated by `proxy_ssrf_check`) — no SSRF, even via DNS rebinding.
+(`infra.upstream.ssrf.host_is_public`, also re-exported by `health`, gated by `proxy_ssrf_check`) — no
+SSRF, even via DNS rebinding.

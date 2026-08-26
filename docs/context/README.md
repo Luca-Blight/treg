@@ -17,7 +17,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [Google Ads conversion tracking — capture, outbox, upload](architecture/ads-conversions.md) | shipped | adsconv.py, signup.py, adtrack.js |
-| [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
+| [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, injectors.py, ssrf.py, crypto.py, … |
 | [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog-drift.yml, catalog_drift.py, catalog_validate.py, aliases.yaml, … |
 | [Application composition and deployment roles](architecture/composition.md) | shipped | bootstrap.py, bootstrap_handlers.py, bootstrap_http.py, connect.py, … |
 | [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | alembic.ini, env.py, 0001_baseline_current_schema.py, sitetrack.js, … |
@@ -27,7 +27,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [MCP — the front door for assistants, and treg as an OAuth authorization server](architecture/mcp-oauth.md) | shipped | auth.py, mcp.py, mcp_oauth.py, health.py, … |
 | [Money — prepaid balance, the ledger, Stripe, and the reports that check it](architecture/money.md) | shipped | ledger.py, __init__.py, models.py, billing.py, … |
 | [Multi-tenancy — orgs, memberships, invites, per-org scoping](architecture/multi-tenancy.md) | shipped | models.py, api.py, caller_metadata.py, auth.py, … |
-| [The proxy — faithful credential-injecting relay + tool resolution](architecture/proxy-model.md) | shipped | proxy.py, api.py, authorize.py, idempotency.py, … |
+| [The proxy — faithful credential-injecting relay + tool resolution](architecture/proxy-model.md) | shipped | proxy.py, relay.py, ssrf.py, api.py, … |
 | [Super-admin — cross-tenant read + control](architecture/super-admin.md) | shipped | api.py, admin.py, access.py, config.py |
 
 ## Interfaces (API · CLI · skill)

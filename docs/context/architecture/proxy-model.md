@@ -3,6 +3,8 @@ title: The proxy — faithful credential-injecting relay + tool resolution
 status: shipped
 sources:
   - src/treg/proxy.py
+  - src/treg/infra/upstream/relay.py
+  - src/treg/infra/upstream/ssrf.py
   - src/treg/api.py
   - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
@@ -23,7 +25,8 @@ related:
 
 # The proxy (the whole product in one function)
 
-The relay is `relay()` in `src/treg/proxy.py`. `application.call.resolve` resolves which tool or
+The relay is `relay()` in `src/treg/infra/upstream/relay.py`; `treg.proxy` is its compatibility facade.
+`application.call.resolve` resolves which tool or
 marketplace endpoint a request targets, and the call path loads its secrets; `relay()` injects and
 streams. It runs no business logic and never buffers the body.
 
@@ -243,11 +246,12 @@ frame on a GET), and honors headers a peer marks hop-by-hop via its `Connection`
 `injectors._token_from_json` rejects a non-string field value instead of injecting garbage.
 
 **Call-time SSRF guard (DNS-rebinding defence).** Just before the upstream `send`, `relay()`
-re-resolves the upstream host (`health.host_is_public`, gated by the `proxy_ssrf_check` setting) and
+re-resolves the upstream host (`infra.upstream.ssrf.host_is_public`, gated by the `proxy_ssrf_check` setting) and
 refuses with a `502` if any resolved address is internal (loopback/private/link-local/reserved/multicast).
 This catches the case where a `base_url` was public at **registration** but its DNS now points at an
 internal target like `169.254.169.254` or localhost — the registration-time check alone can't stop a name
-that resolves differently later. Registration itself (`health.safe_webhook_url`, reused for `base_url`)
+that resolves differently later. Registration itself (`infra.upstream.ssrf.safe_webhook_url`, re-exported
+by `health` and reused for `base_url`)
 also rejects numeric IP encodings — decimal/hex/octal/short forms like `2130706433` / `0x7f000001` /
 `127.1` are normalized via `inet_aton` and re-checked, so they can't sneak past the literal-IP block.
 (A narrow resolve-vs-connect race remains; pinning the resolved IP would need a custom transport.)
