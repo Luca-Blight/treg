@@ -244,6 +244,10 @@ class Settings(BaseSettings):
     # default; the test suite disables it (its upstream is an in-process ASGI transport, not real DNS).
     proxy_ssrf_check: bool = True
 
+    # Additive Claude directory MCP. Default OFF so deploying code cannot publish a new connector
+    # surface before its production Inspector and custom-connector gates have passed.
+    claude_connector_enabled: bool = False
+
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
     # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.
     public_url: str = "https://treg.to"

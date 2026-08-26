@@ -670,6 +670,10 @@ treg is an OAuth authorization server for its own MCP endpoint. Detail in
     GET  /connect-demo/callback                     its OAuth callback
     GET  /connectors/claude                         setup, scope, pricing, data flow and removal docs
 
+The V2 metadata and transport routes are available only when
+`TREG_CLAUDE_CONNECTOR_ENABLED=true`. The metadata route returns 404 when V2 is disabled. New V2
+OAuth grants and catalog-only calls are also refused.
+
 `/call/` gained one thing for this: a metered response now carries `X-Treg-Cost-Micro`, so a caller
 can report what it spent instead of diffing the balance. Absent on an unmetered call — a team's own
 key is not ours to bill, and `0` would read as "free".

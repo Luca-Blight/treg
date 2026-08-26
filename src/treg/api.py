@@ -4213,6 +4213,8 @@ async def call_catalog_endpoint(
     db: AsyncSession = Depends(get_session),
 ):
     """Call one catalog endpoint through the same policy, billing, audit, and relay path as /call."""
+    if not get_settings().claude_connector_enabled:
+        raise HTTPException(status_code=404, detail="Claude catalog connector is not enabled")
     request.state.catalog_only = True
     return await call_tool(rest, request, caller, db)
 

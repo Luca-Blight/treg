@@ -144,6 +144,10 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
 - `proxy_ssrf_check` (`TREG_PROXY_SSRF_CHECK`) — the **call-time SSRF guard** on the proxy: resolve the
   upstream host and refuse an internal/private target. **On by default**; only the test suite disables it
   (its upstream is an in-process ASGI transport, not real DNS).
+- `claude_connector_enabled` (`TREG_CLAUDE_CONNECTOR_ENABLED`) — enables the catalog-only Claude
+  connector at `/mcp/v2/`. The default is false. Keep it false during normal deployment. Set it to
+  true for a controlled test window. Set it back to false to disable V2 without changing the existing
+  `/mcp/` connector.
 - `intercom_app_id` / `intercom_secret` (`TREG_INTERCOM_APP_ID` / `TREG_INTERCOM_SECRET`) — support
   chat via the **Intercom Messenger** (treg's own workspace). Empty app_id = the widget is OFF
   everywhere — `/meta`

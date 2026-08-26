@@ -697,7 +697,10 @@ def _wrong_resource(resource: str) -> str | None:
         return None
     canonical = mcp_oauth.mcp_resource_url()
     # Host aliases and slash variants stay valid within one surface. V1 and V2 stay distinct.
-    if mcp_oauth.mcp_resource_version(resource) is not None:
+    version = mcp_oauth.mcp_resource_version(resource)
+    if version == "v2" and not get_settings().claude_connector_enabled:
+        return "the Claude catalog connector is not enabled on this deployment"
+    if version is not None:
         return None
     return (f"this server issues tokens for {canonical} or {mcp_oauth.mcp_resource_url('v2')} only "
             "— use the `resource` value from "

@@ -7,8 +7,12 @@ from contextlib import asynccontextmanager
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from starlette.routing import Mount
 
+from treg import api as treg_api
 from treg import mcp, mcp_oauth
+from treg.bootstrap import create_app
+from treg.config import Settings, get_settings
 
 pytestmark = pytest.mark.anyio
 
@@ -52,6 +56,58 @@ async def _modern_rpc(client: AsyncClient, method: str, params=None,
         "MCP-Protocol-Version": "2026-07-28",
         "MCP-Method": method,
     })
+
+
+async def test_v2_feature_flag_defaults_off(monkeypatch):
+    monkeypatch.delenv("TREG_CLAUDE_CONNECTOR_ENABLED", raising=False)
+    assert Settings(_env_file=None).claude_connector_enabled is False
+
+
+async def test_v2_feature_flag_disables_mount_metadata_grants_and_catalog_route(
+    monkeypatch, clients,
+):
+    monkeypatch.setenv("TREG_CLAUDE_CONNECTOR_ENABLED", "false")
+    get_settings.cache_clear()
+    try:
+        disabled = create_app("all")
+        mounts = [route.path for route in disabled.routes if isinstance(route, Mount)]
+        assert "/mcp" in mounts
+        assert "/mcp/v2" not in mounts
+
+        async with AsyncClient(transport=ASGITransport(app=disabled),
+                               base_url="http://registry") as client:
+            metadata = await client.get("/.well-known/oauth-protected-resource/mcp/v2")
+        assert metadata.status_code == 404
+        assert "not enabled" in metadata.json()["detail"]
+
+        resource = mcp_oauth.mcp_resource_url("v2")
+        assert "not enabled" in treg_api._wrong_resource(resource)
+
+        direct = await clients.get("/catalog/call/tikhub.tiktok.video.comments?aweme_id=7")
+        assert direct.status_code == 404
+        assert "not enabled" in direct.json()["detail"]
+    finally:
+        get_settings.cache_clear()
+
+
+async def test_v2_feature_flag_enables_mount_metadata_and_resource(monkeypatch):
+    monkeypatch.setenv("TREG_CLAUDE_CONNECTOR_ENABLED", "true")
+    get_settings.cache_clear()
+    try:
+        enabled = create_app("all")
+        mounts = [route.path for route in enabled.routes if isinstance(route, Mount)]
+        assert mounts.index("/mcp/v2") < mounts.index("/mcp")
+
+        async with AsyncClient(transport=ASGITransport(app=enabled),
+                               base_url="http://registry") as client:
+            metadata = await client.get("/.well-known/oauth-protected-resource/mcp/v2")
+        assert metadata.status_code == 200
+        assert metadata.json()["resource"].endswith("/mcp/v2/")
+
+        resource = mcp_oauth.mcp_resource_url("v2")
+        assert treg_api._wrong_resource(resource) is None
+    finally:
+        get_settings.cache_clear()
 
 
 async def test_v2_declares_exact_directory_contract():

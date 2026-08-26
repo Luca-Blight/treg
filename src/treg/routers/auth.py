@@ -1002,6 +1002,8 @@ async def oauth_protected_resource():
 @app.get("/.well-known/oauth-protected-resource/mcp/v2", include_in_schema=False)
 async def oauth_protected_resource_v2():
     """Protected-resource metadata for the catalog-only connector."""
+    if not get_settings().claude_connector_enabled:
+        raise HTTPException(status_code=404, detail="Claude catalog connector is not enabled")
     return JSONResponse(mcp_oauth.protected_resource_metadata("v2"),
                         headers={"Cache-Control": "public, max-age=3600"})
 

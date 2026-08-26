@@ -419,8 +419,11 @@ def _lifespan(api_module, role: AppRole):
         try:
             if role == "control" or _mcp is None:
                 yield
-            else:
+            elif get_settings().claude_connector_enabled:
                 async with _mcp.all_mcp_lifespans():
+                    yield
+            else:
+                async with _mcp.mcp_lifespan():
                     yield
         finally:
             if ads_task is not None:
@@ -462,8 +465,9 @@ def create_app(role: AppRole = "all") -> FastAPI:
     _install_head_and_openapi(app)
 
     if role != "control" and _mcp is not None:
-        # Register the nested mount first so the /mcp parent does not consume it.
-        app.mount("/mcp/v2", _mcp.directory_mcp_app)
+        if get_settings().claude_connector_enabled:
+            # Register the nested mount first so the /mcp parent does not consume it.
+            app.mount("/mcp/v2", _mcp.directory_mcp_app)
         app.mount("/mcp", _mcp.mcp_app)
 
     startup_checks = list(ROLE_STARTUP_CHECKS[role])

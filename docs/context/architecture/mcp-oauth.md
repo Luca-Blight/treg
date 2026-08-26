@@ -9,7 +9,9 @@ sources:
   - src/treg/domain/identity/mcp_oauth.py
   - src/treg/domain/identity/session.py
   - src/treg/routers/auth.py
+  - src/treg/web/claude-connector.html
   - src/treg/web/connect-demo.html
+  - docs/CLAUDE-CONNECTOR-SUBMISSION.md
 related:
   - architecture/auth-secrets.md
   - architecture/proxy-model.md
@@ -19,11 +21,21 @@ related:
 
 # MCP
 
-Everything else in treg is reached by a CLI or an HTTP call. This is the door an **assistant** comes
-through: ChatGPT, Claude Code, Cursor, or anything else that speaks the Model Context Protocol. It is
-mounted at `/mcp/` on the same app, so there is one deployment, one database and one set of rules.
+Everything else in treg is reached by a CLI or an HTTP call. These are the doors an **assistant**
+comes through: ChatGPT, Claude, Claude Code, Cursor, or anything else that speaks the Model Context
+Protocol. Both use one deployment, database, and enforcement layer:
 
-## Six tools, and why only six
+- `/mcp/` keeps the legacy catalog, team-tool, and imported-skill behavior.
+- `/mcp/v2/` is the catalog-only Claude directory surface. It cannot list or call arbitrary
+  team-owned tools, including a team tool whose name matches a catalog endpoint.
+
+## Claude connector feature flag
+
+`TREG_CLAUDE_CONNECTOR_ENABLED` defaults to `false`. When false, V2 is not mounted, its lifespan does
+not start, V2 resource metadata and new V2 grants are refused, and the catalog-only call route returns
+404. The legacy `/mcp/` surface does not depend on this flag.
+
+## Legacy `/mcp/`: six tools
 
 | Tool | Job |
 |---|---|
