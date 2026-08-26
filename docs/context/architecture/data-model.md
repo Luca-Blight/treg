@@ -2,7 +2,12 @@
 title: Data model — the registry tables, async DB, audit writer
 status: shipped
 sources:
+  - alembic.ini
+  - alembic/env.py
+  - alembic/versions/0001_baseline_current_schema.py
+  - src/treg/web/sitetrack.js
   - src/treg/models.py
+  - src/treg/timeutil.py
   - src/treg/db.py
   - src/treg/referrals.py
   - src/treg/audit.py
@@ -27,7 +32,13 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   `require_identity`), `created_at`. **`ad_gclid`/`ad_click_id_type`/`ad_click_at`/`ad_landing`**
   (migration A37, all nullable) — set once, at signup, from the first-party `treg_ad` cookie; never
   overwritten. The historically named `ad_gclid` holds the click value; `ad_click_id_type` says
-  `gclid`/`gbraid`/`wbraid`, with NULL meaning a legacy GCLID. **`first_call_at`** (same migration) —
+  `gclid`/`gbraid`/`wbraid`, with NULL meaning a legacy GCLID. **`utm_source`/`utm_medium`/
+  `utm_campaign`/`utm_term`/`utm_content`/`utm_referrer`** (migration A40, all nullable) — first-touch
+  traffic source from the first-party `treg_utm` cookie (`web/sitetrack.js`, set on the visitor's
+  FIRST page, first touch wins, 90 days), persisted once at signup in both doors. This is the column
+  set that answers "how many teams did campaign X bring" — the `ad_*` columns only know Google
+  clicks. `utm_referrer` is the referring hostname, kept even when no `utm_*` tag was present.
+  **`first_call_at`** (same migration as `ad_*`) —
   set once by a guarded UPDATE in the `/call/` handler,
   deliberately NOT derived from `CallRecord` (which `audit.py` sheds under load, undercounting exactly
   when traffic is highest). Both feed [ads-conversions](ads-conversions.md).
@@ -201,8 +212,23 @@ cannot catch it), which is why `pendingoauth.long_lived_exchange` is spelled `BO
 false`. `reset_db()` is test-only (dispose the loop-bound pool, then drop +
 recreate); `get_session()` is the FastAPI dependency. SQLite locally (`aiosqlite`), Postgres on Render, same code. **Timestamps are
 naive UTC:** `_now()` (the `created_at` default) drops tzinfo because the columns are `TIMESTAMP WITHOUT
-TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout
-(`api._utcnow_naive` / `_as_naive`).
+TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout.
+Shared request-time conversions live in `timeutil.utcnow_naive` and `timeutil.as_naive`, re-exported
+temporarily as `api._utcnow_naive` and `api._as_naive` during the staged router migration.
+
+## Alembic baseline
+
+`alembic/versions/0001_baseline_current_schema.py` is the migration baseline for the current
+`SQLModel.metadata` schema. `alembic/env.py` uses the same async SQLite or Postgres URL as the server
+and exposes that metadata for future revision generation. The baseline is validation-only in refactor
+stage 1: application startup still calls `db.init_db()`, existing databases are not stamped, and the
+execution switch remains stage 5 work.
+
+`tests/test_alembic_baseline.py` creates a fresh database through each path and compares every
+application table's columns, primary and foreign keys, unique and check constraints, and indexes. It
+runs on SQLite in the full suite and on Postgres in the `test-postgres` CI subset. The comparison
+excludes only Alembic's own `alembic_version` bookkeeping table. Until stage 5, each schema change must
+update both the guarded startup migration and an Alembic revision while this parity test stays green.
 
 ## Audit writer (`audit.py`)
 `record_call(**fields)` (a `CallRecord`, now including `org_id`) and `record_run(**fields)` (a

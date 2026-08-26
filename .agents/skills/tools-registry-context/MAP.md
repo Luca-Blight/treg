@@ -13,7 +13,11 @@ Regenerate via `scripts/build-map.py`.
 | `.claude-plugin/marketplace.json` | interface/skill.md |
 | `.claude-plugin/plugin.json` | interface/skill.md |
 | `.github/workflows/catalog-drift.yml` | architecture/catalog.md |
+| `.github/workflows/ci.yml` | architecture/import-boundaries.md |
 | `README.md` | foundation/charter.md |
+| `alembic.ini` | architecture/data-model.md |
+| `alembic/env.py` | architecture/data-model.md |
+| `alembic/versions/0001_baseline_current_schema.py` | architecture/data-model.md |
 | `assets/brand/og-card.html` | interface/seo.md |
 | `dsh/cordis.patch.yml` | interface/skill.md |
 | `dsh/index.js` | interface/skill.md |
@@ -21,11 +25,15 @@ Regenerate via `scripts/build-map.py`.
 | `external:meetings/2026-06-30-jason-tools-registry.md` | foundation/charter.md, reference/glossary.md |
 | `package.json` | interface/skill.md |
 | `plugin/.codex-plugin/plugin.json` | interface/skill.md |
+| `plugins/minimax/.minimax-plugin/plugin.json` | interface/skill.md |
 | `plugins/treg/.cursor-plugin/plugin.json` | interface/skill.md |
+| `pyproject.toml` | architecture/import-boundaries.md, ops/deploy.md |
 | `render.yaml` | ops/deploy.md |
 | `scripts/build_plugin.py` | interface/skill.md |
 | `scripts/catalog_drift.py` | architecture/catalog.md |
 | `scripts/catalog_validate.py` | architecture/catalog.md |
+| `scripts/dump_surface.py` | architecture/composition.md |
+| `scripts/minimax_plugin.py` | interface/skill.md |
 | `src/treg/__main__.py` | ops/deploy.md |
 | `src/treg/adsconv.py` | architecture/ads-conversions.md |
 | `src/treg/agent_pages.py` | interface/seo.md |
@@ -34,12 +42,46 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
+| `src/treg/bootstrap.py` | architecture/composition.md |
 | `src/treg/catalog/aliases.yaml` | architecture/catalog.md |
+| `src/treg/catalog/aviato.yaml` | architecture/catalog.md |
+| `src/treg/catalog/capabilities.yaml` | interface/catalog-review-proposal.md |
+| `src/treg/catalog/crustdata.yaml` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.companies.acquisitions.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.companies.employees.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.companies.enrich.bulk.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.companies.enrich.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.companies.founders.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.companies.funding_rounds.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.companies.investments.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.companies.outbound_investments.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.companies.search.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.linkedin.company.posts.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.linkedin.post.comments.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.linkedin.post.reactions.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.linkedin.post.reposts.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.linkedin.user.posts.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.people.contact.get.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.people.email.find.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.people.enrich.bulk.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.people.enrich.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.people.phone.find.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.people.search.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/aviato.people.search.simple.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/crustdata.companies.autocomplete.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/crustdata.companies.enrich.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/crustdata.companies.identify.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/crustdata.companies.jobs.search.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/crustdata.companies.search.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/crustdata.people.autocomplete.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/crustdata.people.enrich.json` | architecture/catalog.md |
+| `src/treg/catalog/examples/crustdata.people.search.json` | architecture/catalog.md |
+| `src/treg/catalog/fx.yaml` | architecture/catalog.md |
 | `src/treg/catalog/google-search-console.extended.yaml` | architecture/catalog.md |
 | `src/treg/catalog/google-search-console.yaml` | architecture/catalog.md |
 | `src/treg/catalog/justoneapi.extended.yaml` | architecture/catalog.md |
 | `src/treg/catalog/tikhub.extended.yaml` | architecture/catalog.md |
-| `src/treg/catalog_store.py` | architecture/catalog.md, interface/api.md |
+| `src/treg/catalog_store.py` | architecture/catalog.md, interface/api.md, interface/catalog-review-proposal.md |
 | `src/treg/cli.py` | interface/cli.md, interface/onboarding.md, interface/shell.md |
 | `src/treg/config.py` | architecture/super-admin.md, guides/expanding-a-category.md, ops/deploy.md |
 | `src/treg/convert.py` | interface/cli.md |
@@ -67,11 +109,17 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/ratestore.py` | architecture/data-model.md, interface/api.md |
 | `src/treg/reconcile.py` | architecture/money.md |
 | `src/treg/referrals.py` | architecture/data-model.md, architecture/money.md |
+| `src/treg/routers/__init__.py` | interface/api.md |
+| `src/treg/routers/admin.py` | architecture/composition.md, architecture/money.md, architecture/super-admin.md, interface/api.md |
+| `src/treg/routers/catalog.py` | architecture/catalog.md, interface/api.md |
+| `src/treg/routers/dependencies.py` | architecture/multi-tenancy.md, architecture/super-admin.md, interface/api.md |
+| `src/treg/routers/web.py` | architecture/composition.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
 | `src/treg/runner.py` | interface/api.md |
 | `src/treg/sandbox.py` | interface/landing-sandbox.md |
 | `src/treg/session.py` | interface/dashboard.md |
 | `src/treg/shell.py` | interface/shell.md |
 | `src/treg/skills.py` | interface/env-import.md |
+| `src/treg/timeutil.py` | architecture/data-model.md, interface/api.md |
 | `src/treg/web/adtrack.js` | architecture/ads-conversions.md |
 | `src/treg/web/catalog.css` | interface/seo.md |
 | `src/treg/web/connect-demo.html` | architecture/mcp-oauth.md |
@@ -80,6 +128,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/landing.html` | interface/seo.md |
 | `src/treg/web/robots.txt` | interface/seo.md |
 | `src/treg/web/selfhost.sh` | ops/deploy.md |
+| `src/treg/web/sitetrack.js` | architecture/data-model.md, interface/api.md, interface/dashboard.md |
 | `src/treg/web/skill.md` | interface/skill.md |
 | `src/treg/web/support.html` | interface/seo.md |
 | `src/treg/web/tour/index.html` | interface/dashboard.md |
@@ -88,6 +137,8 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/tutorial.js` | interface/dashboard.md |
 | `src/treg/web/vendor/README.md` | interface/dashboard.md |
 | `src/treg/web/vendor/vue-3.5.41.global.prod.js` | interface/dashboard.md |
+| `tests/test_import_lightness.py` | architecture/import-boundaries.md |
+| `tests/test_router_dependencies.py` | architecture/multi-tenancy.md |
 
 ## Fragment → sources
 
@@ -95,26 +146,28 @@ Regenerate via `scripts/build-map.py`.
 |---|---|
 | `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
-| `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py` |
-| `architecture/data-model.md` | `models.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
+| `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `fx.yaml`, `aviato.yaml`, `crustdata.yaml`, `aviato.companies.acquisitions.json`, `aviato.companies.employees.json`, `aviato.companies.enrich.bulk.json`, `aviato.companies.enrich.json`, `aviato.companies.founders.json`, `aviato.companies.funding_rounds.json`, `aviato.companies.investments.json`, `aviato.companies.outbound_investments.json`, `aviato.companies.search.json`, `aviato.linkedin.company.posts.json`, `aviato.linkedin.post.comments.json`, `aviato.linkedin.post.reactions.json`, `aviato.linkedin.post.reposts.json`, `aviato.linkedin.user.posts.json`, `aviato.people.contact.get.json`, `aviato.people.email.find.json`, `aviato.people.enrich.bulk.json`, `aviato.people.enrich.json`, `aviato.people.phone.find.json`, `aviato.people.search.json`, `aviato.people.search.simple.json`, `crustdata.companies.autocomplete.json`, `crustdata.companies.enrich.json`, `crustdata.companies.identify.json`, `crustdata.companies.jobs.search.json`, `crustdata.companies.search.json`, `crustdata.people.autocomplete.json`, `crustdata.people.enrich.json`, `crustdata.people.search.json`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py`, `catalog.py` |
+| `architecture/composition.md` | `bootstrap.py`, `admin.py`, `web.py`, `dump_surface.py` |
+| `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `sitetrack.js`, `models.py`, `timeutil.py`, `db.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py` |
+| `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `test_import_lightness.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `mcp.py`, `mcp_oauth.py`, `connect-demo.html` |
-| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `reconcile.py`, `referrals.py`, `api.py` |
-| `architecture/multi-tenancy.md` | `models.py`, `api.py`, `db.py` |
+| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `reconcile.py`, `referrals.py`, `api.py`, `admin.py` |
+| `architecture/multi-tenancy.md` | `models.py`, `api.py`, `dependencies.py`, `db.py`, `test_router_dependencies.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
-| `architecture/super-admin.md` | `api.py`, `config.py` |
+| `architecture/super-admin.md` | `api.py`, `admin.py`, `dependencies.py`, `config.py` |
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |
 | `guides/expanding-a-category.md` | `oauth_providers.py`, `api.py`, `config.py` |
-| `interface/api.md` | `api.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
-| `interface/catalog-review-proposal.md` | _(no source files — narrative/reference)_ |
+| `interface/api.md` | `sitetrack.js`, `api.py`, `__init__.py`, `admin.py`, `catalog.py`, `dependencies.py`, `web.py`, `timeutil.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
+| `interface/catalog-review-proposal.md` | `catalog_store.py`, `capabilities.yaml` |
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
-| `interface/dashboard.md` | `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `session.py` |
+| `interface/dashboard.md` | `sitetrack.js`, `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `web.py`, `session.py` |
 | `interface/env-import.md` | `providers.py`, `skills.py` |
-| `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `index.html`, `install.sh` |
+| `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `web.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `demo.py`, `cli.py`, `index.html` |
-| `interface/seo.md` | `api.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
+| `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
-| `interface/skill.md` | `skill.md`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js` |
-| `ops/deploy.md` | `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |
+| `interface/skill.md` | `skill.md`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |
+| `ops/deploy.md` | `pyproject.toml`, `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |
 | `reference/glossary.md` | `2026-06-30-jason-tools-registry.md` |

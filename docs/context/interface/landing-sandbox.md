@@ -5,6 +5,7 @@ sources:
   - src/treg/sandbox.py
   - src/treg/pubfeed.py
   - src/treg/api.py
+  - src/treg/routers/web.py
   - src/treg/web/index.html
   - src/treg/web/install.sh
 related:
@@ -15,7 +16,7 @@ related:
 
 # Landing sandbox studio
 
-> **Where this lives now.** `/` serves `landing.html`, not the SPA — `landing()` in `api.py` only
+> **Where this lives now.** `/` serves `landing.html`, not the SPA — `landing()` in `routers.web` only
 > falls through to `index.html` when the request carries a query string (invite links, OAuth
 > returns, tour deep-links). The sandbox studio described below is that fall-through branch of
 > `index.html`, so it is reached from the SPA rather than from the front page. See

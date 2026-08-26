@@ -59,13 +59,19 @@ Faithfulness mechanics inside `relay()`:
 
 A request may carry several credentials: `relay()` loops `tool.bindings` and calls
 `injectors.inject(headers, params, binding, crypto.decrypt(secret.value))` per binding.
+Bindings can also stamp provider protocol constants: a format with no `{secret}` renders literally
+(Crustdata's required API-version header is the first registry use). It still carries the same secret
+reference for binding validation and lifecycle, and the assignment overwrites a caller-supplied value.
+This is generic binding behavior, not an upstream-specific branch in the relay.
 
 **Platform bindings — injecting treg's OWN credential.** A binding with a `platform_setting` key (instead
 of a `secret_id`) injects one of treg's own credentials read from `get_settings()` — the Google Ads
 developer token is the case that exists. The value never lives in the org's secret store, so a tenant
 can't read it or extract it through a local run; a missing setting is a clean `502`
 (`this server has no <setting> configured`). Used by the OAuth-marketplace auto-provisioner for a provider
-that needs a second credential treg holds centrally (see [api](../interface/api.md)).
+that needs a second credential treg holds centrally, and by tier-4 catalog calls. Tier 4 also copies
+the provider's constant `required_headers` bindings, so Crustdata's `x-api-version: 2025-11-01` pin is
+identical on BYOK and platform-key calls (see [api](../interface/api.md)).
 
 A separate case that looks similar but is NOT a platform binding: the Google Ads **conversion**
 uploader (`adsconv.py`) also spends treg's own platform connection, but it is not a caller-issued

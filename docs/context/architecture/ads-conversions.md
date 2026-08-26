@@ -12,6 +12,12 @@ related:
   - ops/deploy.md
 ---
 
+> Scope note: this fragment is the **Google click-id** path (`treg_ad` → `Org.ad_*` → conversion
+> upload). Generic traffic-source attribution — `utm_*` and referrer for sponsor links, newsletters,
+> directories — is the separate `treg_utm` → `Org.utm_*` path in `web/sitetrack.js`, documented in
+> [data-model](data-model.md) and [api](../interface/api.md). The two are independent; a Google ad
+> click with utm tags populates both.
+
 # Google Ads conversion tracking
 
 Off unless `google_ads_customer_id` and `ads_conv_refresh_token` are both set (`adsconv.enabled()`) —
@@ -174,7 +180,8 @@ for the full four-places-at-once list and the two-failure-modes note (a dead ver
 
 ## Testing hazard: the shared test database
 
-The suite's default SQLite file is `./treg-test.db`, and `reset_db()` (test-only) drops and recreates
+The suite's default SQLite files live under `$TMPDIR/treg-tests/` (per-xdist-worker, out of the repo
+tree so file watchers stay quiet), and `reset_db()` (test-only) drops and recreates
 every table. Two pytest runs against the same file concurrently corrupt each other — one run's
 `reset_db()` mid-flight drops a table the other run is about to query — and the failure surfaces as a
 misleading `no such table` error that looks like a flake, not a concurrency bug. This cost this

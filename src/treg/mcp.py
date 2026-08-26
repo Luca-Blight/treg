@@ -30,7 +30,7 @@ instance, and a session-bound transport would need sticky routing to be reliable
 
 Mounting has one trap, and it is silent: `app.mount()` does NOT run the mounted app's lifespan, and
 the session manager initialises its task group there — every request then fails with "Task group is
-not initialized". `api.py` must compose this module's lifespan with its own; see `mcp_lifespan`.
+not initialized". `bootstrap.py` composes this module's lifespan with its own; see `mcp_lifespan`.
 """
 
 from __future__ import annotations
@@ -353,7 +353,7 @@ async def _internal_auth(token: str) -> dict[str, str]:
 @asynccontextmanager
 async def _api(token: str):
     """An in-process client bound to treg's own ASGI app, carrying the caller's identity."""
-    from .api import app  # deferred: api.py imports THIS module to mount it
+    from .api import app  # deferred: bootstrap imports THIS module while assembling api:app
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
