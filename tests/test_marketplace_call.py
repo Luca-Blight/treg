@@ -311,7 +311,7 @@ async def test_402_with_autotopup_on_names_the_policy_not_a_missing_card(clients
     async with session_maker() as db:
         org = await db.get(Org, org_id)
         org.autotopup_enabled = True
-        org.autotopup_consented_at = datetime.now(timezone.utc)
+        org.autotopup_consented_at = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC: TIMESTAMP WITHOUT TIME ZONE
         org.autotopup_amount_micro = 20_000_000
         org.autotopup_threshold_micro = 5_000_000
         await db.commit()
