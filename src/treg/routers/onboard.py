@@ -1,9 +1,17 @@
 """HTTP routes for first-run team onboarding."""
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+import json
+import re
 
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import PlainTextResponse, StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .. import pubfeed, ratestore, sandbox as demo_sandbox
 from ..application import onboard as onboard_use_cases
+from ..config import get_settings
+from ..db import get_session
 from ..domain.identity.access import (
     Caller,
     _require_can_register,
@@ -11,6 +19,7 @@ from ..domain.identity.access import (
     require_member,
 )
 from ..models import User
+from .auth import _client_ip
 from .orgs import _require_admin_of
 
 
@@ -64,7 +73,120 @@ async def onboard_reset(
 
 onboard_entry_router = app
 
-# The second router preserves the later attachment point after the landing-sandbox routes.
+
+# app is rebound so the landing-sandbox block keeps its original attachment point.
+app = APIRouter()
+
+
+# ---- landing-page sandbox studio: an anonymous, throwaway team the visitor builds ----------
+# Per-IP limiter for the unauthenticated mint endpoint, in the DB (treg.ratestore) so it survives a
+# restart and holds across instances (backlog #3). It caps DB churn from the public landing page (abuse
+# is otherwise structurally contained — sandbox calls never touch the network, each sandbox is capped + TTL'd).
+SANDBOX_HIT_NS = "sandbox_hit"
+SANDBOX_RATE_MAX = 12          # sandboxes per IP per window
+SANDBOX_RATE_WINDOW_S = 3600   # 1 hour
+
+
+@app.post("/demo/sandbox")
+async def demo_sandbox_mint(request: Request, db: AsyncSession = Depends(get_session)) -> dict:
+    """Mint a login-free, short-lived sandbox TEAM for the landing-page studio: a throwaway org + a
+    starter secret + a starter endpoint + a member token, returned so the browser (and the visitor's
+    terminal) can register more, call them, and export a skill — all with no account. Sandbox calls
+    never touch the network (see call_tool → sandbox.synthesize); rate-limited per IP; GC'd after the
+    TTL. No auth — this is the anonymous front door."""
+    await ratestore.sweep(db, SANDBOX_HIT_NS)  # evict cold IP keys so the namespace can't grow unbounded
+    if not await ratestore.rate_check(db, SANDBOX_HIT_NS,
+                                      [(_client_ip(request), SANDBOX_RATE_MAX)], SANDBOX_RATE_WINDOW_S):
+        await db.commit()  # persist the sweep even on reject
+        raise HTTPException(status_code=429, detail="too many demo sandboxes from here — try again later")
+    await db.commit()  # persist the recorded hit before minting
+    await demo_sandbox.gc(db)  # opportunistic reap of expired sandboxes
+    out = await demo_sandbox.mint(db)
+    out["live"] = bool(get_settings().demo_stripe_key)  # is the seeded stripe tool a real wire?
+    return out
+
+
+@app.get("/demo/sandbox/live")
+async def demo_sandbox_live(caller: Caller = Depends(require_member)) -> dict:
+    """Live-wire facts for an EXISTING sandbox (the browser reuses one via localStorage, so it may
+    predate the mint response carrying them): is the wire on, and who am I in the feed."""
+    if not demo_sandbox.is_sandbox(caller.org):
+        raise HTTPException(status_code=400, detail="live-wire info is for the landing-page sandbox only")
+    return {"live": bool(get_settings().demo_stripe_key),
+            "visitor": demo_sandbox.visitor_name(caller.org.slug)}
+
+
+# ---- landing-page live payments feed (the public Stripe demo — see pubfeed.py) --------------
+@app.post("/stripe/webhook", include_in_schema=False)
+async def stripe_webhook(request: Request) -> dict:
+    """Stripe → treg: a signed event from the demo sandbox account. Only `charge.succeeded` feeds
+    the landing ticker; everything else is acknowledged and dropped. 404 when unconfigured, so a
+    deploy without the secret exposes no unauthenticated POST surface."""
+    secret = get_settings().demo_stripe_webhook_secret
+    if not secret:
+        raise HTTPException(status_code=404)
+    payload = await request.body()
+    if not pubfeed.verify_signature(payload, request.headers.get("stripe-signature", ""), secret):
+        raise HTTPException(status_code=400, detail="bad signature")
+    try:
+        event = json.loads(payload)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="bad payload")
+    if event.get("type") == "charge.succeeded":
+        pubfeed.push_charge(event.get("data", {}).get("object", {}) or {})
+    return {"received": True}
+
+
+@app.get("/landing/stripe-feed", include_in_schema=False)
+async def landing_stripe_feed() -> StreamingResponse:
+    """SSE stream for the landing demo pane: recent charges, then live ones. Unauthenticated by
+    design — it carries only server-chosen fields (amount/currency/created/id-suffix)."""
+    return StreamingResponse(pubfeed.stream(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",  # tell the reverse proxy not to buffer the stream
+    })
+
+
+@app.get("/demo/sandbox/skill")
+async def demo_sandbox_skill(
+    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
+) -> dict:
+    """Export whatever the visitor built in their sandbox as a shareable **skill** (treg.json manifest
+    + SKILL.md + install commands). Sandbox-only — the payoff that shows what skills are."""
+    if not demo_sandbox.is_sandbox(caller.org):
+        raise HTTPException(status_code=400, detail="skill export is for the landing-page sandbox only")
+    return await demo_sandbox.export_skill(db, caller.org)
+
+
+@app.get("/skills/samples")
+async def skill_samples() -> list[dict]:
+    """The hosted sample skills the landing offers — each with its files (SKILL.md/treg.json/.secret)
+    and the prompt to try. Public: the landing renders these as file packages."""
+    base = get_settings().public_url.rstrip("/")
+    return [{"name": n, "label": s["label"], "key": s["key"], "prompt": s["prompt"],
+             "files": demo_sandbox.skill_files(n, base, None)}
+            for n, s in demo_sandbox.SAMPLE_SKILLS.items()]
+
+
+@app.get("/skills/{name}/install.sh", include_in_schema=False)
+async def skill_install(name: str, token: str = ""):
+    """`curl -fsSL {BASE}/skills/<name>/install.sh?token=<t> | sh` — writes the skill into
+    ./.claude/skills/<name>/ so Claude Code loads it. The token (if given) is baked into the
+    recipe's calls; without it the recipe reads the token from `treg login`."""
+    if name not in demo_sandbox.SAMPLE_SKILLS:
+        raise HTTPException(status_code=404, detail=f"unknown skill {name!r}")
+    # The token is interpolated into a shell script the visitor runs (`curl … | sh`). Restrict it to a
+    # real token charset so a crafted value can't inject a newline + commands into the generated script.
+    if token and not re.fullmatch(r"[A-Za-z0-9_\-]{1,200}", token):
+        raise HTTPException(status_code=422, detail="invalid token")
+    base = get_settings().public_url.rstrip("/")
+    script = demo_sandbox.install_script(name, base, token or None)
+    return PlainTextResponse(script, media_type="text/plain; charset=utf-8")
+
+
+sandbox_router = app
+
+# The third router preserves the later attachment point after the landing-sandbox routes.
 app = APIRouter()
 
 

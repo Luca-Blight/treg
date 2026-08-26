@@ -5,6 +5,7 @@ sources:
   - src/treg/sandbox.py
   - src/treg/pubfeed.py
   - src/treg/api.py
+  - src/treg/routers/onboard.py
   - src/treg/routers/web.py
   - src/treg/web/index.html
   - src/treg/web/install.sh
@@ -25,7 +26,7 @@ related:
 The logged-out SPA is not a login box — it's a **landing page with a live, no-login sandbox
 studio** (the `v-if="!authed"` branch of `index.html`, `.lp` container). A visitor builds a real
 mini-registry in the browser and keeps using it from their terminal, all without an account. The
-engine is `src/treg/sandbox.py` + a handful of `api.py` endpoints; the front-end drives it with `sbx*`
+engine is `src/treg/sandbox.py` plus the landing routes in `routers/onboard.py`; the front-end drives it with `sbx*`
 Vue methods (`sbxInit`/`startSandbox`/`refreshSandbox`/`sbxAddSecret`/`sbxAddTool`/`runTool`).
 
 ## The throwaway team (`sandbox.py`)

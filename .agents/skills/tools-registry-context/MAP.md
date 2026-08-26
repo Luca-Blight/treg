@@ -130,7 +130,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/routers/auth_helpers.py` | interface/api.md |
 | `src/treg/routers/catalog.py` | architecture/catalog.md, interface/api.md |
 | `src/treg/routers/connections.py` | architecture/auth-secrets.md, architecture/composition.md, guides/expanding-a-category.md, interface/api.md |
-| `src/treg/routers/onboard.py` | architecture/composition.md, interface/api.md, interface/onboarding.md |
+| `src/treg/routers/onboard.py` | architecture/composition.md, interface/api.md, interface/landing-sandbox.md, interface/onboarding.md |
 | `src/treg/routers/orgs.py` | architecture/composition.md, architecture/money.md, architecture/multi-tenancy.md, interface/api.md |
 | `src/treg/routers/resources.py` | architecture/auth-secrets.md, architecture/composition.md, architecture/multi-tenancy.md, interface/api.md |
 | `src/treg/routers/signup_cookies.py` | interface/api.md |
@@ -185,7 +185,7 @@ Regenerate via `scripts/build-map.py`.
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
 | `interface/dashboard.md` | `sitetrack.js`, `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `web.py`, `session.py`, `session.py` |
 | `interface/env-import.md` | `providers.py`, `skills.py` |
-| `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `web.py`, `index.html`, `install.sh` |
+| `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `onboard.py`, `web.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `auth.py`, `onboard.py`, `demo.py`, `cli.py`, `auth.py`, `onboard.py`, `index.html` |
 | `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
