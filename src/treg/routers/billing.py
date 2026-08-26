@@ -1,12 +1,10 @@
 """HTTP routes for prepaid balances and Stripe billing."""
 
-import logging
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import analytics, billing, ledger, referrals
+from .. import billing, ledger
 from ..config import get_settings
 from ..db import get_session
 from ..domain.identity.access import Caller, _role_at_least, require_member
@@ -17,6 +15,19 @@ from .orgs import _require_admin_of
 
 # app is the APIRouter alias so mechanically moved @app decorators stay byte-identical.
 app = APIRouter()
+
+
+_BILLING_ERRORS = {
+    "not_configured": 503,
+    "rejected": 422,
+    "webhook_unconfigured": 404,
+    "bad_signature": 400,
+    "webhook_failed": 500,
+}
+
+
+def _translate_billing_error(exc: billing.BillingJourneyError) -> HTTPException:
+    return HTTPException(status_code=_BILLING_ERRORS[exc.kind], detail=exc.detail or None)
 
 
 @app.get("/orgs/{org_id}/balance")
@@ -120,25 +131,19 @@ def _return_base(request: Request) -> str:
 
 @app.get("/billing")
 async def billing_get(
-    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+    caller: Caller = Depends(require_member),
 ) -> dict:
     """The org's billing state: whether top-ups are available at all on this deployment, whether
     there's a Stripe customer and a saved card, the auto-top-up policy + why it's off if it is, and how
     much of this month's automatic cap has been used."""
     org = _billing_org(caller)
-    state = await billing.billing_state(db, org)
-    # Merged HERE rather than inside `billing_state`, so billing.py keeps its one job (Stripe) and
-    # does not grow a second reason to know about referrals. This is the screen where a referred team
-    # is already deciding how much to add, so it is the only place the minimum actually changes a
-    # decision — see referrals.offer_for_org.
-    state["referral_offer"] = await referrals.offer_for_org(db, org.id)
-    return state
+    return await billing.get_billing_state(org.id)
 
 
 @app.post("/billing/topup")
 async def billing_topup(
     request: Request, body: TopupIn,
-    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+    caller: Caller = Depends(require_member),
 ) -> dict:
     """Start a hosted Stripe Checkout for a one-off top-up and return its URL.
 
@@ -147,25 +152,17 @@ async def billing_topup(
     redirect by hand — can create balance.
     """
     org = _billing_org(caller)
-    amount = body.amount_usd if body.amount_usd is not None else await billing.next_default_usd(db, org.id)
     try:
-        out = await billing.create_topup_checkout(
-            db, org, amount, return_base=_return_base(request), email=caller.email)
-    except billing.BillingNotConfigured as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    except billing.TopupRejected as e:
-        raise HTTPException(status_code=422, detail=str(e))
-    # The one place the actual payer's identity exists — the webhook that later credits the
-    # balance is org-scoped, so the started/completed funnel joins on the team group.
-    analytics.capture(caller.email, "topup_started",
-                      {"amount_usd": amount, "org": org.slug}, groups={"team": org.slug})
-    return out
+        return await billing.start_topup(
+            org.id, body.amount_usd, return_base=_return_base(request), email=caller.email)
+    except billing.BillingJourneyError as e:
+        raise _translate_billing_error(e) from e
 
 
 @app.post("/billing/autotopup")
 async def billing_autotopup(
     request: Request, body: AutoTopupIn,
-    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+    caller: Caller = Depends(require_member),
 ) -> dict:
     """Set the org's auto-top-up policy (and record consent when enabling).
 
@@ -175,32 +172,20 @@ async def billing_autotopup(
     deliberate: consent is recorded against the numbers the human saw, before any card exists.
     """
     org = _billing_org(caller)
-    if body.enabled and not body.consent and not org.autotopup_consented_at:
-        raise HTTPException(
-            status_code=422,
-            detail="enabling auto top-up requires consent: true (you are authorizing charges to a "
-                   "saved card without being present)")
     try:
-        await billing.set_autotopup(
-            db, org, enabled=body.enabled, consent=body.consent,
+        return await billing.configure_autotopup(
+            org.id, enabled=body.enabled, consent=body.consent,
             threshold_usd=body.threshold_usd, amount_usd=body.amount_usd,
-            monthly_cap_usd=body.monthly_cap_usd)
-    except billing.TopupRejected as e:
-        raise HTTPException(status_code=422, detail=str(e))
-    state = await billing.billing_state(db, org)
-    if body.enabled and body.setup_url and not org.stripe_default_pm:
-        try:
-            state["setup_url"] = (await billing.create_setup_checkout(
-                db, org, return_base=_return_base(request), email=caller.email))["url"]
-        except billing.BillingNotConfigured as e:
-            raise HTTPException(status_code=503, detail=str(e))
-    return state
+            monthly_cap_usd=body.monthly_cap_usd, return_base=_return_base(request),
+            email=caller.email, setup_url=body.setup_url)
+    except billing.BillingJourneyError as e:
+        raise _translate_billing_error(e) from e
 
 
 @app.get("/billing/history")
 async def billing_history(
     limit: int = Query(24, ge=1, le=100),
-    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+    caller: Caller = Depends(require_member),
 ) -> dict:
     """This team's completed top-ups, newest first, each with its invoice PDF or card receipt.
 
@@ -210,24 +195,22 @@ async def billing_history(
     still correct.
     """
     org = _billing_org(caller)
-    return await billing.list_payments(db, org, limit=limit)
+    return await billing.get_payment_history(org.id, limit=limit)
 
 
 @app.post("/billing/portal")
 async def billing_portal(
     request: Request,
-    caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session),
+    caller: Caller = Depends(require_member),
 ) -> dict:
     """A one-time link into Stripe's hosted billing portal — card, billing address, tax ID, and the
     full invoice archive. 422 until the team has a Stripe customer, which it gets on its first
     payment; `billing_state`'s `portal` flag is what the UI hides the button on."""
     org = _billing_org(caller)
     try:
-        return await billing.create_portal_session(db, org, return_base=_return_base(request))
-    except billing.BillingNotConfigured as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    except billing.TopupRejected as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        return await billing.open_billing_portal(org.id, return_base=_return_base(request))
+    except billing.BillingJourneyError as e:
+        raise _translate_billing_error(e) from e
 
 
 billing_router = app
@@ -237,7 +220,7 @@ app = APIRouter()
 
 
 @app.post("/billing/stripe/webhook", include_in_schema=False)
-async def billing_stripe_webhook(request: Request, db: AsyncSession = Depends(get_session)) -> dict:
+async def billing_stripe_webhook(request: Request) -> dict:
     """Stripe → treg: the ONLY door through which a payment becomes balance.
 
     A DIFFERENT endpoint from the landing demo's `/stripe/webhook`, with a different signing secret:
@@ -245,21 +228,11 @@ async def billing_stripe_webhook(request: Request, db: AsyncSession = Depends(ge
     mean one secret could authorize the other's effects. 404 when unconfigured, so a deploy without the
     secret exposes no unauthenticated POST surface.
     """
-    if not get_settings().stripe_webhook_secret:
-        raise HTTPException(status_code=404)
-    payload = await request.body()
     try:
-        event = billing.verify_event(payload, request.headers.get("stripe-signature", ""))
-    except ValueError:
-        # Deliberately terse: a signature oracle should not explain itself.
-        raise HTTPException(status_code=400, detail="bad signature")
-    try:
-        result = await billing.handle_webhook_event(db, event)
-    except Exception as e:  # noqa: BLE001
-        # 500 tells Stripe to retry, which is what we want for a transient failure — but log loudly:
-        # an event that never succeeds is money someone paid and didn't get.
-        logging.getLogger("treg.billing").exception("webhook %s failed: %s", event.get("type"), e)
-        raise HTTPException(status_code=500, detail="webhook handling failed")
+        result = await billing.process_webhook(
+            request.body, request.headers.get("stripe-signature", ""))
+    except billing.BillingJourneyError as e:
+        raise _translate_billing_error(e) from e
     return {"received": True, **result}
 
 

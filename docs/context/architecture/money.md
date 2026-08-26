@@ -719,11 +719,10 @@ webhook and a page load, and neither may fail over a bonus.
 
 **The referee is told, on the screen where it changes their behaviour.** `offer_for_org` is the
 mirror of `summary`: a team that arrived through a link has a `pending` row and no idea a bonus
-exists. `GET /billing` carries a `referral_offer` (merged in the api route, not in `billing.py` —
-that module keeps its one job) and the dashboard names the MINIMUM there (it equals the smallest preset now that $5
-is gone, but the "Other" input can still go below it, so the note stays). The qualifying presets say `+$5 bonus` on themselves; a note alone sits above the place
-the decision is actually made (the tier bonus and the referral bonus stack on the same card). The
-offer is returned only while `pending` — after qualifying the
+exists. `GET /billing` carries a `referral_offer` (merged by the application journey so the referral
+domain remains separate) and the dashboard names the MINIMUM there. The qualifying presets say
+`+$5 bonus` on themselves; a note alone sits above the place the decision is actually made (the tier
+bonus and the referral bonus stack on the same card). The offer is returned only while `pending` - after qualifying the
 money is already on its way through `sweep`, and still advertising it would read as a second bonus —
 and it names the referrer MASKED (`mask_email`, `j•••@domain`). Not anonymous — "you were invited"
 with nobody attached reads as marketing copy, and someone who clicked a link off a tweet last week

@@ -36,6 +36,7 @@ import hashlib
 import logging
 import sys
 from datetime import datetime, timezone
+from typing import Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -75,6 +76,15 @@ class BillingNotConfigured(Exception):
 class TopupRejected(Exception):
     """The requested amount isn't one we'll charge (below the minimum, not whole dollars, absurd).
     Carries a message written for the person who typed it; the endpoints return it as a 422."""
+
+
+class BillingJourneyError(Exception):
+    """A billing use-case failure translated by the HTTP router."""
+
+    def __init__(self, kind: str, detail: str = "") -> None:
+        super().__init__(detail)
+        self.kind = kind
+        self.detail = detail
 
 
 # ---- units -------------------------------------------------------------------------------------
@@ -1216,3 +1226,111 @@ async def set_autotopup(
         org.autotopup_disabled_reason = None  # a deliberate off is not a failure — clear the banner
     db.add(org)
     await db.commit()
+
+
+# ---- application journeys ---------------------------------------------------------------------
+async def _journey_org(db: AsyncSession, org_id: int) -> Org:
+    org = await db.get(Org, org_id)
+    if org is None:
+        raise RuntimeError("billing organization disappeared")
+    return org
+
+
+async def get_billing_state(org_id: int) -> dict:
+    async with _db.session_maker() as db:
+        org = await _journey_org(db, org_id)
+        state = await billing_state(db, org)
+        # Merged HERE rather than inside `billing_state`, so billing keeps its one job (Stripe) and
+        # does not grow a second reason to know about referrals. This is the screen where a referred
+        # team is already deciding how much to add, so it is the only place the minimum actually
+        # changes a decision — see referrals.offer_for_org.
+        state["referral_offer"] = await referrals.offer_for_org(db, org.id)
+        return state
+
+
+async def start_topup(
+    org_id: int, amount_usd: float | None, *, return_base: str, email: str,
+) -> dict:
+    async with _db.session_maker() as db:
+        org = await _journey_org(db, org_id)
+        amount = amount_usd if amount_usd is not None else await next_default_usd(db, org.id)
+        try:
+            out = await create_topup_checkout(
+                db, org, amount, return_base=return_base, email=email)
+        except BillingNotConfigured as e:
+            raise BillingJourneyError("not_configured", str(e)) from e
+        except TopupRejected as e:
+            raise BillingJourneyError("rejected", str(e)) from e
+        # The one place the actual payer's identity exists — the webhook that later credits the
+        # balance is org-scoped, so the started/completed funnel joins on the team group.
+        analytics.capture(email, "topup_started",
+                          {"amount_usd": amount, "org": org.slug},
+                          groups={"team": org.slug})
+        return out
+
+
+async def configure_autotopup(
+    org_id: int, *, enabled: bool, consent: bool, threshold_usd: float | None,
+    amount_usd: float | None, monthly_cap_usd: float | None, return_base: str, email: str,
+    setup_url: bool = True,
+) -> dict:
+    async with _db.session_maker() as db:
+        org = await _journey_org(db, org_id)
+        if enabled and not consent and not org.autotopup_consented_at:
+            raise BillingJourneyError(
+                "rejected",
+                "enabling auto top-up requires consent: true (you are authorizing charges to a "
+                "saved card without being present)")
+        try:
+            await set_autotopup(
+                db, org, enabled=enabled, consent=consent,
+                threshold_usd=threshold_usd, amount_usd=amount_usd,
+                monthly_cap_usd=monthly_cap_usd)
+        except TopupRejected as e:
+            raise BillingJourneyError("rejected", str(e)) from e
+        state = await billing_state(db, org)
+        if enabled and setup_url and not org.stripe_default_pm:
+            try:
+                state["setup_url"] = (await create_setup_checkout(
+                    db, org, return_base=return_base, email=email))["url"]
+            except BillingNotConfigured as e:
+                raise BillingJourneyError("not_configured", str(e)) from e
+        return state
+
+
+async def get_payment_history(org_id: int, *, limit: int) -> dict:
+    async with _db.session_maker() as db:
+        org = await _journey_org(db, org_id)
+        return await list_payments(db, org, limit=limit)
+
+
+async def open_billing_portal(org_id: int, *, return_base: str) -> dict:
+    async with _db.session_maker() as db:
+        org = await _journey_org(db, org_id)
+        try:
+            return await create_portal_session(db, org, return_base=return_base)
+        except BillingNotConfigured as e:
+            raise BillingJourneyError("not_configured", str(e)) from e
+        except TopupRejected as e:
+            raise BillingJourneyError("rejected", str(e)) from e
+
+
+async def process_webhook(
+    payload_factory: Callable[[], Awaitable[bytes]], signature: str,
+) -> dict:
+    if not get_settings().stripe_webhook_secret:
+        raise BillingJourneyError("webhook_unconfigured")
+    payload = await payload_factory()
+    try:
+        event = verify_event(payload, signature)
+    except ValueError as e:
+        # Deliberately terse: a signature oracle should not explain itself.
+        raise BillingJourneyError("bad_signature", "bad signature") from e
+    async with _db.session_maker() as db:
+        try:
+            return await handle_webhook_event(db, event)
+        except Exception as e:  # noqa: BLE001
+            # 500 tells Stripe to retry, which is what we want for a transient failure — but log
+            # loudly: an event that never succeeds is money someone paid and didn't get.
+            log.exception("webhook %s failed: %s", event.get("type"), e)
+            raise BillingJourneyError("webhook_failed", "webhook handling failed") from e
