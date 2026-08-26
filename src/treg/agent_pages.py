@@ -3538,7 +3538,7 @@ USE_CASE_PAGES["keywords-a-domain-bids-on"] = {
 USE_CASE_PAGES["backlink-profile-of-a-domain"] = {
     "label": "Backlink profile of a domain",
     "sentence": "Backlink API: the backlink profile of a domain from Moz, DataForSEO, Serpstat, SE Ranking, Majestic or Semrush, per call",
-    "title": "Backlink API: a domain's backlink profile, {n} providers | treg.to",
+    "title": "Backlink API: backlink profile of a domain, {n} providers | treg.to",
     "lede": (
         "Give your agent a domain and get its backlink profile back as one row: total "
         "backlinks, referring domains, follow and nofollow split, the vendor's authority score "
@@ -3756,7 +3756,7 @@ USE_CASE_PAGES["search-posts-by-keyword"] = {
          "the live traffic says about each, so the choice is yours with the numbers in front "
          "of you."),
         ("Searching from your own account can get it flagged",
-         "doing any programmatic actions outside of the official API will flag an account—including simply using search.",
+         "doing any programmatic actions outside of the official API will flag an account",
          "X, 1,287 likes", "https://x.com/i/status/2030491364056830011",
          "That warning is about your account. The scraper providers here use none of yours, "
          "so the risk sits with the provider; the page does not call that safe, it calls it "
