@@ -512,19 +512,20 @@ async def call_tool(
     # network: everything above (ACL, deny rules, caps) can still refuse the call, and a refused
     # call must not leave a hold behind for the reaper to clean up.
     if mk is not None and mk.metered:
-        # Rendered BEFORE the reserve, while `tool` is still live. `ledger.reserve` calls
-        # `db.rollback()` on InsufficientBalance, which EXPIRES every ORM object this session is
-        # tracking — `tool` included — and reading an expired attribute outside an awaited call
-        # raises MissingGreenlet. Doing it inside the handler below turned the one refusal an agent
-        # is most likely to hit into a 500 with no `balance_micro` and no top-up URL. Same reasoning
-        # as `block_id` in billing._credit, and the reason that capture is pinned by a test.
+        # Rendered BEFORE the reserve while `tool` is live. The application closes its reservation
+        # session before returning a 402, so refusal evidence cannot rely on a later ORM load. Doing
+        # that once turned the refusal an agent is most likely to hit into a 500 with no balance or
+        # top-up URL. Same reasoning as `block_id` in billing._credit, and pinned by a test.
         refusal_secrets = _safe_secret_renderings(tool, secrets)
         try:
-            await _platform_reserve(mk, caller, db, meta=meta, call_ref=call_ref)
+            # Secret reads above opened the dependency session. Release its pool slot before the
+            # application opens the short transaction that owns the reservation.
+            await db.commit()
+            await _platform_reserve(mk, caller, meta=meta, call_ref=call_ref)
         except asyncio.CancelledError:
             await _finish_cancelled_call(request, mk, call_ref)
             raise
-        except HTTPException as exc:
+        except (CallFailure, HTTPException) as exc:
             # A call refused for MONEY (402 empty balance / 429 daily cap) is the event the org will
             # ask about first — it must appear in the activity feed, charged 0.
             #
@@ -546,6 +547,8 @@ async def call_tool(
                        _ERROR_MASKING_FAILED if refusal_secrets is None else
                        _redact_snippet(f"treg: {exc.detail}", refusal_secrets,
                                        _ERROR_RESPONSE_MAX)))
+            if isinstance(exc, CallFailure):
+                raise _translate_call_failure(exc) from exc
             raise
     body = b""
     response: Response | None = None

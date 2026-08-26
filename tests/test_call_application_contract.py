@@ -8,7 +8,7 @@ from typing import Awaitable, Callable, Literal, Protocol
 import pytest
 
 from treg import api as A
-from treg.application.call import authorize, idempotency, intake, resolve
+from treg.application.call import authorize, idempotency, intake, reserve, resolve
 from treg.application.call.types import (
     AuthorizationFailed,
     CallFailure,
@@ -16,6 +16,7 @@ from treg.application.call.types import (
     IntakeFailed,
     ResolvedTarget,
     ResolutionFailed,
+    ReservationFailed,
 )
 
 
@@ -142,7 +143,7 @@ def test_compatibility_surface_stays_literal_during_boundary_extraction() -> Non
 
 
 def test_call_intake_modules_are_framework_neutral() -> None:
-    for module in (authorize, intake, idempotency, resolve):
+    for module in (authorize, intake, idempotency, reserve, resolve):
         source = module.__loader__.get_source(module.__name__)
         roots = {
             node.module.split(".", 1)[0]
@@ -206,6 +207,14 @@ def test_authorization_failure_keeps_mechanism_and_blame_separate() -> None:
         "policy_denied", status_code=403, detail="blocked by policy")
     assert (exc.kind, exc.blame, exc.status_code, exc.detail) == (
         "policy_denied", "caller", 403, "blocked by policy")
+
+
+def test_reservation_failure_keeps_mechanism_and_blame_separate() -> None:
+    short = ReservationFailed(
+        "insufficient_balance", status_code=402, detail={"error": "insufficient_balance"})
+    unavailable = ReservationFailed(
+        "platform_cap_unavailable", status_code=429, detail="retry")
+    assert (short.blame, unavailable.blame) == ("caller", "treg")
 
 
 def test_intake_failures_keep_mechanism_and_blame_separate() -> None:

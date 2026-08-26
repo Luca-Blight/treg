@@ -91,7 +91,7 @@ swallows exceptions, which is right for analytics and fatal for money.
 |---|---|
 | `grant` | new promotional block, balance up (org creation, the referral bonus, the top-up bonus) |
 | `topup` | new purchased block, balance up (after Stripe authorized) |
-| `reserve` | balance down by the estimate, `Hold` opened — the hot-path spend gate |
+| `reserve` / `reserve_in_transaction` | balance down by the estimate, `Hold` opened — committed by the compatibility wrapper or the call application |
 | `settle` | blocks down by the observed cost, hold closed, difference refunded |
 | `release` | hold closed, balance refunded in full (upstream failure — not billable) |
 
@@ -138,11 +138,12 @@ for as long as possible.
 is recorded on every entry — so a rate change cannot retroactively rewrite what a call cost, and two
 call sites cannot disagree.
 
-**The hold reaper is lazy**, at the top of `reserve`, scoped to the calling org. A crash between relay
+**The hold reaper is lazy**, at the top of the shared reserve operation, scoped to the calling org. A crash between relay
 and settle would otherwise strand that money forever. A background timer would need a scheduler and
 leader election on a multi-instance deploy, and would still only run on a timer; sweeping one org's
 stale holds is paid by the caller who benefits from it, and an org that never calls again has no
-balance to strand.
+balance to strand. Each stale release commits independently before the new balance gate. A later 402
+rolls back only the failed reservation, never a refund the reaper already made durable.
 
 **Idempotency on `topup` is enforced by the database.** `stripe_payment_intent` is UNIQUE, and `topup`
 FLUSHES immediately after adding the block, before the balance moves: the loser of a race rolls back
@@ -291,12 +292,12 @@ command that turns it on. On → the amount, threshold, cooldown and monthly cap
 raise them — because a team that is out of money *with* auto top-up on is being held by the cooldown
 or the cap, and "add funds" alone reads as "auto top-up is broken" (cobl.ai, 2026-08-25: ~1,500
 refusals between hourly $20 refills against a $60/day burn). The org fields are read **before**
-`reserve`: a failed reserve rolls the session back and expires the ORM instance, so a lazy read in
-the except path raises `MissingGreenlet`. The MCP path still scrubs the payment link from the same
+the application reservation transaction: its rollback cannot be a source for refusal rendering after
+the session closes. The MCP path still scrubs the payment link from the same
 body (`mcp.py`, ChatGPT digital-goods rule) — the auto top-up line survives because it names a CLI
 command, not a URL.
 
-## The spend ceiling (`api.py`)
+## The spend ceiling (`application.call.reserve`)
 
 `_enforce_platform_daily_cap` is a per-org, per-UTC-day ceiling on platform spend, and it is
 **fail-closed** — unlike the per-user call cap, which may let a few extra through under load. A query
@@ -327,8 +328,8 @@ are admin-scale windows over a bounded number of metered calls, the same tradeof
 
 ## Where a call's money actually moves
 
-    resolve → _platform_offer (priced + eligible?) → _enforce_platform_daily_cap (fail-closed)
-            → ledger.reserve (the UPDATE gate; 402 if short)
+    resolve → _platform_offer (priced + eligible?) → application.call.reserve (spend caps)
+            → ledger.reserve_in_transaction (the UPDATE gate; 402 if short) → application commit
             → relay upstream
             → settle at the observed cost when the provider reports one
               (dataforseo `cost`, scrapecreators `credits_charged`, akta `credits_consumed` —

@@ -226,6 +226,25 @@ async def reserve(
     Reaps this org's stale holds first, so a call that crashed before settling can't keep money out
     of circulation (and can't make a funded org look broke).
     """
+    try:
+        call_id = await reserve_in_transaction(
+            db, org_id, endpoint_id, est_micro, meta=meta, tags=tags, call_id=call_id)
+    except InsufficientBalance:
+        await db.rollback()
+        raise
+    await db.commit()
+    return call_id
+
+
+async def reserve_in_transaction(
+    db: AsyncSession, org_id: int, endpoint_id: str, est_micro: int, *, meta: dict | None = None,
+    tags: dict[str, str] | None = None, call_id: str | None = None,
+) -> str:
+    """Stage one call reservation in the caller-owned transaction.
+
+    Lazy stale-hold releases still commit independently before the balance gate. The caller must
+    commit a successful reservation or roll back an insufficient one.
+    """
     await reap_stale_holds(db, org_id=org_id)
     charged = max(0, with_margin(int(est_micro)))
     # The caller may supply the id so ONE value identifies the call everywhere: the hold, both
@@ -239,7 +258,6 @@ async def reserve(
         .values(balance_micro=Org.balance_micro - charged)
     )
     if result.rowcount != 1:
-        await db.rollback()
         balance = (await db.execute(select(Org.balance_micro).where(Org.id == org_id))).scalar() or 0
         raise InsufficientBalance(org_id, int(balance), charged)
     db.add(Hold(id=call_id, org_id=org_id, endpoint_id=endpoint_id or "", amount_micro=charged))
@@ -252,7 +270,6 @@ async def reserve(
     # read from these; writing them anywhere else (or later) would make both lossy.
     for dim, val in (tags or {}).items():
         db.add(TagSpend(org_id=org_id, dim=dim, val=val, hold_id=call_id, amount_micro=charged))
-    await db.commit()
     return call_id
 
 

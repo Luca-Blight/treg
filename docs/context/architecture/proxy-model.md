@@ -95,14 +95,15 @@ body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would
 for `identity` keeps what the caller receives matching what the caller requested.
 
 ## Connection discipline: a call in flight holds no DB connection
-`call_tool` ends its DB phase with an explicit `await db.commit()` immediately before `relay()` (and
+`application.call.reserve` owns and closes the short reservation session. The router commits its
+secret-loading session before opening that transaction and again immediately before `relay()` (and
 before `_relay_live_demo()`), so from the moment the upstream is called until the settle, the request
 holds **zero** pooled connections. Everything after the relay — `_platform_settle`, `_record_first_call`,
 `_store_idempotent` — already runs on its own short-lived session, and the request session is
 `expire_on_commit=False`, so `tool`, `secrets` and `caller.org` stay usable without a reload.
 
-Why this is load-bearing: `ledger.reserve` commits, but the org refresh after it, the secret loads and
-an OAuth token refresh each auto-begin a fresh transaction on the request session, and SQLAlchemy keeps
+Why this is load-bearing: secret loads and an OAuth token refresh each auto-begin a transaction on the
+request session, and SQLAlchemy keeps
 that transaction's connection checked out until the next commit — i.e. for the entire upstream round
 trip. `_platform_settle` then needs a second connection from its own session. Two per in-flight call
 against the 15-slot pool (`db.py`: 5 + 10 overflow) deadlocked at 15 concurrent calls: every settle

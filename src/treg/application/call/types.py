@@ -26,6 +26,16 @@ _BLAME_BY_KIND: dict[str, Blame] = {
     "policy_denied": "caller",
     "daily_cap_reached": "caller",
     "public_demo_rate_limited": "caller",
+    "trial_allowance_unavailable": "treg",
+    "trial_allowance_reached": "caller",
+    "platform_cap_unavailable": "treg",
+    "platform_daily_cap_reached": "caller",
+    "tag_budget_unavailable": "treg",
+    "tag_cardinality_exceeded": "caller",
+    "tag_blocked": "caller",
+    "tag_call_cap_reached": "caller",
+    "tag_spend_cap_reached": "caller",
+    "insufficient_balance": "caller",
     "injection_failed": "treg",
     "credential_missing": "org_connection",
     "method_mismatch": "caller",
@@ -63,6 +73,10 @@ class ResolutionFailed(CallFailure):
 
 class AuthorizationFailed(CallFailure):
     """A resolved call target is refused before any money is reserved."""
+
+
+class ReservationFailed(CallFailure):
+    """A metered call is refused before its reservation commits."""
 
 
 @dataclass(frozen=True)
