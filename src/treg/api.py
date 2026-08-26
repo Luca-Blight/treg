@@ -43,6 +43,7 @@ from pathlib import Path
 from fastapi import APIRouter, Cookie, Depends, Form, Header, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
+from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
@@ -237,38 +238,60 @@ def _login_callback_base(request: Request) -> str:
     return get_settings().public_url.rstrip("/")
 
 
-async def _legacy_host_redirect(request: Request, call_next):
+class _LegacyHostRedirectMiddleware:
     """Redirect marketing pages (301) and auth entries (302) from a legacy host to the canonical
     host. Auth entries get a temporary redirect: their URLs carry one-shot OAuth parameters, and a
     cached permanent answer is exactly the wrong thing to keep."""
-    host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
-    if request.method in ("GET", "HEAD") and host in _LEGACY_HOSTS:
-        path = request.url.path
-        always = path in _REDIRECT_ALWAYS
-        if always or (path in _REDIRECT_PATHS and sess.COOKIE not in request.cookies):
-            canonical = get_settings().public_url.rstrip("/")
-            # hostname equality, not substring: a self-hoster whose public_url IS a legacy host
-            # must keep serving in place, but "not-treg.superdesign.dev" must not.
-            if host != ((urlsplit(canonical).hostname or "").rstrip(".").lower()):
-                target = canonical + path
-                if request.url.query:
-                    target += "?" + request.url.query
-                return RedirectResponse(target, status_code=302 if always else 301)
-    return await call_next(request)
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        request = Request(scope)
+        host = request.headers.get("host", "").split(":")[0].rstrip(".").lower()
+        if request.method in ("GET", "HEAD") and host in _LEGACY_HOSTS:
+            path = request.url.path
+            always = path in _REDIRECT_ALWAYS
+            if always or (path in _REDIRECT_PATHS and sess.COOKIE not in request.cookies):
+                canonical = get_settings().public_url.rstrip("/")
+                # hostname equality, not substring: a self-hoster whose public_url IS a legacy host
+                # must keep serving in place, but "not-treg.superdesign.dev" must not.
+                if host != ((urlsplit(canonical).hostname or "").rstrip(".").lower()):
+                    target = canonical + path
+                    if request.url.query:
+                        target += "?" + request.url.query
+                    response = RedirectResponse(target, status_code=302 if always else 301)
+                    return await response(scope, receive, send)
+        return await self.app(scope, receive, send)
 
 
-async def _security_headers(request: Request, call_next):
+class _SecurityHeadersMiddleware:
     """The dashboard is an authenticated app; ship the baseline hardening headers it was missing —
     nosniff, clickjacking protection (X-Frame-Options), and a tight Referrer-Policy. `setdefault`
     so the /call proxy's own stricter CSP/nosniff isn't clobbered."""
-    resp = await call_next(request)
-    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
-    resp.headers.setdefault("X-Frame-Options", "DENY")
-    resp.headers.setdefault("Referrer-Policy", "no-referrer")
-    # HSTS pins the browser to https so a spoofed X-Forwarded-Proto can't downgrade the session
-    # cookie onto cleartext (browsers ignore this header when served over http, so dev is unaffected).
-    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-    return resp
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        async def send_with_security_headers(message):
+            if message["type"] == "http.response.start":
+                message = dict(message, headers=list(message.get("headers", [])))
+                headers = MutableHeaders(scope=message)
+                headers.setdefault("X-Content-Type-Options", "nosniff")
+                headers.setdefault("X-Frame-Options", "DENY")
+                headers.setdefault("Referrer-Policy", "no-referrer")
+                # HSTS pins the browser to https so a spoofed X-Forwarded-Proto can't downgrade the
+                # session cookie onto cleartext (browsers ignore it over http, so dev is unaffected).
+                headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+            await send(message)
+
+        return await self.app(scope, receive, send_with_security_headers)
 
 
 _BODY_ENC_HEADER = b"x-treg-body-encoding"
@@ -305,16 +328,31 @@ class _BodyDecodeMiddleware:
         if enc is None:
             return await self.app(scope, receive, send)
         chunks: list[bytes] = []
+        consumed_messages = []
+        body_complete = False
         while True:
             msg = await receive()
+            consumed_messages.append(msg)
             if msg["type"] == "http.request":
                 chunks.append(msg.get("body", b""))
                 if not msg.get("more_body", False):
+                    body_complete = True
                     break
-            elif msg["type"] == "http.disconnect":
+            else:
                 break
+        raw = b"".join(chunks)
+
+        # A decoder needs the complete encoded payload. If the client disconnected mid-body, pass
+        # the messages already observed through unchanged so downstream sees the real disconnect.
+        if not body_complete:
+            async def replay_incomplete():
+                if consumed_messages:
+                    return consumed_messages.pop(0)
+                return await receive()
+
+            return await self.app(scope, replay_incomplete, send)
         try:
-            decoded = _decode_request_body(b"".join(chunks), enc)
+            decoded = _decode_request_body(raw, enc)
         except Exception:  # noqa: BLE001 -- a malformed encoded body is a client error, not a 500
             return await JSONResponse({"detail": "invalid X-Treg-Body-Encoding body"}, status_code=400)(scope, receive, send)
         # Strip the marker, drop content-encoding, and fix content-length to the decoded size.
@@ -329,7 +367,7 @@ class _BodyDecodeMiddleware:
             if not delivered:
                 delivered = True
                 return {"type": "http.request", "body": decoded, "more_body": False}
-            return {"type": "http.disconnect"}
+            return await receive()
 
         return await self.app(new_scope, receive_decoded, send)
 
@@ -343,10 +381,10 @@ async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse
 async def _pool_saturated(request: Request, exc: PoolTimeoutError) -> JSONResponse:
     """The DB pool had no connection to give within `pool_timeout` (db.py). That is treg being
     saturated, not the caller's fault and not the provider's — so say so, typed, and fast. Before this
-    handler the same condition surfaced as a bare `500 Internal Server Error` after a 30 s wait (the
-    exception escaped the router and Starlette's BaseHTTPMiddleware reported "No response returned"),
-    which an agent cannot tell from a provider bug. `treg_saturated` is the key a retrying client
-    should branch on; `Retry-After` is how long to wait before doing so."""
+    handler the same condition escaped request handling and surfaced as a bare
+    `500 Internal Server Error` after a 30 s wait, which an agent cannot tell from a provider bug.
+    `treg_saturated` is the key a retrying client should branch on; `Retry-After` is how long to wait
+    before doing so."""
     resp = JSONResponse(
         {"detail": "treg's database pool is saturated — retry in a moment", "treg_saturated": True},
         status_code=503, headers={"Retry-After": "2"})
@@ -3738,6 +3776,9 @@ class AutoTopupIn(BaseModel):
     threshold_usd: float | None = None
     amount_usd: float | None = None
     monthly_cap_usd: float | None = None
+    # False when the caller is about to open a top-up Checkout anyway (the dashboard's modal): that
+    # page saves the card too, so a second card-capture session would be a wasted Stripe call.
+    setup_url: bool = True
     # Explicit, per-request agreement to unattended charges — the MIT mandate. Required to ENABLE when
     # there is no timestamp on file; ignored when disabling (nobody consents to stopping).
     consent: bool = False
@@ -3790,7 +3831,7 @@ async def billing_topup(
     redirect by hand — can create balance.
     """
     org = _billing_org(caller)
-    amount = body.amount_usd if body.amount_usd is not None else get_settings().topup_default_usd
+    amount = body.amount_usd if body.amount_usd is not None else await billing.next_default_usd(db, org.id)
     try:
         out = await billing.create_topup_checkout(
             db, org, amount, return_base=_return_base(request), email=caller.email)
@@ -3831,7 +3872,7 @@ async def billing_autotopup(
     except billing.TopupRejected as e:
         raise HTTPException(status_code=422, detail=str(e))
     state = await billing.billing_state(db, org)
-    if body.enabled and not org.stripe_default_pm:
+    if body.enabled and body.setup_url and not org.stripe_default_pm:
         try:
             state["setup_url"] = (await billing.create_setup_checkout(
                 db, org, return_base=_return_base(request), email=caller.email))["url"]
@@ -4354,8 +4395,9 @@ async def list_observed_agents(
     plain terminal (`client` in ('', 'cli')): a roster that lists every human twice teaches nothing.
     """
     _require_admin_of(org_id, caller)
-    since = datetime.now(timezone.utc) - timedelta(days=30)
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    now = _utcnow_naive()
+    since = now - timedelta(days=30)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     # A pair that was PROMOTED — it has its own agent identity now — leaves the detected roster;
     # revoking that agent deletes its membership, which resurfaces the pair automatically.
     promoted = {tuple(m.promoted_from.split("|", 1)) for m in (await db.execute(
@@ -5293,7 +5335,7 @@ async def report_local_run(
         # Mark only the credentials this run actually INJECTED (the ones the CLI used) — not every HTTP
         # binding — and never a `param` (it's config, not a credential; mirrors health.run_all's guard).
         sids = {localrun._resolve_secret_id(e, tool) for e in profile.get("inject") or []}
-        now = datetime.now(timezone.utc)
+        now = _utcnow_naive()
         for sid in [s for s in sids if s is not None]:
             secret = await db.get(Secret, sid)
             if secret is not None and secret.org_id == caller.org_id and secret.kind != "param":
@@ -8208,6 +8250,10 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
     await _enforce_tag_budgets(caller, meta, db, add_micro=mk.estimate_micro)
     await _enforce_platform_daily_cap(caller, mk.estimate_micro, db)
     await _enforce_trial_allowance(caller, mk.provider, db)
+    # Read before `reserve`: a failed reserve rolls the session back and expires the ORM instance, and
+    # a lazy attribute load inside the except would raise MissingGreenlet on the 402 path.
+    auto_on = bool(caller.org.autotopup_enabled and caller.org.autotopup_consented_at)
+    prefs = billing.autotopup_prefs(caller.org) if auto_on else None
     try:
         mk.call_id = await ledger.reserve(
             db, caller.org_id, mk.endpoint_id, mk.estimate_micro,
@@ -8225,15 +8271,28 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
         alt = (f"  or bring your own {mk.provider} developer app (BYO OAuth) — those calls are never metered"
                if mk.billed_oauth else
                f"  or use your own key: treg connections connect --provider {mk.provider}")
+        # A team that keeps hitting this by hand is the one that should hear about auto top-up; a team
+        # that already has it on needs to know it is the cooldown/cap holding, not a missing card —
+        # otherwise the natural reading of "add funds" is that auto top-up is broken.
+        if auto_on:
+            auto_line = (f"  auto top-up:    on — adds ${ledger.usd(prefs['amount_micro']):g} when the balance "
+                         f"drops below ${ledger.usd(prefs['threshold_micro']):g}, at most once per "
+                         f"{get_settings().autotopup_cooldown_s // 60} min and "
+                         f"${ledger.usd(prefs['monthly_cap_micro']):g}/month. Raise the amount or the "
+                         f"cap if your burn outruns it: treg topup --auto on --amount 50 --cap 500")
+        else:
+            auto_line = "  auto top-up:    off — refill automatically instead: treg topup --auto on --threshold 5 --amount 20"
         raise HTTPException(status_code=402, detail={
             "error": "insufficient_balance",
             "message": (f"{mk.endpoint_id} would cost ~${ledger.usd(exc.required_micro):g} on {wallet} "
                         f"and this team's balance is ${ledger.usd(exc.balance_micro):g}.\n"
                         f"  add funds:      {get_settings().public_url}/app#billing\n"
+                        f"{auto_line}\n"
                         + alt),
             "balance_micro": exc.balance_micro,
             "estimated_cost_micro": exc.required_micro,
             "topup_url": "/app#billing",
+            "autotopup_enabled": auto_on,
             "provider": mk.provider,
             "endpoint_id": mk.endpoint_id,
         })

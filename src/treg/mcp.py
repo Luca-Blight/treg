@@ -44,9 +44,11 @@ from urllib.parse import parse_qsl, urlsplit
 
 import httpx
 from mcp.server import MCPServer
+from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
 from mcp.server.mcpserver import Context
 from mcp.server.transport_security import TransportSecuritySettings
-from mcp.types import ToolAnnotations
+from mcp.shared.exceptions import MCPError
+from mcp.types import METHOD_NOT_FOUND, ToolAnnotations
 
 from . import audit, catalog_store
 from .config import PUBLIC_HOST_ALIASES, get_settings
@@ -70,6 +72,40 @@ _CALLS = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world
 _INTERNAL_BASE = "http://treg.internal"
 _TIMEOUT = httpx.Timeout(120.0, connect=5.0)
 
+
+class _StaticSurfaceCapabilities:
+    """Do not advertise or serve change subscriptions for treg's fixed MCP surface.
+
+    MCP SDK 2.0 currently installs subscriptions/listen unconditionally, then derives every
+    listChanged/resource-subscribe capability from that handler. treg never changes its six-tool
+    surface or publishes prompt/resource/tool events; weekly catalog changes are tool DATA, not a
+    tools/list change. Use the SDK's public middleware seam until it exposes a constructor switch —
+    never reach into its private handler registry.
+    """
+
+    async def __call__(
+        self, ctx: ServerRequestContext[Any, Any], call_next: CallNext
+    ) -> HandlerResult:
+        if ctx.method == "subscriptions/listen":
+            raise MCPError(code=METHOD_NOT_FOUND, message="Method not found", data=ctx.method)
+
+        result = await call_next(ctx)
+        if ctx.method != "server/discover" or not isinstance(result, dict):
+            return result
+
+        result = dict(result)
+        capabilities = dict(result.get("capabilities") or {})
+        for name in ("tools", "prompts"):
+            capability = dict(capabilities.get(name) or {})
+            capability["listChanged"] = False
+            capabilities[name] = capability
+        resources = dict(capabilities.get("resources") or {})
+        resources.update({"listChanged": False, "subscribe": False})
+        capabilities["resources"] = resources
+        result["capabilities"] = capabilities
+        return result
+
+
 mcp = MCPServer(
     name="treg",
     title="treg — the tool catalog for your agent",
@@ -85,6 +121,7 @@ mcp = MCPServer(
         "catalog_get (params) → call. Multiple providers for one job? catalog_get ranks them by "
         "measured success, speed and price — you pick."
     ),
+    middleware=[_StaticSurfaceCapabilities()],
 )
 
 
@@ -952,25 +989,35 @@ class RequireAuthForProtectedTools:
         if scope["type"] != "http" or scope.get("method") != "POST":
             return await self.app(scope, receive, send)
 
-        body, more = b"", True
-        while more:
+        chunks: list[bytes] = []
+        consumed_messages = []
+        body_complete = False
+        while True:
             msg = await receive()
-            body += msg.get("body", b"")
-            more = msg.get("more_body", False)
+            consumed_messages.append(msg)
+            if msg["type"] != "http.request":
+                break
+            chunks.append(msg.get("body", b""))
+            if not msg.get("more_body", False):
+                body_complete = True
+                break
+        body = b"".join(chunks)
 
-        verdict = self._auth_verdict(scope, body)
+        # An incomplete request ended by a real disconnect has nothing useful to authenticate, and
+        # challenging it would try to write to a socket that is already gone. Let the transport see
+        # the exact request/disconnect sequence instead.
+        verdict = self._auth_verdict(scope, body) if body_complete else None
         if verdict is not None:
             return await self._challenge(send, invalid=(verdict == "invalid"))
 
-        # The body was consumed to inspect it, so hand the transport a receive() that replays it.
-        replayed = False
-
+        # The body was consumed to inspect it, so replay the messages we actually received. Once
+        # those are exhausted, delegate to the original receive() — only the ASGI server knows when
+        # the client disconnected. Fabricating http.disconnect here cancels long-lived requests such
+        # as MCP 2026-07-28 subscriptions/listen before they can start their response.
         async def replay():
-            nonlocal replayed
-            if replayed:
-                return {"type": "http.disconnect"}
-            replayed = True
-            return {"type": "http.request", "body": body, "more_body": False}
+            if consumed_messages:
+                return consumed_messages.pop(0)
+            return await receive()
 
         return await self.app(scope, replay, send)
 

@@ -39,6 +39,23 @@ async def _rpc(client: AsyncClient, method: str, params=None, token: str | None 
     return r
 
 
+async def _modern_rpc(client: AsyncClient, method: str, params=None, token: str = "opaque-test-token"):
+    body_params = dict(params or {})
+    body_params["_meta"] = {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": {"name": "test", "version": "1"},
+    }
+    return await client.post("http://localhost/mcp/", json={
+        "jsonrpc": "2.0", "id": 1, "method": method, "params": body_params,
+    }, headers={
+        **MCP_HEADERS,
+        "Authorization": f"Bearer {token}",
+        "MCP-Protocol-Version": "2026-07-28",
+        "MCP-Method": method,
+    })
+
+
 async def _call_tool(client: AsyncClient, name: str, args: dict, token: str | None = None) -> dict:
     await _rpc(client, "initialize", {
         "protocolVersion": "2025-06-18", "capabilities": {},
@@ -615,10 +632,102 @@ async def test_a_notification_and_ping_pass_without_a_token(clients):
     async with mcp_session(clients) as c:
         r = await c.post("http://localhost/mcp/", headers=MCP_HEADERS,
                          json={"jsonrpc": "2.0", "method": "notifications/initialized"})
-        assert r.status_code != 401, r.text
+        assert r.status_code == 202, r.text
         r = await c.post("http://localhost/mcp/", headers=MCP_HEADERS,
                          json={"jsonrpc": "2.0", "id": 1, "method": "ping"})
-        assert r.status_code != 401, r.text
+        assert r.status_code == 200, r.text
+
+
+async def test_auth_body_replay_waits_for_the_real_disconnect_on_a_long_response() -> None:
+    """A completed request body is not a disconnect; long responses keep the live receive channel."""
+    from treg.mcp import RequireAuthForProtectedTools
+
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "ping"}).encode()
+    original_calls = 0
+    downstream_received = []
+    sent = []
+
+    async def receive():
+        nonlocal original_calls
+        original_calls += 1
+        if original_calls == 1:
+            return {"type": "http.request", "body": body, "more_body": False}
+        return {"type": "http.disconnect", "real": True}
+
+    async def send(message):
+        sent.append(message)
+
+    async def long_response(scope, receive, send):
+        downstream_received.append(await receive())
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b"still open", "more_body": True})
+        downstream_received.append(await receive())
+
+    scope = {"type": "http", "method": "POST", "headers": []}
+    await RequireAuthForProtectedTools(long_response)(scope, receive, send)
+
+    assert original_calls == 2
+    assert downstream_received == [
+        {"type": "http.request", "body": body, "more_body": False},
+        {"type": "http.disconnect", "real": True},
+    ]
+    assert sent[0] == {"type": "http.response.start", "status": 200, "headers": []}
+
+
+async def test_discover_disables_unused_change_capabilities(clients) -> None:
+    """A fixed tool surface must not make clients open an idle subscription stream."""
+    async with mcp_session(clients) as c:
+        r = await _modern_rpc(c, "server/discover")
+
+    assert r.status_code == 200, r.text
+    capabilities = r.json()["result"]["capabilities"]
+    assert capabilities["tools"]["listChanged"] is False
+    assert capabilities["prompts"]["listChanged"] is False
+    assert capabilities["resources"]["listChanged"] is False
+    assert capabilities["resources"]["subscribe"] is False
+
+
+async def test_subscription_listen_is_not_served(clients) -> None:
+    """SDK 2.0 registers listen by default; treg refuses it through the public middleware seam."""
+    async with mcp_session(clients) as c:
+        r = await _modern_rpc(c, "subscriptions/listen", {
+            "notifications": {"toolsListChanged": True},
+        })
+
+    assert r.status_code == 404, r.text
+    assert r.json()["error"] == {
+        "code": -32601, "message": "Method not found", "data": "subscriptions/listen",
+    }
+
+
+async def test_auth_middleware_preserves_a_real_mid_body_disconnect() -> None:
+    """Authentication inspection replays each partial request message and the real disconnect."""
+    from treg.mcp import RequireAuthForProtectedTools
+
+    received = []
+
+    async def downstream(scope, receive, send):
+        received.append(await receive())
+        received.append(await receive())
+        received.append(await receive())
+
+    messages = [
+        {"type": "http.request", "body": b'{"jsonrpc":', "more_body": True},
+        {"type": "http.request", "body": b'"2.0"', "more_body": True},
+        {"type": "http.disconnect", "real": True},
+    ]
+
+    async def receive():
+        return messages.pop(0)
+
+    scope = {"type": "http", "method": "POST", "headers": []}
+    await RequireAuthForProtectedTools(downstream)(scope, receive, lambda message: None)
+
+    assert received == [
+        {"type": "http.request", "body": b'{"jsonrpc":', "more_body": True},
+        {"type": "http.request", "body": b'"2.0"', "more_body": True},
+        {"type": "http.disconnect", "real": True},
+    ]
 
 
 async def test_a_BAD_token_is_the_tool_s_business_not_the_transport_s(clients):

@@ -72,7 +72,7 @@ swallows exceptions, which is right for analytics and fatal for money.
 
 | Op | Effect |
 |---|---|
-| `grant` | new promotional block, balance up (org creation) |
+| `grant` | new promotional block, balance up (org creation, the referral bonus, the top-up bonus) |
 | `topup` | new purchased block, balance up (after Stripe authorized) |
 | `reserve` | balance down by the estimate, `Hold` opened — the hot-path spend gate |
 | `settle` | blocks down by the observed cost, hold closed, difference refunded |
@@ -183,6 +183,41 @@ off means $40 paid and $40 credited. "Pay $40, get $50" would be a `ledger.grant
 built. A 100%-off code collects nothing, so the session credits nothing: `_on_checkout_completed`
 drops it as `zero amount`. Grant free balance through `ledger.grant`, never through a Stripe coupon.
 
+**The top-up bonus IS that `ledger.grant` on top — tiered, and manual only.** `topup_bonus_tiers`
+(`{10: 0, 50: 5, 100: 10, 200: 15}`, `{min_usd: percent}`) gives a manual top-up a `bonus` block
+worth the highest tier at or below the amount (`bonus_for_topup`: $99 earns the $50 rate, $250 the
+$200 rate; integer `amount * pct // 100`). It is granted inside `_credit`'s `fresh` branch — the one
+point that knows money moved for the first time, so a webhook redelivery grants nothing — as a
+**separate block** with `_KIND_ORDER` rank 0: it burns with promo and referral credit, before the
+purchased block, and the purchased block stays exactly what the card paid. That is the whole
+reason it is not folded into `ledger.topup`: purchased credit is a refundable liability, the bonus
+is marketing spend. Automatic refills (`auto=True`) earn nothing — they repeat a chosen amount, and
+a bonus there would be a permanent 9–15% margin cut on every refill rather than a reason to come
+back and buy bigger. A refund or dispute does **not** reverse it: like an already-granted referral
+bonus it is logged for a human (`_on_payment_reversed` → `bonus_blocks_flagged`), because the ledger
+has no path that drives a balance down and this is not the reason to add one. The grant entry's
+meta carries `payment_intent`, `pct` and `topup_block_id`; `topup_history` joins on it to show
+`bonus_micro` per payment, and the receipt says "$100 + $10 bonus" so a balance that rose $110 on a
+$100 charge reads as intended rather than as a mistake.
+
+**The preselected amount climbs a ladder, capped.** `next_default_usd` looks at the org's last
+*manual* top-up and returns the first preset above it, never past `topup_default_cap_usd` ($50):
+$10 → $50, $50 → $50, nothing yet → `topup_default_usd`. Auto refills are skipped so the ladder
+cannot ratchet on its own. The dashboard modal preselects it (`GET /billing` → `topup.default_usd`,
+now per-org) and `POST /billing/topup` with no amount uses it — which is what `treg topup` sends.
+Presets are four (`[10, 50, 100, 200]`) plus "Other": with eight cards from $5 up nobody ever
+picked $100+ and repeat payers stayed flat; the minimum is $10 (fee math, and the referral
+qualifying amount). The threshold for auto top-up is validated separately (`validate_threshold_usd`,
+≥ $1): it is not a charge, so the top-up minimum must not apply to it — raising the minimum
+without that split would have rejected the default $5 threshold on every enable.
+
+**A saved card arms a consented policy from either webhook.** The modal records consent first
+(`set_autotopup` → `no_card`) and relies on the top-up Checkout to save the card, so there is no
+SetupIntent in that flow: `_set_default_pm` — called by both `_on_checkout_completed` and
+`_on_setup_succeeded` — runs `_arm_if_waiting_for_card`, which turns the policy on only from the
+explicit `no_card` state. A decline, 3DS, or a deliberate off (reason `None`, consent still on
+file) stays off; a redelivered payment webhook must not switch a policy back on.
+
 Turning `invoice_creation` on makes Stripe emit `invoice.created` / `invoice.paid` for every top-up.
 `handle_webhook_event` drops them, deliberately: crediting on an invoice event as well as on the
 PaymentIntent would be a second door onto the same money. The invoice is a document; the
@@ -222,6 +257,16 @@ admin-only, which meant a machine identity could not read the balance it was spe
 402 already hands the caller `balance_micro`, and both `llms.txt` and `skill.md` tell an agent to run
 `treg balance` after a call. Refusing the number there while shipping it in an error was incoherent.
 (Reported by Jason, 2026-08-07.)
+
+The 402 also carries `autotopup_enabled` and an `auto top-up:` line in `message`. Off → the one
+command that turns it on. On → the amount, threshold, cooldown and monthly cap, plus the flags that
+raise them — because a team that is out of money *with* auto top-up on is being held by the cooldown
+or the cap, and "add funds" alone reads as "auto top-up is broken" (cobl.ai, 2026-08-25: ~1,500
+refusals between hourly $20 refills against a $60/day burn). The org fields are read **before**
+`reserve`: a failed reserve rolls the session back and expires the ORM instance, so a lazy read in
+the except path raises `MissingGreenlet`. The MCP path still scrubs the payment link from the same
+body (`mcp.py`, ChatGPT digital-goods rule) — the auto top-up line survives because it names a CLI
+command, not a URL.
 
 ## The spend ceiling (`api.py`)
 
@@ -656,10 +701,10 @@ webhook and a page load, and neither may fail over a bonus.
 **The referee is told, on the screen where it changes their behaviour.** `offer_for_org` is the
 mirror of `summary`: a team that arrived through a link has a `pending` row and no idea a bonus
 exists. `GET /billing` carries a `referral_offer` (merged in the api route, not in `billing.py` —
-that module keeps its one job) and the dashboard names the MINIMUM there, because the first top-up
-preset is $5 and the minimum is $10, so the most-clicked button silently forfeits the reward
-otherwise. The qualifying presets say `+$5 bonus` on themselves; a note alone sits above the place
-the decision is actually made. The offer is returned only while `pending` — after qualifying the
+that module keeps its one job) and the dashboard names the MINIMUM there (it equals the smallest preset now that $5
+is gone, but the "Other" input can still go below it, so the note stays). The qualifying presets say `+$5 bonus` on themselves; a note alone sits above the place
+the decision is actually made (the tier bonus and the referral bonus stack on the same card). The
+offer is returned only while `pending` — after qualifying the
 money is already on its way through `sweep`, and still advertising it would read as a second bonus —
 and it names the referrer MASKED (`mask_email`, `j•••@domain`). Not anonymous — "you were invited"
 with nobody attached reads as marketing copy, and someone who clicked a link off a tweet last week

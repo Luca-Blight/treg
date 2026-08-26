@@ -96,6 +96,72 @@ def cents_to_micro(amount_cents: int) -> int:
     return int(amount_cents) * MICRO_PER_CENT
 
 
+def bonus_for_topup(amount_micro: int) -> tuple[int, int]:
+    """The promotional bonus a MANUAL top-up of `amount_micro` earns, as `(bonus_micro, percent)`.
+
+    Tiered by size (`topup_bonus_tiers`): the highest tier at or below the amount applies, so $99 gets
+    the $50 rate and $250 the $200 rate. Integer micro-USD throughout — `amount * pct // 100`
+    truncates the sub-micro remainder, which is at most a millionth of a dollar in treg's favour.
+    Callers decide whether the top-up qualifies at all (automatic refills never do).
+    """
+    tiers = get_settings().topup_bonus_tiers or {}
+    usd = int(amount_micro) // MICRO_PER_USD
+    pct = 0
+    for floor_usd in sorted(int(k) for k in tiers):
+        if usd >= floor_usd:
+            pct = int(tiers[floor_usd] if floor_usd in tiers else tiers[str(floor_usd)])
+    if pct <= 0:
+        return 0, 0
+    return int(amount_micro) * pct // 100, pct
+
+
+async def next_default_usd(db: AsyncSession, org_id: int | None) -> int:
+    """The amount to preselect for this org's next MANUAL top-up: one preset above the last manual
+    one, capped at `topup_default_cap_usd`. No history → `topup_default_usd`.
+
+    Automatic refills are ignored on purpose: they repeat the org's own chosen amount, and stepping
+    the default up because of them would ratchet forever. "Above" means the first preset strictly
+    greater than the last amount; an amount at or past the cap stays at the cap.
+    """
+    s = get_settings()
+    if not org_id:
+        return int(s.topup_default_usd)
+    rows = (await db.execute(
+        select(LedgerEntry.amount_micro, LedgerEntry.meta)
+        .where(LedgerEntry.org_id == org_id, LedgerEntry.kind == "topup")
+        .order_by(LedgerEntry.created_at.desc(), LedgerEntry.id.desc()).limit(50)
+    )).all()
+    last_micro = None
+    for amount, meta in rows:
+        if not (meta or {}).get("auto"):
+            last_micro = int(amount)
+            break
+    if last_micro is None:
+        return int(s.topup_default_usd)
+    last_usd = last_micro // MICRO_PER_USD
+    cap = int(s.topup_default_cap_usd)
+    for p in sorted(int(x) for x in s.topup_presets):
+        if p > last_usd:
+            return min(p, cap)
+    return min(max(last_usd, int(s.topup_default_usd)), cap)
+
+
+def validate_threshold_usd(amount_usd) -> int:
+    """The auto-top-up THRESHOLD is not a charge, so it is not held to the top-up minimum (which is
+    card-fee math): any whole dollar amount from $1 up to the single-top-up ceiling."""
+    try:
+        value = float(amount_usd)
+    except (TypeError, ValueError):
+        raise TopupRejected("threshold must be a number of US dollars")
+    if value != int(value):
+        raise TopupRejected("the threshold is whole dollars (e.g. 5, not 5.50)")
+    if value < 1:
+        raise TopupRejected("the threshold must be at least $1")
+    if value > TOPUP_MAX_USD:
+        raise TopupRejected(f"the threshold cannot exceed ${TOPUP_MAX_USD}")
+    return int(value)
+
+
 def validate_topup_usd(amount_usd) -> int:
     """The one gate on "how much". Returns whole dollars; raises `TopupRejected` with a message the
     payer can act on.
@@ -238,11 +304,33 @@ async def _set_default_pm(db: AsyncSession, org_id: int, payment_method: str | N
     if not payment_method:
         return False
     org = await db.get(Org, org_id)
-    if org is None or org.stripe_default_pm == payment_method:
+    if org is None:
         return False
+    changed = org.stripe_default_pm != payment_method
     org.stripe_default_pm = payment_method
-    db.add(org)
-    await db.commit()
+    # A card arriving is what a consented-but-cardless policy was waiting for, whichever door it came
+    # through: the dashboard's top-up modal records consent and then relies on the top-up Checkout to
+    # save the card, so the PAYMENT webhook has to arm it, not only the setup one. Checked even when
+    # the pm is unchanged (a redelivered webhook after a crash between the two commits), and only for
+    # the `no_card` shape — a decline, 3DS, or a deliberate off stays off until a human re-enables it.
+    armed = _arm_if_waiting_for_card(org)
+    if changed or armed:
+        db.add(org)
+        await db.commit()
+    return changed
+
+
+def _arm_if_waiting_for_card(org: Org) -> bool:
+    """Turn a consented policy on once `org.stripe_default_pm` exists. Mutates, does not commit."""
+    if not (org.stripe_default_pm and org.autotopup_consented_at) or org.autotopup_enabled:
+        return False
+    # ONLY the explicit `no_card` state. A deliberate off leaves the reason None with consent still
+    # on file, and a later (or redelivered) payment must not switch it back on.
+    if org.autotopup_disabled_reason != "no_card":
+        return False
+    org.autotopup_enabled = True
+    org.autotopup_disabled_reason = None
+    org.autotopup_failures = 0
     return True
 
 
@@ -462,6 +550,17 @@ async def list_payments(db: AsyncSession, org: Org, *, limit: int = 24) -> dict:
             )
         )).all()
         auto = {str(bid) for bid, meta in rows if isinstance(meta, dict) and meta.get("auto")}
+    # The bonus each payment earned, keyed by its PaymentIntent (stamped into the grant entry's
+    # meta by `_credit`). Read the same way as `auto`: the org's grant entries, matched in Python.
+    bonus_by_pi: dict[str, int] = {}
+    if blocks:
+        grants = (await db.execute(
+            select(LedgerEntry.amount_micro, LedgerEntry.meta).where(
+                LedgerEntry.org_id == org.id, LedgerEntry.kind == "grant")
+        )).all()
+        for amt, meta in grants:
+            if isinstance(meta, dict) and meta.get("source") == "topup_bonus" and meta.get("payment_intent"):
+                bonus_by_pi[str(meta["payment_intent"])] = bonus_by_pi.get(str(meta["payment_intent"]), 0) + int(amt)
 
     docs, stripe_ok = await _payment_documents(org, len(blocks))
     items = []
@@ -473,6 +572,7 @@ async def list_payments(db: AsyncSession, org: Org, *, limit: int = 24) -> dict:
             "amount_usd": ledger.usd(int(b.amount_micro)),
             "created_at": b.created_at.isoformat() if b.created_at else None,
             "auto": b.id in auto,
+            "bonus_micro": bonus_by_pi.get(b.stripe_payment_intent or "", 0),
             "invoice_number": d.get("number") or "",
             "invoice_pdf": d.get("invoice_pdf") or "",
             "hosted_invoice_url": d.get("hosted_invoice_url") or "",
@@ -819,8 +919,25 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
     block_id = block.id  # captured now: a later rollback (the ad-conversion except below) expires
                         # every object this session is tracking, `block` included, and reading an
                         # expired attribute outside an awaited call raises MissingGreenlet.
-    after = await ledger.balance_of(db, org_id)
     fresh = not already
+    bonus_micro, bonus_pct = 0, 0
+    if fresh and not auto:
+        # The tiered bonus on a MANUAL top-up, as its own promotional block: it burns first and is
+        # never refundable, so it must not inflate the purchased (refundable) block above. `fresh` is
+        # the idempotency guard — a webhook redelivery finds `already` and grants nothing. Swallowed
+        # like the referral qualification below: a failure here must not 500 the handler and make
+        # Stripe retry a payment that has already credited.
+        bonus_micro, bonus_pct = bonus_for_topup(amount_micro)
+        if bonus_micro > 0:
+            try:
+                await ledger.grant(db, org_id, amount_micro=bonus_micro, kind="bonus", once=False,
+                                   meta={"source": "topup_bonus", "payment_intent": pi_id,
+                                         "pct": bonus_pct, "topup_block_id": block_id})
+            except Exception as e:  # noqa: BLE001
+                await db.rollback()
+                bonus_micro, bonus_pct = 0, 0
+                log.warning("billing: bonus grant failed for org %s on %s: %s", org_id, pi_id, e)
+    after = await ledger.balance_of(db, org_id)
     if fresh:
         org = await db.get(Org, org_id)
         if org is not None and (org.autotopup_failures or org.autotopup_disabled_reason):
@@ -832,7 +949,7 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
         to = await owner_email(db, org_id)
         if to:
             await email_mod.send_topup_receipt(to, (org.name or org.slug) if org else "", amount_micro,
-                                              after, auto=auto)
+                                              after, auto=auto, bonus_micro=bonus_micro)
         # Rides `fresh` like the receipt above, so a webhook redelivery re-emits nothing. The webhook
         # is org-scoped, so the owner's email is the best available person (the payer may differ);
         # the `team` group is what makes org-level revenue exact. capture() never raises — an
@@ -841,6 +958,7 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
                           {"amount_micro": amount_micro,
                            "amount_usd": amount_micro / 1_000_000,  # display-only, never computed against
                            "auto": auto, "balance_after_micro": after,
+                           "bonus_micro": bonus_micro, "bonus_pct": bonus_pct,
                            "org": org.slug if org else ""},
                           groups={"team": org.slug if org else ""})
         # First top-up only: `fresh` is already the "this delivery moved money" branch, and the
@@ -972,7 +1090,26 @@ async def _on_payment_reversed(db: AsyncSession, charge_or_dispute: dict, kind: 
         return {"handled": False, "reason": "clawback failed"}
     if cancelled:
         log.warning("billing: %s on %s cancelled %s pending referral bonus(es)", kind, pi_id, cancelled)
-    return {"handled": True, "type": kind, "referrals_cancelled": cancelled}
+    # The top-up bonus is in the same position as an already-granted referral bonus: it burns first,
+    # so by now it is usually spent, and reversing it would need the balance-reducing path the ledger
+    # deliberately does not have. Logged for a human, with the unspent remainder so they can decide.
+    bonus_rows = (await db.execute(
+        select(CreditBlock.id, CreditBlock.org_id, CreditBlock.amount_micro, CreditBlock.remaining_micro)
+        .join(LedgerEntry, LedgerEntry.block_id == CreditBlock.id)
+        .where(CreditBlock.kind == "bonus", LedgerEntry.kind == "grant")
+    )).all()
+    bonus_flagged = 0
+    for bid, oid, amt, rem in bonus_rows:
+        meta_row = (await db.execute(
+            select(LedgerEntry.meta).where(LedgerEntry.block_id == bid, LedgerEntry.kind == "grant")
+        )).first()
+        meta = (meta_row[0] if meta_row else None) or {}
+        if isinstance(meta, dict) and meta.get("payment_intent") == pi_id:
+            bonus_flagged += 1
+            log.warning("billing: %s on %s — org %s holds top-up bonus block %s (%s micro-USD, %s "
+                        "unspent); not reversed, needs a human", kind, pi_id, oid, bid, amt, rem)
+    return {"handled": True, "type": kind, "referrals_cancelled": cancelled,
+            "bonus_blocks_flagged": bonus_flagged}
 
 
 async def _on_payment_failed(db: AsyncSession, pi: dict) -> dict:
@@ -1004,17 +1141,9 @@ async def _on_setup_succeeded(db: AsyncSession, si: dict) -> dict:
         return {"handled": False, "reason": "no org in metadata"}
     pm = si.get("payment_method")
     pm_id = pm if isinstance(pm, str) else (pm or {}).get("id")
+    # Arming a consented-and-waiting org happens inside `_set_default_pm` (shared with the payment
+    # path). A disable for any reason other than `no_card` (a decline, 3DS) stays off there too.
     changed = await _set_default_pm(db, org_id, pm_id)
-    org = await db.get(Org, org_id)
-    if org is not None and org.autotopup_consented_at and not org.autotopup_enabled \
-            and org.autotopup_disabled_reason in (None, "no_card"):
-        # The org already consented and was only waiting on a card — arming it now is what they asked
-        # for. A disable for any OTHER reason (a decline, 3DS) stays off until a human re-enables it.
-        org.autotopup_enabled = True
-        org.autotopup_disabled_reason = None
-        org.autotopup_failures = 0
-        db.add(org)
-        await db.commit()
     return {"handled": True, "payment_method_saved": bool(pm_id), "changed": changed}
 
 
@@ -1036,8 +1165,12 @@ async def billing_state(db: AsyncSession, org: Org) -> dict:
         # Whether the hosted portal can be opened at all. It hangs off the Stripe customer, which only
         # exists once someone has paid — so the button stays hidden rather than 422-ing a new team.
         "portal": configured() and bool(org.stripe_customer_id),
-        "topup": {"min_usd": s.topup_min_usd, "default_usd": s.topup_default_usd,
-                  "presets": list(s.topup_presets)},
+        "topup": {"min_usd": s.topup_min_usd, "max_usd": TOPUP_MAX_USD,
+                  # Per-org: one preset above the last manual top-up, capped (see next_default_usd).
+                  "default_usd": await next_default_usd(db, org.id),
+                  "presets": list(s.topup_presets),
+                  # {usd: percent}; JSON turns the keys into strings — the UI compares numerically.
+                  "bonus_tiers": {int(k): int(v) for k, v in (s.topup_bonus_tiers or {}).items()}},
         "autotopup": {
             "enabled": bool(org.autotopup_enabled),
             "consented_at": org.autotopup_consented_at.isoformat() if org.autotopup_consented_at else None,
@@ -1071,7 +1204,7 @@ async def set_autotopup(
     is on.
     """
     if threshold_usd is not None:
-        org.autotopup_threshold_micro = usd_to_micro(validate_topup_usd(threshold_usd))
+        org.autotopup_threshold_micro = usd_to_micro(validate_threshold_usd(threshold_usd))
     if amount_usd is not None:
         org.autotopup_amount_micro = usd_to_micro(validate_topup_usd(amount_usd))
     if monthly_cap_usd is not None:

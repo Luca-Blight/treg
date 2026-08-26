@@ -45,7 +45,12 @@ body past the edge: send it base64/gzip-encoded and set `X-Treg-Body-Encoding: b
 fixes `content-length`, and hands the decoded body to routing — so both the Pydantic JSON endpoints
 (e.g. `POST /skills`) and the `/call` proxy (which relays `request.body()` upstream) see plaintext. A
 malformed encoded body is a clean 400. No header ⇒ untouched. The CLI's `_RegistryClient` uses this
-automatically on a WAF 403 (see [cli](cli.md)), as does the local proxy for an intercepted call.
+automatically on a WAF 403 (see [cli](cli.md)), as does the local proxy for an intercepted call. Body
+replay does not imply connection closure: after delivering the decoded request,
+`_BodyDecodeMiddleware` delegates later `receive()` calls to the original ASGI channel and forwards
+only a real `http.disconnect`. If the client disconnects before the encoded body is complete, the
+middleware skips decoding and replays each consumed partial-body message followed by that real
+disconnect.
 
 ## `X-Treg-Error` — whose refusal is this?
 `_mark_treg_own_errors` (an `@app.exception_handler(StarletteHTTPException)`) tags treg's **own**
@@ -556,7 +561,7 @@ helpers `_secret_view` / `_tool_view` / `_bundle_view` never leak secret values 
 surfaced by `GET /tools` / `/bundles/{id}`).
 
 ## Cross-cutting hardening (bug-hunt)
-- **Legacy-host redirect:** `_legacy_host_redirect` 301s GET/HEAD marketing pages (`_REDIRECT_PATHS`)
+- **Legacy-host redirect:** `_LegacyHostRedirectMiddleware` 301s GET/HEAD marketing pages (`_REDIRECT_PATHS`)
   from the legacy hosts (`config.LEGACY_PUBLIC_HOSTS`) to the canonical `public_url` host (`treg.to`)
   — but only for **anonymous** visitors: a `treg_session` cookie is host-scoped, so a signed-in
   browser (e.g. the invite flow landing on `/?invite_org=…`) is served in place. The auth entries
@@ -570,7 +575,7 @@ surfaced by `GET /tools` / `/bundles/{id}`).
   transport allow-lists (`mcp._allowed_hosts`/`_allowed_origins`) and in the OAuth token-audience
   set (`mcp_oauth.mcp_resource_audiences()` — pre-move grants keep their old audience for life,
   and refresh reissues it). Never remove the legacy domain from Render.
-- **Security headers:** a `@app.middleware` adds `X-Content-Type-Options: nosniff`, `X-Frame-Options:
+- **Security headers:** pure-ASGI `_SecurityHeadersMiddleware` adds `X-Content-Type-Options: nosniff`, `X-Frame-Options:
   DENY`, `Referrer-Policy: no-referrer`, and HSTS to every response (`setdefault`, so the `/call`
   proxy's stricter CSP/nosniff wins).
 - **No 500 on bad ids/URLs:** an `OverflowError` handler turns an oversized all-digit id into a `404`

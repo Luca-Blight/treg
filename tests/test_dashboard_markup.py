@@ -818,6 +818,25 @@ def test_the_run_actions_lead_the_expansion_tab_bar():
     assert ".ltabs-r .btn.primary{background:var(--inverse)" in INDEX
 
 
+def test_try_it_post_snippets_carry_the_method_and_shell_safe_body():
+    """The drawer must copy the request shown in Manual, not silently turn every endpoint into GET."""
+    block = INDEX[INDEX.index("epTryShellBody(){") : INDEX.index("epTrySetupLine(){")]
+    assert "replace(/'/g,\"'\\\"'\\\"'\")" in block
+    assert "if(method!=='GET') s+=` --method ${method}`" in block
+    assert "--data ${this.epTryShellBody}" in block
+    assert "curl -X ${method}" in block
+    assert '-H "Content-Type: application/json"' in block
+
+
+def test_try_it_get_snippets_keep_query_and_auth_without_a_body():
+    """GET stays explicit in curl, keeps query and org selection, and does not gain body options."""
+    block = INDEX[INDEX.index("epTryQuery(){") : INDEX.index("epTrySetupLine(){")]
+    assert "const q=this.epTryQuery" in block and "${q?'?'+q:''}" in block
+    assert "curl -X ${method}" in block
+    assert "if(this.sessionMode && this.activeSlugNow)" in block
+    assert block.count("method!=='GET' && this.epTryBody.trim()") == 2
+
+
 def test_provider_page_links_into_the_catalog():
     """Navigation runs both ways: an integration page names the platforms its catalog covers."""
     assert _enclosing_views('v-for="pl in mkPlatforms"') == ["provider"]
@@ -979,3 +998,26 @@ def test_the_referral_preset_helper_null_guards_before_reading_the_offer():
     body = INDEX[at : INDEX.index("},", at)]
     assert "if(!o) return 0;" in body
     assert body.index("if(!o) return 0;") < body.index("o.remaining_micro")
+
+
+def test_the_topup_modal_offers_four_presets_plus_other_and_an_auto_toggle():
+    """The amount, its bonus and auto top-up are one decision in one modal. The toggle's label is the
+    mandate text and names the amount being chosen (`topupUsd`), never a config default the payer
+    did not see; consent is posted BEFORE the Checkout that saves the card."""
+    at = INDEX.index('v-if="topupOpen&&billing"')
+    modal = INDEX[at : INDEX.index('v-if="capAsk"', at)]
+    assert 'v-for="p in billing.topup.presets"' in modal
+    assert "pickOther()" in modal and 'topupPick===\'other\'' in modal
+    assert 'v-model="topupAuto"' in modal
+    assert "I authorize treg to charge my saved card <b>${{autoAmount}}</b>" in modal
+    assert "Processing fee" not in modal, "treg charges no fee; do not copy one from elsewhere"
+    js = INDEX[INDEX.index("async payTopup("):]
+    js = js[: js.index("autoToggled(")]
+    assert js.index("/billing/autotopup") < js.index("/billing/topup"), "consent must precede Checkout"
+    assert "consent:true" in js and "setup_url:false" in js
+
+
+def test_the_topup_modal_defaults_auto_on_only_without_a_mandate():
+    js = INDEX[INDEX.index("openTopup(){"):]
+    js = js[: js.index("tierBonus(")]
+    assert "this.topupAuto=!(this.billing.autotopup.enabled||this.billing.autotopup.consented_at)" in js
