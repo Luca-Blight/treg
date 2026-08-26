@@ -3190,6 +3190,124 @@ USE_CASE_PAGES["news-for-a-ticker"] = {
 }
 
 
+USE_CASE_PAGES["live-crypto-prices-and-history"] = {
+    "label": "Live crypto prices and history",
+    "sentence": "CoinGecko API and Tiingo through one key: a crypto price API for live prices and history, per call",
+    "title": "CoinGecko API for {agent}: crypto prices and history | treg.to",
+    "lede": (
+        "Give your agent a coin and get its price back as data: the current price in any quote "
+        "currency for a whole watchlist in one call, or the price, market cap and volume series "
+        "over a day, a month or the coin's whole life. CoinGecko and Tiingo answer through one "
+        "treg.to key, {cheapest}, at the provider's own rate with no markup, and there is no "
+        "CoinGecko key to paste into a spreadsheet, a dashboard or a device. What comes back is "
+        "an aggregate price, not an order book, and it is polled, not streamed."),
+    "prompt": "Using treg, get the current price and 24h change for bitcoin, ethereum and solana in "
+              "USD in one call, then pull the last 30 days of daily prices for each and tell me "
+              "which one moved most against its 30-day average. Show me the price per call first.",
+    "prompt_why": [
+        ("Use CoinGecko coin ids", "The call takes ids like bitcoin and ethereum, not tickers. BTC is not a coin id, and several tokens share a symbol."),
+        ("Ask for the whole watchlist at once", "Current price takes a comma-separated list of coins and currencies. One call for fifty coins costs the same as one call for one."),
+        ("Say the window", "History takes 1, 7, 30, 365 or max days, and the granularity follows the window: five-minute points under a day, hourly under 90 days, daily beyond."),
+        ("Ask for the price first", "treg.to returns the rate before the call, so the agent can say what a daily refresh of a hundred coins will spend."),
+    ],
+    "result_noun": "price",
+    "result_image": None,
+    "q_cheapest": "Which crypto price API is cheapest per call?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do CoinGecko and Tiingo compare?",
+    "what_is_heading": "What is the CoinGecko API?",
+    "what_is": (
+        "The CoinGecko API is the query interface to CoinGecko's aggregate market data: a "
+        "current price for any listed coin in any quote currency, with market cap, 24h volume and "
+        "24h change on request, and a history endpoint that returns the price, market cap and "
+        "volume series for a coin over a window you choose. The number is an aggregate across "
+        "the exchanges CoinGecko tracks, which is what a dashboard or an agent wants and what a "
+        "trader on one exchange does not. Tiingo is the other provider here and answers a "
+        "different shape: open, high, low, close and volume bars for a pair like btcusd, at a "
+        "resample frequency from a minute to a day."),
+    "notes": [
+        "The rate is per request, not per coin. CoinGecko bills one credit for a successful "
+        "call whatever the endpoint, and the current-price call takes a list of coin ids and a "
+        "list of quote currencies, so the forum's \"it only returns 28 of my 131 coins\" is a "
+        "pagination problem on a different endpoint, not a ceiling here. On treg.to's own key "
+        "that credit is metered from your team's balance at the provider's rate; on your own "
+        "CoinGecko key nothing is metered and the plan's limits are between you and CoinGecko.",
+        "History depth is CoinGecko's, and the page will not stretch it. The series call "
+        "returns per-coin prices over 1, 7, 30, 365 or max days with granularity set by the "
+        "window, and the snapshot call returns one coin's price, market cap and volume on a "
+        "date. Neither is a total-market-cap history and neither is a top-N-by-day table; an "
+        "agent builds that by looping coins, one metered call each. Tiingo's bars are the "
+        "exchange-style alternative, served free on treg.to's key at 20 calls a day per team, "
+        "then on your own Tiingo key.",
+        "The price is an aggregate and it passes through unchanged. CoinGecko's market cap and "
+        "supply figures are its own, and the research has real examples of both being wrong "
+        "for small tokens; treg.to relays the answer verbatim and adds no consensus, no spread "
+        "and no second opinion. If a number matters, pull the Tiingo bar for the same pair and "
+        "let the agent compare, which is a comparison you make, not one treg.to makes for you. "
+        "Nothing here is a websocket, an order book or an exchange connection.",
+    ],
+    "faq": [
+        ("Is the CoinGecko API free through treg.to?",
+         "Not free, cheap: one CoinGecko credit per successful call, metered from your team's "
+         "prepaid balance at CoinGecko's own rate with $0.000 added. Each new team gets $1.00 to "
+         "start, which is a lot of price calls. Register your own CoinGecko key and the calls "
+         "are never metered."),
+        ("How far back does the history go?",
+         "As far as CoinGecko's series for that coin goes, with days set to max, at daily "
+         "granularity. Sub-daily points come only inside the recent windows: five-minute under "
+         "a day, hourly under 90 days. Tiingo's bars go down to one minute for the pairs it "
+         "carries, on its own history."),
+        ("Can my agent stream prices or trade on them?",
+         "No. Both providers here answer a request with a number; there is no websocket, no "
+         "order book and no exchange execution. An agent that refreshes a watchlist every few "
+         "minutes is the fit; a bot that needs a tick feed is not."),
+        ("Which provider should my agent use?",
+         "CoinGecko for coin ids, quote currencies and the aggregate market view; Tiingo for "
+         "OHLCV bars on a pair. treg.to shows both with the rate and the measured success side "
+         "by side; it compares, it does not route or fail over for you."),
+    ],
+    "voices_intro": (
+        "Crypto data threads are two-thirds noise: of the ~170 Reddit and X posts read in August "
+        "2026, most were token shills, subscription resellers and two 'finally found a free "
+        "API' posts with the same arc in two subreddits. These five are people building "
+        "something on a price feed."),
+    "voices": [
+        ("The free tier's rate limit is the first thing that breaks",
+         "There I ran into a problem with Rate limit from the Coingecko api itself.",
+         "r/coingecko", "https://www.reddit.com/r/coingecko/comments/1cibixi/google_sheet_not_working_rate_limits/",
+         "That poster was calling from Google Sheets, where every request leaves a shared "
+         "Google IP. Through treg.to the call is one metered request on a paid key, a whole "
+         "watchlist per call, and the sheet, the dashboard or the device holds no key at all."),
+        ("Twelve months is where the free history stops",
+         "CoinGecko only goes back 12 months, but I was hoping to go back further",
+         "r/CryptoCurrency", "https://www.reddit.com/r/CryptoCurrency/comments/1kq99z1/historic_market_cap_data/",
+         "Per coin, the series call with days set to max returns the daily history CoinGecko "
+         "holds, on the paid key treg.to serves it from. That poster wanted total market cap "
+         "history, which is not this endpoint, and the page will not pretend it is."),
+        ("Free is for testing; what happens at scale is the question",
+         "Free APIs are fine for testing but I want something that scales.",
+         "r/ethdev, 6 points", "https://www.reddit.com/r/ethdev/comments/1rf4ehy/best_crypto_market_data_api_for_real_time/",
+         "Scale here means one credit a call, metered, with no plan tier to jump when the "
+         "dashboard grows. What it does not mean is streaming: the feed is polled, and a "
+         "bot that needs every tick is on a different product."),
+        ("Nobody's number agrees with anybody else's",
+         "CoinGecko API shows wrongs market capital data for 700M !",
+         "r/SmoothLovePotion", "https://www.reddit.com/r/SmoothLovePotion/comments/sq6odb/coingecko_api_shows_wrongs_market_capital_data/",
+         "No comparison table can answer that. The price is the provider's aggregate and "
+         "treg.to relays it as is. The cheap check is to pull the same pair as a Tiingo bar "
+         "and let the agent flag the gap, which it can do in the same prompt."),
+        ("The agent wrote the rate limiter",
+         "until I had ChatGPT incorporate rate-limiting given the 500 rate limit/min",
+         "r/api_connector", "https://www.reddit.com/r/api_connector/comments/1dg1of5/coingecko_api_x_mixed_analytics_crypto_tracker/",
+         "The agent already does the plumbing. What it lacks is the key and the price, and one "
+         "setup line gives it both: the call, the rate shown before it spends, and no "
+         "CoinGecko token in its context."),
+    ],
+    "related": ("Current quote for a ticker", "Daily price history",
+                "Coins trending right now", "News for a ticker"),
+}
+
+
 # The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
 # use-case page answers one job; a workflow chains several, with a per-step price pulled live from
 # the catalog and a receipt from a real run. `run` is hand-recorded from that run and dated. A
