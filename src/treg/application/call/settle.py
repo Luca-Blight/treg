@@ -5,10 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 
-from fastapi import Request
-from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import update
 from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
@@ -16,10 +14,9 @@ from ... import adsconv, catalog_store, ledger
 from ...db import session_maker
 from ...models import Org
 from ...timeutil import utcnow_naive as _utcnow_naive
+from .idempotency import _release_idempotent_claim
 from .resolve import MarketplaceCall, _usd_to_micro
-
-
-_release_idempotent_claim: Callable[[Request], Awaitable[None]]
+from .types import UpstreamResponse
 
 
 # 4xx statuses that mean "the provider did not serve this, and it is NOT the caller's input" — our
@@ -260,7 +257,7 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
     return None
 
 
-async def _buffer_response(response: StreamingResponse) -> tuple[Response, bytes]:
+async def _buffer_response(response: UpstreamResponse) -> tuple[UpstreamResponse, bytes]:
     """Drain a relayed streaming response into memory and return an equivalent plain Response.
 
     Metered calls give up streaming on purpose: settling needs the provider's own reported cost (which
@@ -269,31 +266,38 @@ async def _buffer_response(response: StreamingResponse) -> tuple[Response, bytes
     examples — so the memory cost is a few KB, and buffering happens BEFORE anything is sent to the
     caller, which is what lets a mid-stream upstream failure still become a clean 502 + release."""
     chunks, size = [], 0
-    async for chunk in response.body_iterator:
+    async for chunk in response.body_stream:
         raw = chunk if isinstance(chunk, bytes) else str(chunk).encode("utf-8", "replace")
         size += len(raw)
         if size <= _PLATFORM_BODY_MAX:
             chunks.append(raw)
     body = b"".join(chunks)
-    if response.background is not None:  # the relay's upstream-close task — run it now, not later
-        await response.background()
-        response.background = None
-    out = Response(content=body, status_code=response.status_code)
+    await response.close()
+
+    async def buffered_body():
+        yield body
+
+    async def closed() -> None:
+        return None
+
     # Carry the upstream's headers verbatim (the relay already dropped hop-by-hop + our own), with a
     # content-length that matches what we are actually about to send.
-    out.raw_headers = [(k, v) for k, v in response.raw_headers if k.lower() != b"content-length"]
-    out.raw_headers.append((b"content-length", str(len(body)).encode()))
+    raw_headers = tuple(
+        [(k, v) for k, v in response.raw_headers if k.lower() != b"content-length"]
+        + [(b"content-length", str(len(body)).encode())]
+    )
+    out = UpstreamResponse(response.status, raw_headers, buffered_body(), closed)
     return out, body
 
 
-async def _peek_stream_head(response: StreamingResponse, limit: int) -> tuple[StreamingResponse, bytes]:
+async def _peek_stream_head(response: UpstreamResponse, limit: int) -> tuple[UpstreamResponse, bytes]:
     """Read at most ``limit`` response bytes for evidence, then replay every byte to the caller.
 
     Unmetered calls retain their streaming contract. The consumed chunks are yielded first by the
     replacement response, followed by the untouched iterator; the relay's upstream-close background
     task moves with it and therefore still runs after the caller finishes reading.
     """
-    iterator = response.body_iterator.__aiter__()
+    iterator = response.body_stream.__aiter__()
     consumed: list[bytes] = []
     head = bytearray()
     while len(head) < limit:
@@ -311,14 +315,11 @@ async def _peek_stream_head(response: StreamingResponse, limit: int) -> tuple[St
         async for chunk in iterator:
             yield chunk
 
-    out = StreamingResponse(replay(), status_code=response.status_code,
-                            background=response.background)
-    response.background = None
-    out.raw_headers = list(response.raw_headers)
+    out = UpstreamResponse(response.status, response.raw_headers, replay(), response.close)
     return out, bytes(head)
 async def _platform_settle(
     mk: MarketplaceCall, status_code: int | None, body: bytes = b"", *, headers=None,
-    reason: str = ""
+    reason: str = "", finalized: Callable[[], None] | None = None,
 ) -> tuple[int, int | None]:
     """Close the hold for a metered call → (charged_micro, observed_micro). `charged_micro` is what
     actually hit the org's balance (0 on a release) — the number the Activity feed must show, because
@@ -351,6 +352,8 @@ async def _platform_settle(
                           "status_code": status_code})
                 charged = 0
             await db.commit()
+            if finalized is not None:
+                finalized()
             return charged
 
     try:
@@ -370,10 +373,10 @@ async def _platform_settle(
 
 
 async def _finish_cancelled_call(
-    request: Request,
+    claim: tuple[int, str] | None,
     mk: MarketplaceCall | None,
     call_ref: str,
-    response: Response | None = None,
+    response: UpstreamResponse | None = None,
 ) -> None:
     """Finish compensation before propagating cancellation from a call that may have reserved."""
     # A cancelled request cannot own this cleanup: another cancellation while it is returning the
@@ -381,10 +384,9 @@ async def _finish_cancelled_call(
     async def _cleanup() -> None:
         # Every branch contains its own failure: raising here would replace the original cancellation
         # when shield joins this task, instead of letting the remaining compensation finish.
-        if response is not None and response.background is not None:
-            background, response.background = response.background, None
+        if response is not None:
             try:
-                await background()
+                await response.close()
             except (Exception, asyncio.CancelledError):  # noqa: BLE001
                 logging.getLogger("treg.proxy").error(
                     "upstream close failed for cancelled call %s", call_ref, exc_info=True)
@@ -407,7 +409,7 @@ async def _finish_cancelled_call(
                 logging.getLogger("treg.ledger").error(
                     "cancellation release failed for call %s", call_ref, exc_info=True)
         try:
-            await _release_idempotent_claim(request)
+            await _release_idempotent_claim(claim)
         except (Exception, asyncio.CancelledError):  # noqa: BLE001
             logging.getLogger("treg.idempotency").error(
                 "cancellation claim release failed for call %s", call_ref, exc_info=True)

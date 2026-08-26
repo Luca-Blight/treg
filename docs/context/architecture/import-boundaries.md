@@ -13,7 +13,9 @@ sources:
   - src/treg/application/call/reserve.py
   - src/treg/application/call/settle.py
   - src/treg/application/call/evidence.py
+  - src/treg/application/call/service.py
   - src/treg/application/call/types.py
+  - src/treg/client_identity.py
   - src/treg/domain/__init__.py
   - src/treg/domain/governance/__init__.py
   - src/treg/domain/governance/access.py
@@ -66,9 +68,11 @@ import identity but cannot import the API, routers, or application layer. Future
 absent until their packages exist, so no placeholder domain makes a future boundary look active.
 Governance owns shared tool/project ACLs, tag-budget rules, and public-demo rate policy. The package also
 forbids direct FastAPI and Starlette imports; semantic policy errors are translated by each HTTP interface.
-The call application package owns framework-neutral request intake, idempotency state, target resolution,
-marketplace pricing, and the ordered pre-money authorization gates. The HTTP adapter translates typed
-failures and replay DTOs; the remaining call-kernel collaborators retain their current owners.
+The call application package owns the framework-neutral staged use case: request intake, idempotency
+state, target resolution, marketplace pricing, authorization, reservation, relay orchestration, and
+finalization. The HTTP adapter captures a `CallInput`, translates typed failures, and wraps the returned
+`UpstreamResponse`. Client-name normalization lives in a neutral leaf so the application path does not
+load the Request-aware caller metadata adapter.
 
 Two direct edges are precise exceptions. `cli.ensure_proxy_dependency` imports `cryptography` only after
 the user invokes the optional proxy feature and offers to install the proxy extra first.

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, AsyncIterator, Awaitable, Callable, Literal
+from enum import Enum
+from typing import TYPE_CHECKING, Any, AsyncIterator, Awaitable, Callable, Literal, Protocol
 
 if TYPE_CHECKING:
     from ...models import Tool
@@ -86,6 +87,136 @@ class ReservationFailed(CallFailure):
 
 class GatewayFailed(CallFailure):
     """The provider did not produce a complete response or treg refused the relay."""
+
+
+class RequestBody(Protocol):
+    def stream(self) -> AsyncIterator[bytes]: ...
+
+    async def read(self) -> bytes: ...
+
+
+@dataclass(frozen=True)
+class UserSnapshot:
+    id: int | None
+    email: str
+
+
+@dataclass(frozen=True)
+class MembershipSnapshot:
+    id: int | None
+    user_id: int
+    org_id: int
+    role: str
+    daily_call_cap: int
+    tool_access: list | None
+    project_access: list | None
+    pinned_tags: dict | None
+
+
+@dataclass(frozen=True)
+class OrgSnapshot:
+    id: int | None
+    slug: str
+    demo: bool
+    public_demo: bool
+    budget_dims: list | None
+    primary_dim: str
+    daily_cap_micro: int
+    autotopup_enabled: bool
+    autotopup_consented_at: Any
+    autotopup_threshold_micro: int
+    autotopup_amount_micro: int
+    autotopup_monthly_cap_micro: int
+    first_call_at: Any
+
+
+@dataclass(frozen=True)
+class CallerSnapshot:
+    membership: MembershipSnapshot
+    user: UserSnapshot
+    org: OrgSnapshot
+
+    @property
+    def org_id(self) -> int:
+        return self.membership.org_id
+
+    @property
+    def email(self) -> str:
+        return self.user.email
+
+    @property
+    def role(self) -> str:
+        return self.membership.role
+
+    @classmethod
+    def capture(cls, caller: Any) -> "CallerSnapshot":
+        membership = caller.membership
+        org = caller.org
+        return cls(
+            membership=MembershipSnapshot(
+                id=membership.id,
+                user_id=membership.user_id,
+                org_id=membership.org_id,
+                role=membership.role,
+                daily_call_cap=membership.daily_call_cap,
+                tool_access=(list(membership.tool_access)
+                             if membership.tool_access is not None else None),
+                project_access=(list(membership.project_access)
+                                if membership.project_access is not None else None),
+                pinned_tags=(dict(membership.pinned_tags)
+                             if membership.pinned_tags is not None else None),
+            ),
+            user=UserSnapshot(id=caller.user.id, email=caller.user.email),
+            org=OrgSnapshot(
+                id=org.id,
+                slug=org.slug,
+                demo=org.demo,
+                public_demo=org.public_demo,
+                budget_dims=list(org.budget_dims) if org.budget_dims is not None else None,
+                primary_dim=org.primary_dim,
+                daily_cap_micro=org.daily_cap_micro,
+                autotopup_enabled=org.autotopup_enabled,
+                autotopup_consented_at=org.autotopup_consented_at,
+                autotopup_threshold_micro=org.autotopup_threshold_micro,
+                autotopup_amount_micro=org.autotopup_amount_micro,
+                autotopup_monthly_cap_micro=org.autotopup_monthly_cap_micro,
+                first_call_at=org.first_call_at,
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class CallInput:
+    method: str
+    raw_rest: str
+    raw_headers: tuple[tuple[bytes, bytes], ...]
+    query_items: tuple[tuple[str, str], ...]
+    raw_query: str
+    body: RequestBody
+    caller: CallerSnapshot
+    client_ip: str
+
+
+class FinalizationState(Enum):
+    NONE = "none"
+    PENDING = "pending"
+    OPEN = "open"
+    FINALIZING = "finalizing"
+    FINALIZED = "finalized"
+
+
+@dataclass
+class CallContext:
+    input: CallInput
+    call_ref: str
+    meta: Any
+    idempotency: tuple[int, str] | None = None
+    target: Any = None
+    marketplace: Any = None
+    credentials: dict[int, Any] | None = None
+    finalization: FinalizationState = FinalizationState.NONE
+    audited: bool = False
+    cost_micro: int | None = None
 
 
 @dataclass(frozen=True)

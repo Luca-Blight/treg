@@ -7,6 +7,7 @@ sources:
   - src/treg/bootstrap_handlers.py
   - src/treg/bootstrap_http.py
   - src/treg/caller_metadata.py
+  - src/treg/client_identity.py
   - src/treg/application/auth.py
   - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
@@ -15,6 +16,7 @@ sources:
   - src/treg/application/call/reserve.py
   - src/treg/application/call/settle.py
   - src/treg/application/call/evidence.py
+  - src/treg/application/call/service.py
   - src/treg/application/call/types.py
   - src/treg/infra/upstream/relay.py
   - src/treg/application/connect.py
@@ -591,7 +593,8 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
 - **Health:** `run_health` (`POST /health/run`) → `health.run_all`; `get_health` (`GET /health`) now
   returns `health._view(s)` plus a `needs_reconnect` flag (`health.needs_reconnect`) so a credential treg
   can't renew announces itself before it dies.
-- **The proxy:** `routers.call.call_tool` (`* /call/{rest:path}`) → `application.call.resolve` → (on a dotted 404,
+- **The proxy:** `routers.call.call_tool` (`* /call/{rest:path}`) captures a framework-neutral
+  `CallInput` → `application.call.service.execute_call` → `application.call.resolve` → (on a dotted 404,
   catalog lookup + retirement gate + credential ladder) → `application.call.authorize` (tool/project ACL,
   deny, per-user cap, then public-demo rate cap) → load secrets
   (+ `ensure_fresh`) → **`db.commit()` — the DB phase ends here; a call in flight holds no pooled

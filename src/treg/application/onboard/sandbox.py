@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from secrets import token_hex
 
@@ -11,13 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ... import crypto
 from ...models import Bundle, CallRecord, Invite, Membership, Org, PendingOAuth, Secret, Tool, User
+from ...sandbox_identity import visitor_name
 
 SANDBOX_DOMAIN = "sandbox.treg.local"     # throwaway visitor identities live here (can never log in)
 SANDBOX_TTL_MIN = 60
 MAX_TOOLS = 3                              # a sandbox visitor may register at most this many endpoints
 MAX_SECRETS = 3
-
-visitor_name: Callable[[str], str]  # injected by treg.sandbox; retires with the Stage 4b neutral owner
 
 # Believable starters (real-brand names, OBVIOUSLY-FAKE placeholder values) so the console is alive on
 # arrival and the demo reads instantly. Each value's only job is to appear in the "injected" output; it is

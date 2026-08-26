@@ -13,7 +13,10 @@ sources:
   - src/treg/application/call/reserve.py
   - src/treg/application/call/settle.py
   - src/treg/application/call/evidence.py
+  - src/treg/application/call/service.py
   - src/treg/application/call/types.py
+  - src/treg/client_identity.py
+  - src/treg/sandbox_identity.py
   - src/treg/domain/governance/access.py
   - src/treg/domain/governance/publicdemo.py
   - src/treg/domain/governance/usage.py
@@ -112,9 +115,9 @@ body raw (`aiter_raw`), so if the caller doesn't ask for compression httpx would
 for `identity` keeps what the caller receives matching what the caller requested.
 
 ## Connection discipline: a call in flight holds no DB connection
-`application.call.reserve` owns and closes the short reservation session. The router commits its
-secret-loading session before opening that transaction and again immediately before `relay()` (and
-before `_relay_live_demo()`), so from the moment the upstream is called until the settle, the request
+`application.call.reserve` owns and closes the short reservation session. The staged use case commits
+its secret-loading session before opening that transaction and again immediately before `relay()` (and
+before `_relay_live_demo()`), so from the moment the upstream is called until the settle, the call
 holds **zero** pooled connections. `application.call.settle` owns the short settlement or release
 transaction after the relay; `_record_first_call`
 `_store_idempotent` — already runs on its own short-lived session, and the request session is
@@ -135,10 +138,11 @@ concurrency limit, and `llms.txt` says so. `tests/test_call_pool_discipline.py` 
 (`_engine.pool.checkedout() == 0` at relay time, metered and own-key) and a 20-call burst.
 
 ## Tool resolution (`application.call.resolve`)
-`* /call/{rest:path}` → `call_tool()` → `resolve_call_target(...)` returns a framework-neutral
+`* /call/{rest:path}` → `routers.call.call_tool()` → `application.call.service.execute_call()`
+→ `resolve_call_target(...)` returns a framework-neutral
 `ResolvedTarget(tool, upstream)`. Each resolution use case owns and closes its read session.
 **Both shapes are scoped to the caller's org** (`Tool.org_id == org_id`), so two
-orgs resolve independently and may reuse a tool name or upstream host; `call_tool` then loads only
+orgs resolve independently and may reuse a tool name or upstream host; the use case then loads only
 same-org secrets. After resolution `application.call.authorize` runs tool/project ACL, deny, member-cap,
 and public-demo gates in that order, with no money hold or upstream access. Its short session closes before
 the reserve stage; `-1`/default member caps add no query. Two resolution shapes:

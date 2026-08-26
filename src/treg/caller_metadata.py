@@ -4,19 +4,14 @@ import re
 
 from fastapi import Request
 
+from .client_identity import _norm_client
+
 
 _META_KEY_RE = re.compile(r"^[a-z0-9_]{1,32}$")
 _MAX_BUDGET_DIMS = 3        # each declared dimension = one indexed lookup per call + a row per value
 # The reserved value standing for "every value of this dimension". Safe forever because the tag
 # value charset (`_META_VALUE_RE`) excludes `*`, so no caller can send a value that collides with it.
 TAG_DEFAULT = "*"
-
-
-def _norm_client(raw: str) -> str:
-    """A runtime name as a short slug. One spelling for both ends of the roster: what an incoming
-    header is stored as, and what `promoted_from` must match to hide a detected pair."""
-    return re.sub(r"[^a-z0-9-]", "",
-                  raw.strip().lower().split("/", 1)[0])[:32]  # "claude-code/1.2" → "claude-code"
 
 
 def _client_of(request: Request | None) -> str:

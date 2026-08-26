@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from types import SimpleNamespace
 
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -43,11 +42,9 @@ async def test_success_and_cancellation_race_has_one_terminal_money_effect(
 ) -> None:
     call_id = "double-finalizer-race"
     org_id, before, mk = await _funded_call(clients, call_id)
-    request = SimpleNamespace(state=SimpleNamespace(idem_claim=None))
-
     await asyncio.gather(
         call_settle._platform_settle(mk, 200),
-        call_settle._finish_cancelled_call(request, mk, call_id),
+        call_settle._finish_cancelled_call(None, mk, call_id),
     )
 
     async with session_maker() as db:

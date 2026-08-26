@@ -9,10 +9,12 @@ from typing import Awaitable, Callable, Literal, Protocol
 import pytest
 
 from treg import api as A
-from treg.application.call import authorize, idempotency, intake, reserve, resolve
+from treg.application.call import authorize, evidence, idempotency, intake, reserve, resolve, service, settle
 from treg.application.call.types import (
     AuthorizationFailed,
+    CallContext,
     CallFailure,
+    CallInput,
     IdempotencyFailed,
     IntakeFailed,
     ResolvedTarget,
@@ -88,7 +90,15 @@ def test_call_dto_and_port_shapes_are_frozen() -> None:
     assert [field.name for field in fields(UpstreamResponse)] == [
         "status", "raw_headers", "body_stream", "close",
     ]
+    assert [field.name for field in fields(CallInput)] == [
+        field.name for field in fields(CallInputContract)
+    ]
+    assert [field.name for field in fields(CallContext)] == [
+        "input", "call_ref", "meta", "idempotency", "target", "marketplace",
+        "credentials", "finalization", "audited", "cost_micro",
+    ]
     assert CallInputContract.__dataclass_params__.frozen is True
+    assert CallInput.__dataclass_params__.frozen is True
 
 
 def test_failure_table_pins_every_terminal_path() -> None:
@@ -147,8 +157,8 @@ def test_compatibility_surface_stays_literal_during_boundary_extraction() -> Non
     assert FINALIZATION_TABLE["upstream_2xx"][0] == "settle"
 
 
-def test_call_intake_modules_are_framework_neutral() -> None:
-    for module in (authorize, intake, idempotency, reserve, resolve):
+def test_call_application_modules_are_framework_neutral() -> None:
+    for module in (authorize, evidence, idempotency, intake, reserve, resolve, service, settle):
         source = module.__loader__.get_source(module.__name__)
         roots = {
             node.module.split(".", 1)[0]

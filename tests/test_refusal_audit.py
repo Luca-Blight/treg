@@ -14,6 +14,8 @@ import pytest
 from sqlmodel import select
 
 from treg import api as A
+from treg.application.call import service as call_service
+from treg.infra.upstream.relay import relay as upstream_relay
 from treg.routers import call as call_routes
 from treg import audit
 from treg.db import session_maker
@@ -114,8 +116,8 @@ async def test_retired_catalog_call_is_actionable_audited_and_does_not_shadow_an
         relayed = True
         pytest.fail("a retired catalog row reached the upstream relay")
 
-    real_relay = A.relay
-    monkeypatch.setattr(call_routes, "relay", unexpected_relay)
+    real_relay = upstream_relay
+    monkeypatch.setattr(call_service, "relay", unexpected_relay)
     response = await clients.get(f"/call/{endpoint}")
     assert response.status_code == 410, response.text
     assert response.headers["X-Treg-Error"] == "1"
@@ -143,7 +145,7 @@ async def test_retired_catalog_call_is_actionable_audited_and_does_not_shadow_an
 
     # Tier 1 remains authoritative: a team can deliberately register this exact name, and the
     # initial own-tool resolution succeeds before catalog fallback or its retirement gate exists.
-    monkeypatch.setattr(call_routes, "relay", real_relay)
+    monkeypatch.setattr(call_service, "relay", real_relay)
     secret = (await clients.post("/secrets", json={"name": "own", "value": "own-key"})).json()
     created = await clients.post("/tools", json={
         "name": endpoint, "base_url": "http://upstream", "secret_id": secret["id"],

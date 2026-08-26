@@ -9,9 +9,6 @@ import re
 import zlib
 from urllib.parse import quote, quote_plus, unquote
 
-from fastapi import Request
-from fastapi.responses import Response
-
 from ... import crypto
 from ...config import get_settings
 from ...infra.upstream import injectors
@@ -210,8 +207,10 @@ def _decode_error_body(raw: bytes, content_encoding: str = "", content_type: str
     return text
 
 
-def _caller_request_snippet(request: Request, tool: Tool, caller_body: bytes,
-                            secrets: list[str]) -> str:
+def _caller_request_snippet(
+    query_items: tuple[tuple[str, str], ...], content_type: str, tool: Tool,
+    caller_body: bytes, secrets: list[str],
+) -> str:
     """What the CALLER actually sent, redacted — the half of a failure treg otherwise forgets.
 
     `CallRecord.path` stores the catalog's upstream URL with only `{placeholder}` path params filled,
@@ -225,12 +224,12 @@ def _caller_request_snippet(request: Request, tool: Tool, caller_body: bytes,
     drop = {b.get("name", "Authorization") for b in (tool.bindings or [])
             if b.get("location", "header") == "query"}
     parts = []
-    pairs = [f"{k}={v}" for k, v in request.query_params.multi_items() if k not in drop]
+    pairs = [f"{k}={v}" for k, v in query_items if k not in drop]
     if pairs:
         parts.append("?" + "&".join(pairs))
     if caller_body:
         parts.append(_decode_error_body(caller_body[:_ERROR_BODY_SLICE], "",
-                                        request.headers.get("content-type", "")))
+                                        content_type))
     return _redact_snippet(" ".join(parts), secrets, _ERROR_REQUEST_MAX)
 
 
@@ -262,17 +261,21 @@ def _redact_snippet(text: str, secrets: list[str], limit: int) -> str:
     # Truncation can expose a partial token at the seam that was safe only while whole.
     return re.sub(r"[A-Za-z0-9_\-+/=.]{8,}$", "***", text[:limit]) + "…"
 
-def _error_response_evidence(response: Response, body: bytes, secrets: list[str]) -> str:
+def _error_response_evidence(
+    raw_headers: tuple[tuple[bytes, bytes], ...], body: bytes, secrets: list[str],
+) -> str:
     """Build the redacted provider half of a failed-call evidence row."""
     # Headers first: a 401 or 429 often has an empty or generic body, and `Retry-After` /
     # `WWW-Authenticate` / the rate-limit trio are then the entire diagnosis.
-    hdrs = " ".join(f"{h}={response.headers[h]}" for h in _EVIDENCE_HEADERS
-                    if response.headers.get(h))
+    headers = {
+        key.decode("latin-1").lower(): value.decode("latin-1")
+        for key, value in raw_headers
+    }
+    hdrs = " ".join(f"{h}={headers[h]}" for h in _EVIDENCE_HEADERS if headers.get(h))
     evidence = _redact_snippet(
         (f"[{hdrs}] " if hdrs else "") +
         _decode_error_body(body[:_ERROR_BODY_SLICE],
-                           response.headers.get("content-encoding", ""),
-                           response.headers.get("content-type", "")),
+                           headers.get("content-encoding", ""),
+                           headers.get("content-type", "")),
         secrets, _ERROR_RESPONSE_MAX)
     return evidence or "<no response body or headers>"
-

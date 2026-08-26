@@ -102,7 +102,6 @@ from .models import (ROLE_RANK, AdConversion, Bundle, CallRecord, CapabilityPin,
                      DenyRule, Hold, IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient,
                      OAuthCode, OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, Referral,
                      RunRecord, Secret, TagBudget, TagSpend, Tool, ToolRequest, User)
-from .proxy import relay
 from .bootstrap_handlers import _mark_treg_own_errors, _pool_saturated
 from .routers import admin as admin_routes
 from .routers import billing as billing_routes
@@ -864,10 +863,6 @@ router.routes.extend(org_routes.signup_router.routes)
 # ---- orgs, invites, members (multi-tenancy management) ------------------------------------
 
 
-def _now_ms() -> int:
-    """A monotonic millisecond stamp for measuring a call's duration — never the wall clock, which can
-    step backwards (NTP) and produce a negative latency."""
-    return int(time.monotonic() * 1000)
 
 
 
@@ -1491,43 +1486,12 @@ router.routes.extend(admin_routes.reports_router.routes)
 
 
 
-async def _await_before_reserve(awaitable, request: Request, call_ref: str):
-    """Release an owned idempotency label if cancellation lands before the money gate."""
-    try:
-        return await awaitable
-    except asyncio.CancelledError:
-        await _finish_cancelled_call(request, None, call_ref)
-        raise
 
 
 
 
-async def _relay_live_demo(request: Request, upstream_url: str, key: str, visitor: str):
-    """The sandbox's ONE real upstream call (the landing live wire). Deliberately narrower than
-    relay(): form-encoded only, auth header built here from the env key (never from a sandbox
-    secret), and `metadata[visitor]` is OVERRIDDEN server-side so the landing feed's name is
-    always ours, whatever the caller put in the body."""
-    from urllib.parse import parse_qsl, urlencode
-    http: httpx.AsyncClient = request.app.state.http
-    headers = {"Authorization": f"Bearer {key}"}
-    content = None
-    if request.method == "POST":
-        body = (await request.body()).decode("utf-8", "replace")
-        pairs = [(k, v) for k, v in parse_qsl(body, keep_blank_values=True) if k != "metadata[visitor]"]
-        pairs.append(("metadata[visitor]", visitor))
-        content = urlencode(pairs)
-        headers["Content-Type"] = "application/x-www-form-urlencoded"
-    r = await http.request(request.method, upstream_url, params=request.query_params.multi_items(),
-                           content=content, headers=headers)
-    return Response(content=r.content, status_code=r.status_code,
-                    media_type=r.headers.get("content-type", "application/json"))
 
 
-# Stage 4b moves the HTTP surface before the call kernel. Each binding retires when commits 6
-# through 19 place that collaborator in its final application, domain, or infrastructure owner.
-call_routes._await_before_reserve = _await_before_reserve
-call_routes._now_ms = _now_ms
-call_routes._relay_live_demo = _relay_live_demo
 router.routes.extend(call_routes.router.routes)
 
 

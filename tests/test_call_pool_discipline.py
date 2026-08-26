@@ -26,10 +26,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from treg import api as A
+from treg.application.call import service as call_service
 from treg.routers import call as call_routes
 from treg import audit, ledger
 from treg.config import get_settings
 from treg.db import _engine, session_maker
+from treg.infra.upstream.relay import relay as upstream_relay
 from treg.models import Hold
 
 from test_marketplace_call import EP, EP_MICRO, platform_on  # noqa: F401 — fixture reuse
@@ -49,7 +51,7 @@ def _relay_that_checks_the_pool(seen: list[int]):
     """The real relay, with the pool's checked-out count sampled at the moment the upstream is
     called. Recorded rather than asserted here: an assertion inside the relay would surface as a
     502, not a test failure."""
-    original = A.relay
+    original = upstream_relay
 
     async def _relay(*args, **kwargs):
         seen.append(_engine.pool.checkedout())
@@ -63,7 +65,7 @@ async def test_a_metered_call_holds_no_db_connection_while_upstream_is_called(
 ):
     await audit.drain()  # an earlier test's fire-and-forget audit row must not be counted
     seen: list[int] = []
-    monkeypatch.setattr(call_routes, "relay", _relay_that_checks_the_pool(seen))
+    monkeypatch.setattr(call_service, "relay", _relay_that_checks_the_pool(seen))
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 200, r.text
     assert seen == [0], f"pooled connections held during the upstream round trip: {seen}"
@@ -77,7 +79,7 @@ async def test_an_own_key_call_holds_no_db_connection_while_upstream_is_called(
     await clients.post("/secrets", json={"name": "tikhub", "value": "MKKEY"})
     await audit.drain()
     seen: list[int] = []
-    monkeypatch.setattr(call_routes, "relay", _relay_that_checks_the_pool(seen))
+    monkeypatch.setattr(call_service, "relay", _relay_that_checks_the_pool(seen))
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 200 and r.json()["auth"] == "Bearer MKKEY"
     assert seen == [0], f"pooled connections held during the upstream round trip: {seen}"
@@ -91,7 +93,7 @@ async def test_a_burst_larger_than_the_pool_settles_every_call_at_provider_speed
     uses). Before the fix this deadlocked: 20 requests × a held connection, 20 settles waiting for a
     slot nobody could free, until the 30 s pool_timeout killed some and the rest cascaded."""
     N = 20
-    original = A.relay
+    original = upstream_relay
     arrived = 0
     everyone_in = asyncio.Event()
 
@@ -103,7 +105,7 @@ async def test_a_burst_larger_than_the_pool_settles_every_call_at_provider_speed
         await asyncio.wait_for(everyone_in.wait(), timeout=10)
         return await original(*args, **kwargs)
 
-    monkeypatch.setattr(call_routes, "relay", _relay_after_everyone_arrives)
+    monkeypatch.setattr(call_service, "relay", _relay_after_everyone_arrives)
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
     before = (await clients.get(f"/orgs/{org_id}/balance")).json()["balance_micro"]
 
@@ -127,7 +129,7 @@ async def test_a_saturated_pool_answers_a_typed_503_not_an_anonymous_500(
     async def _no_slot(*args, **kwargs):
         raise PoolTimeoutError("QueuePool limit of size 5 overflow 10 reached, connection timed out")
 
-    monkeypatch.setattr(call_routes, "_resolve_call", _no_slot)
+    monkeypatch.setattr(call_service, "_resolve_call", _no_slot)
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 503, r.text
     assert r.json()["treg_saturated"] is True
