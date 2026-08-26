@@ -105,10 +105,10 @@ holds **zero** pooled connections. Everything after the relay — `_platform_set
 `_store_idempotent` — already runs on its own short-lived session, and the request session is
 `expire_on_commit=False`, so `tool`, `secrets` and `caller.org` stay usable without a reload.
 
-Why this is load-bearing: secret loads and an OAuth token refresh each auto-begin a transaction on the
-request session, and SQLAlchemy keeps
-that transaction's connection checked out until the next commit — i.e. for the entire upstream round
-trip. `_platform_settle` then needs a second connection from its own session. Two per in-flight call
+Why this is load-bearing: secret loads auto-begin a transaction on the request session, while OAuth refresh
+uses separate short read and CAS-write phases around connection-free token-endpoint I/O. SQLAlchemy keeps
+an open transaction's connection checked out until the next commit; carrying that transaction through the
+upstream round trip would make `_platform_settle` need a second connection. Two per in-flight call
 against the 15-slot pool (`db.py`: 5 + 10 overflow) deadlocked at 15 concurrent calls: every settle
 waited on a slot that only another waiting call could free, until `pool_timeout` killed one (a bare
 500, or a settle that forfeited its charge and left the hold to the reaper) and the rest cascaded — so

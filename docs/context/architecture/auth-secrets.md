@@ -9,11 +9,13 @@ sources:
   - src/treg/oauth.py
   - src/treg/domain/connections/__init__.py
   - src/treg/domain/connections/refresh.py
+  - src/treg/infra/oauth_refresh.py
   - src/treg/oauth_providers.py
   - src/treg/health.py
   - src/treg/application/connect.py
   - src/treg/routers/connections.py
   - src/treg/routers/resources.py
+  - tests/test_oauth_refresh.py
 related:
   - architecture/proxy-model.md
   - architecture/data-model.md
@@ -47,19 +49,21 @@ clients.
 ## OAuth freshness (`domain/connections/refresh.py`)
 Two modes, detected by `is_refreshable(blob)` (has `refresh_token` + `client_id` + `client_secret`):
 - **auto:** `ensure_fresh(secret, db, client)` — if `is_stale()` (past `expires_at`/`expiry` minus
-  `_SKEW=60s`), `refresh()` POSTs `token_uri` (default `_DEFAULT_TOKEN_URI`), re-encrypts + persists the
-  new blob, then returns. A **single-flight** `asyncio.Lock` per secret id (`_locks`) plus a
+  `_SKEW=60s`), the `OAuthRefreshPort` POSTs `token_uri` (default `_DEFAULT_TOKEN_URI`), then the domain
+  command re-encrypts and persists the new blob. The read transaction commits before token-endpoint I/O,
+  and the conditional write opens a new short transaction, so provider latency holds no pooled connection.
+  A **single-flight** `asyncio.Lock` per secret id (`_locks`) plus a
   `db.refresh()` re-check under the lock prevents a refresh stampede. The `_locks` map is now **bounded**:
   before a stale refresh, if it holds more than 512 entries the idle (unheld) locks are dropped — a fresh
   lock is created on next need — so a long-lived worker can't accumulate one lock per secret forever.
-  `refresh()` updates both `access_token` and `token` keys so either binding `secret_field` stays fresh.
+  The HTTP adapter updates both `access_token` and `token` keys so either binding `secret_field` stays fresh.
 - **manual:** a bare uploaded token (not refreshable) is injected as-is; the user re-uploads on expiry.
 
 `treg.oauth` re-exports the refresh family for compatibility with connect, health, call, and lazy local-run
 consumers. `ensure_fresh` is called by `call_tool()` before injecting, and by the health runner. The injector
 stays dumb; one refresh function serves both. Its write-back is **conditional on the prior ciphertext**
 (`UPDATE … WHERE value = old`) then reloads the row — so under multiple workers a second refresh can't
-clobber a refresh_token the first already rotated (the in-process lock alone doesn't cross processes). `refresh` always stamps a fallback `expires_at` (so a
+clobber a refresh_token the first already rotated (the in-process lock alone doesn't cross processes). The adapter always stamps a fallback `expires_at` (so a
 provider that omits `expires_in` doesn't force a refresh on every call), coerces a null `expires_in`,
 and raises a clear error when a 200 body carries no `access_token`; `_expires_at` treats a naive ISO
 `expiry` as UTC.

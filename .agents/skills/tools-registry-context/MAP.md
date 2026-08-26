@@ -132,6 +132,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/fsjail.py` | architecture/local-run.md |
 | `src/treg/health.py` | architecture/auth-secrets.md |
 | `src/treg/infra/__init__.py` | architecture/money.md |
+| `src/treg/infra/oauth_refresh.py` | architecture/auth-secrets.md |
 | `src/treg/infra/stripe.py` | architecture/money.md |
 | `src/treg/infra/upstream/__init__.py` | architecture/import-boundaries.md |
 | `src/treg/infra/upstream/injectors.py` | architecture/auth-secrets.md, architecture/import-boundaries.md |
@@ -191,6 +192,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/vendor/README.md` | interface/dashboard.md |
 | `src/treg/web/vendor/vue-3.5.41.global.prod.js` | interface/dashboard.md |
 | `tests/test_import_lightness.py` | architecture/import-boundaries.md |
+| `tests/test_oauth_refresh.py` | architecture/auth-secrets.md |
 | `tests/test_router_dependencies.py` | architecture/multi-tenancy.md |
 
 ## Fragment → sources
@@ -198,7 +200,7 @@ Regenerate via `scripts/build-map.py`.
 | Fragment | Sources |
 |---|---|
 | `architecture/ads-conversions.md` | `adsconv.py`, `signup.py`, `adtrack.js` |
-| `architecture/auth-secrets.md` | `injectors.py`, `injectors.py`, `ssrf.py`, `crypto.py`, `oauth.py`, `__init__.py`, `refresh.py`, `oauth_providers.py`, `health.py`, `connect.py`, `connections.py`, `resources.py` |
+| `architecture/auth-secrets.md` | `injectors.py`, `injectors.py`, `ssrf.py`, `crypto.py`, `oauth.py`, `__init__.py`, `refresh.py`, `oauth_refresh.py`, `oauth_providers.py`, `health.py`, `connect.py`, `connections.py`, `resources.py`, `test_oauth_refresh.py` |
 | `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `fx.yaml`, `aviato.yaml`, `crustdata.yaml`, `aviato.companies.acquisitions.json`, `aviato.companies.employees.json`, `aviato.companies.enrich.bulk.json`, `aviato.companies.enrich.json`, `aviato.companies.founders.json`, `aviato.companies.funding_rounds.json`, `aviato.companies.investments.json`, `aviato.companies.outbound_investments.json`, `aviato.companies.search.json`, `aviato.linkedin.company.posts.json`, `aviato.linkedin.post.comments.json`, `aviato.linkedin.post.reactions.json`, `aviato.linkedin.post.reposts.json`, `aviato.linkedin.user.posts.json`, `aviato.people.contact.get.json`, `aviato.people.email.find.json`, `aviato.people.enrich.bulk.json`, `aviato.people.enrich.json`, `aviato.people.phone.find.json`, `aviato.people.search.json`, `aviato.people.search.simple.json`, `crustdata.companies.autocomplete.json`, `crustdata.companies.enrich.json`, `crustdata.companies.identify.json`, `crustdata.companies.jobs.search.json`, `crustdata.companies.search.json`, `crustdata.people.autocomplete.json`, `crustdata.people.enrich.json`, `crustdata.people.search.json`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py`, `catalog.py` |
 | `architecture/composition.md` | `bootstrap.py`, `bootstrap_handlers.py`, `bootstrap_http.py`, `connect.py`, `mcp_oauth.py`, `session.py`, `admin.py`, `auth.py`, `billing.py`, `call.py`, `connections.py`, `onboard.py`, `orgs.py`, `resources.py`, `referrals.py`, `web.py`, `dump_surface.py` |
 | `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `sitetrack.js`, `models.py`, `timeutil.py`, `db.py`, `referrals.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py`, `auth.py` |

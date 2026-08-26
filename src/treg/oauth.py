@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
 from . import crypto
 from .domain.connections.refresh import (
     EXPIRING_SOON_DAYS,
@@ -25,15 +26,23 @@ from .domain.connections.refresh import (
     _expires_at,
     _locks,
     connection_view,
-    ensure_fresh,
+    ensure_fresh as _ensure_fresh,
     expiry_of,
     expiry_state,
     is_refreshable,
     is_stale,
-    refresh,
     secret_is_refreshable,
 )
-from .models import PendingOAuth
+from .infra.oauth_refresh import HTTPXOAuthRefreshPort
+from .models import PendingOAuth, Secret
+
+
+async def refresh(blob: dict, client: httpx.AsyncClient) -> dict:
+    return await HTTPXOAuthRefreshPort(client).exchange(blob)
+
+
+async def ensure_fresh(secret: Secret, db: AsyncSession, client: httpx.AsyncClient) -> None:
+    await _ensure_fresh(secret, db, HTTPXOAuthRefreshPort(client))
 
 # ---- connect flow (Phase C): mint the first token via browser consent --------------------
 def pkce_challenge(verifier: str) -> str:
