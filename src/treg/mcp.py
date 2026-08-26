@@ -956,6 +956,7 @@ directory_mcp = MCPServer(
         "catalog_get returns parameters, provider documentation, price and reliability; "
         "catalog_call_read and catalog_call_write execute the selected endpoint."
     ),
+    middleware=[_StaticSurfaceCapabilities()],
 )
 
 

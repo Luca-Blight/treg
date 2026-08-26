@@ -36,6 +36,24 @@ async def _rpc(client: AsyncClient, method: str, params=None, token: str | None 
     return await client.post("http://localhost/mcp/v2/", json=body, headers=headers)
 
 
+async def _modern_rpc(client: AsyncClient, method: str, params=None,
+                      token: str = "opaque-test-token"):
+    body_params = dict(params or {})
+    body_params["_meta"] = {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": {"name": "directory-test", "version": "1"},
+    }
+    return await client.post("http://localhost/mcp/v2/", json={
+        "jsonrpc": "2.0", "id": 1, "method": method, "params": body_params,
+    }, headers={
+        **MCP_HEADERS,
+        "Authorization": f"Bearer {token}",
+        "MCP-Protocol-Version": "2026-07-28",
+        "MCP-Method": method,
+    })
+
+
 async def test_v2_declares_exact_directory_contract():
     tools = {tool.name: tool for tool in await mcp.directory_mcp.list_tools()}
     assert list(tools) == [
@@ -56,6 +74,24 @@ async def test_v2_declares_exact_directory_contract():
     blob = " ".join(tool.description.lower() for tool in tools.values())
     for disallowed in ("use treg first", "official", "anthropic verified", "best provider"):
         assert disallowed not in blob
+
+
+async def test_v2_does_not_advertise_or_serve_change_subscriptions():
+    async with directory_session() as client:
+        discovered = await _modern_rpc(client, "server/discover")
+        listened = await _modern_rpc(client, "subscriptions/listen", {
+            "notifications": {"toolsListChanged": True},
+        })
+
+    assert discovered.status_code == 200, discovered.text
+    capabilities = discovered.json()["result"]["capabilities"]
+    assert capabilities["tools"]["listChanged"] is False
+    assert capabilities["prompts"]["listChanged"] is False
+    assert capabilities["resources"] == {"listChanged": False, "subscribe": False}
+    assert listened.status_code == 404, listened.text
+    assert listened.json()["error"] == {
+        "code": -32601, "message": "Method not found", "data": "subscriptions/listen",
+    }
 
 
 async def test_v2_annotations_separate_safe_and_unsafe_calls():
