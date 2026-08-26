@@ -19,6 +19,7 @@ from ..application.call.idempotency import (
     _release_idempotent_claim as release_idempotent_claim,
     _store_idempotent,
 )
+from ..application.call.authorize import authorize_call, enforce_public_demo_limit
 from ..application.call.resolve import (
     MarketplaceCall,
     QueryValues,
@@ -48,7 +49,7 @@ from ..config import get_settings
 from ..db import get_session
 from ..domain.governance import access as access_policy
 from ..domain.governance import publicdemo as publicdemo_policy
-from ..domain.identity.access import Caller, _role_at_least, require_member
+from ..domain.identity.access import Caller, require_member
 from ..models import Secret, Tool
 from ..proxy import relay
 from .auth import _client_ip
@@ -64,7 +65,6 @@ _ERROR_RESPONSE_MAX: Any
 _await_before_reserve: Any
 _buffer_response: Any
 _caller_request_snippet: Any
-_enforce_deny: Any
 _enforce_tag_budgets: Any
 _error_response_evidence: Any
 _finish_cancelled_call: Any
@@ -348,19 +348,20 @@ async def call_tool(
                 groups={"team": caller.org.slug})
             raise _translate_call_failure(mkexc) from mkexc
         tool, upstream_url, drop_params = mk.tool, mk.upstream, mk.consumed
-    _require_tool_use_http(caller, tool)  # per-member tool + project ACL (NULL access = all; admins exempt)
-    # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
-    # shape the caller used (named or URL-passthrough), and the relay never follows redirects, so a
-    # blocked host can't be reached via a 3xx bounce.
-    await _await_before_reserve(
-        _enforce_deny(caller, upstream_url, request.method, db, tool.project_id), request, call_ref)
-    await _await_before_reserve(
-        _enforce_daily_cap(caller, db), request, call_ref
-    )  # per-user daily cap (skips sandbox + unmetered members)
-    if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
+    try:
         await _await_before_reserve(
-            _enforce_public_demo_ip_cap(request, db), request, call_ref
-        )  # shared token → meter by client IP, not user
+            authorize_call(
+                caller=caller,
+                tool=tool,
+                upstream_url=upstream_url,
+                method=request.method,
+                client_ip=_client_ip(request),
+            ),
+            request,
+            call_ref,
+        )
+    except CallFailure as exc:
+        raise _translate_call_failure(exc) from exc
 
     # The caller's own request bytes, read ONCE when it is safe to buffer them, so a failure can be
     # explained later (see models.CallRecord.error_request). Metered JSON calls already require full
@@ -443,9 +444,12 @@ async def call_tool(
     if demo_sandbox.is_sandbox(caller.org):
         live_key = get_settings().demo_stripe_key
         if live_key and demo_sandbox.is_live_tool(tool) and request.method in ("GET", "POST"):
-            await _await_before_reserve(
-                _enforce_public_demo_ip_cap(request, db), request, call_ref
-            )  # one shared wire → meter by client IP
+            try:
+                await _await_before_reserve(
+                    enforce_public_demo_limit(_client_ip(request)), request, call_ref
+                )  # one shared wire → meter by client IP
+            except CallFailure as exc:
+                raise _translate_call_failure(exc) from exc
             await _await_before_reserve(
                 db.commit(), request, call_ref
             )  # end the DB phase before network I/O (see the same call before relay())

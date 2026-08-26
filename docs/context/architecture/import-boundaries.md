@@ -6,6 +6,7 @@ sources:
   - .github/workflows/ci.yml
   - src/treg/application/__init__.py
   - src/treg/application/call/__init__.py
+  - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
   - src/treg/application/call/resolve.py
@@ -16,6 +17,7 @@ sources:
   - src/treg/domain/governance/budgets.py
   - src/treg/domain/governance/publicdemo.py
   - src/treg/domain/governance/teams.py
+  - src/treg/domain/governance/usage.py
   - src/treg/domain/identity/__init__.py
   - src/treg/domain/money/__init__.py
   - tests/test_import_lightness.py
@@ -59,9 +61,9 @@ import identity but cannot import the API, routers, or application layer. Future
 absent until their packages exist, so no placeholder domain makes a future boundary look active.
 Governance owns shared tool/project ACLs, tag-budget rules, and public-demo rate policy. The package also
 forbids direct FastAPI and Starlette imports; semantic policy errors are translated by each HTTP interface.
-The call application package owns framework-neutral request intake and idempotency state plus target
-resolution and marketplace pricing. The HTTP adapter translates its typed failures and replay DTO;
-the remaining call-kernel collaborators retain their current owners.
+The call application package owns framework-neutral request intake, idempotency state, target resolution,
+marketplace pricing, and the ordered pre-money authorization gates. The HTTP adapter translates typed
+failures and replay DTOs; the remaining call-kernel collaborators retain their current owners.
 
 Two direct edges are precise exceptions. `cli.ensure_proxy_dependency` imports `cryptography` only after
 the user invokes the optional proxy feature and offers to install the proxy extra first.

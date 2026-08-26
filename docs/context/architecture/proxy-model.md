@@ -4,10 +4,14 @@ status: shipped
 sources:
   - src/treg/proxy.py
   - src/treg/api.py
+  - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
   - src/treg/application/call/resolve.py
   - src/treg/application/call/types.py
+  - src/treg/domain/governance/access.py
+  - src/treg/domain/governance/publicdemo.py
+  - src/treg/domain/governance/usage.py
   - src/treg/routers/call.py
 related:
   - architecture/data-model.md
@@ -115,8 +119,9 @@ concurrency limit, and `llms.txt` says so. `tests/test_call_pool_discipline.py` 
 `ResolvedTarget(tool, upstream)`. Each resolution use case owns and closes its read session.
 **Both shapes are scoped to the caller's org** (`Tool.org_id == org_id`), so two
 orgs resolve independently and may reuse a tool name or upstream host; `call_tool` then loads only
-same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the per-user daily usage cap —
-429 when over; `-1`/default is a no-op, so the hot path adds no query for unmetered members). Two shapes:
+same-org secrets. After resolution `application.call.authorize` runs tool/project ACL, deny, member-cap,
+and public-demo gates in that order, with no money hold or upstream access. Its short session closes before
+the reserve stage; `-1`/default member caps add no query. Two resolution shapes:
 - **URL-passthrough (agent-native):** `rest` is the real upstream URL (`/call/https://api.intercom.io/me`).
   `_normalize_scheme()` restores the `https://` a path param collapses to `https:/`. The tool is resolved
   by **host** (`_host_of()` = `urlsplit(...).netloc`, matched against the indexed `Tool.host`) then the

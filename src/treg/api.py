@@ -2395,7 +2395,6 @@ call_routes._ERROR_RESPONSE_MAX = _ERROR_RESPONSE_MAX
 call_routes._await_before_reserve = _await_before_reserve
 call_routes._buffer_response = _buffer_response
 call_routes._caller_request_snippet = _caller_request_snippet
-call_routes._enforce_deny = _enforce_deny
 call_routes._enforce_tag_budgets = _enforce_tag_budgets
 call_routes._error_response_evidence = _error_response_evidence
 call_routes._finish_cancelled_call = _finish_cancelled_call

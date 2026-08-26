@@ -8,8 +8,9 @@ from typing import Awaitable, Callable, Literal, Protocol
 import pytest
 
 from treg import api as A
-from treg.application.call import idempotency, intake, resolve
+from treg.application.call import authorize, idempotency, intake, resolve
 from treg.application.call.types import (
+    AuthorizationFailed,
     CallFailure,
     IdempotencyFailed,
     IntakeFailed,
@@ -141,7 +142,7 @@ def test_compatibility_surface_stays_literal_during_boundary_extraction() -> Non
 
 
 def test_call_intake_modules_are_framework_neutral() -> None:
-    for module in (intake, idempotency, resolve):
+    for module in (authorize, intake, idempotency, resolve):
         source = module.__loader__.get_source(module.__name__)
         roots = {
             node.module.split(".", 1)[0]
@@ -154,6 +155,57 @@ def test_call_intake_modules_are_framework_neutral() -> None:
             for alias in node.names
         }
         assert not ({"fastapi", "starlette"} & roots)
+
+
+async def test_authorization_gate_order_is_frozen(monkeypatch) -> None:
+    order = []
+
+    class Session:
+        async def commit(self):
+            order.append("commit")
+
+    class SessionContext:
+        async def __aenter__(self):
+            return Session()
+
+        async def __aexit__(self, *args):
+            return False
+
+    monkeypatch.setattr(authorize, "session_maker", SessionContext)
+    monkeypatch.setattr(
+        authorize.access_policy, "_require_tool_use", lambda caller, tool: order.append("acl"))
+
+    async def deny(*args):
+        order.append("deny")
+
+    async def daily(*args, **kwargs):
+        order.append("daily")
+
+    async def public(*args):
+        order.append("public")
+
+    monkeypatch.setattr(authorize.access_policy, "enforce_deny", deny)
+    monkeypatch.setattr(authorize.usage_policy, "enforce_daily_cap", daily)
+    monkeypatch.setattr(authorize.publicdemo_policy, "enforce_public_demo_ip_cap", public)
+    monkeypatch.setattr(authorize.demo_sandbox, "is_sandbox", lambda org: False)
+    caller = type("Caller", (), {
+        "role": "member",
+        "org": type("Org", (), {"public_demo": True})(),
+    })()
+    tool = type("Tool", (), {"project_id": None})()
+
+    await authorize.authorize_call(
+        caller=caller, tool=tool, upstream_url="https://upstream.test/x",
+        method="GET", client_ip="203.0.113.1")
+
+    assert order == ["acl", "deny", "daily", "public", "commit"]
+
+
+def test_authorization_failure_keeps_mechanism_and_blame_separate() -> None:
+    exc = AuthorizationFailed(
+        "policy_denied", status_code=403, detail="blocked by policy")
+    assert (exc.kind, exc.blame, exc.status_code, exc.detail) == (
+        "policy_denied", "caller", 403, "blocked by policy")
 
 
 def test_intake_failures_keep_mechanism_and_blame_separate() -> None:

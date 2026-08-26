@@ -8,6 +8,7 @@ sources:
   - src/treg/bootstrap_http.py
   - src/treg/caller_metadata.py
   - src/treg/application/auth.py
+  - src/treg/application/call/authorize.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
   - src/treg/application/call/resolve.py
@@ -35,6 +36,7 @@ sources:
   - src/treg/domain/governance/access.py
   - src/treg/domain/governance/budgets.py
   - src/treg/domain/governance/publicdemo.py
+  - src/treg/domain/governance/usage.py
   - src/treg/domain/identity/mcp_oauth.py
   - src/treg/domain/identity/session.py
   - src/treg/timeutil.py
@@ -586,8 +588,8 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   returns `health._view(s)` plus a `needs_reconnect` flag (`health.needs_reconnect`) so a credential treg
   can't renew announces itself before it dies.
 - **The proxy:** `routers.call.call_tool` (`* /call/{rest:path}`) → `application.call.resolve` → (on a dotted 404,
-  catalog lookup + retirement gate + credential ladder) → the router's `_enforce_daily_cap` adapter (the
-  per-user daily cap; 429 when over) → (public-demo token → `_enforce_public_demo_ip_cap`) → load secrets
+  catalog lookup + retirement gate + credential ladder) → `application.call.authorize` (tool/project ACL,
+  deny, per-user cap, then public-demo rate cap) → load secrets
   (+ `ensure_fresh`) → **`db.commit()` — the DB phase ends here; a call in flight holds no pooled
   connection** → `relay()` → `audit.record_call`. A pool that has no slot within 5 s answers
   `503 {"treg_saturated": true}` + `Retry-After: 2` (`_pool_saturated`, the handler for

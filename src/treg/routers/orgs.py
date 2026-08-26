@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy import case, func, or_
+from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -19,6 +19,8 @@ from ..caller_metadata import TAG_DEFAULT, _MAX_BUDGET_DIMS, _META_KEY_RE, _clie
 from ..config import get_settings
 from ..db import get_session
 from ..domain.governance import budgets as budget_policy
+from ..domain.governance import access as access_policy
+from ..domain.governance import usage as usage_policy
 from ..domain.governance.budgets import (
     _META_MAX_KEYS,
     _budget_dims_of,
@@ -68,6 +70,12 @@ from ..models import (
 )
 from ..timeutil import as_naive as _as_naive
 from ..timeutil import utcnow_naive as _utcnow_naive
+
+
+_day_start_utc = usage_policy._day_start_utc
+count_today = usage_policy.count_today
+_deny_match = access_policy._deny_match
+_org_deny_rules = access_policy._org_deny_rules
 from .auth_helpers import _is_https
 from .signup_cookies import REFERRAL_COOKIE
 
@@ -254,24 +262,6 @@ async def _count_owners(org_id: int, db: AsyncSession) -> int:
     return len(rows)
 
 
-def _day_start_utc() -> datetime:
-    """Midnight (00:00) of the current UTC day, naive — matches how *Record.created_at is stored."""
-    return _utcnow_naive().replace(hour=0, minute=0, second=0, microsecond=0)
-
-
-async def count_today(db: AsyncSession, org_id: int | None, user_email: str) -> int:
-    """How many usage events this user has produced in this org since midnight UTC: proxy calls +
-    local-run grants (both `CallRecord`) plus server runs (`RunRecord`). Two indexed COUNTs."""
-    since = _day_start_utc()
-    calls = (await db.execute(select(func.count()).select_from(CallRecord).where(
-        CallRecord.org_id == org_id, CallRecord.user_email == user_email, CallRecord.created_at >= since,
-    ))).scalar_one()
-    runs = (await db.execute(select(func.count()).select_from(RunRecord).where(
-        RunRecord.org_id == org_id, RunRecord.user_email == user_email, RunRecord.created_at >= since,
-    ))).scalar_one()
-    return calls + runs
-
-
 async def _used_today_by_user(db: AsyncSession, org_id: int) -> dict[str, int]:
     """{user_email: events today} for every member of the org — one grouped COUNT per table, so the
     members list gets everyone's usage without an N+1 fan-out. Spans all kinds (calls + local + server)."""
@@ -308,37 +298,6 @@ async def _drop_member_deny_rules(db: AsyncSession, user_id: int, org_id: int | 
     return len(stale)
 
 
-def _deny_match(rules: list[DenyRule], host: str, path: str, method: str) -> DenyRule | None:
-    """The FIRST rule that matches — pure, so it unit-tests without a DB (like `localrun.check_deny`).
-
-    An empty field on a rule means "any", so `{method: "DELETE"}` blocks every delete and
-    `{host: "api.stripe.com"}` blocks that upstream entirely. Host is compared case-insensitively;
-    the path match is a prefix, anchored at `/` so `/v1/charges` cannot be dodged by `/v1/chargesX`.
-    """
-    host, method = host.lower(), method.upper()
-    path = path or "/"
-    for r in rules:
-        if r.host and r.host.lower() != host:
-            continue
-        if r.method and r.method.upper() != method:
-            continue
-        if r.path_prefix:
-            p = (r.path_prefix if r.path_prefix.startswith("/") else "/" + r.path_prefix).rstrip("/")
-            # Anchored at a segment boundary: `/v1/charges` must NOT match `/v1/chargesX`.
-            if not (path == p or path.startswith(p + "/")):
-                continue
-        return r
-    return None
-
-
-async def _org_deny_rules(caller: Caller, db: AsyncSession) -> list[DenyRule]:
-    """This caller's applicable rules: the org-wide ones plus the ones aimed at them specifically."""
-    return list((await db.execute(select(DenyRule).where(
-        DenyRule.org_id == caller.org_id,
-        or_(DenyRule.user_id.is_(None), DenyRule.user_id == caller.membership.user_id),
-    ))).scalars().all())
-
-
 async def _enforce_deny(
     caller: Caller, url: str, method: str, db: AsyncSession, tool_project_id: int | None = None
 ) -> None:
@@ -350,23 +309,10 @@ async def _enforce_deny(
     `tool_project_id` = the project of the tool this call goes through (every enforcement point has
     resolved a Tool by then). A project-scoped rule (`project_id` set) fires only on that project's
     tools; an org-wide-tool call (`tool_project_id` None) is never caught by one."""
-    rules = [r for r in await _org_deny_rules(caller, db)
-             if r.project_id is None or r.project_id == tool_project_id]
-    if not rules:
-        return  # the common path costs one indexed query and nothing else
     try:
-        parts = urlsplit(url)
-    except ValueError:
-        return
-    rule = _deny_match(rules, parts.netloc, parts.path, method)
-    if rule is None:
-        return
-    why = f" ({rule.note})" if rule.note else ""
-    scope = "this team" if rule.user_id is None else "you"
-    in_proj = " in this project" if rule.project_id is not None else ""
-    raise HTTPException(status_code=403, detail=(
-        f"blocked by a policy rule on {scope}{in_proj}{why} — "
-        f"{rule.method or 'any'} {rule.host or 'any host'}{rule.path_prefix or ''}"))
+        await access_policy.enforce_deny(caller, url, method, db, tool_project_id)
+    except access_policy.AccessPolicyError as exc:
+        raise HTTPException(status_code=403, detail=exc.detail) from exc
 
 
 async def _usage_rollup(db: AsyncSession, org_id: int, since: datetime) -> dict:

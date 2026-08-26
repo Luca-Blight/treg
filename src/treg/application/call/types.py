@@ -23,6 +23,9 @@ _BLAME_BY_KIND: dict[str, Blame] = {
     "catalog_retired": "caller",
     "catalog_parameter_invalid": "caller",
     "capability_pinned": "caller",
+    "policy_denied": "caller",
+    "daily_cap_reached": "caller",
+    "public_demo_rate_limited": "caller",
     "injection_failed": "treg",
     "credential_missing": "org_connection",
     "method_mismatch": "caller",
@@ -56,6 +59,10 @@ class IdempotencyFailed(CallFailure):
 
 class ResolutionFailed(CallFailure):
     """The requested tool or marketplace target cannot be resolved."""
+
+
+class AuthorizationFailed(CallFailure):
+    """A resolved call target is refused before any money is reserved."""
 
 
 @dataclass(frozen=True)

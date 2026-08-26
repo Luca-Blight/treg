@@ -11,6 +11,7 @@ sources:
   - src/treg/domain/governance/budgets.py
   - src/treg/domain/governance/publicdemo.py
   - src/treg/domain/governance/teams.py
+  - src/treg/domain/governance/usage.py
   - src/treg/domain/identity/access.py
   - src/treg/domain/identity/session.py
   - src/treg/routers/auth.py
