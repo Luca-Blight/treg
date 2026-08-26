@@ -10,7 +10,9 @@ sources:
   - src/treg/api.py
   - src/treg/application/signup.py
   - src/treg/routers/admin.py
+  - src/treg/routers/billing.py
   - src/treg/routers/orgs.py
+  - src/treg/routers/referrals.py
 related:
   - architecture/catalog.md
   - architecture/proxy-model.md

@@ -9,10 +9,12 @@ sources:
   - src/treg/domain/identity/session.py
   - src/treg/routers/admin.py
   - src/treg/routers/auth.py
+  - src/treg/routers/billing.py
   - src/treg/routers/connections.py
   - src/treg/routers/onboard.py
   - src/treg/routers/orgs.py
   - src/treg/routers/resources.py
+  - src/treg/routers/referrals.py
   - src/treg/routers/web.py
   - scripts/dump_surface.py
 related:

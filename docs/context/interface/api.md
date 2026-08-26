@@ -14,11 +14,13 @@ sources:
   - src/treg/routers/admin.py
   - src/treg/routers/auth.py
   - src/treg/routers/auth_helpers.py
+  - src/treg/routers/billing.py
   - src/treg/routers/catalog.py
   - src/treg/routers/connections.py
   - src/treg/routers/onboard.py
   - src/treg/routers/orgs.py
   - src/treg/routers/resources.py
+  - src/treg/routers/referrals.py
   - src/treg/routers/signup_cookies.py
   - src/treg/routers/web.py
   - src/treg/domain/identity/access.py
