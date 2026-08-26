@@ -2382,7 +2382,6 @@ a:hover{text-decoration-color:var(--muted)}
                     <div style="flex:1;min-width:220px">
                       <div class="lbl">Balance</div>
                       <div style="font-size:28px;font-weight:700;color:var(--accent);font-family:var(--mono)">{{money(billing.balance_micro)}}</div>
-                      <p class="sub" style="margin:4px 0 0">Prepaid credit. Calls draw from it - <code>treg balance</code> shows the ledger.</p>
                     </div>
                     <!-- Stripe's hosted portal: card, billing address, tax ID and the invoice archive.
                          Hidden until the team has a Stripe customer, which its first payment creates. -->
@@ -2394,8 +2393,7 @@ a:hover{text-decoration-color:var(--muted)}
                   <p v-if="!billing.configured" class="sub" style="margin:12px 0 0">Top-ups aren't configured on this deployment.</p>
 
                   <template v-if="billing.configured">
-                    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
-                      <div class="lbl">Add funds</div>
+                    <div style="margin-top:12px">
                       <!-- A team that arrived through someone's link does not know a bonus exists.
                            This is the one screen where saying so changes what they do, and the
                            MINIMUM is the part that matters: the first preset ($5) is below it, so
@@ -2429,10 +2427,7 @@ a:hover{text-decoration-color:var(--muted)}
                       <!-- The amounts live in a modal (openTopup), not inline: choosing a size,
                            seeing the bonus it earns and deciding on auto top-up are one decision,
                            and the mandate text has to sit next to the Pay button it authorizes. -->
-                      <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                        <button class="btn primary" :disabled="billingBusy" @click="openTopup()">Top up</button>
-                        <span class="sub" style="margin:0">Bigger top-ups earn bonus credit — up to {{maxBonusPct}}% extra.</span>
-                      </div>
+                      <button class="btn primary" :disabled="billingBusy" @click="openTopup()">Top up</button>
                     </div>
 
                     <!-- `no_card` is not a failure: consent was recorded (usually from the top-up
@@ -3249,16 +3244,18 @@ product, including per-customer usage tracking and billing.</pre>
                  The referral bonus (refPresetBonus) stacks on the tier bonus. -->
             <span v-if="tierBonus(p)" style="color:var(--green)">+{{money(tierBonus(p))}} bonus</span>
             <span v-else-if="refPresetBonus(p)" style="color:var(--green)">+{{money(refPresetBonus(p))}} bonus</span>
-            <span v-else>one-time</span>
           </button>
           <button class="fundcard" :class="{sel:topupPick==='other'}" :disabled="billingBusy" @click="topupPick='other'">
-            <b>Other</b><span>${{billing.topup.min_usd}}+</span>
+            <b>Other</b>
           </button>
         </div>
-        <div v-if="topupPick==='other'" style="margin-top:10px;display:flex;gap:8px;align-items:center">
-          <span class="sub" style="margin:0">Amount $</span>
-          <input class="msel" style="width:110px" type="number" :min="billing.topup.min_usd" :max="billing.topup.max_usd" step="1" v-model.number="topupOther" placeholder="e.g. 75"/>
-          <span class="sub" style="margin:0">whole dollars, ${{billing.topup.min_usd}}–${{billing.topup.max_usd.toLocaleString()}}</span>
+        <div v-if="topupPick==='other'" style="margin-top:12px">
+          <div style="display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--rb);background:var(--bg);padding:0 14px">
+            <span style="font-family:var(--mono);font-size:22px;color:var(--muted)">$</span>
+            <input type="number" :min="billing.topup.min_usd" :max="billing.topup.max_usd" step="1" v-model.number="topupOther" placeholder="0" autocomplete="off" data-lpignore="true"
+                   style="flex:1;border:0;background:transparent;color:var(--ink);font-family:var(--mono);font-size:22px;font-weight:700;padding:12px 8px;outline:none;min-width:0"/>
+          </div>
+          <p class="sub" style="margin:6px 0 0">Whole dollars, ${{billing.topup.min_usd}}–${{billing.topup.max_usd.toLocaleString()}}.</p>
         </div>
 
         <!-- Auto top-up. Read-only line when the team already has a mandate; otherwise the toggle. -->
@@ -3276,7 +3273,7 @@ product, including per-customer usage tracking and billing.</pre>
                      THESE numbers is an unauthorized charge under PSD2/SCA. The amount is the one
                      being chosen right now, never a config default the payer didn't see. -->
                 <span class="sub" style="display:block;margin:2px 0 0">
-                  <template v-if="topupAuto">I authorize treg to charge my saved card <b>${{topupUsd||'…'}}</b> automatically whenever my balance drops below <b>${{autoThreshold}}</b>, up to <b>${{autoCapUsd}}</b> per month. Cancel any time from the billing page.</template>
+                  <template v-if="topupAuto">I authorize treg to charge my saved card <b>${{topupUsd||'…'}}</b> automatically whenever my balance drops below <b>${{autoThreshold}}</b>. Cancel any time from the billing page.</template>
                   <template v-else>Calls fail with a 402 once the balance runs out. Turn this on to keep agents running without watching it.</template>
                 </span>
               </span>
@@ -3285,7 +3282,7 @@ product, including per-customer usage tracking and billing.</pre>
         </div>
 
         <div style="margin-top:14px;border:1px solid var(--line);border-radius:var(--rb);padding:10px 12px;font-family:var(--mono);font-size:12.5px">
-          <div style="display:flex;justify-content:space-between"><span>Top-up credit</span><span>{{topupUsd?money(topupUsd*1e6):'—'}}<span v-if="topupBonusMicro" style="color:var(--green)"> (+{{money(topupBonusMicro)}} bonus)</span></span></div>
+          <div style="display:flex;justify-content:space-between"><span>Credit added</span><span v-if="!topupUsd">—</span><span v-else><b>{{money(topupUsd*1e6+topupBonusMicro)}}</b><span v-if="topupBonusMicro" class="sub" style="margin:0"> ({{money(topupUsd*1e6)}} + <span style="color:var(--green)">{{money(topupBonusMicro)}} bonus</span>)</span></span></div>
           <div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:8px;padding-top:8px;font-weight:700"><span>Total due</span><span>{{topupUsd?money(topupUsd*1e6):'—'}}</span></div>
         </div>
         <p v-if="topupErr" class="sub" style="color:var(--red);margin:10px 0 0">{{topupErr}}</p>
@@ -4020,9 +4017,10 @@ createApp({
     topupValid(){ if(!this.billing||!this.topupUsd) return false; const t=this.billing.topup; return this.topupUsd>=t.min_usd&&this.topupUsd<=t.max_usd; },
     topupBonusMicro(){ return this.tierBonus(this.topupUsd)+this.refPresetBonus(this.topupUsd); },
     maxBonusPct(){ const t=this.billing&&this.billing.topup.bonus_tiers; return t?Math.max(0,...Object.values(t)):0; },
-    // The monthly cap the mandate names: the configured default, or four refills of the chosen
-    // amount, whichever is larger - a $200 payer under a $100 cap would be locked out after one.
-    autoCapUsd(){ if(!this.billing) return 0; return Math.max(Math.round(this.billing.autotopup.monthly_cap_usd), 4*(this.topupUsd||0)); },
+    // The monthly cap is a server-side runaway guardrail, not something the payer is asked to pick:
+    // the modal sets it to the single-top-up ceiling (effectively unlimited) so a big payer is never
+    // locked out mid-month by a default sized for $10 refills. The manage panel below can lower it.
+    autoCapUsd(){ return this.billing?this.billing.topup.max_usd:0; },
     // Marketplace shelves. /oauth/providers already returns providers grouped-then-alphabetical, so
     // this walks the list once and starts a shelf whenever the category changes — re-sorting here
     // would just be a second place to keep the order in step with the registry.

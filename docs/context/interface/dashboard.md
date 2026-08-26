@@ -226,8 +226,9 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
     bonus stacks via `refPresetBonus`), a summary box (credit + bonus, total due = the amount — treg
     charges no fee, so there is no fee line), and an **auto top-up toggle that defaults ON** for a
     team with no mandate yet. The toggle's label is the mandate text with the amount being chosen
-    right now, the $5 threshold and a monthly cap of `max(configured cap, 4 × amount)` — never a
-    config default the payer did not see. Pay with the toggle on POSTs `/billing/autotopup`
+    right now and the $5 threshold — never a config default the payer did not see. The monthly cap is
+    not in the copy: it is a server-side runaway guardrail, and the modal sets it to `topup.max_usd`
+    (effectively unlimited) so a big payer is never locked out by a default sized for $10 refills. Pay with the toggle on POSTs `/billing/autotopup`
     (`consent: true`, those numbers, `setup_url: false` because the top-up Checkout saves the card
     itself) **before** `/billing/topup`, so consent exists before the card that will be charged under
     it; the setup webhook then arms the policy. A team that already has a mandate sees a read-only
