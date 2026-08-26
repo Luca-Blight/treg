@@ -43,7 +43,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Onboarding — the first-run demo team (dashboard + CLI)](interface/onboarding.md) | shipped | auth.py, demo.py, cli.py, auth.py, … |
 | [Search surfaces — robots, sitemap, the crawlable catalog, and the social card](interface/seo.md) | shipped | api.py, web.py, agent_pages.py, robots.txt, … |
 | [Shell mode (treg shell) — transparent CLI interception](interface/shell.md) | shipped | shell.py, cli.py |
-| [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md, mcp_install.py, build_plugin.py, plugin.json, … |
+| [The shippable tools-registry skill (3 personas)](interface/skill.md) | shipped | skill.md, web.py, mcp_install.py, build_plugin.py, … |
 
 ## Ops (deploy, scale)
 
@@ -61,5 +61,5 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [Expanding a marketplace category — the add-a-provider playbook](guides/expanding-a-category.md) | guide | oauth_providers.py, api.py, config.py |
+| [Expanding a marketplace category — the add-a-provider playbook](guides/expanding-a-category.md) | guide | oauth_providers.py, connect.py, connections.py, config.py |
 

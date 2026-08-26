@@ -267,6 +267,7 @@ Two consequences worth stating plainly:
 
 - **`TagBudget` never grows a balance column.** One org, one balance. Budgets are ceilings on a shared
   pot, not sub-accounts; per-user balances would be a second money authority and are out of scope.
-- **`TagSpend` and `TagBudget` are org-scoped** and registered in `api._ORG_SCOPED_MODELS`, `TagSpend`
+- **`TagSpend` and `TagBudget` are org-scoped** and registered in
+  `routers.orgs._ORG_SCOPED_MODELS`, `TagSpend`
   ahead of `LedgerEntry`/`Hold` because it references them. `tests/test_orgs.py` walks the models and
   fails if a new `org_id` table is missed.

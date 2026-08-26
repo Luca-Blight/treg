@@ -146,8 +146,9 @@ chat, which is also what `landing.html`/`support.html` do with a tiny `/meta`-ga
 `switchOrg`/team-create call `intercomUpdate()` so the company tracks the active team; `logout()`
 calls `Intercom('shutdown')` so the next user on the machine can't read the previous conversations.
 
-Server side (`api.py`): `require_identity` (who, from token OR session), `require_member` (a Caller in a
-specific org — token bakes the org in; a session picks it via `X-Treg-Org`), and `require_superadmin`
+Server side (`domain.identity.access`): `require_identity` (who, from token OR session),
+`require_member` (a Caller in a specific org — token bakes the org in; a session picks it via
+`X-Treg-Org`), and `require_superadmin`
 (env token, or a token/session whose user `is_superadmin`). Every fetch also sends
 `ngrok-skip-browser-warning: 1`.
 
