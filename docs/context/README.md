@@ -27,7 +27,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [MCP — the front door for assistants, and treg as an OAuth authorization server](architecture/mcp-oauth.md) | shipped | auth.py, mcp.py, mcp_oauth.py, health.py, … |
 | [Money — prepaid balance, the ledger, Stripe, and the reports that check it](architecture/money.md) | shipped | ledger.py, __init__.py, models.py, billing.py, … |
 | [Multi-tenancy — orgs, memberships, invites, per-org scoping](architecture/multi-tenancy.md) | shipped | models.py, api.py, caller_metadata.py, auth.py, … |
-| [The proxy — faithful credential-injecting relay + tool resolution](architecture/proxy-model.md) | shipped | proxy.py, api.py, call.py |
+| [The proxy — faithful credential-injecting relay + tool resolution](architecture/proxy-model.md) | shipped | proxy.py, api.py, idempotency.py, intake.py, … |
 | [Super-admin — cross-tenant read + control](architecture/super-admin.md) | shipped | api.py, admin.py, access.py, config.py |
 
 ## Interfaces (API · CLI · skill)

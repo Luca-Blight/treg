@@ -8,6 +8,8 @@ sources:
   - src/treg/bootstrap_http.py
   - src/treg/caller_metadata.py
   - src/treg/application/auth.py
+  - src/treg/application/call/idempotency.py
+  - src/treg/application/call/intake.py
   - src/treg/application/connect.py
   - src/treg/application/onboard.py
   - src/treg/application/referrals.py

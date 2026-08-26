@@ -7,6 +7,8 @@ sources:
   - src/treg/models.py
   - src/treg/billing.py
   - src/treg/application/billing.py
+  - src/treg/application/call/idempotency.py
+  - src/treg/application/call/intake.py
   - src/treg/application/referrals.py
   - src/treg/domain/governance/budgets.py
   - src/treg/infra/__init__.py
@@ -469,7 +471,8 @@ means storing the first response and replaying it.
 
 ### The surface
 
-`Idempotency-Key: <label>` on `/call/`, or the `idempotency_key` argument to the MCP `call` tool. A
+`application.call.idempotency` owns the claim and replay state behind `Idempotency-Key: <label>` on
+`/call/`, or the `idempotency_key` argument to the MCP `call` tool. A
 replay answers with `X-Treg-Idempotent-Replay: true` and `X-Treg-Cost-Micro` set to what the FIRST
 call cost, so a caller can report the charge honestly rather than implying a second one. Over MCP the
 result carries `replayed: true`.

@@ -300,6 +300,28 @@ from .domain.governance.teams import _make_org_membership, _slugify, _unique_slu
 from .domain.governance import access as access_policy
 from .domain.governance import budgets as budget_policy
 from .domain.governance import publicdemo as publicdemo_policy
+from .application.call.idempotency import (
+    IDEMPOTENCY_HEADER,
+    IDEMPOTENCY_WINDOW_S,
+    _IDEM_MAX_KEY,
+    _IDEM_SCOPE_SEP,
+    _claim_idempotent,
+    _idem_display,
+    _idempotency_key,
+    _release_idempotent_claim,
+    _replay_idempotent,
+    _request_fingerprint,
+    _scoped_idempotency_key,
+    _store_idempotent,
+)
+from .application.call.intake import (
+    META_HEADER,
+    _META_MAX_HEADER,
+    CallMeta,
+    _NO_META,
+    _parse_call_meta,
+    _tag_telemetry,
+)
 from .routers import orgs as org_routes
 from .routers.orgs import (
     INVITE_TTL_DAYS,
@@ -2098,299 +2120,6 @@ async def _enforce_capability_pin(ep: dict, caller: Caller, db: AsyncSession) ->
                     + f". An admin can change it: treg org unpin {cap}"),
         "capability": cap, "pinned_provider": pin.provider, "use_endpoint": alt,
     })
-
-
-IDEMPOTENCY_WINDOW_S = 24 * 3600   # retries happen in seconds; a day is generous and easy to reason about
-IDEMPOTENCY_HEADER = "idempotency-key"
-_IDEM_MAX_KEY = 200
-
-# ---- caller tags (X-Treg-Meta) -----------------------------------------------------------------
-# A builder reselling treg through one token stamps their OWN ids on each call —
-# `X-Treg-Meta: customer=cust_8123, workspace=ws_9` — so they can attribute, budget and invoice their
-# users. Deliberately a HEADER and not a tool argument: a model asked to pass an id drops it somewhere
-# in a chain, and a figure you cannot reconcile is worse than no figure. The builder's backend already
-# sets Authorization on this request; this is the same call site.
-META_HEADER = "x-treg-meta"
-_META_MAX_HEADER = 512
-
-
-@dataclass(frozen=True)
-class CallMeta:
-    """The parsed tag bag for one call. Built ONCE per request (see call_tool) and read by everyone —
-    idempotency scope, budgets, the ledger and the audit row. A second parse site would be a second
-    chance to disagree about who pays."""
-
-    tags: dict[str, str]
-    primary_dim: str = budget_policy.DEFAULT_PRIMARY_DIM
-
-    @property
-    def primary_val(self) -> str:
-        return self.tags.get(self.primary_dim, "")
-
-
-_NO_META = CallMeta(tags={})
-
-
-def _tag_telemetry(meta: CallMeta) -> dict:
-    """The tag columns of an audit row, built the one way — the refusal path and the success path
-    both write them and had drifted apart once already.
-
-    `budget_dim` stays blank unless the PRIMARY dimension actually carries a value: a call tagged
-    only on some other key must not claim a primary it never had, or a report grouped by the indexed
-    column would attribute it to the empty value.
-    """
-    return {"budget_dim": meta.primary_dim if meta.primary_val else "",
-            "budget_val": meta.primary_val,
-            "tags": dict(meta.tags) or None}
-
-
-def _parse_call_meta(request: Request, caller: Caller | None = None) -> CallMeta:
-    """`X-Treg-Meta: k=v, k=v` → a validated bag. No header means today's behaviour exactly.
-
-    REFUSES rather than repairs. A tag that is silently dropped or truncated is usage that leaves the
-    builder's invoice without anyone noticing, and a truncated id can merge two of their users into one
-    line — so an oversized value is a 422, never a `[:128]`.
-
-    A PINNED token (Membership.pinned_tags) wins over the header for the dimensions it names: a token
-    handed to one customer's machine must not be able to bill another customer. Naming a different
-    value for a pinned dimension is a 403 rather than a silent override — a builder debugging their
-    integration needs to see the disagreement, not discover it in a month of misattributed invoices.
-    """
-    pinned = (caller.membership.pinned_tags if caller is not None else None) or {}
-    raw = (request.headers.get(META_HEADER) or "").strip()
-    if not raw:
-        # An unpinned caller with no header is untagged; a pinned one still attributes to its pin, so
-        # a builder can hand out a scoped token and never touch the header at all.
-        return CallMeta(tags=dict(pinned), primary_dim=budget_policy._primary_dim_of(caller)) if pinned else _NO_META
-    if len(raw.encode()) > _META_MAX_HEADER:
-        raise HTTPException(status_code=422, detail=(
-            f"X-Treg-Meta is limited to {_META_MAX_HEADER} bytes"))
-    tags: dict[str, str] = {}
-    for segment in raw.split(","):
-        raw_key, sep, raw_value = segment.partition("=")
-        if not sep or not _META_KEY_RE.match(raw_key.strip().lower()):
-            # The SHAPE of the segment, which only this parser can report — everything past here is
-            # the shared storage-key rule.
-            raise HTTPException(status_code=422, detail=(
-                f"X-Treg-Meta must be `key=value` pairs; keys are 1-32 chars of [a-z0-9_] "
-                f"(got {segment.strip()!r})"))
-        try:
-            key, value = budget_policy._validate_tag_pair(
-                raw_key, raw_value, where="X-Treg-Meta")
-        except budget_policy.BudgetPolicyError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        if key in tags:
-            raise HTTPException(status_code=422, detail=f"X-Treg-Meta names {key!r} twice")
-        tags[key] = value
-    if len(tags) > budget_policy._META_MAX_KEYS:
-        raise HTTPException(status_code=422, detail=(
-            f"X-Treg-Meta is limited to {budget_policy._META_MAX_KEYS} keys (got {len(tags)})"))
-    for dim, pinned_val in pinned.items():
-        if tags.get(dim, pinned_val) != pinned_val:
-            raise HTTPException(status_code=403, detail=(
-                f"this token is pinned to {dim}={pinned_val!r} and cannot bill {tags[dim]!r}"))
-        tags[dim] = pinned_val
-    return CallMeta(tags=tags, primary_dim=budget_policy._primary_dim_of(caller))
-
-
-def _idempotency_key(request: Request) -> str:
-    """The caller's label for this request, or "" when they sent none.
-
-    Only ever the client's. A server-invented key — hashing the URL and body, say — would silently
-    collapse two calls a caller genuinely MEANT to make twice, and "do this again" is a legitimate
-    thing to ask of an API. No header means today's behaviour exactly: no lookup, no storage.
-    """
-    return (request.headers.get(IDEMPOTENCY_HEADER) or "").strip()[:_IDEM_MAX_KEY]
-
-
-_IDEM_SCOPE_SEP = "\x1f"
-
-
-def _scoped_idempotency_key(key: str, meta: CallMeta) -> str:
-    """The caller's label, PARTITIONED by the primary tag.
-
-    A reselling builder runs every one of their users through one token, so two of them will both
-    reach for `retry-1` — and `IdempotentCall` is unique on (membership_id, key), which would serve
-    the second user the FIRST one's stored response body. That is the cross-tenant leak the table was
-    built to prevent, reappearing one level down.
-
-    Folding the value into the stored key partitions retries exactly as widening the unique constraint
-    would, with no migration: `uq_idem_caller_key` is declared in `__table_args__`, so SQLAlchemy emits
-    it as a table CONSTRAINT inside CREATE TABLE — Postgres could drop it, sqlite could not without
-    rebuilding the table. Every access site keeps querying by (membership_id, key) and simply receives
-    this value.
-
-    Only the PRIMARY dimension partitions. Retry scoping cannot generalize the way budgets do: a call
-    tagged `customer=a, workspace=b` has no principled answer for which of them owns the key.
-    """
-    if not key:
-        return key
-    return f"{meta.primary_val}{_IDEM_SCOPE_SEP}{key}" if meta.primary_val else key
-
-
-def _idem_display(key: str) -> str:
-    """The label as the CALLER wrote it — error messages must not echo our internal scoping."""
-    return key.rsplit(_IDEM_SCOPE_SEP, 1)[-1]
-
-
-def _request_fingerprint(method: str, rest: str, body: bytes, query: str = "") -> str:
-    """What the label was used FOR, so reusing it on a different request can be caught.
-
-    A client that reuses one label for two different requests has a bug. Quietly returning the first
-    answer would hide it, and the caller would be left wondering why their second call returned
-    somebody else's data. Refusing loudly is the useful behaviour, and it is what Stripe does.
-
-    The QUERY STRING is part of the request. It was missing here at first, and since most catalog
-    calls are GETs that carry all their arguments in the query, that made the check almost inert: two
-    genuinely different lookups under one label matched, and the second was answered with the first
-    one's data instead of the 422 this function exists to raise.
-    """
-    h = hashlib.sha256()
-    h.update(method.upper().encode())
-    h.update(b"\0")
-    h.update(rest.encode())
-    h.update(b"\0")
-    h.update((query or "").encode())
-    h.update(b"\0")
-    h.update(body or b"")
-    return h.hexdigest()
-
-
-async def _replay_idempotent(key: str, fingerprint: str, caller: Caller,
-                             db: AsyncSession) -> Response | None:
-    """The stored answer for this caller's label, or None if there is nothing to replay.
-
-    Returns a real response, so the provider is never reached and no money moves. That is the whole
-    point: merely skipping the second CHARGE would still make the second upstream call, which means
-    still paying the provider and simply absorbing the double cost ourselves.
-    """
-    row = (await db.execute(select(IdempotentCall).where(
-        IdempotentCall.membership_id == caller.membership.id,
-        IdempotentCall.key == key))).scalar_one_or_none()
-    if row is None:
-        return None
-    if row.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
-        # Past its window: the label is free again, and the call proceeds normally.
-        await db.delete(row)
-        await db.commit()
-        return None
-    if row.request_fingerprint and row.request_fingerprint != fingerprint:
-        raise HTTPException(status_code=422, detail=(
-            f"Idempotency-Key {_idem_display(key)!r} was already used for a different request. Use a new key, or "
-            f"repeat the original request exactly."))
-    if row.status != "done" or row.response_status is None:
-        # Still in flight. The first call is talking to the provider right now; telling the caller to
-        # retry is honest and cheap, and it is what stops the second one duplicating the spend.
-        raise HTTPException(status_code=409, detail=(
-            f"a call with Idempotency-Key {_idem_display(key)!r} is still in progress — retry shortly"))
-    return Response(
-        content=row.response_body or b"",
-        status_code=row.response_status,
-        media_type=row.response_media_type or "application/json",
-        headers={"X-Treg-Idempotent-Replay": "true",
-                 "X-Treg-Cost-Micro": str(row.charged_micro),
-                 # The ORIGINAL call's id: a retry must resolve to the row that actually holds the
-                 # money, not to a fresh reference for work that never happened.
-                 **({"X-Treg-Call-Id": row.call_ref} if row.call_ref else {})},
-    )
-
-
-async def _release_idempotent_claim(request: Request) -> None:
-    """Drop a claim this request took and never completed, so the label is usable again at once.
-
-    Reads what the handler parked on `request.state`; does nothing when there is no claim, which is
-    every request that sent no key. Never raises: this runs while an error is already being returned.
-    """
-    claim = getattr(request.state, "idem_claim", None)
-    if not claim:
-        return
-    request.state.idem_claim = None
-    membership_id, key = claim
-    try:
-        async with session_maker() as db:
-            row = (await db.execute(select(IdempotentCall).where(
-                IdempotentCall.membership_id == membership_id,
-                IdempotentCall.key == key,
-                IdempotentCall.status == "pending"))).scalar_one_or_none()
-            if row is not None:
-                await db.delete(row)
-                await db.commit()
-    except Exception as exc:  # noqa: BLE001 — an error is already on its way out
-        logging.getLogger("treg.idempotency").error(
-            "could not release idempotency claim %s: %s", key, exc, exc_info=True)
-
-
-async def _claim_idempotent(key: str, fingerprint: str, rest: str, caller: Caller,
-                            db: AsyncSession) -> bool:
-    """Take the label for this caller, or report that somebody else already has it.
-
-    The pending row IS the lock. It goes in before the upstream call, so a concurrent retry loses the
-    insert on `(membership_id, key)` and is told to wait rather than duplicating the spend.
-    """
-    # Sweep this caller's expired labels first. LAZY and caller-scoped, matching the hold reaper in
-    # ledger.py and for the same reasons: a background timer would need a scheduler and a leader
-    # election on a multi-instance deploy, and would still only run on a timer. One indexed DELETE
-    # paid by the caller who benefits from it, and a caller who never calls again leaves rows that
-    # can no longer answer anything, because a replay checks the window before it serves.
-    #
-    # Freeing the label matters as much as reclaiming the space: without this, reusing a label a day
-    # later would hit the old row's unique constraint and be refused rather than starting fresh.
-    await db.execute(delete(IdempotentCall).where(
-        IdempotentCall.membership_id == caller.membership.id,
-        IdempotentCall.expires_at < datetime.now(timezone.utc).replace(tzinfo=None)))
-
-    row = IdempotentCall(
-        org_id=caller.org_id, membership_id=caller.membership.id, key=key,
-        request_fingerprint=fingerprint, endpoint_id=rest[:200], status="pending",
-        expires_at=datetime.now(timezone.utc).replace(tzinfo=None)
-        + timedelta(seconds=IDEMPOTENCY_WINDOW_S))
-    db.add(row)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        return False
-    return True
-
-
-async def _store_idempotent(key: str, caller: Caller, *, status_code: int, body: bytes,
-                            media_type: str, charged_micro: int, metered: bool,
-                            call_ref: str = "") -> None:
-    """Remember a METERED success so a retry can be answered without paying twice.
-
-    Metered only. A team calling on its OWN key is billed by the provider, not by us, so there is
-    nothing to protect and no reason for treg to hold their response. Successes only, because a
-    failure was never billed — replaying one would freeze an error the caller should be free to
-    retry out of.
-
-    Anything else drops the claim, which frees the label immediately rather than making the caller
-    wait out the window before they can try again.
-
-    Never raises: the caller already has their answer, and a bookkeeping failure must not turn a
-    served call into a 500. Its own session, because the request's may be mid-rollback.
-    """
-    keep = metered and 200 <= status_code < 300
-    try:
-        async with session_maker() as db:
-            row = (await db.execute(select(IdempotentCall).where(
-                IdempotentCall.membership_id == caller.membership.id,
-                IdempotentCall.key == key))).scalar_one_or_none()
-            if row is None:
-                return
-            if not keep:
-                await db.delete(row)
-            else:
-                row.status = "done"
-                row.response_status = status_code
-                row.response_body = body
-                row.response_media_type = media_type or "application/json"
-                row.charged_micro = charged_micro
-                row.call_ref = call_ref
-                db.add(row)
-            await db.commit()
-    except Exception as exc:  # noqa: BLE001 — loudly, but never into the caller's response
-        logging.getLogger("treg.idempotency").error(
-            "could not record idempotency key %s: %s", key, exc, exc_info=True)
 
 
 async def _resolve_marketplace_call(
