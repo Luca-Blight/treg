@@ -154,6 +154,22 @@ forbidden_modules = ["fastapi", "starlette"]
 allow_indirect_imports = true
 as_packages = true
 
+[[tool.importlinter.contracts]]
+name = "Call application does not depend on HTTP adapters"
+type = "forbidden"
+source_modules = ["treg.application.call"]
+forbidden_modules = ["treg.api", "treg.bootstrap", "treg.routers", "fastapi", "starlette"]
+allow_indirect_imports = true
+as_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Upstream infrastructure does not depend on HTTP adapters"
+type = "forbidden"
+source_modules = ["treg.infra.upstream"]
+forbidden_modules = ["treg.api", "treg.bootstrap", "treg.routers", "fastapi", "starlette"]
+allow_indirect_imports = true
+as_packages = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 # asyncpg connections are bound to the event loop that created them. The test engine is module-level,

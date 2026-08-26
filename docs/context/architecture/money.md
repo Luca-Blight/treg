@@ -26,6 +26,7 @@ sources:
   - src/treg/routers/call.py
   - src/treg/routers/orgs.py
   - src/treg/routers/referrals.py
+  - tests/test_call_architecture.py
 related:
   - architecture/catalog.md
   - architecture/proxy-model.md
@@ -95,6 +96,13 @@ swallows exceptions, which is right for analytics and fatal for money.
 | `reserve` / `reserve_in_transaction` | balance down by the estimate, `Hold` opened — committed by the compatibility wrapper or the call application |
 | `settle` / `settle_in_transaction` | blocks down by the observed cost, hold closed, difference refunded - committed by the compatibility wrapper or the call application |
 | `release` / `release_in_transaction` | hold closed, balance refunded in full - committed by the compatibility wrapper or the call application |
+
+The call-only `reserve_in_transaction`, `settle_in_transaction`, and `release_in_transaction`
+primitives may stage work but never commit or roll back. `tests/test_call_architecture.py` enforces
+that boundary and pins reserve's exception: its lazy stale-hold sweep calls the public committing
+`release`, so each old refund remains durable even if the new reservation returns 402. Converting
+`grant` and `topup` callers to application-owned transactions is tracked as
+`money-funding-transactions` and is required before Stage 5.
 
 Release metadata distinguishes a failed call from a normal non-billable provider response, and says
 which side failed. A provider that answered 5xx releases as `provider_failed_<status>`; a call treg

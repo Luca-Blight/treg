@@ -64,7 +64,8 @@ callmatrix stream-failure case pins.
 ## Role manifests
 
 Every created app exposes `app.state.role_manifest` with explicit `routes`, `background_tasks`, and
-`startup_checks` lists. `tests/test_app_roles.py` pins all three lists for every role.
+`startup_checks` lists. `tests/test_app_roles.py` pins all three lists for every role, while the call
+architecture test separately pins the dataplane/control startup split and background-task ownership.
 
 | Role | HTTP routes and mounts | Background tasks | Startup checks |
 |---|---|---|---|

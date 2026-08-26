@@ -27,6 +27,8 @@ sources:
   - src/treg/domain/money/__init__.py
   - src/treg/infra/upstream/__init__.py
   - src/treg/infra/upstream/injectors.py
+  - src/treg/infra/upstream/relay.py
+  - tests/test_call_architecture.py
   - tests/test_import_lightness.py
 related:
   - architecture/composition.md
@@ -73,6 +75,11 @@ state, target resolution, marketplace pricing, authorization, reservation, relay
 finalization. The HTTP adapter captures a `CallInput`, translates typed failures, and wraps the returned
 `UpstreamResponse`. Client-name normalization lives in a neutral leaf so the application path does not
 load the Request-aware caller metadata adapter.
+
+Two runtime contracts keep that boundary executable. `treg.application.call` cannot import the legacy
+API, bootstrap, routers, FastAPI, or Starlette. `treg.infra.upstream` cannot import those HTTP adapters
+or frameworks. Direct imports of the application-owned request and response DTOs remain the port shared
+by the use case and relay. Mutation tests inject representative forbidden edges and assert detection.
 
 Two direct edges are precise exceptions. `cli.ensure_proxy_dependency` imports `cryptography` only after
 the user invokes the optional proxy feature and offers to install the proxy extra first.

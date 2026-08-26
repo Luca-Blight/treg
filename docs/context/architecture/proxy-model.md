@@ -29,6 +29,7 @@ sources:
   - tests/test_passthrough.py
   - tests/test_tag_billing.py
   - tests/test_tag_billing_adversarial.py
+  - tests/test_call_architecture.py
 related:
   - architecture/data-model.md
   - architecture/auth-secrets.md
@@ -136,6 +137,13 @@ per instance and shared by every org, so one team's burst stalled everyone's set
 bounds concurrent DB *phases* (milliseconds), not concurrent calls; there is no per-token or per-team
 concurrency limit, and `llms.txt` says so. `tests/test_call_pool_discipline.py` pins the invariant
 (`_engine.pool.checkedout() == 0` at relay time, metered and own-key) and a 20-call burst.
+
+The dataplane's derived writes are an explicit allowlist: an auto-top-up check may create its
+own-session task, public-demo and sandbox live-wire limits may persist ratestore hits, a first
+successful call may enqueue one AdConversion outbox row, and reserve may lazily reap stale holds.
+The main reserve, settle, release, audit, and idempotency writes remain the staged call's synchronous
+bookkeeping. Architecture tests pin every derived-write anchor so adding another requires an explicit
+contract decision.
 
 ## Tool resolution (`application.call.resolve`)
 `* /call/{rest:path}` → `routers.call.call_tool()` → `application.call.service.execute_call()`
