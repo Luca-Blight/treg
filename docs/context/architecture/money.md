@@ -6,6 +6,7 @@ sources:
   - src/treg/models.py
   - src/treg/billing.py
   - src/treg/application/billing.py
+  - src/treg/application/referrals.py
   - src/treg/infra/__init__.py
   - src/treg/infra/stripe.py
   - src/treg/reconcile.py
@@ -714,9 +715,9 @@ A refusal is **recorded, not dropped**, and `capped` is deliberately distinct fr
 nothing" is the ticket this program generates, and the answer has to be on the page.
 
 **No scheduler, as everywhere else.** `sweep()` runs from `billing._credit` (any top-up advances the
-queue) and from `GET /referrals` (someone checking on their reward is the one who makes it land) —
-the same lazy, caller-pays bargain as `reap_stale_holds`. It never raises: its callers are a Stripe
-webhook and a page load, and neither may fail over a bonus.
+queue) and the referral application journey for `GET /referrals` (someone checking on their reward is
+the one who makes it land), following the same lazy, caller-pays bargain as `reap_stale_holds`. It
+never raises: neither its Stripe webhook caller nor its page-load caller may fail over a bonus.
 
 **The referee is told, on the screen where it changes their behaviour.** `offer_for_org` is the
 mirror of `summary`: a team that arrived through a link has a `pending` row and no idea a bonus
