@@ -3198,7 +3198,7 @@ USE_CASE_PAGES["live-crypto-prices-and-history"] = {
         "Give your agent a coin and get its price back as data: the current price in any quote "
         "currency for a whole watchlist in one call, or the price, market cap and volume series "
         "over a day, a month or the coin's whole life. CoinGecko and Tiingo answer through one "
-        "treg.to key, {cheapest}, at the provider's own rate with no markup, and there is no "
+        "treg.to key, from {cheapest} at the provider's own rate with no markup, and there is no "
         "CoinGecko key to paste into a spreadsheet, a dashboard or a device. What comes back is "
         "an aggregate price, not an order book, and it is polled, not streamed."),
     "prompt": "Using treg, get the current price and 24h change for bitcoin, ethereum and solana in "
@@ -3316,7 +3316,7 @@ USE_CASE_PAGES["employee-reviews-of-a-company"] = {
         "Give your agent a company and get its employee reviews back as rows: rating, title, "
         "pros, cons, date and whether the reviewer still works there. Glassdoor closed its "
         "partner API, so the two providers here read the reviews for you, by company website "
-        "or by Glassdoor page URL, {cheapest}, at the provider's own rate with no markup. "
+        "or by Glassdoor page URL, from {cheapest} at the provider's own rate with no markup. "
         "There is no Glassdoor login, no bot wall and no give-to-get review to write first. "
         "What comes back is what Glassdoor shows; nobody here vets the reviewers."),
     "prompt": "Using treg, pull the last 100 employee reviews for canva.com, show me the price "
@@ -3430,8 +3430,8 @@ USE_CASE_PAGES["keywords-a-domain-bids-on"] = {
     "lede": (
         "Give your agent a competitor's domain and get the Google Ads keywords it bids on "
         "back as rows: keyword, search volume, cost per click, estimated monthly spend and who "
-        "else bids on it. SpyFu and Semrush answer through one treg.to key, {cheapest}, at "
-        "the provider's own rate with no markup, priced per row rather than per seat. Both "
+        "else bids on it. SpyFu and Semrush answer through one treg.to key, from {cheapest} "
+        "at the provider's own rate with no markup, priced per row rather than per seat. Both "
         "are estimates built from a crawl of the ads they saw, not Google's own numbers, and "
         "the page says so before the comparison does."),
     "prompt": "Using treg, get the top 200 Google Ads keywords that competitor.com bids on in "
@@ -3543,7 +3543,7 @@ USE_CASE_PAGES["backlink-profile-of-a-domain"] = {
         "Give your agent a domain and get its backlink profile back as one row: total "
         "backlinks, referring domains, follow and nofollow split, the vendor's authority score "
         "and, from some providers, the spam and anchor breakdowns. {n} providers answer through "
-        "one treg.to key, {cheapest}, each at its own rate with no markup and none of them "
+        "one treg.to key, from {cheapest}, each at its own rate with no markup and none of them "
         "behind a monthly plan or a credit reset. Ahrefs is not among them. Every index is that "
         "vendor's own crawl, so the counts differ by design, and the page shows them side by "
         "side rather than picking one."),
@@ -3553,7 +3553,7 @@ USE_CASE_PAGES["backlink-profile-of-a-domain"] = {
               "tell me where the gap is widest.",
     "prompt_why": [
         ("Give bare domains", "Most rows want the domain without scheme or www, and a page URL where you mean a page. Say which, or the agent guesses."),
-        ("One call per domain", "Each provider prices the summary per target, and the dearest per-target row is ten times the cheapest. Four domains is four calls."),
+        ("One call per domain", "Each provider prices the summary per target, and the dearest per-call row is ten times the cheapest. Four domains is four calls."),
         ("Name the score you mean", "Moz DA, Majestic Trust Flow, Semrush Authority Score: each belongs to its vendor and compares only to itself. Ask for one and stick to it."),
         ("Ask for the price first", "treg.to returns the rate before the call, so the agent can say what a thousand expired domains will spend before it starts."),
     ],
@@ -3580,12 +3580,12 @@ USE_CASE_PAGES["backlink-profile-of-a-domain"] = {
         "and DataForSEO's request to $0.024 plus a fraction of a cent per returned row, "
         "metered from a prepaid balance at the provider's rate with $0.000 added. A new "
         "team's free dollar is a few hundred Serpstat summaries.",
-        "Two rows carry no dollar price. Majestic charges one index item unit per target, and "
-        "it is the same command as its URL metrics call, so ask for one and read both sets of "
+        "Two rows are the odd ones. Majestic charges one index item unit per target, and it is "
+        "the same command as its URL metrics call, so ask for one and read both sets of "
         "columns rather than paying twice. Semrush charges 40 API units flat for the overview "
-        "and publishes no dollar rate for a unit, so it runs on your own Semrush plan. Neither "
-        "has been called live through treg.to yet; the other four have, and the measured "
-        "success rates on this page come from that traffic.",
+        "and publishes no dollar rate for a unit, so the page prints no price and it runs on "
+        "your own Semrush plan. Neither has been called live through treg.to yet; the other "
+        "four have, and the measured success rates on this page come from that traffic.",
         "The columns are not the same shape. Moz's call is its URL metrics with distributions "
         "on, which adds histograms by domain authority, spam score and root domains; SE "
         "Ranking's summary is ten times the price of its metrics call and adds the full "
