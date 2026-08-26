@@ -18,6 +18,7 @@ sources:
   - src/treg/application/signup.py
   - src/treg/routers/admin.py
   - src/treg/routers/billing.py
+  - src/treg/routers/call.py
   - src/treg/routers/orgs.py
   - src/treg/routers/referrals.py
 related:
@@ -37,7 +38,7 @@ Two wallets of treg's spend through this machinery, and only these two: **tier-4
 (`TREG_PLATFORM_KEY_*`) and **oauth-billed apps** — providers like X whose upstream bills the app
 owner per use, so even a call on the org's *own* connection spends treg's prepaid credits
 (`MarketplaceCall.billed_oauth`; detection and rates live in
-[auth-secrets](auth-secrets.md)). Both run the same reserve→relay→settle path in `api.py`, share the
+[auth-secrets](auth-secrets.md)). Both run the same reserve→relay→settle path in `routers/call.py`, share the
 fail-closed daily cap, and are distinguished in ledger meta by `tier: platform` vs `tier: oauth`.
 An org's own key/credential on any *other* provider is never metered — there the org's account pays.
 

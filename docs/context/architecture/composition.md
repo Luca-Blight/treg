@@ -3,6 +3,7 @@ title: Application composition and deployment roles
 status: shipped
 sources:
   - src/treg/bootstrap.py
+  - src/treg/bootstrap_handlers.py
   - src/treg/bootstrap_http.py
   - src/treg/application/connect.py
   - src/treg/domain/identity/mcp_oauth.py
@@ -10,6 +11,7 @@ sources:
   - src/treg/routers/admin.py
   - src/treg/routers/auth.py
   - src/treg/routers/billing.py
+  - src/treg/routers/call.py
   - src/treg/routers/connections.py
   - src/treg/routers/onboard.py
   - src/treg/routers/orgs.py
@@ -35,6 +37,10 @@ static mounts, optional MCP mount and lifespan, GET-to-HEAD widening, the OpenAP
 implied HEAD operations, shared HTTP client creation, startup work, shutdown drains, and the Ads
 conversion worker. Registration order is compatibility behavior. The four stage-0 snapshots stay
 byte-identical for `role="all"` unless that composition intentionally changes.
+
+`bootstrap_handlers.py` owns the app-wide pool-saturation and HTTP-exception adapters. The composition
+root supplies the call-specific `_stamp_call_exit` callback from `routers/call.py` before registration;
+the callback owns call ids, refusal classification, audit fallback, and idempotency-label release.
 
 `bootstrap_http.py` owns the app-wide middleware implementations. The middleware stack is
 `_BodyDecodeMiddleware` -> `_SecurityHeadersMiddleware` ->

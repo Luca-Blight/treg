@@ -16,6 +16,7 @@ from sqlmodel import select
 from starlette.requests import Request
 
 from treg import api as A, audit, crypto, ledger, localproxy
+from treg.routers import call as call_routes
 from treg.config import get_settings
 from treg.db import session_maker
 from treg.domain.governance import budgets as budget_policy
@@ -215,7 +216,7 @@ async def test_attack_4_concurrent_prechecks_overshoot_is_bounded_not_exact(
                 all_prechecked.set()
             await asyncio.wait_for(all_prechecked.wait(), timeout=5)
 
-    monkeypatch.setattr(A, "_enforce_tag_budgets", synchronized_precheck)
+    monkeypatch.setattr(call_routes, "_enforce_tag_budgets", synchronized_precheck)
     responses = await asyncio.gather(*(
         clients.get(
             f"/call/{EP}?aweme_id=race-{index}",
@@ -415,7 +416,7 @@ async def test_review_distinct_memberships_never_share_idempotent_bodies(
 
         return StreamingResponse(stream(), status_code=200, media_type="text/plain")
 
-    monkeypatch.setattr(A, "relay", relay_by_token)
+    monkeypatch.setattr(call_routes, "relay", relay_by_token)
     common = {"X-Treg-Meta": "customer=same", "Idempotency-Key": "same-key"}
     first_a = await clients.get(f"/call/{EP}?aweme_id=idem", headers={**common, "X-Treg-Token": token_a})
     first_b = await clients.get(f"/call/{EP}?aweme_id=idem", headers={**common, "X-Treg-Token": token_b})

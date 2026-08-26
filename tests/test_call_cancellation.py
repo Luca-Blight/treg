@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from treg import api as A, ledger
+from treg.routers import call as call_routes
 from treg.api import app
 from treg.db import session_maker
 from treg.models import Hold, IdempotentCall, LedgerEntry
@@ -310,7 +311,7 @@ async def test_cancellation_after_claim_before_reserve_releases_the_label(
         await never_resolve.wait()
         return await original_resolve(*args, **kwargs)
 
-    monkeypatch.setattr(A, "_resolve_call", _blocked_resolve)
+    monkeypatch.setattr(call_routes, "_resolve_call", _blocked_resolve)
     task = asyncio.create_task(clients.get(
         f"/call/{EP}?aweme_id=pre-reserve",
         headers={"Idempotency-Key": key},
@@ -328,7 +329,7 @@ async def test_cancellation_after_claim_before_reserve_releases_the_label(
             await asyncio.gather(task, return_exceptions=True)
 
     assert await _idempotency_claim(key) is None
-    monkeypatch.setattr(A, "_resolve_call", original_resolve)
+    monkeypatch.setattr(call_routes, "_resolve_call", original_resolve)
     retry = await clients.get(
         f"/call/{EP}?aweme_id=pre-reserve",
         headers={"Idempotency-Key": key},
@@ -374,7 +375,7 @@ async def test_cancellation_while_failure_release_is_in_flight_finishes_compensa
             await never_finish_first_release.wait()
         await original_commit(db)
 
-    monkeypatch.setattr(A, "relay", _fail_relay)
+    monkeypatch.setattr(call_routes, "relay", _fail_relay)
     monkeypatch.setattr(ledger, "release", _tag_first_release)
     monkeypatch.setattr(AsyncSession, "commit", _gate_first_release)
     task = asyncio.create_task(clients.get(

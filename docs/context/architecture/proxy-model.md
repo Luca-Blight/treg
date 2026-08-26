@@ -4,6 +4,7 @@ status: shipped
 sources:
   - src/treg/proxy.py
   - src/treg/api.py
+  - src/treg/routers/call.py
 related:
   - architecture/data-model.md
   - architecture/auth-secrets.md

@@ -25,6 +25,7 @@ from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 
 from treg import api as A, audit
+from treg.routers import call as call_routes
 from treg.config import get_settings
 from treg.db import session_maker
 from treg.models import Org
@@ -341,7 +342,7 @@ async def test_malformed_marketplace_call_still_leaves_an_audit_row(clients: Asy
 async def test_released_call_records_charged_zero(clients: AsyncClient, platform_on, monkeypatch):
     """A per_success 4xx releases the hold — the activity feed must show $0.00, not the estimate the
     org was never charged (found live: a tikhub 400 displayed $0.001 of phantom spend)."""
-    monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"detail":"bad id"}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(400, b'{"detail":"bad id"}'))
     assert (await clients.get(f"/call/{EP}?aweme_id=nope")).status_code == 400
     row = await _telemetry(clients)
     assert row["cost_charged_micro"] == 0
@@ -349,7 +350,7 @@ async def test_released_call_records_charged_zero(clients: AsyncClient, platform
 
 
 async def test_settled_call_records_what_was_charged(clients: AsyncClient, platform_on, monkeypatch):
-    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps({"cost": 0.0005}).encode()))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, json.dumps({"cost": 0.0005}).encode()))
     assert (await clients.post(f"/call/{EP_DFS}", json=[{"url": "https://x.co/"}])).status_code == 200
     row = await _telemetry(clients)
     assert row["cost_charged_micro"] == 500 and row["cost_observed_micro"] == 500
@@ -358,7 +359,7 @@ async def test_settled_call_records_what_was_charged(clients: AsyncClient, platf
 async def test_per_result_estimate_reads_a_body_limit(clients: AsyncClient, platform_on, monkeypatch):
     """dataforseo expresses row counts in the JSON body — `[{"limit": 3}]` must scale the reserve,
     not fall back to the 20-row default (which would reserve $2.50/call on a lusha-priced endpoint)."""
-    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps({"cost": 0.00015}).encode()))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, json.dumps({"cost": 0.00015}).encode()))
     await clients.post(f"/call/{EP_DFS}", json=[{"url": "https://x.co/", "limit": 3}])
     row = await _telemetry(clients)
     assert row["cost_estimated_micro"] == 150 * 3
@@ -366,7 +367,7 @@ async def test_per_result_estimate_reads_a_body_limit(clients: AsyncClient, plat
 
 async def test_provider_5xx_releases_the_hold(clients: AsyncClient, platform_on, monkeypatch):
     """An upstream failure is not billable: the balance ends exactly where it started."""
-    monkeypatch.setattr(A, "relay", _fake_relay(503, b'{"error":"upstream is down"}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(503, b'{"error":"upstream is down"}'))
     before = await _balance(clients)
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 503
@@ -376,7 +377,7 @@ async def test_provider_5xx_releases_the_hold(clients: AsyncClient, platform_on,
 
 
 async def test_network_error_releases_the_hold(clients: AsyncClient, platform_on, monkeypatch):
-    monkeypatch.setattr(A, "relay", _fake_relay(200, raises=httpx.ConnectError("no route to host")))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, raises=httpx.ConnectError("no route to host")))
     before = await _balance(clients)
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 502
@@ -387,7 +388,7 @@ async def test_network_error_releases_the_hold(clients: AsyncClient, platform_on
 async def test_per_success_4xx_releases_but_per_call_4xx_settles(clients: AsyncClient, platform_on, monkeypatch):
     """Whether a rejected request costs money is the endpoint's own billing rule (cost.type), not ours:
     under `per_success` the provider produced nothing, under `per_call` it charged for the attempt."""
-    monkeypatch.setattr(A, "relay", _fake_relay(400, b'{"error":"bad aweme_id"}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(400, b'{"error":"bad aweme_id"}'))
     before = await _balance(clients)
     assert (await clients.get(f"/call/{EP}?aweme_id=nope")).status_code == 400
     assert await _balance(clients) == before, "per_success: a rejected request is not billable"
@@ -399,7 +400,7 @@ async def test_per_success_4xx_releases_but_per_call_4xx_settles(clients: AsyncC
 async def test_dataforseo_settles_at_the_cost_it_reports(clients: AsyncClient, platform_on, monkeypatch):
     """DataForSEO puts its own charge on every response — settling against THAT (not our estimate) is
     what keeps the ledger honest when the catalog's price drifts."""
-    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps({"cost": 0.0005, "tasks": []}).encode()))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, json.dumps({"cost": 0.0005, "tasks": []}).encode()))
     before = await _balance(clients)
     r = await clients.post(f"/call/{EP_DFS}", json=[{"url": "https://example.com/"}])
     assert r.status_code == 200, r.text
@@ -433,7 +434,7 @@ async def test_unmetered_call_keeps_the_callers_encoding(clients: AsyncClient):
 async def test_scrapecreators_settles_on_the_credits_it_charged(clients: AsyncClient, platform_on, monkeypatch):
     """ScrapeCreators reports `credits_charged`, not dollars — converted through the SAME credit rate
     `cost_view` prices with, so a 3-credit call costs three times the catalog's per-call figure."""
-    monkeypatch.setattr(A, "relay", _fake_relay(
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(
         200, json.dumps({"success": True, "credits_charged": 3, "credits_remaining": 100}).encode()))
     before = await _balance(clients)
     assert (await clients.get(f"/call/{EP_CALL}?group_id=1")).status_code == 200
@@ -621,14 +622,14 @@ async def test_hunter_zero_result_search_costs_nothing(clients: AsyncClient, pla
     monkeypatch.setenv("TREG_PLATFORM_KEY_HUNTER", "PLATFORM-HUNTER-KEY")
     monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,brightdata,hunter")
     get_settings.cache_clear()
-    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, json.dumps(
         {"data": {"domain": "nobody.example", "emails": []}, "meta": {"results": 0}}).encode()))
     before = await _balance(clients)
     assert (await clients.get("/call/hunter.companies.emails?domain=nobody.example")).status_code == 200
     assert await _balance(clients) == before, "an empty domain search must not move the balance"
     assert (await _telemetry(clients))["cost_observed_micro"] == 0
 
-    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, json.dumps(
         {"data": {"domain": "stripe.com", "emails": [{"value": "a@stripe.com"}]},
          "meta": {"results": 2207}}).encode()))
     assert (await clients.get("/call/hunter.companies.emails?domain=stripe.com&limit=1")).status_code == 200
@@ -643,7 +644,7 @@ async def test_hunter_email_finder_no_match_costs_nothing(clients: AsyncClient, 
     monkeypatch.setenv("TREG_PLATFORM_KEY_HUNTER", "PLATFORM-HUNTER-KEY")
     monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,brightdata,hunter")
     get_settings.cache_clear()
-    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, json.dumps(
         {"data": {"first_name": "Nobody", "last_name": "Here", "email": None, "score": None,
                   "domain": "nobody.example", "sources": []},
          "meta": {"params": {"full_name": "Nobody Here", "domain": "nobody.example"}}}).encode()))
@@ -653,7 +654,7 @@ async def test_hunter_email_finder_no_match_costs_nothing(clients: AsyncClient, 
     assert await _balance(clients) == before, "a miss is free — the balance must not move"
     assert (await _telemetry(clients))["cost_observed_micro"] == 0
 
-    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, json.dumps(
         {"data": {"first_name": "Patrick", "last_name": "Collison", "email": "p@stripe.com",
                   "score": 92, "domain": "stripe.com", "sources": []},
          "meta": {"params": {"full_name": "Patrick Collison", "domain": "stripe.com"}}}).encode()))
@@ -1251,7 +1252,7 @@ def test_the_billability_truth_table():
 async def test_an_upstream_429_releases_the_hold(clients: AsyncClient, platform_on, monkeypatch):
     """End to end: the provider rate-limits, the balance ends exactly where it started, and the
     activity feed shows $0.00 charged."""
-    monkeypatch.setattr(A, "relay", _fake_relay(429, b'{"error":"rate limited"}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(429, b'{"error":"rate limited"}'))
     before = await _balance(clients)
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 429
@@ -1270,7 +1271,7 @@ async def test_a_stale_catalog_method_never_charges_a_per_call_endpoint(
     pricing says ``per_call`` therefore cannot turn its rejection of TREG'S method into team spend.
     Pin the ledger path as well as the classifier: this is real balance, not display arithmetic.
     """
-    monkeypatch.setattr(A, "relay", _fake_relay(405, b'{"error":"method not allowed"}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(405, b'{"error":"method not allowed"}'))
     before = await _balance(clients)
     r = await clients.get(f"/call/{EP_CALL}?group_id=1")
     assert r.status_code == 405
@@ -1311,7 +1312,7 @@ def trial_on(monkeypatch):
 
 async def test_a_trial_call_is_served_keyless_and_charges_NOTHING(clients: AsyncClient, trial_on,
                                                                   monkeypatch):
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"c": 231.5, "pc": 230.1}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, b'{"c": 231.5, "pc": 230.1}'))
     before = await _balance(clients)
     r = await clients.get("/call/finnhub.quote?symbol=AAPL")
     assert r.status_code == 200, r.text
@@ -1333,7 +1334,7 @@ async def test_the_trial_allowance_bites_at_the_fx_number(clients: AsyncClient, 
             db.add(CallRecord(org_id=1, user_email="u@example.com", tool_name="finnhub.quote",
                               method="GET", path="/quote", status_code=502))
         await db.commit()
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"c": 1}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, b'{"c": 1}'))
     before = await _balance(clients)
     r = await clients.get("/call/finnhub.quote?symbol=AAPL")
     assert r.status_code == 429, r.text
@@ -1351,7 +1352,7 @@ async def test_failures_alone_never_exhaust_a_trial(clients: AsyncClient, trial_
             db.add(CallRecord(org_id=1, user_email="u@example.com", tool_name="finnhub.quote",
                               method="GET", path="/quote", status_code=429))
         await db.commit()
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"c": 1}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, b'{"c": 1}'))
     assert (await clients.get("/call/finnhub.quote?symbol=AAPL")).status_code == 200
 
 
@@ -1369,7 +1370,7 @@ async def test_another_orgs_usage_never_burns_MY_trial(clients: AsyncClient, tri
                               tool_name="finnhub.quote", method="GET", path="/quote",
                               status_code=200))
         await db.commit()
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"c": 1}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, b'{"c": 1}'))
     assert (await clients.get("/call/finnhub.quote?symbol=AAPL")).status_code == 200
 
 
@@ -1451,7 +1452,7 @@ async def test_a_formerly_free_x_route_now_debits_the_balance(clients: AsyncClie
     """`x.x.get-users-muting` is one of the 168 extended routes that used to publish `free`. X's card
     prices a Mute read at $0.001 per resource, so one muted account back costs exactly that."""
     await _connect_x(clients)
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"data": [{"id": "1"}]}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, b'{"data": [{"id": "1"}]}'))
     before = await _balance(clients)
     r = await clients.get("/call/x.x.get-users-muting?id=44196397")
     assert r.status_code == 200, r.text
@@ -1487,7 +1488,7 @@ async def test_a_user_lookup_settles_per_user_returned(clients: AsyncClient, x_b
     """`per_result` settles against the RESPONSE, so the published $0.010/user is what each returned
     user costs — three users back is $0.030, not the reserve for a full page."""
     await _connect_x(clients)
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"data": [{"id":"1"},{"id":"2"},{"id":"3"}]}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, b'{"data": [{"id":"1"},{"id":"2"},{"id":"3"}]}'))
     before = await _balance(clients)
     r = await clients.get("/call/x.x.get-users-by-ids?ids=1,2,3")
     assert r.status_code == 200, r.text
@@ -1507,7 +1508,7 @@ async def test_a_byo_x_connection_is_never_metered(clients: AsyncClient, x_bille
         db.add(Secret(org_id=org_id, name="x", kind="oauth", provider="",
                       value=crypto.encrypt(_json.dumps({"access_token": "byo-tok"}))))
         await db.commit()
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"data": [{"id": "1"}]}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, b'{"data": [{"id": "1"}]}'))
     before = await _balance(clients)
     r = await clients.get("/call/x.x.get-webhooks")
     assert r.status_code == 200, r.text
@@ -1552,7 +1553,7 @@ async def test_brightdata_sync_scrape_settles_per_record_through_the_ledger(
     the settle counts the response, the hold's 1-record estimate is an overrun, and the ledger
     charges what was delivered ($13.61-vs-$0.35 incident, 2026-08-24)."""
     records = [{"url": f"https://x/{i}", "title": f"r{i}"} for i in range(5)]
-    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(records).encode()))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, json.dumps(records).encode()))
     before = await _balance(clients)
     r = await clients.post("/call/brightdata.web.scrape.structured?dataset_id=gd_x",
                            json=[{"url": "https://x/0"}])
@@ -1566,7 +1567,7 @@ async def test_brightdata_sync_timeout_202_charges_nothing(
     """The >60s sync fallback answers 202 + snapshot_id: zero records delivered HERE, so the hold
     releases to a zero charge — the records bill when the snapshot is downloaded. Before the fix
     this billed the estimate while the job kept running (and billing) upstream."""
-    monkeypatch.setattr(A, "relay", _fake_relay(202, b'{"snapshot_id": "sd_test123"}'))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(202, b'{"snapshot_id": "sd_test123"}'))
     before = await _balance(clients)
     r = await clients.post("/call/brightdata.web.scrape.structured?dataset_id=gd_x",
                            json=[{"url": "https://x/0"}])
@@ -1580,7 +1581,7 @@ async def test_brightdata_snapshot_download_bills_the_jobs_records(
     """The async job's records bill at the snapshot download — the endpoint that was cataloged
     `free` while $9.09 of Google Play reviews rode through it unbilled."""
     records = [{"review": f"r{i}"} for i in range(40)]
-    monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps(records).encode()))
+    monkeypatch.setattr(call_routes, "relay", _fake_relay(200, json.dumps(records).encode()))
     before = await _balance(clients)
     r = await clients.get("/call/brightdata.web.scrape.job.results"
                           "?snapshot_id=sd_test123&format=json")

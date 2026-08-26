@@ -4,6 +4,7 @@ status: shipped
 sources:
   - src/treg/web/sitetrack.js
   - src/treg/api.py
+  - src/treg/bootstrap_handlers.py
   - src/treg/bootstrap_http.py
   - src/treg/caller_metadata.py
   - src/treg/application/auth.py
@@ -16,6 +17,7 @@ sources:
   - src/treg/routers/auth.py
   - src/treg/routers/auth_helpers.py
   - src/treg/routers/billing.py
+  - src/treg/routers/call.py
   - src/treg/routers/catalog.py
   - src/treg/routers/connections.py
   - src/treg/routers/onboard.py
@@ -72,7 +74,7 @@ middleware skips decoding and replays each consumed partial-body message followe
 disconnect.
 
 ## `X-Treg-Error` — whose refusal is this?
-`_mark_treg_own_errors` (an `@app.exception_handler(StarletteHTTPException)`) tags treg's **own**
+`bootstrap_handlers._mark_treg_own_errors` tags treg's **own**
 refusals on `/call/` paths with `X-Treg-Error: 1`, then answers exactly as before — the status and body
 are untouched, and a client that ignores the header sees what it always saw. Without it a caller cannot
 tell treg's 404 ("no tool registered for that host") from the vendor's own 404: both are a status and
@@ -578,7 +580,7 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
 - **Health:** `run_health` (`POST /health/run`) → `health.run_all`; `get_health` (`GET /health`) now
   returns `health._view(s)` plus a `needs_reconnect` flag (`health.needs_reconnect`) so a credential treg
   can't renew announces itself before it dies.
-- **The proxy:** `call_tool` (`* /call/{rest:path}`) → `_resolve_call` → (on a dotted 404,
+- **The proxy:** `routers.call.call_tool` (`* /call/{rest:path}`) → `_resolve_call` → (on a dotted 404,
   catalog lookup + retirement gate + credential ladder) → `_enforce_daily_cap` (the
   per-user daily cap; 429 when over) → (public-demo token → `_enforce_public_demo_ip_cap`) → load secrets
   (+ `ensure_fresh`) → **`db.commit()` — the DB phase ends here; a call in flight holds no pooled
