@@ -4,6 +4,8 @@ status: shipped
 sources:
   - src/treg/sandbox.py
   - src/treg/pubfeed.py
+  - src/treg/application/onboard/pubfeed.py
+  - src/treg/application/onboard/sandbox.py
   - src/treg/api.py
   - src/treg/routers/onboard.py
   - src/treg/routers/web.py
@@ -25,9 +27,10 @@ related:
 
 The logged-out SPA is not a login box — it's a **landing page with a live, no-login sandbox
 studio** (the `v-if="!authed"` branch of `index.html`, `.lp` container). A visitor builds a real
-mini-registry in the browser and keeps using it from their terminal, all without an account. The
-engine is `src/treg/sandbox.py` plus the landing routes in `routers/onboard.py`; the front-end drives it with `sbx*`
-Vue methods (`sbxInit`/`startSandbox`/`refreshSandbox`/`sbxAddSecret`/`sbxAddTool`/`runTool`).
+mini-registry in the browser and keeps using it from their terminal, all without an account.
+Provisioning, export, samples, and garbage collection live in `application/onboard/sandbox.py`;
+the call-side sandbox engine remains in `sandbox.py`. The routes in `routers/onboard.py` drive them
+from the front-end's `sbx*` Vue methods.
 
 ## The throwaway team (`sandbox.py`)
 `mint(db)` creates a login-free team: a `visitor-<hex>@sandbox.treg.local` `User` (can never sign in),
@@ -92,8 +95,8 @@ for a reused sandbox (the browser keeps one across reloads via `localStorage`, s
 carried these facts). The front-end live pane (`liveSnippets`, the `SBX` state) shows the visitor a copyable
 `curl` that hits their OWN sandbox token.
 
-## The public payments feed (`pubfeed.py`)
-`pubfeed.py` is the landing page's **live payments ticker**: a stranger's live-wire charge appears on the
+## The public payments feed (`application/onboard/pubfeed.py`)
+The feed is the landing page's **live payments ticker**: a stranger's live-wire charge appears on the
 page within seconds, no refresh, as skeptic-proof that the proxy really injected a real key. The path:
 visitor `curl` → live wire relays a Stripe test charge → Stripe fires `charge.succeeded` at
 `POST /stripe/webhook` (`stripe_webhook`) → `pubfeed.push_charge(...)` → `GET /landing/stripe-feed`

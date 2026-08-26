@@ -1,12 +1,22 @@
 """First-run onboarding journeys and their transaction boundaries."""
 
+import sys
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import demo as demo_seed
-from ..db import session_maker
-from ..domain.identity.access import _norm_email
-from ..models import Invite, Org, User
+from ... import crypto as _crypto
+from ... import models as _models
+from ...db import session_maker
+from ...domain.identity.access import _norm_email
+from ...models import Invite, Org, User
+
+
+# These aliases preserve demo.reset's relative model import; without them the package move breaks resolution.
+sys.modules.setdefault(__name__ + ".crypto", _crypto)
+sys.modules.setdefault(__name__ + ".models", _models)
+
+from . import demo as demo_seed
 
 
 class OnboardError(Exception):

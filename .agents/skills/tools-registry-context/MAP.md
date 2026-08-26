@@ -43,7 +43,11 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/application/__init__.py` | architecture/import-boundaries.md |
 | `src/treg/application/auth.py` | architecture/data-model.md, architecture/mcp-oauth.md, architecture/multi-tenancy.md, interface/api.md, interface/onboarding.md |
 | `src/treg/application/connect.py` | architecture/auth-secrets.md, architecture/composition.md, guides/expanding-a-category.md, interface/api.md |
-| `src/treg/application/onboard.py` | interface/api.md, interface/onboarding.md |
+| `src/treg/application/onboard.py` | interface/api.md |
+| `src/treg/application/onboard/__init__.py` | interface/onboarding.md |
+| `src/treg/application/onboard/demo.py` | interface/onboarding.md |
+| `src/treg/application/onboard/pubfeed.py` | interface/landing-sandbox.md |
+| `src/treg/application/onboard/sandbox.py` | interface/landing-sandbox.md |
 | `src/treg/application/signup.py` | architecture/ads-conversions.md, architecture/money.md, architecture/multi-tenancy.md, interface/api.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
@@ -185,8 +189,8 @@ Regenerate via `scripts/build-map.py`.
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
 | `interface/dashboard.md` | `sitetrack.js`, `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `web.py`, `session.py`, `session.py` |
 | `interface/env-import.md` | `providers.py`, `skills.py` |
-| `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `onboard.py`, `web.py`, `index.html`, `install.sh` |
-| `interface/onboarding.md` | `auth.py`, `onboard.py`, `demo.py`, `cli.py`, `auth.py`, `onboard.py`, `index.html` |
+| `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `pubfeed.py`, `sandbox.py`, `api.py`, `onboard.py`, `web.py`, `index.html`, `install.sh` |
+| `interface/onboarding.md` | `auth.py`, `__init__.py`, `demo.py`, `demo.py`, `cli.py`, `auth.py`, `onboard.py`, `index.html` |
 | `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `web.py`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |

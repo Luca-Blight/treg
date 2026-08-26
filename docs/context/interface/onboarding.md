@@ -3,7 +3,8 @@ title: Onboarding — the first-run demo team (dashboard + CLI)
 status: shipped
 sources:
   - src/treg/application/auth.py
-  - src/treg/application/onboard.py
+  - src/treg/application/onboard/__init__.py
+  - src/treg/application/onboard/demo.py
   - src/treg/demo.py
   - src/treg/cli.py
   - src/treg/routers/auth.py
@@ -22,7 +23,7 @@ A brand-new user's fastest path to *believing* treg ("call a real API with no ke
 is to **do it** on a team that's already alive. So onboarding hands them a **team they own**,
 seeded with teammates, a working tool, and a real audit trail — one backend brain, two faces.
 
-## The one brain — `src/treg/demo.py`
+## The one brain - `src/treg/application/onboard/demo.py`
 
 `provision(db, owner, team_name)` seeds a REAL org owned by the caller, marked `Org.demo=True`:
 
