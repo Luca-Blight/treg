@@ -431,7 +431,12 @@ The data lives in `agent_pages.WORKFLOWS`, one dict per slug: `steps` are
 CSV path. **The receipt and the CSV are hand-recorded from a real run and dated** — the page
 prints them verbatim and computes nothing from them; only the per-step prices are live. The CSV is
 shipped in the package at `src/treg/workflow_runs/<slug>.csv` and served at
-`/workflows/<slug>.csv` (404 when the file is missing). The rule: **a workflow page is not written
+`/workflows/<slug>.csv` (404 when the file is missing). The published CSV carries **row-level
+outcomes only** (`person_found`, the finder, the verdict, catch-all, news) — never a name, title
+or address: these are real people and a title at a named company identifies one. A spec's `once`
+tuple names the endpoints called once per run rather than once per row (Apollo's list page); the
+"at the rates above" total and the hub's per-row price read it, so the list step is 1 × its price.
+The rule: **a workflow page is not written
 without a real run behind it.** A page whose receipt is a rate card is the thing this page type
 exists to not be.
 

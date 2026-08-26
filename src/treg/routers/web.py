@@ -1440,7 +1440,10 @@ async def workflow_page(request: Request, slug: str, db: AsyncSession = Depends(
     n_steps = len(steps)
     n_prov = len({s["provider"] for s in steps})
     rows_in = int(run.get("rows_in") or 0)
-    worst = sum((s["usd"] or 0) * rows_in for s in steps)
+    once = set(spec.get("once") or ())
+    for s in steps:  # how many times the step's endpoint is called on a full-hit run
+        s["calls"] = 1 if s["ep_id"] in once else rows_in
+    worst = sum((s["usd"] or 0) * s["calls"] for s in steps)
     setup = agent_pages.SETUP_LINE.format(base=base)
 
     def money(x):
@@ -1540,7 +1543,7 @@ async def workflow_page(request: Request, slug: str, db: AsyncSession = Depends(
                    '<th>#</th><th>Step</th><th>What the agent asks</th><th>Provider used</th><th>Price</th><th>Success rate</th>'
                    f'</tr></thead><tbody>{step_rows}</tbody></table></div>'
                    f'<div class="wftotal">At the rates above, {rows_in} rows where every call hits comes to <b>${worst:,.2f}</b>'
-                   f'<span style="color:var(--muted)"> ({" + ".join(f"{rows_in} &times; {_esc_html(money(s["usd"]))}" for s in steps if s["usd"])}). '
+                   f'<span style="color:var(--muted)"> ({" + ".join(f"{s["calls"]} &times; {_esc_html(money(s["usd"]))}" for s in steps if s["usd"])}). '
                    'The receipt below is what it actually cost.</span></div>')
 
     receipt = "".join(f'<dt>{_esc_html(k)}</dt><dd>{_esc_html(v)}</dd>' for k, v in run["receipt"])
@@ -1633,7 +1636,10 @@ async def workflows_hub(db: AsyncSession = Depends(get_session)):
     cards = []
     for slug, spec in agent_pages.WORKFLOWS.items():
         steps = await _wf_steps(cat, db, spec, agent_slug)
-        per_row = sum(s["usd"] or 0 for s in steps)
+        # Per row: a once-per-run step (the list page) is spread over the run's rows.
+        rows_in = int(spec["run"].get("rows_in") or 0) or 1
+        once = set(spec.get("once") or ())
+        per_row = sum(((s["usd"] or 0) / rows_in) if s["ep_id"] in once else (s["usd"] or 0) for s in steps)
         n = len(steps)
         meta = f"{n} steps &middot; from {_esc_html(_usd_short(per_row))} per row" if per_row else f"{n} steps"
         blurb = spec["lede"].format(n=n, steps=n)

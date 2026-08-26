@@ -516,7 +516,9 @@ async def test_workflow_page_is_served_with_the_crawler_essentials(clients: Asyn
     assert md.text.rstrip().endswith(f"HTML version: {_base()}{WORKFLOW}")
     csv = await clients.get(WORKFLOW + ".csv")
     assert csv.status_code == 200 and csv.headers["content-type"].startswith("text/csv")
-    assert csv.text.startswith("company,domain,person,title,email")
+    assert csv.text.startswith("company,domain,person_found,email_source,verify")
+    # Real people: the published copy carries outcomes per row, never a name, title or address.
+    assert "@" not in csv.text and "person,title,email" not in csv.text
     hub = await clients.get("/workflows")
     assert hub.status_code == 200 and f'href="{WORKFLOW}"' in hub.text
     loud = "/workflows/" + WORKFLOW.rsplit("/", 1)[1].upper()
@@ -581,6 +583,15 @@ def _walk_strings(x):
     elif isinstance(x, (list, tuple)):
         for v in x:
             yield from _walk_strings(v)
+
+
+async def test_workflow_total_counts_a_once_per_run_step_once(clients: AsyncClient):
+    """The list step is one Apollo page for the whole run, not one call per row. The worst-case
+    total must say 1 × its price, or the receipt's 'why it differs' blames misses for arithmetic."""
+    html = (await clients.get(WORKFLOW)).text
+    spec = agent_pages.WORKFLOWS["find-and-verify-a-lead-list"]
+    assert spec["once"] == ("apollo.companies.search",)
+    assert "1 &times; $0.026" in html and "50 &times; $0.026" not in html
 
 
 def test_workflow_copy_has_no_em_dashes():

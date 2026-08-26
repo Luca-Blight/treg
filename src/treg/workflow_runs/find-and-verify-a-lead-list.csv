@@ -1,51 +1,51 @@
-company,domain,person,title,email,email_source,verify,catch_all,latest_news,note
-Apty,apty.ai,Sandeep R.,Marketing Director,s****************@apty.ai,tomba,valid,false,,
-Avoma,avoma.com,Erin H.,Director of Marketing,e**********@avoma.com,tomba,valid,false,integrates with (2025-03-29),
-Blavity Inc.,blavityinc.com,Courtney N.,"Director, Content Marketing & Live Events",c************@blavityinc.com,tomba,valid,false,launches (2025-12-15),
-COGNNA,cognna.com,Haidy H.,Marketing Manager,h******@cognna.com,tomba,valid,false,integrates with (2026-01-25),
-Conversion,conversion.ai,Kyle W.,Head of Growth,k***@conversion.ai,tomba,valid,false,receives financing (2025-07-31),
-Cranium AI,cranium.ai,Thomas C.,Marketing and Sales Operations Manager,t******@cranium.ai,tomba,valid,false,partners with (2026-05-21),
-DiligenceVault,diligencevault.com,Jacqueline B.,Head of Marketing,j*********@diligencevault.com,hunter,valid,false,launches (2026-07-28),
-Efficient Capital Labs,ecaplabs.com,Neha S.,Head of Marketing,n**********@ecaplabs.com,hunter,valid,false,launches (2026-03-17),
-Elucidata,elucidata.io,Milan G.,"Associate Director, Product & Growth",m**********@elucidata.io,tomba,valid,false,is developing (2026-01-23),
-Eqvista,eqvista.com,Jakub V.,Marketing Director,j****@eqvista.com,hunter,valid,false,identified as competitor of (2026-07-17),
-FLORA,flora.ai,Megha N.,"VP, Marketing",m****@flora.ai,tomba,valid,false,identified as competitor of (2026-02-14),
-FlutterFlow,flutterflow.io,Ashley T.,Head of Marketing,a*****@flutterflow.io,tomba,valid,false,launches (2026-07-29),
-LiveSwitch,liveswitch.com,Ethan M.,Marketing and Product Manager,e*********@liveswitch.com,tomba,valid,false,promotes (2026-08-13),
-LlamaIndex,llamaindex.ai,Murtaza K.,Vice President Marketing,m******@llamaindex.ai,tomba,valid,false,integrates with (2026-08-11),
-Loop AI,loopai.com,Casey H.,Founding Director of Restaurant Growth,c****@loopai.com,tomba,valid,false,invests into (2026-02-04),
-Lucidity,lucidity.cloud,Raj D.,"VP, Head of Marketing",r*******@lucidity.cloud,tomba,valid,false,launches (2026-08-21),
-OpenArt AI,openart.ai,Stella G.,Head of Growth & Operations,s*****@openart.ai,hunter,valid,false,identified as competitor of (2026-08-09),
-Passion.io,passion.io,Oliver C.,Head of Performance Marketing,o*****@passion.io,tomba,valid,false,launches (2022-11-01),
-PaxeraHealth,paxerahealth.com,Yasmine F.,Marketing Manager,y***********@paxerahealth.com,tomba,valid,false,integrates with (2026-06-10),
-RepeatMD,repeatmd.com,Thomas S.,Head of Marketing,t****@repeatmd.com,hunter,valid,false,launches (2025-10-23),
-rePurpose Global,repurpose.global,Richard G.,Associate Director of Growth,r******@repurpose.global,tomba,valid,false,partners with (2026-08-24),
-Reveal HealthTech,revealhealthtech.com,Preeti M.,Head of Marketing & Client Solutioning,p**********@revealhealthtech.com,hunter,valid,false,invests into (2025-09-04),
-Sauce,getsauce.com,Elliot H.,VP of Marketing,e*********@getsauce.com,tomba,valid,false,launches (2026-05-14),
-Shipday,shipday.com,Neamul A.,Head of Global Marketing,m**********@shipday.com,tomba,valid,false,,
-Spendflo,spendflo.com,Nivas R.,Head of Marketing,n****@spendflo.com,tomba,valid,false,launches (2026-05-13),
-SuperAGI,superagi.com,Vansh A.,Marketing Manager,v***********@superagi.com,tomba,valid,false,launches (2026-01-18),
-TrueFan AI,truefan.ai,Shashank P.,Director of Growth,s*******@truefan.ai,tomba,valid,false,invests into (2026-06-04),
-AdPushup,adpushup.com,Bodhisatwa S.,Head of Marketing,b***************@adpushup.com,hunter,invalid,false,integrates with (2025-10-01),
-Borneo (Acquired by Atlassian),borneo.io,Andrea C.,Marketing Manager,a*****@borneo.io,hunter,invalid,false,acquires (2025-07-02),
-Goldcast,goldcast.io,Zaurin T.,Head of Marketing,z*****@goldcast.io,tomba,invalid,false,acquires (2025-12-15),
-Process Street,process.st,Michael D.,VP of Product & Growth,m******@process.st,hunter,invalid,false,launches (2026-08-10),
-Clari Groove,,,,,,,,,no domain on the Apollo row
-Conduit,conduitpay.com,,,,,,,,no matching person at either provider
-Convo,convo.com,Abdur R.,Head of Marketing,,,,,,no email found by either finder
-ElectroNeek,electroneek.com,Martha K.,Head of Marketing,,,,,,no email found by either finder
-Ema,ema.ai,,,,,,,,no matching person at either provider
-Files.com,files.com,Tom S.,Head of Marketing,,,,,,no email found by either finder
-FinancialForce,,,,,,,,,no domain on the Apollo row
-Fireflies.ai,fireflies.ai,,,,,,,,no matching person at either provider
-Hyperbots Inc.,hyperbots.com,,,,,,,,no matching person at either provider
-inFeedo AI,infeedo.ai,Nishchal D.,VP of Marketing,,,,,,no email found by either finder
-Lavender 💜🔮,lavender.ai,Mathew,Head of Marketing,,,,,,no email found by either finder
-Legal.io,legal.io,Varun U.,Head of Marketing,,,,,,no email found by either finder
-Lingopal,lingopal.ai,Daniely A.,Marketing and Growth Manager,,,,,,no email found by either finder
-procol ai,procol.in,,,,,,,,no matching person at either provider
-Redrob,redrob.io,Ratin S.,Head of Marketing,,,,,,no email found by either finder
-"Slintel, a 6sense company",,,,,,,,,no domain on the Apollo row
-StackAI,stackai.com,,,,,,,,no matching person at either provider
-TestFit,testfit.io,,,,,,,,no matching person at either provider
-Trekea Mobile,fieldlogs.com,Ankita G.,Head of Marketing,,,,,,no email found by either finder
+company,domain,person_found,email_source,verify,catch_all,latest_news,note
+Apty,apty.ai,yes,tomba,valid,false,,
+Avoma,avoma.com,yes,tomba,valid,false,integrates with (2025-03-29),
+Blavity Inc.,blavityinc.com,yes,tomba,valid,false,launches (2025-12-15),
+COGNNA,cognna.com,yes,tomba,valid,false,integrates with (2026-01-25),
+Conversion,conversion.ai,yes,tomba,valid,false,receives financing (2025-07-31),
+Cranium AI,cranium.ai,yes,tomba,valid,false,partners with (2026-05-21),
+DiligenceVault,diligencevault.com,yes,hunter,valid,false,launches (2026-07-28),
+Efficient Capital Labs,ecaplabs.com,yes,hunter,valid,false,launches (2026-03-17),
+Elucidata,elucidata.io,yes,tomba,valid,false,is developing (2026-01-23),
+Eqvista,eqvista.com,yes,hunter,valid,false,identified as competitor of (2026-07-17),
+FLORA,flora.ai,yes,tomba,valid,false,identified as competitor of (2026-02-14),
+FlutterFlow,flutterflow.io,yes,tomba,valid,false,launches (2026-07-29),
+LiveSwitch,liveswitch.com,yes,tomba,valid,false,promotes (2026-08-13),
+LlamaIndex,llamaindex.ai,yes,tomba,valid,false,integrates with (2026-08-11),
+Loop AI,loopai.com,yes,tomba,valid,false,invests into (2026-02-04),
+Lucidity,lucidity.cloud,yes,tomba,valid,false,launches (2026-08-21),
+OpenArt AI,openart.ai,yes,hunter,valid,false,identified as competitor of (2026-08-09),
+Passion.io,passion.io,yes,tomba,valid,false,launches (2022-11-01),
+PaxeraHealth,paxerahealth.com,yes,tomba,valid,false,integrates with (2026-06-10),
+RepeatMD,repeatmd.com,yes,hunter,valid,false,launches (2025-10-23),
+rePurpose Global,repurpose.global,yes,tomba,valid,false,partners with (2026-08-24),
+Reveal HealthTech,revealhealthtech.com,yes,hunter,valid,false,invests into (2025-09-04),
+Sauce,getsauce.com,yes,tomba,valid,false,launches (2026-05-14),
+Shipday,shipday.com,yes,tomba,valid,false,,
+Spendflo,spendflo.com,yes,tomba,valid,false,launches (2026-05-13),
+SuperAGI,superagi.com,yes,tomba,valid,false,launches (2026-01-18),
+TrueFan AI,truefan.ai,yes,tomba,valid,false,invests into (2026-06-04),
+AdPushup,adpushup.com,yes,hunter,invalid,false,integrates with (2025-10-01),
+Borneo (Acquired by Atlassian),borneo.io,yes,hunter,invalid,false,acquires (2025-07-02),
+Goldcast,goldcast.io,yes,tomba,invalid,false,acquires (2025-12-15),
+Process Street,process.st,yes,hunter,invalid,false,launches (2026-08-10),
+Clari Groove,,no,,,,,no domain on the Apollo row
+Conduit,conduitpay.com,no,,,,,no matching person at either provider
+Convo,convo.com,yes,,,,,no email found by either finder
+ElectroNeek,electroneek.com,yes,,,,,no email found by either finder
+Ema,ema.ai,no,,,,,no matching person at either provider
+Files.com,files.com,yes,,,,,no email found by either finder
+FinancialForce,,no,,,,,no domain on the Apollo row
+Fireflies.ai,fireflies.ai,no,,,,,no matching person at either provider
+Hyperbots Inc.,hyperbots.com,no,,,,,no matching person at either provider
+inFeedo AI,infeedo.ai,yes,,,,,no email found by either finder
+Lavender 💜🔮,lavender.ai,yes,,,,,no email found by either finder
+Legal.io,legal.io,yes,,,,,no email found by either finder
+Lingopal,lingopal.ai,yes,,,,,no email found by either finder
+procol ai,procol.in,no,,,,,no matching person at either provider
+Redrob,redrob.io,yes,,,,,no email found by either finder
+"Slintel, a 6sense company",,no,,,,,no domain on the Apollo row
+StackAI,stackai.com,no,,,,,no matching person at either provider
+TestFit,testfit.io,no,,,,,no matching person at either provider
+Trekea Mobile,fieldlogs.com,yes,,,,,no email found by either finder

@@ -3218,6 +3218,11 @@ WORKFLOWS["find-and-verify-a-lead-list"] = {
         ("Only bill on a hit", "Most email finders' rate cards charge nothing for a miss. Say so and the agent picks one."),
         ("Deliverable first", "Verification sorts the list into send, do not send, and unknown. Ask for that order."),
     ],
+    # Steps whose endpoint is called ONCE per run rather than once per row. The list step is one
+    # page for all 50 companies (Apollo bills per page); everything after it runs per row. The
+    # "at the rates above" total and the hub's per-row price both read this — without it the page
+    # charged 50 × the list price and blamed misses for a gap that was mostly its own arithmetic.
+    "once": ("apollo.companies.search",),
     # Each step: (name, capability id, the line the agent effectively asks, the endpoint the worked run used, one-line why)
     "steps": [
         ("Build the company list", "companies.search",
@@ -3299,7 +3304,7 @@ WORKFLOWS["find-and-verify-a-lead-list"] = {
         ("Does treg.to pick the providers?",
          "No. treg.to shows the agent every provider for each step with its price and measured success rate; the agent picks, or you tell it which one. There is no automatic failover."),
         ("What comes back at the end?",
-         "A CSV with company, domain, person, title, email, which provider found it, the verifier's verdict, whether the domain is catch-all, and the latest news event. The one from the run on this page is linked above with the names shortened and the addresses masked, because these are real people; your own run returns them in full."),
+         "A CSV with company, domain, person, title, email, which provider found it, the verifier's verdict, whether the domain is catch-all, and the latest news event. The one from the run on this page is linked above with the person, title and email columns removed, because these are real people and a title at a named company is enough to identify one; the row-level outcomes are what the numbers on this page come from. Your own run returns every column."),
     ],
     "related": ("Find professional emails", "Verify an email before you send",
                 "Find people by role, company or location", "Build a company list by industry, size or tech"),
