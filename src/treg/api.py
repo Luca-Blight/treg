@@ -289,6 +289,29 @@ from .routers.connections import (
     set_extra_credential,
 )
 from .domain.governance.teams import _make_org_membership, _slugify, _unique_slug
+from .domain.governance import publicdemo as publicdemo_policy
+from .domain.governance.access import (
+    _project_allowed,
+    _require_tool_access,
+    _require_tool_use,
+    _tool_allowed,
+    _tool_usable,
+)
+from .domain.governance.budgets import (
+    DEFAULT_PRIMARY_DIM,
+    _META_MAX_KEYS,
+    _budget_dims_of,
+    _effective_daily_cap,
+    _primary_dim_of,
+    _tag_budget,
+    _validate_tag_pair,
+)
+from .domain.governance.publicdemo import (
+    PUBLIC_DEMO_HIT_NS,
+    PUBLIC_DEMO_RATE_MAX,
+    PUBLIC_DEMO_RATE_WINDOW_S,
+    _enforce_public_demo_ip_cap,
+)
 from .routers import orgs as org_routes
 from .routers.orgs import (
     INVITE_TTL_DAYS,
@@ -441,6 +464,10 @@ from .routers.signup_cookies import (
     _remember_referral,
     _take_referral,
 )
+
+# The limiter body stays byte-identical in the A move; the request adapter is removed in c3.
+publicdemo_policy._client_ip = _client_ip
+
 from .routers import web as web_routes
 from .routers.web import (
     LOCAL_USER_EMAIL,
@@ -791,58 +818,6 @@ router.routes.extend(auth_routes.token_router.routes)
 
 
 
-def _tool_allowed(caller: Caller, tool_name: str) -> bool:
-    """Per-member tool ACL: allowed if the member's `tool_access` is unset (NULL = ALL tools) or names
-    this tool. The OWNER is never restricted (the org's authority); admins/members can be."""
-    if caller.role == "owner":
-        return True
-    access = caller.membership.tool_access
-    return access is None or tool_name in access
-
-
-def _require_tool_access(caller: Caller, tool_name: str) -> None:
-    """Gate any use of a tool (proxy call + both run tiers) on the member's tool ACL."""
-    if not _tool_allowed(caller, tool_name):
-        raise HTTPException(status_code=403, detail=(
-            f"you don't have access to the tool {tool_name!r} in this team — an admin can grant it "
-            "(dashboard → Team, or `treg org access <you> --tools …`)"))
-
-
-def _project_allowed(caller: Caller, tool: Tool) -> bool:
-    """Per-member PROJECT scope, the coarse dial above the per-tool one.
-
-    NULL `project_access` = the whole org (the default, so nothing changed when projects landed), and a
-    tool with NULL `project_id` is ORG-WIDE and always in scope — which is every tool that existed
-    before projects. Owner is never restricted, matching `_tool_allowed`. Pure: `project_access` holds
-    project IDs, so this is a set test with no query, even on the proxy's hot path."""
-    if caller.role == "owner":
-        return True
-    access = caller.membership.project_access
-    return access is None or tool.project_id is None or tool.project_id in access
-
-
-def _tool_usable(caller: Caller, tool: Tool) -> bool:
-    """The two ACL axes compose as AND: the project scope AND the per-tool list must both allow it.
-    `project_access=[X]` with `tool_access=NULL` therefore means "every tool in project X, including
-    ones added later" — the composition that makes the coarse dial useful on its own."""
-    return _tool_allowed(caller, tool.name) and _project_allowed(caller, tool)
-
-
-def _require_tool_use(caller: Caller, tool: Tool) -> None:
-    """Gate any use of a tool (proxy call + both run tiers) on BOTH ACL axes."""
-    _require_tool_access(caller, tool.name)
-    if not _project_allowed(caller, tool):
-        raise HTTPException(status_code=403, detail=(
-            f"the tool {tool.name!r} belongs to a project you're not scoped to — an admin can grant it "
-            "(dashboard → Team, or `treg org access <you> --projects …`)"))
-
-
-
-
-
-
-
-
 def _require_local_run(caller: Caller) -> None:
     """Gate the LOCAL run tier on the member's `local_run_enabled` (owner exempt). Off → server only."""
     if caller.role != "owner" and not caller.membership.local_run_enabled:
@@ -904,27 +879,6 @@ router.routes.extend(org_routes.invite_entry_router.routes)
 
 
 router.routes.extend(onboard_routes.onboard_entry_router.routes)
-
-
-# Per-IP limiter for /call with a PUBLIC-DEMO token (the landing page publishes one shared member
-# token, so the per-user daily cap is meaningless there — thousands of strangers are one "user").
-PUBLIC_DEMO_HIT_NS = "pubdemo_call"
-PUBLIC_DEMO_RATE_MAX = 10      # calls per IP per window
-PUBLIC_DEMO_RATE_WINDOW_S = 60
-
-
-async def _enforce_public_demo_ip_cap(request: Request, db: AsyncSession) -> None:
-    """Per-IP cap for a call made with a SHARED public credential — the published demo token or
-    the sandbox live wire. Both are one identity for thousands of strangers, so meter by client IP
-    rather than by user. Commits the sweep + recorded hit (get_session never auto-commits) and
-    raises 429 when the window is exhausted."""
-    await ratestore.sweep(db, PUBLIC_DEMO_HIT_NS)
-    allowed = await ratestore.rate_check(
-        db, PUBLIC_DEMO_HIT_NS, [(_client_ip(request), PUBLIC_DEMO_RATE_MAX)], PUBLIC_DEMO_RATE_WINDOW_S)
-    await db.commit()
-    if not allowed:
-        raise HTTPException(status_code=429, detail=(
-            f"demo limit reached ({PUBLIC_DEMO_RATE_MAX} calls/min per IP) — try again in a minute"))
 
 
 # ---- per-user daily usage cap (usage-metering v1) -------------------------------------------
@@ -2235,15 +2189,7 @@ _IDEM_MAX_KEY = 200
 # in a chain, and a figure you cannot reconcile is worse than no figure. The builder's backend already
 # sets Authorization on this request; this is the same call site.
 META_HEADER = "x-treg-meta"
-_META_MAX_KEYS = 5
 _META_MAX_HEADER = 512
-_META_MAX_VALUE = 128
-# Tag VALUES become storage keys (the idempotency scope, a TagBudget row, a TagSpend row), so the
-# charset is an allowlist rather than a length check. See the collision note in `_parse_call_meta`.
-_META_VALUE_RE = re.compile(r"^[A-Za-z0-9._:-]{1,%d}$" % _META_MAX_VALUE)
-# The dimension that scopes idempotency and defaults reports, for a team that never declared one.
-DEFAULT_PRIMARY_DIM = "customer"
-_MAX_TAG_VALUES = 10_000    # distinct values per dimension per org, bounded at WRITE (see _tag_budget)
 
 
 @dataclass(frozen=True)
@@ -2274,45 +2220,6 @@ def _tag_telemetry(meta: CallMeta) -> dict:
     return {"budget_dim": meta.primary_dim if meta.primary_val else "",
             "budget_val": meta.primary_val,
             "tags": dict(meta.tags) or None}
-
-
-def _validate_tag_pair(key: str, value: str, *, where: str = "tag") -> tuple[str, str]:
-    """One `dim=val` pair, validated the SAME way wherever it enters treg. THE only rule.
-
-    Both doors have to agree, because a tag value becomes a storage key — the idempotency scope, a
-    `TagBudget` row, a `TagSpend` row. `pinned_tags` arrives as JSON on the agent-mint endpoint and
-    never passes the header parser, so validating only there would leave the identical hole open one
-    route over (it did, until this function existed). `_parse_call_meta` therefore delegates here
-    rather than repeating the checks: two copies of a storage-key rule is two chances to drift.
-
-    `where` only names the source in the message ("X-Treg-Meta value" vs "tag value"); the rules
-    themselves are identical by construction, which is the entire point.
-    """
-    key = (key or "").strip().lower()
-    value = (value or "").strip()
-    if not _META_KEY_RE.match(key):
-        raise HTTPException(status_code=422, detail=(
-            f"{key!r} is not a valid tag key — 1-32 chars of [a-z0-9_]"))
-    if not value or len(value) > _META_MAX_VALUE:
-        raise HTTPException(status_code=422, detail=(
-            f"{where} value for {key!r} must be 1-{_META_MAX_VALUE} characters"))
-    if "@" in value:
-        # The ledger is append-only, so a tag written today cannot be erased later. An email here
-        # is a permanent record of a person, which is not a thing we can undo on request.
-        raise HTTPException(status_code=422, detail=(
-            f"{where} value for {key!r} looks like an email — use an opaque id: these tags are "
-            f"written to an append-only ledger and cannot be deleted afterwards"))
-    if not _META_VALUE_RE.match(value):
-        # An ALLOWLIST, not a blocklist, and the reason is `_scoped_idempotency_key`: the primary
-        # value is joined to the caller's Idempotency-Key with \x1f, so a value permitted to
-        # contain that separator lets `customer="A", key="B\x1fC"` collide with
-        # `customer="A\x1fB", key="C"` — one of a builder's users reading another's cached
-        # response. Do not narrow this to "reject \x1f": the header parser is not a security
-        # boundary we control, and the next separator would reopen it.
-        raise HTTPException(status_code=422, detail=(
-            f"{where} value for {key!r} may only contain letters, digits and . _ - : "
-            f"(these ids are used as storage keys)"))
-    return key, value
 
 
 def _parse_call_meta(request: Request, caller: Caller | None = None) -> CallMeta:
@@ -2358,23 +2265,6 @@ def _parse_call_meta(request: Request, caller: Caller | None = None) -> CallMeta
                 f"this token is pinned to {dim}={pinned_val!r} and cannot bill {tags[dim]!r}"))
         tags[dim] = pinned_val
     return CallMeta(tags=tags, primary_dim=_primary_dim_of(caller))
-
-
-def _primary_dim_of(caller: Caller | None) -> str:
-    """The tag key that scopes idempotency for this team. Per-org so a builder whose billing unit is a
-    workspace is not forced to call it "customer"."""
-    if caller is None:
-        return DEFAULT_PRIMARY_DIM
-    return (getattr(caller.org, "primary_dim", "") or DEFAULT_PRIMARY_DIM)
-
-
-def _budget_dims_of(org: Org) -> list[str]:
-    """The keys this team may set budgets on — declared, because each one costs an indexed lookup on
-    every call and a row per value. Bounded at `_MAX_BUDGET_DIMS`."""
-    declared = getattr(org, "budget_dims", None)
-    if not declared:
-        return [getattr(org, "primary_dim", "") or DEFAULT_PRIMARY_DIM]
-    return [str(d) for d in declared][:_MAX_BUDGET_DIMS]
 
 
 def _idempotency_key(request: Request) -> str:
@@ -2713,22 +2603,6 @@ async def catalog_endpoint_access(
 
 
 # ---- tier-4 metering: reserve → relay → settle/release ------------------------------------------
-def _effective_daily_cap(org: Org) -> int:
-    """This team's ceiling on daily tier-4 spend: the LOWER of what they set and what we allow.
-
-    Two masters, which is why it is two numbers. The team's own figure protects them from a runaway
-    agent draining a balance that auto-top-up keeps refilling. The platform ceiling protects US from a
-    catalog mispricing, and only we can raise it — so onboarding a high-volume builder is a
-    conversation rather than an env-var edit that lifts the blast-radius rail for every team at once.
-
-    0 means "never set one", which follows the deployment default rather than freezing the team at
-    whatever that default happened to be the day they signed up.
-    """
-    ceiling = get_settings().platform_daily_cap_micro
-    own = int(getattr(org, "daily_cap_micro", 0) or 0)
-    return min(own, ceiling) if own > 0 else ceiling
-
-
 async def _enforce_trial_allowance(caller: Caller, provider: str, db: AsyncSession) -> None:
     """Per-team, per-UTC-day call allowance for TRIAL-POOL providers (fx.yaml `kind: treg_trial`).
 
@@ -2816,34 +2690,6 @@ async def _resolve_tag_budget(db: AsyncSession, org_id: int, dim: str, val: str)
         TagBudget.val.in_([val, TAG_DEFAULT])))).scalars().all()
     own = next((r for r in rows if r.val == val and not r.auto), None)
     return own or next((r for r in rows if r.val == TAG_DEFAULT), None)
-
-
-async def _tag_budget(db: AsyncSession, org_id: int, dim: str, val: str,
-                      create: bool = False) -> TagBudget | None:
-    """This team's budget row for one tag value, creating it on first sighting when asked.
-
-    Auto-created, so a builder never pre-registers a user before their first call can carry an id.
-    The row also BOUNDS cardinality: the count runs only on the miss path, so steady state stays one
-    indexed lookup. Bounding has to happen at the write — a limit checked when a report is run is
-    checked after the rows already exist.
-    """
-    row = (await db.execute(select(TagBudget).where(
-        TagBudget.org_id == org_id, TagBudget.dim == dim, TagBudget.val == val))).scalar_one_or_none()
-    if row is not None or not create:
-        return row
-    seen = (await db.execute(select(func.count()).select_from(TagBudget).where(
-        TagBudget.org_id == org_id, TagBudget.dim == dim))).scalar() or 0
-    if seen >= _MAX_TAG_VALUES:
-        raise HTTPException(status_code=429, detail={
-            "error": "tag_cardinality_exceeded", "dim": dim,
-            "message": (f"this team has already used {seen} distinct {dim!r} values, the limit. A tag "
-                        f"that changes every call (a session or request id) is not a budget "
-                        f"dimension — tag by the unit you bill."),
-        })
-    row = TagBudget(org_id=org_id, dim=dim, val=val, auto=True)
-    db.add(row)
-    await db.commit()
-    return row
 
 
 # Governance routes and agent pins share call-path rules until Stage 4 extracts caller metadata ownership.

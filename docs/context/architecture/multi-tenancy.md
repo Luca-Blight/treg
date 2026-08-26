@@ -7,6 +7,9 @@ sources:
   - src/treg/caller_metadata.py
   - src/treg/application/auth.py
   - src/treg/application/signup.py
+  - src/treg/domain/governance/access.py
+  - src/treg/domain/governance/budgets.py
+  - src/treg/domain/governance/publicdemo.py
   - src/treg/domain/governance/teams.py
   - src/treg/domain/identity/access.py
   - src/treg/domain/identity/session.py
@@ -66,7 +69,7 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   (creator email) is kept for audit + the member role gate. `Tool.name` is unique **per `(org_id, name)`**
   (`UniqueConstraint("org_id", "name")`), so two orgs may reuse a name.
 
-## Enforcement (`domain.identity.access`, consumed by `api.py` and routers)
+## Enforcement (`domain.identity.access` and `domain.governance.access`)
 - **`require_member`** resolves `X-Treg-Token` → a `Membership` → a `Caller` (`membership, user, org`,
   with `org_id`/`email`/`role` properties). 401 if the token matches no membership.
 - **`_role_at_least` + `_can_manage`**: admin/owner may manage any resource in the org; a member only

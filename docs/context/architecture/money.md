@@ -7,6 +7,7 @@ sources:
   - src/treg/billing.py
   - src/treg/application/billing.py
   - src/treg/application/referrals.py
+  - src/treg/domain/governance/budgets.py
   - src/treg/infra/__init__.py
   - src/treg/infra/stripe.py
   - src/treg/reconcile.py
@@ -553,6 +554,8 @@ rows and both apply to a call carrying both tags. Every declared dimension is ev
 breach in declaration order refuses, so the outcome is deterministic. The refusal **names the
 dimension** — a builder running stacked budgets otherwise cannot tell a workspace breach from a
 per-user one.
+Validation, dimension selection, effective daily caps, and tag-budget row lookup share the
+`domain.governance.budgets` owner across the call and control surfaces.
 
 ### `TagSpend` — why the money side is a table, not a JSON key
 

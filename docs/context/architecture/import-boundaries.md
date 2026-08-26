@@ -7,6 +7,9 @@ sources:
   - src/treg/application/__init__.py
   - src/treg/domain/__init__.py
   - src/treg/domain/governance/__init__.py
+  - src/treg/domain/governance/access.py
+  - src/treg/domain/governance/budgets.py
+  - src/treg/domain/governance/publicdemo.py
   - src/treg/domain/governance/teams.py
   - src/treg/domain/identity/__init__.py
   - tests/test_import_lightness.py
@@ -48,6 +51,7 @@ MCP token and grant-family primitives, and caller/access resolution as a leaf. S
 edges are added when the sibling appears; identity therefore also forbids governance. Governance may
 import identity but cannot import the API, routers, or application layer. Future sibling contracts remain
 absent until their packages exist, so no placeholder domain makes a future boundary look active.
+Governance owns shared tool/project ACLs, tag-budget rules, and public-demo rate policy.
 
 Two direct edges are precise exceptions. `cli.ensure_proxy_dependency` imports `cryptography` only after
 the user invokes the optional proxy feature and offers to install the proxy extra first.
