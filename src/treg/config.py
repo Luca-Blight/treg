@@ -231,7 +231,7 @@ class Settings(BaseSettings):
     # threshold is deliberately above the $1 promo grant's tail: at agent call rates a $2 floor is one
     # burst away from empty, and an off-session charge takes seconds to land.
     autotopup_default_threshold_usd: int = 5
-    autotopup_default_amount_usd: int = 10
+    autotopup_default_amount_usd: int = 20
     # Hard guardrails on the off-session charge — the difference between "convenient" and "a runaway
     # agent bills a card all night". Cap is per calendar month, cooldown is between attempts, and
     # max_attempts counts CONSECUTIVE failures before auto-top-up disables itself.

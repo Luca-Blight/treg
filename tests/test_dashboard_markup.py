@@ -1009,7 +1009,7 @@ def test_the_topup_modal_offers_four_presets_plus_other_and_an_auto_toggle():
     assert 'v-for="p in billing.topup.presets"' in modal
     assert "pickOther()" in modal and 'topupPick===\'other\'' in modal
     assert 'v-model="topupAuto"' in modal
-    assert "I authorize treg to charge my saved card <b>${{topupUsd||'…'}}</b>" in modal
+    assert "I authorize treg to charge my saved card <b>${{autoAmount}}</b>" in modal
     assert "Processing fee" not in modal, "treg charges no fee; do not copy one from elsewhere"
     js = INDEX[INDEX.index("async payTopup("):]
     js = js[: js.index("autoToggled(")]

@@ -5501,7 +5501,7 @@ def build_parser() -> argparse.ArgumentParser:
     tu = mk(sub, "topup", "Add funds to your team's balance, or set up automatic top-ups.",
             "treg topup                                     # a Checkout link for the default amount",
             "treg topup 100                                 # …for $100 (+10% bonus credit)",
-            "treg topup --auto on --threshold 5 --amount 10 # refill $10 whenever it drops below $5",
+            "treg topup --auto on --threshold 5 --amount 20 # refill $20 whenever it drops below $5",
             "treg topup --auto off")
     tu.add_argument("amount", nargs="?", type=float, default=None,
                     help="how many US dollars to add (whole dollars; default from the server)")

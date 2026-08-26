@@ -2446,10 +2446,13 @@ a:hover{text-decoration-color:var(--muted)}
                         <span v-if="billing.card_on_file" class="sub" style="margin-left:auto">Card on file ✓</span>
                       </label>
                       <p class="sub" style="margin:8px 0 0">
-                        <template v-if="billing.autotopup.enabled">On - we add {{money(billing.autotopup.amount_micro)}} whenever the balance drops below {{money(billing.autotopup.threshold_micro)}}. This month: {{money(billing.autotopup.month_spend_micro)}} of {{money(billing.autotopup.monthly_cap_micro)}}.</template>
-                        <template v-else>Keep agents running without watching the balance. We charge your saved card only when it dips below your threshold, never more than your monthly cap.</template>
+                        <template v-if="billing.autotopup.enabled">On - we add {{money(billing.autotopup.amount_micro)}} whenever the balance drops below {{money(billing.autotopup.threshold_micro)}}. This month: {{money(billing.autotopup.month_spend_micro)}}.
+                          <a href="#" @click.prevent="autoOpen=!autoOpen;autoConsent=false">{{autoOpen?'Cancel':'Edit'}}</a></template>
+                        <template v-else>Keep agents running without watching the balance. We charge your saved card only when it dips below your threshold.</template>
                       </p>
-                      <div v-if="!billing.autotopup.enabled && autoOpen" style="margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--rb);padding:12px 14px;max-width:560px">
+                      <!-- The same panel edits a running policy (Edit link above) and arms a new one:
+                           either way the numbers change, so the mandate is re-agreed and re-stamped. -->
+                      <div v-if="autoOpen" style="margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--rb);padding:12px 14px;max-width:560px">
                         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                           <span class="sub" style="margin:0">Add $</span>
                           <input class="msel" style="width:70px" type="number" min="5" v-model.number="autoAmount"/>
@@ -2460,10 +2463,10 @@ a:hover{text-decoration-color:var(--muted)}
                           <input type="checkbox" v-model="autoConsent" style="margin-top:3px"/>
                           <!-- The mandate text. Not decoration: an off-session charge with no recorded
                                agreement to THESE numbers is an unauthorized charge under PSD2/SCA. -->
-                          <span class="sub" style="margin:0">I authorize treg to charge my saved card ${{autoAmount}} automatically whenever my balance drops below ${{autoThreshold}}, up to {{money(billing.autotopup.monthly_cap_micro)}} per month. Cancel any time.</span>
+                          <span class="sub" style="margin:0">I authorize treg to charge my saved card ${{autoAmount}} automatically whenever my balance drops below ${{autoThreshold}}. Cancel any time.</span>
                         </label>
                         <div style="margin-top:12px">
-                          <button class="btn primary" :disabled="!autoConsent||billingBusy" @click="setAuto(true)">{{billingBusy?'…':'Turn on auto top-up'}}</button>
+                          <button class="btn primary" :disabled="!autoConsent||billingBusy" @click="setAuto(true)">{{billingBusy?'…':(billing.autotopup.enabled?'Save':'Turn on auto top-up')}}</button>
                         </div>
                       </div>
                     </div>
@@ -3226,7 +3229,7 @@ product, including per-customer usage tracking and billing.</pre>
 
     <!-- TOP UP. Four presets + Other, the bonus each earns, and auto top-up as a toggle that is
          ON by default for a team with no mandate yet. The toggle IS the consent control: its label
-         is the PSD2/SCA mandate text (amount, threshold, monthly cap), and Pay records it through
+         is the PSD2/SCA mandate text (amount, threshold), and Pay records it through
          /billing/autotopup BEFORE opening Checkout — so the card Checkout saves arms auto top-up
          from the setup webhook with numbers a human agreed to. Off = plain one-off top-up. -->
     <div v-if="topupOpen&&billing" class="scrim" role="dialog" aria-modal="true" @click.self="topupOpen=false">
@@ -3270,10 +3273,12 @@ product, including per-customer usage tracking and billing.</pre>
               <span>
                 <b style="font-size:12.5px">Auto top-up {{topupAuto?'on':'off'}}</b>
                 <!-- The mandate. Not decoration: an off-session charge with no recorded agreement to
-                     THESE numbers is an unauthorized charge under PSD2/SCA. The amount is the one
-                     being chosen right now, never a config default the payer didn't see. -->
+                     THESE numbers is an unauthorized charge under PSD2/SCA. The numbers are the
+                     server defaults ($20 when below $5), shown here in full; the billing page's
+                     Edit panel changes them. Not the top-up amount: a $200 buyer does not want
+                     $200 refills. -->
                 <span class="sub" style="display:block;margin:2px 0 0">
-                  <template v-if="topupAuto">I authorize treg to charge my saved card <b>${{topupUsd||'…'}}</b> automatically whenever my balance drops below <b>${{autoThreshold}}</b>. Cancel any time from the billing page.</template>
+                  <template v-if="topupAuto">I authorize treg to charge my saved card <b>${{autoAmount}}</b> automatically whenever my balance drops below <b>${{autoThreshold}}</b>. Cancel any time from the billing page.</template>
                   <template v-else>Calls fail with a 402 once the balance runs out. Turn this on to keep agents running without watching it.</template>
                 </span>
               </span>
@@ -5022,14 +5027,14 @@ createApp({
           // saved card then arms it from the setup webhook. A failure here stops the payment too -
           // paying without the auto top-up the user just agreed to would be a silent downgrade.
           this.billing=await this.api('/billing/autotopup',{method:'POST',headers:{'content-type':'application/json'},
-            body:JSON.stringify({enabled:true, consent:true, amount_usd:usd, threshold_usd:this.autoThreshold, monthly_cap_usd:this.autoCapUsd, setup_url:false})});
+            body:JSON.stringify({enabled:true, consent:true, amount_usd:this.autoAmount, threshold_usd:this.autoThreshold, monthly_cap_usd:this.autoCapUsd, setup_url:false})});
         }
         const out=await this.api('/billing/topup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({amount_usd:usd})});
         window.location.href=out.url; }
       catch(e){ this.topupErr='Could not start the payment: '+(e.detail||e.status); this.billingBusy=false; } },
     // The toggle itself never arms auto top-up - it can only DISARM (off is safe) or open the
     // settings panel; arming still goes through the consent checkbox + confirm button below.
-    autoToggled(){ if(this.billing.autotopup.enabled){ this.setAuto(false); return; }
+    autoToggled(){ if(this.billing.autotopup.enabled){ this.autoOpen=false; this.setAuto(false); return; }
       this.autoOpen=!this.autoOpen; if(!this.autoOpen) this.autoConsent=false; },
     async setAuto(on){ this.billingBusy=true; this.err='';
       try{ const out=await this.api('/billing/autotopup',{method:'POST',headers:{'content-type':'application/json'},
