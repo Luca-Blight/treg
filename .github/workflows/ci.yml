@@ -100,6 +100,10 @@ jobs:
           tests/test_call_pool_discipline.py
           tests/test_marketplace_call.py
           tests/test_billing.py
+          tests/test_agent_capture.py
+          tests/test_adsconv.py
+          tests/test_health.py
+          tests/test_localrun.py
           tests/test_orgs.py
           tests/test_orgs_isolation.py
           tests/test_orgs_mgmt.py

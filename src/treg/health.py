@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from urllib.parse import urlsplit
 
 import httpx
@@ -20,6 +20,7 @@ from sqlmodel import select
 
 from . import crypto, injectors, oauth
 from .models import Invite, Membership, PendingOAuth, Secret, Tool, User
+from .timeutil import utcnow_naive
 
 OAUTH_PENDING_TTL_MIN = 30  # an in-flight OAuth connect (holds an encrypted client_secret + a CSRF state) expires after this
 
@@ -146,7 +147,7 @@ async def _probe(tool: Tool, smap: dict[int, Secret], client: httpx.AsyncClient)
 async def gc_expired_invites(db: AsyncSession, org_id: int) -> int:
     """Delete expired invites in an org (their codes can never be accepted). Caller commits.
     Runs opportunistically when invites are listed and periodically in the health run."""
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = utcnow_naive()
     rows = (await db.execute(select(Invite).where(Invite.org_id == org_id))).scalars().all()
     n = 0
     for inv in rows:
@@ -160,7 +161,7 @@ async def gc_expired_invites(db: AsyncSession, org_id: int) -> int:
 async def gc_stale_pending_oauth(db: AsyncSession, org_id: int) -> int:
     """Delete in-flight OAuth connects older than the TTL — each holds an encrypted client_secret and
     an otherwise-indefinitely-valid CSRF `state`. Caller commits."""
-    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=OAUTH_PENDING_TTL_MIN)
+    cutoff = utcnow_naive() - timedelta(minutes=OAUTH_PENDING_TTL_MIN)
     rows = (await db.execute(select(PendingOAuth).where(PendingOAuth.org_id == org_id))).scalars().all()
     n = 0
     for p in rows:
@@ -172,7 +173,7 @@ async def gc_stale_pending_oauth(db: AsyncSession, org_id: int) -> int:
 
 
 async def run_all(db: AsyncSession, client: httpx.AsyncClient, org_id: int | None = None) -> dict:
-    now = datetime.now(timezone.utc)
+    now = utcnow_naive()
     secret_q, tool_q = select(Secret), select(Tool)
     if org_id is not None:  # scope the run to one org (the caller's) — no cross-tenant leakage
         secret_q = secret_q.where(Secret.org_id == org_id)

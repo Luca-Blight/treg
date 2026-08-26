@@ -4377,8 +4377,9 @@ async def list_observed_agents(
     plain terminal (`client` in ('', 'cli')): a roster that lists every human twice teaches nothing.
     """
     _require_admin_of(org_id, caller)
-    since = datetime.now(timezone.utc) - timedelta(days=30)
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    now = _utcnow_naive()
+    since = now - timedelta(days=30)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     # A pair that was PROMOTED — it has its own agent identity now — leaves the detected roster;
     # revoking that agent deletes its membership, which resurfaces the pair automatically.
     promoted = {tuple(m.promoted_from.split("|", 1)) for m in (await db.execute(
@@ -5316,7 +5317,7 @@ async def report_local_run(
         # Mark only the credentials this run actually INJECTED (the ones the CLI used) — not every HTTP
         # binding — and never a `param` (it's config, not a credential; mirrors health.run_all's guard).
         sids = {localrun._resolve_secret_id(e, tool) for e in profile.get("inject") or []}
-        now = datetime.now(timezone.utc)
+        now = _utcnow_naive()
         for sid in [s for s in sids if s is not None]:
             secret = await db.get(Secret, sid)
             if secret is not None and secret.org_id == caller.org_id and secret.kind != "param":
