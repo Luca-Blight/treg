@@ -19,6 +19,19 @@ from ..application.call.idempotency import (
     _release_idempotent_claim as release_idempotent_claim,
     _store_idempotent,
 )
+from ..application.call.resolve import (
+    MarketplaceCall,
+    _billed_marketplace,
+    _catalog_endpoint_for,
+    _enforce_catalog_status,
+    _marketplace_secret,
+    _may_have_body,
+    _oauth_billed_provider,
+    _platform_estimate_micro,
+    _platform_offer,
+    _resolve_call,
+    _resolve_marketplace_call,
+)
 from ..application.call.intake import (
     META_HEADER,
     CallMeta,
@@ -37,29 +50,20 @@ from ..proxy import relay
 
 # Stage 4b moves the HTTP surface before its call-kernel collaborators. These annotations are
 # populated by api.py and retire one phase at a time as commits 6 through 19 assign final owners.
-_enforce_catalog_status: Any
-_marketplace_secret: Any
-_platform_estimate_micro: Any
-_platform_offer: Any
-_resolve_call: Any
 _ERROR_BODY_SLICE: Any
 _ERROR_CALLER_BODY_MAX: Any
 _ERROR_MASKING_FAILED: Any
 _ERROR_RESPONSE_MAX: Any
 _await_before_reserve: Any
-_billed_marketplace: Any
 _buffer_response: Any
 _caller_request_snippet: Any
-_catalog_endpoint_for: Any
 _enforce_daily_cap: Any
 _enforce_deny: Any
 _enforce_public_demo_ip_cap: Any
 _enforce_tag_budgets: Any
 _error_response_evidence: Any
 _finish_cancelled_call: Any
-_may_have_body: Any
 _now_ms: Any
-_oauth_billed_provider: Any
 _peek_stream_head: Any
 _platform_reserve: Any
 _platform_settle: Any
@@ -67,7 +71,6 @@ _record_first_call: Any
 _redact_snippet: Any
 _relay_live_demo: Any
 _require_tool_use_http: Any
-_resolve_marketplace_call: Any
 _safe_secret_renderings: Any
 
 

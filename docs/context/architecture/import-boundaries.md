@@ -8,6 +8,7 @@ sources:
   - src/treg/application/call/__init__.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
+  - src/treg/application/call/resolve.py
   - src/treg/application/call/types.py
   - src/treg/domain/__init__.py
   - src/treg/domain/governance/__init__.py
@@ -58,9 +59,9 @@ import identity but cannot import the API, routers, or application layer. Future
 absent until their packages exist, so no placeholder domain makes a future boundary look active.
 Governance owns shared tool/project ACLs, tag-budget rules, and public-demo rate policy. The package also
 forbids direct FastAPI and Starlette imports; semantic policy errors are translated by each HTTP interface.
-The call application package owns framework-neutral request intake and idempotency state. The HTTP
-adapter translates its typed failures and replay DTO; the remaining call-kernel collaborators retain
-their current owners.
+The call application package owns framework-neutral request intake and idempotency state plus target
+resolution and marketplace pricing. The HTTP adapter translates its typed failures and replay DTO;
+the remaining call-kernel collaborators retain their current owners.
 
 Two direct edges are precise exceptions. `cli.ensure_proxy_dependency` imports `cryptography` only after
 the user invokes the optional proxy feature and offers to install the proxy extra first.

@@ -9,6 +9,7 @@ sources:
   - src/treg/application/billing.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
+  - src/treg/application/call/resolve.py
   - src/treg/application/referrals.py
   - src/treg/domain/governance/budgets.py
   - src/treg/infra/__init__.py

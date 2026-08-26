@@ -6,6 +6,7 @@ sources:
   - src/treg/api.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
+  - src/treg/application/call/resolve.py
   - src/treg/application/call/types.py
   - src/treg/routers/call.py
 related:
@@ -17,8 +18,9 @@ related:
 
 # The proxy (the whole product in one function)
 
-The relay is `relay()` in `src/treg/proxy.py`. The API resolves which tool a request targets and loads
-its secrets; `relay()` injects and streams. It runs no business logic and never buffers the body.
+The relay is `relay()` in `src/treg/proxy.py`. `application.call.resolve` resolves which tool or
+marketplace endpoint a request targets, and the call path loads its secrets; `relay()` injects and
+streams. It runs no business logic and never buffers the body.
 
 ## The faithful-relay contract
 `relay()` alters **only three things**; everything else is verbatim (method, path, all query params
