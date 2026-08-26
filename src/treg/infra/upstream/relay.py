@@ -21,10 +21,9 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 import httpx
-from fastapi import HTTPException, Request
 
 from ... import crypto
-from ...application.call.types import UpstreamResponse
+from ...application.call.types import GatewayFailed, UpstreamRequest, UpstreamResponse
 from ...config import get_settings
 from ...models import Secret, Tool
 from . import injectors
@@ -76,7 +75,7 @@ def _scrub_treg_cookies(headers: httpx.Headers) -> None:
 
 
 async def relay(
-    request: Request,
+    request: UpstreamRequest,
     upstream_url: str,
     tool: Tool,
     secrets: dict[int, Secret],
@@ -88,9 +87,9 @@ async def relay(
     # `.raw` is the original (bytes, bytes) pairs; httpx.Headers is a multidict, so binding
     # injection (headers[name]=v) overwrites only its target and leaves the rest untouched.
     # RFC 7230 §6.1: also drop any header NAMED in the caller's own Connection header.
-    req_drop = _connection_named(request.headers.get("connection"))
+    req_drop = _connection_named(_header_value(request.raw_headers, "connection"))
     headers = httpx.Headers(
-        [(k, v) for k, v in request.headers.raw
+        [(k, v) for k, v in request.raw_headers
          if not _is_dropped_request_header(k.decode("latin-1").lower(), req_drop)]
     )
     _scrub_treg_cookies(headers)  # keep caller cookies, drop treg's own session cookie
@@ -111,7 +110,7 @@ async def relay(
     # endpoint-id call may have CONSUMED some params into the path (`{siteUrl}` placeholders) —
     # those must not also reach the upstream as query noise.
     params: list[tuple[str, str]] = [
-        (k, v) for k, v in request.query_params.multi_items()
+        (k, v) for k, v in request.query_items
         if not drop_params or k not in drop_params
     ]
 
@@ -125,16 +124,28 @@ async def relay(
         if setting:
             value = getattr(get_settings(), setting, "") or ""
             if not value:
-                raise HTTPException(status_code=502, detail=f"this server has no {setting} configured")
-            injectors.inject(headers, params, binding, value)
+                raise GatewayFailed(
+                    "injection_failed", status_code=502,
+                    detail=f"this server has no {setting} configured")
+            try:
+                injectors.inject(headers, params, binding, value)
+            except ValueError as exc:
+                raise GatewayFailed(
+                    "injection_failed", status_code=502,
+                    detail=f"credential injection failed: {exc}") from exc
             continue
         secret = secrets[binding["secret_id"]]
-        injectors.inject(headers, params, binding, crypto.decrypt(secret.value))
+        try:
+            injectors.inject(headers, params, binding, crypto.decrypt(secret.value))
+        except ValueError as exc:
+            raise GatewayFailed(
+                "injection_failed", status_code=502,
+                detail=f"credential injection failed: {exc}") from exc
 
     # Only carry a body when the caller actually sent one — otherwise passing an (unsized) stream
     # makes httpx frame the request `Transfer-Encoding: chunked`, putting a bogus body-frame on a
     # GET/HEAD/OPTIONS (which strict upstreams reject).
-    content = request.stream() if _has_body(request) else None
+    content = request.body_stream() if request.has_body else None
     upstream_req = client.build_request(
         request.method, upstream_url, headers=headers, params=params, content=content
     )
@@ -142,7 +153,9 @@ async def relay(
     # rebinding (base_url was public at registration, its DNS now points at 169.254.169.254 / localhost).
     from . import health  # local: health imports proxy-adjacent modules, so keep the cycle lazy
     if get_settings().proxy_ssrf_check and not health.host_is_public(upstream_req.url.host):
-        raise HTTPException(status_code=502, detail="upstream host resolves to a non-public address")
+        raise GatewayFailed(
+            "ssrf_refused", status_code=502,
+            detail="upstream host resolves to a non-public address")
     upstream_resp = await client.send(upstream_req, stream=True)
 
     # Response drop set: hop-by-hop + whatever the upstream marked hop-by-hop via its Connection
@@ -201,11 +214,12 @@ def _connection_named(conn: str | None) -> frozenset[str]:
     return frozenset(t.strip().lower() for t in conn.split(",") if t.strip())
 
 
-def _has_body(request: Request) -> bool:
-    cl = request.headers.get("content-length")
-    if cl is not None and cl != "0":
-        return True
-    return "chunked" in request.headers.get("transfer-encoding", "").lower()
+def _header_value(raw_headers: tuple[tuple[bytes, bytes], ...], name: str) -> str | None:
+    wanted = name.encode("latin-1")
+    for key, value in reversed(raw_headers):
+        if key.lower() == wanted:
+            return value.decode("latin-1")
+    return None
 
 
 def _is_treg_setcookie(name: str, value: str) -> bool:

@@ -16,6 +16,7 @@ sources:
   - src/treg/application/call/settle.py
   - src/treg/application/call/evidence.py
   - src/treg/application/call/types.py
+  - src/treg/infra/upstream/relay.py
   - src/treg/application/connect.py
   - src/treg/application/onboard.py
   - src/treg/application/referrals.py

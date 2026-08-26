@@ -37,6 +37,11 @@ _BLAME_BY_KIND: dict[str, Blame] = {
     "tag_spend_cap_reached": "caller",
     "insufficient_balance": "caller",
     "injection_failed": "treg",
+    "ssrf_refused": "treg",
+    "connect_failed": "upstream",
+    "read_timeout": "upstream",
+    "stream_interrupted": "upstream",
+    "refresh_failed": "org_connection",
     "credential_missing": "org_connection",
     "method_mismatch": "caller",
 }
@@ -77,6 +82,19 @@ class AuthorizationFailed(CallFailure):
 
 class ReservationFailed(CallFailure):
     """A metered call is refused before its reservation commits."""
+
+
+class GatewayFailed(CallFailure):
+    """The provider did not produce a complete response or treg refused the relay."""
+
+
+@dataclass(frozen=True)
+class UpstreamRequest:
+    method: str
+    raw_headers: tuple[tuple[bytes, bytes], ...]
+    query_items: tuple[tuple[str, str], ...]
+    body_stream: Callable[[], AsyncIterator[bytes]]
+    has_body: bool
 
 
 @dataclass(frozen=True)

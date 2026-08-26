@@ -138,7 +138,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/infra/stripe.py` | architecture/money.md |
 | `src/treg/infra/upstream/__init__.py` | architecture/import-boundaries.md |
 | `src/treg/infra/upstream/injectors.py` | architecture/auth-secrets.md, architecture/import-boundaries.md |
-| `src/treg/infra/upstream/relay.py` | architecture/proxy-model.md |
+| `src/treg/infra/upstream/relay.py` | architecture/proxy-model.md, interface/api.md |
 | `src/treg/infra/upstream/ssrf.py` | architecture/auth-secrets.md, architecture/proxy-model.md |
 | `src/treg/injectors.py` | architecture/auth-secrets.md |
 | `src/treg/ledger.py` | architecture/money.md |
@@ -224,7 +224,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/super-admin.md` | `api.py`, `admin.py`, `access.py`, `config.py` |
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |
 | `guides/expanding-a-category.md` | `oauth_providers.py`, `connect.py`, `connections.py`, `config.py` |
-| `interface/api.md` | `sitetrack.js`, `api.py`, `bootstrap_handlers.py`, `bootstrap_http.py`, `caller_metadata.py`, `auth.py`, `authorize.py`, `idempotency.py`, `intake.py`, `resolve.py`, `reserve.py`, `settle.py`, `evidence.py`, `types.py`, `connect.py`, `onboard.py`, `referrals.py`, `signup.py`, `__init__.py`, `admin.py`, `auth.py`, `auth_helpers.py`, `billing.py`, `call.py`, `catalog.py`, `connections.py`, `onboard.py`, `orgs.py`, `resources.py`, `referrals.py`, `signup_cookies.py`, `web.py`, `access.py`, `teams.py`, `access.py`, `budgets.py`, `publicdemo.py`, `usage.py`, `mcp_oauth.py`, `session.py`, `timeutil.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
+| `interface/api.md` | `sitetrack.js`, `api.py`, `bootstrap_handlers.py`, `bootstrap_http.py`, `caller_metadata.py`, `auth.py`, `authorize.py`, `idempotency.py`, `intake.py`, `resolve.py`, `reserve.py`, `settle.py`, `evidence.py`, `types.py`, `relay.py`, `connect.py`, `onboard.py`, `referrals.py`, `signup.py`, `__init__.py`, `admin.py`, `auth.py`, `auth_helpers.py`, `billing.py`, `call.py`, `catalog.py`, `connections.py`, `onboard.py`, `orgs.py`, `resources.py`, `referrals.py`, `signup_cookies.py`, `web.py`, `access.py`, `teams.py`, `access.py`, `budgets.py`, `publicdemo.py`, `usage.py`, `mcp_oauth.py`, `session.py`, `timeutil.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
 | `interface/catalog-review-proposal.md` | `catalog_store.py`, `capabilities.yaml` |
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
 | `interface/dashboard.md` | `sitetrack.js`, `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `web.py`, `session.py`, `session.py` |

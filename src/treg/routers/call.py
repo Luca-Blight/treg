@@ -63,7 +63,7 @@ from ..application.call.intake import (
     _tag_telemetry,
     prepare_call_intake,
 )
-from ..application.call.types import CallFailure, UpstreamResponse
+from ..application.call.types import CallFailure, GatewayFailed, UpstreamRequest, UpstreamResponse
 from ..caller_metadata import _client_of
 from ..config import get_settings
 from ..db import get_session
@@ -606,7 +606,14 @@ async def call_tool(
         await db.commit()
         try:
             response = _http_upstream_response(await relay(
-                request, upstream_url, tool, secrets, request.app.state.http,
+                UpstreamRequest(
+                    method=request.method,
+                    raw_headers=tuple(request.headers.raw),
+                    query_items=tuple(request.query_params.multi_items()),
+                    body_stream=request.stream,
+                    has_body=_may_have_body(request),
+                ),
+                upstream_url, tool, secrets, request.app.state.http,
                 drop_params=drop_params or None,
                 force_identity=mk is not None and mk.metered,
             ))
@@ -619,8 +626,8 @@ async def call_tool(
                 # Preserve streaming for own-key and own-tool calls while retaining only the small
                 # diagnostic head. The replacement response replays every consumed byte verbatim.
                 response, body = await _peek_stream_head(response, _ERROR_BODY_SLICE)
-        except ValueError as exc:  # a binding/injector mismatch (e.g. non-JSON secret on an oauth binding)
-            raise HTTPException(status_code=502, detail=f"credential injection failed: {exc}")
+        except GatewayFailed as exc:
+            raise _translate_call_failure(exc) from exc
         except httpx.RequestError as exc:  # upstream down/timeout is a gateway fault, not treg's 500
             raise HTTPException(status_code=502, detail=f"upstream request failed: {str(exc) or type(exc).__name__}")
     except asyncio.CancelledError:

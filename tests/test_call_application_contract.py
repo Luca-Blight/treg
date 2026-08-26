@@ -1,6 +1,7 @@
 """Executable contract for the Stage 4 call application boundary."""
 
 import ast
+import importlib
 from dataclasses import dataclass, fields
 from inspect import signature
 from typing import Awaitable, Callable, Literal, Protocol
@@ -160,6 +161,22 @@ def test_call_intake_modules_are_framework_neutral() -> None:
             for alias in node.names
         }
         assert not ({"fastapi", "starlette"} & roots)
+
+
+def test_upstream_relay_is_framework_neutral() -> None:
+    relay_module = importlib.import_module("treg.infra.upstream.relay")
+    source = relay_module.__loader__.get_source(relay_module.__name__)
+    roots = {
+        node.module.split(".", 1)[0]
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.ImportFrom) and node.module
+    } | {
+        alias.name.split(".", 1)[0]
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    assert not ({"fastapi", "starlette"} & roots)
 
 
 async def test_authorization_gate_order_is_frozen(monkeypatch) -> None:

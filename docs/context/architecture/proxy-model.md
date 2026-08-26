@@ -66,9 +66,10 @@ incl. duplicates, headers, cookies, body bytes):
 > [data-model](data-model.md) for the redaction order, admin-only access, and retention.
 
 Faithfulness mechanics inside `relay()`:
-- request headers rebuilt from `request.headers.raw` into an `httpx.Headers` multidict (preserves
+- request headers rebuilt from `UpstreamRequest.raw_headers` into an `httpx.Headers` multidict (preserves
   duplicate headers / cookies); injection (`headers[name] = v`) overwrites only the named one.
-- query as a list from `request.query_params.multi_items()` (keeps duplicate keys like `?tag=a&tag=b`).
+- query as the router-captured ordered pairs in `UpstreamRequest.query_items` (keeps duplicate keys
+  like `?tag=a&tag=b`).
 - path rebuilt from `request.scope["raw_path"]` (in `call_tool`), not Starlette's URL-decoded path
   param — percent-encoding survives to the upstream (npm's scoped publish `PUT /@scope%2fname` 404s
   if `%2f` is decoded to a literal slash).

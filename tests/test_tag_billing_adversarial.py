@@ -409,7 +409,8 @@ async def test_review_distinct_memberships_never_share_idempotent_bodies(
 
     async def relay_by_token(request, upstream_url, tool, secrets, client, drop_params=None,
                              force_identity=False):
-        body = request.headers["X-Treg-Token"].encode()
+        body = next(
+            value for name, value in request.raw_headers if name.lower() == b"x-treg-token")
 
         async def stream():
             yield body
