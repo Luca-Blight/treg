@@ -4155,6 +4155,68 @@ async def _platform_settle(
     return charged, observed
 
 
+async def _finish_cancelled_call(
+    request: Request,
+    mk: MarketplaceCall | None,
+    call_ref: str,
+    response: Response | None = None,
+) -> None:
+    """Finish compensation before propagating cancellation from a call that may have reserved."""
+    # A cancelled request cannot own this cleanup: another cancellation while it is returning the
+    # first one would strand the upstream response, hold, or idempotency label halfway through.
+    async def _cleanup() -> None:
+        # Every branch contains its own failure: raising here would replace the original cancellation
+        # when shield joins this task, instead of letting the remaining compensation finish.
+        if response is not None and response.background is not None:
+            background, response.background = response.background, None
+            try:
+                await background()
+            except (Exception, asyncio.CancelledError):  # noqa: BLE001
+                logging.getLogger("treg.proxy").error(
+                    "upstream close failed for cancelled call %s", call_ref, exc_info=True)
+        if mk is not None and mk.metered:
+            # `ledger.reserve` may have committed without returning, so `mk.call_id` is not an
+            # authority here. The pre-reserve call_ref is the hold id in either outcome, and release
+            # conditionally claims it: committed means refund, rolled back means a safe no-op.
+            mk.call_id = None
+            try:
+                async with session_maker() as cleanup_db:
+                    await ledger.release(
+                        cleanup_db,
+                        call_ref,
+                        reason="call_cancelled",
+                        meta={"provider": mk.provider, "cost_type": mk.cost_type,
+                              "status_code": None},
+                    )
+            except (Exception, asyncio.CancelledError):  # noqa: BLE001
+                logging.getLogger("treg.ledger").error(
+                    "cancellation release failed for call %s", call_ref, exc_info=True)
+        try:
+            await _release_idempotent_claim(request)
+        except (Exception, asyncio.CancelledError):  # noqa: BLE001
+            logging.getLogger("treg.idempotency").error(
+                "cancellation claim release failed for call %s", call_ref, exc_info=True)
+
+    cleanup = asyncio.create_task(_cleanup())
+    while not cleanup.done():
+        try:
+            await asyncio.shield(cleanup)
+        except asyncio.CancelledError:
+            # A repeated cancel may interrupt the shield await, but not its child. Keep joining the
+            # same cleanup task so compensation completes before the original cancellation escapes.
+            continue
+    await cleanup
+
+
+async def _await_before_reserve(awaitable, request: Request, call_ref: str):
+    """Release an owned idempotency label if cancellation lands before the money gate."""
+    try:
+        return await awaitable
+    except asyncio.CancelledError:
+        await _finish_cancelled_call(request, None, call_ref)
+        raise
+
+
 async def _record_first_call(org_id: int) -> None:
     """Set Org.first_call_at once — the metric that decides whether a marketing channel is real (see
     marketing/landing/_measurement.md). A CONDITIONAL UPDATE, not read-then-write: concurrent first
@@ -4268,7 +4330,8 @@ async def call_tool(
     mk: MarketplaceCall | None = None
     own_tool_miss: dict | None = None
     try:
-        tool, upstream_url = await _resolve_call(rest, caller, db)
+        tool, upstream_url = await _await_before_reserve(
+            _resolve_call(rest, caller, db), request, call_ref)
     except HTTPException as exc:
         # Not a tool → maybe a marketplace endpoint id (`treg call tikhub.tiktok.video.comments`).
         # Only the 404 falls through, so an org tool with the same name always wins.
@@ -4279,7 +4342,8 @@ async def call_tool(
                 and str(exc.detail.get("hint", "")).startswith("your org has tool ")):
             own_tool_miss = exc.detail
         try:
-            mk = await _resolve_marketplace_call(ep, request, caller, db)
+            mk = await _await_before_reserve(
+                _resolve_marketplace_call(ep, request, caller, db), request, call_ref)
         except HTTPException as mkexc:
             # Catalog resolution is allowed to fall through from a named miss, but its own 404 must
             # not discard the useful fact discovered there: this org already has a nearby own tool.
@@ -4310,10 +4374,15 @@ async def call_tool(
     # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
     # shape the caller used (named or URL-passthrough), and the relay never follows redirects, so a
     # blocked host can't be reached via a 3xx bounce.
-    await _enforce_deny(caller, upstream_url, request.method, db, tool.project_id)
-    await _enforce_daily_cap(caller, db)  # per-user daily cap (skips sandbox + unmetered members)
+    await _await_before_reserve(
+        _enforce_deny(caller, upstream_url, request.method, db, tool.project_id), request, call_ref)
+    await _await_before_reserve(
+        _enforce_daily_cap(caller, db), request, call_ref
+    )  # per-user daily cap (skips sandbox + unmetered members)
     if caller.org.public_demo and not _role_at_least(caller.role, "admin"):
-        await _enforce_public_demo_ip_cap(request, db)  # shared token → meter by client IP, not user
+        await _await_before_reserve(
+            _enforce_public_demo_ip_cap(request, db), request, call_ref
+        )  # shared token → meter by client IP, not user
 
     # The caller's own request bytes, read ONCE when it is safe to buffer them, so a failure can be
     # explained later (see models.CallRecord.error_request). Metered JSON calls already require full
@@ -4332,7 +4401,7 @@ async def call_tool(
             small_declared_body = False
     if _may_have_body(request) and ((mk is not None and mk.metered) or small_declared_body):
         try:
-            caller_body = await request.body()
+            caller_body = await _await_before_reserve(request.body(), request, call_ref)
         except Exception:  # noqa: BLE001 — a caller that hung up must not become a 500 here
             caller_body = b""
 
@@ -4396,11 +4465,17 @@ async def call_tool(
     if demo_sandbox.is_sandbox(caller.org):
         live_key = get_settings().demo_stripe_key
         if live_key and demo_sandbox.is_live_tool(tool) and request.method in ("GET", "POST"):
-            await _enforce_public_demo_ip_cap(request, db)  # one shared wire → meter by client IP
-            await db.commit()  # end the DB phase before network I/O (see the same call before relay())
+            await _await_before_reserve(
+                _enforce_public_demo_ip_cap(request, db), request, call_ref
+            )  # one shared wire → meter by client IP
+            await _await_before_reserve(
+                db.commit(), request, call_ref
+            )  # end the DB phase before network I/O (see the same call before relay())
             try:
-                response = await _relay_live_demo(
-                    request, upstream_url, live_key, demo_sandbox.visitor_name(caller.org.slug))
+                response = await _await_before_reserve(
+                    _relay_live_demo(
+                        request, upstream_url, live_key, demo_sandbox.visitor_name(caller.org.slug)),
+                    request, call_ref)
             except httpx.RequestError as exc:
                 _audit(502)
                 raise HTTPException(status_code=502, detail=f"upstream request failed: {str(exc) or type(exc).__name__}")
@@ -4408,10 +4483,11 @@ async def call_tool(
             return response
         secrets = {}
         for sid in {b.get("secret_id") for b in tool.bindings if b.get("secret_id") is not None}:
-            s = await db.get(Secret, sid)
+            s = await _await_before_reserve(db.get(Secret, sid), request, call_ref)
             if s is not None and s.org_id == caller.org_id:
                 secrets[sid] = s
-        body = (await request.body()).decode("utf-8", "replace")
+        body = (await _await_before_reserve(request.body(), request, call_ref)).decode(
+            "utf-8", "replace")
         result = demo_sandbox.synthesize(
             request.method, upstream_url, tool, secrets,
             query=request.query_params.multi_items(), body=body)
@@ -4426,7 +4502,7 @@ async def call_tool(
     try:
         # A platform binding carries no secret_id — its value comes from settings at relay time.
         for sid in {b["secret_id"] for b in tool.bindings if b.get("secret_id") is not None}:
-            secret = await db.get(Secret, sid)
+            secret = await _await_before_reserve(db.get(Secret, sid), request, call_ref)
             if secret is None or secret.org_id != caller.org_id:
                 raise HTTPException(status_code=409, detail="a bound secret is missing")
             secrets[sid] = secret
@@ -4442,7 +4518,8 @@ async def call_tool(
             raise HTTPException(status_code=403, detail=(
                 f"{billed_provider.display_name} calls are pay-per-use on treg's app and the "
                 f"public demo can't spend — create your own team to use this"))
-        mk = await _billed_marketplace(mk, billed_provider, tool, upstream_url, request)
+        mk = await _await_before_reserve(
+            _billed_marketplace(mk, billed_provider, tool, upstream_url, request), request, call_ref)
 
     # Metered — treg's own money is about to be spent (tier 4's platform key, or a registry OAuth
     # connect on a pay-per-use app), so take the money FIRST. Deliberately the last gate before the
@@ -4458,6 +4535,9 @@ async def call_tool(
         refusal_secrets = _safe_secret_renderings(tool, secrets)
         try:
             await _platform_reserve(mk, caller, db, meta=meta, call_ref=call_ref)
+        except asyncio.CancelledError:
+            await _finish_cancelled_call(request, mk, call_ref)
+            raise
         except HTTPException as exc:
             # A call refused for MONEY (402 empty balance / 429 daily cap) is the event the org will
             # ask about first — it must appear in the activity feed, charged 0.
@@ -4482,6 +4562,7 @@ async def call_tool(
                                        _ERROR_RESPONSE_MAX)))
             raise
     body = b""
+    response: Response | None = None
     started = _now_ms()
     try:
         # treg keeps oauth tokens fresh: refresh in place if stale, before injecting. Inside the
@@ -4520,12 +4601,19 @@ async def call_tool(
             raise HTTPException(status_code=502, detail=f"credential injection failed: {exc}")
         except httpx.RequestError as exc:  # upstream down/timeout is a gateway fault, not treg's 500
             raise HTTPException(status_code=502, detail=f"upstream request failed: {str(exc) or type(exc).__name__}")
+    except asyncio.CancelledError:
+        await _finish_cancelled_call(request, mk, call_ref, response)
+        raise
     except HTTPException as exc:
         # The provider never produced a billable answer (our own error, a failed injection, an
         # unreachable upstream) → return the hold in full, regardless of the endpoint's billing type.
         metered = mk is not None and mk.metered
         if metered:
-            await _platform_settle(mk, None, reason=f"call_failed_{exc.status_code}")
+            try:
+                await _platform_settle(mk, None, reason=f"call_failed_{exc.status_code}")
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
             # The shared exception handler builds the response and adds this zero-cost result.
             request.state.call_cost_micro = 0
         # No provider body exists on this branch. treg's own detail is the explanation instead, and
@@ -4544,7 +4632,11 @@ async def call_tool(
         # The reaper would eventually return this hold anyway; returning it now means a bug in the call
         # path can't make a funded org look broke for the next three minutes.
         if mk is not None and mk.metered:
-            await _platform_settle(mk, None, reason="call_crashed")
+            try:
+                await _platform_settle(mk, None, reason="call_crashed")
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
         raise
     duration_ms = _now_ms() - started
     # First successful call. The common case — an org that already has one — is an in-memory check
@@ -4553,16 +4645,24 @@ async def call_tool(
     # does so via _record_first_call's own session, never the request's `db` (which _platform_settle,
     # right below, is about to settle/release — see its docstring for why that session is off-limits).
     if 200 <= response.status_code < 400 and caller.org_id and caller.org.first_call_at is None:
-        await _record_first_call(caller.org_id)
+        try:
+            await _record_first_call(caller.org_id)
+        except asyncio.CancelledError:
+            await _finish_cancelled_call(request, mk, call_ref, response)
+            raise
     if mk is not None and mk.metered:
-        charged, observed = await _platform_settle(
-            mk, response.status_code, body, headers=response.headers,
-            # `provider_failed_`, not `call_failed_`: the latter is the branch above, where treg
-            # never got an answer (timeout, SSRF refusal, a failed oauth refresh). Both release a
-            # 502 the same way, so a shared prefix would make the two indistinguishable in the
-            # journal once the 14-day error evidence expires — and they need different fixes.
-            reason=(f"provider_failed_{response.status_code}" if response.status_code >= 500 else ""),
-        )
+        try:
+            charged, observed = await _platform_settle(
+                mk, response.status_code, body, headers=response.headers,
+                # `provider_failed_`, not `call_failed_`: the latter is the branch above, where treg
+                # never got an answer (timeout, SSRF refusal, a failed oauth refresh). Both release a
+                # 502 the same way, so a shared prefix would make the two indistinguishable in the
+                # journal once the 14-day error evidence expires — and they need different fixes.
+                reason=(f"provider_failed_{response.status_code}" if response.status_code >= 500 else ""),
+            )
+        except asyncio.CancelledError:
+            await _finish_cancelled_call(request, mk, call_ref, response)
+            raise
         # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
         # (see _refusal_kind). So this is where the provider's own explanation is captured, and the
         # only place it exists: nothing downstream keeps the body.
@@ -4581,10 +4681,14 @@ async def call_tool(
             # Here, and not earlier: this is the first point where BOTH the response and what it
             # actually cost are known, and a replay has to hand back the real charge rather than the
             # estimate that was reserved.
+            try:
+                await _store_idempotent(idem_key, caller, status_code=response.status_code, body=body,
+                                        media_type=response.headers.get("content-type", ""),
+                                        charged_micro=charged, metered=True, call_ref=call_ref)
+            except asyncio.CancelledError:
+                await _finish_cancelled_call(request, mk, call_ref, response)
+                raise
             request.state.idem_claim = None      # dealt with; nothing left to release
-            await _store_idempotent(idem_key, caller, status_code=response.status_code, body=body,
-                                    media_type=response.headers.get("content-type", ""),
-                                    charged_micro=charged, metered=True, call_ref=call_ref)
         # Tell the caller what the call actually cost. Both llms.txt and skill.md instruct an agent to
         # report the price it spent, and until now the only way to find out was to read the balance
         # before and after — which races with any other call and cannot attribute a figure to a
@@ -4609,9 +4713,13 @@ async def call_tool(
     if idem_key:
         # Unmetered: nothing was billed, so there is nothing to protect. Dropping the claim frees the
         # label at once instead of making the caller wait out the window to reuse it.
+        try:
+            await _store_idempotent(idem_key, caller, status_code=response.status_code, body=b"",
+                                    media_type="", charged_micro=0, metered=False)
+        except asyncio.CancelledError:
+            await _finish_cancelled_call(request, mk, call_ref, response)
+            raise
         request.state.idem_claim = None
-        await _store_idempotent(idem_key, caller, status_code=response.status_code, body=b"",
-                                media_type="", charged_micro=0, metered=False)
     response.headers["X-Treg-Call-Id"] = call_ref
     return response
 
