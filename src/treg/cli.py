@@ -3685,7 +3685,7 @@ def _billing_autotopup(cfg: dict) -> dict | None:
         return None
 
 
-def _billing_bonus_tiers(cfg: dict) -> dict[int, int]:
+def _bonus_tiers_from_server(cfg: dict) -> dict[int, int]:
     """`{min_usd: percent}` from GET /billing, or {} when unavailable. Same never-raises posture as
     `_billing_autotopup`: this decorates the top-up output."""
     try:
@@ -3719,7 +3719,7 @@ def cmd_topup(args, cfg) -> None:
     print(f"\n  {_A}Add {_usd(out['amount_micro'])} to your balance{_R}")
     # The bonus this size earns, and the next tier up if it earns more — the one nudge that changes
     # what people pay. Comes from GET /billing; silence when it can't be fetched.
-    tiers = _billing_bonus_tiers(cfg)
+    tiers = _bonus_tiers_from_server(cfg)
     if tiers:
         usd = out["amount_micro"] // 1_000_000
         pct = max([v for k, v in tiers.items() if usd >= k], default=0)
