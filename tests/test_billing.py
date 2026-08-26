@@ -1111,3 +1111,33 @@ async def test_topup_without_an_amount_uses_the_ladder_default(c: AsyncClient, m
     r = await c.post("/billing/topup", json={}, headers=_h(owner))
     assert r.status_code == 200, r.text
     assert r.json()["amount_usd"] == 50
+
+
+async def test_a_topup_checkout_arms_a_consented_policy_that_was_waiting_for_a_card(c: AsyncClient, monkeypatch):
+    """The modal flow: consent is stored first (no card → `no_card`), then the top-up Checkout saves
+    the card. The PAYMENT webhook must arm the policy — there is no setup_intent in this flow."""
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    r = await c.post("/billing/autotopup", headers=_h(owner),
+                     json={"enabled": True, "consent": True, "threshold_usd": 5, "amount_usd": 100,
+                           "monthly_cap_usd": 2000, "setup_url": False})
+    assert r.status_code == 200, r.text
+    assert r.json()["autotopup"]["enabled"] is False
+    assert r.json()["autotopup"]["disabled_reason"] == "no_card" and "setup_url" not in r.json()
+
+    async def pm(pi_id):
+        return "pm_saved_by_checkout", "fp_1"
+    monkeypatch.setattr(billing, "_pm_and_fingerprint", pm)
+    session_event = {"id": "evt_cs_arm", "type": "checkout.session.completed", "data": {"object": {
+        "id": "cs_arm", "object": "checkout.session", "mode": "payment", "payment_status": "paid",
+        "amount_total": 10_000, "currency": "usd", "payment_intent": "pi_arm",
+        "metadata": {"treg_org_id": str(org_id), "treg_kind": "topup"}}}}
+    assert (await _deliver(c, session_event)).json()["credited"] is True
+    body = (await c.get("/billing", headers=_h(owner))).json()
+    assert body["card_on_file"] is True
+    assert body["autotopup"]["enabled"] is True and body["autotopup"]["disabled_reason"] is None
+    assert body["autotopup"]["amount_usd"] == 100 and body["autotopup"]["monthly_cap_usd"] == 2000
+    # A redelivery (same card, already armed) is a no-op, and a deliberate OFF is not re-armed by it.
+    await c.post("/billing/autotopup", json={"enabled": False, "consent": False}, headers=_h(owner))
+    await _deliver(c, session_event)
+    assert (await c.get("/billing", headers=_h(owner))).json()["autotopup"]["enabled"] is False

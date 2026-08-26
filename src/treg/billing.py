@@ -304,11 +304,33 @@ async def _set_default_pm(db: AsyncSession, org_id: int, payment_method: str | N
     if not payment_method:
         return False
     org = await db.get(Org, org_id)
-    if org is None or org.stripe_default_pm == payment_method:
+    if org is None:
         return False
+    changed = org.stripe_default_pm != payment_method
     org.stripe_default_pm = payment_method
-    db.add(org)
-    await db.commit()
+    # A card arriving is what a consented-but-cardless policy was waiting for, whichever door it came
+    # through: the dashboard's top-up modal records consent and then relies on the top-up Checkout to
+    # save the card, so the PAYMENT webhook has to arm it, not only the setup one. Checked even when
+    # the pm is unchanged (a redelivered webhook after a crash between the two commits), and only for
+    # the `no_card` shape — a decline, 3DS, or a deliberate off stays off until a human re-enables it.
+    armed = _arm_if_waiting_for_card(org)
+    if changed or armed:
+        db.add(org)
+        await db.commit()
+    return changed
+
+
+def _arm_if_waiting_for_card(org: Org) -> bool:
+    """Turn a consented policy on once `org.stripe_default_pm` exists. Mutates, does not commit."""
+    if not (org.stripe_default_pm and org.autotopup_consented_at) or org.autotopup_enabled:
+        return False
+    # ONLY the explicit `no_card` state. A deliberate off leaves the reason None with consent still
+    # on file, and a later (or redelivered) payment must not switch it back on.
+    if org.autotopup_disabled_reason != "no_card":
+        return False
+    org.autotopup_enabled = True
+    org.autotopup_disabled_reason = None
+    org.autotopup_failures = 0
     return True
 
 
@@ -1119,17 +1141,9 @@ async def _on_setup_succeeded(db: AsyncSession, si: dict) -> dict:
         return {"handled": False, "reason": "no org in metadata"}
     pm = si.get("payment_method")
     pm_id = pm if isinstance(pm, str) else (pm or {}).get("id")
+    # Arming a consented-and-waiting org happens inside `_set_default_pm` (shared with the payment
+    # path). A disable for any reason other than `no_card` (a decline, 3DS) stays off there too.
     changed = await _set_default_pm(db, org_id, pm_id)
-    org = await db.get(Org, org_id)
-    if org is not None and org.autotopup_consented_at and not org.autotopup_enabled \
-            and org.autotopup_disabled_reason in (None, "no_card"):
-        # The org already consented and was only waiting on a card — arming it now is what they asked
-        # for. A disable for any OTHER reason (a decline, 3DS) stays off until a human re-enables it.
-        org.autotopup_enabled = True
-        org.autotopup_disabled_reason = None
-        org.autotopup_failures = 0
-        db.add(org)
-        await db.commit()
     return {"handled": True, "payment_method_saved": bool(pm_id), "changed": changed}
 
 

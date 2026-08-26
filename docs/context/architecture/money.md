@@ -211,6 +211,13 @@ qualifying amount). The threshold for auto top-up is validated separately (`vali
 ≥ $1): it is not a charge, so the top-up minimum must not apply to it — raising the minimum
 without that split would have rejected the default $5 threshold on every enable.
 
+**A saved card arms a consented policy from either webhook.** The modal records consent first
+(`set_autotopup` → `no_card`) and relies on the top-up Checkout to save the card, so there is no
+SetupIntent in that flow: `_set_default_pm` — called by both `_on_checkout_completed` and
+`_on_setup_succeeded` — runs `_arm_if_waiting_for_card`, which turns the policy on only from the
+explicit `no_card` state. A decline, 3DS, or a deliberate off (reason `None`, consent still on
+file) stays off; a redelivered payment webhook must not switch a policy back on.
+
 Turning `invoice_creation` on makes Stripe emit `invoice.created` / `invoice.paid` for every top-up.
 `handle_webhook_event` drops them, deliberately: crediting on an invoice event as well as on the
 PaymentIntent would be a second door onto the same money. The invoice is a document; the
