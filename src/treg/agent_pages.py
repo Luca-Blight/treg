@@ -3423,6 +3423,118 @@ USE_CASE_PAGES["employee-reviews-of-a-company"] = {
 }
 
 
+USE_CASE_PAGES["keywords-a-domain-bids-on"] = {
+    "label": "Keywords a domain bids on",
+    "sentence": "Competitor PPC keywords: the Google Ads keywords a domain bids on, with CPC, from SpyFu or Semrush",
+    "title": "Competitor PPC keywords API: what a domain bids on | treg.to",
+    "lede": (
+        "Give your agent a competitor's domain and get the Google Ads keywords it bids on "
+        "back as rows: keyword, search volume, cost per click, estimated monthly spend and who "
+        "else bids on it. SpyFu and Semrush answer through one treg.to key, {cheapest}, at "
+        "the provider's own rate with no markup, priced per row rather than per seat. Both "
+        "are estimates built from a crawl of the ads they saw, not Google's own numbers, and "
+        "the page says so before the comparison does."),
+    "prompt": "Using treg, get the top 200 Google Ads keywords that competitor.com bids on in "
+              "the US, show me the price first, then drop their brand terms and give me the "
+              "twenty highest-volume keywords we are not bidding on, with CPC.",
+    "prompt_why": [
+        ("Give a domain, and a country", "The call takes the advertiser's domain and a country code. A brand that advertises in five markets has five different keyword lists."),
+        ("Cap the rows", "SpyFu's page size defaults to 5 and goes to 10,000, and every row is billed. Two hundred rows is a strategy; ten thousand is a bill."),
+        ("Strip their brand", "Every advertiser bids on its own name. Ask the agent to drop those rows before it ranks the rest, or the top of the list is noise."),
+        ("Ask for the price first", "treg.to returns the rate before the call, so the agent can say what a full pull across ten competitors will spend."),
+    ],
+    "result_noun": "keyword",
+    "result_image": None,
+    "q_cheapest": "Which competitor PPC keywords API is cheapest per row?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do SpyFu and Semrush compare?",
+    "what_is_heading": "How do you find the keywords a competitor bids on?",
+    "what_is": (
+        "Google will not tell you. Auction Insights shows which advertisers overlapped with "
+        "your campaign, not which keywords they bought, and Keyword Planner's competition "
+        "index counts your own ads. The third-party answer is a crawl: SpyFu and Semrush "
+        "sample Google results, record which domains' ads appear against which queries, and "
+        "estimate volume, CPC and spend from there. That is what a competitor PPC keywords "
+        "API returns, one domain at a time, and why two tools will not agree with each other "
+        "or with the advertiser's own account."),
+    "notes": [
+        "SpyFu bills per row and defaults to five. At $2.00 per 1,000 rows, a first look at a "
+        "domain is a fraction of a cent and a ten-thousand-row dump is $20, so the page size "
+        "is the cost dial. Rows carry the keyword, search volume, ranking difficulty, monthly "
+        "clicks, broad and exact CPC, estimated monthly cost and the count of competing "
+        "advertisers, and the endpoint has answered every call treg.to has measured so far.",
+        "Semrush prices in API units bought up front, 20 per line on the current view and "
+        "100 per line for a past date, and publishes no dollar rate for a unit, so the page "
+        "prints no price for it. Its rows add the position and the live ad copy, which SpyFu "
+        "does not carry. Send a display limit: the default is 10,000 lines, and an agent that "
+        "loops without one spends real units. It has not been called live through treg.to "
+        "yet.",
+        "Both are crawl estimates, and the research is full of the consequences: a local "
+        "advertiser missing entirely, a tool showing one bidder on a keyword that had "
+        "several, two tools disagreeing on a domain's traffic by a factor of four. No "
+        "comparison table settles which is right for your niche. The cheap test is to pull "
+        "the same domain from both and treat the overlap as the confident set.",
+    ],
+    "faq": [
+        ("Is this Google's own data?",
+         "No. Google publishes no per-keyword view of another advertiser's account. SpyFu and "
+         "Semrush estimate it from the ads their crawls observed, which is why the monthly cost "
+         "column is an estimate and a competitor's max bid is not on the page at all."),
+        ("Do I need a SpyFu or Semrush subscription?",
+         "Not for SpyFu: treg.to serves it on its own key, metered per row from your team's "
+         "balance at SpyFu's rate with $0.000 added. Semrush's API units come with a Semrush "
+         "plan, so that row runs on your own Semrush key, never metered by treg.to."),
+        ("Can I see a competitor's budget or impression share?",
+         "No. The rows carry an estimated monthly spend per keyword, built from volume, CPC and "
+         "observed position. Impression share, bids and search terms Google does not disclose "
+         "are not in any third-party tool, and this page will not imply they are."),
+        ("Which provider should my agent use?",
+         "SpyFu for a priced, verified per-row pull; Semrush when you hold a plan and want the "
+         "ad copy. treg.to shows both side by side with the rate and the measured success; it "
+         "compares, it does not route or fail over for you."),
+    ],
+    "voices_intro": (
+        "PPC tool threads are heavily seeded: of the ~95 distinct Reddit and X posts read in "
+        "August 2026, one vendor's cluster ran to seven posts across three subreddits and two "
+        "listicles were posted twice each. These five are advertisers and SEOs asking on "
+        "their own behalf."),
+    "voices": [
+        ("Google's own report does not answer the question",
+         "Auction Insights only provides a campaign summary, which lacks detail.",
+         "r/PPC", "https://www.reddit.com/r/PPC/comments/1gdyefi/see_if_competitor_is_bidding_on_a_specific/",
+         "It names the overlapping advertisers and stops. The per-domain rows here are the "
+         "detail it lacks: which keywords, at what estimated CPC, against how many other "
+         "bidders, one call per competitor."),
+        ("The estimate missed the other bidders",
+         "I tried Spyfu, and it was a little inaccurate. It showed me that only my brand was bidding on a specific keyword",
+         "r/PPC", "https://www.reddit.com/r/PPC/comments/1gdyefi/see_if_competitor_is_bidding_on_a_specific/",
+         "A crawl only records the ads it saw, and small or local advertisers fall through. "
+         "No table fixes that. Pull the same keyword from both providers and treat a bidder "
+         "both report as real; treat one nobody reports as unknown, not absent."),
+        ("Do you have to buy both tools?",
+         "Given Spyfu is only $9/month, do you think there is a case to be made to just purchase both?",
+         "r/PPC, 35 points", "https://www.reddit.com/r/PPC/comments/wmvyd4/spyfu_vs_semrush_for_ppc/",
+         "Through treg.to nobody buys either seat. SpyFu is metered per row on treg.to's key; "
+         "Semrush runs on a plan you already hold. Calling both for one domain costs rows, "
+         "not subscriptions."),
+        ("The two tools do not agree with each other",
+         "one site I put into SEMrush shows 12.6k in traffic while Spyfu shows 3.2k",
+         "r/bigseo, 8 points", "https://www.reddit.com/r/bigseo/comments/4b4gwi/could_someone_explain_to_me_semrush_numbers_vs/",
+         "Different crawls, different models, different numbers, and neither is Google's. "
+         "The page shows the two side by side and leaves the choice to you; it does not "
+         "average them or pick a winner."),
+        ("The subscriptions are priced for agencies, not for one question",
+         "I wanted to do some keyword research yesterday and was surprised by how expensive Ahrefs / Semrush were.",
+         "r/TechSEO, 40 points", "https://www.reddit.com/r/TechSEO/comments/1r7qifp/open_source_seo_tool_that_uses_your_own/",
+         "One competitor's keyword list is a per-row call, a fraction of a cent for the first "
+         "page, with the rate printed before the agent spends it. The seat-priced tools "
+         "stay on their own sites, linked, not restated."),
+    ],
+    "related": ("Ads a competitor is running now", "Keywords a domain ranks for",
+                "Your own campaign performance", "Keyword volume, CPC and competition"),
+}
+
+
 # The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
 # use-case page answers one job; a workflow chains several, with a per-step price pulled live from
 # the catalog and a receipt from a real run. `run` is hand-recorded from that run and dated. A
