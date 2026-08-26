@@ -478,7 +478,8 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   stripe tool is a real wire); `demo_sandbox_skill` (`GET /demo/sandbox/skill`) exports what the visitor
   built. `skill_samples` (`GET /skills/samples`, open) + `skill_install`
   (`GET /skills/{name}/install.sh?token=`) host sample skills. `call_tool` short-circuits **sandbox**
-  orgs to `sandbox.synthesize` (real injection, no network). Caps via `_enforce_sandbox_cap`. Full
+  orgs to `sandbox.synthesize` (real injection, no network). Caps via
+`domain.governance.sandbox.enforce_sandbox_cap`. Full
   behavior: [landing-sandbox](landing-sandbox.md).
   - **The one live wire (real Stripe demo).** When `demo_stripe_key` is set, a sandbox call to the exact
     seeded `stripe` tool (fingerprint-matched by `demo_sandbox.is_live_tool`, GET/POST only) is relayed
