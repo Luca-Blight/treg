@@ -12,6 +12,7 @@ sources:
   - src/treg/domain/governance/publicdemo.py
   - src/treg/domain/governance/teams.py
   - src/treg/domain/identity/__init__.py
+  - src/treg/domain/money/__init__.py
   - tests/test_import_lightness.py
 related:
   - architecture/composition.md
@@ -37,7 +38,7 @@ Stage 1 activated the first two contracts:
   by `TYPE_CHECKING` are excluded globally because they cannot load at runtime. Indirect imports are
   allowed by this contract because optional proxy dependencies may appear in lazily executed internal
   modules; the named CLI modules themselves must remain free of direct server imports.
-- `treg.ledger` cannot import `treg.audit`. Money correctness never flows through the best-effort audit
+- `treg.domain.money` cannot import `treg.audit`. Money correctness never flows through the best-effort audit
   path, whose writes may be shed under load.
 
 Stage 2 adds a third contract: the complete `treg.routers` package cannot import `treg.api`, directly or

@@ -119,11 +119,11 @@ unmatched_ignore_imports_alerting = "error"
 as_packages = false
 
 [[tool.importlinter.contracts]]
-name = "Ledger does not depend on best-effort audit"
+name = "Money domain does not depend on best-effort audit"
 type = "forbidden"
-source_modules = ["treg.ledger"]
+source_modules = ["treg.domain.money"]
 forbidden_modules = ["treg.audit"]
-as_packages = false
+as_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Routers do not depend on the legacy API module"

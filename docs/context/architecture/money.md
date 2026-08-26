@@ -3,6 +3,7 @@ title: Money — prepaid balance, the ledger, Stripe, and the reports that check
 status: shipped
 sources:
   - src/treg/ledger.py
+  - src/treg/domain/money/__init__.py
   - src/treg/models.py
   - src/treg/billing.py
   - src/treg/application/billing.py
@@ -49,7 +50,7 @@ providers is what the reserve takes, and a test walks the provider asserting the
 
 | Module | Job | May it write money? |
 |---|---|---|
-| `ledger.py` | the only code path that moves money | **yes — exclusively** |
+| `domain/money` | the only code path that moves money | **yes — exclusively** |
 | `application/billing.py` | billing policy, transactions, and webhook orchestration | no (it calls `ledger.topup`) |
 | `infra/stripe.py` | the only Stripe SDK, signature verification, and network adapter | no |
 | `reconcile.py` | read-only reports that check the ledger against the world | no |
@@ -79,7 +80,7 @@ below). Every operation writes its `LedgerEntry` **in the same transaction, sync
 in-request**. Never route a ledger write through `audit.py`: it drops rows past its queue bound and
 swallows exceptions, which is right for analytics and fatal for money.
 
-## The five operations (`ledger.py`)
+## The five operations (`domain/money`)
 
 | Op | Effect |
 |---|---|
@@ -182,7 +183,7 @@ On the same `fresh` branch, `_credit` also queues a `paid` Google Ads conversion
 the org has a click to attribute to — but this one is **not** atomic with the credit: `ledger.topup()`
 already committed by the time `_credit` gets here, so the conversion is a second, separate commit. A
 crash between the two loses the conversion permanently (the money is still correctly credited). Found
-in review and accepted deliberately (2026-08-17) rather than restructuring `ledger.py`'s commit-inside
+in review and accepted deliberately (2026-08-17) rather than restructuring `domain/money`'s commit-inside
 convention; full reasoning and the cheap future fix in
 [ads-conversions](ads-conversions.md).
 
@@ -581,7 +582,7 @@ estimate`, and that is acceptable **only** because the hard gates sit behind it 
 the per-org daily cap.
 
 Making it exact would need a second materialized authority on spend: reset daily, decremented on
-release, corrected on settle divergence. Four new ways to disagree with `ledger.py`, which is the one
+release, corrected on settle divergence. Four new ways to disagree with `domain/money`, which is the one
 module allowed to move money. Not worth it. Never document these caps to builders as hard limits.
 
 ### Refusal bodies are not the org's
@@ -596,7 +597,7 @@ ordered so a tag refusal can never fall through to the org 402.
 `GET /orgs/{id}/usage/by-tag` takes **money from the ledger** and call counts from `CallRecord`. Audit
 rows are fire-and-forget and the queue sheds them under exactly the load a successful builder
 generates; an invoice built on them would under-bill silently and unrecoverably. The money query lives
-in `ledger.py`, so presentation code cannot casually reach for `CallRecord`.
+in `domain/money`, so presentation code cannot casually reach for `CallRecord`.
 
 The response reports **`unattributed_micro`** explicitly rather than dropping it. The identity a
 builder's books rest on is `attributed + unattributed == the org's settled spend for the window`, and
@@ -622,7 +623,7 @@ and it replaces editing one env var that would lift the blast-radius rail for ev
 
 ## Referrals — paying for growth out of the one margin we have
 
-`domain/referrals.py` decides; `ledger.py` moves. The only crossing is `ledger.grant(...)`, exactly as
+`domain/referrals.py` decides; `domain/money` moves. The only crossing is `ledger.grant(...)`, exactly as
 `billing.py`'s only crossing is `ledger.topup(...)`.
 
 **Why a flat bounty and not a percentage.** `platform_margin` is 0.0 and "we add no markup" is a
