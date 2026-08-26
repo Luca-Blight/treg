@@ -555,7 +555,9 @@ breach in declaration order refuses, so the outcome is deterministic. The refusa
 dimension** — a builder running stacked budgets otherwise cannot tell a workspace breach from a
 per-user one.
 Validation, dimension selection, effective daily caps, and tag-budget row lookup share the
-`domain.governance.budgets` owner across the call and control surfaces.
+`domain.governance.budgets` owner across the call and control surfaces. A newly observed tag returns
+an explicit `created` result without committing; the call intake and governance router commit at the
+same boundary that makes the row visible.
 
 ### `TagSpend` — why the money side is a table, not a JSON key
 

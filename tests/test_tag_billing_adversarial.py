@@ -18,6 +18,7 @@ from starlette.requests import Request
 from treg import api as A, audit, crypto, ledger, localproxy
 from treg.config import get_settings
 from treg.db import session_maker
+from treg.domain.governance import budgets as budget_policy
 from treg.models import CallRecord, CreditBlock, Hold, LedgerEntry, Membership, Org, TagSpend, User
 
 
@@ -83,8 +84,8 @@ async def test_attack_1_all_ingress_paths_reject_storage_key_delimiters(
     # Characters whose NFKC form contains punctuation, plus a combining sequence, must be rejected
     # before either TagSpend or the scoped idempotency key can receive them.
     for value in ("a，b", "a．b", "e\u0301"):
-        with pytest.raises(HTTPException) as exc:
-            A._validate_tag_pair("customer", value)
+        with pytest.raises(budget_policy.BudgetPolicyError) as exc:
+            budget_policy._validate_tag_pair("customer", value)
         assert exc.value.status_code == 422
 
     meta = A._parse_call_meta(_request_with_meta("customer=safe_value"))
@@ -377,8 +378,8 @@ async def test_review_pin_bypass_matrix_never_attributes_a_different_value(
         assert response.status_code == expected, (headers, response.status_code, response.text)
         successes += response.status_code == 200
     # Exercise a non-ASCII lookalike through the shared pin/header validator.
-    with pytest.raises(HTTPException) as exc:
-        A._validate_tag_pair("customer", "cust_\u00c0")
+    with pytest.raises(budget_policy.BudgetPolicyError) as exc:
+        budget_policy._validate_tag_pair("customer", "cust_\u00c0")
     assert exc.value.status_code == 422
     async with session_maker() as db:
         assert await ledger.tag_invoice_since(

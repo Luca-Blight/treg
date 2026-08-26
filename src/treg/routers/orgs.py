@@ -18,6 +18,14 @@ from ..application import signup as signup_use_cases
 from ..caller_metadata import TAG_DEFAULT, _MAX_BUDGET_DIMS, _META_KEY_RE, _client_of, _norm_client
 from ..config import get_settings
 from ..db import get_session
+from ..domain.governance import budgets as budget_policy
+from ..domain.governance.budgets import (
+    _META_MAX_KEYS,
+    _budget_dims_of,
+    _effective_daily_cap,
+    _primary_dim_of,
+)
+from ..domain.governance.publicdemo import PUBLIC_DEMO_RATE_MAX, PUBLIC_DEMO_RATE_WINDOW_S
 from ..domain.governance import teams
 from ..domain.governance.teams import _slugify
 from ..domain.identity.access import (
@@ -693,6 +701,25 @@ async def my_invites(
             "created_at": inv.created_at.isoformat() if inv.created_at else None,
         })
     return out
+
+
+def _validate_tag_pair(key: str, value: str, *, where: str = "tag") -> tuple[str, str]:
+    try:
+        return budget_policy._validate_tag_pair(key, value, where=where)
+    except budget_policy.BudgetPolicyError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+async def _tag_budget(
+    db: AsyncSession, org_id: int, dim: str, val: str, create: bool = False,
+) -> TagBudget | None:
+    try:
+        result = await budget_policy._tag_budget(db, org_id, dim, val, create=create)
+    except budget_policy.BudgetPolicyError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    if result.created:
+        await db.commit()
+    return result.row
 
 
 app = APIRouter()

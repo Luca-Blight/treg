@@ -87,7 +87,8 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   to NULL** so a fully-checked member keeps auto-getting new tools. It's an **explicit allow-list**: a
   *customized* member does NOT auto-get a newly-registered tool (the dashboard toasts a reminder). `Invite`
   carries `tool_access`/`local_run_enabled` (validated at `create_invite`) → copied onto the membership at
-  both accept doors. `list_members` returns both fields.
+  both accept doors. `list_members` returns both fields. ACL refusal details originate as
+  `AccessPolicyError`; call, run, and resource HTTP surfaces translate them to the same 403 response.
 - **Agents (`create_agent` / `list_agents` / `revoke_agent`, `/orgs/{id}/agents`, admin+).** Mints a
   member identity for a machine caller, reusing the `create_public_token` recipe (re-POST the same name
   **rotates** — the old token dies there; revoke deletes the membership). Three invariants, each closing

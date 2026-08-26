@@ -1,9 +1,15 @@
 """Tool and project access policy shared by call, run, and resource surfaces."""
 
-from fastapi import HTTPException
-
 from ...models import Tool
 from ..identity.access import Caller
+
+
+class AccessPolicyError(Exception):
+    """A tool or project ACL refusal translated by the calling interface."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
 
 
 def _tool_allowed(caller: Caller, tool_name: str) -> bool:
@@ -18,9 +24,9 @@ def _tool_allowed(caller: Caller, tool_name: str) -> bool:
 def _require_tool_access(caller: Caller, tool_name: str) -> None:
     """Gate any use of a tool (proxy call + both run tiers) on the member's tool ACL."""
     if not _tool_allowed(caller, tool_name):
-        raise HTTPException(status_code=403, detail=(
+        raise AccessPolicyError(
             f"you don't have access to the tool {tool_name!r} in this team — an admin can grant it "
-            "(dashboard → Team, or `treg org access <you> --tools …`)"))
+            "(dashboard → Team, or `treg org access <you> --tools …`)")
 
 
 def _project_allowed(caller: Caller, tool: Tool) -> bool:
@@ -47,6 +53,6 @@ def _require_tool_use(caller: Caller, tool: Tool) -> None:
     """Gate any use of a tool (proxy call + both run tiers) on BOTH ACL axes."""
     _require_tool_access(caller, tool.name)
     if not _project_allowed(caller, tool):
-        raise HTTPException(status_code=403, detail=(
+        raise AccessPolicyError(
             f"the tool {tool.name!r} belongs to a project you're not scoped to — an admin can grant it "
-            "(dashboard → Team, or `treg org access <you> --projects …`)"))
+            "(dashboard → Team, or `treg org access <you> --projects …`)")

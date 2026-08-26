@@ -22,6 +22,7 @@ from .. import providers as _providers
 from .. import skills as _skills
 from ..config import get_settings
 from ..db import get_session
+from ..domain.governance import access as access_policy
 from ..domain.governance import sandbox as sandbox_policy
 from ..domain.identity.access import (
     Caller,
@@ -43,6 +44,13 @@ sys.modules.setdefault("treg.routers.providers", _providers)
 sys.modules.setdefault("treg.routers.convert", _convert)
 sys.modules.setdefault("treg.routers.skills", _skills)
 sys.modules.setdefault("treg.routers.db", _db)
+
+
+def _require_tool_use_http(caller: Caller, tool: Tool) -> None:
+    try:
+        access_policy._require_tool_use(caller, tool)
+    except access_policy.AccessPolicyError as exc:
+        raise HTTPException(status_code=403, detail=exc.detail) from exc
 
 
 class SecretIn(BaseModel):
@@ -67,7 +75,7 @@ async def _visible_secret_ids(caller: Caller, db: AsyncSession) -> set[int] | No
     tools = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
     ids: set[int] = set()
     for t in tools:
-        if not _tool_usable(caller, t):
+        if not access_policy._tool_usable(caller, t):
             continue
         ids |= {b.get("secret_id") for b in (t.bindings or []) if b.get("secret_id") is not None}
         ids |= {e.get("secret_id") for e in ((t.cli or {}).get("inject") or []) if e.get("secret_id") is not None}
@@ -407,7 +415,7 @@ async def list_tools(
 ) -> list[dict]:
     rows = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id))).scalars().all()
     # The per-member tool ACL hides what it gates: a restricted member's listing shows only their tools.
-    return [_tool_view(t) for t in rows if _tool_usable(caller, t)]
+    return [_tool_view(t) for t in rows if access_policy._tool_usable(caller, t)]
 
 
 @app.get("/tools/by-name/{name}")
@@ -420,7 +428,7 @@ async def get_tool_by_name(
     )).scalars().first()
     if tool is None:
         raise HTTPException(status_code=404, detail="tool not found")
-    _require_tool_use(caller, tool)  # a 403 names the fix (ask an admin) — clearer than a fake 404
+    _require_tool_use_http(caller, tool)  # a 403 names the fix (ask an admin) — clearer than a fake 404
     return _tool_view(tool)
 
 

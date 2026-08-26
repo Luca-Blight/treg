@@ -289,29 +289,9 @@ from .routers.connections import (
     set_extra_credential,
 )
 from .domain.governance.teams import _make_org_membership, _slugify, _unique_slug
+from .domain.governance import access as access_policy
+from .domain.governance import budgets as budget_policy
 from .domain.governance import publicdemo as publicdemo_policy
-from .domain.governance.access import (
-    _project_allowed,
-    _require_tool_access,
-    _require_tool_use,
-    _tool_allowed,
-    _tool_usable,
-)
-from .domain.governance.budgets import (
-    DEFAULT_PRIMARY_DIM,
-    _META_MAX_KEYS,
-    _budget_dims_of,
-    _effective_daily_cap,
-    _primary_dim_of,
-    _tag_budget,
-    _validate_tag_pair,
-)
-from .domain.governance.publicdemo import (
-    PUBLIC_DEMO_HIT_NS,
-    PUBLIC_DEMO_RATE_MAX,
-    PUBLIC_DEMO_RATE_WINDOW_S,
-    _enforce_public_demo_ip_cap,
-)
 from .routers import orgs as org_routes
 from .routers.orgs import (
     INVITE_TTL_DAYS,
@@ -464,9 +444,6 @@ from .routers.signup_cookies import (
     _remember_referral,
     _take_referral,
 )
-
-# The limiter body stays byte-identical in the A move; the request adapter is removed in c3.
-publicdemo_policy._client_ip = _client_ip
 
 from .routers import web as web_routes
 from .routers.web import (
@@ -814,6 +791,13 @@ router.routes.extend(web_routes.public_docs_router.routes)
 router.routes.extend(auth_routes.token_router.routes)
 
 
+def _require_tool_use_http(caller: Caller, tool: Tool) -> None:
+    try:
+        access_policy._require_tool_use(caller, tool)
+    except access_policy.AccessPolicyError as exc:
+        raise HTTPException(status_code=403, detail=exc.detail) from exc
+
+
 
 
 
@@ -881,6 +865,15 @@ router.routes.extend(org_routes.invite_entry_router.routes)
 router.routes.extend(onboard_routes.onboard_entry_router.routes)
 
 
+async def _enforce_public_demo_ip_cap(request: Request, db: AsyncSession) -> None:
+    try:
+        await publicdemo_policy.enforce_public_demo_ip_cap(_client_ip(request), db)
+    except publicdemo_policy.PublicDemoLimitError as exc:
+        await db.commit()
+        raise HTTPException(status_code=429, detail=exc.detail) from exc
+    await db.commit()
+
+
 # ---- per-user daily usage cap (usage-metering v1) -------------------------------------------
 
 
@@ -937,9 +930,6 @@ router.routes.extend(billing_routes.webhook_router.routes)
 router.routes.extend(org_routes.member_management_router.routes)
 
 
-# The public-token response reports the same limiter values enforced by _enforce_public_demo_rate.
-org_routes.PUBLIC_DEMO_RATE_MAX = PUBLIC_DEMO_RATE_MAX
-org_routes.PUBLIC_DEMO_RATE_WINDOW_S = PUBLIC_DEMO_RATE_WINDOW_S
 router.routes.extend(org_routes.machine_identity_router.routes)
 
 
@@ -1053,9 +1043,6 @@ async def clear_capability_pin(
 router.routes.extend(org_routes.policy_router.routes)
 
 
-# ACL bridges retire with Stage 4 call extraction.
-resources_routes._tool_usable = _tool_usable
-resources_routes._require_tool_use = _require_tool_use
 router.routes.extend(resources_routes.crud_router.routes)
 
 
@@ -1155,7 +1142,7 @@ async def grant_local_run(
     tool = (await db.execute(select(Tool).where(Tool.org_id == caller.org_id, Tool.name == name))).scalar_one_or_none()
     if tool is None:
         raise HTTPException(status_code=404, detail="tool not found")
-    _require_tool_use(caller, tool)  # per-member tool + project ACL (call + both run tiers)
+    _require_tool_use_http(caller, tool)  # per-member tool + project ACL (call + both run tiers)
     _require_local_run(caller)               # local tier may be disabled for this member (server-only)
     await _enforce_deny(caller, tool.base_url, "", db, tool.project_id)  # host-level policy (see run_tool_server)
     await _enforce_daily_cap(caller, db)  # a local run counts toward the per-user daily cap
@@ -1501,7 +1488,7 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
     per-tool list) *before* the longest-prefix tiebreak. That ordering matters: a same-host tool the
     caller cannot use must not be able to cause a 409 — or win the tiebreak — for someone who can't
     even see it in `list_tools`. This narrows the candidate set, so it can never grant access: whatever
-    resolves still passes `_require_tool_use`. The named shape needs no filter (it resolves one tool).
+    resolves still passes the access-policy gate. The named shape needs no filter (it resolves one tool).
     """
     org_id = caller.org_id
     norm = _normalize_scheme(rest)
@@ -1513,7 +1500,7 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         on_host = (await db.execute(
             select(Tool).where(Tool.host == host, Tool.org_id == org_id)
         )).scalars().all()
-        candidates = [t for t in on_host if _tool_usable(caller, t)]  # can't use it → can't 409 on it
+        candidates = [t for t in on_host if access_policy._tool_usable(caller, t)]  # can't use it → can't 409 on it
         # Match on a path-segment boundary, not a raw string prefix: base `.../v2` must NOT match
         # request `.../v20/...` (that would inject v2's credential onto an unregistered sibling path).
         def _prefix_match(base: str) -> bool:
@@ -1587,7 +1574,7 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         first_segment = name.partition(".")[0]
         own_near = sorted({
             t.name for t in own_tools
-            if _tool_usable(caller, t) and (
+            if access_policy._tool_usable(caller, t) and (
                 name.startswith(t.name + ".")
                 or t.name == first_segment
                 or t.name.startswith(first_segment + "-")
@@ -2199,7 +2186,7 @@ class CallMeta:
     chance to disagree about who pays."""
 
     tags: dict[str, str]
-    primary_dim: str = DEFAULT_PRIMARY_DIM
+    primary_dim: str = budget_policy.DEFAULT_PRIMARY_DIM
 
     @property
     def primary_val(self) -> str:
@@ -2239,7 +2226,7 @@ def _parse_call_meta(request: Request, caller: Caller | None = None) -> CallMeta
     if not raw:
         # An unpinned caller with no header is untagged; a pinned one still attributes to its pin, so
         # a builder can hand out a scoped token and never touch the header at all.
-        return CallMeta(tags=dict(pinned), primary_dim=_primary_dim_of(caller)) if pinned else _NO_META
+        return CallMeta(tags=dict(pinned), primary_dim=budget_policy._primary_dim_of(caller)) if pinned else _NO_META
     if len(raw.encode()) > _META_MAX_HEADER:
         raise HTTPException(status_code=422, detail=(
             f"X-Treg-Meta is limited to {_META_MAX_HEADER} bytes"))
@@ -2252,19 +2239,23 @@ def _parse_call_meta(request: Request, caller: Caller | None = None) -> CallMeta
             raise HTTPException(status_code=422, detail=(
                 f"X-Treg-Meta must be `key=value` pairs; keys are 1-32 chars of [a-z0-9_] "
                 f"(got {segment.strip()!r})"))
-        key, value = _validate_tag_pair(raw_key, raw_value, where="X-Treg-Meta")
+        try:
+            key, value = budget_policy._validate_tag_pair(
+                raw_key, raw_value, where="X-Treg-Meta")
+        except budget_policy.BudgetPolicyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
         if key in tags:
             raise HTTPException(status_code=422, detail=f"X-Treg-Meta names {key!r} twice")
         tags[key] = value
-    if len(tags) > _META_MAX_KEYS:
+    if len(tags) > budget_policy._META_MAX_KEYS:
         raise HTTPException(status_code=422, detail=(
-            f"X-Treg-Meta is limited to {_META_MAX_KEYS} keys (got {len(tags)})"))
+            f"X-Treg-Meta is limited to {budget_policy._META_MAX_KEYS} keys (got {len(tags)})"))
     for dim, pinned_val in pinned.items():
         if tags.get(dim, pinned_val) != pinned_val:
             raise HTTPException(status_code=403, detail=(
                 f"this token is pinned to {dim}={pinned_val!r} and cannot bill {tags[dim]!r}"))
         tags[dim] = pinned_val
-    return CallMeta(tags=tags, primary_dim=_primary_dim_of(caller))
+    return CallMeta(tags=tags, primary_dim=budget_policy._primary_dim_of(caller))
 
 
 def _idempotency_key(request: Request) -> str:
@@ -2652,7 +2643,7 @@ async def _enforce_platform_daily_cap(caller: Caller, add_micro: int, db: AsyncS
     meters calls and may let a few extra through under load, this one meters OUR money, so a query that
     cannot answer refuses the call. The cap is the blast radius of a runaway agent (and of a pricing
     mistake in the catalog) — the balance alone is not enough, because auto-top-up can refill it."""
-    cap = _effective_daily_cap(caller.org)
+    cap = budget_policy._effective_daily_cap(caller.org)
     try:
         spent = await ledger.spent_today(db, caller.org_id)
     except Exception as exc:  # noqa: BLE001 — cannot verify the ceiling ⇒ do not spend
@@ -2692,15 +2683,6 @@ async def _resolve_tag_budget(db: AsyncSession, org_id: int, dim: str, val: str)
     return own or next((r for r in rows if r.val == TAG_DEFAULT), None)
 
 
-# Governance routes and agent pins share call-path rules until Stage 4 extracts caller metadata ownership.
-org_routes._META_MAX_KEYS = _META_MAX_KEYS
-org_routes._validate_tag_pair = _validate_tag_pair
-org_routes._primary_dim_of = _primary_dim_of
-org_routes._budget_dims_of = _budget_dims_of
-org_routes._effective_daily_cap = _effective_daily_cap
-org_routes._tag_budget = _tag_budget
-
-
 async def _enforce_tag_budgets(caller: Caller, meta: CallMeta, db: AsyncSession,
                                add_micro: int | None = None) -> None:
     """Refuse a call that breaches a builder-set limit on one of its tags.
@@ -2724,7 +2706,7 @@ async def _enforce_tag_budgets(caller: Caller, meta: CallMeta, db: AsyncSession,
     """
     if not meta.tags:
         return
-    dims = _budget_dims_of(caller.org)
+    dims = budget_policy._budget_dims_of(caller.org)
     for dim in dims:
         val = meta.tags.get(dim)
         if not val:
@@ -2733,10 +2715,13 @@ async def _enforce_tag_budgets(caller: Caller, meta: CallMeta, db: AsyncSession,
             # Registering the value (cardinality bound) happens on the pre-flight pass only; both
             # passes then resolve override → default.
             if add_micro is None:
-                await _tag_budget(db, caller.org_id, dim, val, create=True)
+                result = await budget_policy._tag_budget(
+                    db, caller.org_id, dim, val, create=True)
+                if result.created:
+                    await db.commit()
             row = await _resolve_tag_budget(db, caller.org_id, dim, val)
-        except HTTPException:
-            raise
+        except budget_policy.BudgetPolicyError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
         except Exception as exc:  # noqa: BLE001 — cannot verify a ceiling ⇒ do not spend
             logging.getLogger("treg.ledger").warning(
                 "tag budget check failed for org %s (%s=%s): %s", caller.org_id, dim, val, exc)
@@ -3668,7 +3653,7 @@ async def call_tool(
                 groups={"team": caller.org.slug})
             raise
         tool, upstream_url, drop_params = mk.tool, mk.upstream, mk.consumed
-    _require_tool_use(caller, tool)  # per-member tool + project ACL (NULL access = all; admins exempt)
+    _require_tool_use_http(caller, tool)  # per-member tool + project ACL (NULL access = all; admins exempt)
     # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
     # shape the caller used (named or URL-passthrough), and the relay never follows redirects, so a
     # blocked host can't be reached via a 3xx bounce.
@@ -4051,7 +4036,7 @@ async def run_tool_server(
     ).scalar_one_or_none()
     if tool is None:
         raise HTTPException(status_code=404, detail=f"no tool {body.tool!r} in this org")
-    _require_tool_use(caller, tool)  # per-member tool + project ACL
+    _require_tool_use_http(caller, tool)  # per-member tool + project ACL
     # A run executes a CLI, so there is no request path to match — evaluate the tool's own upstream
     # host, which is what a host-level rule ("nobody may reach api.stripe.com") is really saying.
     await _enforce_deny(caller, tool.base_url, "", db, tool.project_id)

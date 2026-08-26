@@ -1,8 +1,8 @@
 """Tag validation and budget policy shared by call and governance surfaces."""
 
 import re
+from dataclasses import dataclass
 
-from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -23,6 +23,21 @@ DEFAULT_PRIMARY_DIM = "customer"
 _MAX_TAG_VALUES = 10_000    # distinct values per dimension per org, bounded at WRITE (see _tag_budget)
 
 
+class BudgetPolicyError(Exception):
+    """A tag or budget refusal translated by the calling interface."""
+
+    def __init__(self, status_code: int, detail: str | dict) -> None:
+        super().__init__(str(detail))
+        self.status_code = status_code
+        self.detail = detail
+
+
+@dataclass(frozen=True)
+class TagBudgetResult:
+    row: TagBudget | None
+    created: bool
+
+
 def _validate_tag_pair(key: str, value: str, *, where: str = "tag") -> tuple[str, str]:
     """One `dim=val` pair, validated the SAME way wherever it enters treg. THE only rule.
 
@@ -38,15 +53,15 @@ def _validate_tag_pair(key: str, value: str, *, where: str = "tag") -> tuple[str
     key = (key or "").strip().lower()
     value = (value or "").strip()
     if not _META_KEY_RE.match(key):
-        raise HTTPException(status_code=422, detail=(
-            f"{key!r} is not a valid tag key — 1-32 chars of [a-z0-9_]"))
+        raise BudgetPolicyError(
+            422, f"{key!r} is not a valid tag key — 1-32 chars of [a-z0-9_]")
     if not value or len(value) > _META_MAX_VALUE:
-        raise HTTPException(status_code=422, detail=(
-            f"{where} value for {key!r} must be 1-{_META_MAX_VALUE} characters"))
+        raise BudgetPolicyError(
+            422, f"{where} value for {key!r} must be 1-{_META_MAX_VALUE} characters")
     if "@" in value:
         # The ledger is append-only, so a tag written today cannot be erased later. An email here
         # is a permanent record of a person, which is not a thing we can undo on request.
-        raise HTTPException(status_code=422, detail=(
+        raise BudgetPolicyError(422, (
             f"{where} value for {key!r} looks like an email — use an opaque id: these tags are "
             f"written to an append-only ledger and cannot be deleted afterwards"))
     if not _META_VALUE_RE.match(value):
@@ -56,7 +71,7 @@ def _validate_tag_pair(key: str, value: str, *, where: str = "tag") -> tuple[str
         # `customer="A\x1fB", key="C"` — one of a builder's users reading another's cached
         # response. Do not narrow this to "reject \x1f": the header parser is not a security
         # boundary we control, and the next separator would reopen it.
-        raise HTTPException(status_code=422, detail=(
+        raise BudgetPolicyError(422, (
             f"{where} value for {key!r} may only contain letters, digits and . _ - : "
             f"(these ids are used as storage keys)"))
     return key, value
@@ -96,7 +111,7 @@ def _effective_daily_cap(org: Org) -> int:
 
 
 async def _tag_budget(db: AsyncSession, org_id: int, dim: str, val: str,
-                      create: bool = False) -> TagBudget | None:
+                      create: bool = False) -> TagBudgetResult:
     """This team's budget row for one tag value, creating it on first sighting when asked.
 
     Auto-created, so a builder never pre-registers a user before their first call can carry an id.
@@ -107,11 +122,11 @@ async def _tag_budget(db: AsyncSession, org_id: int, dim: str, val: str,
     row = (await db.execute(select(TagBudget).where(
         TagBudget.org_id == org_id, TagBudget.dim == dim, TagBudget.val == val))).scalar_one_or_none()
     if row is not None or not create:
-        return row
+        return TagBudgetResult(row=row, created=False)
     seen = (await db.execute(select(func.count()).select_from(TagBudget).where(
         TagBudget.org_id == org_id, TagBudget.dim == dim))).scalar() or 0
     if seen >= _MAX_TAG_VALUES:
-        raise HTTPException(status_code=429, detail={
+        raise BudgetPolicyError(429, {
             "error": "tag_cardinality_exceeded", "dim": dim,
             "message": (f"this team has already used {seen} distinct {dim!r} values, the limit. A tag "
                         f"that changes every call (a session or request id) is not a budget "
@@ -119,5 +134,4 @@ async def _tag_budget(db: AsyncSession, org_id: int, dim: str, val: str,
         })
     row = TagBudget(org_id=org_id, dim=dim, val=val, auto=True)
     db.add(row)
-    await db.commit()
-    return row
+    return TagBudgetResult(row=row, created=True)

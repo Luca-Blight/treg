@@ -488,7 +488,8 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   token entirely (it must never act as a user — mint identity tokens, create orgs, accept invites). Its
   `/call` traffic is metered per client IP (`_enforce_public_demo_ip_cap`, `PUBLIC_DEMO_HIT_NS`,
   ~10 calls/min/IP) since one token stands in for thousands of strangers. The limiter and its
-  constants share the `domain.governance.publicdemo` owner.
+  constants share the `domain.governance.publicdemo` owner; the API commits its ratestore write before
+  translating a semantic exhaustion result to 429.
 - **Skills / bundles:** `register_skill` (`POST /skills`) composes a `Bundle` + its secrets + tools
   atomically, resolving each binding's `secret` local-name to the created secret id; the shared core is
   `_register_skill_bundle` (also used by the folder importer). `list_bundles`, `get_bundle`,
