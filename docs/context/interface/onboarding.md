@@ -6,6 +6,7 @@ sources:
   - src/treg/demo.py
   - src/treg/cli.py
   - src/treg/routers/auth.py
+  - src/treg/routers/onboard.py
   - src/treg/web/index.html
 related:
   - interface/api.md
@@ -92,7 +93,7 @@ Idempotent — `existing_demo_org` reuses the caller's demo org instead of stack
 `_cascade_delete_org`), drops demo-teammate memberships from the caller's REAL teams too, and sweeps
 any demo user left with zero memberships — a clean exit, no litter.
 
-## Endpoints (`api.py`, all identity/member-scoped)
+## Endpoints (`routers/onboard.py`, all identity/member-scoped)
 
 - `POST /onboard/demo {team_name}` (`require_identity`) → `demo.provision` (CLI quick mode: full seed).
 - `POST /onboard/seed-tool` (`require_member`, member+) → `demo.seed_tool` into the active team.

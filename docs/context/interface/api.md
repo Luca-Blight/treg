@@ -15,6 +15,7 @@ sources:
   - src/treg/routers/auth_helpers.py
   - src/treg/routers/catalog.py
   - src/treg/routers/connections.py
+  - src/treg/routers/onboard.py
   - src/treg/routers/orgs.py
   - src/treg/routers/resources.py
   - src/treg/routers/signup_cookies.py

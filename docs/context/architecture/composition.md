@@ -10,6 +10,7 @@ sources:
   - src/treg/routers/admin.py
   - src/treg/routers/auth.py
   - src/treg/routers/connections.py
+  - src/treg/routers/onboard.py
   - src/treg/routers/orgs.py
   - src/treg/routers/resources.py
   - src/treg/routers/web.py
