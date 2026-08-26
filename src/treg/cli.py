@@ -3685,6 +3685,20 @@ def _billing_autotopup(cfg: dict) -> dict | None:
         return None
 
 
+def _bonus_tiers_from_server(cfg: dict) -> dict[int, int]:
+    """`{min_usd: percent}` from GET /billing, or {} when unavailable. Same never-raises posture as
+    `_billing_autotopup`: this decorates the top-up output."""
+    try:
+        with _client(cfg) as c:
+            r = c.get("/billing")
+        if r.status_code >= 400:
+            return {}
+        tiers = ((r.json().get("topup") or {}).get("bonus_tiers")) or {}
+        return {int(k): int(v) for k, v in tiers.items()}
+    except Exception:
+        return {}
+
+
 def cmd_topup(args, cfg) -> None:
     """Add funds (prints a Stripe Checkout URL), or configure auto top-up.
 
@@ -3703,6 +3717,17 @@ def cmd_topup(args, cfg) -> None:
         return
     out = r.json()
     print(f"\n  {_A}Add {_usd(out['amount_micro'])} to your balance{_R}")
+    # The bonus this size earns, and the next tier up if it earns more — the one nudge that changes
+    # what people pay. Comes from GET /billing; silence when it can't be fetched.
+    tiers = _bonus_tiers_from_server(cfg)
+    if tiers:
+        usd = out["amount_micro"] // 1_000_000
+        pct = max([v for k, v in tiers.items() if usd >= k], default=0)
+        if pct:
+            print(f"  {_G}+{pct}% bonus credit{_R} ({_usd(out['amount_micro'] * pct // 100)}) added when it lands")
+        nxt = [(k, v) for k, v in sorted(tiers.items()) if k > usd and v > pct]
+        if nxt:
+            print(f"  {_M}top up ${nxt[0][0]} or more for +{nxt[0][1]}% bonus credit{_R}")
     print(f"\n  Pay on Stripe's secure page:\n\n    {_TEAL}{out['url']}{_R}")
     print(f"\n  {_M}Your balance updates as soon as Stripe confirms the payment "
           f"(seconds). Check it with `treg balance`.{_R}\n")
@@ -5475,8 +5500,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     tu = mk(sub, "topup", "Add funds to your team's balance, or set up automatic top-ups.",
             "treg topup                                     # a Checkout link for the default amount",
-            "treg topup 25                                  # …for $25",
-            "treg topup --auto on --threshold 5 --amount 10 # refill $10 whenever it drops below $5",
+            "treg topup 100                                 # …for $100 (+10% bonus credit)",
+            "treg topup --auto on --threshold 5 --amount 20 # refill $20 whenever it drops below $5",
             "treg topup --auto off")
     tu.add_argument("amount", nargs="?", type=float, default=None,
                     help="how many US dollars to add (whole dollars; default from the server)")

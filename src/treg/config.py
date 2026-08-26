@@ -213,15 +213,25 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     # Top-up amounts, in whole USD (the ONLY place dollars appear — billing.py converts to micro-USD
     # for the ledger and to integer cents for Stripe at the boundaries, and nothing in between sees a
-    # float). $5 minimum is fee math, not policy: at 2.9% + $0.30 a $1 top-up loses 33% to fees.
-    topup_min_usd: int = 5
+    # float). The $10 minimum is fee math, not policy: at 2.9% + $0.30 a $5 top-up loses 9% to fees,
+    # and the referral offer's qualifying amount is $10 already.
+    topup_min_usd: int = 10
     topup_default_usd: int = 10
-    topup_presets: list[int] = [5, 10, 25, 50, 100, 200, 300, 400]
+    # Four presets plus "Other" (any whole amount ≥ min). Deliberately few and skewed big: with eight
+    # cards from $5 up nobody ever picked $100+, and repeat payers stayed flat ($10 → $10).
+    topup_presets: list[int] = [10, 50, 100, 200]
+    # Bonus credit on a MANUAL top-up, as {min_usd: percent}: the highest key ≤ the amount applies.
+    # It is promotional credit (a separate block that burns first and is never refundable), never
+    # purchased balance — see billing.bonus_for_topup. Automatic refills get no bonus.
+    topup_bonus_tiers: dict[int, int] = {10: 0, 50: 5, 100: 10, 200: 15}
+    # After each manual top-up the dashboard's preselected amount steps one preset up, but never past
+    # this — the ladder nudges $10 payers toward $50 without preselecting $200 at anyone.
+    topup_default_cap_usd: int = 50
     # Auto-top-up defaults, applied when an org enables it without naming its own numbers. The
     # threshold is deliberately above the $1 promo grant's tail: at agent call rates a $2 floor is one
     # burst away from empty, and an off-session charge takes seconds to land.
     autotopup_default_threshold_usd: int = 5
-    autotopup_default_amount_usd: int = 10
+    autotopup_default_amount_usd: int = 20
     # Hard guardrails on the off-session charge — the difference between "convenient" and "a runaway
     # agent bills a card all night". Cap is per calendar month, cooldown is between attempts, and
     # max_attempts counts CONSECUTIVE failures before auto-top-up disables itself.

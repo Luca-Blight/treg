@@ -63,7 +63,9 @@ from .models import CreditBlock, Hold, LedgerEntry, Org, TagSpend
 # It is a separate kind ONLY so reporting can tell the two apart. Note that an unrecognised kind
 # sorts LAST (`.get(kind, 99)` in `_consume_blocks`), i.e. after purchased: any new non-refundable
 # kind must be added here or it silently gets the most expensive treatment available.
-_KIND_ORDER = {"promotional": 0, "referral": 0, "purchased": 1}
+# `bonus` (the tiered extra on a manual top-up, `billing.bonus_for_topup`) is the same kind of thing:
+# marketing spend keyed to a payment, never refundable, so it burns first too.
+_KIND_ORDER = {"promotional": 0, "referral": 0, "bonus": 0, "purchased": 1}
 
 
 class InsufficientBalance(Exception):

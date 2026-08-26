@@ -186,6 +186,11 @@
             ],
             "title": "Monthly Cap Usd"
           },
+          "setup_url": {
+            "default": true,
+            "title": "Setup Url",
+            "type": "boolean"
+          },
           "threshold_usd": {
             "anyOf": [
               {

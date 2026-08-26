@@ -368,6 +368,7 @@ addEventListener('load', function(){
   .fundcard{background:var(--panel2);border:1px solid var(--line);border-radius:var(--rb);padding:13px 8px 11px;text-align:center;cursor:pointer;color:var(--ink);font-family:var(--mono);transition:border-color .12s,transform .12s}
   .fundcard:hover:not(:disabled){border-color:var(--accent);transform:translateY(-1px)}
   .fundcard:disabled{opacity:.55;cursor:default}
+  .fundcard.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
   .fundcard b{display:block;font-size:17px;letter-spacing:-.3px}
   .fundcard span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
   @media(max-width:520px){.fundgrid{grid-template-columns:repeat(2,1fr)}}
@@ -2381,7 +2382,6 @@ a:hover{text-decoration-color:var(--muted)}
                     <div style="flex:1;min-width:220px">
                       <div class="lbl">Balance</div>
                       <div style="font-size:28px;font-weight:700;color:var(--accent);font-family:var(--mono)">{{money(billing.balance_micro)}}</div>
-                      <p class="sub" style="margin:4px 0 0">Prepaid credit. Calls draw from it - <code>treg balance</code> shows the ledger.</p>
                     </div>
                     <!-- Stripe's hosted portal: card, billing address, tax ID and the invoice archive.
                          Hidden until the team has a Stripe customer, which its first payment creates. -->
@@ -2393,8 +2393,7 @@ a:hover{text-decoration-color:var(--muted)}
                   <p v-if="!billing.configured" class="sub" style="margin:12px 0 0">Top-ups aren't configured on this deployment.</p>
 
                   <template v-if="billing.configured">
-                    <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
-                      <div class="lbl">Add funds</div>
+                    <div style="margin-top:12px">
                       <!-- A team that arrived through someone's link does not know a bonus exists.
                            This is the one screen where saying so changes what they do, and the
                            MINIMUM is the part that matters: the first preset ($5) is below it, so
@@ -2425,20 +2424,19 @@ a:hover{text-decoration-color:var(--muted)}
                         {{money(billing.referral_offer.referrer_micro)}} after
                         {{billing.referral_offer.hold_days}} days.
                       </div>
-                      <div class="fundgrid" style="margin-top:8px">
-                        <button v-for="p in billing.topup.presets" :key="p" class="fundcard" :disabled="billingBusy" @click="addFunds(p)">
-                          <b>${{p}}</b>
-                          <!-- The bonus is named ON the qualifying buttons, not only in the note
-                               above: the amount is chosen here, and a preset that quietly forfeits
-                               it is the whole failure this is meant to prevent. -->
-                          <span v-if="billingBusy&&topupAmount===p">Opening Stripe…</span>
-                          <span v-else-if="refPresetBonus(p)" style="color:var(--green)">+{{money(refPresetBonus(p))}} bonus</span>
-                          <span v-else>one-time</span>
-                        </button>
-                      </div>
+                      <!-- The amounts live in a modal (openTopup), not inline: choosing a size,
+                           seeing the bonus it earns and deciding on auto top-up are one decision,
+                           and the mandate text has to sit next to the Pay button it authorizes. -->
+                      <button class="btn primary" :disabled="billingBusy" @click="openTopup()">Top up</button>
                     </div>
 
-                    <div v-if="billing.autotopup.disabled_reason" class="banner" style="margin:14px 0 0">
+                    <!-- `no_card` is not a failure: consent was recorded (usually from the top-up
+                         modal) and the policy arms itself when a payment saves a card. Showing it in
+                         the red "switched itself off" banner made an abandoned Checkout look broken. -->
+                    <p v-if="billing.autotopup.disabled_reason==='no_card'" class="sub" style="margin:14px 0 0">
+                      Auto top-up is set up and will switch on as soon as a top-up saves your card.
+                    </p>
+                    <div v-else-if="billing.autotopup.disabled_reason" class="banner" style="margin:14px 0 0">
                       Auto top-up switched itself off ({{billing.autotopup.disabled_reason}}). Once the balance runs out, calls will fail until it's funded.
                     </div>
                     <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">
@@ -2448,10 +2446,13 @@ a:hover{text-decoration-color:var(--muted)}
                         <span v-if="billing.card_on_file" class="sub" style="margin-left:auto">Card on file ✓</span>
                       </label>
                       <p class="sub" style="margin:8px 0 0">
-                        <template v-if="billing.autotopup.enabled">On - we add {{money(billing.autotopup.amount_micro)}} whenever the balance drops below {{money(billing.autotopup.threshold_micro)}}. This month: {{money(billing.autotopup.month_spend_micro)}} of {{money(billing.autotopup.monthly_cap_micro)}}.</template>
-                        <template v-else>Keep agents running without watching the balance. We charge your saved card only when it dips below your threshold, never more than your monthly cap.</template>
+                        <template v-if="billing.autotopup.enabled">On - we add {{money(billing.autotopup.amount_micro)}} whenever the balance drops below {{money(billing.autotopup.threshold_micro)}}. This month: {{money(billing.autotopup.month_spend_micro)}}.
+                          <a href="#" @click.prevent="autoOpen=!autoOpen;autoConsent=false">{{autoOpen?'Cancel':'Edit'}}</a></template>
+                        <template v-else>Keep agents running without watching the balance. We charge your saved card only when it dips below your threshold.</template>
                       </p>
-                      <div v-if="!billing.autotopup.enabled && autoOpen" style="margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--rb);padding:12px 14px;max-width:560px">
+                      <!-- The same panel edits a running policy (Edit link above) and arms a new one:
+                           either way the numbers change, so the mandate is re-agreed and re-stamped. -->
+                      <div v-if="autoOpen" style="margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--rb);padding:12px 14px;max-width:560px">
                         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                           <span class="sub" style="margin:0">Add $</span>
                           <input class="msel" style="width:70px" type="number" min="5" v-model.number="autoAmount"/>
@@ -2462,10 +2463,10 @@ a:hover{text-decoration-color:var(--muted)}
                           <input type="checkbox" v-model="autoConsent" style="margin-top:3px"/>
                           <!-- The mandate text. Not decoration: an off-session charge with no recorded
                                agreement to THESE numbers is an unauthorized charge under PSD2/SCA. -->
-                          <span class="sub" style="margin:0">I authorize treg to charge my saved card ${{autoAmount}} automatically whenever my balance drops below ${{autoThreshold}}, up to {{money(billing.autotopup.monthly_cap_micro)}} per month. Cancel any time.</span>
+                          <span class="sub" style="margin:0">I authorize treg to charge my saved card ${{autoAmount}} automatically whenever my balance drops below ${{autoThreshold}}. Cancel any time.</span>
                         </label>
                         <div style="margin-top:12px">
-                          <button class="btn primary" :disabled="!autoConsent||billingBusy" @click="setAuto(true)">{{billingBusy?'…':'Turn on auto top-up'}}</button>
+                          <button class="btn primary" :disabled="!autoConsent||billingBusy" @click="setAuto(true)">{{billingBusy?'…':(billing.autotopup.enabled?'Save':'Turn on auto top-up')}}</button>
                         </div>
                       </div>
                     </div>
@@ -2481,7 +2482,7 @@ a:hover{text-decoration-color:var(--muted)}
                           <tr v-for="i in bhist.items" :key="i.payment_intent" style="border-top:1px solid var(--line)">
                             <td style="padding:8px 10px 8px 0;white-space:nowrap">{{bhistDate(i.created_at)}}</td>
                             <td style="padding:8px 10px 8px 0;font-family:var(--mono);white-space:nowrap">{{money(i.amount_micro)}}</td>
-                            <td style="padding:8px 10px 8px 0" class="sub">{{i.auto?'auto':''}}</td>
+                            <td style="padding:8px 10px 8px 0" class="sub">{{i.auto?'auto':''}}<span v-if="i.bonus_micro" style="color:var(--green)">+{{money(i.bonus_micro)}} bonus</span></td>
                             <td style="padding:8px 0;text-align:right;white-space:nowrap">
                               <a v-if="bhistLink(i)" :href="bhistLink(i)" target="_blank" rel="noopener">{{bhistLabel(i)}}</a>
                               <span v-else class="muted">—</span>
@@ -3226,6 +3227,78 @@ product, including per-customer usage tracking and billing.</pre>
       </div>
     </div>
 
+    <!-- TOP UP. Four presets + Other, the bonus each earns, and auto top-up as a toggle that is
+         ON by default for a team with no mandate yet. The toggle IS the consent control: its label
+         is the PSD2/SCA mandate text (amount, threshold), and Pay records it through
+         /billing/autotopup BEFORE opening Checkout — so the card Checkout saves arms auto top-up
+         from the setup webhook with numbers a human agreed to. Off = plain one-off top-up. -->
+    <div v-if="topupOpen&&billing" class="scrim" role="dialog" aria-modal="true" @click.self="topupOpen=false">
+      <div class="modal" style="padding:18px 20px;width:min(620px,94vw)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Top up credits</h3>
+          <button class="btn sm" @click="topupOpen=false" aria-label="Close">✕</button>
+        </div>
+        <p class="sub" style="margin:6px 0 14px">Choose an amount. Bigger top-ups earn bonus credit; you can always add more later.</p>
+        <div class="fundgrid" style="max-width:none;grid-template-columns:repeat(5,minmax(80px,1fr))">
+          <button v-for="p in billing.topup.presets" :key="p" class="fundcard" :class="{sel:topupPick===p}" :disabled="billingBusy" @click="topupPick=p">
+            <b>${{p}}</b>
+            <!-- The bonus is named ON the qualifying buttons: the amount is chosen here, and a
+                 preset that quietly forfeits a bonus is the whole failure this is meant to prevent.
+                 The referral bonus (refPresetBonus) stacks on the tier bonus. -->
+            <span v-if="tierBonus(p)" style="color:var(--green)">+{{money(tierBonus(p))}} bonus</span>
+            <span v-else-if="refPresetBonus(p)" style="color:var(--green)">+{{money(refPresetBonus(p))}} bonus</span>
+          </button>
+          <button class="fundcard" :class="{sel:topupPick==='other'}" :disabled="billingBusy" @click="pickOther()">
+            <b>Other</b>
+          </button>
+        </div>
+        <div v-if="topupPick==='other'" style="margin-top:12px">
+          <div style="display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--rb);background:var(--bg);padding:0 14px">
+            <span style="font-family:var(--mono);font-size:22px;color:var(--muted)">$</span>
+            <input type="number" :min="billing.topup.min_usd" :max="billing.topup.max_usd" step="1" v-model.number="topupOther" placeholder="0" autocomplete="off" data-lpignore="true"
+                   style="flex:1;border:0;background:transparent;color:var(--ink);font-family:var(--mono);font-size:22px;font-weight:700;padding:12px 8px;outline:none;min-width:0"/>
+          </div>
+          <p class="sub" style="margin:6px 0 0">Whole dollars, ${{billing.topup.min_usd}}–${{billing.topup.max_usd.toLocaleString()}}.</p>
+        </div>
+
+        <!-- Auto top-up. Read-only line when the team already has a mandate; otherwise the toggle. -->
+        <div style="margin-top:14px;border:1px solid var(--line);border-radius:var(--rb);padding:10px 12px;background:var(--panel2)">
+          <template v-if="billing.autotopup.enabled||billing.autotopup.consented_at">
+            <b style="font-size:12.5px">Auto top-up is {{billing.autotopup.enabled?'on':'set up'}}.</b>
+            <span class="sub" style="margin:0"> Manage or turn it off from the billing page.</span>
+          </template>
+          <template v-else>
+            <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
+              <span class="tswitch" style="margin-top:2px"><input type="checkbox" v-model="topupAuto"/><span class="knob"></span></span>
+              <span>
+                <b style="font-size:12.5px">Auto top-up {{topupAuto?'on':'off'}}</b>
+                <!-- The mandate. Not decoration: an off-session charge with no recorded agreement to
+                     THESE numbers is an unauthorized charge under PSD2/SCA. The numbers are the
+                     server defaults ($20 when below $5), shown here in full; the billing page's
+                     Edit panel changes them. Not the top-up amount: a $200 buyer does not want
+                     $200 refills. -->
+                <span class="sub" style="display:block;margin:2px 0 0">
+                  <template v-if="topupAuto">I authorize treg to charge my saved card <b>${{autoAmount}}</b> automatically whenever my balance drops below <b>${{autoThreshold}}</b>. Cancel any time from the billing page.</template>
+                  <template v-else>Calls fail with a 402 once the balance runs out. Turn this on to keep agents running without watching it.</template>
+                </span>
+              </span>
+            </label>
+          </template>
+        </div>
+
+        <div style="margin-top:14px;border:1px solid var(--line);border-radius:var(--rb);padding:10px 12px;font-family:var(--mono);font-size:12.5px">
+          <div style="display:flex;justify-content:space-between"><span>Credit added</span><span v-if="!topupUsd">—</span><span v-else><b>{{money(topupUsd*1e6+topupBonusMicro)}}</b><span v-if="topupBonusMicro" class="sub" style="margin:0"> ({{money(topupUsd*1e6)}} + <span style="color:var(--green)">{{money(topupBonusMicro)}} bonus</span>)</span></span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:8px;padding-top:8px;font-weight:700"><span>Total due</span><span>{{topupUsd?money(topupUsd*1e6):'—'}}</span></div>
+        </div>
+        <p v-if="topupErr" class="sub" style="color:var(--red);margin:10px 0 0">{{topupErr}}</p>
+        <p class="sub" style="margin:10px 0 0">You'll pay on Stripe's secure page. The balance updates the moment the payment lands.</p>
+        <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px">
+          <button class="btn" @click="topupOpen=false" :disabled="billingBusy">Cancel</button>
+          <button class="btn primary" :disabled="billingBusy||!topupValid" @click="payTopup()">{{billingBusy?'Opening Stripe…':(topupUsd?'Pay $'+topupUsd+' now':'Pay now')}}</button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="capAsk" class="scrim" role="dialog" aria-modal="true" @click.self="capAsk=null">
       <div class="modal" style="padding:16px">
         <h3 style="margin:0 0 6px">Connect {{capAsk.provider.display_name}}</h3>
@@ -3861,6 +3934,7 @@ createApp({
       // Billing (Stripe top-ups). `billing` null = not loaded / not an admin; billing.configured
       // false = this deployment sells no balance, so the whole block stays hidden.
       billing:null, billingBusy:false, topupAmount:10, autoAmount:10, autoThreshold:5, autoConsent:false, autoOpen:false,
+      topupOpen:false, topupPick:10, topupOther:null, topupAuto:true, topupErr:'',
       capCfg:null, capUsd:0, capBusy:false, capErr:'',
       budgets:[], budDims:[], budDim:'', budVal:'', budDaily:'', budBusy:false, budErr:'',
       bhist:{items:[],loading:false,ok:true},   // past top-ups + their invoice/receipt links; ok=false means Stripe was unreachable, amounts are still right
@@ -3944,6 +4018,14 @@ createApp({
     };
   },
   computed:{
+    topupUsd(){ if(!this.billing) return 0; if(this.topupPick==='other'){ const v=Number(this.topupOther); return Number.isInteger(v)&&v>0?v:0; } return this.topupPick; },
+    topupValid(){ if(!this.billing||!this.topupUsd) return false; const t=this.billing.topup; return this.topupUsd>=t.min_usd&&this.topupUsd<=t.max_usd; },
+    topupBonusMicro(){ return this.tierBonus(this.topupUsd)+this.refPresetBonus(this.topupUsd); },
+    maxBonusPct(){ const t=this.billing&&this.billing.topup.bonus_tiers; return t?Math.max(0,...Object.values(t)):0; },
+    // The monthly cap is a server-side runaway guardrail, not something the payer is asked to pick:
+    // the modal sets it to the single-top-up ceiling (effectively unlimited) so a big payer is never
+    // locked out mid-month by a default sized for $10 refills. The manage panel below can lower it.
+    autoCapUsd(){ return this.billing?this.billing.topup.max_usd:0; },
     // Marketplace shelves. /oauth/providers already returns providers grouped-then-alphabetical, so
     // this walks the list once and starts a shelf whenever the category changes — re-sorting here
     // would just be a second place to keep the order in step with the registry.
@@ -4921,9 +5003,38 @@ createApp({
         // on the return redirect (which a payer could simply type). Same tab, so the return lands here.
         window.location.href=out.url; }
       catch(e){ this.err='Could not start the payment: '+(e.detail||e.status); this.billingBusy=false; } },
+    // ---- top-up modal ----
+    openTopup(){ this.topupPick=this.billing.topup.default_usd; this.topupOther=null; this.topupErr='';
+      // Default ON only for a team with no mandate; a team that already decided is not re-asked.
+      this.topupAuto=!(this.billing.autotopup.enabled||this.billing.autotopup.consented_at);
+      this.topupOpen=true; },
+    // "Other" starts one rung above the biggest card, not blank: the card row ends at $200, so the
+    // amount a payer reaches for here is larger than that, and a prefilled number is one keystroke
+    // away from theirs. Only on first pick - a value they typed survives re-selecting the card.
+    pickOther(){ if(this.topupPick!=='other'&&!this.topupOther){ const top=Math.max(...this.billing.topup.presets); this.topupOther=Math.min(this.billing.topup.max_usd, top>=200?500:top*2); } this.topupPick='other'; },
+    tierBonus(usd){ const t=this.billing&&this.billing.topup.bonus_tiers; if(!t||!usd) return 0;
+      // Keys arrive as strings from JSON; the highest floor at or below the amount applies.
+      let pct=0; Object.keys(t).map(Number).sort((a,b)=>a-b).forEach(k=>{ if(usd>=k) pct=t[k]; });
+      return Math.floor(usd*1e6*pct/100); },
+    async payTopup(){ const usd=this.topupUsd; if(!this.topupValid) return;
+      this.billingBusy=true; this.topupErr=''; this.topupAmount=usd;
+      this.track('topup_checkout_opened',{amount_usd:usd, auto_opt_in:this.topupAuto, bonus_micro:this.topupBonusMicro});
+      try{
+        const fresh=!(this.billing.autotopup.enabled||this.billing.autotopup.consented_at);
+        if(fresh&&this.topupAuto){
+          // Consent first, Checkout second: the mandate has to exist before the card that will be
+          // charged under it. The server stores the numbers and marks it "no_card"; Checkout's
+          // saved card then arms it from the setup webhook. A failure here stops the payment too -
+          // paying without the auto top-up the user just agreed to would be a silent downgrade.
+          this.billing=await this.api('/billing/autotopup',{method:'POST',headers:{'content-type':'application/json'},
+            body:JSON.stringify({enabled:true, consent:true, amount_usd:this.autoAmount, threshold_usd:this.autoThreshold, monthly_cap_usd:this.autoCapUsd, setup_url:false})});
+        }
+        const out=await this.api('/billing/topup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({amount_usd:usd})});
+        window.location.href=out.url; }
+      catch(e){ this.topupErr='Could not start the payment: '+(e.detail||e.status); this.billingBusy=false; } },
     // The toggle itself never arms auto top-up - it can only DISARM (off is safe) or open the
     // settings panel; arming still goes through the consent checkbox + confirm button below.
-    autoToggled(){ if(this.billing.autotopup.enabled){ this.setAuto(false); return; }
+    autoToggled(){ if(this.billing.autotopup.enabled){ this.autoOpen=false; this.setAuto(false); return; }
       this.autoOpen=!this.autoOpen; if(!this.autoOpen) this.autoConsent=false; },
     async setAuto(on){ this.billingBusy=true; this.err='';
       try{ const out=await this.api('/billing/autotopup',{method:'POST',headers:{'content-type':'application/json'},
