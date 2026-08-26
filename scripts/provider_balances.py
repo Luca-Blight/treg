@@ -105,8 +105,14 @@ async def _hunter(c, key):
     d = await _get(c, "https://api.hunter.io/v2/account", params={"api_key": key})
     req = (d.get("data") or {}).get("requests", {})
     s, v = req.get("searches", {}), req.get("verifications", {})
-    return {"value": (s.get("available", 0) - s.get("used", 0)), "unit": "searches left",
-            "note": f"verifications {v.get('available', 0) - v.get('used', 0)} left, "
+    # Use Hunter's own `remaining` — `available - used` goes negative once credit packages are
+    # stacked on the plan (used counts lifetime-in-period, available is the pack sum; the dashboard
+    # shows `remaining`). Verified 2026-08-26: remaining=25 while available-used=-849.
+    cr = req.get("credits", {})
+    return {"value": s.get("remaining", s.get("available", 0) - s.get("used", 0)),
+            "unit": "searches left",
+            "note": f"verifications {v.get('remaining', 0)} left, credits {cr.get('remaining')}, "
+                    f"plan {(d.get('data') or {}).get('plan_name')}, "
                     f"resets {(d.get('data') or {}).get('reset_date')}"}
 
 
