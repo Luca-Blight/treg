@@ -21,16 +21,19 @@ from ..application.call.idempotency import (
 )
 from ..application.call.resolve import (
     MarketplaceCall,
+    QueryValues,
     _billed_marketplace,
     _catalog_endpoint_for,
     _enforce_catalog_status,
     _marketplace_secret,
-    _may_have_body,
+    _may_have_body as may_have_body,
     _oauth_billed_provider,
     _platform_estimate_micro,
     _platform_offer,
     _resolve_call,
     _resolve_marketplace_call,
+    resolve_call_target,
+    resolve_marketplace_target,
 )
 from ..application.call.intake import (
     META_HEADER,
@@ -96,6 +99,14 @@ async def _release_idempotent_claim(request: Request) -> None:
     await release_idempotent_claim(claim)
 
 
+def _query_values(request: Request) -> QueryValues:
+    return QueryValues(tuple(request.query_params.multi_items()))
+
+
+def _may_have_body(request: Request) -> bool:
+    return may_have_body(tuple(request.headers.raw))
+
+
 async def _stamp_call_exit(request: Request, resp: Response, status_code: int) -> None:
     """Give one `/call/` exit the three things every other exit gets: the id that joins the response
     to the audit row, the row itself, and the release of any idempotency label the request took.
@@ -145,7 +156,10 @@ async def catalog_endpoint_access(
     ep = catalog_store.load().by_id.get(endpoint_id)
     if ep is None:
         raise HTTPException(status_code=404, detail=f"unknown endpoint {endpoint_id!r}")
-    _enforce_catalog_status(ep)
+    try:
+        _enforce_catalog_status(ep)
+    except CallFailure as exc:
+        raise _translate_call_failure(exc) from exc
     service = ep["provider"]
     provider = oauth_providers.get(service)
     if provider is None or not provider.base_url:
@@ -161,14 +175,15 @@ async def catalog_endpoint_access(
                       f" — metered from the team balance ({service} bills treg's app per use)"
     probe = provider.base_url.rstrip("/") + "/" + (ep["path"] or "/").lstrip("/")
     try:
-        tool, _ = await _resolve_call(probe, caller, db)
+        target = await resolve_call_target(probe, caller, _resolve_call)
+        tool = target.tool
         return {"tier": "tool", "metered": bool(billed_note),
                 "detail": f"will use this org's registered {tool.name!r} tool{billed_note}"}
-    except HTTPException as exc:
+    except CallFailure as exc:
         if exc.status_code == 403:
             return {"tier": "restricted", "detail": "a registered tool exists but your access is restricted — ask an admin"}
         if exc.status_code != 404:
-            raise
+            raise _translate_call_failure(exc) from exc
     if await _marketplace_secret(service, caller.org_id, db) is not None:
         return {"tier": "credential", "metered": bool(billed_note),
                 "detail": f"will use this org's {service} credential (no tool needed){billed_note}"}
@@ -254,21 +269,29 @@ async def call_tool(
     mk: MarketplaceCall | None = None
     own_tool_miss: dict | None = None
     try:
-        tool, upstream_url = await _await_before_reserve(
-            _resolve_call(rest, caller, db), request, call_ref)
-    except HTTPException as exc:
+        target = await _await_before_reserve(
+            resolve_call_target(rest, caller, _resolve_call), request, call_ref)
+        tool, upstream_url = target.tool, target.upstream
+    except CallFailure as exc:
         # Not a tool → maybe a marketplace endpoint id (`treg call tikhub.tiktok.video.comments`).
         # Only the 404 falls through, so an org tool with the same name always wins.
         ep = _catalog_endpoint_for(rest) if exc.status_code == 404 else None
         if ep is None:
-            raise
+            raise _translate_call_failure(exc) from exc
         if (isinstance(exc.detail, dict)
                 and str(exc.detail.get("hint", "")).startswith("your org has tool ")):
             own_tool_miss = exc.detail
         try:
-            mk = await _await_before_reserve(
-                _resolve_marketplace_call(ep, request, caller, db), request, call_ref)
-        except HTTPException as mkexc:
+            mk = await _await_before_reserve(resolve_marketplace_target(
+                ep,
+                method=request.method,
+                query=_query_values(request),
+                has_body=_may_have_body(request),
+                read_body=request.body,
+                caller=caller,
+                resolve_call=_resolve_call,
+            ), request, call_ref)
+        except CallFailure as mkexc:
             # Catalog resolution is allowed to fall through from a named miss, but its own 404 must
             # not discard the useful fact discovered there: this org already has a nearby own tool.
             if mkexc.status_code == 404 and own_tool_miss is not None:
@@ -292,7 +315,7 @@ async def call_tool(
                  "client": _client_of(request), "method": request.method,
                  "own_tool": False, "provider": ep.get("provider"), "endpoint_id": ep["id"]},
                 groups={"team": caller.org.slug})
-            raise
+            raise _translate_call_failure(mkexc) from mkexc
         tool, upstream_url, drop_params = mk.tool, mk.upstream, mk.consumed
     _require_tool_use_http(caller, tool)  # per-member tool + project ACL (NULL access = all; admins exempt)
     # Policy deny — evaluated on the RESOLVED upstream, so it sees the real host/path/method whichever
@@ -442,8 +465,13 @@ async def call_tool(
             raise HTTPException(status_code=403, detail=(
                 f"{billed_provider.display_name} calls are pay-per-use on treg's app and the "
                 f"public demo can't spend — create your own team to use this"))
-        mk = await _await_before_reserve(
-            _billed_marketplace(mk, billed_provider, tool, upstream_url, request), request, call_ref)
+        mk = await _await_before_reserve(_billed_marketplace(
+            mk, billed_provider, tool, upstream_url,
+            method=request.method,
+            query=_query_values(request),
+            has_body=_may_have_body(request),
+            read_body=request.body,
+        ), request, call_ref)
 
     # Metered — treg's own money is about to be spent (tier 4's platform key, or a registry OAuth
     # connect on a pay-per-use app), so take the money FIRST. Deliberately the last gate before the

@@ -20,11 +20,12 @@ import httpx
 from datetime import datetime, timezone
 
 import pytest
-from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 
 from treg import api as A, audit
+from treg.application.call import resolve as call_resolution
+from treg.application.call.types import ResolutionFailed
 from treg.routers import call as call_routes
 from treg.config import get_settings
 from treg.db import session_maker
@@ -161,20 +162,21 @@ def test_path_placeholders_fill_from_query_and_are_consumed():
     params and are reported as consumed so the relay drops them from the query string."""
     provider = type("P", (), {"base_url": "https://api.example.com"})()
     ep = {"id": "x.y.z", "path": "/v3/sites/{siteUrl}/query", "input": {}}
-    url, consumed = A._marketplace_upstream(ep, provider, {"siteUrl": "sc-domain:ex.com", "row": "1"})
+    url, consumed = call_resolution._marketplace_upstream(
+        ep, provider, {"siteUrl": "sc-domain:ex.com", "row": "1"})
     assert url == "https://api.example.com/v3/sites/sc-domain%3Aex.com/query"
     assert consumed == {"siteUrl"}
 
-    encoded, _ = A._marketplace_upstream(
+    encoded, _ = call_resolution._marketplace_upstream(
         ep, provider, {"siteUrl": "sc-domain%3Aex.com"})
     assert encoded == "https://api.example.com/v3/sites/sc-domain%3Aex.com/query"
 
     # A literal `%` is not an encoded marker unless two following characters are hexadecimal.
-    literal, _ = A._marketplace_upstream(
+    literal, _ = call_resolution._marketplace_upstream(
         ep, provider, {"siteUrl": "sc-domain:100%coverage.example"})
     assert literal == "https://api.example.com/v3/sites/sc-domain%3A100%25coverage.example/query"
-    with pytest.raises(HTTPException) as exc:
-        A._marketplace_upstream(ep, provider, {})
+    with pytest.raises(ResolutionFailed) as exc:
+        call_resolution._marketplace_upstream(ep, provider, {})
     assert exc.value.status_code == 400 and "siteUrl" in exc.value.detail
 
 

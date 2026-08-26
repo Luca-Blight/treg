@@ -5,27 +5,44 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Callable
 from urllib.parse import quote, urlsplit
 
-from fastapi import HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from ... import catalog_store, oauth_providers
 from ... import sandbox as demo_sandbox
 from ...config import get_settings, platform_setting_name
+from ...db import session_maker
 from ...domain.governance import access as access_policy
 from ...domain.identity.access import Caller
 from ...models import CapabilityPin, Org, Secret, Tool
 from ..connect import _host_of, _provider_bindings
+from .types import ResolutionFailed, ResolvedTarget
 
 
-_normalize_scheme: Callable[[str], str]
+@dataclass(frozen=True)
+class QueryValues:
+    items: tuple[tuple[str, str], ...]
+
+    def get(self, key: str, default=None):
+        return next((value for name, value in reversed(self.items) if name == key), default)
+
+    def multi_items(self) -> list[tuple[str, str]]:
+        return list(self.items)
 
 
-async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[Tool, str]:
+def _normalize_scheme(rest: str) -> str:
+    """A path param collapses `https://` to `https:/`; restore it."""
+    for sch in ("https:/", "http:/"):
+        if rest.startswith(sch) and not rest.startswith(sch + "/"):
+            return sch + "/" + rest[len(sch):]
+    return rest
+
+
+async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> ResolvedTarget:
     """Resolve `/call/<rest>` to (tool, full upstream URL), scoped to the caller's org. Shapes:
 
     - URL-passthrough (agent-facing): rest is the real upstream URL. Resolve the tool by host
@@ -47,7 +64,8 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         try:
             host = urlsplit(norm).netloc.lower()
         except ValueError:  # malformed passthrough URL (e.g. unbalanced IPv6 brackets) → 400, not 500
-            raise HTTPException(status_code=400, detail="malformed upstream URL")
+            raise ResolutionFailed(
+                "invalid_target", status_code=400, detail="malformed upstream URL")
         on_host = (await db.execute(
             select(Tool).where(Tool.host == host, Tool.org_id == org_id)
         )).scalars().all()
@@ -65,10 +83,13 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
             # would send an admin hunting for a registration that already exists. The message names
             # the HOST the caller already typed, never the internal tool name the ACL hides.
             if any(_prefix_match(t.base_url) for t in on_host):
-                raise HTTPException(status_code=403, detail=(
-                    f"you don't have access to the registered tool for {host!r} in this team — an "
-                    "admin can grant it (dashboard → Team, or `treg org access <you> …`)"))
-            raise HTTPException(status_code=404, detail=f"no registered tool for upstream {host!r}")
+                raise ResolutionFailed(
+                    "tool_access_denied", status_code=403, detail=(
+                        f"you don't have access to the registered tool for {host!r} in this team — an "
+                        "admin can grant it (dashboard → Team, or `treg org access <you> …`)"))
+            raise ResolutionFailed(
+                "target_not_found", status_code=404,
+                detail=f"no registered tool for upstream {host!r}")
         # Tiebreak on the NORMALIZED length so `.../v1` and `.../v1/` count equal (a real 409), not
         # one silently "longer" than the other.
         longest = max(len(t.base_url.rstrip("/")) for t in matches)
@@ -89,12 +110,13 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
                         provider_owned.append(t)
                         break
             if len(provider_owned) == 1:
-                return provider_owned[0], norm
+                return ResolvedTarget(provider_owned[0], norm)
             names = ", ".join(repr(t.name) for t in sorted(top, key=lambda t: t.name))
-            raise HTTPException(status_code=409, detail=(
-                f"ambiguous: multiple tools match {host!r}: {names}; call one by name as "
-                "/call/<name>/<path>"))
-        return top[0], norm
+            raise ResolutionFailed(
+                "target_ambiguous", status_code=409, detail=(
+                    f"ambiguous: multiple tools match {host!r}: {names}; call one by name as "
+                    "/call/<name>/<path>"))
+        return ResolvedTarget(top[0], norm)
 
     name, _, path = rest.partition("/")
     tool = (
@@ -108,10 +130,11 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         # the real id turns the dead end back into the next call.
         if (name not in cat.by_id and "." in name and not path
                 and (near := catalog_store.near_ids(name, cat))):
-            raise HTTPException(status_code=404, detail={
-                "error": f"no endpoint {name!r} in the catalog",
-                "hint": "did you mean " + ", ".join(near) + "?",
-                "did_you_mean": near})
+            raise ResolutionFailed(
+                "target_not_found", status_code=404, detail={
+                    "error": f"no endpoint {name!r} in the catalog",
+                    "hint": "did you mean " + ", ".join(near) + "?",
+                    "did_you_mean": near})
         detail = f"no tool {name!r} in this org"
         # A caller may have mistaken a catalog-looking operation for a path on the connected own
         # tool. Look only at callable tools inside this org and only on the error path; the first
@@ -133,22 +156,32 @@ async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[To
         }, key=lambda candidate: (-len(candidate), candidate))
         if own_near:
             suggested = own_near[0]
-            raise HTTPException(status_code=404, detail={
-                "error": detail,
-                "hint": (f"your org has tool {suggested!r} — call "
-                         f"/call/{suggested}/<path>"),
-                "did_you_mean": own_near,
-            })
+            raise ResolutionFailed(
+                "target_not_found", status_code=404, detail={
+                    "error": detail,
+                    "hint": (f"your org has tool {suggested!r} — call "
+                             f"/call/{suggested}/<path>"),
+                    "did_you_mean": own_near,
+                })
         # A bare provider name (`treg call tikhub /path`) stays a miss, but points at the
         # marketplace form instead of dead-ending — its endpoints are callable without a tool.
         if oauth_providers.get(name) is not None or name in cat.provider_meta:
             detail += (f" — but {name!r} is a marketplace provider; call its endpoints directly: "
                        f"treg catalog search <what you need> → treg call <endpoint-id>")
-        raise HTTPException(status_code=404, detail=detail)
+        raise ResolutionFailed("target_not_found", status_code=404, detail=detail)
     base = tool.base_url.rstrip("/")
     # No path → the base URL itself, WITHOUT a trailing slash: a base pinned to a full resource
     # (e.g. .../v1/charges) must relay as-is — Stripe 404s `/v1/charges/`.
-    return tool, (f"{base}/{path.lstrip('/')}" if path else base)
+    return ResolvedTarget(tool, (f"{base}/{path.lstrip('/')}" if path else base))
+
+
+async def resolve_call_target(
+    rest: str,
+    caller: Caller,
+    resolver: Callable[[str, Caller, AsyncSession], Awaitable[ResolvedTarget]],
+) -> ResolvedTarget:
+    async with session_maker() as db:
+        return await resolver(rest, caller, db)
 
 
 # ---- direct marketplace calls: `treg call <catalog-endpoint-id>`, no tool registration ----------
@@ -199,7 +232,7 @@ def _enforce_catalog_status(ep: dict) -> None:
         detail += " " + " ".join(alternatives)
     else:
         detail += " No replacement is currently catalogued."
-    raise HTTPException(status_code=410, detail=detail)
+    raise ResolutionFailed("catalog_retired", status_code=410, detail=detail)
 
 
 async def _marketplace_secret(service: str, org_id: int, db: AsyncSession) -> Secret | None:
@@ -513,14 +546,15 @@ def _oauth_billed_estimate(provider, ep: dict | None, method: str, query, body: 
 
 
 async def _billed_marketplace(
-    mk: MarketplaceCall | None, provider, tool: Tool, upstream_url: str, request: Request
+    mk: MarketplaceCall | None, provider, tool: Tool, upstream_url: str, *, method: str,
+    query: QueryValues, has_body: bool, read_body: Callable[[], Awaitable[bytes]],
 ) -> MarketplaceCall:
     """Flag (or, for a URL-passthrough call, build) the `MarketplaceCall` that meters an
     oauth-billed relay. The catalog id shape arrives with an `mk` (tier 1/2 — keep its endpoint id
     and telemetry identity); the passthrough shape gets one made here, priced off the catalog
     entry its path lands on so both shapes pay the same price for the same route."""
-    body = await request.body() if _may_have_body(request) else b""
-    method = request.method.upper()
+    body = await read_body() if has_body else b""
+    method = method.upper()
     if mk is None:
         path = urlsplit(upstream_url).path or "/"
         ep = _billed_endpoint_match(provider.service, method, path)
@@ -528,10 +562,10 @@ async def _billed_marketplace(
         mk = MarketplaceCall(
             tool=tool, upstream=upstream_url, consumed=set(), endpoint_id=endpoint_id,
             provider=provider.service, tier="tool",
-            params_hash=_params_hash(endpoint_id, request.query_params.multi_items(), body))
+            params_hash=_params_hash(endpoint_id, query.multi_items(), body))
     else:
         ep = catalog_store.load().by_id.get(mk.endpoint_id)
-    est, ctype, unit = _oauth_billed_estimate(provider, ep, method, request.query_params, body)
+    est, ctype, unit = _oauth_billed_estimate(provider, ep, method, query, body)
     mk.billed_oauth, mk.estimate_micro, mk.cost_type, mk.unit_micro = True, est, ctype, unit
     return mk
 
@@ -641,7 +675,9 @@ def _capability_alternatives(ep: dict, *, limit: int = 3) -> list[str]:
     return lines
 
 
-def _marketplace_no_credential(service: str, ep_id: str, provider, ep: dict | None = None) -> HTTPException:
+def _marketplace_no_credential(
+    service: str, ep_id: str, provider, ep: dict | None = None,
+) -> ResolutionFailed:
     """Tier 3: the actionable dead-end. Every line names a real command; a pasted-key provider
     gets the `secret add` route too (name it for the service so the ladder finds it)."""
     lines = [f"no {service} credential in this org — {ep_id} is a marketplace endpoint"]
@@ -651,7 +687,8 @@ def _marketplace_no_credential(service: str, ep_id: str, provider, ep: dict | No
     lines.append(f"  or register the tool yourself: treg tool add {service} --base-url {provider.base_url} …")
     if ep is not None:
         lines.extend(_capability_alternatives(ep))
-    return HTTPException(status_code=404, detail="\n".join(lines))
+    return ResolutionFailed(
+        "credential_missing", status_code=404, detail="\n".join(lines))
 
 
 _VALID_PERCENT_ESCAPE_RE = re.compile(r"%[0-9A-Fa-f]{2}")
@@ -665,8 +702,10 @@ def _marketplace_upstream(ep: dict, provider, query_params) -> tuple[str, set[st
     for name in re.findall(r"{(\w+)}", path):
         value = query_params.get(name)
         if value is None:
-            raise HTTPException(status_code=400, detail=(
-                f"{ep['id']} needs --query {name}=<value> (a path parameter of {ep['path']})"))
+            raise ResolutionFailed(
+                "catalog_parameter_invalid", status_code=400, detail=(
+                    f"{ep['id']} needs --query {name}=<value> "
+                    f"(a path parameter of {ep['path']})"))
         # Agents often pass `siteUrl` straight from GSC's sites list, where it may already be
         # encoded. Preserve a value containing a real %HH escape; otherwise encode it exactly once.
         # A literal/invalid percent sequence has no valid escape and therefore becomes `%25`.
@@ -677,8 +716,10 @@ def _marketplace_upstream(ep: dict, provider, query_params) -> tuple[str, set[st
     required = [k for k, v in (inp.get("queryParams") or {}).items()
                 if isinstance(v, dict) and v.get("required") and query_params.get(k) is None]
     if required:
-        raise HTTPException(status_code=400, detail=(
-            f"{ep['id']} requires --query " + " --query ".join(f"{k}=<value>" for k in required)))
+        raise ResolutionFailed(
+            "catalog_parameter_invalid", status_code=400, detail=(
+                f"{ep['id']} requires --query "
+                + " --query ".join(f"{k}=<value>" for k in required)))
     return provider.base_url.rstrip("/") + "/" + path.lstrip("/"), consumed
 
 
@@ -707,17 +748,20 @@ async def _enforce_capability_pin(ep: dict, caller: Caller, db: AsyncSession) ->
     mine = [e for e in cat.for_capability(cap) if e["provider"] == pin.provider]
     mine.sort(key=lambda e: ((e.get("tier") or "") != "core", not cat.platform_eligible(e), e["id"]))
     alt = mine[0]["id"] if mine else None
-    raise HTTPException(status_code=403, detail={
-        "error": "capability_pinned",
-        "message": (f"this team uses {pin.provider!r} for {cap!r}"
-                    + (f" — call {alt} instead" if alt else "")
-                    + f". An admin can change it: treg org unpin {cap}"),
-        "capability": cap, "pinned_provider": pin.provider, "use_endpoint": alt,
-    })
+    raise ResolutionFailed(
+        "capability_pinned", status_code=403, detail={
+            "error": "capability_pinned",
+            "message": (f"this team uses {pin.provider!r} for {cap!r}"
+                        + (f" — call {alt} instead" if alt else "")
+                        + f". An admin can change it: treg org unpin {cap}"),
+            "capability": cap, "pinned_provider": pin.provider, "use_endpoint": alt,
+        })
 
 
 async def _resolve_marketplace_call(
-    ep: dict, request: Request, caller: Caller, db: AsyncSession
+    ep: dict, *, method: str, query: QueryValues, has_body: bool,
+    read_body: Callable[[], Awaitable[bytes]], caller: Caller, db: AsyncSession,
+    resolve_call: Callable[[str, Caller, AsyncSession], Awaitable[ResolvedTarget]],
 ) -> MarketplaceCall:
     """Walk the credential ladder for a catalog endpoint id → a `MarketplaceCall`.
 
@@ -734,22 +778,24 @@ async def _resolve_marketplace_call(
     service = ep["provider"]
     provider = oauth_providers.get(service)
     if provider is None or not provider.base_url:
-        raise HTTPException(status_code=502, detail=(
-            f"{ep['id']} is cataloged but {service!r} isn't proxy-callable yet"))
-    if request.method.upper() != (ep.get("method") or "GET").upper():
-        raise HTTPException(status_code=400, detail=(
-            f"{ep['id']} is {ep['method']} — add --method {ep['method']}"))
-    upstream, consumed = _marketplace_upstream(ep, provider, request.query_params)
+        raise ResolutionFailed(
+            "injection_failed", status_code=502,
+            detail=f"{ep['id']} is cataloged but {service!r} isn't proxy-callable yet")
+    if method.upper() != (ep.get("method") or "GET").upper():
+        raise ResolutionFailed(
+            "method_mismatch", status_code=400,
+            detail=f"{ep['id']} is {ep['method']} — add --method {ep['method']}")
+    upstream, consumed = _marketplace_upstream(ep, provider, query)
     # The telemetry identity of this call, computed once. The body is read here (Starlette caches it,
     # so the relay still streams the same bytes) only for its HASH — never stored, never logged.
-    body = await request.body() if _may_have_body(request) else b""
-    phash = _params_hash(ep["id"], request.query_params.multi_items(), body)
+    body = await read_body() if has_body else b""
+    phash = _params_hash(ep["id"], query.multi_items(), body)
     # The catalog's estimate travels on EVERY tier — informational on tiers 1/2 (the provider bills
     # the org's own account; Activity shows "estimated") and the reserve amount on tier 4 only
     # (`metered` gates the ledger, so this never charges a balance for an own-key call).
     cv = catalog_store.load().cost_view(ep.get("cost"), service) if ep.get("cost") else None
     info_est, info_unit = _marketplace_pricing(
-        service, ep["id"], cv, request.query_params, body)
+        service, ep["id"], cv, query, body)
     common = dict(upstream=upstream, consumed=consumed, endpoint_id=ep["id"], provider=service,
                   params_hash=phash, cost_type=str((ep.get("cost") or {}).get("type") or ""),
                   estimate_micro=info_est,
@@ -758,9 +804,10 @@ async def _resolve_marketplace_call(
                   # which is how 6,000 delivered Bright Data records once billed as one (2026-08-24).
                   unit_micro=info_unit)
     try:  # tier 1 — the org registered this provider: their tool, their bindings, their ACLs
-        tool, resolved = await _resolve_call(upstream, caller, db)
-        return MarketplaceCall(tool=tool, tier="tool", **{**common, "upstream": resolved})
-    except HTTPException as exc:
+        target = await resolve_call(upstream, caller, db)
+        return MarketplaceCall(
+            tool=target.tool, tier="tool", **{**common, "upstream": target.upstream})
+    except ResolutionFailed as exc:
         if exc.status_code != 404:  # 403 (ACL) / 409 (ambiguous) are real answers, not fall-through
             raise
     secret = await _marketplace_secret(service, caller.org_id, db)  # tier 2 — credential, no tool
@@ -787,10 +834,34 @@ async def _resolve_marketplace_call(
     raise _marketplace_no_credential(service, ep["id"], provider, ep)
 
 
-def _may_have_body(request: Request) -> bool:
+async def resolve_marketplace_target(
+    ep: dict,
+    *,
+    method: str,
+    query: QueryValues,
+    has_body: bool,
+    read_body: Callable[[], Awaitable[bytes]],
+    caller: Caller,
+    resolve_call: Callable[[str, Caller, AsyncSession], Awaitable[ResolvedTarget]],
+) -> MarketplaceCall:
+    async with session_maker() as db:
+        return await _resolve_marketplace_call(
+            ep,
+            method=method,
+            query=query,
+            has_body=has_body,
+            read_body=read_body,
+            caller=caller,
+            db=db,
+            resolve_call=resolve_call,
+        )
+
+
+def _may_have_body(raw_headers: tuple[tuple[bytes, bytes], ...]) -> bool:
     """Whether this request could carry a body worth hashing. Mirrors proxy._has_body — a GET with no
     content-length must not be awaited for a body it never sends."""
-    cl = request.headers.get("content-length")
+    headers = {name.lower(): value for name, value in raw_headers}
+    cl = headers.get(b"content-length", b"").decode("latin-1") or None
     if cl is not None and cl != "0":
         return True
-    return "chunked" in request.headers.get("transfer-encoding", "").lower()
+    return "chunked" in headers.get(b"transfer-encoding", b"").decode("latin-1").lower()

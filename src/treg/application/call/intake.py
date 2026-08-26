@@ -82,7 +82,7 @@ def _parse_call_meta(raw_header: str | None, caller: Caller | None = None) -> Ca
         return CallMeta(tags=dict(pinned), primary_dim=budget_policy._primary_dim_of(caller)) if pinned else _NO_META
     if len(raw.encode()) > _META_MAX_HEADER:
         raise IntakeFailed(
-            "metadata_invalid", blame="caller", status_code=422,
+            "metadata_invalid", status_code=422,
             detail=f"X-Treg-Meta is limited to {_META_MAX_HEADER} bytes")
     tags: dict[str, str] = {}
     for segment in raw.split(","):
@@ -91,7 +91,7 @@ def _parse_call_meta(raw_header: str | None, caller: Caller | None = None) -> Ca
             # The SHAPE of the segment, which only this parser can report — everything past here is
             # the shared storage-key rule.
             raise IntakeFailed(
-                "metadata_invalid", blame="caller", status_code=422,
+                "metadata_invalid", status_code=422,
                 detail=(f"X-Treg-Meta must be `key=value` pairs; keys are 1-32 chars of [a-z0-9_] "
                         f"(got {segment.strip()!r})"))
         try:
@@ -99,22 +99,22 @@ def _parse_call_meta(raw_header: str | None, caller: Caller | None = None) -> Ca
                 raw_key, raw_value, where="X-Treg-Meta")
         except budget_policy.BudgetPolicyError as exc:
             raise IntakeFailed(
-                "metadata_invalid", blame="caller", status_code=exc.status_code,
+                "metadata_invalid", status_code=exc.status_code,
                 detail=exc.detail) from exc
         if key in tags:
             raise IntakeFailed(
-                "metadata_invalid", blame="caller", status_code=422,
+                "metadata_invalid", status_code=422,
                 detail=f"X-Treg-Meta names {key!r} twice")
         tags[key] = value
     if len(tags) > budget_policy._META_MAX_KEYS:
         raise IntakeFailed(
-            "metadata_invalid", blame="caller", status_code=422,
+            "metadata_invalid", status_code=422,
             detail=(f"X-Treg-Meta is limited to {budget_policy._META_MAX_KEYS} keys "
                     f"(got {len(tags)})"))
     for dim, pinned_val in pinned.items():
         if tags.get(dim, pinned_val) != pinned_val:
             raise IntakeFailed(
-                "metadata_pin_mismatch", blame="caller", status_code=403,
+                "metadata_pin_mismatch", status_code=403,
                 detail=(f"this token is pinned to {dim}={pinned_val!r} "
                         f"and cannot bill {tags[dim]!r}"))
         tags[dim] = pinned_val
@@ -168,7 +168,7 @@ async def prepare_call_intake(
         # feature exists to close — the same reasoning as the conditional UPDATE in ledger.reserve.
         if not await _claim_idempotent(key, fingerprint, rest, caller, db):
             raise IdempotencyFailed(
-                "idempotency_in_progress", blame="treg", status_code=409,
+                "idempotency_in_progress", status_code=409,
                 detail=(f"a call with Idempotency-Key {_idem_display(key)!r} "
                         "is already in progress — retry shortly"))
     return IntakeResult(key, fingerprint, None, (caller.membership.id, key))

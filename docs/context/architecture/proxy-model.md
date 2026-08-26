@@ -110,9 +110,10 @@ bounds concurrent DB *phases* (milliseconds), not concurrent calls; there is no 
 concurrency limit, and `llms.txt` says so. `tests/test_call_pool_discipline.py` pins the invariant
 (`_engine.pool.checkedout() == 0` at relay time, metered and own-key) and a 20-call burst.
 
-## Tool resolution (`_resolve_call` in api.py)
-`* /call/{rest:path}` → `call_tool()` → `_resolve_call(rest, caller, db)` returns
-`(tool, upstream_url)`. **Both shapes are scoped to the caller's org** (`Tool.org_id == org_id`), so two
+## Tool resolution (`application.call.resolve`)
+`* /call/{rest:path}` → `call_tool()` → `resolve_call_target(...)` returns a framework-neutral
+`ResolvedTarget(tool, upstream)`. Each resolution use case owns and closes its read session.
+**Both shapes are scoped to the caller's org** (`Tool.org_id == org_id`), so two
 orgs resolve independently and may reuse a tool name or upstream host; `call_tool` then loads only
 same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the per-user daily usage cap —
 429 when over; `-1`/default is a no-op, so the hot path adds no query for unmetered members). Two shapes:
@@ -199,7 +200,10 @@ each is NULL-means-any.
 (`_mark_treg_own_errors`, see [api](../interface/api.md)) — status and body unchanged. A caller cannot
 otherwise tell treg's 404 ("no tool registered for that host") from the vendor's own; the
 [local proxy](local-proxy.md) uses the marker to explain a failure without ever rewriting a real vendor
-response.
+response. Resolution raises a mechanism-keyed `ResolutionFailed`; one mapping assigns its
+`caller | treg | upstream | org_connection` blame, and the router translates status and detail without
+changing either. Provider responses, including 4xx and 5xx, remain response data and never become a
+typed resolution failure.
 
 `call_tool()` loads every bound secret (running `oauth.ensure_fresh` on oauth secrets first — see
 [auth-secrets](auth-secrets.md)), calls `relay()`, then fires `audit.record_call(...)` off the response

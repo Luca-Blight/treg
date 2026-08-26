@@ -1,13 +1,21 @@
 """Executable contract for the Stage 4 call application boundary."""
 
+import ast
 from dataclasses import dataclass, fields
+from inspect import signature
 from typing import Awaitable, Callable, Literal, Protocol
 
 import pytest
 
 from treg import api as A
-from treg.application.call import idempotency, intake
-from treg.application.call.types import IdempotencyFailed, IntakeFailed
+from treg.application.call import idempotency, intake, resolve
+from treg.application.call.types import (
+    CallFailure,
+    IdempotencyFailed,
+    IntakeFailed,
+    ResolvedTarget,
+    ResolutionFailed,
+)
 
 
 class RequestBodyPort(Protocol):
@@ -133,10 +141,19 @@ def test_compatibility_surface_stays_literal_during_boundary_extraction() -> Non
 
 
 def test_call_intake_modules_are_framework_neutral() -> None:
-    for module in (intake, idempotency):
+    for module in (intake, idempotency, resolve):
         source = module.__loader__.get_source(module.__name__)
-        assert "fastapi" not in source
-        assert "starlette" not in source
+        roots = {
+            node.module.split(".", 1)[0]
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.ImportFrom) and node.module
+        } | {
+            alias.name.split(".", 1)[0]
+            for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        }
+        assert not ({"fastapi", "starlette"} & roots)
 
 
 def test_intake_failures_keep_mechanism_and_blame_separate() -> None:
@@ -146,8 +163,19 @@ def test_intake_failures_keep_mechanism_and_blame_separate() -> None:
         "metadata_invalid", "caller", 422)
 
     waiting = IdempotencyFailed(
-        "idempotency_in_progress", blame="treg", status_code=409, detail="wait")
+        "idempotency_in_progress", status_code=409, detail="wait")
     mismatch = IdempotencyFailed(
-        "idempotency_mismatch", blame="caller", status_code=422, detail="new key")
+        "idempotency_mismatch", status_code=422, detail="new key")
     assert waiting.blame == "treg"
     assert mismatch.blame == "caller"
+
+
+def test_resolution_result_and_failures_are_framework_neutral() -> None:
+    assert [field.name for field in fields(ResolvedTarget)] == ["tool", "upstream"]
+    assert "blame" not in signature(CallFailure).parameters
+    assert ResolutionFailed(
+        "target_not_found", status_code=404, detail="missing").blame == "caller"
+    assert ResolutionFailed(
+        "credential_missing", status_code=404, detail="connect").blame == "org_connection"
+    assert ResolutionFailed(
+        "injection_failed", status_code=502, detail="configuration").blame == "treg"

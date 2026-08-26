@@ -109,14 +109,14 @@ async def _replay_idempotent(key: str, fingerprint: str, caller: Caller,
         return None
     if row.request_fingerprint and row.request_fingerprint != fingerprint:
         raise IdempotencyFailed(
-            "idempotency_mismatch", blame="caller", status_code=422,
+            "idempotency_mismatch", status_code=422,
             detail=(f"Idempotency-Key {_idem_display(key)!r} was already used for a different request. Use a new key, or "
                     f"repeat the original request exactly."))
     if row.status != "done" or row.response_status is None:
         # Still in flight. The first call is talking to the provider right now; telling the caller to
         # retry is honest and cheap, and it is what stops the second one duplicating the spend.
         raise IdempotencyFailed(
-            "idempotency_in_progress", blame="treg", status_code=409,
+            "idempotency_in_progress", status_code=409,
             detail=(f"a call with Idempotency-Key {_idem_display(key)!r} "
                     "is still in progress — retry shortly"))
     return IdempotentReplay(

@@ -3,10 +3,30 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from ...models import Tool
 
 
 Blame = Literal["caller", "treg", "upstream", "org_connection"]
+
+_BLAME_BY_KIND: dict[str, Blame] = {
+    "metadata_invalid": "caller",
+    "metadata_pin_mismatch": "caller",
+    "idempotency_mismatch": "caller",
+    "idempotency_in_progress": "treg",
+    "invalid_target": "caller",
+    "tool_access_denied": "caller",
+    "target_not_found": "caller",
+    "target_ambiguous": "caller",
+    "catalog_retired": "caller",
+    "catalog_parameter_invalid": "caller",
+    "capability_pinned": "caller",
+    "injection_failed": "treg",
+    "credential_missing": "org_connection",
+    "method_mismatch": "caller",
+}
 
 
 class CallFailure(Exception):
@@ -16,13 +36,12 @@ class CallFailure(Exception):
         self,
         kind: str,
         *,
-        blame: Blame,
         status_code: int,
         detail: str | dict,
     ) -> None:
         super().__init__(str(detail))
         self.kind = kind
-        self.blame = blame
+        self.blame = _BLAME_BY_KIND[kind]
         self.status_code = status_code
         self.detail = detail
 
@@ -35,6 +54,10 @@ class IdempotencyFailed(CallFailure):
     """An idempotency label conflicts with its stored use or active owner."""
 
 
+class ResolutionFailed(CallFailure):
+    """The requested tool or marketplace target cannot be resolved."""
+
+
 @dataclass(frozen=True)
 class IdempotentReplay:
     body: bytes
@@ -42,3 +65,9 @@ class IdempotentReplay:
     media_type: str
     charged_micro: int
     call_ref: str
+
+
+@dataclass(frozen=True)
+class ResolvedTarget:
+    tool: Tool
+    upstream: str

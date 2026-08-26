@@ -461,7 +461,6 @@ from .routers.resources import (
     update_secret,
     update_tool,
 )
-from .application.call import resolve as call_resolution
 from .application.call.resolve import (
     MarketplaceCall,
     _LIMIT_PARAMS,
@@ -495,9 +494,6 @@ from .application.call.resolve import (
     _truthy,
     _usd_to_micro,
 )
-# The A move keeps `_resolve_call` byte-identical; commit 9 replaces this HTTP-owned seam with the
-# framework-neutral resolver input.
-call_resolution._normalize_scheme = _normalize_scheme
 from .routers.auth_helpers import (
     OAUTH_RETURN_COOKIE,
     _is_https,

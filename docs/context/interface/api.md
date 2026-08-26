@@ -83,7 +83,8 @@ refusals on `/call/` paths with `X-Treg-Error: 1`, then answers exactly as befor
 are untouched, and a client that ignores the header sees what it always saw. Without it a caller cannot
 tell treg's 404 ("no tool registered for that host") from the vendor's own 404: both are a status and
 some JSON. The [local proxy](../architecture/local-proxy.md) needs that distinction to explain a failure
-without ever rewriting a real vendor response.
+without ever rewriting a real vendor response. `application.call` failures carry a mechanism `kind`
+and separately mapped `blame`; the compatibility header remains the literal `1`.
 
 Resolution refusals are actionable: a named miss that resembles one of the caller's usable own tools
 returns a structured `detail` with `hint` and `did_you_mean`, including after a real catalog endpoint
@@ -584,7 +585,7 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
 - **Health:** `run_health` (`POST /health/run`) → `health.run_all`; `get_health` (`GET /health`) now
   returns `health._view(s)` plus a `needs_reconnect` flag (`health.needs_reconnect`) so a credential treg
   can't renew announces itself before it dies.
-- **The proxy:** `routers.call.call_tool` (`* /call/{rest:path}`) → `_resolve_call` → (on a dotted 404,
+- **The proxy:** `routers.call.call_tool` (`* /call/{rest:path}`) → `application.call.resolve` → (on a dotted 404,
   catalog lookup + retirement gate + credential ladder) → `_enforce_daily_cap` (the
   per-user daily cap; 429 when over) → (public-demo token → `_enforce_public_demo_ip_cap`) → load secrets
   (+ `ensure_fresh`) → **`db.commit()` — the DB phase ends here; a call in flight holds no pooled
