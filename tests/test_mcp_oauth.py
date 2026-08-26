@@ -16,6 +16,7 @@ import time
 
 import pytest
 
+from treg import api as treg_api
 from treg import mcp, mcp_oauth, session
 from treg.config import Settings, get_settings
 
@@ -33,6 +34,7 @@ async def test_protected_resource_metadata_names_the_mcp_endpoint(clients):
     assert r.status_code == 200
     body = r.json()
     assert body["resource"] == mcp_oauth.mcp_resource_url()
+    assert mcp_oauth.DIRECTORY_SCOPE not in body["scopes_supported"]
     assert body["resource"].endswith("/mcp/"), "the trailing slash is part of the identifier"
     assert body["authorization_servers"], "a client must be told who issues tokens for us"
 
@@ -52,6 +54,7 @@ async def test_v2_metadata_names_only_the_directory_resource(clients):
     assert response.json()["resource"] == mcp_oauth.mcp_resource_url("v2")
     assert response.json()["resource"].endswith("/mcp/v2/")
     assert response.json()["resource"] != mcp_oauth.mcp_resource_url("v1")
+    assert mcp_oauth.DIRECTORY_SCOPE in response.json()["scopes_supported"]
 
 
 async def test_connect_demo_defaults_off(monkeypatch):
@@ -69,6 +72,7 @@ async def test_authorization_server_metadata_offers_only_safe_choices(clients):
     assert "plain" not in body["code_challenge_methods_supported"]
     assert body["authorization_endpoint"].endswith("/oauth/authorize")
     assert body["token_endpoint"].endswith("/oauth/token")
+    assert mcp_oauth.DIRECTORY_SCOPE in body["scopes_supported"]
 
 
 async def test_metadata_advertises_BOTH_ways_for_a_client_to_identify_itself(clients):
@@ -406,6 +410,41 @@ async def test_v2_dcr_flow_mints_only_a_v2_audience(clients):
     access = token.json()["access_token"]
     assert mcp_oauth.read_access_token_any(access, "v2") is not None
     assert mcp_oauth.read_access_token_any(access, "v1") is None
+
+
+async def test_v2_scope_selects_v2_when_claude_omits_the_resource(clients):
+    """Hosted Claude omitted RFC 8707 resource but kept the V2 challenge scopes in production."""
+    client_id = await _register(clients)
+    _, org_id = await _signed_in(clients, "oauth-v2-no-resource@superdesign.dev")
+    verifier, challenge = _pkce()
+    scope = " ".join(mcp_oauth.scopes_for_resource("v2"))
+    params = {
+        "client_id": client_id, "redirect_uri": "https://client.test/cb",
+        "response_type": "code", "code_challenge": challenge,
+        "code_challenge_method": "S256", "state": "v2-no-resource", "scope": scope,
+    }
+
+    shown = await clients.get("/oauth/authorize", params=params,
+                              headers={"Accept": "application/json"})
+    assert shown.status_code == 200
+    approved = await clients.post("/oauth/authorize", data={**params, "org_id": org_id},
+                                  follow_redirects=False)
+    assert approved.status_code == 302
+    code = approved.headers["location"].split("code=")[1].split("&")[0]
+    token = await clients.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code,
+        "redirect_uri": "https://client.test/cb", "client_id": client_id,
+        "code_verifier": verifier,
+    })
+    assert token.status_code == 200, token.text
+    access = token.json()["access_token"]
+    assert mcp_oauth.read_access_token_any(access, "v2") is not None
+    assert mcp_oauth.read_access_token_any(access, "v1") is None
+
+
+def test_explicit_resource_wins_over_the_v2_scope_marker():
+    v1 = mcp_oauth.mcp_resource_url("v1")
+    assert treg_api._effective_mcp_resource(v1, mcp_oauth.DIRECTORY_SCOPE) == v1
 
 
 async def test_a_code_can_be_redeemed_only_ONCE(clients):

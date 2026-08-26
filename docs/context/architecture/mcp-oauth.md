@@ -253,6 +253,11 @@ A test asserts that calling without it raises rather than defaulting to permissi
 that is valid, well-formed and silently useless — the failure then surfaces at the first tool call as
 "not signed in", pointing the reader at authentication when the problem was the audience.
 
+V2 advertises `treg:directory` as a fallback resource marker. Hosted Claude can preserve the V2
+challenge scopes while omitting the RFC 8707 `resource` parameter. In that case,
+`_effective_mcp_resource` selects the V2 audience. An explicit resource always wins, and all other
+requests keep the V1 default.
+
 **The audience set is canonical + legacy** (`mcp_resource_audiences()`: `public_url` plus
 `config.PUBLIC_HOST_ALIASES` — the treg.superdesign.dev → treg.to move, SYMMETRIC so grants
 minted on either name survive a `TREG_PUBLIC_URL` flip in either direction). A pre-move grant carries

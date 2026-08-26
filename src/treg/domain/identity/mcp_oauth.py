@@ -45,6 +45,19 @@ ACCESS_TTL_SECONDS = 3600
 
 REFRESH_TTL_S = 30 * 24 * 3600   # a connector the user still uses keeps working for a month
 
+# Hosted Claude can preserve requested scopes while omitting RFC 8707 `resource`. This V2-only
+# marker selects the directory audience in that case; it grants no additional API permission.
+DIRECTORY_SCOPE = "treg:directory"
+BASE_SCOPES = ["treg:catalog", "treg:call", "treg:read"]
+
+
+def scopes_for_resource(version: str = "v1") -> list[str]:
+    if version == "v1":
+        return [*BASE_SCOPES]
+    if version == "v2":
+        return [*BASE_SCOPES, DIRECTORY_SCOPE]
+    raise ValueError(f"unknown MCP resource version {version!r}")
+
 # Marks a token as an MCP access token and nothing else. treg already mints session cookies and
 # identity tokens with the same HMAC construction, so without a type marker a session cookie would
 # validate here (and vice versa) — one class of token would silently become another, which is a
@@ -135,7 +148,7 @@ def protected_resource_metadata(version: str = "v1") -> dict:
     return {
         "resource": mcp_resource_url(version),
         "authorization_servers": [base],
-        "scopes_supported": ["treg:catalog", "treg:call", "treg:read"],
+        "scopes_supported": scopes_for_resource(version),
         "bearer_methods_supported": ["header"],
         "resource_documentation": f"{base}/llms.txt",
     }
@@ -159,7 +172,7 @@ def authorization_server_metadata() -> dict:
         "grant_types_supported": ["authorization_code", "refresh_token"],
         "code_challenge_methods_supported": ["S256"],
         "token_endpoint_auth_methods_supported": ["none"],
-        "scopes_supported": ["treg:catalog", "treg:call", "treg:read"],
+        "scopes_supported": scopes_for_resource("v2"),
         # ChatGPT sends an HTTPS metadata URL as its client_id instead of registering. Advertising
         # this does not replace `registration_endpoint` above — Claude Code and most other clients
         # register dynamically, and supporting only one of the two would lock the others out.

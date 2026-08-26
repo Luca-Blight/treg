@@ -811,6 +811,7 @@ def _consent_page(*, client_name: str, client_uri: str, user_email: str, teams: 
 
 
 _wrong_resource = auth_use_cases._wrong_resource
+_effective_mcp_resource = auth_use_cases._effective_mcp_resource
 _same_mcp_resource = auth_use_cases._same_mcp_resource
 
 
@@ -866,6 +867,7 @@ async def oauth_authorize(
             code_challenge=code_challenge,
             code_challenge_method=code_challenge_method,
             resource=resource,
+            scope=scope,
             session_cookie=treg_session,
         )
     except auth_use_cases.OAuthServerError as exc:

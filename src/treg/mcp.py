@@ -1260,12 +1260,14 @@ class RequireAuthForProtectedTools:
         return None             # a live access token, or a per-org token the tool validates itself
 
     async def _challenge(self, send, *, invalid: bool = False) -> None:
+        from . import mcp_oauth
+
         base = get_settings().public_url.rstrip("/")
         suffix = "/mcp/v2" if self.resource_version == "v2" else ""
         meta = f"{base}/.well-known/oauth-protected-resource{suffix}"
         # The spec SHOULDs a `scope` in the challenge so a client requests the right scopes up front,
         # least-privilege, without a second round-trip. These match scopes_supported in the metadata.
-        scope = "treg:catalog treg:call treg:read"
+        scope = " ".join(mcp_oauth.scopes_for_resource(self.resource_version))
         if invalid:
             # RFC 6750 §3.1: the expired/invalid-token challenge. `error="invalid_token"` is the
             # machine-readable cue on which an OAuth client runs its refresh grant instead of

@@ -227,6 +227,7 @@ async def test_v2_transport_challenges_with_v2_metadata():
     assert response.status_code == 401
     challenge = response.headers["www-authenticate"]
     assert "/.well-known/oauth-protected-resource/mcp/v2" in challenge
+    assert mcp_oauth.DIRECTORY_SCOPE in challenge
     assert response.headers["cache-control"] == "no-store, no-transform"
 
 

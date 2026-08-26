@@ -210,6 +210,7 @@ from .routers.auth import (
     _cli_states,
     _client_ip,
     _find_or_create_user,
+    _effective_mcp_resource,
     _live_invite_by_email_token,
     _login_page_html,
     _norm_pair_code,
