@@ -301,7 +301,7 @@ PROVIDER_DOMAINS: dict[str, str] = {
     "scrapecreators": "scrapecreators.com", "tikhub": "tikhub.io", "justoneapi": "justoneapi.com",
     "predictleads": "predictleads.com", "finnhub": "finnhub.io", "twelvedata": "twelvedata.com",
     "eodhd": "eodhd.com", "lusha": "lusha.com", "crunchbase": "crunchbase.com",
-    "youtube": "youtube.com",
+    "youtube": "youtube.com", "akta": "akta.pro",
 }
 
 # Why go through treg.to at all: (lead, one short line). Same on every use-case page.
@@ -3187,4 +3187,125 @@ USE_CASE_PAGES["news-for-a-ticker"] = {
     ],
     "related": ("Current quote for a ticker", "Daily price history",
                 "Company profile and fundamentals behind a ticker", "A company's SEC filings"),
+}
+
+
+# The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
+# use-case page answers one job; a workflow chains several, with a per-step price pulled live from
+# the catalog and a receipt from a real run. `run` is hand-recorded from that run and dated. A
+# workflow page is never written without a real run behind it; the numbers are the page.
+# Each step: (name, capability id, what the agent effectively asks, the endpoint the worked run
+# used, a one-line why). The step's link resolves through USE_CASES by capability at request time.
+WORKFLOWS: dict[str, dict] = {}
+
+WORKFLOWS["find-and-verify-a-lead-list"] = {
+    "sentence": "AI lead generation: build a verified lead list from one prompt",
+    "title": "AI lead generation: a verified lead list in {n} calls | treg.to",
+    "lede": (
+        "Give your agent one prompt and get back a lead list with a named person, a verified work "
+        "email and a reason to write, for every company that matched. {steps} steps, each a "
+        "metered call through one treg.to key, with the price printed before the agent spends it. "
+        "The numbers on this page come from running it, not from a rate card."),
+    "prompt": (
+        "Using treg, build me a lead list: 50 US software companies with 51 to 200 staff that raised "
+        "a Series A. For each one find the VP or Head of Marketing, find their work email with the "
+        "cheapest provider that only bills on a hit, verify it, and pull the latest news so I have "
+        "an opener. Show me the total price before each step, and give me a CSV at the end with "
+        "the deliverable ones first."),
+    "prompt_why": [
+        ("One list in, one CSV out", "The agent carries the domain from step to step. You never paste anything twice."),
+        ("Ask for the price before each step", "Every step is metered per call, so the agent can show the bill before it spends."),
+        ("Only bill on a hit", "Most email finders' rate cards charge nothing for a miss. Say so and the agent picks one."),
+        ("Deliverable first", "Verification sorts the list into send, do not send, and unknown. Ask for that order."),
+    ],
+    # Steps whose endpoint is called ONCE per run rather than once per row. The list step is one
+    # page for all 50 companies (Apollo bills per page); everything after it runs per row. The
+    # "at the rates above" total and the hub's per-row price both read this — without it the page
+    # charged 50 × the list price and blamed misses for a gap that was mostly its own arithmetic.
+    "once": ("apollo.companies.search",),
+    # Each step: (name, capability id, the line the agent effectively asks, the endpoint the worked run used, one-line why)
+    "steps": [
+        ("Build the company list", "companies.search",
+         "50 US software companies, 51 to 200 staff, latest round Series A",
+         "apollo.companies.search",
+         "Apollo bills per page, not per company, so one page of 50 is one charge."),
+        ("Find the person", "people.search",
+         "the VP or Head of Marketing, or Head of Growth, at each company",
+         "findymail.search.employees",
+         "Findymail's rate card bills per contact returned. LeadMagic's role finder is the fallback, and it settled at $0.00 on every miss in the run."),
+        ("Find the work email", "people.email.find",
+         "their work email, cheapest provider that only bills on a hit",
+         "tomba.people.email.find",
+         "Tomba is the cheapest per-success finder in the catalog. Hunter runs on Tomba's misses and settled at $0.00 on its own."),
+        ("Verify it", "people.email.verify",
+         "drop anything not deliverable, keep the unknowns separate",
+         "leadmagic.people.email.verify",
+         "LeadMagic bills a quarter credit per definitive verdict and nothing for an unknown."),
+        ("Find an opener", "companies.news",
+         "the three most recent news events about each company",
+         "predictleads.companies.news_events",
+         "PredictLeads bills $0.04 a call for classified events. Akta is a third of that per call but was out of credit on the day, so the run used PredictLeads."),
+    ],
+    "run": {
+        "date": "2026-08-26",
+        "rows_in": 50,
+        "receipt": [
+            ("Companies matched", "746 on Apollo; the first page of 50 taken, one charge of $0.026"),
+            ("Rows with a usable domain", "47 of 50"),
+            ("A named marketing lead found", "40 of 47 (27 by Findymail, 13 by LeadMagic's role finder)"),
+            ("Work email found", "31 of 40 (22 by Tomba, 9 by Hunter on Tomba's misses)"),
+            ("Verified deliverable", "27 of 31; 4 invalid; 0 unknown or catch-all"),
+            ("A news event in the last year", "29 of 31 (PredictLeads; Akta refused every call, see below)"),
+            ("Wall clock, one call at a time", "about 21 minutes; Findymail and Tomba take 10 seconds a row"),
+            ("Total metered", "$3.62 for 50 companies, or $0.13 per deliverable lead"),
+        ],
+        "cost_usd": 3.62,
+        "csv": "/workflows/find-and-verify-a-lead-list.csv",
+        "narrative": [
+            "Every number above is what treg.to's ledger settled on 2026-08-26 for this run, not a "
+            "rate-card estimate. The 50 rows cost $0.026 to list, $1.58 to name a person ($0.93 at "
+            "Findymail, $0.65 at LeadMagic), $0.58 to find emails, $0.19 to verify them and $1.24 for "
+            "news. The news step was the dearest per row because Akta, the cheapest provider for it, "
+            "answered every call with an insufficient-credits error on treg.to's own key and the run "
+            "fell back to PredictLeads at $0.04 a call. A miss on a per-success endpoint is free at "
+            "Hunter and LeadMagic, and both showed it: 9 of Hunter's 18 calls and 14 of the role "
+            "finder's 27 settled at $0.00. Findymail and Tomba list a free miss too, but treg.to "
+            "settled all 47 Findymail calls and all 40 Tomba calls at the list rate, misses included, "
+            "because neither provider reports the charge in its response. That is $0.56 of the $3.62, "
+            "and it is being fixed on treg.to's side.",
+            "Where the rows fell out: 3 Apollo rows had no domain (two were acquired companies). "
+            "Neither people provider had a marketing lead for 7 of the 47 companies; the ones "
+            "LeadMagic's role finder returned drift in seniority, so a request for Head of Marketing "
+            "came back as a Marketing Manager at four companies. Of the 40 named people, 9 had no "
+            "findable work email at either finder, and 4 of the 31 addresses found failed "
+            "verification. Nothing landed in the unknown bucket, which is unusual for a B2B list "
+            "and says more about this list of small software companies with plain mail setups than "
+            "about the verifier. Apollo's United States filter also let a handful of Indian and "
+            "Singaporean companies through; check the location column before you send.",
+        ],
+    },
+    "failure_modes": [
+        ("The filter returns almost nothing",
+         "Icypeas' company search sized the same filter at 12 companies, Apollo at 746. Size the filter with a free count call before paying for a page, and expect the count to swing an order of magnitude between providers."),
+        ("A row with no domain",
+         "Three of the 50 Apollo rows carried no primary domain (two were acquired companies). Every later step keys on the domain, so those rows stop at step one. Keep them in the CSV with the reason rather than dropping them silently."),
+        ("The people search times out, or nobody has the person",
+         "LeadMagic's people search answered \"query too broad\" for a single domain with six titles, at no charge. Findymail by title returned a person for 27 of 47 companies and LeadMagic's role finder for 13 of the remaining 20. Nobody's database has a marketing lead for every 100-person company; the miss rate is the workflow, not a bug."),
+        ("The cheapest provider is out of credit",
+         "Akta answered all 31 news calls with an insufficient-credits error on treg.to's own key, at no charge, and the run fell back to PredictLeads at four times the price. A provider outage shows up as a price change, so ask the agent for the price before each step, not once at the start."),
+        ("Catch-all domains",
+         "A verifier cannot resolve an address on a domain that accepts everything. Expect a fifth of a B2B list to land in that bucket, and decide once, per campaign, whether to send to it."),
+    ],
+    "faq": [
+        ("How much does the whole workflow cost?",
+         "The receipt on this page prints the real total for a 50-company run. Per-call rates are the provider's own with $0.000 added by treg.to. A miss on a per-success step is free at the provider's rate card; the receipt shows where that held and where it did not."),
+        ("Can I change the filter or the title?",
+         "Yes. The prompt is plain text. Change the industry, headcount band, funding stage or the job title and the agent changes the calls. The prices per step do not change."),
+        ("Does treg.to pick the providers?",
+         "No. treg.to shows the agent every provider for each step with its price and measured success rate; the agent picks, or you tell it which one. There is no automatic failover."),
+        ("What comes back at the end?",
+         "A CSV with company, domain, person, title, email, which provider found it, the verifier's verdict, whether the domain is catch-all, and the latest news event. The one from the run on this page is linked above with the person, title and email columns removed, because these are real people and a title at a named company is enough to identify one; the row-level outcomes are what the numbers on this page come from. Your own run returns every column."),
+    ],
+    "related": ("Find professional emails", "Verify an email before you send",
+                "Find people by role, company or location", "Build a company list by industry, size or tech"),
 }

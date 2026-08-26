@@ -411,6 +411,39 @@ are served first by the same flat handler; `test_legacy_flat_use_case_pages_stil
 rendered job page cannot shadow one. `/use-cases` is the crawlable hub they hang from; before it existed the only link into a spoke
 was one row on one agent page. All hosted-only, sitemapped and `.md`-mirrored like the agent pages.
 
+## The workflow pages — `/workflows/<slug>`, and the hub at `/workflows`
+
+A use-case page answers one job; a workflow page is **the sequence a real person runs**, as ONE
+paste-in prompt. It renders, in order: the setup line and the prompt (copy buttons), four "why this
+prompt works" cards, a **step table** with a per-step price pulled live from the catalog (the
+endpoint the worked run used, its `cost_view` price per billing unit, how many providers do the
+step, observed success rate and p50 when there are samples, and a link to the step's use-case page
+resolved through `USE_CASES` by capability — or the category anchor on the default agent page when
+no page is written), a worst-case total (`price × rows_in` if every call hits), then **the receipt**
+of a real run (`id="run"`), `WHY_TREG`, the failure modes, the FAQ, and four related cards.
+JSON-LD: BreadcrumbList, a `HowTo` whose steps are the table rows, and a FAQPage. `.md` mirrors it
+all, ending with `HTML version: …`. Hosted-only, sitemapped (hub 0.8, page 0.7) and case-folded to
+the canonical slug with a 301, exactly like the use-case pages.
+
+The data lives in `agent_pages.WORKFLOWS`, one dict per slug: `steps` are
+`(name, capability, what the agent asks, endpoint the run used, why)` tuples; `run` holds the
+`date`, `rows_in`, the `receipt` label/value pairs, `cost_usd`, the narrative paragraphs and the
+CSV path. **The receipt and the CSV are hand-recorded from a real run and dated** — the page
+prints them verbatim and computes nothing from them; only the per-step prices are live. The CSV is
+shipped in the package at `src/treg/workflow_runs/<slug>.csv` and served at
+`/workflows/<slug>.csv` (404 when the file is missing). The published CSV carries **row-level
+outcomes only** (`person_found`, the finder, the verdict, catch-all, news) — never a name, title
+or address: these are real people and a title at a named company identifies one. A spec's `once`
+tuple names the endpoints called once per run rather than once per row (Apollo's list page); the
+"at the rates above" total and the hub's per-row price read it, so the list step is 1 × its price.
+The rule: **a workflow page is not written
+without a real run behind it.** A page whose receipt is a rate card is the thing this page type
+exists to not be.
+
+Tests: `test_workflow_page_is_served_with_the_crawler_essentials` (crawler plumbing, HowTo with the
+step count, `.md`, `.csv`, hub, 301, sitemap), `test_every_workflow_step_capability_and_endpoint_exist`,
+`test_no_workflow_ships_with_an_empty_section`, `test_workflow_copy_has_no_em_dashes`.
+
 ## Counts
 
 `2,630 endpoints / 47 providers / 80 platforms`, from `catalog_store.load()`. The landing, `llms.txt`

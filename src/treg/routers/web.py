@@ -1340,7 +1340,8 @@ async def use_cases_hub():
         '</div>' + blocks
         + '<section class="cat"><h2>Everything else</h2><div class="cap"><p style="margin:0">These are the jobs '
           'written up so far. The full menu is on the agent pages, and the whole catalog is at '
-          '<a href="/catalog">/catalog</a>.</p></div></section></main>')
+          '<a href="/catalog">/catalog</a>. The multi-step versions are at <a href="/workflows">/workflows</a>.'
+          '</p></div></section></main>')
     ld = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
         {"@type": "ListItem", "position": 2, "name": "Use cases", "item": base + "/use-cases"}]}]
@@ -1348,6 +1349,320 @@ async def use_cases_hub():
                  "One page per job: the prompt that works in ChatGPT or Claude, what the call costs, and "
                  "every provider that does it, compared. One treg.to key, no markup.",
                  "/use-cases", body, ld)
+
+
+# ------------------------------------------------------------------ /workflows/<slug>
+
+def _wf_use_case_link(cap: str, agent_slug: str) -> str:
+    """Where a workflow step links: the use-case page for the menu row that carries this
+    capability, or the row's category anchor on the agent page when no page is written."""
+    for category, jobs in agent_pages.USE_CASES:
+        for lbl, caps in jobs:
+            if cap in caps:
+                return (_use_case_page_for(lbl)
+                        or f"/agents/{agent_slug}#{agent_pages.category_slug(category)}")
+    return f"/agents/{agent_slug}"
+
+
+async def _wf_steps(cat, db, spec: dict, agent_slug: str) -> list[dict]:
+    """One dict per step, priced live from the catalog: the endpoint the worked run used, its
+    price per billing unit, how many providers do the step, and the observed stats when any."""
+    out = []
+    for name, cap, asks, ep_id, why in spec["steps"]:
+        eps = [e for e in cat.for_capability(cap) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+        used = next((e for e in eps if e["id"] == ep_id), None)
+        cv = cat.cost_view(used.get("cost"), used.get("provider")) if used else None
+        usd = cv["usd"] if cv and cv["usd"] else None
+        unit = _UNIT_WORDS.get(((used or {}).get("cost") or {}).get("type"), "call")
+        st = (await _observed_or_empty(db, [ep_id])).get(ep_id) or {} if used else {}
+        prov = used["provider"] if used else ep_id.split(".")[0]
+        out.append({
+            "name": name, "cap": cap, "asks": asks, "why": why, "ep": used, "ep_id": ep_id,
+            "provider": prov, "provider_name": _provider_display(prov),
+            "domain": agent_pages.PROVIDER_DOMAINS.get(prov),
+            "usd": usd, "unit": unit, "providers": len({e["provider"] for e in eps}),
+            "ok_rate": st.get("ok_rate") if st.get("samples") else None,
+            "p50": st.get("p50_ms") if st.get("samples") else None,
+            "samples": st.get("samples") or 0,
+            "link": _wf_use_case_link(cap, agent_slug),
+        })
+    return out
+
+
+_WF_CSS = """
+<style>
+.wftable td,.wftable th{vertical-align:top}
+.wftable td.n{font-family:var(--mono);color:var(--muted2);white-space:nowrap}
+.wftable .why{display:block;font-size:12.5px;color:var(--muted);margin-top:4px}
+.wftable .asks{color:var(--muted)}
+.wftotal{margin:14px 0 0;padding:12px 14px;border:1px solid var(--line,rgba(0,0,0,.12));border-radius:10px;font-size:14px}
+.wftotal b{font-family:var(--mono)}
+.receipt{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:12px 0 18px;font-size:14.5px}
+.receipt dt{color:var(--muted)}
+.receipt dd{margin:0;font-family:var(--mono)}
+</style>"""
+
+
+@app.get("/workflows/{slug}.csv", include_in_schema=False)
+async def workflow_csv(slug: str):
+    """The CSV of the run the page reports, hand-recorded from that run. 404 when no file."""
+    key = next((k for k in agent_pages.WORKFLOWS if k == slug.lower()), None)
+    if key is None or not _hosted():
+        raise HTTPException(status_code=404, detail="unknown workflow")
+    f = Path(agent_pages.__file__).parent / "workflow_runs" / f"{key}.csv"
+    if not f.exists():
+        raise HTTPException(status_code=404, detail="no run recorded")
+    return FileResponse(f, media_type="text/csv", filename=f"{key}.csv",
+                        headers={"Cache-Control": "public, max-age=600"})
+
+
+@app.get("/workflows/{slug}.md", include_in_schema=False)
+@app.get("/workflows/{slug}", include_in_schema=False)
+async def workflow_page(request: Request, slug: str, db: AsyncSession = Depends(get_session)):
+    """One workflow: the sequence a person runs, as ONE prompt. A use-case page answers one job;
+    this chains several, with a per-step price pulled live from the catalog, a receipt and CSV from
+    a real run (hand-recorded in `agent_pages.WORKFLOWS`, dated), and the failure modes. `.md`
+    serves the same page as Markdown. Hosted-only, like the use-case pages."""
+    as_md = request.url.path.endswith(".md")
+    raw = slug[:-3] if slug.endswith(".md") else slug
+    key = next((k for k in agent_pages.WORKFLOWS if k == raw.lower()), None)
+    if key is None or not _hosted():
+        raise HTTPException(status_code=404, detail="unknown workflow")
+    if raw != key:
+        return RedirectResponse(f"/workflows/{key}" + (".md" if as_md else ""), status_code=301)
+    wf_slug = key
+    spec = agent_pages.WORKFLOWS[key]
+    cat = catalog_store.load()
+    base = get_settings().public_url.rstrip("/")
+    agent_slug, agent_name = _uc_agent()
+    steps = await _wf_steps(cat, db, spec, agent_slug)
+    run = spec["run"]
+    n_steps = len(steps)
+    n_prov = len({s["provider"] for s in steps})
+    rows_in = int(run.get("rows_in") or 0)
+    once = set(spec.get("once") or ())
+    for s in steps:  # how many times the step's endpoint is called on a full-hit run
+        s["calls"] = 1 if s["ep_id"] in once else rows_in
+    worst = sum((s["usd"] or 0) * s["calls"] for s in steps)
+    setup = agent_pages.SETUP_LINE.format(base=base)
+
+    def money(x):
+        return _usd_short(x)
+
+    def pct(x):
+        return f"{round(x * 100)}%" if x is not None else ""
+
+    def ms(x):
+        return (f"{x/1000:.1f}s" if x >= 1000 else f"{int(x)}ms") if x else ""
+
+    title = spec["title"].format(n=n_steps, steps=n_steps)
+    lede = spec["lede"].format(n=n_steps, steps=n_steps)
+    desc = _serp_desc(f"{spec['sentence']}. {n_steps} steps through one treg.to key, priced before "
+                      f"each call, with a real run's receipt.")
+
+    if as_md:
+        md = [f"# {spec['sentence']}", "", lede, "",
+              "## Try it", "",
+              f"Setup line (paste into any agent): `{setup}`", "",
+              f'Then ask: "{spec["prompt"]}"', ""]
+        md += [f"- **{t}** {d}" for t, d in spec["prompt_why"]]
+        md += ["", "## The steps", "",
+               "| # | Step | What the agent asks | Provider used | Price | Success rate |", "|---|---|---|---|---|---|"]
+        for i, s in enumerate(steps, 1):
+            price = f"{money(s['usd'])} per {s['unit']}" if s["usd"] else "no dollar rate published"
+            rel = f"{pct(s['ok_rate'])} over {s['samples']} calls, {ms(s['p50'])} median" if s["samples"] else "not yet measured"
+            md.append(f"| {i} | {s['name']} | {s['asks']} | {s['provider_name']} (`{s['ep_id']}`, {s['providers']} providers, "
+                      f"{base}{s['link']}) | {price} | {rel} |")
+        md += [""] + [f"- {s['name']}: {s['why']}" for s in steps]
+        md += ["", f"At the rates above, {rows_in} rows where every call hits comes to ${worst:,.2f}. The receipt below is what it actually cost, and why it differs.", ""]
+        md += [f"## What it actually cost", "", f"Run on {run['date']}.", ""]
+        md += [f"- {k}: {v}" for k, v in run["receipt"]]
+        md += [""] + list(run["narrative"])
+        md += ["", f"Download the CSV of this run: {base}{run['csv']}", ""]
+        md += ["## Why go through treg.to", ""] + [f"- **{t}** {d}" for t, d in agent_pages.WHY_TREG]
+        md += ["", "## Where it goes wrong", ""]
+        for h, p in spec["failure_modes"]:
+            md += [f"**{h}** {p}", ""]
+        md += ["## Before you start", ""]
+        for q, a in spec["faq"]:
+            md += [f"**{q}** {a}", ""]
+        md += ["## Related", ""]
+        for lbl in spec["related"]:
+            href, _owner = _related_link(lbl, agent_slug)
+            md.append(f"- {lbl}: {base}{href}")
+        md += ["", f"HTML version: {base}/workflows/{wf_slug}"]
+        return PlainTextResponse("\n".join(md), media_type="text/markdown; charset=utf-8",
+                                 headers={"Cache-Control": "public, max-age=600"})
+
+    # ---------------------------------------------------------------- html (use-case skin)
+    seen, ptiles = set(), []
+    for s in steps:
+        if s["domain"] and s["provider"] not in seen:
+            seen.add(s["provider"])
+            ptiles.append(f'<span class="ptile" title="{_esc_html(s["provider_name"])}">{_logo(s["domain"], s["provider_name"])}</span>')
+    provstrip = (f'<div class="provstrip"><div class="pl">used in this run</div>'
+                 f'<div class="ptiles">{"".join(ptiles)}</div></div>' if ptiles else "")
+    agent_icons = "".join(
+        f'<span class="ptile" title="{_esc_html(label)}">'
+        f'<img src="https://unpkg.com/@lobehub/icons-static-png@latest/light/{icon}.png" alt="{_esc_html(label)}" loading="lazy"/></span>'
+        for aid, label, icon in agent_pages.AGENT_ICONS[:6])
+
+    def promptbox(label: str, text: str) -> str:
+        return ('<div class="promptbox"><div class="ph">'
+                f'<span>{_esc_html(label)}</span>'
+                f'<button class="copybtn" data-copy="{_esc_html(text)}">copy</button></div>'
+                f'<pre>{_esc_html(text)}</pre></div>')
+
+    why_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
+                        for t, d in spec["prompt_why"])
+    treg_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
+                         for t, d in agent_pages.WHY_TREG)
+
+    def price_cell(s: dict) -> str:
+        if s["usd"]:
+            return f'{_esc_html(money(s["usd"]))} <span style="color:var(--muted2)">per {s["unit"]}</span>'
+        return '<span style="color:var(--muted2)">no dollar rate published</span>'
+
+    def rel_cell(s: dict) -> str:
+        if not s["samples"]:
+            return '<span style="color:var(--muted2)">not yet measured</span>'
+        return (f'{pct(s["ok_rate"])} <span style="color:var(--muted2)">({s["samples"]} calls'
+                + (f', {ms(s["p50"])} median' if s["p50"] else "") + ')</span>')
+
+    step_rows = "".join(
+        f'<tr data-step="{i}">'
+        f'<td class="n">{i}</td>'
+        f'<td><b>{_esc_html(s["name"])}</b><span class="why">{_esc_html(s["why"])}</span></td>'
+        f'<td class="asks">{_esc_html(s["asks"])}</td>'
+        f'<td><a href="{_esc_html(s["link"])}">{_logo(s["domain"], s["provider_name"])}{_esc_html(s["provider_name"])}</a>'
+        f'<span class="why">{s["providers"]} provider{"s" if s["providers"] != 1 else ""} do this step</span></td>'
+        f'<td>{price_cell(s)}</td>'
+        f'<td>{rel_cell(s)}</td>'
+        '</tr>' for i, s in enumerate(steps, 1))
+    steps_table = ('<div class="tablewrap"><table class="wftable"><thead><tr>'
+                   '<th>#</th><th>Step</th><th>What the agent asks</th><th>Provider used</th><th>Price</th><th>Success rate</th>'
+                   f'</tr></thead><tbody>{step_rows}</tbody></table></div>'
+                   f'<div class="wftotal">At the rates above, {rows_in} rows where every call hits comes to <b>${worst:,.2f}</b>'
+                   f'<span style="color:var(--muted)"> ({" + ".join(f"{s["calls"]} &times; {_esc_html(money(s["usd"]))}" for s in steps if s["usd"])}). '
+                   'The receipt below is what it actually cost.</span></div>')
+
+    receipt = "".join(f'<dt>{_esc_html(k)}</dt><dd>{_esc_html(v)}</dd>' for k, v in run["receipt"])
+    narrative = "".join(f'<p>{_esc_html(p)}</p>' for p in run["narrative"])
+    failures = "".join(f'<h3>{_esc_html(h)}</h3><p>{_esc_html(p)}</p>' for h, p in spec["failure_modes"])
+    faq_html = "".join(f'<h3>{_esc_html(q)}</h3><p>{_esc_html(a)}</p>' for q, a in spec["faq"])
+
+    def _related_card(lbl: str) -> str:
+        href, owner = _related_link(lbl, agent_slug)
+        return (f'<a class="card" href="{href}"><h4>{_esc_html(lbl)}</h4>'
+                f'<p>One step of this workflow, on its own{(", in " + _esc_html(owner.lower())) if owner else ""}.</p></a>')
+    related = "".join(_related_card(lbl) for lbl in spec.get("related", ()))
+
+    body = (
+        '<div class="hero"><div class="wrap">'
+        f'<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / <a href="/workflows">Workflows</a> / '
+        f'{_esc_html(spec["sentence"])}</div>'
+        f'<div class="kicker">{n_steps} steps &middot; {n_prov} providers &middot; $0.000 markup</div>'
+        f'<h1>{_esc_html(spec["sentence"])}</h1>'
+        f'<div class="lede">{_esc_html(lede)}</div>'
+        '<div class="ctas">'
+        f'<a class="candy" href="/app?ref=wf-{_esc_html(wf_slug)}">Start free</a>'
+        '<a class="ghostbtn" href="#run">See the receipt</a></div>'
+        '<div class="trust">$1.00 of free credit on every new team &middot; no provider signup &middot; no card</div>'
+        f'{provstrip}</div></div>'
+
+        '<section id="ask"><div class="wrap"><div class="seclab">Try it</div>'
+        f'<h2>One prompt runs the whole thing</h2>'
+        f'<div class="steplabel"><span class="n">1</span><b>Set your agent up, once</b></div>'
+        + promptbox("in your agent's chat", setup)
+        + f'<div class="steplabel"><span class="n">2</span><b>Ask for the list</b></div>'
+        + promptbox("the prompt", spec["prompt"])
+        + f'<div class="provstrip"><div class="pl">works in</div><div class="ptiles">{agent_icons}</div></div>'
+        + f'<h3>Why this prompt works</h3><div class="cards">{why_cards}</div>'
+        + '</div></section>'
+
+        + '<section id="steps"><div class="wrap"><div class="seclab">The steps</div>'
+          f'<h2>What {_esc_html(agent_name)} calls, and what each call costs</h2>'
+          '<p>Prices are the provider&rsquo;s own rate, read from the catalog when this page loads, with $0.000 '
+          'added by treg.to. Success rates are treg.to&rsquo;s own served calls over the last 30 days.</p>'
+          + steps_table + '</div></section>'
+
+        + '<section id="run"><div class="wrap"><div class="seclab">The receipt</div>'
+          '<h2>What it actually cost</h2>'
+          f'<p style="color:var(--muted)">Run on {_esc_html(run["date"])}, {rows_in} companies in.</p>'
+          f'<dl class="receipt">{receipt}</dl>{narrative}'
+          f'<p><a class="ghostbtn" href="{_esc_html(run["csv"])}">Download the CSV of this run</a></p>'
+          '</div></section>'
+
+        + '<section id="why"><div class="wrap"><div class="seclab">Why treg.to</div>'
+          '<h2>Why go through treg.to</h2>'
+          f'<div class="cards">{treg_cards}</div></div></section>'
+
+        + '<section id="failures"><div class="wrap"><div class="seclab">The detail</div>'
+          f'<h2>Where it goes wrong</h2>{failures}</div></section>'
+
+        + '<section id="faq"><div class="wrap"><div class="seclab">Questions</div>'
+          f'<h2>Before you start</h2>{faq_html}</div></section>'
+
+        + (f'<section id="related"><div class="wrap"><div class="seclab">Related</div>'
+           f'<h2>Each step on its own</h2><div class="cards">{related}</div></div></section>' if related else "")
+        + _COPY_JS)
+    ld = [
+        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
+            {"@type": "ListItem", "position": 2, "name": "Workflows", "item": base + "/workflows"},
+            {"@type": "ListItem", "position": 3, "name": spec["sentence"],
+             "item": f"{base}/workflows/{wf_slug}"}]},
+        {"@context": "https://schema.org", "@type": "HowTo", "name": spec["sentence"],
+         "description": desc,
+         "step": [{"@type": "HowToStep", "position": i, "name": s["name"], "text": s["asks"],
+                   "url": f"{base}/workflows/{wf_slug}#steps"} for i, s in enumerate(steps, 1)]},
+        {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+            {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
+            for q, a in spec["faq"]]},
+    ]
+    return _page(title, desc[:300], f"/workflows/{wf_slug}", body, ld,
+                 head_extra=_MD_ALT.format(href=f"{base}/workflows/{wf_slug}.md") + _WF_CSS,
+                 css="usecase.css")
+
+
+@app.get("/workflows", include_in_schema=False)
+async def workflows_hub(db: AsyncSession = Depends(get_session)):
+    """The hub the workflow pages hang from: one card per workflow, priced per row from the catalog."""
+    if not _hosted():
+        raise HTTPException(status_code=404, detail="not found")
+    cat = catalog_store.load()
+    base = get_settings().public_url.rstrip("/")
+    agent_slug, _agent_name = _uc_agent()
+    cards = []
+    for slug, spec in agent_pages.WORKFLOWS.items():
+        steps = await _wf_steps(cat, db, spec, agent_slug)
+        # Per row: a once-per-run step (the list page) is spread over the run's rows.
+        rows_in = int(spec["run"].get("rows_in") or 0) or 1
+        once = set(spec.get("once") or ())
+        per_row = sum(((s["usd"] or 0) / rows_in) if s["ep_id"] in once else (s["usd"] or 0) for s in steps)
+        n = len(steps)
+        meta = f"{n} steps &middot; from {_esc_html(_usd_short(per_row))} per row" if per_row else f"{n} steps"
+        blurb = spec["lede"].format(n=n, steps=n)
+        cards.append(f'<a class="pcard" href="/workflows/{slug}"><h3>{_esc_html(spec["sentence"])}</h3>'
+                     f'<p>{_esc_html(blurb[:140])}</p><div class="meta">{meta}</div></a>')
+    body = (
+        '<main class="wrap"><div class="phead">'
+        '<div class="crumbs"><a href="/">treg.to</a> / <a href="/workflows">Workflows</a></div>'
+        '<h1>Workflows your agent can run from one prompt</h1>'
+        '<p class="lede">A use-case page answers one job. A workflow is the sequence a person actually runs: '
+        'one prompt, a price per step read live from the catalog, and the receipt and CSV of a real run. '
+        'All of it through one treg.to key, at the provider&rsquo;s own rate with $0.000 markup.</p>'
+        f'</div><section class="cat"><div class="grid">{"".join(cards)}</div></section>'
+        '<section class="cat"><h2>Everything else</h2><div class="cap"><p style="margin:0">The single-job '
+        'versions are at <a href="/use-cases">/use-cases</a>, and the whole catalog is at '
+        '<a href="/catalog">/catalog</a>.</p></div></section></main>')
+    ld = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
+        {"@type": "ListItem", "position": 2, "name": "Workflows", "item": base + "/workflows"}]}]
+    return _page("Workflows your agent can run from one prompt | treg.to",
+                 "Multi-step jobs as one prompt: a price per step read live from the catalog, and the "
+                 "receipt and CSV of a real run. One treg.to key, no markup.",
+                 "/workflows", body, ld)
 
 
 @app.get("/catalog.css", include_in_schema=False)
@@ -2192,6 +2507,9 @@ async def sitemap_xml():
         add("/use-cases", copy_day, "0.8")
         for j in agent_pages.USE_CASE_PAGES:
             add(f"/use-cases/{j}", copy_day, "0.7")
+        add("/workflows", copy_day, "0.8")
+        for w in agent_pages.WORKFLOWS:
+            add(f"/workflows/{w}", copy_day, "0.7")
     out.append("</urlset>")
     return Response("\n".join(out), media_type="application/xml; charset=utf-8",
                     headers={"Cache-Control": "max-age=3600"})
