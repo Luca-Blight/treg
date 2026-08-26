@@ -586,7 +586,7 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   returns `health._view(s)` plus a `needs_reconnect` flag (`health.needs_reconnect`) so a credential treg
   can't renew announces itself before it dies.
 - **The proxy:** `routers.call.call_tool` (`* /call/{rest:path}`) → `application.call.resolve` → (on a dotted 404,
-  catalog lookup + retirement gate + credential ladder) → `_enforce_daily_cap` (the
+  catalog lookup + retirement gate + credential ladder) → the router's `_enforce_daily_cap` adapter (the
   per-user daily cap; 429 when over) → (public-demo token → `_enforce_public_demo_ip_cap`) → load secrets
   (+ `ensure_fresh`) → **`db.commit()` — the DB phase ends here; a call in flight holds no pooled
   connection** → `relay()` → `audit.record_call`. A pool that has no slot within 5 s answers

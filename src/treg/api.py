@@ -110,9 +110,12 @@ from .routers import call as call_routes
 from .routers import referrals as referral_routes
 from .routers import onboard as onboard_routes
 from .routers.call import (
+    _enforce_daily_cap,
+    _enforce_public_demo_ip_cap,
     _parse_call_meta,
     _refusal_kind,
     _release_idempotent_claim,
+    _require_tool_use_http,
     _stamp_call_exit,
     call_tool,
     catalog_endpoint_access,
@@ -299,9 +302,7 @@ from .routers.connections import (
     set_extra_credential,
 )
 from .domain.governance.teams import _make_org_membership, _slugify, _unique_slug
-from .domain.governance import access as access_policy
 from .domain.governance import budgets as budget_policy
-from .domain.governance import publicdemo as publicdemo_policy
 from .application.call.idempotency import (
     IDEMPOTENCY_HEADER,
     IDEMPOTENCY_WINDOW_S,
@@ -781,17 +782,6 @@ router.routes.extend(web_routes.public_docs_router.routes)
 router.routes.extend(auth_routes.token_router.routes)
 
 
-def _require_tool_use_http(caller: Caller, tool: Tool) -> None:
-    try:
-        access_policy._require_tool_use(caller, tool)
-    except access_policy.AccessPolicyError as exc:
-        raise HTTPException(status_code=403, detail=exc.detail) from exc
-
-
-
-
-
-
 def _require_local_run(caller: Caller) -> None:
     """Gate the LOCAL run tier on the member's `local_run_enabled` (owner exempt). Off → server only."""
     if caller.role != "owner" and not caller.membership.local_run_enabled:
@@ -855,34 +845,7 @@ router.routes.extend(org_routes.invite_entry_router.routes)
 router.routes.extend(onboard_routes.onboard_entry_router.routes)
 
 
-async def _enforce_public_demo_ip_cap(request: Request, db: AsyncSession) -> None:
-    try:
-        await publicdemo_policy.enforce_public_demo_ip_cap(_client_ip(request), db)
-    except publicdemo_policy.PublicDemoLimitError as exc:
-        await db.commit()
-        raise HTTPException(status_code=429, detail=exc.detail) from exc
-    await db.commit()
-
-
 # ---- per-user daily usage cap (usage-metering v1) -------------------------------------------
-
-
-
-
-async def _enforce_daily_cap(caller: Caller, db: AsyncSession) -> None:
-    """Refuse a call/run once the caller has used their per-user daily cap for this org. `-1` (the
-    default) = unlimited, so unmetered members pay ZERO extra queries. The sandbox has its own limiter
-    and is exempt. Soft by design: the count reads best-effort `CallRecord`s, so under heavy load it
-    can lag slightly and fail OPEN (a few extra slip through) — never closed. See docs/USAGE-METERING-PLAN.md."""
-    cap = caller.membership.daily_call_cap
-    if cap < 0 or demo_sandbox.is_sandbox(caller.org):
-        return
-    used = await count_today(db, caller.org_id, caller.email)
-    if used >= cap:
-        raise HTTPException(status_code=429, detail=(
-            f"daily usage limit reached ({used}/{cap}) — ask an admin to raise your cap"))
-
-
 
 
 
@@ -2432,9 +2395,7 @@ call_routes._ERROR_RESPONSE_MAX = _ERROR_RESPONSE_MAX
 call_routes._await_before_reserve = _await_before_reserve
 call_routes._buffer_response = _buffer_response
 call_routes._caller_request_snippet = _caller_request_snippet
-call_routes._enforce_daily_cap = _enforce_daily_cap
 call_routes._enforce_deny = _enforce_deny
-call_routes._enforce_public_demo_ip_cap = _enforce_public_demo_ip_cap
 call_routes._enforce_tag_budgets = _enforce_tag_budgets
 call_routes._error_response_evidence = _error_response_evidence
 call_routes._finish_cancelled_call = _finish_cancelled_call
@@ -2445,7 +2406,6 @@ call_routes._platform_settle = _platform_settle
 call_routes._record_first_call = _record_first_call
 call_routes._redact_snippet = _redact_snippet
 call_routes._relay_live_demo = _relay_live_demo
-call_routes._require_tool_use_http = _require_tool_use_http
 call_routes._safe_secret_renderings = _safe_secret_renderings
 router.routes.extend(call_routes.router.routes)
 

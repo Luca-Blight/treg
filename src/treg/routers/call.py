@@ -46,9 +46,13 @@ from ..application.call.types import CallFailure
 from ..caller_metadata import _client_of
 from ..config import get_settings
 from ..db import get_session
+from ..domain.governance import access as access_policy
+from ..domain.governance import publicdemo as publicdemo_policy
 from ..domain.identity.access import Caller, _role_at_least, require_member
-from ..models import Secret
+from ..models import Secret, Tool
 from ..proxy import relay
+from .auth import _client_ip
+from .orgs import count_today
 
 
 # Stage 4b moves the HTTP surface before its call-kernel collaborators. These annotations are
@@ -60,9 +64,7 @@ _ERROR_RESPONSE_MAX: Any
 _await_before_reserve: Any
 _buffer_response: Any
 _caller_request_snippet: Any
-_enforce_daily_cap: Any
 _enforce_deny: Any
-_enforce_public_demo_ip_cap: Any
 _enforce_tag_budgets: Any
 _error_response_evidence: Any
 _finish_cancelled_call: Any
@@ -73,13 +75,42 @@ _platform_settle: Any
 _record_first_call: Any
 _redact_snippet: Any
 _relay_live_demo: Any
-_require_tool_use_http: Any
 _safe_secret_renderings: Any
 
 
 # The app alias preserves the moved handlers' decorator text byte-for-byte.
 app = APIRouter()
 router = app
+
+
+def _require_tool_use_http(caller: Caller, tool: Tool) -> None:
+    try:
+        access_policy._require_tool_use(caller, tool)
+    except access_policy.AccessPolicyError as exc:
+        raise HTTPException(status_code=403, detail=exc.detail) from exc
+
+
+async def _enforce_public_demo_ip_cap(request: Request, db: AsyncSession) -> None:
+    try:
+        await publicdemo_policy.enforce_public_demo_ip_cap(_client_ip(request), db)
+    except publicdemo_policy.PublicDemoLimitError as exc:
+        await db.commit()
+        raise HTTPException(status_code=429, detail=exc.detail) from exc
+    await db.commit()
+
+
+async def _enforce_daily_cap(caller: Caller, db: AsyncSession) -> None:
+    """Refuse a call/run once the caller has used their per-user daily cap for this org. `-1` (the
+    default) = unlimited, so unmetered members pay ZERO extra queries. The sandbox has its own limiter
+    and is exempt. Soft by design: the count reads best-effort `CallRecord`s, so under heavy load it
+    can lag slightly and fail OPEN (a few extra slip through) — never closed. See docs/USAGE-METERING-PLAN.md."""
+    cap = caller.membership.daily_call_cap
+    if cap < 0 or demo_sandbox.is_sandbox(caller.org):
+        return
+    used = await count_today(db, caller.org_id, caller.email)
+    if used >= cap:
+        raise HTTPException(status_code=429, detail=(
+            f"daily usage limit reached ({used}/{cap}) — ask an admin to raise your cap"))
 
 
 def _translate_call_failure(exc: CallFailure) -> HTTPException:
