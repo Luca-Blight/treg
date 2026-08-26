@@ -345,7 +345,7 @@ requires `voices` and `voices_intro` together rather than requiring either.
 say it anyway. Write position-neutral ("the comparison above", "the prices here") or the sentence
 is wrong for every reader who scrolls.
 
-**Written so far: 22 of the 66 jobs**, and from 2026-08-24 the remaining set is no longer "all of
+**Written so far: 27 of the 66 jobs**, and from 2026-08-24 the remaining set is no longer "all of
 them". Every unwritten job was measured against Google Ads keyword volume that day; the ones
 clearing 50 US searches a month became a worklist ordered by volume, and the rest are parked as
 rows on the menu with no page. A page nobody searches for is the scaled-content shape the risk
@@ -359,6 +359,25 @@ unit daily quota. The free row is deliberately excluded from the "cheapest per u
 `_uc_providers` only ranks rows with a truthy USD price, and a free-but-rationed row is not a
 cheaper version of a metered one. Those pages carry the quota arithmetic instead, which is what the
 research said people actually get stuck on.
+
+**A single provider on a trial pool is a third `short` state** (2026-08-26). The `short` form
+branched on the row's `free` flag: own-account copy, else `metered_single`. Finnhub's company news
+is one provider, not free, with no USD and a 50-call daily allowance, so it would have rendered
+"metered from your team's balance". `trial_single` now states the allowance and the own-key
+fallback in the description, the `.md` and the "How it works" section; the hero and `{cheapest}`
+already handled it through `free_words`. Found the usual way, by rendering the page after 88 green
+tests.
+
+**A platform label is catalog vocabulary, and a page cannot override it.** The ads page groups
+SerpApi's Ads Transparency Center engine under the `google` platform, whose catalog label is
+"Google Keyword Data"; the heading is wrong for that job and right for the SERP jobs. Fixing it
+means renaming the platform in the catalog, not the page, so it is flagged rather than patched.
+
+**Demand keeps outrunning the worklist term** (2026-08-26). `slack mcp` 4,400 and `slack mcp
+server` 1,900 against `slack bot api` 260, the fifth time `mcp` has beaten `api`; `google index
+checker` 590 against `google indexing api` 260, and the Indexing API is the wrong API for the
+job, so the page carries the checker term and says so; `financial news api` 170 sits beside
+`stock news api` 210.
 
 **A `related` card resolves by label, not inside the current category.** Four categories carry
 fewer than five jobs (advertising and market research three, e-commerce and local businesses four),

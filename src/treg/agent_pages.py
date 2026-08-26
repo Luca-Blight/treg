@@ -2705,6 +2705,490 @@ AGENTS["grok-bot"] = {
     ],
 }
 
+USE_CASE_PAGES["tiktok-shop-products-and-reviews"] = {
+    "label": "TikTok Shop products and reviews",
+    "sentence": "TikTok Shop API: search products by keyword and read a product's reviews, without a seller account",
+    "title": "TikTok Shop API: {n} providers compared, from {cheapest} | treg.to",
+    "lede": (
+        "Give your agent a keyword and a region and get TikTok Shop's product results back as "
+        "rows: title, price, seller and product id, then the reviews on any of them by id or URL. "
+        "{n} providers read the public storefront through one treg.to key, from {cheapest} a call, "
+        "at the provider's own rate with no markup. None of them is the seller-side Partner API, "
+        "so there is no shop, no sandbox and no app review to get through first."),
+    "prompt": "Using treg, search TikTok Shop US for \"matcha whisk\", show me the price per call "
+              "first, then give me the top 20 products by sales with seller, price and rating, and "
+              "pull the last 50 reviews on the best seller.",
+    "prompt_why": [
+        ("Name the region", "Every provider takes a region code and US is the one they all list as reliable. Say which market you mean."),
+        ("Ask for the price first", "treg.to returns the cost before the call, so the agent can say what a 20-page pull will spend."),
+        ("Go id to id", "Search returns product ids; the reviews call takes one. Two calls, no browser, no login."),
+        ("Bring the analysis", "The rows carry sales counts, prices and review text. Ranking and reading them is the agent's job."),
+    ],
+    "result_noun": "product",
+    "result_image": None,
+    "q_cheapest": "Which TikTok Shop API is cheapest?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do the providers compare?",
+    "what_is_heading": "What is a TikTok Shop API?",
+    "what_is": (
+        "TikTok's own Shop API is for sellers and their partners: it needs a seller account, an "
+        "app that passes review and, for many applicants, a US representative, and it manages "
+        "orders and inventory rather than answering questions about the market. What buyers "
+        "usually mean by a TikTok Shop API is the other thing: a way to read the public "
+        "storefront as data, search results by keyword and the reviews on a product, without "
+        "owning a shop. That is what the providers here do, per call, in JSON."),
+    "notes": [
+        "The three providers cover the job differently. TikHub and ScrapeCreators do both halves, "
+        "keyword search and product reviews; JustOneAPI does search only and bills per successful "
+        "call, so an error costs nothing there. TikHub's reviews call also takes a star filter and "
+        "a sort rule, which saves paging through five-star noise to reach the complaints.",
+        "Region is a real parameter, not a default to ignore. JustOneAPI lists nine markets, "
+        "ScrapeCreators says in its own docs that US is the reliable region for reviews and that "
+        "other regions may come back thin or inconsistent, and TikHub takes a region code on "
+        "every call. Ask for the market you sell in and read the count that comes back.",
+        "This is the public storefront, so it moves. TikTok changes the page and fights scrapers, "
+        "and the providers here have had public outages when it did. treg.to shows each provider's "
+        "measured success rate on live traffic where there is enough of it, and the agent picks; "
+        "treg.to does not fail over between them on its own.",
+    ],
+    "faq": [
+        ("Do I need a TikTok Shop seller account or Partner API access?",
+         "No. These providers read the public storefront, not the seller-side API, so there is no "
+         "seller account, sandbox, app review or US representative involved. What you cannot do "
+         "this way is anything seller-side: orders, inventory, your own shop's analytics."),
+        ("How much does a TikTok Shop search cost?",
+         "A fraction of a cent per call at the cheapest provider, and the live rate is at the top "
+         "of this page. treg.to bills the provider's own rate with $0.000 markup from your team's "
+         "prepaid balance, and JustOneAPI bills only when the call succeeds."),
+        ("Can I get a product's reviews?",
+         "Yes, by product id or product URL, paged. Two of the three providers do reviews, and "
+         "one lets you filter by star rating. Reviews TikTok has removed from the page are gone "
+         "from here too."),
+        ("Which provider should my agent use?",
+         "Ask for the price first and let it pick, or name one. treg.to shows the providers side "
+         "by side with the rate and the measured success rate; it compares, it does not route or "
+         "fail over for you."),
+    ],
+    "voices_intro": (
+        "TikTok Shop is sold harder than it is discussed: of ~140 Reddit and X posts in August "
+        "2026, about seventeen vendors were pitching, including one MCP launched by five accounts "
+        "reading the same script inside thirty hours. These four are people blocked at the "
+        "official door or paying for a dashboard they cannot export."),
+    "voices": [
+        ("The official API needs a shop before it will let you test",
+         "We're stuck in a loop: our app keeps getting rejected in review... but to test that authorization flow we need a sandbox test account",
+         "r/TikTokshop", "https://www.reddit.com/r/TikTokshop/comments/1ufgdy3/tiktok_shop_partner_center_create_test_account/",
+         "That loop is the Partner API's, and the providers here never enter it. They read the "
+         "public storefront, so the first call is a keyword and a region, and the $1.00 a new "
+         "team starts with is enough to see live results before deciding anything."),
+        ("Everything built on it is priced for agencies",
+         "Been looking into the TikTok Shop API but.... I only find those tools meant for agencies.",
+         "r/TikTokshop", "https://www.reddit.com/r/TikTokshop/comments/1vhwoph/is_the_tiktok_shop_api_worth_learning_if_you_just/",
+         "Per-call metering is the answer to a monthly plan you would use twice. A search is a "
+         "fraction of a cent and there is no subscription, so a one-off market check costs what "
+         "it costs and nothing the month after."),
+        ("The dashboards will show you the data but not give it to you",
+         "built a TikTok Shop research tool in Claude Code that replaces your $99/mo Kalodata subscription",
+         "@mikefutia on X, 305 likes", "https://x.com/i/status/2068043305292886465",
+         "The most-liked on-topic post in the research is someone doing exactly this page's job "
+         "with an agent. The rows come back as JSON, so sorting by sales, price or rating and "
+         "keeping the output is yours, not a plan tier."),
+        ("A seller's full product list is a different question",
+         "we are struggling to find a way of programmatically obtaining all product IDs for a particular seller",
+         "r/webscraping", "https://www.reddit.com/r/webscraping/comments/1e7042c/tiktok_shop_product_link_scraping/",
+         "This page is keyword search and reviews by product id. Search results carry the seller, "
+         "so an agent can filter to one shop, but a complete catalogue for a seller is not a call "
+         "on this page and it would be wrong to pretend otherwise."),
+    ],
+    "related": ("Amazon product detail by ASIN", "Product reviews", "Find creators by keyword",
+                "A creator's profile and stats"),
+}
+
+USE_CASE_PAGES["ads-a-competitor-is-running-now"] = {
+    "label": "Ads a competitor is running now",
+    "sentence": "Meta Ad Library API, Google Ads Transparency Center and LinkedIn ads: what a competitor is running right now",
+    "title": "Meta Ad Library API and Google Ads Transparency data | treg.to",
+    "lede": (
+        "Give your agent a competitor's Page, advertiser or company and get their live ads back "
+        "as rows: creative text, link titles, start dates, platforms and the snapshot URL. Meta, "
+        "Google and LinkedIn answer through one treg.to key, from {cheapest} at the "
+        "provider's own rate with no markup, or free on the Meta Ad Library token you set up "
+        "yourself. The three libraries are not alternatives to each other; the network is the "
+        "choice."),
+    "prompt": "Using treg, list every Facebook and Instagram ad this Page has run in the US in the "
+              "last 30 days, show me the price first, then group them by landing page and tell me "
+              "which creatives have been live longest.",
+    "prompt_why": [
+        ("Give the Page id, not the name", "Many Pages share a brand name. A Page id or URL returns one advertiser; a name returns false positives."),
+        ("Say the country", "The Meta library asks which country the ad reached, and US-only can miss half of a global brand's actives. Say ALL when you mean all."),
+        ("Read longevity, not spend", "Meta publishes spend only for political ads. How long a creative has run is the signal everyone uses instead."),
+        ("Ask for the price first", "treg.to returns the cost before the call, so the agent can say what a full library pull will spend."),
+    ],
+    "result_noun": "ad",
+    "result_image": None,
+    "q_cheapest": "Which ad library API is cheapest?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do the providers compare, per network?",
+    "what_is_heading": "What is the Meta Ad Library API?",
+    "what_is": (
+        "The Meta Ad Library is the public record of every ad running on Facebook and Instagram, "
+        "and the Ad Library API is its official query interface: search by keyword or by Page, "
+        "filter by country, date and status, and get the creative, the delivery dates and the "
+        "platforms back as data. Google's equivalent is the Ads Transparency Center, which has "
+        "no official API and lists ads per advertiser; LinkedIn's is its ad library. The "
+        "providers here answer all three, either through the official API on your own token or "
+        "by reading the public library pages."),
+    "notes": [
+        "The official Meta route is free and it is yours to set up: a one-time government-ID "
+        "verification at Facebook, then a Meta app and an access token, which you register with "
+        "treg.to as your own key. The forum wait for verification runs from days to never. The "
+        "two scraper providers on the Meta row need none of that and bill per call or per ad, "
+        "which is why most people start there and register a token later, if ever.",
+        "Spend is not on the page for ordinary ads. Meta publishes spend and impression ranges "
+        "for political and issue ads only, and richer fields for ads reaching the EU under the "
+        "DSA, so a European pull carries more than a US one. For everything else the working "
+        "signals are how long a creative has run and how many variants a Page is testing.",
+        "Google is a lookup, not a search. The Transparency Center lists what one advertiser runs, "
+        "by advertiser or domain, and that is what the SerpApi engine here returns, with region, "
+        "format and date filters. There is no keyword search across every advertiser, which is a "
+        "limit of the Center, and the copy of a search ad comes back as text only where Google "
+        "renders it as text.",
+    ],
+    "faq": [
+        ("Do I need Meta Ad Library API access?",
+         "Not to start. ScrapeCreators and Apify read the public library without any Meta app, "
+         "billed per call or per ad. If you have completed Meta's identity verification and hold "
+         "a token, register it and the official calls run free on your own key, never metered."),
+        ("Can I see how much a competitor is spending?",
+         "Only for political and issue ads, where Meta publishes ranges. For everything else no "
+         "provider has the number, and this page will not invent one. Run length, variant count "
+         "and the platforms an ad reaches are what the data does carry."),
+        ("Does this cover Google Ads?",
+         "Yes, per advertiser, through the Ads Transparency Center engine at SerpApi's flat "
+         "per-search rate. You look up an advertiser or a domain; searching every advertiser for "
+         "a keyword is not something the Center offers."),
+        ("Which provider should my agent use?",
+         "The network decides the shelf; on Meta, the cheapest verified row or your own token. "
+         "treg.to shows the rows side by side with the rate and measured success; it compares, "
+         "it does not route or fail over for you."),
+    ],
+    "voices_intro": (
+        "Ad intelligence is a crowded shelf: about seventeen tools were pitched across the ~65 "
+        "on-topic posts on Reddit and X in August 2026, including one founder posting a dozen "
+        "times. These four are people who tried the official libraries first."),
+    "voices": [
+        ("Meta's identity check is the first wall, and it does not always answer",
+         "I've sent my id however 4 days passed and there is no answer. It is still \"in progress\".",
+         "r/FacebookAds", "https://www.reddit.com/r/FacebookAds/comments/1vr13ds/",
+         "The official API waits on that check; the scraper rows do not. Start on a per-call "
+         "provider today, and register your own Meta token when the verification lands so the "
+         "official calls run free."),
+        ("There is no spend number, so people watch launch velocity instead",
+         "Meta doesn't expose dollar spend for non-political ads, so \"velocity\" = ad-launch volume not actual budget",
+         "r/FacebookAds", "https://www.reddit.com/r/FacebookAds/comments/1t045tp/",
+         "True, and no provider here changes it. What the rows do carry is start date, stop date "
+         "and platform per ad, which is enough for an agent to count new creatives a week and "
+         "flag the ones that have survived a month."),
+        ("Google only lets you look at one advertiser at a time",
+         "Google only lets you look up one advertiser at a time. There's no way to answer \"who is running ads on roof repair right now?\"",
+         "r/marketingagency", "https://www.reddit.com/r/marketingagency/comments/1ve8pke/",
+         "Still the case through the API, because it is the Center's own shape. The honest "
+         "workaround is a list: give the agent the advertisers you already know and let it "
+         "loop, at a flat rate per lookup."),
+        ("The library gives you data, not intelligence",
+         "The Ad Library gives you data, but not much intelligence. You end up opening hundreds of ads manually",
+         "r/FacebookAds", "https://www.reddit.com/r/FacebookAds/comments/1vi52qj/",
+         "The rows come back as JSON with the creative text, so grouping by landing page, "
+         "clustering hooks and ranking by run length is the agent's job on top, and it is the "
+         "part that used to be a weekend of tabs."),
+    ],
+    "related": ("Your own campaign performance", "Keywords a domain bids on",
+                "A competitor's recent posts", "Google results for a keyword"),
+}
+
+USE_CASE_PAGES["read-and-post-in-your-slack-channels"] = {
+    "label": "Read and post in your Slack channels",
+    "sentence": "Slack bot API: your agent reads your channels and posts in them, on your own workspace",
+    "title": "Slack MCP and bot API for {agent}: read and post | treg.to",
+    "lede": (
+        "Install one bot in the Slack workspace you already run and your agent can read a "
+        "channel's recent messages and post replies into it, as the bot, with no token in the "
+        "agent's hands. It is your own workspace, so treg.to never meters it; and the scopes, the "
+        "manifest and the bot-versus-user-token question are settled before you start, which is "
+        "where most of the forum threads stall."),
+    "prompt": "Using treg, read the last two days of #support, summarise the open questions with "
+              "who asked each one, and post the summary to #support-digest as a single message.",
+    "prompt_why": [
+        ("Install once", "A pre-filled manifest creates the bot with a fixed scope set. You paste one bot token; the agent never sees it."),
+        ("Invite the bot first", "A bot reads only channels it is a member of. It can post to any public channel without joining."),
+        ("Read in windows", "History comes back in pages with a cap per call and a rate tier per minute. Ask for a window, not the archive."),
+        ("It costs nothing", "Your own workspace, so the call is never metered."),
+    ],
+    "result_image": None,
+    "what_is_heading": "What is the Slack bot API?",
+    "what_is": (
+        "The Slack Web API is how an app reads and writes a workspace as data: list channels, "
+        "read a channel's message history, post a message or a threaded reply. A bot token is "
+        "the credential an installed app holds, scoped to that one workspace and to the "
+        "permissions its manifest asked for, and everything it does shows up as the bot, not as "
+        "you. That is the token this connection uses, so the agent reads what the bot can see "
+        "and posts under the bot's name, never under yours."),
+    "notes": [
+        "Reading history on a new, unlisted app is rationed. Apps created after May 2025 that "
+        "are not listed in the Slack Marketplace get one history request a minute and fifteen "
+        "messages a call, and the bot you install from treg.to's manifest is one of those apps. "
+        "Nothing here lifts that; treg.to relays the call and the 429 as they are. A daily "
+        "digest of a busy channel is fine; a backfill of a year is not this tool.",
+        "Membership is the read permission. The bot reads only channels it has been invited to, "
+        "and direct messages need their own scopes, which the manifest does not request. Posting "
+        "is broader: the write scope lets it post into any public channel without joining. "
+        "Slack answers a dead channel or a missing scope with HTTP 200 and ok: false, so read "
+        "the body, not the status.",
+        "History returns top-level messages with authors as user ids, so a readable digest needs "
+        "the users call to resolve names, and thread replies live behind a separate replies call. "
+        "Ask the agent for a summary with names and it will make those calls; ask for the raw "
+        "rows and it will hand you ids.",
+    ],
+    "faq": [
+        ("Does this cost anything?",
+         "No. Slack runs on your own workspace, so treg.to relays the call and meters nothing. "
+         "Only calls on treg.to's own provider keys are billed."),
+        ("Does my agent post as me or as a bot?",
+         "As the bot, always. The connection holds a bot token, which is what makes it "
+         "auditable: every message it writes carries the bot's name, and it cannot read your "
+         "DMs or anything a channel you did not invite it to."),
+        ("Why is reading history slow?",
+         "Slack rate-tiers history reads on unlisted apps: one request a minute, fifteen messages "
+         "each. That is Slack's rule for every app created outside the Marketplace since 2025, "
+         "and treg.to does not get around it. Ask for windows and let the agent page."),
+        ("What if my workspace restricts app installs?",
+         "Then an admin has to approve the install, the same as any app. treg.to gives you the "
+         "manifest to submit; it cannot approve it for you."),
+    ],
+    "voices_intro": (
+        "Slack posts in August 2026 were four-fifths agent launches and MCP listicles; about "
+        "twenty tools were pitched across ~170 posts, one with zero-width characters in the "
+        "text. These four are people trying to read their own workspace."),
+    "voices": [
+        ("Slack cut history reads to one a minute, and it applies to internal apps",
+         "For accessing messages, you can now only make 1 request per minute, with a maximum of 15 messages",
+         "@grinich on X, 1,951 likes", "https://x.com/i/status/1946391052489028082",
+         "Still the rule for any unlisted app, and this connection is one. The page says so "
+         "rather than implying a way round it: a summary of a channel's last day fits the "
+         "allowance, and that is the job most people are actually asking for."),
+        ("All anyone wants is the morning summary, and the easy path got switched off",
+         "All I want is to get a summary of my Slack messages and with a list of action items every morning.",
+         "r/AI_Agents", "https://www.reddit.com/r/AI_Agents/comments/1txzeow/",
+         "The same poster found the Claude Slack connector disabled by IT and was unsure they "
+         "could create an app at all. A manifest install is still an app install, so an admin "
+         "may have to say yes; after that the digest is one read and one post a day."),
+        ("The bot has to be in the room",
+         "Turns out the bot needs to be a member of the channel first.",
+         "r/indiehackers, 18 points", "https://www.reddit.com/r/indiehackers/comments/1vryo4q/",
+         "True here too, and the manifest keeps it that way on purpose: read what you invited it "
+         "to, post where you point it. The same thread had DM scopes rejected in review as too "
+         "much access, which is why this connection does not ask for them."),
+        ("Pasting bot tokens into code is where the audit trail goes",
+         "pasting bot tokens into your code... less great when you need to know exactly what your agent can touch",
+         "@Mai_Builds on X", "https://x.com/i/status/2091946621504311753",
+         "The token sits with treg.to, the agent holds one team token that works for every tool, "
+         "and what it can touch is the manifest's scope list, which is fixed and readable. Revoke "
+         "the bot and the agent's access is gone with it."),
+    ],
+    "related": ("Read a Telegram channel", "Publish to your own accounts",
+                "Google Analytics: traffic and behaviour reports",
+                "Search Console: clicks, impressions and top queries"),
+}
+
+USE_CASE_PAGES["is-this-page-indexed-and-why-not"] = {
+    "label": "Is this page indexed, and why not",
+    "sentence": "Google index checker: is this page indexed, and why not, from the URL Inspection API",
+    "title": "Google index checker: URL Inspection API for {agent} | treg.to",
+    "lede": (
+        "Connect the Search Console property you already own and your agent can ask Google, per "
+        "URL, the question the UI answers one click at a time: is it indexed, when was it last "
+        "crawled, which canonical did Google choose, and if it is not indexed, which bucket it "
+        "sits in. It runs on your own Google account, so treg.to never meters it, and it is the "
+        "same URL Inspection data the Search Console panel shows, without the clicking."),
+    "prompt": "Using treg, take every URL in our sitemap, inspect each one in Search Console, and "
+              "give me a table of the ones that are not indexed with the coverage state, last "
+              "crawl date and the canonical Google picked.",
+    "prompt_why": [
+        ("Connect once", "One OAuth click for the property you own. treg.to holds the token, not you."),
+        ("Give it the property string", "The URL must sit under the property you name, sc-domain or URL-prefix. A mismatch is a permission error, not a result."),
+        ("Mind the quota", "Google allows 2,000 inspections per property per day, and nothing lifts it. A 5,000-page site is three days."),
+        ("It costs nothing", "Your own account, so the call is never metered."),
+    ],
+    "result_image": None,
+    "what_is_heading": "What is the URL Inspection API?",
+    "what_is": (
+        "The URL Inspection API is the Search Console endpoint behind the URL Inspection tool. "
+        "For one URL on a property you own it returns Google's index verdict, the coverage "
+        "state (indexed, crawled but not indexed, discovered but not indexed, and the rest), the "
+        "last crawl date, the robots and indexing state, the canonical you declared against the "
+        "one Google chose, and the mobile and rich-result checks. It is a read. It does not ask "
+        "Google to index anything, and it is not the Indexing API, which is a different endpoint "
+        "restricted to job postings and live-broadcast pages."),
+    "notes": [
+        "The quota is Google's and it is hard: 2,000 inspections per property per day. treg.to "
+        "does not pool, rotate or route around it, and the forum's tales of getting past it "
+        "involve multiple properties or policy violations. Inspect the pages that matter, keep "
+        "the verdicts, and diff them week to week; that is where the tool earns its place.",
+        "This is the fresher of the two Search Console answers. The Page Indexing report lags and "
+        "its validations can sit for months, which is why people see it disagree with the URL "
+        "Inspection panel. The API reads the inspection side, so a scripted check gives the "
+        "per-URL answer without waiting for the report to catch up.",
+        "Two things this page does not do. It does not request indexing: that button has no API "
+        "and its own small daily limit. And it is not the Indexing API, which Google restricts to "
+        "JobPosting and BroadcastEvent pages; using it for anything else is against policy and "
+        "returns a cheerful 200 that changes nothing.",
+    ],
+    "faq": [
+        ("Does this cost anything?",
+         "No. Search Console runs on your own Google account, so treg.to relays the call and meters "
+         "nothing. Only calls on treg.to's own provider keys are billed."),
+        ("Can it make Google index my page?",
+         "No. The URL Inspection API reads Google's verdict; it does not submit anything. It "
+         "tells you which bucket a page is in and why, which is the part you can act on."),
+        ("Is this the Google Indexing API?",
+         "No. The Indexing API is for job postings and live-broadcast pages only. Most people "
+         "searching for it want what this page does: check whether a URL is indexed, in bulk, "
+         "and see the reason when it is not."),
+        ("How many URLs can I check a day?",
+         "2,000 per Search Console property per day, set by Google. The agent can loop a sitemap "
+         "and stop at the quota, then carry on the next day."),
+    ],
+    "voices_intro": (
+        "Indexing is a queue of people waiting on Google and a shelf of tools promising to jump "
+        "it: about a dozen index-checker and indexing-service pitches sat among ~70 on-topic "
+        "Reddit and X posts in August 2026. These four are people checking their own pages."),
+    "voices": [
+        ("The two Search Console reports disagree",
+         "URL Inspection says Indexed, but Page Indexing says 'Crawled – currently not indexed.'... Which status should we trust more?",
+         "r/SEO, 12 points", "https://www.reddit.com/r/SEO/comments/1ume4w0/",
+         "The inspection side is the fresher one, and it is what the API reads. A scripted "
+         "pass over the affected URLs gives you the current verdict per page instead of a "
+         "report that updates on its own schedule."),
+        ("Crawled, not indexed, for months, and validation never finishes",
+         "Crawled - currently not indexed for almost 2 months. Validation Started - Started: 5/29/26 and still nothing.",
+         "r/TechSEO, 70 points", "https://www.reddit.com/r/TechSEO/comments/1uzt1t0/",
+         "No API makes Google decide faster, and this page will not claim one does. What it "
+         "gives you is the per-URL state, the last crawl date and the canonical Google chose, "
+         "kept over time, so you can see which pages moved and which did not."),
+        ("The Indexing API turns out to be for job postings",
+         "Google Search API can not be used because it only supports categories related to broadcasting and job postings.",
+         "r/SEO, 32 points", "https://www.reddit.com/r/SEO/comments/1robehb/",
+         "Correct, and it is why the most-searched term for this job names the wrong API. The "
+         "URL Inspection API is the one that answers 'is this indexed', for any page on a "
+         "property you own."),
+        ("The 2,000 a day quota is the whole constraint",
+         "The big limitation of the insufferable URL inspection API is the 2,000 daily quota.",
+         "@iannuttall on X", "https://x.com/i/status/1734591329953276340",
+         "It is, and it is per property, set by Google. treg.to relays the call as it is, so the "
+         "quota is yours to spend well: inspect the pages that changed, not the whole site every "
+         "morning."),
+    ],
+    "related": ("Search Console: clicks, impressions and top queries", "Keywords a domain ranks for",
+                "On-page audit of a URL", "Google results for a keyword"),
+}
+
+USE_CASE_PAGES["news-for-a-ticker"] = {
+    "label": "News for a ticker",
+    "sentence": "Stock news API: the headlines on a ticker over a date range, as rows your agent can read",
+    "title": "Stock news API for {agent}: headlines by ticker | treg.to",
+    "lede": (
+        "Give your agent a ticker and a date range and get the news on that company back as "
+        "rows: headline, source, summary, time and the link. Finnhub answers it, {cheapest}, so "
+        "the first question of every forum thread, which free news API is worth trying, costs "
+        "nothing to settle. What comes back is headlines and summaries, not full text and not a "
+        "sentiment score; the reading is the agent's job, and it is the part it is good at."),
+    "prompt": "Using treg, get the news on NVDA from the last seven days, drop anything that is not "
+              "about the company itself, and give me the five stories that matter with one line "
+              "each and the source link.",
+    "prompt_why": [
+        ("Give a symbol and two dates", "The call takes a ticker and a from and to date. A week is a page; a year is a lot of pages."),
+        ("Ask it to filter", "Finnhub tags stories to a symbol and the tagging is loose. Ask the agent to drop the ones that only mention the sector."),
+        ("Score it yourself", "The rows carry the headline and summary. Sentiment, themes and 'does this matter' are the agent's to judge."),
+        ("Try free, run on your key", "The daily allowance is for finding out whether the feed suits you. A bot that polls all day needs your own Finnhub key, never metered."),
+    ],
+    "result_image": None,
+    "what_is_heading": "What is a stock news API?",
+    "what_is": (
+        "A stock news API returns the news articles tagged to a company as data, by ticker and "
+        "date range, so a program can read them instead of a person scrolling a feed. Each row is "
+        "a headline, the source, a summary, a timestamp and the article's URL. It is not the "
+        "article itself, which stays on the publisher's site, and it is not a verdict on whether "
+        "the news is good; providers that sell sentiment scores layer that on top, and this "
+        "endpoint does not."),
+    "notes": [
+        "The free allowance is a trial, not a plan. treg.to serves Finnhub's company news on its "
+        "own free-tier key at 50 calls a day per team; past that the call is refused with a hint "
+        "to connect your own key, and on your own key nothing is metered. Finnhub's free tier "
+        "carries its own rate limit and, per Finnhub's own docs, this endpoint covers North "
+        "American companies, so a UK or Indian ticker is not this tool's job.",
+        "Symbol tagging is Finnhub's, and it is generous. A story about the chip sector arrives "
+        "under every chip ticker, and at least one builder in the research shipped wrong-symbol "
+        "rows by trusting the scoping. Ask the agent to check that the headline is about the "
+        "company, and to keep the article URL so a human can verify the ones that count.",
+        "This is headlines and summaries, delivered after publication, not a real-time wire. "
+        "The forum wants full text from the paywalled sources and a sentiment number; no free "
+        "feed gives either, and this page will not pretend to. What the rows are good for is "
+        "the morning brief, the earnings-week watch, and a pre-trade sanity check on what "
+        "happened overnight.",
+    ],
+    "faq": [
+        ("Is the stock news API free?",
+         "50 calls a day per team on treg.to's own Finnhub key, free, which is enough to try it "
+         "and to run a daily brief on a handful of tickers. Beyond that, register your own "
+         "Finnhub key and the calls are never metered by treg.to."),
+        ("Does it include sentiment?",
+         "No. The rows are headline, source, summary, time and URL. Sentiment is the agent's "
+         "reading, or a separate provider's product; this endpoint returns the news, not a "
+         "score on it."),
+        ("Do I get the full article?",
+         "No. You get the headline, a summary and the link. Full text from paywalled outlets is "
+         "not something any news API on the free side hands out, and the link is there so a "
+         "person can read the ones that matter."),
+        ("Can I build a trading bot on it?",
+         "Not on the free allowance, which is a daily trial, and not as a real-time signal: the "
+         "feed is post-publication. On your own key a polling bot is between you and Finnhub's "
+         "limits; the news is an input for the agent to reason over, not a trigger."),
+    ],
+    "voices_intro": (
+        "Stock news threads are half vendors: about 30 of the ~190 Reddit and X posts in August "
+        "2026 were news APIs pitching themselves, two of them in five subreddits each with the "
+        "same 'I polled the free ones and then found this' arc. These four are people building "
+        "on their own."),
+    "voices": [
+        ("The first thing the model admits is that it cannot see the market",
+         "Then on the second day ChatGPT told me, \"Uh... I can't actually see live stock prices.\"",
+         "r/ClaudeAI, 432 points", "https://www.reddit.com/r/ClaudeAI/comments/1r35gpb/",
+         "That poster spent eight months wiring data in by hand, and Finnhub's news was one of "
+         "the feeds. One setup line gives the agent the same call, with the price of every "
+         "other tool shown before it spends anything."),
+        ("Free tiers are for trying, not for the backtest",
+         "Their free tiers don't provide enough history for a proper multi-year backtest.",
+         "r/algotrading, 13 points", "https://www.reddit.com/r/algotrading/comments/1vp74rb/",
+         "True of this one as well. The allowance settles whether the feed fits; a multi-year "
+         "pull is your own key and Finnhub's plan, and the page says so instead of hiding the "
+         "cliff behind a free badge."),
+        ("Nobody knows which news feed is actually current",
+         "I have seen some reviews of Polygon.io saying their news feed is outdated by months",
+         "r/algotrading, 17 points", "https://www.reddit.com/r/algotrading/comments/1i0ghfd/",
+         "No comparison table can answer that honestly for your tickers. The cheap test is the "
+         "point of the allowance: pull last week on five symbols today and read the timestamps "
+         "yourself."),
+        ("The tagging puts stories under the wrong symbol",
+         "company news sometimes gets tagged with the wrong symbol because I'm trusting Finnhub's endpoint scoping instead of double-checking it.",
+         "X", "https://x.com/i/status/2078351559344128383",
+         "A known property of the feed, so make the agent do the double-checking: keep the "
+         "headline and summary, drop what is not about the company, and carry the URL for "
+         "anything it flags as material."),
+    ],
+    "related": ("Current quote for a ticker", "Daily price history",
+                "Company profile and fundamentals behind a ticker", "A company's SEC filings"),
+}
+
 
 # The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
 # use-case page answers one job; a workflow chains several, with a per-step price pulled live from
