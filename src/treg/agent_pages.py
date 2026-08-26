@@ -3535,6 +3535,126 @@ USE_CASE_PAGES["keywords-a-domain-bids-on"] = {
 }
 
 
+USE_CASE_PAGES["backlink-profile-of-a-domain"] = {
+    "label": "Backlink profile of a domain",
+    "sentence": "Backlink API: the backlink profile of a domain from Moz, DataForSEO, Serpstat, SE Ranking, Majestic or Semrush, per call",
+    "title": "Backlink API: a domain's backlink profile, {n} providers | treg.to",
+    "lede": (
+        "Give your agent a domain and get its backlink profile back as one row: total "
+        "backlinks, referring domains, follow and nofollow split, the vendor's authority score "
+        "and, from some providers, the spam and anchor breakdowns. {n} providers answer through "
+        "one treg.to key, {cheapest}, each at its own rate with no markup and none of them "
+        "behind a monthly plan or a credit reset. Ahrefs is not among them. Every index is that "
+        "vendor's own crawl, so the counts differ by design, and the page shows them side by "
+        "side rather than picking one."),
+    "prompt": "Using treg, get the backlink summary for our domain and our three main "
+              "competitors from the cheapest verified provider, show me the price first, then "
+              "put referring domains, follow share and the authority score in one table and "
+              "tell me where the gap is widest.",
+    "prompt_why": [
+        ("Give bare domains", "Most rows want the domain without scheme or www, and a page URL where you mean a page. Say which, or the agent guesses."),
+        ("One call per domain", "Each provider prices the summary per target, and the dearest per-target row is ten times the cheapest. Four domains is four calls."),
+        ("Name the score you mean", "Moz DA, Majestic Trust Flow, Semrush Authority Score: each belongs to its vendor and compares only to itself. Ask for one and stick to it."),
+        ("Ask for the price first", "treg.to returns the rate before the call, so the agent can say what a thousand expired domains will spend before it starts."),
+    ],
+    "result_noun": "domain",
+    "result_image": None,
+    "q_cheapest": "Which backlink API is cheapest per call?",
+    "q_reliable": "Which backlink API is the most reliable?",
+    "q_compare": "How do the backlink providers compare?",
+    "what_is_heading": "What is a backlink API?",
+    "what_is": (
+        "A backlink API returns what a link index knows about a domain or a page as data: how "
+        "many pages link to it, from how many distinct domains, how many of those links pass "
+        "authority, and a score the vendor computes from all of it. The summary endpoint on "
+        "this page is the one-row version, the profile rather than the list of links; the "
+        "list is a different job. Each provider runs its own crawler and its own index, so "
+        "DataForSEO, Moz, Serpstat, SE Ranking, Majestic and Semrush will each give a "
+        "different referring-domain count for the same domain, and none of them is the "
+        "count. Ahrefs, the index most of the forum pays for, is not in the catalog."),
+    "notes": [
+        "Per-call is the point. The forum's problem is not the data, it is the plan: an API "
+        "tier priced for enterprises, a credit allowance that resets in two weeks, a seat that "
+        "costs hundreds a month for one column. Here Serpstat's summary is $0.0025 a call, "
+        "Moz's two quota rows come to $0.0133, SE Ranking's 100 credits to $0.0179 per target "
+        "and DataForSEO's request to $0.024 plus a fraction of a cent per returned row, "
+        "metered from a prepaid balance at the provider's rate with $0.000 added. A new "
+        "team's free dollar is a few hundred Serpstat summaries.",
+        "Two rows carry no dollar price. Majestic charges one index item unit per target, and "
+        "it is the same command as its URL metrics call, so ask for one and read both sets of "
+        "columns rather than paying twice. Semrush charges 40 API units flat for the overview "
+        "and publishes no dollar rate for a unit, so it runs on your own Semrush plan. Neither "
+        "has been called live through treg.to yet; the other four have, and the measured "
+        "success rates on this page come from that traffic.",
+        "The columns are not the same shape. Moz's call is its URL metrics with distributions "
+        "on, which adds histograms by domain authority, spam score and root domains; SE "
+        "Ranking's summary is ten times the price of its metrics call and adds the full "
+        "breakdown, so use metrics when you only need totals; DataForSEO returns the counts, "
+        "rank and spam score with breakdown arrays you can cap. Read the docs linked on each "
+        "row before the agent loops.",
+    ],
+    "faq": [
+        ("Is there an Ahrefs API here?",
+         "No. Ahrefs is not in the catalog, and this page does not resell or proxy it. The "
+         "six indexes here are the alternatives, each priced per call at its own rate, and "
+         "the honest note is that their counts and scores are theirs, not Ahrefs'."),
+        ("Why do the backlink counts differ between providers?",
+         "Because each provider crawls the web itself and keeps its own index. A link one "
+         "crawler found last week is one another has not reached. There is no correct count; "
+         "pick one index and compare domains within it, or pull two and treat the overlap as "
+         "the confident set."),
+        ("Is Domain Authority in the response?",
+         "Moz's DA is in Moz's row, and only there; Majestic returns Trust Flow and Citation "
+         "Flow, Semrush its Authority Score, DataForSEO and SE Ranking their own rank. Each "
+         "score is comparable only to itself, and no provider's number should be read as "
+         "another's."),
+        ("Which provider should my agent use?",
+         "The one whose columns match the question and whose rate fits the volume. treg.to "
+         "shows all six side by side with the rate and the measured success; it compares, it "
+         "does not route or fail over for you."),
+    ],
+    "voices_intro": (
+        "Backlink threads are among the most seeded in SEO: of the ~163 Reddit and X posts "
+        "read in August 2026, one vendor's ring ran to eleven posts across five subreddits "
+        "with the same template, and link sellers filled most of the rest. These five are "
+        "people paying for the data themselves."),
+    "voices": [
+        ("The API plan is priced for a different kind of company",
+         "Don't really want to drop $14K to have access to the ahrefs API",
+         "r/bigseo", "https://www.reddit.com/r/bigseo/comments/1fyki5o/if_i_want_to_identify_ranking_keywords_for_a/",
+         "That is a plan, and here there is none. A summary is a call, priced per call at the "
+         "provider's rate, from a prepaid balance with no minimum and no tier to unlock."),
+        ("Credits reset on the vendor's calendar, not yours",
+         "two more weeks until my @ahrefs API credits reset. BRUTAL. this may push me to the $449/mo plan.",
+         "X", "https://x.com/i/status/2091997435379773762",
+         "Nothing here resets. The balance is money, it is spent per call, and the rate is "
+         "printed before the agent spends it. When it runs out you top it up; you do not "
+         "wait."),
+        ("Whose data do you trust for link building?",
+         "Just started testing APIs for backlinks of the two.. Which ones data do you prefer when it comes to linkbuilding?",
+         "r/SEO", "https://www.reddit.com/r/SEO/comments/1r5gxxd/ahrefs_vs_semrush_backlinks_data/",
+         "No comparison table can answer that for your niche. The cheap experiment is on this "
+         "page: pull the same domain from Serpstat, Moz and DataForSEO for a few cents and "
+         "see which index has the links you know exist."),
+        ("A hundred domains a day makes the seat price absurd",
+         "DA checks are way too expensive at volume",
+         "r/Domains, 7 points", "https://www.reddit.com/r/Domains/comments/1oof78c/whats_your_workflow_for_checking_da_on_100/",
+         "At volume the per-call rate is the whole story: Moz's DA row is two quota rows a "
+         "call, and the cheaper summaries here carry their own vendor's score. An agent "
+         "looping a list of expired domains is the fit; the price of the loop is the rate "
+         "times the list."),
+        ("If DR is gameable, which score is not?",
+         "If Ahrefs DR should be ignored, then which “domain rating” you should care about?",
+         "X", "https://x.com/i/status/2092739835694137635",
+         "None of them is more than its vendor's model, and this page will not crown one. "
+         "What it can do is put four vendors' scores for the same domain in one table, with "
+         "the referring-domain counts beside them, so the agent shows its working."),
+    ],
+    "related": ("Keywords a domain ranks for", "List backlinks and find link gaps",
+                "Google results for a keyword", "On-page audit of a URL"),
+}
+
+
 # The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
 # use-case page answers one job; a workflow chains several, with a per-step price pulled live from
 # the catalog and a receipt from a real run. `run` is hand-recorded from that run and dated. A
