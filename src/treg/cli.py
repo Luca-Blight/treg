@@ -1648,7 +1648,12 @@ def _import_env(args, cfg, env_path: str) -> None:
                     print(f"  ✗ {a.tool_name}: secret failed ({rs.status_code}) {rs.text[:100]}"); continue
                 sid = rs.json().get("id") or rs.json().get("secret_id")
                 binding = {**a.binding, "secret_id": sid}
-                tool_body = {"name": a.tool_name, "base_url": a.base_url, "bindings": [binding]}
+                bindings = [binding] + [
+                    {"secret_id": sid, "injector": "env", "location": "header",
+                     "name": name, "format": value}
+                    for name, value in a.required_headers.items()
+                ]
+                tool_body = {"name": a.tool_name, "base_url": a.base_url, "bindings": bindings}
                 if a.health:  # a catalog probe → the tool self-validates on `health --run` + gives a real test path
                     tool_body["health_check"] = a.health
                 rt = c.post("/tools", json=tool_body)

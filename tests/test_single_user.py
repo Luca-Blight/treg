@@ -15,6 +15,7 @@ from treg.api import LOCAL_ORG_NAME, LOCAL_USER_EMAIL, app
 from treg.config import Settings, get_settings
 from treg.db import reset_db, session_maker
 from treg.models import Membership, Org, User
+from treg.routers import web
 
 
 def _settings(**kw) -> Settings:
@@ -50,6 +51,7 @@ async def local(tmp_path, monkeypatch):
     await reset_db()
     token_file = tmp_path / "local-token"
     monkeypatch.setattr(api, "get_settings", lambda: _settings(single_user_token_file=str(token_file)))
+    monkeypatch.setattr(web, "get_settings", api.get_settings)
     await api._bootstrap_single_user()
     yield token_file
 

@@ -8,6 +8,7 @@ The `clients` fixture also registers a user and authes the client by default.
 from __future__ import annotations
 
 import os
+import tempfile
 
 # Isolate the test DB from any .env / running dev server BEFORE importing treg (the engine is
 # built at import time). A real env var overrides the .env file in pydantic-settings.
@@ -18,7 +19,11 @@ import os
 # one sqlite file drop each other's tables mid-test (1,022 errors on the first parallel run). An
 # explicit TREG_TEST_DB_URL wins untouched, for single-process runs against something specific.
 _worker = os.environ.get("PYTEST_XDIST_WORKER", "")
-_default = f"sqlite+aiosqlite:///./treg-test{'-' + _worker if _worker else ''}.db"
+# The files live under the system temp dir, NOT the repo root: sixteen 600 KB databases rewritten
+# on every run kept editors' file watchers busy re-indexing the working tree.
+_db_dir = os.path.join(tempfile.gettempdir(), "treg-tests")
+os.makedirs(_db_dir, exist_ok=True)
+_default = f"sqlite+aiosqlite:///{_db_dir}/treg-test{'-' + _worker if _worker else ''}.db"
 os.environ["TREG_DATABASE_URL"] = os.environ.get("TREG_TEST_DB_URL", _default)
 os.environ["TREG_EMAIL_DEV_MODE"] = "true"  # tests need the returned OTP code (prod default is now False)
 os.environ["TREG_RESEND_API_KEY"] = ""  # never fire a real Resend send from the test suite (send_otp/send_invite skip when empty)
@@ -47,6 +52,7 @@ from fastapi import FastAPI, Request  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 
+from treg import audit  # noqa: E402
 from treg.api import app  # noqa: E402
 from treg.db import reset_db  # noqa: E402
 
@@ -176,6 +182,15 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
             return JSONResponse({"message": "field is required"}, status_code=400)
         return {"ok": True}
 
+    @up.get("/requires-version")
+    async def requires_version(request: Request):
+        # Crustdata requires this protocol header on every route, including its free credential
+        # probe. The provisioner must stamp it without asking each caller to remember it.
+        if request.headers.get("x-api-version") != "2025-11-01":
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"message": "x-api-version is required"}, status_code=400)
+        return {"ok": True, "version": request.headers["x-api-version"]}
+
     @up.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
     async def echo(request: Request) -> dict:
         body = (await request.body()).decode()
@@ -193,15 +208,22 @@ def make_upstream(hook_hits: list | None = None) -> FastAPI:
 
 @pytest.fixture
 async def clients():
+    # Postgres needs a session-scoped event loop so asyncpg can safely pool connections. That also
+    # lets fire-and-forget audit writes survive between tests, so drain both sides of reset_db():
+    # before it, to keep an old write out of the new schema, and after the test, to finish its own.
+    await audit.drain()
     await reset_db()
     app.state.hook_hits = []  # webhook POSTs the upstream received (for alerting assertions)
     app.state.http = AsyncClient(transport=ASGITransport(app=make_upstream(app.state.hook_hits)), base_url="http://upstream")
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
-        r = await c.post("/users", json={"email": "tim@superdesign.dev"})  # open registration
-        assert r.status_code == 200, r.text
-        c.headers["X-Treg-Token"] = r.json()["token"]  # authed by default from here on
-        yield c
-    await app.state.http.aclose()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
+            r = await c.post("/users", json={"email": "tim@superdesign.dev"})  # open registration
+            assert r.status_code == 200, r.text
+            c.headers["X-Treg-Token"] = r.json()["token"]  # authed by default from here on
+            yield c
+    finally:
+        await audit.drain()
+        await app.state.http.aclose()
 
 
 @pytest.fixture(autouse=True)

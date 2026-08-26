@@ -29,7 +29,6 @@ import tempfile
 import time
 import uuid
 import zlib
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl, quote, quote_plus, unquote, urlsplit, urlunsplit
@@ -41,11 +40,9 @@ INVITE_TTL_DAYS = 7  # invite codes are one-time AND expire after this many days
 import httpx
 from pathlib import Path
 
-from fastapi import Cookie, Depends, FastAPI, Form, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Cookie, Depends, Form, Header, HTTPException, Query, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
-from fastapi.routing import APIRoute
-from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
@@ -54,19 +51,90 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 from sqlmodel import select
 
-from . import adsconv, agent_pages, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, endpoint_stats, health, injectors, ledger, localrun, oauth
+from . import adsconv, agent_pages, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, referrals, runner, sandbox as demo_sandbox, session as sess
 from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
-from .db import get_session, init_db, session_maker
+from .db import get_session, session_maker
 from .models import (ROLE_RANK, AdConversion, Bundle, CallRecord, CapabilityPin, CreditBlock,
                      DenyRule, Hold, IdempotentCall, Invite, LedgerEntry, Membership, OAuthClient,
                      OAuthCode, OAuthGrant, OAuthRefresh, Org, PendingOAuth, Project, Referral,
                      RunRecord, Secret, TagBudget, TagSpend, Tool, ToolRequest, User)
 from .proxy import relay
+from .routers import admin as admin_routes
+from .routers.admin import (
+    _ERROR_EVIDENCE_EXPIRED,
+    _ERROR_EVIDENCE_TTL_DAYS,
+    _purge_expired_error_evidence,
+    _tally,
+    admin_calls,
+    admin_errors,
+    admin_health,
+    admin_org_detail,
+    admin_orgs,
+    admin_reconcile_drift,
+    admin_reconcile_repeats,
+    admin_reconcile_spend,
+    admin_referrals,
+    admin_stats,
+    admin_tools,
+    admin_users,
+)
+from .routers import catalog as catalog_routes
+from .routers.catalog import (
+    _observed_or_empty,
+    _platform_rows,
+    _provider_display,
+    catalog_endpoint,
+    catalog_example,
+    catalog_platform,
+    catalog_platforms,
+    catalog_search,
+)
+from .routers.dependencies import (
+    AGENT_DOMAIN,
+    OAUTH_RETURN_COOKIE,
+    PUBLIC_DEMO_DOMAIN,
+    REFERRAL_COOKIE,
+    REFERRAL_COOKIE_MAX_AGE,
+    Caller,
+    _is_agent_email,
+    _is_https,
+    _is_machine_email,
+    _membership_by_token,
+    _norm_email,
+    _remember_oauth_return,
+    _remember_referral,
+    _resolve_org,
+    _role_at_least,
+    _take_oauth_return,
+    _take_referral,
+    _user_from_identity_token,
+    _user_from_session,
+    require_identity,
+    require_member,
+    require_superadmin,
+)
+from .routers import web as web_routes
+from .routers.web import (
+    LOCAL_USER_EMAIL,
+    _LOGO_DIR,
+    _MEDIA_DIR,
+    _TOUR_DIR,
+    _VENDOR_DIR,
+    _WEB_DIR,
+    _esc_html,
+    _local_owner,
+    _provider_rows,
+    _related_link,
+    _usd_short,
+    _use_case_page_for,
+    use_case_job_page,
+)
+from .timeutil import as_naive as _as_naive
+from .timeutil import utcnow_naive as _utcnow_naive
 
 
-LOCAL_USER_EMAIL = "you@local.treg"   # the single-user identity; a real address is never needed
 LOCAL_ORG_NAME = "personal"
 
 
@@ -124,58 +192,10 @@ async def _bootstrap_single_user() -> None:
           f"\n  Token      {shown}\n", flush=True)
 
 
-async def _local_owner(db: AsyncSession) -> User | None:
-    """The single-user identity, if this deployment is in that mode."""
-    if not get_settings().single_user_ok:
-        return None
-    return (await db.execute(select(User).where(User.email == LOCAL_USER_EMAIL))).scalar_one_or_none()
-
-
-# The MCP front door is OPTIONAL at import time. It lives in the `[server]` extra, and a deploy that
-# has not picked the dependency up yet must still serve the API — a missing optional feature is not a
-# reason for the whole registry to refuse to boot.
-try:
-    from . import mcp as _mcp
-except Exception:  # pragma: no cover - exercised by deploys without the extra
-    _mcp = None
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_db()
-    await _backfill_provider_extra_tools()
-    await _bootstrap_single_user()
-    # One long-lived client for ALL upstream calls (rule 1: keepalive). The pool reuses
-    # TCP+TLS connections across requests — the single biggest latency win for a relay.
-    limits = httpx.Limits(max_keepalive_connections=100, max_connections=200)
-    app.state.http = httpx.AsyncClient(limits=limits, timeout=httpx.Timeout(float(get_settings().call_timeout_s)))
-    # Off unless configured (adsconv.enabled() requires the customer id, developer token and OAuth
-    # org slug) — keeps the test suite and self-hosted instances completely inert by default.
-    ads_task = asyncio.create_task(adsconv.worker(session_maker, app.state.http)) \
-        if adsconv.enabled() else None
-    try:
-        if _mcp is None:
-            yield
-        else:
-            # `app.mount()` does NOT run a mounted app's lifespan, and the streamable-HTTP session
-            # manager builds its task group there. Without entering it here, every /mcp request fails
-            # with "Task group is not initialized" — silently, and only under real traffic.
-            async with _mcp.mcp_lifespan():
-                yield
-    finally:
-        if ads_task is not None:
-            ads_task.cancel()
-        await audit.drain()  # flush pending audit writes before tearing down
-        await analytics.drain()  # best-effort flush of queued analytics events
-        await app.state.http.aclose()
-
-
-# `/docs` is OURS — a server-rendered reference (see `docs_page`). FastAPI's stock Swagger UI moves
-# to `/docs/api`: it is a 1 KB JavaScript shell to anything that does not run scripts, it was titled
-# "tools-registry - Swagger UI" with FastAPI's own favicon, and it was the only thing we offered a
-# crawler looking for our API. ReDoc is off — two consoles for one schema is one too many.
-app = FastAPI(title="treg", version="0.0.1", lifespan=lifespan,
-              docs_url="/docs/api", redoc_url=None)
+# Route definitions stay in this module until refactor stage 2. `bootstrap.create_app` consumes this
+# router after import and owns every concrete assembly decision around it.
+router = APIRouter()
+app = router  # temporary decorator target; replaced by the compatibility FastAPI app at EOF
 
 
 # The pre-treg.to hostnames must keep answering the API forever — every installed CLI, skill.md
@@ -217,7 +237,6 @@ def _login_callback_base(request: Request) -> str:
     return get_settings().public_url.rstrip("/")
 
 
-@app.middleware("http")
 async def _legacy_host_redirect(request: Request, call_next):
     """Redirect marketing pages (301) and auth entries (302) from a legacy host to the canonical
     host. Auth entries get a temporary redirect: their URLs carry one-shot OAuth parameters, and a
@@ -238,7 +257,6 @@ async def _legacy_host_redirect(request: Request, call_next):
     return await call_next(request)
 
 
-@app.middleware("http")
 async def _security_headers(request: Request, call_next):
     """The dashboard is an authenticated app; ship the baseline hardening headers it was missing —
     nosniff, clickjacking protection (X-Frame-Options), and a tight Referrer-Policy. `setdefault`
@@ -316,17 +334,12 @@ class _BodyDecodeMiddleware:
         return await self.app(new_scope, receive_decoded, send)
 
 
-app.add_middleware(_BodyDecodeMiddleware)
-
-
-@app.exception_handler(OverflowError)
 async def _id_out_of_range(request: Request, exc: OverflowError) -> JSONResponse:
     # A huge all-digit path param (e.g. /secrets/999…) overflows SQLite's 64-bit INTEGER at bind
     # time; that's a non-existent id, not a server fault — surface a 404 instead of a 500.
     return JSONResponse({"detail": "identifier out of range"}, status_code=404)
 
 
-@app.exception_handler(PoolTimeoutError)
 async def _pool_saturated(request: Request, exc: PoolTimeoutError) -> JSONResponse:
     """The DB pool had no connection to give within `pool_timeout` (db.py). That is treg being
     saturated, not the caller's fault and not the provider's — so say so, typed, and fast. Before this
@@ -334,9 +347,45 @@ async def _pool_saturated(request: Request, exc: PoolTimeoutError) -> JSONRespon
     exception escaped the router and Starlette's BaseHTTPMiddleware reported "No response returned"),
     which an agent cannot tell from a provider bug. `treg_saturated` is the key a retrying client
     should branch on; `Retry-After` is how long to wait before doing so."""
-    return JSONResponse(
+    resp = JSONResponse(
         {"detail": "treg's database pool is saturated — retry in a moment", "treg_saturated": True},
         status_code=503, headers={"Retry-After": "2"})
+    # A saturation 503 is answered HERE, not through `_mark_treg_own_errors`, so it needs its own
+    # join key, row and label release. Without them the one failure mode a burst actually produces
+    # (#181) is the one a caller cannot report and `/calls` cannot show. `X-Treg-Error` stays off:
+    # the typed `treg_saturated` flag above is this exit's signal, and the header is documented as
+    # the HTTPException handler's (interface/api.md).
+    if request.url.path.startswith("/call/"):
+        await _stamp_call_exit(request, resp, 503)
+    return resp
+
+
+async def _stamp_call_exit(request: Request, resp: Response, status_code: int) -> None:
+    """Give one `/call/` exit the three things every other exit gets: the id that joins the response
+    to the audit row, the row itself, and the release of any idempotency label the request took.
+
+    Shared by the two handlers that answer a call without reaching `call_tool`'s own bookkeeping.
+    Identity comes from `request.state` (stashed at handler entry); an exit that failed before the
+    caller was resolved records an anonymous row, which is still the fact that someone knocked."""
+    call_ref = getattr(request.state, "call_ref", "") or uuid.uuid4().hex
+    request.state.call_ref = call_ref
+    resp.headers["X-Treg-Call-Id"] = call_ref
+    if (cost_micro := getattr(request.state, "call_cost_micro", None)) is not None:
+        resp.headers["X-Treg-Cost-Micro"] = str(cost_micro)
+    if not getattr(request.state, "call_audited", False):
+        org_id, email = getattr(request.state, "call_identity", (None, ""))
+        rest = request.url.path[len("/call/"):]
+        audit.record_call(
+            org_id=org_id, user_email=email, tool_name=rest.split("/", 1)[0] or "—",
+            method=request.method, path=request.url.path, status_code=status_code,
+            client=_client_of(request), refused_by=_refusal_kind(status_code),
+            telemetry={"call_ref": call_ref})
+    # A failed call must not keep its idempotency label. The claim is taken before the upstream
+    # call, and a request that dies anywhere after that — a bad parameter, a deny rule, an empty
+    # balance, a saturated pool — would otherwise hold the label for the whole window and answer
+    # every retry with 409. Worse than the problem this feature exists to solve, and found by the
+    # test for it.
+    await _release_idempotent_claim(request)
 
 
 def _refusal_kind(status_code: int) -> str | None:
@@ -352,7 +401,6 @@ def _refusal_kind(status_code: int) -> str | None:
             429: "cap"}.get(status_code, "request")
 
 
-@app.exception_handler(StarletteHTTPException)
 async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     """Tag treg's OWN refusals on `/call/` with `X-Treg-Error`, then answer exactly as before.
 
@@ -365,27 +413,12 @@ async def _mark_treg_own_errors(request: Request, exc: StarletteHTTPException):
     if request.url.path.startswith("/call/"):
         resp.headers["X-Treg-Error"] = "1"
         # Refusals that raised before the handler's own audit ran (bad token, unknown tool, ACL,
-        # deny rule, daily cap) would otherwise leave NO row — the funnel's early friction was
-        # invisible until this. Identity comes from request.state (stashed at handler entry); a
-        # bad-token 401 never had one, and an anonymous row is still the fact that someone knocked.
-        if not getattr(request.state, "call_audited", False):
-            org_id, email = getattr(request.state, "call_identity", (None, ""))
-            rest = request.url.path[len("/call/"):]
-            audit.record_call(
-                org_id=org_id, user_email=email, tool_name=rest.split("/", 1)[0] or "—",
-                method=request.method, path=request.url.path, status_code=exc.status_code,
-                client=_client_of(request), refused_by=_refusal_kind(exc.status_code))
-        # A failed call must not keep its idempotency label. The claim is taken before the upstream
-        # call, and a request that dies anywhere after that — a bad parameter, a deny rule, an empty
-        # balance — would otherwise hold the label for the whole window and answer every retry with
-        # 409. Worse than the problem this feature exists to solve, and found by the test for it.
-        #
-        # Here because this is the ONE place every refusal passes through; the handler has a dozen
-        # raise points and releasing at each would be a dozen chances to miss one.
-        await _release_idempotent_claim(request)
+        # deny rule, daily cap) would otherwise leave NO row, and no id to report — the funnel's
+        # early friction was invisible until this. Here because this is the ONE place every refusal
+        # passes through; the handler has a dozen raise points and stamping at each would be a dozen
+        # chances to miss one.
+        await _stamp_call_exit(request, resp, exc.status_code)
     return resp
-
-_WEB_DIR = Path(__file__).parent / "web"
 
 _app_version_cache: tuple[float, str] | None = None  # (index.html mtime, content hash)
 
@@ -453,1519 +486,11 @@ async def providers_catalog() -> dict:
     return {"version": prov.CATALOG_VERSION, "providers": prov.CATALOG}
 
 
-# ---- endpoint catalog (what you can DO once connected) ------------------------------------
-# The credential registry above answers "how do I connect Moz?"; these answer "and then what can I
-# call?" — platform-grouped operations with cost, verification date and captured example responses.
-# Open like /providers.json: the data is curated public documentation, no org's anything is in it.
-# See docs/context/architecture/catalog.md.
-def _provider_display(service: str) -> str:
-    p = oauth_providers.get(service)
-    return p.display_name if p else service
-
-
-def _platform_rows() -> list[dict]:
-    """The platform shelves, busiest first — one builder shared by the JSON route below and the
-    server-rendered /catalog page, so the two can never disagree about what is on the shelf."""
-    cat = catalog_store.load()
-    rows = []
-    for slug, plat in cat.platforms.items():
-        # The census counts the BROWSE surface only: account/utility ("management") endpoints are
-        # real inventory but they are not what a marketplace tile advertises, so they never inflate
-        # the endpoint/capability/verified counts or the "from …" price. They still ship in the
-        # platform-detail list (with `kind` set) — see catalog_platform's ?include_hidden.
-        eps = [e for e in cat.for_platform(slug) if e["kind"] not in catalog_store.HIDDEN_KINDS]
-        if not eps:  # a taxonomy entry no provider implements (or only plumbing) is grid noise
-            continue
-        rows.append({
-            "slug": slug,
-            "label": plat["label"],
-            "category": plat["category"],
-            "featured": plat.get("featured"),  # rank within its category's Featured shelf; null = not featured
-            "summary": plat.get("summary", ""),
-            # cheapest priced endpoint, for the card's "from …" corner. Ordering compares the
-            # server-computed USD figure, so CNY rows and provider-credit rows sort against dollar
-            # rows honestly; the ORIGINAL value+currency rides along for display.
-            # cheapest PAID option — zero-cost utility routes (rate-card freebies) would otherwise
-            # advertise a misleading "from $0"; genuinely free own-account access is signaled by the
-            # UI separately when a platform has only free endpoints (price_from stays null).
-            "price_from": min(
-                (c for e in eps if (c := cat.cost_view(e.get("cost"), e.get("provider"))) and c["usd"]),
-                key=lambda c: c["usd"],
-                default=None,
-            ),
-            "capabilities": len({e["capability"] for e in eps if e["capability"]}),
-            "endpoints": len(eps),
-            "verified": len([e for e in eps if e["verified"]]),
-            "providers": sorted({e["provider"] for e in eps}),
-        })
-    rows.sort(key=lambda r: (-r["endpoints"], r["slug"]))
-    return rows
-
-
-@app.get("/catalog/platforms")
-async def catalog_platforms() -> dict:
-    """Open: the platform shelves of the endpoint catalog, busiest first."""
-    return {"platforms": _platform_rows(), "generated_from": "catalog"}
-
-
-@app.get("/catalog/platforms/{slug}")
-async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
-    """Open: one platform's operations, grouped by capability so the same job across providers sits
-    on one row — that grouping is what makes comparison (and a future failover router) possible.
-
-    By default the account/utility ("management") endpoints are dropped from every shape below — the
-    browse view is data + action. `?include_hidden=1` returns the whole surface (each endpoint still
-    carries `kind`, so a client can file the plumbing behind an expander); `hidden_count` always
-    reports how many were set aside so a caller can label that expander without a second request."""
-    cat = catalog_store.load()
-    eps = cat.for_platform(slug)
-    if not eps:
-        raise HTTPException(status_code=404, detail=f"unknown platform {slug!r}")
-    hidden_count = len([e for e in eps if e["kind"] in catalog_store.HIDDEN_KINDS])
-    if not include_hidden:
-        eps = [e for e in eps if e["kind"] not in catalog_store.HIDDEN_KINDS]
-    grouped: dict[str, list[dict]] = {}
-    extended: list[dict] = []
-    pairs: list[tuple[dict, dict]] = []
-    for ep in eps:
-        view = catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
-        pairs.append((ep, view))
-        if ep["capability"]:
-            grouped.setdefault(ep["capability"], []).append(view)
-        else:
-            extended.append(view)
-    for views in grouped.values():
-        # core before mapped-extended, verified before not — same convention as search ranking
-        views.sort(key=lambda v: (v["tier"] != "core", not v["verified"], v["id"]))
-    return {
-        "platform": {"slug": slug,
-                     "label": cat.platforms.get(slug, {}).get("label", slug),
-                     "category": cat.platforms.get(slug, {}).get("category", "Other")},
-        # The capability grouping `treg catalog` renders. The dashboard reads `domains` below, but
-        # this is the shape the CLI has been written against since the catalog shipped, and the same
-        # endpoints appear in both — a client picks the axis it wants, neither is a subset.
-        "capabilities": [
-            {"id": cap, "description": cat.capabilities.get(cap, ""), "endpoints": grouped[cap]}
-            for cap in sorted(grouped)
-        ],
-        "extended": extended,
-        # account/utility endpoints set aside — how many, so the page can label its expander. When
-        # ?include_hidden=1 they are already folded into the shapes above (tagged by `kind`).
-        "hidden_count": hidden_count,
-        # The ledger the platform page renders: sections by subject, ordered and merged server-side
-        # so every client shows the same page (see `catalog_store.domain_rows`).
-        "domains": catalog_store.domain_rows(pairs, cat.capabilities),
-        # Provider-wide facts (limits, pricing page, docs), once per provider rather than copied onto
-        # every row — an expanded endpoint needs them and shouldn't cost a second request.
-        "providers": {
-            service: {"service": service, "display_name": _provider_display(service),
-                      **cat.provider_meta.get(service, {})}
-            for service in sorted({ep["provider"] for ep in eps})
-        },
-    }
-
-
-async def _observed_or_empty(db: AsyncSession, endpoint_ids: list[str]) -> dict[str, dict]:
-    """What the served calls say about these endpoints — or `{}` if that query is unavailable.
-
-    Telemetry must never take the catalog down: the catalog answers signed-out readers and is the
-    step every agent starts from, while these numbers are an enrichment on top of it.
-    """
-    try:
-        return await endpoint_stats.observed(db, endpoint_ids)
-    except Exception:  # noqa: BLE001
-        logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
-        return {}
-
-
-@app.get("/catalog/search")
-async def catalog_search(q: str = "", limit: int = 25,
-                         db: AsyncSession = Depends(get_session)) -> dict:
-    """Open: free-text search across the whole catalog — the DISCOVER half of the loop.
-
-    An agent that knows what it wants ("tiktok comments") shouldn't have to guess which platform
-    shelf hides it. Ranking is plain token matching (see `catalog_store.search`) so results are
-    reproducible and explainable; equal scores — the common case, not the edge — then break on what
-    treg has MEASURED and on price, so the cut stops being file order. `hints` carries the next
-    command, since finding the endpoint is never the goal — inspecting or calling it is."""
-    cat = catalog_store.load()
-    limit = max(1, min(limit, 100))
-    ranked, total, tie_truncated = catalog_store.rank_band(q, cat, limit)
-    stats = await _observed_or_empty(db, [ep["id"] for ep, _ in ranked])
-    ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
-    results = [
-        catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
-        | catalog_store.endpoint_context(ep, cat)
-        # The evidence that decided the order, shown rather than merely applied: a caller comparing
-        # two rows should be able to see WHY one is above the other.
-        | {"score": score, "observed": stats.get(ep["id"])}
-        for ep, score in ranked
-    ]
-    if not q.strip():
-        hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
-    elif not results:
-        # The miss IS the signal: log it (fire-and-forget, see models.SearchMiss) so the queries the
-        # catalog couldn't answer surface in the usage report next to the ToolRequests they rarely
-        # become. One source for this whole route — web, CLI and raw API all arrive here, and
-        # guessing which from headers would be a made-up column.
-        audit.record_search_miss(query=q.strip(), source="api")
-        hints = [f"nothing matches {q!r} closely enough — try different task words, or browse `treg catalog` for the platform shelves",
-                 "still missing? POST /tool-requests {\"capability\": \"<what you need>\"} — "
-                 "requests steer which provider gets added next"]
-    else:
-        hints = [f"treg catalog get {results[0]['id']}   # params, cost and an example response",
-                 f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
-        if total > len(results):
-            hints.append(f"{total - len(results)} more matches — raise limit (max 100)")
-        if tie_truncated:
-            # No silent caps. Every row here scored the same, more of them scored the same than the
-            # evidence sort was allowed to weigh, so the tail of this list is back to being ordered
-            # by nothing in particular — say so instead of letting it read as a ranked answer.
-            hints.append(f"{q!r} matches too broadly to rank on measured reliability past the first "
-                         f"{catalog_store.RERANK_BAND} equally-scoring rows — add a word to narrow it")
-    out = {"query": q, "count": len(results), "total": total, "results": results, "hints": hints}
-    if not results and q.strip():
-        # the rows that JUST missed the admission gate and which words they missed — an agent (or
-        # the CLI display) turns this straight into the corrected query
-        near = catalog_store.near_misses(q, cat)
-        if near:
-            out["near"] = near
-            first = near[0]
-            hints.insert(1, f"nearest: {first['endpoint_id']} matches "
-                            f"{', '.join(first['matches'])} but not {', '.join(first['missing'])}")
-    return out
-
-
-@app.get("/catalog/endpoints/{endpoint_id}")
-async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_session)) -> dict:
-    """Open: everything about ONE endpoint — the INSPECT half of the loop.
-
-    Deliberately one round-trip: params, cost, the sibling providers offering the same capability
-    (so a price/verification comparison needs no second call), a paste-ready `call_template`, and the
-    captured example response inline — an agent shouldn't have to fetch /catalog/examples to learn
-    the response shape it is about to parse."""
-    cat = catalog_store.load()
-    ep = cat.by_id.get(endpoint_id)
-    if ep is None:
-        # Name the near misses. An id that is one segment off is the common miss, and a bare 404
-        # ends the search → get → call loop at its first step with nothing to try next.
-        raise HTTPException(status_code=404, detail={
-            "error": f"unknown endpoint {endpoint_id!r}",
-            "hint": catalog_store.unknown_id_hint(endpoint_id, cat),
-            "did_you_mean": catalog_store.near_ids(endpoint_id, cat)})
-    view = (catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
-            | catalog_store.endpoint_context(ep, cat))
-    siblings = [
-        catalog_store.endpoint_view(other, _provider_display(other["provider"]), cat)
-        for other in sorted(cat.for_capability(ep["capability"]), key=lambda e: e["id"])
-        if other["id"] != ep["id"]
-    ]
-    example = None
-    path = catalog_store.example_path(endpoint_id)
-    if path is not None and path.is_file():
-        try:
-            example = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            example = None
-    # What the calls we have already served say about this endpoint and its alternatives — the half
-    # of "compare providers" that only treg can answer (see endpoint_stats + CAPABILITY-CHOICE-PLAN).
-    # Attached to the SAME response because the choice is made here; a second round-trip to compare
-    # reliability is a round-trip an agent will skip.
-    stats = await _observed_or_empty(db, [endpoint_id] + [s["id"] for s in siblings])
-    view = view | {"observed": stats.get(endpoint_id)}
-    siblings = [s | {"observed": stats.get(s["id"])} for s in siblings]
-
-    return {
-        "endpoint": view,
-        "provider": {"service": ep["provider"], "display_name": _provider_display(ep["provider"]),
-                     **cat.provider_meta.get(ep["provider"], {})},
-        "siblings": siblings,
-        "call_template": catalog_store.call_template(ep),
-        "example_response": example,
-        "hints": [f"{catalog_store.call_template(ep)}   # run it — key injected server-side"]
-                 + ([f"treg catalog get {siblings[0]['id']}   # the same job from {siblings[0]['provider']}"]
-                    if siblings else []),
-    }
-
-
-@app.get("/catalog/examples/{endpoint_id}", include_in_schema=False)
-async def catalog_example(endpoint_id: str) -> Response:
-    """Open: the captured response of one endpoint, as recorded by scripts/catalog_verify.py.
-
-    The id is resolved through the loaded catalog BEFORE any path is built, so raw input never
-    reaches the filesystem. The files are truncated + PII-scrubbed public data (see the fragment)."""
-    path = catalog_store.example_path(endpoint_id)
-    if path is None or not path.is_file():
-        raise HTTPException(status_code=404, detail=f"no example response for {endpoint_id!r}")
-    return Response(content=path.read_bytes(), media_type="application/json")
-
-
-# ---- the crawlable catalog: /catalog and /catalog/<slug> -------------------------------------
-#
-# The JSON routes above are what agents and the dashboard read. These two render the SAME data as
-# server-side HTML, because until now none of it had a URL: the dashboard browses platforms through
-# hash routes (/app#platform/<slug>) behind a login, so ~2,600 endpoints across 80 shelves were
-# invisible to every crawler and every AI answer engine. No JavaScript here on purpose — the text IS
-# the product surface, and it has to be readable by something that will not run a script or click.
-#
-# `/catalog/<slug>` is registered after the JSON routes so /catalog/platforms, /catalog/search,
-# /catalog/endpoints/… and /catalog/examples/… keep matching first. Registration order alone is a
-# thin guarantee, so the reserved names are also refused explicitly below.
-_CATALOG_RESERVED = {"platforms", "search", "endpoints", "examples"}
-
-_GH = "https://github.com/superdesigndev/treg"
-
-
-def _usd_short(usd: float) -> str:
-    """A dollar figure a person can read. `%g` flips to scientific notation below 1e-4, and a shelf
-    advertising "from $1.2e-07 per call" reads as a bug rather than as a price — so anything under
-    a hundredth of a cent is labelled as such instead."""
-    if not usd:
-        return "free"
-    return "<$0.0001" if usd < 0.0001 else f"${usd:.3g}"
-
-
-def _price_label(cost: dict | None) -> str:
-    """A price in ONE currency, so rows down a page stay comparable. Mirrors `_cost_usd` in cli.py
-    rather than importing it: pulling treg.cli into the server process costs ~200ms and drags the
-    whole CLI in for one string (see `_treg_version`)."""
-    if not isinstance(cost, dict):
-        return ""
-    usd = cost.get("usd")
-    if usd is None:
-        return "own account"     # no rate published — never invent a dollar figure
-    if not usd:
-        return "free"
-    unit = {"per_call": "call", "per_result": "result", "per_success": "success"}.get(
-        cost.get("type"), "call")
-    return f"{_usd_short(usd)}/{unit}"
-
-
-def _css_stamp(name: str = "catalog.css") -> str:
-    """The stylesheet's own mtime, stamped onto its URL. Skins are served with a real max-age
-    (they are static and every page pulls them), so without a stamp an edited skin keeps rendering
-    from the browser's copy until the cache expires — the trap `/tutorial.js` already guards."""
-    f = _WEB_DIR / name
-    try:
-        return str(int(f.stat().st_mtime))
-    except OSError:
-        return "0"
-
-
-def _serp_desc(text: str, limit: int = 155) -> str:
-    """A meta description Google will print whole. Past ~155 characters it truncates mid-sentence,
-    so cut at the last sentence that fits, then at the last word."""
-    text = " ".join(text.split())
-    if len(text) <= limit:
-        return text
-    cut = text[:limit]
-    for sep in (". ", "? ", "! "):
-        i = cut.rfind(sep)
-        if i > limit * 0.5:
-            return cut[:i + 1]
-    return cut[:cut.rfind(" ")].rstrip(",;:") + "."
-
-
-def _page(title: str, description: str, path: str, body: str, ld: list[dict],
-          *, nav_current: str = "", head_extra: str = "", css: str = "catalog.css") -> HTMLResponse:
-    """The shared shell for every server-rendered page. One place that owns <title>, the meta
-    description, the canonical, the og/twitter card and the JSON-LD, so a new page cannot ship
-    without them — that omission is exactly what left the landing page bare for a year.
-
-    The "Start free" CTA carries `?ref=<page>`: a logged-out visit to bare `/app` is bounced to the
-    marketing landing with nothing open, which loses the page the visitor was reading. With `ref`
-    the app keeps them and opens sign-in in place (see the boot in index.html), and the page that
-    produced the signup is recorded."""
-    base = get_settings().public_url.rstrip("/")
-    ref = quote(path.strip("/").replace("/", "-") or "home", safe="")
-    t, d = _esc_html(title), _esc_html(description)
-    url = _esc_html(base + path)  # `path` reaches attribute context — escape it like title/description
-    # `<` escaped to its \u form inside the JSON: a catalog label containing "</script>" would
-    # otherwise close the block early and put the rest of the payload into the document as markup.
-    # Still valid JSON, so parsers and Google's validator read it unchanged.
-    blocks = "\n".join(
-        '<script type="application/ld+json">'
-        + json.dumps(b, separators=(",", ":")).replace("<", "\\u003c")
-        + "</script>"
-        for b in ld)
-    def navlink(href: str, label: str, extra: str = "") -> str:
-        cur = ' aria-current="page"' if href == nav_current else ""
-        return f'<a href="{href}"{cur}{extra}>{label}</a>'
-    return HTMLResponse(f"""<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>{t}</title>
-<meta name="description" content="{d}"/>
-<link rel="canonical" href="{url}"/>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-<meta property="og:type" content="website"/>
-<meta property="og:site_name" content="treg"/>
-<meta property="og:url" content="{url}"/>
-<meta property="og:title" content="{t}"/>
-<meta property="og:description" content="{d}"/>
-<meta property="og:image" content="{base}/media/og.png"/>
-<meta property="og:image:width" content="1200"/>
-<meta property="og:image:height" content="630"/>
-<meta property="og:image:alt" content="treg.to: one key for the whole tool catalog, priced per call"/>
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="{t}"/>
-<meta name="twitter:description" content="{d}"/>
-<meta name="twitter:image" content="{base}/media/og.png"/>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&family=Inter:wght@400;450;500;600;650;700&family=DM+Mono:ital,wght@0,400;0,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/{css}?v={_css_stamp(css)}"/>
-{head_extra}
-{blocks}
-</head>
-<body>
-<div class="navwrap"><nav class="nav">
-  <a class="brand" href="/"><span class="glyph">▚</span> treg</a>
-  <div class="links">
-    {navlink("/catalog", "Catalog")}
-    {navlink("/tutorial", "Tutorial")}
-    {navlink("/docs", "API")}
-    <a class="hidem" href="{_GH}" target="_blank" rel="noopener">GitHub ↗</a>
-    <a class="candy" href="/app?ref={ref}">Start free</a>
-  </div>
-</nav></div>
-{body}
-<footer>
-  <div class="foot-in">
-    <div class="brand"><span class="glyph">▚</span> treg</div>
-    <span style="font-family:var(--mono);font-size:12px">· 100% open source</span>
-    <span class="sp"></span>
-    <a href="/catalog">catalog</a><a href="/tutorial">docs</a><a href="/llms.txt">llms.txt</a
-    ><a href="{_GH}" target="_blank" rel="noopener">github ↗</a><a href="/docs">api</a
-    ><a href="/terms">terms</a><a href="/privacy">privacy</a>
-  </div>
-</footer>
-</body>
-</html>""", headers={"Cache-Control": "public, max-age=600"})
-
-
-def _spa_catalog_page(title: str, description: str, path: str, ld: list[dict],
-                      prerender: str) -> HTMLResponse:
-    """Serve the dashboard SPA at a PUBLIC catalog URL, with the head a crawler needs.
-
-    The public catalog is not a second implementation of the marketplace — it IS the marketplace.
-    `/catalog` and `/catalog/<slug>` hand back `index.html`, and the Vue app renders the same
-    platform views a member sees (its catalog API is unauthenticated, so it works signed out; see
-    `publicCatalog` in index.html). That is the whole point: one UI, so the two can never drift
-    apart visually the way a hand-built copy would.
-
-    Two things have to be added on the way out:
-
-    1. **The head.** The SPA ships one bare `<title>treg</title>`. Every catalog URL needs its own
-       title, description, canonical, og/twitter card and JSON-LD, so they are substituted in here —
-       the same trick `_spa_with_og` uses for shared skill/tool links.
-    2. **A no-JS fallback.** Vue compiles `#app`'s own innerHTML as its template, so prerendered
-       markup cannot go inside it. `#prerender` is therefore a SIBLING, removed by the app on boot.
-       It is deliberately plainer than the Vue view — the ledger's row-merging is a chain of
-       client-side computeds, and reproducing it server-side would recreate exactly the duplicate
-       implementation this design avoids. It carries the TEXT (names, summaries, providers, prices),
-       which is what a crawler that does not run scripts is here for.
-    """
-    index = _WEB_DIR / "index.html"
-    if not index.exists():
-        return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
-    base = get_settings().public_url.rstrip("/")
-    t, d = _esc_html(title), _esc_html(description)
-    # `path` carries the {slug} from the URL. Today an unknown slug 404s in catalog_platform before
-    # it reaches here, so a quote can't get this far — but that is an upstream lookup's side effect,
-    # not a guarantee this function makes. Escape it where it is used, so a future "slug not found →
-    # suggestions" page cannot turn a canonical tag into a reflected XSS.
-    url = _esc_html(base + path)
-    blocks = "\n".join(
-        '<script type="application/ld+json">'
-        + json.dumps(b, separators=(",", ":")).replace("<", "\\u003c") + "</script>"
-        for b in ld)
-    meta = (
-        f"<title>{t}</title>\n"
-        f'<meta name="description" content="{d}"/>\n'
-        f'<link rel="canonical" href="{url}"/>\n'
-        f'<meta name="robots" content="index, follow"/>\n'   # index.html defaults to noindex
-        f'<meta property="og:type" content="website"/>\n'
-        f'<meta property="og:site_name" content="treg"/>\n'
-        f'<meta property="og:url" content="{url}"/>\n'
-        f'<meta property="og:title" content="{t}"/>\n'
-        f'<meta property="og:description" content="{d}"/>\n'
-        f'<meta property="og:image" content="{base}/media/og.png"/>\n'
-        f'<meta property="og:image:width" content="1200"/>\n'
-        f'<meta property="og:image:height" content="630"/>\n'
-        f'<meta name="twitter:card" content="summary_large_image"/>\n'
-        f'<meta name="twitter:title" content="{t}"/>\n'
-        f'<meta name="twitter:description" content="{d}"/>\n'
-        f'<meta name="twitter:image" content="{base}/media/og.png"/>\n'
-        + blocks
-    )
-    html = index.read_text(encoding="utf-8")
-    # index.html carries `robots: noindex` for the authenticated app; these URLs are public, and the
-    # `index, follow` in `meta` only wins if the noindex is gone. Stripped BEFORE `meta` is spliced
-    # in, so this scan only ever runs over the static bundle — never over a string carrying a
-    # caller-supplied title, which is what made it a ReDoS candidate rather than a fixed-cost pass.
-    html = re.sub(r'<meta name="robots" content="noindex[^>]*>\s*', "", html, count=1)
-    # Match whatever title the page carries, not one exact string — a rename in the dashboard must
-    # not be able to switch every catalog page's head off without a word (the same failure
-    # `_spa_with_og` was written to survive).
-    html, hits = re.subn(r"<title>.*?</title>", lambda _m: meta, html, count=1,
-                         flags=re.IGNORECASE | re.DOTALL)
-    if not hits:
-        html = html.replace("<head>", "<head>\n" + meta, 1)
-    marker = '<div id="app"'
-    if marker in html:
-        html = html.replace(marker, f'<div id="prerender">{prerender}</div>\n{marker}', 1)
-    return HTMLResponse(html, headers={"Cache-Control": "public, max-age=600"})
-
-
-# The fallback's own skin. Scoped to #prerender and written against the dashboard's OWN tokens
-# (already defined in index.html), so it reads as the same product for the moment it is on screen.
-_PRERENDER_CSS = """<style>
-#prerender{max-width:1100px;margin:0 auto;padding:38px 26px 60px;font-family:var(--sans,system-ui);
-  color:var(--ink,#1a1a1a)}
-#prerender h1{font-size:30px;letter-spacing:-.01em;margin:0 0 8px}
-#prerender .lede{color:var(--muted,#7c7c7c);margin:0 0 20px;max-width:64ch}
-#prerender h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;
-  color:var(--muted2,#989898);margin:26px 0 10px;padding-bottom:8px;
-  border-bottom:1px solid var(--line,#26262322)}
-#prerender ul{list-style:none;margin:0;padding:0}
-#prerender li{padding:9px 0;border-bottom:1px solid var(--line,#26262322)}
-#prerender li b{font-weight:600}
-#prerender li i{font-style:normal;color:var(--muted,#7c7c7c);display:block;font-size:13.5px}
-#prerender .m{font-family:var(--mono,ui-monospace);font-size:11.5px;
-  color:var(--muted2,#989898);margin-top:3px;display:block}
-#prerender a{color:var(--teal,#1a7da6);text-decoration:none}
-</style>"""
-
-
-@app.get("/catalog", include_in_schema=False)
-async def catalog_index():
-    """The catalog index — the marketplace's Catalog view, on a public, indexable URL."""
-    base = get_settings().public_url.rstrip("/")
-    rows = _platform_rows()
-    # The WHOLE catalog, not the sum of the tiles: a tile counts only its browse surface, so the
-    # account/utility endpoints (real inventory, listed on each shelf page) would go uncounted and
-    # this page would quietly contradict the number on the landing.
-    cat = catalog_store.load()
-    total_eps = len(cat.endpoints)
-    providers = sorted({e["provider"] for e in cat.endpoints})
-
-    cats: dict[str, list[dict]] = {}
-    for row in rows:
-        cats.setdefault(row["category"], []).append(row)
-    sections = []
-    for name, items in cats.items():
-        lis = []
-        for r in items:
-            price = _price_label(r["price_from"])
-            vendors = ", ".join(_provider_display(p) for p in r["providers"])
-            lis.append(
-                f'<li><b><a href="/catalog/{_esc_html(r["slug"])}">{_esc_html(r["label"])}</a></b>'
-                f'<i>{_esc_html(r["summary"])}</i>'
-                f'<span class="m">{r["endpoints"]} endpoints · {r["capabilities"]} capabilities'
-                + (f" · from {_esc_html(price)}" if price else "")
-                + f" · {_esc_html(vendors)}</span></li>")
-        sections.append(f"<h2>{_esc_html(name)}</h2><ul>{''.join(lis)}</ul>")
-
-    prerender = (_PRERENDER_CSS
-                 + "<h1>The tool catalog</h1>"
-                 + f'<p class="lede">{total_eps:,} endpoints across {len(rows)} platforms and '
-                   f"{len(providers)} providers — every tool your agent can call through one key, "
-                   "priced up front and billed per call, with no provider signup.</p>"
-                 + "".join(sections))
-
-    ld = [
-        {"@context": "https://schema.org", "@type": "ItemList",
-         "name": "treg tool catalog",
-         "description": f"{total_eps} API endpoints across {len(rows)} platforms, callable through one key.",
-         "numberOfItems": len(rows),
-         "itemListElement": [
-             {"@type": "ListItem", "position": i, "name": r["label"],
-              "url": f"{base}/catalog/{r['slug']}"}
-             for i, r in enumerate(rows, 1)]},
-        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-            {"@type": "ListItem", "position": 1, "name": "treg", "item": base + "/"},
-            {"@type": "ListItem", "position": 2, "name": "Catalog", "item": base + "/catalog"}]},
-    ]
-    return _spa_catalog_page(
-        f"Tool catalog — {total_eps:,} API endpoints your agent can call | treg",
-        f"Browse {total_eps:,} endpoints across {len(rows)} platforms and {len(providers)} providers "
-        "— SEO, social, enrichment, ads and scraping data. One key, priced per call, no provider signup.",
-        "/catalog", ld, prerender)
-
-
-@app.get("/catalog/{slug}", include_in_schema=False)
-async def catalog_page(slug: str):
-    """One platform shelf — the marketplace's platform view, on a public, indexable URL."""
-    if slug in _CATALOG_RESERVED:
-        raise HTTPException(status_code=404, detail=f"unknown platform {slug!r}")
-    # include_hidden=1, exactly as the SPA asks for it (see `loadPlatform`): the account/utility
-    # endpoints are real inventory and the page files them in their own section rather than hiding
-    # them. Asking for a different population than the view that is about to replace this would put
-    # two different endpoint counts on one URL.
-    detail = await catalog_platform(slug, include_hidden=1)
-    base = get_settings().public_url.rstrip("/")
-    plat = detail["platform"]
-    label, category = plat["label"], plat["category"]
-    row = next((r for r in _platform_rows() if r["slug"] == slug), None)
-    summary = (row or {}).get("summary", "")
-    caps = detail["capabilities"]
-    eps = [e for cap in caps for e in cap["endpoints"]] + detail["extended"]
-    prices = [c["usd"] for e in eps if isinstance(c := e.get("cost"), dict) and c.get("usd")]
-    cheapest = _usd_short(min(prices)) if prices else ""
-
-    blocks = []
-    for cap in caps:
-        lis = []
-        for e in cap["endpoints"]:
-            price = _price_label(e.get("cost"))
-            bits = [_esc_html(e["provider_display"])]
-            if e.get("verified"):
-                bits.append("live-verified")
-            if price:
-                bits.append(_esc_html(price))
-            bits.append(_esc_html(e["id"]))
-            lis.append(f'<li><b>{_esc_html(e["name"])}</b>'
-                       f'<i>{_esc_html(e.get("summary") or "")}</i>'
-                       f'<span class="m">{" · ".join(bits)}</span></li>')
-        blocks.append(f'<h2>{_esc_html(cap["description"] or cap["id"])}</h2><ul>{"".join(lis)}</ul>')
-
-    provs = ", ".join(p["display_name"] for p in detail["providers"].values())
-    prerender = (_PRERENDER_CSS
-                 + f'<p class="m"><a href="/catalog">← Catalog</a> · {_esc_html(category)}</p>'
-                 + f"<h1>{_esc_html(label)}</h1>"
-                 + f'<p class="lede">{_esc_html(summary)} {len(eps)} endpoints from '
-                   f"{_esc_html(provs)}"
-                 + (f", from {_esc_html(cheapest)} per call" if cheapest else "")
-                 + ". Jobs that several providers do sit on one row, so you can compare price and "
-                   "coverage before you spend a call — <b>choosing is yours</b>; treg does not route "
-                   "between providers automatically.</p>"
-                 + "".join(blocks))
-
-    desc = (f"{len(eps)} {label.lower()} API endpoints from "
-            f"{', '.join(p['display_name'] for p in list(detail['providers'].values())[:3])}"
-            + (f", from {cheapest} per call" if cheapest else "")
-            + ". Call them through one treg key — no provider signup.")
-    ld = [
-        {"@context": "https://schema.org", "@type": "ItemList",
-         "name": f"{label} — API endpoints on treg",
-         "numberOfItems": len(caps),
-         "itemListElement": [
-             {"@type": "ListItem", "position": i, "name": cap["description"] or cap["id"],
-              "url": f"{base}/catalog/{slug}#{cap['id']}"}
-             for i, cap in enumerate(caps, 1)]},
-        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-            {"@type": "ListItem", "position": 1, "name": "treg", "item": base + "/"},
-            {"@type": "ListItem", "position": 2, "name": "Catalog", "item": base + "/catalog"},
-            {"@type": "ListItem", "position": 3, "name": label, "item": f"{base}/catalog/{slug}"}]},
-    ]
-    return _spa_catalog_page(f"{label} API — {len(eps)} endpoints, priced per call | treg",
-                             desc[:300], f"/catalog/{slug}", ld, prerender)
-
-
-# --------------------------------------------------------------------------- /agents/<agent>
-
-def _hosted() -> bool:
-    """True on the reference deployment only. The agent pages describe treg.to's own listings (the
-    ChatGPT plugin, the OAuth connector, the free grant), none of which is true of a self-hosted
-    registry, so off these hosts the pages do not exist rather than lie."""
-    host = (urlsplit(get_settings().public_url).hostname or "").lower()
-    return host in PUBLIC_HOST_ALIASES
-
-
-def _catalog_census() -> tuple[int, int]:
-    """(browse-surface endpoint count, platform count): the two numbers the agent pages state."""
-    cat = catalog_store.load()
-    browse = [e for e in cat.endpoints if e["kind"] not in catalog_store.HIDDEN_KINDS]
-    return len(browse), len({e["platform"] for e in browse})
-
-
-def _anchor(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-
-
-def _logo(domain: str | None, alt: str) -> str:
-    """A 20px brand mark from the favicon service the landing uses, or the treg glyph when the
-    brand is unknown (never a wrong logo)."""
-    if not domain:
-        return '<span class="lg lg-none" aria-hidden="true">▚</span>'
-    return (f'<img class="lg" src="https://www.google.com/s2/favicons?domain={_esc_html(domain)}&amp;sz=64" '
-            f'alt="{_esc_html(alt)}" width="20" height="20" loading="lazy"/>')
-
-
-def _use_case_page_for(category: str, label: str) -> str | None:
-    """The spoke URL for a job on the agent page, or None when no page has been written for it."""
-    cslug = agent_pages.category_slug(category)
-    for (c, j), spec in agent_pages.USE_CASE_PAGES.items():
-        if c == cslug and spec["label"] == label:
-            return f"/use-cases/{c}/{j}"
-    return None
-
-
-def _use_case_caps(category_slug: str, label: str) -> tuple[str, ...]:
-    for category, jobs in agent_pages.USE_CASES:
-        if agent_pages.category_slug(category) == category_slug:
-            for lbl, caps in jobs:
-                if lbl == label:
-                    return caps
-    return ()
-
-
-def _menu_rows(cat, category: str, jobs) -> list[dict]:
-    """The use-case menu for one category, priced from the catalog. Shared by the HTML and the
-    Markdown renderings of the agent page so the two can never list different jobs."""
-    rows = []
-    for label, caps in jobs:
-        eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
-        if not eps:  # the test forbids this, but a page must never render an empty promise
-            continue
-        prices = [c["usd"] for e in eps if (c := cat.cost_view(e.get("cost"), e.get("provider"))) and c["usd"]]
-        plats, seen = [], set()
-        for cid in caps:
-            ceps = [e for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
-            if not ceps:
-                continue
-            slug = ceps[0]["platform"]
-            plats.append({"cap": cid, "slug": slug, "dup": slug in seen,
-                          "label": (cat.platforms.get(slug) or {}).get("label") or slug,
-                          "domain": agent_pages.PLATFORM_DOMAINS.get(slug)})
-            seen.add(slug)
-        rows.append({"label": label, "caps": caps, "platforms": plats,
-                     "providers": len({e["provider"] for e in eps}),
-                     "verified": sum(1 for e in eps if e["verified"]),
-                     "from_usd": min(prices) if prices else None,
-                     # no priced endpoint at all = the team's own account does the job, unmetered
-                     "own_account": not prices,
-                     "page": _use_case_page_for(category, label)})
-    return rows
-
-
-_COPY_JS = """
-<script>
-document.querySelectorAll('button[data-copy]').forEach(function(b){
-  b.addEventListener('click', async function(){
-    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent='copied'; b.classList.add('done');
-          setTimeout(function(){ b.textContent='copy'; b.classList.remove('done'); }, 1400); } catch(e) {}
-  });
-});
-</script>"""
-
-_MD_ALT = '<link rel="alternate" type="text/markdown" href="{href}"/>'
-
-
-@app.get("/agents/{agent}.md", include_in_schema=False)
-@app.get("/agents/{agent}", include_in_schema=False)
-async def agent_page(request: Request, agent: str):
-    """One client: "I use ChatGPT, what can it do now?" A rotating "The ChatGPT plugin for <role>"
-    hero, the install steps for that client, then the use-case menu: plain-words jobs under buyer
-    categories, each priced from the catalog. The menu is `agent_pages.USE_CASES`, the same
-    taxonomy the use-case pages hang from, so the agent page is the map of the whole site.
-    `/agents/<agent>.md` is the same page as Markdown, for agents and answer engines."""
-    as_md = request.url.path.endswith(".md")
-    raw = agent[:-3] if agent.endswith(".md") else agent
-    # Resolve to the dict's OWN key, never the request's bytes: `agent` is interpolated into the
-    # canonical, the rel=alternate href and the JSON-LD breadcrumb below, and a path parameter
-    # must not reach those unescaped (CodeQL py/reflective-xss). The lookup is case-insensitive,
-    # so a differently-cased URL would otherwise serve a 200 whose canonical points at itself: a
-    # duplicate page. Send it to the one spelling instead.
-    agent = next((k for k in agent_pages.AGENTS if k == raw.lower()), None)
-    if agent is None or not _hosted():
-        raise HTTPException(status_code=404, detail="unknown agent")
-    if raw != agent:
-        return RedirectResponse(f"/agents/{agent}" + (".md" if as_md else ""), status_code=301)
-    spec = agent_pages.AGENTS[agent]
-    cat = catalog_store.load()
-    base = get_settings().public_url.rstrip("/")
-    n_eps, n_plats = _catalog_census()
-    n, p = f"{n_eps:,}", str(n_plats)
-    name = spec["name"]
-    title = spec["title"].format(n=n, p=p)
-    desc = _serp_desc(spec["description"].format(n=n, p=p))
-    definition = spec["definition"].format(n=n, p=p)
-    menu = [(category, agent_pages.CATEGORY_PROMPTS.get(category, ""), _menu_rows(cat, category, jobs))
-            for category, jobs in agent_pages.USE_CASES]
-    steps_text = [re.sub(r"<[^>]+>", "", st) for st in spec["install_steps"]]
-
-    if as_md:
-        md = [f"# {title}", "", definition, "", f"## Install in {name}", ""]
-        md += [f"{i}. {html_mod.unescape(st)}" for i, st in enumerate(steps_text, 1)]
-        md += ["", f"## What {name} can do now", "",
-               "One row per job. Prices are the provider's own rate with $0.000 markup; rows marked FREE run on your own account and are never metered.", ""]
-        for category, prompt, rows in menu:
-            md += [f"### {category}", ""]
-            if prompt:
-                md += [f"Try: \"{prompt}\"", ""]
-            for r in rows:
-                plats = ", ".join(pl["label"] for pl in r["platforms"] if not pl["dup"])
-                price = "FREE with your own account" if r["own_account"] else f"from {_usd_short(r['from_usd'])}"
-                link = f"{base}{r['page']}" if r["page"] else f"{base}/catalog/{r['platforms'][0]['slug']}"
-                md.append(f"- [{r['label']}]({link}): {plats}. {r['providers']} provider{'s' if r['providers'] != 1 else ''}, {price}.")
-            md.append("")
-        md += ["## Questions", ""]
-        for q, a in spec["faq"]:
-            md += [f"**{q}** {a}", ""]
-        md += [f"HTML version: {base}/agents/{agent}", f"Setup line for any agent: {agent_pages.SETUP_LINE.format(base=base)}"]
-        return PlainTextResponse("\n".join(md), media_type="text/markdown; charset=utf-8",
-                                 headers={"Cache-Control": "public, max-age=600"})
-
-    # Only the FIRST role is in the H1 markup: a crawler reads "…plugin for SEO experts", not nine
-    # roles run together. The rest ride in a JSON block and the script appends them.
-    roles = f'<span class="ri on">{_esc_html(agent_pages.ROLES[0])}</span>'
-    more_roles = json.dumps(list(agent_pages.ROLES[1:])).replace("<", "\\u003c")
-    steps = "".join(
-        f'<div class="steplabel"><span class="n">{i}</span><b>{st}</b></div>'
-        for i, st in enumerate(spec["install_steps"], 1))
-    shot = (f'<div class="sample"><div class="sbar">{_esc_html(spec.get("install_image_bar") or name)}</div>'
-            f'<img src="{_esc_html(spec["install_image"])}" alt="{_esc_html(spec["install_image_alt"])}" '
-            f'loading="lazy" style="display:block;width:100%"/>'
-            + (f'<div class="sbar" style="border-top:1px solid var(--line);border-bottom:0">'
-               f'{_esc_html(spec["install_image_caption"])}</div>' if spec.get("install_image_caption") else "")
-            + '</div>' if spec.get("install_image") else "")
-
-    # the platform marks in the hero: the busiest shelves, deduped by brand
-    hero_tiles, seen_brand = [], set()
-    for _cat_name, _prompt, rows in menu:
-        for r in rows:
-            for pl in r["platforms"]:
-                root = ".".join((pl["domain"] or "").split(".")[-2:])
-                if pl["domain"] and root not in seen_brand and len(hero_tiles) < 14:
-                    seen_brand.add(root)
-                    hero_tiles.append(f'<span class="ptile" title="{_esc_html(pl["label"])}">'
-                                      f'{_logo(pl["domain"], pl["label"])}</span>')
-
-    cards, sections = [], []
-    for category, prompt, rows in menu:
-        anchor = _anchor(category)
-        priced = [r["from_usd"] for r in rows if r["from_usd"]]
-        free_all = all(r["own_account"] for r in rows)
-        meta = (f'{len(rows)} jobs &middot; <b style="color:var(--green)">free</b> on your account' if free_all
-                else f'{len(rows)} jobs &middot; from {_esc_html(_usd_short(min(priced)))}' if priced
-                else f"{len(rows)} jobs")
-        blurb = agent_pages.CATEGORY_BLURBS.get(category, "").format(agent=name)
-        cards.append(f'<a class="card" href="#{anchor}"><h4>{_esc_html(category)}</h4>'
-                     f'<p>{_esc_html(blurb)}</p>'
-                     f'<p style="font-family:var(--mono);font-size:11.5px;color:var(--muted2)">{meta}</p></a>')
-        body_rows = []
-        for r in rows:
-            chips, seen_p = [], set()
-            for pl in r["platforms"]:
-                if pl["slug"] in seen_p:
-                    body_rows.append("")  # keep data-cap discoverable below
-                    continue
-                seen_p.add(pl["slug"])
-                chips.append(f'<a href="/catalog/{_esc_html(pl["slug"])}#{_esc_html(pl["cap"])}" '
-                             f'data-cap="{_esc_html(pl["cap"])}">{_logo(pl["domain"], pl["label"])}{_esc_html(pl["label"])}</a>')
-            hidden = "".join(f'<span data-cap="{_esc_html(pl["cap"])}" hidden></span>'
-                             for pl in r["platforms"] if pl["dup"])
-            price = ('<span style="color:var(--green)">free, your account</span>' if r["own_account"]
-                     else f'{_esc_html(_usd_short(r["from_usd"]))}')
-            name_cell = (f'<a href="{r["page"]}"><b>{_esc_html(r["label"])}</b></a>' if r["page"]
-                         else f'<b>{_esc_html(r["label"])}</b>')
-            body_rows.append(
-                f'<tr><td>{name_cell}{hidden}</td>'
-                f'<td style="color:var(--muted)">{" &middot; ".join(chips)}</td>'
-                f'<td>{r["providers"]}</td><td>{price}</td></tr>')
-        sections.append(
-            f'<section id="{anchor}"><div class="wrap"><div class="seclab">{_esc_html(category)}</div>'
-            f'<h2>{_esc_html(blurb)}</h2>'
-            + (f'<p>Try: <i>&ldquo;{_esc_html(prompt)}&rdquo;</i></p>' if prompt else "")
-            + '<div class="tablewrap"><table><thead><tr><th>Job</th><th>Where</th><th>Providers</th>'
-              '<th>From</th></tr></thead><tbody>'
-            + "".join(body_rows) + '</tbody></table></div></div></section>')
-
-    faq_html = "".join(f'<h3>{_esc_html(q)}</h3><p>{_esc_html(a)}</p>' for q, a in spec["faq"])
-
-    body = (
-        '<div class="hero"><div class="wrap">'
-        f'<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / '
-        f'<a href="/agents/{_esc_html(agent)}">{_esc_html(name)}</a></div>'
-        f'<div class="kicker">{n} endpoints &middot; {p} platforms &middot; $0.000 markup</div>'
-        f'<h1>The {_esc_html(name)} plugin for <span class="roleslot" id="roleslot">'
-        f'<span class="rw" id="rolewheel">{roles}</span></span></h1>'
-        f'<script type="application/json" id="roles-more">{more_roles}</script>'
-        f'<div class="lede">{_esc_html(definition)}</div>'
-        '<div class="ctas">'
-        f'<a class="candy" href="/app?ref=agents-{_esc_html(agent)}">Start free</a>'
-        '<a class="ghostbtn" href="#use-cases">See what it can do</a></div>'
-        '<div class="trust">$1.00 of free credit on every new team &middot; no provider signup &middot; no card</div>'
-        f'<div class="subline">Your own keys always win and are never metered. '
-        f'{_esc_html(name)} sees the price before it spends.</div>'
-        + (f'<div class="provstrip"><div class="pl">a few of the {p} platforms</div>'
-           f'<div class="ptiles">{"".join(hero_tiles)}</div></div>' if hero_tiles else "")
-        + '</div></div>'
-
-        f'<section id="install"><div class="wrap"><div class="seclab">Get started</div>'
-        f'<h2>Install in {_esc_html(name)}</h2>{steps}{shot}</div></section>'
-
-        '<section id="use-cases"><div class="wrap"><div class="seclab">The menu</div>'
-        f'<h2>What {_esc_html(name)} can do now</h2>'
-        '<p>By job, not by endpoint. The price is the lowest provider&rsquo;s own rate with $0.000 added by '
-        'treg.to; <b>free</b> means the job runs on an account you already own and is never metered. Where '
-        f'several providers do one job, {_esc_html(name)} sees them side by side and choosing is yours.</p>'
-        f'<div class="cards">{"".join(cards)}</div>'
-        f'<p style="margin-top:20px"><a href="/catalog">Browse all {n} endpoints &rarr;</a> &middot; '
-        f'<a href="/use-cases">read the job guides &rarr;</a></p></div></section>'
-
-        + "".join(sections)
-
-        + f'<section id="faq"><div class="wrap"><div class="seclab">Questions</div>'
-          f'<h2>Before you install</h2>{faq_html}</div></section>'
-
-        + '<div class="final"><div class="wrap">'
-          f'<h2>Give {_esc_html(name)} the tools</h2>'
-          f'<a class="candy" href="/app?ref=agents-{_esc_html(agent)}-final">Start free</a>'
-          '<div class="trust">$1.00 of calls free per new team &middot; '
-          '<a href="/catalog">browse the catalog</a></div></div></div>'
-
-        + """
-<style>
-.hero h1{line-height:1.16}
-.roleslot{display:inline-block;height:1.16em;overflow:hidden;vertical-align:bottom;position:relative}
-.roleslot .rw{display:flex;flex-direction:column;align-items:flex-start;transition:transform .62s cubic-bezier(.2,.7,.2,1)}
-.roleslot .ri{height:1.16em;line-height:1.16;flex:none;white-space:nowrap;transition:opacity .4s}
-.roleslot .ri:not(.on){opacity:.25}
-@media (prefers-reduced-motion:reduce){.roleslot .rw{transition:none}}
-</style>
-<script>
-(function(){
-  var w=document.getElementById('rolewheel'); if(!w) return;
-  try { JSON.parse((document.getElementById('roles-more')||{}).textContent||'[]').forEach(function(r){
-    var s=document.createElement('span'); s.className='ri'; s.textContent=r; w.appendChild(s); }); } catch(e) {}
-  var items=w.children, i=0, slot=document.getElementById('roleslot');
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  function fit(){ slot.style.width=items[i].getBoundingClientRect().width+'px'; }
-  fit(); addEventListener('resize', fit);
-  setInterval(function(){
-    if(scrollY>innerHeight*.8) return;
-    i=(i+1)%items.length; w.style.transform='translateY(-'+(i*1.16)+'em)';
-    for(var k=0;k<items.length;k++) items[k].classList.toggle('on',k===i);
-    fit();
-  },3000);
-})();
-</script>""")
-
-    ld = [
-        {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "treg.to",
-         "applicationCategory": "DeveloperApplication", "operatingSystem": "Web",
-         "url": base + "/", "description": desc,
-         "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD",
-                    "description": "Free to install. Calls are metered per call from a prepaid balance at the "
-                                   "provider's own rate with no markup; every new team starts with $1.00 free."}},
-        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-            {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
-            {"@type": "ListItem", "position": 2, "name": name, "item": f"{base}/agents/{agent}"}]},
-        {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
-            {"@type": "Question", "name": q,
-             "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in spec["faq"]]},
-    ]
-    return _page(title, desc[:300], f"/agents/{agent}", body, ld,
-                 head_extra=_MD_ALT.format(href=f"{base}/agents/{agent}.md"), css="usecase.css")
-
-
-def _uc_agent() -> tuple[str, str]:
-    """(slug, display name) of the client the use-case pages use as the example."""
-    slug = agent_pages.DEFAULT_AGENT
-    return slug, agent_pages.AGENTS[slug]["name"]
-
-
-_UNIT_WORDS = {"per_success": "found", "per_call": "call", "per_result": "result"}
-
-
-def _uc_providers(cat, eps: list[dict], obs: dict) -> list[dict]:
-    """One row per provider for this job: cheapest priced endpoint, best-sampled observed stats,
-    the union of its accepted inputs, and the platform it serves."""
-    def usd(e):
-        cv = cat.cost_view(e.get("cost"), e.get("provider"))
-        return cv["usd"] if cv and cv["usd"] else None
-
-    # Keyed by (provider, platform), not provider alone: one provider often serves several
-    # platforms for the same job (ScrapeCreators does Instagram AND YouTube), and collapsing those
-    # into one row silently drops a whole platform from a multi-platform page.
-    out = []
-    for prov, plat in sorted({(e["provider"], e["platform"]) for e in eps}):
-        peps = [e for e in eps if e["provider"] == prov and e["platform"] == plat]
-        priced = sorted([(usd(e), e) for e in peps if usd(e)], key=lambda t: t[0])
-        cheapest_e = priced[0][1] if priced else None
-        stats = [(obs.get(e["id"]) or {}) for e in peps]
-        best = max((st for st in stats if st.get("samples")), key=lambda st: st["samples"], default=None)
-        ins = []
-        for e in peps:
-            inp = e.get("input") or {}
-            for section in ("queryParams", "pathParams", "body", "headers"):
-                for k, v in (inp.get(section) or {}).items():
-                    if isinstance(v, dict) and k not in ins:
-                        ins.append(k)
-        slug = plat
-        out.append({
-            "id": prov, "name": _provider_display(prov), "eps": peps,
-            "domain": agent_pages.PROVIDER_DOMAINS.get(prov),
-            "platform": slug, "platform_label": (cat.platforms.get(slug) or {}).get("label") or slug,
-            "usd": priced[0][0] if priced else None,
-            "unit": _UNIT_WORDS.get((cheapest_e.get("cost") or {}).get("type"), "call") if cheapest_e else "",
-            "cheapest_ep": cheapest_e, "inputs": ins[:6],
-            "verified": max((e.get("verified") or "" for e in peps), default=""),
-            "ok_rate": best.get("ok_rate") if best else None,
-            "p50": best.get("p50_ms") if best else None,
-            "samples": best.get("samples") if best else 0,
-        })
-    return out
-
-
-def _uc_call(e: dict) -> str:
-    tr = e.get("test_request") or {}
-    q = " ".join(f"--query {k}={v}" for k, v in (tr.get("queryParams") or {}).items())
-    parts = [f"treg call {e['id']}"]
-    if q:
-        parts.append(q)
-    if tr.get("body"):
-        parts.append("--data '" + json.dumps(tr["body"], separators=(",", ":")) + "'")
-    return " ".join(parts)
-
-
-@app.get("/use-cases/{category}/{job}.md", include_in_schema=False)
-@app.get("/use-cases/{category}/{job}", include_in_schema=False)
-async def use_case_job_page(request: Request, category: str, job: str,
-                            db: AsyncSession = Depends(get_session)):
-    """One job. The reader does one thing, the prompt; everything else is what the agent sees
-    before it calls. The page takes one of three FORMS, chosen from the data rather than by hand:
-
-      short      one provider, so there is nothing to compare (all of "connect your own accounts")
-      platforms  the job spans several platforms, which are not alternatives to one another
-      compare    several providers doing one job on one platform: the full comparison
-
-    Everything job-specific comes from `agent_pages.USE_CASE_PAGES`; the example client comes from
-    `DEFAULT_AGENT`, so writing page two is data entry. `.md` serves the same page as Markdown.
-    """
-    as_md = request.url.path.endswith(".md")
-    raw = (category, job[:-3] if job.endswith(".md") else job)
-    # Same rule as `agent_page`: the slugs reach the canonical and the JSON-LD, so they come from
-    # the table's own key, and a differently-cased URL is redirected rather than duplicated.
-    key = next((k for k in agent_pages.USE_CASE_PAGES
-                if k == (raw[0].lower(), raw[1].lower())), None)
-    if key is None or not _hosted():
-        raise HTTPException(status_code=404, detail="unknown use case")
-    if raw != key:
-        return RedirectResponse(f"/use-cases/{key[0]}/{key[1]}" + (".md" if as_md else ""),
-                                status_code=301)
-    # Fresh names on purpose: rebinding the parameters themselves does not read as a taint kill to
-    # CodeQL, and the request's spelling must not be what the page prints.
-    cat_slug, job_slug = key
-    spec = agent_pages.USE_CASE_PAGES[key]
-    cat = catalog_store.load()
-    base = get_settings().public_url.rstrip("/")
-    agent_slug, agent_name = _uc_agent()
-    cat_label = next((c for c, _ in agent_pages.USE_CASES if agent_pages.category_slug(c) == cat_slug), cat_slug)
-    caps = _use_case_caps(cat_slug, spec["label"])
-    eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
-    if not eps:
-        raise HTTPException(status_code=404, detail="no endpoints for this job")
-    obs = await _observed_or_empty(db, [e["id"] for e in eps])
-    provs = _uc_providers(cat, eps, obs)
-
-    def usd_of(e):
-        cv = cat.cost_view(e.get("cost"), e.get("provider"))
-        return cv["usd"] if cv and cv["usd"] else None
-
-    platforms = sorted({p["platform_label"] for p in provs})
-    form = "short" if len(provs) == 1 else ("platforms" if len(platforms) > 1 else "compare")
-    # data-provider must stay unique in the DOM when one provider appears under two platforms
-    for pr in provs:
-        pr["row_id"] = pr["id"] if form != "platforms" else f'{pr["id"]}-{pr["platform"]}'
-    noun = spec.get("result_noun", "result")
-
-    # Cheapest is claimed PER BILLING UNIT. A per-call endpoint that returns a thousand rows is not
-    # dearer than a per-result one, and ranking them together names the wrong winner: 38 of the 66
-    # jobs on the menu mix units.
-    cheapest_by_unit: dict[str, dict] = {}
-    for pr in provs:
-        u = pr["unit"]
-        if pr["usd"] and (u not in cheapest_by_unit or pr["usd"] < cheapest_by_unit[u]["usd"]):
-            cheapest_by_unit[u] = pr
-    units = list(cheapest_by_unit)
-    headline = cheapest_by_unit[units[0]] if units else None
-    reliable = sorted([p for p in provs if p["samples"] and p["ok_rate"] is not None],
-                      key=lambda p: (-p["ok_rate"], p["p50"] or 9e9, -p["samples"]))
-    n = str(len({p["id"] for p in provs}))
-    n_ver = sum(1 for e in eps if e.get("verified"))
-    latest_verified = max((e.get("verified") or "" for e in eps), default="")
-    setup = agent_pages.SETUP_LINE.format(base=base)
-
-    def money(x):
-        return _usd_short(x)
-
-    def pct(x):
-        return f"{round(x * 100)}%" if x is not None else ""
-
-    def ms(x):
-        return (f"{x/1000:.1f}s" if x >= 1000 else f"{int(x)}ms") if x else ""
-
-    def unit_plural(u: str) -> str:
-        return {"found": f"{noun}s found", "result": "results"}.get(u, "calls")
-
-    title = spec.get("title", "{sentence}: {n} providers | treg.to").format(
-        sentence=spec["sentence"], n=n, agent=agent_name,
-        cheapest=money(headline["usd"]) if headline else "free on your own account")
-    lede = spec["lede"].format(n=n, agent=agent_name,
-                               cheapest=money(headline["usd"]) if headline else "free on your own account")
-    bits_desc = [spec["sentence"] + "."]
-    if form == "short":
-        bits_desc.append("Runs on the account you already own, so treg.to never meters it.")
-    elif headline:
-        bits_desc.append(f"{n} providers compared, cheapest {money(headline['usd'])} per {headline['unit']}.")
-    bits_desc.append(f"The prompt that works in {agent_name}, with the price shown before the call.")
-    desc = _serp_desc(" ".join(bits_desc))
-
-    if as_md:
-        md = [f"# {spec['sentence']}", "", lede, "",
-              f"## What's the best way to ask {agent_name}?", "",
-              f"Setup line (paste into any agent): `{setup}`", "",
-              f'Then ask: "{spec["prompt"]}"', ""]
-        md += [f"- **{t}** {d}" for t, d in spec["prompt_why"]]
-        md += ["", "## Why go through treg.to", ""] + [f"- **{t}** {d}" for t, d in agent_pages.WHY_TREG]
-        if form == "short":
-            e0 = provs[0]["eps"][0]
-            md += ["", "## How it works", "",
-                   f"One provider does this job: {provs[0]['name']} (`{e0['id']}`), on the account you already own. "
-                   "You connect it once, treg.to keeps the token server side, and the call is never metered.",
-                   "", f"    {_uc_call(e0)}", ""]
-        else:
-            md += ["", f"## Behind the scenes: what {agent_name} sees before it calls", "",
-                   f"treg.to does not choose for you. It hands {agent_name} this comparison and it picks, "
-                   "or you tell it how.", ""]
-            if units:
-                md += [f"### {spec.get('q_cheapest', 'Which is cheapest?')}", ""]
-                for u in units:
-                    pu = cheapest_by_unit[u]
-                    md.append(f"- Cheapest per {u}: {pu['name']} at {money(pu['usd'])} (`{pu['cheapest_ep']['id']}`)")
-                if len(units) > 1:
-                    md += ["", "Those units are not interchangeable: one call can return many results, "
-                               "so compare on the unit you will actually be billed in."]
-            if reliable:
-                md += ["", f"### {spec.get('q_reliable', 'Which is the most reliable?')}", ""]
-                md += [f"- {p['name']}: {pct(p['ok_rate'])} over {p['samples']} calls, {ms(p['p50'])} median"
-                       for p in reliable[:6]]
-                md += ["", "Measured on treg.to traffic; not a controlled benchmark."]
-            md += ["", f"### {spec.get('q_compare', 'How do they compare?')}", ""]
-            for plat in (platforms if form == "platforms" else [None]):
-                rows_ = [p for p in provs if plat is None or p["platform_label"] == plat]
-                if plat:
-                    md += [f"#### {plat}", ""]
-                md += ["| Provider | Price | Accepts | Verified |", "|---|---|---|---|"]
-                for p in sorted(rows_, key=lambda p: (p["usd"] is None, p["usd"] or 0)):
-                    price = f"{money(p['usd'])} per {p['unit']}" if p["usd"] else "own account, free"
-                    md.append(f"| {p['name']} | {price} | {', '.join(p['inputs'])} | {p['verified'] or 'unverified'} |")
-                md.append("")
-        md += ["Endpoints:", ""] + [f"- `{e['id']}`: {_uc_call(e)}" for e in eps]
-        if spec.get("voices"):
-            md += ["", "## What people actually struggle with", "", spec["voices_intro"], ""]
-            for head, quote, who, url, answer in spec["voices"]:
-                md += [f"**{head}**", "", f'> "{quote}" ({who}: {url})', "",
-                       f"What this page can do about it: {answer}", ""]
-        md += ["", "## What actually differs", ""] + [f"- {x}" for x in spec["notes"]]
-        md += ["", f"## {spec.get('what_is_heading', 'What is this?')}", "", spec["what_is"], "", "## Questions", ""]
-        for q, a in spec["faq"]:
-            md += [f"**{q}** {a}", ""]
-        md += [f"HTML version: {base}/use-cases/{cat_slug}/{job_slug}"]
-        return PlainTextResponse("\n".join(md), media_type="text/markdown; charset=utf-8",
-                                 headers={"Cache-Control": "public, max-age=600"})
-
-    # ---------------------------------------------------------------- html (landing-page skin)
-    ptiles = "".join(
-        f'<span class="ptile" title="{_esc_html(p["name"])}">{_logo(p["domain"], p["name"])}</span>'
-        for p in provs[:12] if p["domain"])
-    provstrip = (f'<div class="provstrip"><div class="pl">compared on this page</div>'
-                 f'<div class="ptiles">{ptiles}</div></div>' if ptiles else "")
-    agent_icons = "".join(
-        f'<span class="ptile" title="{_esc_html(label)}">'
-        f'<img src="https://unpkg.com/@lobehub/icons-static-png@latest/light/{icon}.png" alt="{_esc_html(label)}" loading="lazy"/></span>'
-        for aid, label, icon in agent_pages.AGENT_ICONS[:6])
-    hero_price = (f"from {_esc_html(money(headline['usd']))} per {headline['unit']}"
-                  if headline else "free on the account you already own")
-
-    def promptbox(label: str, text: str) -> str:
-        return ('<div class="promptbox"><div class="ph">'
-                f'<span>{_esc_html(label)}</span>'
-                f'<button class="copybtn" data-copy="{_esc_html(text)}">copy</button></div>'
-                f'<pre>{_esc_html(text)}</pre></div>')
-
-    why_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
-                        for t, d in spec["prompt_why"])
-    treg_cards = "".join(f'<div class="card"><h4>{_esc_html(t)}</h4><p>{_esc_html(d)}</p></div>'
-                         for t, d in agent_pages.WHY_TREG)
-
-    def price_cell(p: dict) -> str:
-        return (f'{_esc_html(money(p["usd"]))} <span style="color:var(--muted2)">per {p["unit"]}</span>'
-                if p["usd"] else '<span style="color:var(--green)">free, your own account</span>')
-
-    def rel_cell(p: dict) -> str:
-        return (f'{pct(p["ok_rate"])} <span style="color:var(--muted2)">({p["samples"]} calls)</span>'
-                if p["samples"] else '<span style="color:var(--muted2)">not yet measured</span>')
-
-    def prov_table(rows_: list[dict]) -> str:
-        body_rows = "".join(
-            f'<tr data-provider="{_esc_html(p["id"])}">'
-            f'<td><b>{_logo(p["domain"], p["name"])}{_esc_html(p["name"])}</b></td>'
-            f'<td>{price_cell(p)}</td>'
-            f'<td style="color:var(--muted)">{_esc_html(", ".join(p["inputs"]) or "see endpoints")}</td>'
-            f'<td>{rel_cell(p)}</td>'
-            f'<td style="color:var(--muted2)">{_esc_html(p["verified"] or "unverified")}</td>'
-            '</tr>' for p in rows_)
-        return ('<div class="tablewrap"><table><thead><tr>'
-                '<th>Provider</th><th>Price</th><th>Accepts</th><th>Success rate</th><th>Verified</th>'
-                f'</tr></thead><tbody>{body_rows}</tbody></table></div>')
-
-    sections = []
-    if form == "short":
-        p0, e0 = provs[0], provs[0]["eps"][0]
-        sections.append(
-            '<section id="how"><div class="wrap"><div class="seclab">How it works</div>'
-            f'<h2>One provider, on the account you already own</h2>'
-            f'<p>{_logo(p0["domain"], p0["name"])}<b>{_esc_html(p0["name"])}</b> answers this job. You connect it once, '
-            'treg.to keeps the token server side, and the call is never metered.</p>'
-            f'<div class="sample"><div class="sbar">the call</div><pre>{_esc_html(_uc_call(e0))}</pre></div>'
-            f'<p style="font-size:12.5px;color:var(--muted)">Every endpoint on this connection is listed on the '
-            f'<a href="/catalog/{_esc_html(e0["platform"])}">{_esc_html((cat.platforms.get(e0["platform"]) or {}).get("label") or e0["platform"])} shelf</a>.</p>'
-            + '</div></section>')
-    else:
-        inner = [f'<p>treg.to does not choose for you. It hands {_esc_html(agent_name)} this comparison, with the '
-                 f'price shown before any call, and {_esc_html(agent_name)} picks. Or you <b>tell it how</b>: '
-                 '"cheapest", "most reliable", "the one that takes what I have", or a provider by name.</p>']
-        if headline:
-            cheap_cards = "".join(
-                f'<div class="card"><h4>Cheapest per {_esc_html(u)}</h4>'
-                f'<p>{_logo(cheapest_by_unit[u]["domain"], cheapest_by_unit[u]["name"])}'
-                f'<b>{_esc_html(cheapest_by_unit[u]["name"])}</b> at {_esc_html(money(cheapest_by_unit[u]["usd"]))}'
-                + (f' &middot; {_esc_html(cheapest_by_unit[u]["platform_label"])}' if form == "platforms" else "")
-                + '</p></div>' for u in units)
-            inner.append(f'<h3 id="cheapest">{_esc_html(spec.get("q_cheapest", "Which is cheapest?"))}</h3>'
-                         f'<div class="cards">{cheap_cards}</div>')
-            if len(units) > 1:
-                inner.append('<blockquote>Those units are not interchangeable: one call can return many results, '
-                             'so compare on the unit you will actually be billed in.</blockquote>')
-        if reliable:
-            rel_rows = "".join(
-                f'<tr><td><b>{_logo(p["domain"], p["name"])}{_esc_html(p["name"])}</b></td>'
-                f'<td>{pct(p["ok_rate"])}</td><td>{ms(p["p50"])}</td><td style="color:var(--muted2)">{p["samples"]} calls</td></tr>'
-                for p in reliable[:6])
-            inner.append(f'<h3 id="reliable">{_esc_html(spec.get("q_reliable", "Which is the most reliable?"))}</h3>'
-                         '<div class="tablewrap"><table><thead><tr><th>Provider</th><th>Success</th><th>Median</th>'
-                         f'<th>Sample</th></tr></thead><tbody>{rel_rows}</tbody></table></div>'
-                         '<blockquote>Measured on treg.to traffic: real calls, real inputs, and sample sizes differ '
-                         'by provider. Live reliability, not a controlled benchmark.</blockquote>')
-        inner.append(f'<h3 id="compare">{_esc_html(spec.get("q_compare", "How do they compare?"))}</h3>')
-        if form == "platforms":
-            for plat in platforms:
-                rows_ = sorted([p for p in provs if p["platform_label"] == plat],
-                               key=lambda p: (p["usd"] is None, p["usd"] or 0))
-                inner.append(f'<h4 data-platform-group="{_esc_html(plat)}">{_esc_html(plat)}</h4>' + prov_table(rows_))
-        else:
-            inner.append(prov_table(sorted(provs, key=lambda p: (p["usd"] is None, p["usd"] or 0))))
-        if headline and headline["cheapest_ep"]:
-            shelves = ", ".join(
-                f'<a href="/catalog/{_esc_html(sl)}">{_esc_html((cat.platforms.get(sl) or {}).get("label") or sl)}</a>'
-                for sl in sorted({p["platform"] for p in provs}))
-            inner.append(
-                '<h3>Run one</h3>'
-                f'<div class="sample"><div class="sbar">the cheapest verified call</div>'
-                f'<pre>{_esc_html(_uc_call(headline["cheapest_ep"]))}</pre></div>'
-                f'<p style="font-size:12.5px;color:var(--muted)">Swap the id for any provider above. '
-                f'All {len(eps)} endpoints behind this job, with their parameters and captured responses, '
-                f'are on the {shelves} shelf.</p>')
-        inner.append(
-            '<h3>How these numbers are made</h3>'
-            '<div class="who">'
-            '<div><b>Prices</b>Each provider&rsquo;s own published rate, converted to US dollars for one chargeable '
-            'event of the unit they bill in. treg.to adds $0.000. Where a provider bills in credits, the conversion '
-            'uses the rate on their public pricing page'
-            + (f', last checked {_esc_html(latest_verified)}.' if latest_verified else '.') + '</div>'
-            '<div><b>Success rate</b>treg.to&rsquo;s own served calls over the last 30 days: 2xx counts as a success, '
-            '5xx and timeouts as a failure. A 4xx is excluded, because it usually means the caller sent bad '
-            'parameters and one bad query should not make a healthy endpoint look broken.</div>'
-            '<div><b>What this is not</b>A controlled benchmark. These are real calls with real inputs, so sample '
-            'sizes and the difficulty of what was asked differ by provider. Treat the rates as live reliability, '
-            'not a like-for-like test.</div>'
-            '<div><b>Verified</b>The date treg.to last called the endpoint end to end and confirmed the shape of '
-            'its response and the price it charged.</div>'
-            '</div>')
-        sections.append(f'<section id="bts"><div class="wrap"><div class="seclab">Behind the scenes</div>'
-                        f'<h2>What {_esc_html(agent_name)} sees before it calls</h2>'
-                        + "".join(inner) + '</div></section>')
-
-    voices_html = "".join(
-        f'<h3>{_esc_html(head)}</h3>'
-        f'<blockquote>&ldquo;{_esc_html(quote)}&rdquo; '
-        f'<a href="{_esc_html(url)}" rel="nofollow noopener" target="_blank">{_esc_html(who)}</a></blockquote>'
-        f'<p><b>What this page can do about it:</b> {_esc_html(answer)}</p>'
-        for head, quote, who, url, answer in spec.get("voices", []))
-    voices_section = ('<section id="voices"><div class="wrap"><div class="seclab">From the field</div>'
-                      '<h2>What people actually struggle with</h2>'
-                      f'<p>{_esc_html(spec.get("voices_intro", ""))}</p>{voices_html}</div></section>'
-                      if spec.get("voices") else "")
-    notes = "".join(f'<h4>{_esc_html(x.split(".")[0])}.</h4><p>{_esc_html(x.split(".", 1)[1].strip())}</p>'
-                    if "." in x else f"<p>{_esc_html(x)}</p>" for x in spec["notes"])
-    related = "".join(
-        f'<a class="card" href="{_use_case_page_for(cat_label, lbl) or ("/agents/" + agent_slug + "#" + agent_pages.category_slug(cat_label))}">'
-        f'<h4>{_esc_html(lbl)}</h4><p>Another job in {_esc_html(cat_label.lower())}.</p></a>'
-        for lbl in spec.get("related", ()))
-    faq_html = "".join(f'<h3>{_esc_html(q)}</h3><p>{_esc_html(a)}</p>' for q, a in spec["faq"])
-
-    # The "instead of" anchor: what the same job costs on subscriptions from the providers on this
-    # page whose plan prices are recorded in marketing/landing/_facts.md, against a real run here.
-    # Only sourced figures are named; with none, the anchor is the catalog's own spread.
-    plans = [(p["name"], agent_pages.PLAN_PRICES[p["id"]]) for p in provs
-             if p["id"] in agent_pages.PLAN_PRICES]
-    pricewall = ""
-    if headline:
-        run_n = 100
-        run_cost = headline["usd"] * run_n
-        if plans:
-            plans = sorted(plans, key=lambda t: -t[1])[:2]
-            old_total = sum(v for _, v in plans)
-            old_note = " + ".join(f"{k} ${v}/mo" for k, v in plans) + ", at list"
-            old_v, old_k = f"${old_total}/mo", "instead of"
-        else:
-            dearest = max((p for p in provs if p["usd"]), key=lambda p: p["usd"])
-            old_total = dearest["usd"] * run_n
-            old_note = f"{dearest['name']}, the dearest here, for the same {run_n}"
-            old_v, old_k = f"${old_total:,.2f}", "the wide end"
-        pricewall = (
-            '<section id="cost"><div class="wrap"><div class="seclab">The economics</div>'
-            f'<h2>What {run_n} of these actually costs</h2>'
-            '<div class="pricewall">'
-            f'<div class="pw old"><div class="k">{old_k}</div><div class="v">{old_v}</div>'
-            f'<div class="s">{_esc_html(old_note)}</div></div>'
-            '<div class="arrow">&rarr;</div>'
-            f'<div class="pw new"><div class="k">you pay</div><div class="v">${run_cost:,.2f}</div>'
-            f'<div class="s">{run_n} &times; {_esc_html(money(headline["usd"]))} at {_esc_html(headline["name"])}, '
-            'metered per call</div></div></div>'
-            '<p style="font-size:12.5px;color:var(--muted)">Subscription figures are provider list prices recorded in '
-            'treg.to&rsquo;s own catalog grid; per-call prices are what treg.to charges today, with $0.000 added.</p>'
-            '</div></section>')
-
-    body = (
-        '<div class="hero"><div class="wrap">'
-        f'<div class="trust" style="margin:0 0 18px"><a href="/">treg.to</a> / <a href="/use-cases">Use cases</a> / '
-        f'<a href="/agents/{agent_slug}#{agent_pages.category_slug(cat_label)}">{_esc_html(cat_label)}</a></div>'
-        f'<div class="kicker">{n} providers &middot; {hero_price} &middot; $0.000 markup</div>'
-        f'<h1>{_esc_html(spec["sentence"])}</h1>'
-        f'<div class="lede">{_esc_html(lede)}</div>'
-        '<div class="ctas">'
-        f'<a class="candy" href="/app?ref=uc-{_esc_html(job_slug)}">Start free</a>'
-        '<a class="ghostbtn" href="#bts">See the comparison</a></div>'
-        f'<div class="trust">$1.00 of free credit on every new team &middot; no provider signup &middot; no card</div>'
-        f'<div class="subline">{n_ver} of {len(eps)} endpoints on this page are live-verified against the provider.</div>'
-        f'{provstrip}</div></div>'
-
-        + pricewall +
-        '<section id="ask"><div class="wrap"><div class="seclab">Try it</div>'
-        f'<h2>What&rsquo;s the best way to ask {_esc_html(agent_name)}?</h2>'
-        f'<div class="steplabel"><span class="n">1</span><b>Set your agent up, once</b></div>'
-        + promptbox("in your agent's chat", setup)
-        + f'<div class="steplabel"><span class="n">2</span><b>Ask for the job</b></div>'
-        + promptbox("the prompt", spec["prompt"])
-        + f'<div class="provstrip"><div class="pl">works in</div><div class="ptiles">{agent_icons}</div></div>'
-        + f'<h3>Why this prompt works</h3><div class="cards">{why_cards}</div>'
-        + (f'<div class="sample"><div class="sbar">{_esc_html(agent_name)}</div>'
-           f'<img src="{_esc_html(spec["result_image"])}" alt="{_esc_html(agent_name)} answering" '
-           'style="display:block;width:100%"/></div>' if spec.get("result_image") else "")
-        + '</div></section>'
-
-        '<section id="why"><div class="wrap"><div class="seclab">Why treg.to</div>'
-        '<h2>Why go through treg.to</h2>'
-        f'<div class="cards">{treg_cards}</div></div></section>'
-
-        + "".join(sections) + voices_section
-
-        + '<section id="notes"><div class="wrap"><div class="seclab">The detail</div>'
-          f'<h2>What actually differs</h2>{notes}</div></section>'
-
-        + f'<section id="what"><div class="wrap"><div class="seclab">Background</div>'
-          f'<h2>{_esc_html(spec.get("what_is_heading", "What is this?"))}</h2>'
-          f'<p>{_esc_html(spec["what_is"])}</p></div></section>'
-
-        + f'<section id="faq"><div class="wrap"><div class="seclab">Questions</div>'
-          f'<h2>Before you start</h2>{faq_html}</div></section>'
-
-        + (f'<section id="related"><div class="wrap"><div class="seclab">Related</div>'
-           f'<h2>Other jobs your agent can do</h2><div class="cards">{related}</div></div></section>' if related else "")
-        + _COPY_JS)
-    ld = [
-        {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-            {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
-            {"@type": "ListItem", "position": 2, "name": "Use cases", "item": base + "/use-cases"},
-            {"@type": "ListItem", "position": 3, "name": cat_label,
-             "item": f"{base}/agents/{agent_slug}#{agent_pages.category_slug(cat_label)}"},
-            {"@type": "ListItem", "position": 4, "name": spec["sentence"],
-             "item": f"{base}/use-cases/{cat_slug}/{job_slug}"}]},
-        {"@context": "https://schema.org", "@type": "ItemList", "name": title, "numberOfItems": len(provs),
-         "itemListElement": [{"@type": "ListItem", "position": i, "name": p["name"],
-                              "url": f"{base}/use-cases/{cat_slug}/{job_slug}#compare"}
-                             for i, p in enumerate(provs, 1)]},
-        {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
-            {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
-            for q, a in spec["faq"]]},
-    ]
-    return _page(title, desc[:300], f"/use-cases/{cat_slug}/{job_slug}", body, ld,
-                 head_extra=_MD_ALT.format(href=f"{base}/use-cases/{cat_slug}/{job_slug}.md"),
-                 css="usecase.css")
-
-
-@app.get("/use-cases", include_in_schema=False)
-async def use_cases_hub():
-    """The hub the spokes hang from. A sitemap is not a crawl path: before this existed, the only
-    link into a use-case page was one row on one agent page's menu."""
-    if not _hosted():
-        raise HTTPException(status_code=404, detail="not found")
-    cat = catalog_store.load()
-    base = get_settings().public_url.rstrip("/")
-    _, agent_name = _uc_agent()
-    by_cat: dict[str, list[str]] = {}
-    for (c, j), spec in agent_pages.USE_CASE_PAGES.items():
-        label = next((cl for cl, _ in agent_pages.USE_CASES if agent_pages.category_slug(cl) == c), c)
-        caps = _use_case_caps(c, spec["label"])
-        eps = [e for cid in caps for e in cat.for_capability(cid) if e["kind"] not in catalog_store.HIDDEN_KINDS]
-        nprov = len({e["provider"] for e in eps})
-        prices = [cv["usd"] for e in eps if (cv := cat.cost_view(e.get("cost"), e.get("provider"))) and cv["usd"]]
-        meta = (f"{nprov} provider{'s' if nprov != 1 else ''} &middot; from {_esc_html(_usd_short(min(prices)))}"
-                if prices else "free on your own account")
-        blurb = spec["lede"].format(n=nprov, agent=agent_name,
-                                    cheapest=_usd_short(min(prices)) if prices else "free")
-        by_cat.setdefault(label, []).append(
-            f'<a class="pcard" href="/use-cases/{c}/{j}"><h3>{_esc_html(spec["sentence"])}</h3>'
-            f'<p>{_esc_html(blurb[:140])}</p><div class="meta">{meta}</div></a>')
-    blocks = "".join(f'<section class="cat"><h2 id="{_anchor(c)}">{_esc_html(c)}</h2>'
-                     f'<div class="grid">{"".join(v)}</div></section>' for c, v in by_cat.items())
-    body = (
-        '<main class="wrap"><div class="phead">'
-        '<div class="crumbs"><a href="/">treg.to</a> / <a href="/use-cases">Use cases</a></div>'
-        '<h1>What you can have your agent do</h1>'
-        '<p class="lede">One page per job: the prompt that works, what the call costs, and every provider '
-        'that does it. All of it through one treg.to key, at the provider&rsquo;s own rate with $0.000 markup.</p>'
-        '</div>' + blocks
-        + '<section class="cat"><h2>Everything else</h2><div class="cap"><p style="margin:0">These are the jobs '
-          'written up so far. The full menu is on the agent pages, and the whole catalog is at '
-          '<a href="/catalog">/catalog</a>.</p></div></section></main>')
-    ld = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-        {"@type": "ListItem", "position": 1, "name": "treg.to", "item": base + "/"},
-        {"@type": "ListItem", "position": 2, "name": "Use cases", "item": base + "/use-cases"}]}]
-    return _page("What you can have your agent do | treg.to",
-                 "One page per job: the prompt that works in ChatGPT or Claude, what the call costs, and "
-                 "every provider that does it, compared. One treg.to key, no markup.",
-                 "/use-cases", body, ld)
-
-
-@app.get("/catalog.css", include_in_schema=False)
-async def catalog_css():
-    """The shared skin for /catalog, /catalog/<slug> and /docs — the landing's tokens, one copy."""
-    f = _WEB_DIR / "catalog.css"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="catalog.css not bundled")
-    return FileResponse(f, media_type="text/css", headers={"Cache-Control": "public, max-age=600"})
-
-
-# ---- the API reference ------------------------------------------------------------------------
-# Prose first, because the schema cannot say the load-bearing part: what /call/ actually does. Kept
-# short and factual — the tutorial teaches, this page is the reference a reader lands on from search.
-_DOCS_INTRO = """
-<h2>How a call works</h2>
-<p>You make the <b>real upstream request</b> — the provider's own path, its own parameters, its own
-response. treg injects the credential server-side and relays the answer verbatim. Nothing here
-models a provider's API, which is why an upstream change does not break us and why the caller never
-holds a secret.</p>
-<pre class="call">curl -H "Authorization: Bearer $TREG_TOKEN" \\
-  "{BASE}/call/moz.web.url.metrics"</pre>
-<p>Prefix any catalogued endpoint id with <code>/call/</code>. If your team has its own key for that
-provider, treg uses it and the call is <b>not metered</b>; otherwise eligible endpoints are served on
-treg's key and metered against your prepaid balance at the provider's own rate.</p>
-
-<h2>Finding an endpoint</h2>
-<p>Search by what you want to <i>do</i>, not by vendor: <code>GET /catalog/search?q=backlinks</code>.
-When several providers can do the same job, <code>/catalog/platforms/{slug}</code> lists them side by
-side with measured success rate, speed and price. <b>Choosing is yours</b> — treg compares, but it
-does not route between providers automatically and does not fail over.</p>
-<p>The whole catalog is also browsable as pages: <a href="/catalog">/catalog</a>.</p>
-
-<h2>Other ways in</h2>
-<p><a href="/llms.txt">/llms.txt</a> is the file to point a coding agent at — it teaches the whole
-protocol in one fetch. <code>curl -fsSL {BASE}/install.sh | sh</code> installs the CLI. The MCP
-endpoint is at <code>{BASE}/mcp</code>. An interactive console for everything below lives at
-<a href="/docs/api">/docs/api</a>.</p>
-
-<h2>Endpoints</h2>
-<p>Authenticated requests carry <code>Authorization: Bearer &lt;token&gt;</code> (or
-<code>X-Treg-Token</code>). The catalog routes are open and need no token.</p>
-"""
-
-
-@app.get("/docs", include_in_schema=False)
-async def docs_page():
-    """The API reference, rendered server-side from the OpenAPI schema.
-
-    Replaces the stock Swagger UI at this path (now /docs/api), which was a script shell — the
-    landing page linked "api" here and a crawler that followed it found an empty document.
-    """
-    base = get_settings().public_url.rstrip("/")
-    schema = app.openapi()
-
-    def rank(path: str) -> tuple:
-        """The proxy first, then the catalog, then the rest alphabetically. Sorting purely by path
-        opened the reference on /admin/* — super-admin plumbing, and the worst possible first
-        impression of the API on a page built to be someone's search result."""
-        return (0 if path.startswith("/call/") else 1 if path.startswith("/catalog") else 2, path)
-
-    # Auth travels the same way on every route; naming it on all 135 rows is noise, and the page
-    # says it once above. `/admin/*` is super-admin only — still in openapi.json, not advertised here.
-    _PLUMBING = {"x-treg-token", "treg_session", "authorization"}
-    ops = []
-    for path in sorted(schema.get("paths", {}), key=rank):
-        if path.startswith("/admin"):
-            continue
-        for method, op in sorted(schema["paths"][path].items()):
-            if method.lower() == "head":     # implied by GET; see `_openapi_without_head`
-                continue
-            params = ", ".join(p["name"] for p in op.get("parameters", []) or []
-                               if p["name"].lower() not in _PLUMBING)
-            summary = op.get("summary") or ""
-            # FastAPI takes the description from the docstring; only the first paragraph belongs on
-            # a reference index, and the rest is written for maintainers rather than callers.
-            desc = (op.get("description") or "").strip().split("\n\n")[0].replace("\n", " ")
-            ops.append(
-                f'<div class="op"><div class="sig"><span class="verb">{_esc_html(method.upper())}</span>'
-                f'<code>{_esc_html(path)}</code></div>'
-                + (f"<p>{_esc_html(summary or desc)}</p>" if (summary or desc) else "")
-                + (f'<div class="params">{_esc_html(params)}</div>' if params else "")
-                + "</div>")
-
-    body = f"""<main class="wrap">
-<div class="phead">
-  <div class="crumbs"><a href="/">treg</a> / api</div>
-  <h1>API reference</h1>
-  <p class="lede">One base URL, one token. Call any of {len(ops)} documented operations, or proxy a
-  real request to any of 2,630 catalogued provider endpoints through <code>/call/</code>.</p>
-  <div class="facts">
-    <span>base <b>{_esc_html(base)}</b></span>
-    <span><b>Bearer</b> token auth</span>
-    <span><a href="/openapi.json">openapi.json</a></span>
-    <span><a href="/docs/api">interactive console</a></span>
-  </div>
-</div>
-<section class="cat">
-  <div class="prose">{_DOCS_INTRO.replace("{BASE}", _esc_html(base))}</div>
-  {"".join(ops)}
-</section>
-</main>"""
-    ld = [{"@context": "https://schema.org", "@type": "TechArticle",
-           "headline": "treg API reference",
-           "description": "How to call 2,630 provider API endpoints through one treg token.",
-           "url": f"{base}/docs"}]
-    return _page("API reference — call any tool through one endpoint | treg",
-                 "The treg HTTP API: proxy a real request to any of 2,630 catalogued provider "
-                 "endpoints through /call/, with the credential injected server-side. Plus the "
-                 "catalog, org, billing and tool-management routes.",
-                 "/docs", body, ld, nav_current="/docs")
-
+# Register the moved Catalog routes at their original position.
+router.routes.extend(catalog_routes.public_router.routes)
+
+# Register the moved Catalog-page routes at their original position.
+router.routes.extend(web_routes.catalog_pages_router.routes)
 
 # ---- "the catalog doesn't have X" — tool requests -------------------------------------------
 TOOLREQ_HIT_NS = "toolreq"
@@ -2035,11 +560,6 @@ async def create_tool_request(
 
 
 # ---- human login via GitHub OAuth (dashboard sessions) ------------------------------------
-def _is_https(request: Request) -> bool:
-    # behind a reverse proxy (Render), TLS is terminated upstream and forwarded as http + X-Forwarded-Proto.
-    return request.headers.get("x-forwarded-proto", "").lower() == "https" or request.url.scheme == "https"
-
-
 def _same_origin(request: Request) -> bool:
     """CSRF guard for cookie-authenticated mutations: the Origin header (when a browser sends one)
     must be this server itself. "Itself" is EITHER the configured public URL or the host the request
@@ -2821,465 +1341,8 @@ async def auth_invite_signin_confirm(request: Request, db: AsyncSession = Depend
     return resp
 
 
-def _esc_html(s: str) -> str:
-    """The stdlib escaper, not a hand-rolled replace() chain.
-
-    Same four substitutions as before plus `'` -> `&#x27;`, so every call site is at least as safe.
-    The reason to delegate is not correctness but legibility to tooling: static analysis models
-    `html.escape` as an XSS sanitizer and cannot know that a private chain of `.replace()` calls is
-    one, so every escaped value stayed 'tainted' and the real sinks were buried in false positives.
-    """
-    return _html.escape(str(s), quote=True)
-
-
-@app.get("/", include_in_schema=False)
-async def landing(request: Request, treg_session: str = Cookie(default=""),
-                  db: AsyncSession = Depends(get_session)):
-    """Serve the marketing landing at the root. Any query string (invite links, OAuth returns,
-    tour deep-links) belongs to the SPA, so those requests fall through to the dashboard —
-    the landing is only the clean, parameterless front door. A signed-in visitor belongs on
-    the dashboard, so a live session redirects to /app instead of re-showing the pitch.
-
-    `?ref=<code>` is the ONE exception, and it has to be: a referral link's whole job is to show a
-    stranger the pitch. Falling through to the SPA would send someone who has never heard of treg
-    to an empty dashboard shell — so a lone `ref` counts as parameterless, and the code is parked in
-    a cookie on the way past. It is only redeemed much later, when they create their first team.
-    """
-    page = _WEB_DIR / "landing.html"
-    ref = referrals.normalize_code(request.query_params.get("ref", ""))
-    # Only `ref` may be present. Anything else alongside it belongs to the SPA, and a referral code
-    # is not a reason to hijack an invite or an OAuth return.
-    ref_only = set(request.query_params.keys()) <= {"ref"}
-    if page.exists() and (not request.query_params or (ref and ref_only)):
-        if treg_session and await _user_from_session(treg_session, db):
-            return RedirectResponse("/app", status_code=302)
-        # Read-and-substitute rather than a bare FileResponse: the canonical, og:url and og:image
-        # are `{BASE}`-templated so they name the serving host. Hardcoded, a self-hosted registry
-        # would tell crawlers its front page really lives on treg.to.
-        html = page.read_text(encoding="utf-8").replace(
-            "{BASE}", get_settings().public_url.rstrip("/"))
-        resp = HTMLResponse(html, headers={"Cache-Control": "no-cache"})
-        if ref:
-            _remember_referral(resp, request, ref)
-        return resp
-    return await dashboard(request, treg_session, db)
-
-
-@app.get("/app", include_in_schema=False)
-async def dashboard(
-    request: Request, treg_session: str = Cookie(default=""),
-    db: AsyncSession = Depends(get_session),
-):
-    """Serve the single-file dashboard (same-origin, so it calls this API directly).
-
-    Also the place a parked OAuth authorization resumes. Every browser sign-in door — GitHub, Google,
-    the email code — ends here, so honouring the cookie at this ONE point covers all of them, rather
-    than threading a return value through five handlers that each finish differently (two redirect,
-    one answers JSON).
-
-    In frictionless local mode the dashboard opens ALREADY SIGNED IN: with no valid session we
-    attach one for the machine's single user, so `curl … | sh` reaches a working dashboard without
-    an account. Only reachable when `single_user_ok` holds (local sqlite + loopback URL), so this
-    can never hand a session to a stranger on a real deploy.
-    """
-    index = _WEB_DIR / "index.html"
-    if not index.exists():
-        return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
-    signed_in = await _user_from_session(treg_session, db)
-    # A parked authorization resumes here, but ONLY once the user is actually signed in — otherwise
-    # this would bounce them back to /oauth/authorize, which would bounce them here again.
-    if signed_in and (parked := _take_oauth_return(request)) is not None:
-        resume = RedirectResponse(parked, status_code=302)
-        resume.delete_cookie(OAUTH_RETURN_COOKIE)
-        return resume
-    resp = FileResponse(index, headers={"Cache-Control": "no-cache"})
-    if not signed_in:
-        owner = await _local_owner(db)
-        if owner is not None:
-            resp.set_cookie(sess.COOKIE, sess.make(owner.id, token_version=owner.token_version),
-                            httponly=True, samesite="lax",
-                            secure=_is_https(request),
-                            max_age=sess.TTL_SECONDS)
-    return resp
-
-
-def _spa_with_og(kind: str, name: str):
-    """Serve the SPA at a shareable detail path (/app/skills/x, /app/tools/x) with per-resource
-    og/twitter meta so link unfurls show what was shared. The meta echoes only the URL's own
-    name segment — no DB read, so an unauthenticated crawler learns nothing it didn't send."""
-    index = _WEB_DIR / "index.html"
-    if not index.exists():
-        return HTMLResponse("<h3>tools-registry API. Dashboard not bundled.</h3>")
-    label = "skill" if kind == "skills" else "tool"
-    safe = _esc_html(name)
-    meta = (
-        f"<title>{safe} · Treg</title>\n"
-        f'<meta property="og:title" content="{safe} — shared {label}"/>\n'
-        f'<meta property="og:description" content="A {label} shared via Treg. '
-        f'Sign in to preview it and get the one-command install."/>\n'
-        f'<meta name="twitter:card" content="summary"/>'
-    )
-    # Match WHATEVER title the page carries, not one exact string. It was pinned to
-    # `<title>tools-registry</title>`, the page says `<title>treg</title>`, so the replacement
-    # silently did nothing and every shared link unfurled blank — a rename in the dashboard must
-    # not be able to switch this off without a word.
-    html, hits = re.subn(r"<title>.*?</title>", lambda _m: meta, index.read_text(encoding="utf-8"),
-                         count=1, flags=re.IGNORECASE | re.DOTALL)
-    if not hits:  # no title at all: still emit the meta rather than serve a bare page
-        html = html.replace("<head>", "<head>\n" + meta, 1)
-    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
-
-
-@app.get("/app/marketplace/{service}", include_in_schema=False)
-async def dashboard_marketplace(
-    service: str, request: Request, treg_session: str = Cookie(default=""),  # noqa: ARG001 — the SPA reads the path itself
-    db: AsyncSession = Depends(get_session),
-):
-    """One integration's page. Served as the plain SPA: unlike /app/skills/<x> there is no og meta
-    to add, because a marketplace page is only meaningful to a signed-in member of the org."""
-    return await dashboard(request, treg_session, db)
-
-
-@app.get("/app/skills/{name}", include_in_schema=False)
-async def dashboard_skill_page(name: str):
-    return _spa_with_og("skills", name)
-
-
-@app.get("/app/tools/{name}", include_in_schema=False)
-async def dashboard_tool_page(name: str):
-    return _spa_with_og("tools", name)
-
-
-@app.get("/llms.txt", include_in_schema=False)
-async def llms_txt():
-    """Agent-readable overview (llms.txt convention) — an AI agent that fetches this learns the
-    whole registry: the call protocol, discovery, auth, CLI, skills, and links to the tutorial/docs.
-    The serving domain is templated in so links stay correct across deploys."""
-    f = _WEB_DIR / "llms.txt"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="llms.txt not bundled")
-    base = get_settings().public_url.rstrip("/")
-    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base), media_type="text/plain; charset=utf-8")
-
-
-@app.get("/robots.txt", include_in_schema=False)
-async def robots_txt():
-    """Crawler policy. `{BASE}`-templated like llms.txt, so a self-hosted registry advertises its own
-    sitemap rather than treg.to's."""
-    f = _WEB_DIR / "robots.txt"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="robots.txt not bundled")
-    base = get_settings().public_url.rstrip("/")
-    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base),
-                             media_type="text/plain; charset=utf-8",
-                             headers={"Cache-Control": "max-age=3600"})
-
-
-# The outcome landing pages: one per vertical, the destinations for search ads and the organic
-# `/use-cases/` cluster. Their COPY is generated from marketing/landing/*.md — never hand-edit
-# the HTML in web/, it is overwritten by that build. The slug is the public URL and is quoted in
-# live ad campaigns, so treat this map as an API: add freely, never rename or remove without a
-# redirect.
-_USE_CASES = {
-    "seo-data-for-ai-agents": "usecase-seo.html",
-    "lead-enrichment-for-ai-agents": "usecase-enrichment.html",
-    "social-trend-research-for-ai-agents": "usecase-social.html",
-    "competitor-ad-research-for-ai-agents": "usecase-ads.html",
-    "company-research-for-ai-agents": "usecase-company.html",
-}
-
-
-# The pages a crawler should know about. Everything here must answer 200 to a GET — a sitemap that
-# lists a redirect or a 404 is worse than no sitemap, so `tests/test_seo.py` walks every entry.
-# Deliberately absent: /contact and /help (alias URLs for the one support.html), /vendor-listing.md
-# (the text/plain twin of /vendor-listing), /login (302s to /app), /app* (authenticated SPA),
-# /connect-demo (noindex by design), and the shell installers.
-_SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
-    # (path, source file for lastmod — "" means use the catalog's, priority)
-    ("/", "landing.html", "1.0"),
-    ("/catalog", "", "0.9"),
-    ("/tutorial", "tutorial.html", "0.8"),
-    ("/docs", "", "0.7"),
-    ("/resources", "resources.html", "0.8"),
-    ("/vendor-listing", "vendor-listing.md", "0.5"),
-    ("/support", "support.html", "0.4"),
-    ("/terms", "terms.html", "0.2"),
-    ("/privacy", "privacy.html", "0.2"),
-    # The outcome pages. Listed WITHOUT a trailing slash on purpose: `/use-cases/<slug>/` 307s to
-    # this form, and a sitemap that lists a redirect is worse than no sitemap. Their canonical tags
-    # match these exactly. `_USE_CASES` is the one source for the set, so a new page is listed the
-    # moment it is routed, and `tests/test_seo.py` will fail if one stops answering 200.
-    *(
-        (f"/use-cases/{slug}", name, "0.8")
-        for slug, name in _USE_CASES.items()
-    ),
-)
-
-
-@lru_cache(maxsize=1)
-def _catalog_mtime() -> str:
-    """The newest mtime under the catalog directory, as a sitemap `lastmod` date. The catalog is
-    read-only and changes only on deploy, so one scan per process is enough."""
-    newest = 0.0
-    for f in (Path(catalog_store.__file__).parent / "catalog").rglob("*.yaml"):
-        try:
-            newest = max(newest, f.stat().st_mtime)
-        except OSError:  # noqa: PERF203 -- a file vanishing mid-scan is not worth failing the sitemap
-            continue
-    return _iso_day(newest)
-
-
-def _iso_day(ts: float) -> str:
-    return datetime.fromtimestamp(ts, tz=timezone.utc).date().isoformat() if ts else ""
-
-
-@app.get("/sitemap.xml", include_in_schema=False)
-async def sitemap_xml():
-    """Generated, not bundled: 80 of its URLs are the catalog's platform shelves, which move with the
-    catalog rather than with a checked-in file. Every URL is absolute on `public_url` so a self-host
-    publishes its own pages, and so the copy served on a legacy host still names the canonical one."""
-    base = get_settings().public_url.rstrip("/")
-    cat_day = _catalog_mtime()
-    out = ['<?xml version="1.0" encoding="UTF-8"?>',
-           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-
-    def add(path: str, lastmod: str, priority: str) -> None:
-        out.append("<url>")
-        out.append(f"<loc>{_esc_html(base + path)}</loc>")
-        if lastmod:
-            out.append(f"<lastmod>{lastmod}</lastmod>")
-        out.append(f"<priority>{priority}</priority>")
-        out.append("</url>")
-
-    for path, src, priority in _SITEMAP_PAGES:
-        day = cat_day
-        if src:
-            f = _WEB_DIR / src
-            day = _iso_day(f.stat().st_mtime) if f.exists() else ""
-        add(path, day, priority)
-    for row in _platform_rows():
-        add(f"/catalog/{row['slug']}", cat_day, "0.6")
-    # The agent pages exist only on the hosted deployment (see `_hosted`); their lastmod follows the
-    # hand-written copy, which is what changes between deploys.
-    if _hosted():
-        copy_day = _iso_day(Path(agent_pages.__file__).stat().st_mtime)
-        for slug in agent_pages.AGENTS:
-            add(f"/agents/{slug}", copy_day, "0.8")
-        add("/use-cases", copy_day, "0.8")
-        for (c, j) in agent_pages.USE_CASE_PAGES:
-            add(f"/use-cases/{c}/{j}", copy_day, "0.7")
-    out.append("</urlset>")
-    return Response("\n".join(out), media_type="application/xml; charset=utf-8",
-                    headers={"Cache-Control": "max-age=3600"})
-
-
-@app.get("/install.sh", include_in_schema=False)
-async def install_sh():
-    """`curl -fsSL {BASE}/install.sh | sh` — installs the treg CLI and points it at this server.
-    The serving domain is templated in so it targets whichever host is live (dev box or the real
-    domain after deploy)."""
-    f = _WEB_DIR / "install.sh"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="install.sh not bundled")
-    base = get_settings().public_url.rstrip("/")
-    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base), media_type="text/x-shellscript; charset=utf-8")
-
-
-@app.get("/selfhost.sh", include_in_schema=False)
-async def selfhost_sh():
-    """`curl -fsSL {BASE}/selfhost.sh | sh` — run your OWN registry locally, with no account.
-
-    Different from install.sh, which only installs the CLI and points it at THIS server. This one
-    brings up a server on the caller's machine in single-user mode, so they land on a dashboard that
-    is already signed in. Value first, account later."""
-    f = _WEB_DIR / "selfhost.sh"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="selfhost.sh not bundled")
-    base = get_settings().public_url.rstrip("/")
-    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base),
-                             media_type="text/x-shellscript; charset=utf-8")
-
-
-def _serve_md(name: str) -> PlainTextResponse:
-    """Serve a bundled markdown file as inline text (so "open in new tab" shows it, not a download),
-    with the serving domain templated in. Backs the 'copy markdown' buttons on the docs pages."""
-    f = _WEB_DIR / name
-    if not f.exists():
-        raise HTTPException(status_code=404, detail=f"{name} not bundled")
-    base = get_settings().public_url.rstrip("/")
-    return PlainTextResponse(f.read_text(encoding="utf-8").replace("{BASE}", base),
-                             media_type="text/plain; charset=utf-8")
-
-
-@app.get("/quickstart.md", include_in_schema=False)
-async def quickstart_md():
-    """The quick-start as raw markdown — copy it or open it in a tab and use it anywhere."""
-    return _serve_md("quickstart.md")
-
-
-@app.get("/tutorial.md", include_in_schema=False)
-async def tutorial_md():
-    """The full tutorial as raw markdown (mirrors the interactive /tutorial)."""
-    return _serve_md("tutorial.md")
-
-
-@app.get("/tutorial-import-shell.md", include_in_schema=False)
-async def tutorial_import_shell_md():
-    """Focused tutorial: CLI auto-import (`treg upload clis`) + shell mode (`treg shell`) + the
-    local-run security sandbox. Linked from the main tutorial."""
-    return _serve_md("tutorial-import-shell.md")
-
-
-@app.get("/tutorial-access.md", include_in_schema=False)
-async def tutorial_access_md():
-    """Focused tutorial: per-member team access control (which tools a member may use + the local-run
-    toggle). Linked from the main tutorial."""
-    return _serve_md("tutorial-access.md")
-
-
-@app.get("/vendor-listing", include_in_schema=False)
-@app.get("/vendor-listing.md", include_in_schema=False)
-async def vendor_listing_md(request: Request):
-    """Vendor listing instructions — what a vendor's coding agent reads before raising a PR that
-    adds their API to the catalog. Linked from the dashboard's "List your API" modal."""
-    resp = _serve_md("vendor-listing.md")
-    # Two URLs, one document. `text/plain` cannot carry a <link rel=canonical>, so the duplicate is
-    # suppressed with the header equivalent: /vendor-listing is the indexed one (it is what the
-    # sitemap lists), /vendor-listing.md keeps serving agents and stays out of the index.
-    if request.url.path.endswith(".md"):
-        resp.headers["X-Robots-Tag"] = "noindex"
-    return resp
-
-
-@app.get("/integrate.md", include_in_schema=False)
-async def integrate_md():
-    """The BUILDER skill: how to put treg inside your own product and bill your own customers for it.
-
-    Distinct from `skill.md`, which teaches an agent to USE treg. This one is pasted into a builder's
-    repo and pointed at their coding agent, so it leads with the per-customer billing model — the
-    part that changes how the plumbing is written, and therefore has to be read before any of it is.
-    """
-    return _serve_md("integrate.md")
-
-
-@app.get("/skill.md", include_in_schema=False)
-async def skill_md():
-    """The OFFICIAL treg Claude skill (3 personas), {BASE}-templated to this server.
-    install.sh drops it into ~/.claude/skills/treg/ so agents learn treg at CLI install."""
-    return _serve_md("skill.md")
-
-
-@app.get("/favicon.svg", include_in_schema=False)
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    """The ▚ brand mark. Served at both paths so browsers that auto-request /favicon.ico stop 404ing."""
-    ico = _WEB_DIR / "favicon.svg"
-    if not ico.exists():
-        raise HTTPException(status_code=404, detail="favicon not bundled")
-    return FileResponse(ico, media_type="image/svg+xml", headers={"Cache-Control": "max-age=86400"})
-
-
-@app.get("/tutorial.js", include_in_schema=False)
-async def tutorial_js():
-    """The shared interactive-tutorial data + highlighter (window.TREG_TUTORIAL / tregHL).
-    Loaded by both the dashboard Help view and the standalone tutorial page, so they never drift."""
-    js = _WEB_DIR / "tutorial.js"
-    if not js.exists():
-        raise HTTPException(status_code=404, detail="tutorial.js not bundled")
-    # no-cache, like index.html and the landing: the page includes this as a bare `<script
-    # src="/tutorial.js">` with no version query, so without the header a browser keeps serving the
-    # tutorial from before the last deploy until someone hard-refreshes.
-    return FileResponse(js, media_type="application/javascript",
-                        headers={"Cache-Control": "no-cache"})
-
-
-@app.get("/legal.css", include_in_schema=False)
-async def legal_css():
-    """The shared skin for /terms and /privacy (landing-page tokens, one copy)."""
-    f = _WEB_DIR / "legal.css"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="legal.css not bundled")
-    return FileResponse(f, media_type="text/css", headers={"Cache-Control": "no-cache"})
-
-
-def _legal_page(name: str) -> HTMLResponse:
-    page = _WEB_DIR / name
-    if not page.exists():
-        raise HTTPException(status_code=404, detail=f"{name} not bundled")
-    # `{BASE}`-substituted rather than sent as a plain FileResponse, so each page's canonical and
-    # og:url name the host actually serving it. A hardcoded treg.to would tell a self-hosted
-    # registry's crawler that the real page lives on someone else's domain.
-    base = get_settings().public_url.rstrip("/")
-    html = page.read_text(encoding="utf-8").replace("{BASE}", base)
-    # no-cache: a legal page must not be served stale after we publish an update.
-    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
-
-
-@app.get("/terms", include_in_schema=False)
-async def terms_page():
-    """Terms of Service for the HOSTED registry (self-hosted instances are governed by LICENSE)."""
-    return _legal_page("terms.html")
-
-
-@app.get("/privacy", include_in_schema=False)
-async def privacy_page():
-    """Privacy policy. Also the URL given to OAuth providers at app-registration/verification time
-    (Google requires a reachable privacy policy carrying the Limited Use disclosure), so this path
-    is effectively public API — don't rename it without updating the provider consoles."""
-    return _legal_page("privacy.html")
-
-
-@app.get("/adtrack.js", include_in_schema=False)
-async def adtrack_js():
-    """First-party ad-click capture (see the file itself): sets the `treg_ad` cookie that
-    `_ad_attribution_from` reads at signup. No Google script, no third-party request."""
-    headers = {"Cache-Control": "no-cache"}
-    if not adsconv.enabled():
-        # The page keeps one static script include, but an unconfigured/self-hosted deployment must
-        # not collect an advertising cookie at all. A stale cookie is also ignored at signup below.
-        return Response(content="", media_type="application/javascript", headers=headers)
-    f = _WEB_DIR / "adtrack.js"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="adtrack.js not bundled")
-    # no-cache, same reasoning as tutorial.js: served as a bare `<script src="/adtrack.js">` with no
-    # version query, so without this header a browser would keep an ad-window-stale copy after a fix.
-    return FileResponse(f, media_type="application/javascript", headers=headers)
-
-
-@app.get("/resources", include_in_schema=False)
-async def resources_page():
-    """The hub for the outcome pages. It exists for two reasons beyond navigation: without it the
-    `/use-cases/*` pages are orphans that no crawler reaches, and it gives the footer one durable
-    link instead of five that grow every time a page is added."""
-    page = _WEB_DIR / "resources.html"
-    if not page.exists():
-        raise HTTPException(status_code=404, detail="resources.html not bundled")
-    return FileResponse(page, headers={"Cache-Control": "no-cache"})
-
-
-@app.get("/usecase.css", include_in_schema=False)
-async def usecase_css():
-    """The shared skin for /use-cases/* (landing-page tokens, one copy — same deal as legal.css)."""
-    f = _WEB_DIR / "usecase.css"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="usecase.css not bundled")
-    return FileResponse(f, media_type="text/css", headers={"Cache-Control": "no-cache"})
-
-
-@app.get("/use-cases/{slug}", include_in_schema=False)
-async def use_case_page(slug: str):
-    """One outcome page. Unlike the root landing this does NOT redirect a signed-in visitor to
-    /app: these are ad destinations, and bouncing a returning user away from the page they paid
-    to reach would make the campaign data unreadable."""
-    name = _USE_CASES.get(slug.strip("/").lower())
-    if not name:
-        raise HTTPException(status_code=404, detail="unknown use case")
-    page = _WEB_DIR / name
-    if not page.exists():
-        raise HTTPException(status_code=404, detail=f"{name} not bundled")
-    # no-cache: these are edited against live campaign data and must never serve stale.
-    return FileResponse(page, headers={"Cache-Control": "no-cache"})
-
+# Register the moved site routes at their original position.
+router.routes.extend(web_routes.site_router.routes)
 
 class OAuthClientRegistration(BaseModel):
     """RFC 7591 registration request. Extra fields are ignored rather than refused — clients send
@@ -3527,69 +1590,6 @@ def _consent_page(*, client_name: str, client_uri: str, user_email: str, teams: 
         f"</div></form>{warn}"
         f'<p class="fine">You can revoke this at any time from your treg dashboard.</p>'
         f"</div></div></body></html>")
-
-
-OAUTH_RETURN_COOKIE = "treg_oauth_return"
-
-
-def _remember_oauth_return(resp, request: Request) -> None:
-    """Park where to come back to after the user signs in.
-
-    A RELATIVE path, deliberately — never a full URL. A stored absolute URL would have to be
-    validated against our own origin before being redirected to, and getting that check subtly wrong
-    is how open redirects happen. A path cannot leave the site.
-
-    Short-lived: this is a detour of seconds, and a stale one would silently hijack the next sign-in.
-    """
-    target = request.url.path + (f"?{request.url.query}" if request.url.query else "")
-    resp.set_cookie(OAUTH_RETURN_COOKIE, target, httponly=True, samesite="lax",
-                    secure=_is_https(request), max_age=600)
-
-
-def _take_oauth_return(request: Request) -> str | None:
-    """The parked destination, if it is one we actually park — else None.
-
-    Only `/oauth/authorize` is honoured. Accepting any path would turn this cookie into a general
-    "redirect me anywhere after login" primitive, which is a phishing aid rather than a feature.
-    """
-    # Starlette quotes a cookie value containing separators, and not every client strips the quotes
-    # back off. Tolerating them here costs nothing; assuming they are absent cost a failing test and
-    # would have cost a silently-dropped authorization in production.
-    target = (request.cookies.get(OAUTH_RETURN_COOKIE) or "").strip('"')
-    return target if target.startswith("/oauth/authorize?") else None
-
-
-REFERRAL_COOKIE = "treg_ref"
-# A month. The gap between clicking a friend's link and actually creating a team is measured in days
-# for the people this program is for — they read the landing, think about it, and come back. Shorter
-# would silently drop the referrals that took the longest to convert, which are exactly the genuine
-# ones; much longer would keep attributing a signup to a link somebody forgot they ever clicked.
-REFERRAL_COOKIE_MAX_AGE = 30 * 24 * 3600
-
-
-def _remember_referral(resp, request: Request, code: str) -> None:
-    """Park a referral code from `/?ref=…` until the visitor creates their first team.
-
-    Same shape as `_remember_oauth_return`: httponly (no script needs it), `samesite=lax` so it
-    survives the click through to a GitHub/Google sign-in and back, and `secure` only when we are
-    actually on HTTPS so local development still works.
-
-    First code wins is NOT enforced here — the cookie is simply overwritten. Someone who clicks two
-    different referral links before signing up gets attributed to the second, which is both the
-    normal advertising convention (last touch) and the one that needs no extra state.
-    """
-    resp.set_cookie(REFERRAL_COOKIE, code, httponly=True, samesite="lax",
-                    secure=_is_https(request), max_age=REFERRAL_COOKIE_MAX_AGE)
-
-
-def _take_referral(request: Request) -> str:
-    """The parked code, revalidated. "" when there is none or it is not a shape we ever mint.
-
-    Validated on READ as well as on write, exactly like `_take_oauth_return`: a cookie is
-    attacker-supplied, and this value reaches a database query. `normalize_code` is a strict
-    allowlist, so anything odd becomes "" and the signup simply proceeds unreferred.
-    """
-    return referrals.normalize_code((request.cookies.get(REFERRAL_COOKIE) or "").strip('"'))
 
 
 def _wrong_resource(resource: str) -> str | None:
@@ -4013,229 +2013,10 @@ async def openai_apps_challenge():
     return PlainTextResponse(token, headers={"Cache-Control": "no-store"})
 
 
-def _skill_frontmatter() -> dict[str, str]:
-    """The bundled skill's frontmatter, read at request time rather than duplicated in code — the
-    description is what drives discovery in every registry, and a second copy of it would drift."""
-    f = _WEB_DIR / "skill.md"
-    if not f.exists():
-        raise HTTPException(status_code=404, detail="skill.md not bundled")
-    text = f.read_text(encoding="utf-8")
-    if not text.startswith("---"):
-        raise HTTPException(status_code=404, detail="skill.md has no frontmatter")
-    out: dict[str, str] = {}
-    for line in text.split("---", 2)[1].strip().splitlines():
-        key, _, value = line.partition(":")
-        out[key.strip()] = value.strip()
-    return out
-
-
-@app.get("/.well-known/skills/index.json", include_in_schema=False)
-async def well_known_skills_index():
-    """Advertise treg's own skill under the agentskills.io well-known convention.
-
-    This makes THIS host a first-class skill source: an agent that supports the standard can install
-    treg from treg.to directly, with no directory, no review queue and no third party in the middle
-    — the same skill the plugins ship and `install.sh` drops, reached by whoever asks the domain.
-    """
-    fm = _skill_frontmatter()
-    return JSONResponse({"skills": [{
-        "name": fm.get("name", "treg"),
-        "description": fm.get("description", ""),
-        "files": ["SKILL.md"],
-    }]})
-
-
-@app.get("/.well-known/skills/treg/SKILL.md", include_in_schema=False)
-async def well_known_skill_md():
-    """The skill itself, at the path `index.json` promises. Deliberately the same `_serve_md` the
-    canonical `/skill.md` uses, so `{BASE}` is templated to the serving host here too — a self-hosted
-    registry advertises ITSELF, not treg.to."""
-    return _serve_md("skill.md")
-
-
-@app.get("/connect-demo", include_in_schema=False)
-async def connect_demo_page():
-    """A page that PRETENDS to be someone else's app, so the OAuth flow can be seen end to end.
-
-    It uses only public endpoints — register, authorize, token, revoke, and /mcp/ — with nothing
-    privileged about being served from treg's own domain. The point is to watch the whole dance in a
-    browser before trusting it inside ChatGPT, where a failure surfaces as a shrug rather than an
-    error message.
-    """
-    return _legal_page("connect-demo.html")
-
-
-@app.get("/connect-demo/callback", include_in_schema=False)
-async def connect_demo_callback():
-    """Where treg sends the browser back. Hands the code to the opener and closes."""
-    return _legal_page("connect-demo-callback.html")
-
-
-@app.get("/support", include_in_schema=False)
-@app.get("/contact", include_in_schema=False)
-@app.get("/help", include_in_schema=False)
-async def support_page():
-    """How to get help. Three paths for one page because people guess differently, and because a
-    plugin-directory listing must give a Support URL that resolves — a 404 there reads as an
-    abandoned product. Like `/privacy`, this path is effectively public API once it is filed with a
-    directory or an OAuth console: don't rename it without updating them."""
-    return _legal_page("support.html")
-
-
-@app.get("/tutorial", include_in_schema=False)
-async def tutorial_page():
-    """Standalone shareable interactive tutorial (same STEPS[] as the dashboard Help view)."""
-    page = _WEB_DIR / "tutorial.html"
-    if not page.exists():
-        return HTMLResponse("<h3>Tutorial not bundled.</h3>")
-    # Stamp the tutorial.js URL with the bundle version. `no-cache` alone is not enough: a browser
-    # that cached the file BEFORE that header existed applies a heuristic lifetime and never
-    # revalidates, so an edited tutorial silently keeps serving the old steps (cost an hour to find).
-    js = _WEB_DIR / "tutorial.js"
-    stamp = int(js.stat().st_mtime) if js.exists() else 0   # tutorial.js's OWN mtime: _app_version()
-    html = page.read_text(encoding="utf-8").replace(       # hashes index.html and would not move
-        'src="/tutorial.js"', f'src="/tutorial.js?v={stamp}"')
-    html = html.replace("{BASE}", get_settings().public_url.rstrip("/"))  # canonical + og:url
-    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
-
-
-# Provider logos, resolved by convention: /logos/<service>.svg, matching `service` in
-# oauth_providers.py. Keyed off the name the registry already has, so adding a provider needs no
-# second registration step — drop the file in and it appears. Public and unauthenticated: they are
-# brand marks, not data, and the dashboard renders them before the caller is known.
-_LOGO_DIR = _WEB_DIR / "logos"
-if _LOGO_DIR.exists():
-    app.mount("/logos", StaticFiles(directory=str(_LOGO_DIR)), name="logos")
-
-
-# Demo recordings — the plugin-directory submission requires a publicly reachable video URL, and
-# hosting it ourselves means no third-party account decides whether reviewers can watch it.
-_MEDIA_DIR = _WEB_DIR / "media"
-if _MEDIA_DIR.exists():
-    app.mount("/media", StaticFiles(directory=str(_MEDIA_DIR)), name="media")
-
-
-# The interactive dashboard tour (matted screenshots) — served + its WebP images, at /dashboard-tour/.
-_TOUR_DIR = _WEB_DIR / "tour"
-if _TOUR_DIR.exists():
-    app.mount("/dashboard-tour", StaticFiles(directory=str(_TOUR_DIR), html=True), name="dashboard-tour")
-
-
-# Third-party front-end libraries, vendored rather than pulled from a CDN at page load. The
-# dashboard is a single hand-written Vue file with no bundler, so Vue arrives as a plain <script>
-# — and while that script came from unpkg.com, any network that cannot reach unpkg rendered the
-# signed-in dashboard as a blank page (issue #137: a mainland-China visitor, ERR_CONNECTION_CLOSED,
-# then `Vue is not defined`). Serving it ourselves means the dashboard depends on exactly one
-# origin: whoever served the page can serve its runtime. It also closes the supply-chain hole in
-# the old floating `vue@3` tag, which let whatever npm published next run in an authed session.
-# Filenames carry their version, so a bump is a visible one-line change and caches never collide.
-class _ImmutableStatic(StaticFiles):
-    """StaticFiles that says out loud what its filenames already promise.
-
-    Every file here is version-stamped, so a given URL's bytes never change — a new version is a
-    new URL. Without the header a browser still caches, but heuristically, on its own guess; being
-    explicit means a returning visitor re-fetches nothing and a bump is picked up instantly.
-    """
-    def file_response(self, *args, **kwargs):
-        resp = super().file_response(*args, **kwargs)
-        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-        return resp
-
-
-_VENDOR_DIR = _WEB_DIR / "vendor"
-if _VENDOR_DIR.exists():
-    app.mount("/vendor", _ImmutableStatic(directory=str(_VENDOR_DIR)), name="vendor")
-
+# Register the moved public-document routes at their original position.
+router.routes.extend(web_routes.public_docs_router.routes)
 
 # ---- caller auth (token = a Membership; open registration) --------------------------------
-@dataclass
-class Caller:
-    """The resolved caller: their membership (org + role + token), identity, and org row.
-    A token identifies a (user, org) pair, so `org_id`/`email`/`role` all come from here.
-    """
-
-    membership: Membership
-    user: User
-    org: Org
-
-    @property
-    def org_id(self) -> int:
-        return self.membership.org_id
-
-    @property
-    def email(self) -> str:
-        return self.user.email
-
-    @property
-    def role(self) -> str:
-        return self.membership.role
-
-
-async def _membership_by_token(token: str, db: AsyncSession) -> Membership | None:
-    if not token:
-        return None
-    return (
-        await db.execute(select(Membership).where(Membership.token_hash == crypto.hash_token(token)))
-    ).scalar_one_or_none()
-
-
-async def _user_from_session(cookie: str, db: AsyncSession) -> User | None:
-    claims = sess.read_claims(cookie)
-    if claims is None:
-        return None
-    user = await db.get(User, claims["uid"])
-    if user is None or user.suspended or claims["tv"] != user.token_version:  # revoked = tv mismatch
-        return None
-    return user
-
-
-async def _resolve_org(ref: str, db: AsyncSession) -> Org | None:
-    """Resolve an X-Treg-Org header (a slug, or a numeric id) to an Org. Slug wins first: an
-    all-digit slug is producible (`_slugify("2024") == "2024"`), so an id-first lookup would
-    reinterpret a member's own slug as a primary key and lock them out of their org."""
-    if not ref:
-        return None
-    by_slug = (await db.execute(select(Org).where(Org.slug == ref))).scalar_one_or_none()
-    if by_slug is not None:
-        return by_slug
-    # int() of a huge all-digit ref would overflow SQLite's 64-bit INTEGER → 500 inside the auth
-    # dependency; bound it so an out-of-range X-Treg-Org just falls through to the 400.
-    return await db.get(Org, int(ref)) if (ref.isdigit() and int(ref) < 2**63) else None
-
-
-async def require_identity(
-    x_treg_token: str = Header(default=""),
-    treg_session: str = Cookie(default=""),
-    db: AsyncSession = Depends(get_session),
-) -> User:
-    """Just *who* the caller is (no org): a token's user, or a session user. 401 otherwise."""
-    if x_treg_token:
-        m = await _membership_by_token(x_treg_token, db)
-        if m is not None:
-            # A published public-demo token must never act as a USER — user-level endpoints mint
-            # identity tokens (/auth/cli-token), create real orgs, and accept invites, all of which
-            # would let a stranger escape the demo org. Admin+ (the real operator) is exempt.
-            org = await db.get(Org, m.org_id)
-            if org is not None and org.public_demo and not _role_at_least(m.role, "admin"):
-                raise HTTPException(status_code=403, detail=(
-                    "this is a public demo token — it can only call the demo team's tools"))
-        user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
-        # A machine token must never act as a USER. `create_org` depends on THIS dependency, so an
-        # agent could otherwise create a fresh org in which it is the OWNER — and owners are exempt
-        # from `_require_tool_access` and `_require_local_run`, escaping every limit set on it.
-        if user is not None and _is_machine_email(user.email):
-            raise HTTPException(status_code=403, detail=(
-                "this token belongs to a machine identity — it can call this team's tools, "
-                "but cannot act as a user"))
-        if user is not None and not user.suspended:
-            return user
-        raise HTTPException(status_code=401, detail="invalid token")
-    user = await _user_from_session(treg_session, db)
-    if user is not None:
-        return user
-    raise HTTPException(status_code=401, detail="not authenticated")
-
-
 @app.get("/auth/cli-token")
 async def auth_cli_token(
     user: User = Depends(require_identity),
@@ -4284,93 +2065,6 @@ async def auth_revoke_tokens(
     resp.set_cookie(sess.COOKIE, sess.make(user.id, token_version=user.token_version), httponly=True,
                     samesite="lax", secure=_is_https(request), max_age=sess.TTL_SECONDS)
     return resp
-
-
-async def _user_from_identity_token(token: str, db: AsyncSession) -> User | None:
-    """A signed identity token (from `treg login`) — same format as the session cookie, sent as a
-    bearer by the CLI. Returns the user if valid + not suspended."""
-    claims = sess.read_claims(token)
-    if claims is None:
-        return None
-    user = await db.get(User, claims["uid"])
-    if user is None or user.suspended or claims["tv"] != user.token_version:  # revoked = tv mismatch
-        return None
-    return user
-
-
-async def require_member(
-    request: Request,
-    x_treg_token: str = Header(default=""),
-    x_treg_org: str = Header(default=""),
-    treg_session: str = Cookie(default=""),
-    db: AsyncSession = Depends(get_session),
-) -> Caller:
-    """A caller acting in a specific org. Two ways in:
-    - **token** (agents/CLI): the token IS a membership, so the org is baked in.
-    - **session** (dashboard): the cookie identifies the user; the org is chosen via `X-Treg-Org`.
-    """
-    membership = await _membership_by_token(x_treg_token, db) if x_treg_token else None
-    if membership is not None:  # per-org token — the org is baked in
-        user = await db.get(User, membership.user_id)
-        org = await db.get(Org, membership.org_id)
-    else:
-        # identity token (CLI `treg login`) or a browser session — pick the org via X-Treg-Org
-        user = (await _user_from_identity_token(x_treg_token, db)) if x_treg_token else await _user_from_session(treg_session, db)
-        if user is None:
-            raise HTTPException(status_code=401, detail="invalid token" if x_treg_token else "not authenticated")
-        # The X-Treg-Org header wins; a team-pinned identity token (org baked into its claim) is the
-        # fallback, so a copyable "API key" resolves as a BARE bearer where no header can travel — an
-        # MCP server's Authorization. The header still overrides, so one token can act on another team
-        # when the caller can set it (the CLI does). Only the token owner could sign it, so trusting
-        # its own org claim grants nothing they could not already reach.
-        org_ref = x_treg_org or ((sess.read_claims(x_treg_token) or {}).get("org", "") if x_treg_token else "")
-        org = await _resolve_org(org_ref, db)
-        if org is None:
-            raise HTTPException(status_code=400, detail="choose an org (send X-Treg-Org)")
-        membership = (
-            await db.execute(
-                select(Membership).where(Membership.user_id == user.id, Membership.org_id == org.id)
-            )
-        ).scalar_one_or_none()
-        if membership is None:
-            raise HTTPException(status_code=403, detail="not a member of this org")
-    if user is None or org is None:
-        raise HTTPException(status_code=401, detail="invalid token")
-    if user.suspended:
-        raise HTTPException(status_code=403, detail="account suspended")
-    if org.suspended:
-        raise HTTPException(status_code=403, detail="org suspended")
-    # Public-demo lockdown: the published token (non-admin roles) may ONLY call tools and read.
-    # Centralized here — not per-endpoint — so every mutation (tools, secrets, skills, members,
-    # leave, runs) is frozen no matter what routes are added later. Admin+ keeps full control.
-    if org.public_demo and not _role_at_least(membership.role, "admin"):
-        if not (request.url.path.startswith("/call/") or request.method in ("GET", "HEAD", "OPTIONS")):
-            raise HTTPException(status_code=403, detail=(
-                "this is a public demo team — its token can only call tools and read"))
-    return Caller(membership=membership, user=user, org=org)
-
-
-async def require_superadmin(
-    x_treg_token: str = Header(default=""),
-    treg_session: str = Cookie(default=""),
-    db: AsyncSession = Depends(get_session),
-) -> str:
-    """Cross-tenant gate for /admin/*. Authorized by the env admin token, a token whose user is
-    is_superadmin, OR a session whose user is is_superadmin. Returns a principal (for audit)."""
-    admin = get_settings().admin_token
-    if x_treg_token and admin and hmac.compare_digest(x_treg_token, admin):
-        return "env-admin"
-    user: User | None = None
-    if x_treg_token:
-        m = await _membership_by_token(x_treg_token, db)
-        user = await db.get(User, m.user_id) if m else await _user_from_identity_token(x_treg_token, db)
-    else:
-        user = await _user_from_session(treg_session, db)
-    if user is not None and user.is_superadmin and not user.suspended:
-        return user.email
-    if not x_treg_token and not treg_session:  # nothing presented → not authenticated
-        raise HTTPException(status_code=401, detail="not authenticated")
-    raise HTTPException(status_code=403, detail="super-admin required")
 
 
 async def _is_last_active_superadmin(db: AsyncSession, target: User) -> bool:
@@ -4439,10 +2133,6 @@ async def _cascade_delete_org(org: Org, db: AsyncSession) -> None:
             await db.delete(r)
         await db.flush()   # honour the ordering above rather than leaving it to the unit of work
     await db.delete(org)
-
-
-def _role_at_least(role: str, minimum: str) -> bool:
-    return ROLE_RANK.get(role, -1) >= ROLE_RANK.get(minimum, 99)
 
 
 def _can_manage(caller: Caller, resource) -> bool:
@@ -4779,13 +2469,6 @@ def _slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-") or "org"
 
 
-def _norm_email(email: str) -> str:
-    """Canonical email identity: trimmed + lowercased. One human = one identity regardless of the
-    case they type. Applied at every identity door + every invite comparison so `Bob@X.com` and
-    `bob@x.com` never fork into two users / two orgs and an invite is always redeemable."""
-    return email.strip().lower()
-
-
 async def _unique_slug(base: str, db: AsyncSession) -> str:
     slug, i = base, 2
     while (await db.execute(select(Org).where(Org.slug == slug))).scalar_one_or_none() is not None:
@@ -4887,6 +2570,30 @@ def _ad_attribution_from(request: Request) -> tuple[str, str, str]:
     return click_field, click_id.strip()[:255], landing.strip()[:64]
 
 
+_UTM_FIELDS = ("utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_referrer")
+
+
+def _utm_attribution_from(request: Request) -> dict[str, str]:
+    """First-touch traffic source from the `treg_utm` cookie (set by web/sitetrack.js):
+    `source|medium|campaign|term|content|referring-host`, URL-encoded. Missing/short cookies yield
+    fewer fields; anything unparseable yields nothing. Values are capped so a hostile cookie cannot
+    bloat the row."""
+    raw = request.cookies.get("treg_utm") or ""
+    if not raw:
+        return {}
+    parts = [p.strip()[:100] for p in unquote(raw).split("|")]
+    out = {k: v for k, v in zip(_UTM_FIELDS, parts) if v}
+    return out
+
+
+def _stamp_utm(org: Org, request: Request) -> None:
+    """Persist the first-touch source on a brand-new team. Independent of the Google-Ads `treg_ad`
+    path: a sponsor link or a newsletter has no click id, and this is what lets us count its
+    signups. Called from both signup doors, like `_ad_attribution_from`."""
+    for k, v in _utm_attribution_from(request).items():
+        setattr(org, k, v)
+
+
 # ---- users (open registration; personal org + owner membership; token shown once) ---------
 @app.post("/users")
 async def register_user(body: UserIn, request: Request, db: AsyncSession = Depends(get_session)) -> dict:
@@ -4913,6 +2620,8 @@ async def register_user(body: UserIn, request: Request, db: AsyncSession = Depen
         org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
                                             # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
         db.add(org)
+    _stamp_utm(org, request)
+    db.add(org)
     try:
         await db.commit()
     except IntegrityError:
@@ -4937,18 +2646,10 @@ def _require_owner_of(org_id: int, caller: Caller) -> None:
         raise HTTPException(status_code=403, detail="owner role in this org is required")
 
 
-def _utcnow_naive() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
-
-
 def _now_ms() -> int:
     """A monotonic millisecond stamp for measuring a call's duration — never the wall clock, which can
     step backwards (NTP) and produce a negative latency."""
     return int(time.monotonic() * 1000)
-
-
-def _as_naive(dt: datetime | None) -> datetime | None:
-    return dt.replace(tzinfo=None) if (dt is not None and dt.tzinfo is not None) else dt
 
 
 async def _count_owners(org_id: int, db: AsyncSession) -> int:
@@ -4987,6 +2688,8 @@ async def create_org(
             org.ad_click_at = _utcnow_naive()  # naive UTC: asyncpg rejects tz-aware into a
                                                 # TIMESTAMP WITHOUT TIME ZONE column (see models._now).
             db.add(org)
+        _stamp_utm(org, request)
+        db.add(org)
         try:
             await db.commit()
             break
@@ -6412,20 +4115,9 @@ async def delete_org(
 # Both are Users on an UNROUTABLE domain, which is what makes them machines rather than people: no
 # login door can ever resolve one (guarded in `_find_or_create_user`) and neither may act as a USER
 # (guarded in `require_identity`). Everything else they inherit from Membership for free.
-PUBLIC_DEMO_DOMAIN = "public-demo.treg.local"  # unroutable — the public identity can never log in
 # NOTE: "agent" here is an IDENTITY — a coding agent / automation that calls treg. It is NOT the
 # skill-directory table in `agents.py` (which answers "where does each coding agent keep its skills").
 # The words collide, the concepts don't; kept apart deliberately.
-AGENT_DOMAIN = "agents.treg.local"  # unroutable — an agent acts only by its token
-
-
-def _is_agent_email(email: str) -> bool:
-    return _norm_email(email).endswith(f"@{AGENT_DOMAIN}")
-
-
-def _is_machine_email(email: str) -> bool:
-    """An identity minted by an admin for a machine — never a person who can sign in."""
-    return _is_agent_email(email) or _norm_email(email).endswith(f"@{PUBLIC_DEMO_DOMAIN}")
 
 
 def _public_demo_email(org: Org) -> str:
@@ -8128,6 +5820,14 @@ def _provider_bindings(provider, secret: Secret) -> list[dict]:
             "secret_id": secret.id, "injector": "oauth", "location": "header",
             "name": "Authorization", "format": "Bearer {secret}", "secret_field": "access_token",
         }]
+    # A provider-required protocol header is a constant-format binding over the same encrypted
+    # secret reference. `format` deliberately contains no {secret}: the existing injector stamps
+    # the literal value after caller headers are copied, so a caller cannot accidentally select a
+    # different API version. The relay remains provider-blind.
+    source = {k: v for k, v in bindings[0].items()
+              if k in ("secret_id", "platform_setting", "injector", "secret_field")}
+    bindings.extend({**source, "location": "header", "name": name, "format": value}
+                    for name, value in provider.required_headers)
     if provider.needs_extra_credential and provider.extra_credential_is_platform:
         bindings.append({
             "platform_setting": provider.extra_credential_setting, "injector": "env",
@@ -8766,6 +6466,7 @@ async def connect_with_token(
         headers, params = {}, {provider.token_param: rendered}
     else:
         headers, params = {provider.token_header: rendered}, {}
+    headers.update(dict(provider.required_headers))
     probe_url = provider.probe_url or f"{provider.base_url.rstrip('/')}{provider.probe_path}"
     # httpx REPLACES a URL's own query string when `params=` is passed, so a probe_path like
     # `/autocomplete?field=title&text=data` (PDL, Akta, JustOneAPI, SpyFu) silently lost its required
@@ -8994,261 +6695,8 @@ class BoolIn(BaseModel):
     value: bool = True
 
 
-def _tally(items) -> dict:
-    d: dict[str, int] = {}
-    for k in items:
-        d[k] = d.get(k, 0) + 1
-    return d
-
-
-@app.get("/admin/stats")
-async def admin_stats(_: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session)) -> dict:
-    async def n(model) -> int:
-        return (await db.execute(select(func.count()).select_from(model))).scalar() or 0
-
-    tools = (await db.execute(select(Tool))).scalars().all()
-    secrets = (await db.execute(select(Secret))).scalars().all()
-    # THREE COLUMNS, not the whole row. This is an unbounded read of the largest table in the
-    # database (tens of thousands of rows), and every one of them was being materialised as a full
-    # ORM object to count three fields. It matters more now that `callrecord` carries the failure
-    # evidence columns, which are wide and are read by nothing here.
-    calls = (await db.execute(
-        select(CallRecord.org_id, CallRecord.created_at, CallRecord.status_code))).all()
-    users = (await db.execute(select(User))).scalars().all()
-    orgs = (await db.execute(select(Org))).scalars().all()
-    # Sandbox onboarding data isn't real platform usage — exclude the demo footprint from totals so
-    # metrics stay honest (fake teammates, demo teams, and everything scoped to them).
-    demo_org_ids = {o.id for o in orgs if o.demo}
-    users = [u for u in users if not u.demo]
-    orgs = [o for o in orgs if not o.demo]
-    tools = [t for t in tools if t.org_id not in demo_org_ids]
-    secrets = [s for s in secrets if s.org_id not in demo_org_ids]
-    calls = [c for c in calls if c.org_id not in demo_org_ids]
-    now = _utcnow_naive()
-
-    def since(rows, days, pred=lambda r: True):
-        cut = now - timedelta(days=days)
-        return sum(1 for r in rows if _as_naive(r.created_at) >= cut and pred(r))
-
-    ok = sum(1 for c in calls if c.status_code < 400)
-    return {
-        "totals": {
-            "users": len(users), "orgs": len(orgs), "tools": len(tools),
-            "secrets": len(secrets), "bundles": await n(Bundle), "calls": len(calls),
-            "superadmins": sum(1 for u in users if u.is_superadmin),
-            "suspended_orgs": sum(1 for o in orgs if o.suspended),
-        },
-        "tools_by_injector": _tally(b.get("injector", "?") for t in tools for b in t.bindings),
-        "tools_by_host": _tally(t.host for t in tools),
-        "credential_health": _tally(s.health_status for s in secrets),
-        "calls": {
-            "last_7d": since(calls, 7), "last_30d": since(calls, 30), "total": len(calls),
-            "success_rate": round(ok / len(calls), 3) if calls else None,
-        },
-        "growth": {
-            "new_users_7d": since(users, 7), "new_users_30d": since(users, 30),
-            "new_orgs_7d": since(orgs, 7), "new_orgs_30d": since(orgs, 30),
-        },
-    }
-
-
-@app.get("/admin/orgs")
-async def admin_orgs(_: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session)) -> list[dict]:
-    orgs = (await db.execute(select(Org))).scalars().all()
-
-    async def _counts(model) -> dict[int, int]:  # one grouped COUNT instead of one-per-org (was O(orgs) queries)
-        rows = await db.execute(select(model.org_id, func.count()).group_by(model.org_id))
-        return {oid: n for oid, n in rows.all()}
-
-    mems: dict[int, list] = {}
-    for m in (await db.execute(select(Membership))).scalars().all():
-        mems.setdefault(m.org_id, []).append(m)
-    tool_n, secret_n, bundle_n = await _counts(Tool), await _counts(Secret), await _counts(Bundle)
-    # Was 1 + 4N serial queries (401 at 100 orgs); now a constant ~4 regardless of tenant count.
-    return [
-        {
-            "id": o.id, "slug": o.slug, "name": o.name, "suspended": o.suspended,
-            "members": len(mems.get(o.id, [])), "roles": _tally(m.role for m in mems.get(o.id, [])),
-            "tools": tool_n.get(o.id, 0), "secrets": secret_n.get(o.id, 0), "bundles": bundle_n.get(o.id, 0),
-            "created_at": o.created_at.isoformat(),
-        }
-        for o in orgs
-    ]
-
-
-@app.get("/admin/orgs/{org_id}")
-async def admin_org_detail(
-    org_id: int, _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session)
-) -> dict:
-    org = await db.get(Org, org_id)
-    if org is None:
-        raise HTTPException(status_code=404, detail="org not found")
-    mem = (await db.execute(select(Membership).where(Membership.org_id == org_id))).scalars().all()
-    umap = {u.id: u for u in (await db.execute(
-        select(User).where(User.id.in_([m.user_id for m in mem]))
-    )).scalars().all()}  # batched (was one db.get per member)
-    members = [{"user_id": m.user_id, "email": umap[m.user_id].email if m.user_id in umap else None, "role": m.role}
-               for m in mem]
-    tools = (await db.execute(select(Tool).where(Tool.org_id == org_id))).scalars().all()
-    secrets = (await db.execute(select(Secret).where(Secret.org_id == org_id))).scalars().all()
-    recent = (
-        await db.execute(select(CallRecord).where(CallRecord.org_id == org_id).order_by(CallRecord.id.desc()).limit(20))
-    ).scalars().all()
-    return {
-        "id": org.id, "slug": org.slug, "name": org.name, "suspended": org.suspended,
-        "members": members,
-        "tools": [{"id": t.id, "name": t.name, "host": t.host, "owner": t.owner,
-                   "injectors": [b.get("injector") for b in t.bindings]} for t in tools],
-        "secrets": [{"id": s.id, "name": s.name, "kind": s.kind, "health": s.health_status, "owner": s.owner} for s in secrets],
-        "recent_calls": [{"tool": c.tool_name, "method": c.method, "status": c.status_code,
-                          "user": c.user_email, "at": c.created_at.isoformat()} for c in recent],
-    }
-
-
-@app.get("/admin/users")
-async def admin_users(_: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session)) -> list[dict]:
-    users = (await db.execute(select(User))).scalars().all()
-    mems_by_user: dict[int, list] = {}  # all memberships in one query, grouped (was one query per user)
-    for m in (await db.execute(select(Membership))).scalars().all():
-        mems_by_user.setdefault(m.user_id, []).append(m)
-    omap = {o.id: o for o in (await db.execute(  # all referenced orgs in one query (was one db.get per membership)
-        select(Org).where(Org.id.in_({m.org_id for ms in mems_by_user.values() for m in ms}))
-    )).scalars().all()}
-    return [
-        {
-            "id": u.id, "email": u.email, "is_superadmin": u.is_superadmin, "suspended": u.suspended,
-            "orgs": [{"slug": omap[m.org_id].slug if m.org_id in omap else None, "role": m.role}
-                     for m in mems_by_user.get(u.id, [])],
-            "created_at": u.created_at.isoformat(),
-        }
-        for u in users
-    ]
-
-
-@app.get("/admin/tools")
-async def admin_tools(_: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session)) -> list[dict]:
-    tools = (await db.execute(select(Tool))).scalars().all()
-    omap = {o.id: o for o in (await db.execute(  # batched (was one db.get per tool)
-        select(Org).where(Org.id.in_({t.org_id for t in tools}))
-    )).scalars().all()}
-    return [{"id": t.id, "name": t.name, "org": omap[t.org_id].slug if t.org_id in omap else None,
-             "host": t.host, "owner": t.owner, "injectors": [b.get("injector") for b in t.bindings]} for t in tools]
-
-
-@app.get("/admin/calls")
-async def admin_calls(
-    limit: int = 50, _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session)
-) -> list[dict]:
-    limit = max(1, min(limit, 1000))
-    rows = (await db.execute(select(CallRecord).order_by(CallRecord.id.desc()).limit(limit))).scalars().all()
-    return [{"id": c.id, "org_id": c.org_id, "user": c.user_email, "tool": c.tool_name,
-             "method": c.method, "status": c.status_code, "at": c.created_at.isoformat()} for c in rows]
-
-
-_ERROR_EVIDENCE_TTL_DAYS = 14
-_ERROR_EVIDENCE_EXPIRED = "<expired>"
-
-
-@app.get("/admin/errors")
-async def admin_errors(
-    days: int = 7, limit: int = 100, provider: str | None = None, status: int | None = None,
-    tier: str | None = None,
-    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
-) -> dict:
-    """Failed calls with the evidence to explain them — the caller's request and the provider's own
-    answer (see models.CallRecord.error_request).
-
-    Superadmin-only and deliberately not mirrored on `/calls`: the rows hold customers' request
-    content, so v1 keeps them behind the same door as every other cross-tenant view.
-
-    Ageing happens HERE rather than on the request path. There is no scheduler in this app by design
-    (see the comment above `_claim_idempotent`), and the obvious lazy hook — a marker written on the
-    request session — cannot work: `get_session` never commits, so the marker would roll back and the
-    purge would then run on every single failed call. Doing it on this route costs one UPDATE to the
-    person who came to read errors, which is exactly who wants the stale ones gone.
-    """
-    purged = await _purge_expired_error_evidence()
-    since = _utcnow_naive() - timedelta(days=max(1, min(days, 90)))
-    q = (select(CallRecord)
-         .where(CallRecord.created_at >= since,
-                or_(CallRecord.error_request.is_not(None), CallRecord.error_response.is_not(None)))
-         .order_by(CallRecord.id.desc()).limit(max(1, min(limit, 500))))
-    if provider:
-        q = q.where(CallRecord.provider == provider)
-    if status is not None:
-        q = q.where(CallRecord.status_code == status)
-    if tier is not None:
-        q = q.where(CallRecord.credential_tier.is_(None) if tier == ""
-                    else CallRecord.credential_tier == tier)
-    rows = (await db.execute(q)).scalars().all()
-    omap = {o.id: o for o in (await db.execute(
-        select(Org).where(Org.id.in_({c.org_id for c in rows if c.org_id is not None})))).scalars().all()}
-    return {
-        "since": since.isoformat(), "days": days, "retention_days": _ERROR_EVIDENCE_TTL_DAYS,
-        "expired_rows_purged": purged,
-        "errors": [{
-            "id": c.id, "call_ref": c.call_ref, "at": c.created_at.isoformat(),
-            "org": omap[c.org_id].slug if c.org_id in omap else None,
-            # `method` is already on the row and is the whole diagnosis for a real failure class:
-            # 47 of apollo.people.enrich's failures were a GET at a POST endpoint. Omitting a field
-            # we already store, in the view built to explain failures, was a free loss.
-            "endpoint_id": c.endpoint_id, "provider": c.provider, "tier": c.credential_tier,
-            "status": c.status_code,
-            "method": c.method, "refused_by": c.refused_by, "duration_ms": c.duration_ms,
-            # An aged-out row holds the sentinel, which is a STATE, not content. Returning it as the
-            # request/response would have a reader treat the word `<expired>` as the provider's
-            # answer; `expired` says the same thing without pretending to be evidence.
-            "request": None if c.error_request == _ERROR_EVIDENCE_EXPIRED else c.error_request,
-            "response": None if c.error_response == _ERROR_EVIDENCE_EXPIRED else c.error_response,
-            "expired": c.error_response == _ERROR_EVIDENCE_EXPIRED,
-        } for c in rows],
-    }
-
-
-async def _purge_expired_error_evidence() -> int:
-    """Blank the evidence columns past the retention window; returns how many rows were cleared.
-
-    An UPDATE, not a DELETE: `callrecord` is the audit trail and the rest of the row must survive.
-    The sentinel rather than NULL keeps "captured, then aged out" distinguishable from "never
-    captured" — without it an old failure and a successful call look identical. Runs on its own
-    session because the request's session is not committed for us.
-    """
-    cutoff = _utcnow_naive() - timedelta(days=_ERROR_EVIDENCE_TTL_DAYS)
-    try:
-        async with session_maker() as db:
-            result = await db.execute(
-                update(CallRecord)
-                # `coalesce`, not a bare `!=`: SQL three-valued logic makes `error_response !=
-                # '<expired>'` UNKNOWN when that column is NULL, so a row carrying request-only
-                # evidence would never age out — excluded by the very predicate meant only to skip
-                # rows already purged.
-                .where(CallRecord.created_at < cutoff,
-                       or_(CallRecord.error_request.is_not(None),
-                           CallRecord.error_response.is_not(None)),
-                       or_(func.coalesce(CallRecord.error_request, "") != _ERROR_EVIDENCE_EXPIRED,
-                           func.coalesce(CallRecord.error_response, "") != _ERROR_EVIDENCE_EXPIRED))
-                .values(error_request=_ERROR_EVIDENCE_EXPIRED,
-                        error_response=_ERROR_EVIDENCE_EXPIRED))
-            await db.commit()
-            return int(result.rowcount or 0)
-    except Exception as exc:  # noqa: BLE001 — retention housekeeping must not break the view
-        logging.getLogger("treg").warning("error-evidence purge failed: %s", exc)
-        return 0
-
-
-@app.get("/admin/health")
-async def admin_health(_: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session)) -> list[dict]:
-    rows = (await db.execute(select(Secret).where(Secret.health_status != "ok"))).scalars().all()
-    omap = {o.id: o for o in (await db.execute(  # batched (was one db.get per secret)
-        select(Org).where(Org.id.in_({s.org_id for s in rows}))
-    )).scalars().all()}
-    out: list[dict] = []
-    for s in rows:
-        org = omap.get(s.org_id)
-        out.append({"secret_id": s.id, "name": s.name, "org": org.slug if org else None,
-                    "kind": s.kind, "status": s.health_status, "detail": s.health_detail})
-    return out
-
+# Register the moved admin read routes at their original position.
+router.routes.extend(admin_routes.reads_router.routes)
 
 @app.post("/admin/users/{user_id}/superadmin")
 async def admin_set_superadmin(
@@ -9339,93 +6787,8 @@ async def admin_delete_org(
     return {"deleted_org": org_id}
 
 
-# ---- reconciliation: is the money real? ----------------------------------------------------
-# Cross-org aggregates over platform spend, so `require_superadmin` and nothing weaker — an org admin
-# may see their own bill (`/orgs/{id}/balance`), never the platform's margin. See reconcile.py.
-@app.get("/admin/reconcile/drift")
-async def admin_reconcile_drift(
-    since_days: int = 30, min_calls: int = 3,
-    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
-) -> dict:
-    """Endpoints whose observed cost has wandered from the catalog's estimate. Only the providers that
-    report their own charge in-band appear (see `reconcile.price_drift`)."""
-    since = reconcile.window_start(since_days)
-    rows = await reconcile.price_drift(db, since, max(1, min_calls))
-    return {"since": since.isoformat(), "since_days": since_days, "min_calls": min_calls,
-            "tolerance": reconcile.DRIFT_TOLERANCE,
-            "flagged": [r for r in rows if r["flagged"]], "endpoints": rows}
-
-
-@app.get("/admin/reconcile/spend")
-async def admin_reconcile_spend(
-    since_days: int = 30, _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
-) -> dict:
-    """Settled platform spend per provider — the number to hold next to the provider's own invoice."""
-    since = reconcile.window_start(since_days)
-    return {"since": since.isoformat(), "since_days": since_days,
-            **await reconcile.provider_spend(db, since)}
-
-
-@app.get("/admin/reconcile/repeats")
-async def admin_reconcile_repeats(
-    since_days: int = 30, top: int = 10,
-    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
-) -> dict:
-    """How much of the bill was the same query twice — the cache-worthiness measurement."""
-    since = reconcile.window_start(since_days)
-    return {"since": since.isoformat(), "since_days": since_days,
-            **await reconcile.repeat_rate(db, since, top=top)}
-
-
-@app.get("/admin/referrals")
-async def admin_referrals(
-    status: str = "", limit: int = Query(200, ge=1, le=1000),
-    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
-) -> dict:
-    """Every referral, across every team — who invited whom, what it cost, and what is still owed.
-
-    Cross-org, so `require_superadmin` and nothing weaker, exactly like the reconcile trio above.
-    Read-only: it pays nothing and refuses nothing. `pending_payout_micro` is what the sweep will
-    grant once holds elapse, and it is the number that says whether this program is affordable
-    before the money leaves — the same job `provider_spend` does for provider bills.
-
-    This is also the report the influencer tier will read when it lands: a cash payout run is this
-    list, filtered to partners on a contract, exported.
-    """
-    s = get_settings()
-    q = select(Referral).order_by(Referral.created_at.desc()).limit(limit)
-    if status:
-        q = q.where(Referral.status == status)
-    rows = (await db.execute(q)).scalars().all()
-
-    emails: dict[int, str] = {}
-    for uid in {r.referrer_user_id for r in rows} | {r.referred_user_id for r in rows}:
-        u = await db.get(User, uid)
-        if u is not None:
-            emails[uid] = u.email
-
-    by_status: dict[str, int] = {}
-    for r in rows:
-        by_status[r.status] = by_status.get(r.status, 0) + 1
-    pending = sum(int(s.referral_referrer_micro) + int(s.referral_referred_micro)
-                  for r in rows if r.status == "qualified")
-    paid = sum(r.referrer_reward_micro + r.referred_reward_micro for r in rows if r.status == "paid")
-    return {
-        "counts": by_status,
-        "paid_micro": paid,
-        "pending_payout_micro": pending,
-        "referrals": [{
-            "id": r.id, "code": r.code, "status": r.status, "reason": r.reject_reason,
-            "referrer": emails.get(r.referrer_user_id, ""),
-            "referred": emails.get(r.referred_user_id, ""),
-            "referred_org_id": r.referred_org_id,
-            "created_at": r.created_at.isoformat() if r.created_at else None,
-            "qualified_at": r.qualified_at.isoformat() if r.qualified_at else None,
-            "paid_at": r.paid_at.isoformat() if r.paid_at else None,
-            "paid_micro": r.referrer_reward_micro + r.referred_reward_micro,
-        } for r in rows],
-    }
-
+# Register the moved admin report routes after the unchanged mutation block.
+router.routes.extend(admin_routes.reports_router.routes)
 
 # ---- the proxy: call a tool without holding its credential --------------------------------
 async def _resolve_call(rest: str, caller: Caller, db: AsyncSession) -> tuple[Tool, str]:
@@ -9725,6 +7088,120 @@ def _usd_to_micro(usd: float) -> int:
     return whole + 1 if raw > whole else whole
 
 
+def _truthy(value) -> bool:
+    """Provider query/body booleans arrive as strings or JSON booleans; interpret both."""
+    return value is True or (isinstance(value, str) and value.strip().lower() in ("1", "true", "yes"))
+
+
+def _json_object(body: bytes) -> dict:
+    try:
+        doc = json.loads(body) if body else {}
+    except (ValueError, UnicodeDecodeError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _input_count(doc: dict, keys: tuple[str, ...]) -> int:
+    """Count request records without mistaking field-selection arrays for billable inputs."""
+    sizes = [len(doc[k]) for k in keys if isinstance(doc.get(k), list)]
+    return max(sizes, default=1)
+
+
+def _credit_modifiers(cost: dict, query, doc: dict) -> tuple[bool, float, float, float]:
+    """Return (free, reserve add, settle add, add per requested result) from catalog rules.
+
+    The request SHAPE stays provider-aware, but every credit NUMBER stays in the provider YAML.
+    A documented but live-unbilled rider can stay in the safety hold with `reserve_only: true`.
+    This prevents a rate-card edit from leaving hardcoded arithmetic in the billing path.
+    """
+    free, added, settled_added, per_result = False, 0.0, 0.0, 0.0
+    modifiers = cost.get("modifiers")
+    if not isinstance(modifiers, dict):
+        return free, added, settled_added, per_result
+    for name, rule in modifiers.items():
+        if not isinstance(rule, dict):
+            continue
+        location = rule.get("location", "query")
+        if location == "query":
+            values = [query.get(name)]
+        elif location == "body":
+            values = [doc.get(name)]
+        elif location == "lookups":
+            lookups = doc.get("lookups") if isinstance(doc.get("lookups"), list) else []
+            values = [item.get(name) for item in lookups if isinstance(item, dict)]
+        else:
+            continue
+        when = rule.get("when", "truthy")
+        matches = (any(value not in (None, "") for value in values)
+                   if when == "present" else any(_truthy(value) for value in values))
+        if not matches:
+            continue
+        if rule.get("set_credits") == 0:
+            free = True
+        if isinstance(rule.get("add_credits"), (int, float)):
+            added += float(rule["add_credits"])
+            if not rule.get("reserve_only"):
+                settled_added += float(rule["add_credits"])
+        if isinstance(rule.get("add_credits_per_result"), (int, float)):
+            per_result += float(rule["add_credits_per_result"])
+    return free, added, settled_added, per_result
+
+
+def _marketplace_pricing(
+    provider: str, endpoint_id: str, cost: dict | None, query, body: bytes
+) -> tuple[int, int]:
+    """Return (reserve estimate, response-count unit), in raw micro-USD.
+
+    The catalog remains the price source. This helper only models provider rules that one fixed
+    scalar cannot express: Crustdata batch-shaped single calls and Aviato preview/add-on/bulk modes.
+    `unit` is non-zero only when the response must decide the final charge.
+    """
+    if not cost:
+        return 0, 0
+    estimate = _platform_estimate_micro(cost, query, body)
+    unit = (_usd_to_micro(cost["usd"])
+            if cost.get("type") in ("per_result", "quota_rows") and cost.get("usd") else 0)
+    if provider == "crustdata" and endpoint_id in (
+        "crustdata.companies.enrich", "crustdata.people.enrich"
+    ):
+        doc = _json_object(body)
+        count = _input_count(doc, (
+            "domains", "names", "professional_network_profile_urls", "business_emails"
+        ))
+        return _usd_to_micro(float(cost.get("usd") or 0) * count), unit
+    if provider != "aviato":
+        return estimate, unit
+
+    rate = catalog_store.load().credit_rates.get("aviato")
+    if not rate:
+        return estimate, unit
+    def credit_micro(credits):
+        return _usd_to_micro(float(credits) * rate)
+
+    doc = _json_object(body)
+    free, added, settled_added, per_result = _credit_modifiers(cost, query, doc)
+    if free:
+        return 0, 0
+    credits = float(cost.get("value") or 0) + added
+    settled_credits = float(cost.get("value") or 0) + settled_added
+    if endpoint_id in ("aviato.companies.enrich.bulk", "aviato.people.enrich.bulk"):
+        lookups = doc.get("lookups") if isinstance(doc.get("lookups"), list) else []
+        per_record = credit_micro(credits)
+        return per_record * max(1, len(lookups)), credit_micro(settled_credits)
+    if per_result:
+        raw = query.get("perPage")
+        asked = int(raw) if raw is not None and str(raw).isdigit() else _PLATFORM_PAGE_DEFAULT
+        asked = max(1, min(asked, _PLATFORM_PAGE_MAX))
+        # The documented rider stays in the safety hold. A catalog `settle: base` rule can release
+        # it after the response when multi-row balance evidence proves that the provider did not
+        # charge or deliver the add-on.
+        return credit_micro(credits + asked * per_result), 0
+    if cost.get("modifiers"):
+        settle_unit = credit_micro(settled_credits) if added != settled_added else 0
+        return credit_micro(credits), settle_unit
+    return estimate, 0
+
+
 def _oauth_billed_provider(secrets: dict[int, Secret]):
     """The flagged OAuthProvider whose registry connect this call's bindings ride, or None.
     Three gates: the secret is a REGISTRY connect (`secret.provider` is only ever set by the
@@ -9850,6 +7327,13 @@ def _platform_bindings(provider) -> list[dict]:
     else:
         bindings = [{"platform_setting": setting, "injector": "env", "location": "header",
                      "name": provider.token_header, "format": provider.token_format}]
+    # Keep tier 4 protocol-identical to BYOK. Required provider headers are constants, but they
+    # still use the same platform setting reference so the normal binding validator and injector
+    # own the whole shape. Crustdata's x-api-version pin is the first provider that needs this.
+    source = {k: v for k, v in bindings[0].items()
+              if k in ("platform_setting", "injector", "secret_field")}
+    bindings.extend({**source, "location": "header", "name": name, "format": value}
+                    for name, value in provider.required_headers)
     # A per-user credential PAIR (Tomba's key+secret headers) needs treg's own second half on
     # tier 4. platform_extra_setting is tier-4-only by design: extra_credential_setting would also
     # ride user connects, pairing a user's key with treg's secret — a pair the provider rejects.
@@ -10385,16 +7869,15 @@ async def _resolve_marketplace_call(
     # the org's own account; Activity shows "estimated") and the reserve amount on tier 4 only
     # (`metered` gates the ledger, so this never charges a balance for an own-key call).
     cv = catalog_store.load().cost_view(ep.get("cost"), service) if ep.get("cost") else None
-    info_est = _platform_estimate_micro(cv, request.query_params, body) if cv else 0
+    info_est, info_unit = _marketplace_pricing(
+        service, ep["id"], cv, request.query_params, body)
     common = dict(upstream=upstream, consumed=consumed, endpoint_id=ep["id"], provider=service,
                   params_hash=phash, cost_type=str((ep.get("cost") or {}).get("type") or ""),
                   estimate_micro=info_est,
                   # The per-ROW price, carried on every tier (settle only reads it on metered calls):
                   # a `per_result` settle that can't count rows can only ever bill the estimate,
                   # which is how 6,000 delivered Bright Data records once billed as one (2026-08-24).
-                  unit_micro=(_usd_to_micro(cv["usd"])
-                              if cv and cv.get("type") in ("per_result", "quota_rows") and cv.get("usd")
-                              else 0))
+                  unit_micro=info_unit)
     try:  # tier 1 — the org registered this provider: their tool, their bindings, their ACLs
         tool, resolved = await _resolve_call(upstream, caller, db)
         return MarketplaceCall(tool=tool, tier="tool", **{**common, "upstream": resolved})
@@ -10421,7 +7904,7 @@ async def _resolve_marketplace_call(
         )
         return MarketplaceCall(tool=virtual, tier="platform", **{
             **common, "cost_type": str(cost.get("type") or "per_call"),
-            "estimate_micro": _platform_estimate_micro(cost, request.query_params, body)})
+            "estimate_micro": info_est, "unit_micro": info_unit})
     raise _marketplace_no_credential(service, ep["id"], provider, ep)
 
 
@@ -10898,6 +8381,13 @@ def _secret_renderings(tool: Tool, secrets: dict[int, Secret]) -> list[str]:
             add(part)
 
     for binding in tool.bindings or []:
+        fmt = str(binding.get("format") or "{secret}")
+        # A constant provider header can share the binding's credential reference so the normal
+        # injector owns the whole protocol shape, but it does not inject that credential. Treating
+        # its literal format as a secret spelling masked ordinary dates such as Crustdata's API
+        # version from every failure-evidence snippet.
+        if "{secret}" not in fmt:
+            continue
         setting = binding.get("platform_setting")
         if setting:
             value = getattr(get_settings(), setting, None)
@@ -10905,7 +8395,7 @@ def _secret_renderings(tool: Tool, secrets: dict[int, Secret]) -> list[str]:
                 continue
             value = value.strip()
             add_credential(value)
-            add(str(binding.get("format") or "{secret}").format(secret=value))
+            add(fmt.format(secret=value))
             continue
 
         sid = binding.get("secret_id")
@@ -10915,14 +8405,14 @@ def _secret_renderings(tool: Tool, secrets: dict[int, Secret]) -> list[str]:
         add_credential(plain)
         injector = binding.get("injector", "env")
         if injector not in ("oauth", "secret_file"):
-            add(str(binding.get("format") or "{secret}").format(secret=plain.strip()))
+            add(fmt.format(secret=plain.strip()))
             continue
 
         field = str(binding.get("secret_field") or "access_token")
         token = injectors._token_from_json(plain, field)
         add_credential(token)
         add(f"Bearer {token}")
-        add(str(binding.get("format") or "{secret}").format(secret=token.strip()))
+        add(fmt.format(secret=token.strip()))
         data = json.loads(plain)
         if not isinstance(data, dict):
             raise ValueError("JSON credential is not an object")
@@ -11090,7 +8580,7 @@ def _brightdata_record_count(body: bytes) -> int | None:
         return 0
     return None
 
-def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
+def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int | None:
     """The provider's OWN reported charge for this call, in micro-USD, or None when it doesn't say.
 
     For an oauth-billed `per_result` call (X reads), the response body IS the bill: X charges per
@@ -11132,6 +8622,23 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
     Everyone else settles at the estimate. This is the same signal the catalog's `observed_cost`
     harvests, which is what lets phase 5's drift detector compare the two numbers directly."""
     provider = mk.provider
+    catalog = catalog_store.load()
+    ep = catalog.by_id.get(mk.endpoint_id)
+    cost = catalog.cost_view(ep.get("cost"), provider) if ep else None
+    if cost and cost.get("settle") == "base" and cost.get("usd") is not None:
+        # The reserve can include documented request riders while the observed settlement remains
+        # the catalog base. Aviato simple search earned this rule from two multi-row live probes:
+        # enrich=true returned only id rows and charged the same 0.25-credit base both times.
+        return _usd_to_micro(float(cost["usd"]))
+    if provider == "crustdata" and headers is not None:
+        raw = headers.get("x-credits-used")
+        rate = catalog_store.load().credit_rates.get("crustdata")
+        try:
+            credits = float(raw)
+        except (TypeError, ValueError):
+            credits = -1
+        if credits >= 0 and rate:
+            return _usd_to_micro(credits * rate)
     if not body:
         return None
     if provider == "brightdata" and mk.cost_type == "per_result" and mk.unit_micro > 0:
@@ -11143,8 +8650,21 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes) -> int | None:
         doc = json.loads(body)
     except (ValueError, UnicodeDecodeError):
         return None
+    if provider == "aviato" and mk.endpoint_id == "aviato.people.enrich.bulk":
+        if isinstance(doc, list) and mk.unit_micro > 0:
+            return sum(item is not None for item in doc) * mk.unit_micro
+        return None
     if not isinstance(doc, dict):
         return None
+    if provider == "aviato" and mk.endpoint_id == "aviato.companies.enrich.bulk":
+        rows = doc.get("companies")
+        if isinstance(rows, list) and mk.unit_micro > 0:
+            return sum(item is not None for item in rows) * mk.unit_micro
+        return None
+    if provider == "aviato" and cost and cost.get("settle") == "modifiers" and mk.unit_micro > 0:
+        # The request-time unit excludes catalog modifiers marked reserve_only. Bulk routes above
+        # multiply that unit by successful rows; a single route settles one such unit.
+        return mk.unit_micro
     if mk.billed_oauth and mk.cost_type == "per_result" and mk.unit_micro > 0:
         data = doc.get("data")
         n = len(data) if isinstance(data, list) else (1 if data else 0)
@@ -11295,7 +8815,8 @@ def _error_response_evidence(response: Response, body: bytes, secrets: list[str]
 
 
 async def _platform_settle(
-    mk: MarketplaceCall, status_code: int | None, body: bytes = b"", *, reason: str = ""
+    mk: MarketplaceCall, status_code: int | None, body: bytes = b"", *, headers=None,
+    reason: str = ""
 ) -> tuple[int, int | None]:
     """Close the hold for a metered call → (charged_micro, observed_micro). `charged_micro` is what
     actually hit the org's balance (0 on a release) — the number the Activity feed must show, because
@@ -11311,7 +8832,7 @@ async def _platform_settle(
     if not mk.metered or not mk.call_id:
         return 0, None
     billable = status_code is not None and _platform_billable(status_code, mk.cost_type)
-    observed = _observed_cost_micro(mk, body) if billable else None
+    observed = _observed_cost_micro(mk, body, headers) if billable else None
     call_id, mk.call_id = mk.call_id, None  # closing is once-only, even if two paths try
     charged = 0
 
@@ -11422,6 +8943,7 @@ async def call_tool(
     # metered call, lands on the audit row, and goes back as X-Treg-Call-Id — so a builder can join
     # our records to theirs on a single value.
     call_ref = uuid.uuid4().hex
+    request.state.call_ref = call_ref
     # Blocked status and the per-tag call count, BEFORE the replay below: a blocked user must neither
     # take an idempotency lock nor be handed an answer this team cached before they were blocked.
     await _enforce_tag_budgets(caller, meta, db)
@@ -11482,7 +9004,8 @@ async def call_tool(
                 org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
                 method=request.method, path=rest, status_code=mkexc.status_code,
                 client=_client_of(request), refused_by=_refusal_kind(mkexc.status_code),
-                telemetry={"endpoint_id": ep["id"], "provider": ep.get("provider"),
+                telemetry={"call_ref": call_ref,
+                           "endpoint_id": ep["id"], "provider": ep.get("provider"),
                            **_tag_telemetry(meta)})
             analytics.capture(caller.email, "tool_called",
                 {"tool_name": ep["id"], "status_code": mkexc.status_code,
@@ -11711,6 +9234,8 @@ async def call_tool(
         metered = mk is not None and mk.metered
         if metered:
             await _platform_settle(mk, None, reason=f"call_failed_{exc.status_code}")
+            # The shared exception handler builds the response and adds this zero-cost result.
+            request.state.call_cost_micro = 0
         # No provider body exists on this branch. treg's own detail is the explanation instead, and
         # it is the one worth keeping: this branch carries refresh, timeout, injection and SSRF 502s.
         _renderings = _safe_secret_renderings(tool, secrets)
@@ -11738,7 +9263,14 @@ async def call_tool(
     if 200 <= response.status_code < 400 and caller.org_id and caller.org.first_call_at is None:
         await _record_first_call(caller.org_id)
     if mk is not None and mk.metered:
-        charged, observed = await _platform_settle(mk, response.status_code, body)
+        charged, observed = await _platform_settle(
+            mk, response.status_code, body, headers=response.headers,
+            # `provider_failed_`, not `call_failed_`: the latter is the branch above, where treg
+            # never got an answer (timeout, SSRF refusal, a failed oauth refresh). Both release a
+            # 502 the same way, so a shared prefix would make the two indistinguishable in the
+            # journal once the 14-day error evidence expires — and they need different fixes.
+            reason=(f"provider_failed_{response.status_code}" if response.status_code >= 500 else ""),
+        )
         # A relayed non-2xx arrives HERE, as a Response — the vendor's own status is never raised
         # (see _refusal_kind). So this is where the provider's own explanation is captured, and the
         # only place it exists: nothing downstream keeps the body.
@@ -11899,57 +9431,9 @@ async def _bundle_view(bundle_id: int, db: AsyncSession) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------------------------
-# HEAD, everywhere GET is answered
-# ---------------------------------------------------------------------------------------------
-# FastAPI's APIRoute pins `methods` to {"GET"} and, unlike Starlette's plain Route, never adds HEAD
-# (fastapi/routing.py: `if methods is None: methods = ["GET"]`). So every page on the site answered
-# 405 to the HEAD probe that crawlers, link unfurlers and uptime checks send first — including `/`.
-# Widened once, here, rather than by editing ~120 decorators: this runs after every route is
-# registered, and only touches routes that are GET-only (a POST route keeps refusing HEAD, rightly).
-#
-# Sending the body is not a concern: ASGI servers drop it for HEAD per RFC 9110, and Starlette's
-# FileResponse already checks the scope method and sends headers only.
-_HEAD_WIDENED: list[APIRoute] = []
-for _route in app.routes:
-    if isinstance(_route, APIRoute) and _route.methods == {"GET"}:
-        _route.methods = {"GET", "HEAD"}
-        _HEAD_WIDENED.append(_route)
+# Deployment and imports keep using `treg.api:app`; the concrete assembly now lives in bootstrap.
+from .bootstrap import create_app  # noqa: E402
 
-
-_fastapi_openapi = app.openapi
-
-
-def _openapi_without_head():
-    """The generated schema, minus the HEAD the loop above just added to every GET route.
-
-    Without this the widening leaks into a PUBLIC artifact: FastAPI derives one operation per
-    (path, method), so /openapi.json grew 58 duplicate HEAD entries — each warning "Duplicate
-    Operation ID" at generation and each doubling its operation on the /docs page. HEAD is a
-    transport detail that HTTP already implies wherever GET is answered; it is not an API operation
-    anyone reads about. So the routes are narrowed for the duration of generation and put back.
-    Routes that declared HEAD themselves (the /call proxy) are untouched and still documented.
-    """
-    if app.openapi_schema:
-        return app.openapi_schema
-    for r in _HEAD_WIDENED:
-        r.methods = {"GET"}
-    try:
-        app.openapi_schema = _fastapi_openapi()
-    finally:
-        for r in _HEAD_WIDENED:
-            r.methods = {"GET", "HEAD"}
-    return app.openapi_schema
-
-
-app.openapi = _openapi_without_head
-
-
-# ---------------------------------------------------------------------------------------------
-# The MCP front door
-# ---------------------------------------------------------------------------------------------
-# Mounted LAST so it cannot shadow a route, and guarded so a deploy without the `[server]` extra's
-# `mcp` dependency still serves everything else. Its lifespan is entered in `lifespan` above — a
-# mounted app's own lifespan never runs, and this one builds the transport's task group there.
-if _mcp is not None:
-    app.mount("/mcp", _mcp.mcp_app)
+app = create_app()
+# Moved handlers retain api.py's original final global binding for calls such as app.openapi().
+web_routes.app = app

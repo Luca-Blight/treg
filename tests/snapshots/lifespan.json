@@ -1,0 +1,51 @@
+{
+  "background_tasks": [
+    {
+      "condition": "treg.adsconv.enabled()",
+      "task": "treg.adsconv.worker"
+    }
+  ],
+  "mounted_lifespans": [
+    {
+      "condition": "treg.bootstrap._mcp is not None",
+      "task": "treg.mcp.mcp_lifespan"
+    }
+  ],
+  "shutdown": [
+    {
+      "action": "cancel",
+      "condition": "treg.adsconv.worker was started",
+      "task": "treg.adsconv.worker"
+    },
+    {
+      "action": "await",
+      "task": "treg.audit.drain"
+    },
+    {
+      "action": "await",
+      "task": "treg.analytics.drain"
+    },
+    {
+      "action": "await close",
+      "task": "app.state.http"
+    }
+  ],
+  "startup": [
+    {
+      "action": "await",
+      "task": "treg.db.init_db"
+    },
+    {
+      "action": "await",
+      "task": "treg.api._backfill_provider_extra_tools"
+    },
+    {
+      "action": "await",
+      "task": "treg.api._bootstrap_single_user"
+    },
+    {
+      "action": "create",
+      "task": "app.state.http (httpx.AsyncClient)"
+    }
+  ]
+}

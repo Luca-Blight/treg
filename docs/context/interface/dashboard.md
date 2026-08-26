@@ -2,6 +2,7 @@
 title: The web dashboard (Ledger, served from FastAPI)
 status: shipped
 sources:
+  - src/treg/web/sitetrack.js
   - src/treg/web/index.html
   - src/treg/web/vendor/README.md
   - src/treg/web/vendor/vue-3.5.41.global.prod.js
@@ -10,6 +11,7 @@ sources:
   - src/treg/web/tour/tour.js
   - src/treg/web/tour/index.html
   - src/treg/api.py
+  - src/treg/routers/web.py
   - src/treg/session.py
 related:
   - interface/api.md
@@ -23,13 +25,13 @@ related:
 # Web dashboard (Phase 1)
 
 A single-file Vue 3 dashboard in `src/treg/web/index.html`, served **same-origin** by the API
-(`GET /` → `FileResponse`, `dashboard()` in `api.py`, via `_WEB_DIR`). Same origin = no CORS and it
+(`GET /app` → `FileResponse`, `dashboard()` in `routers.web`, via `_WEB_DIR`). Same origin = no CORS and it
 ships with the server (Render/Fly). Design language: **Ledger** (warm charcoal + clay accent,
 mono-forward, dark default + light toggle) — see `docs/style-board.html` / `docs/DASHBOARD-PLAN.md`.
 
 ### Vue is vendored, not fetched from a CDN
 There is no bundler, so Vue arrives as a plain `<script src>` — but from **`/vendor/`**, served off
-`src/treg/web/vendor/` by an `_ImmutableStatic` mount in `api.py`, never from unpkg. It used to come
+`src/treg/web/vendor/` by an `_ImmutableStatic` mount in `bootstrap.py`, never from unpkg. It used to come
 from `unpkg.com/vue@3`, and a visitor whose network could not reach unpkg got a **blank signed-in
 dashboard with no error** ([#137](https://github.com/superdesigndev/treg/issues/137): mainland-China
 `ERR_CONNECTION_CLOSED`, then `Vue is not defined`). The landing has no external scripts at all, so
@@ -49,7 +51,12 @@ template until Vue mounts, which is precisely what made #137 silent — so the g
 `#app` is still cloaked ~1.5s after `load` and, if it is, replaces the blank with a readable message,
 a reload button, and the issues link. Anything that stops Vue mounting now says so on screen.
 
-`index.html`'s closing `<script src="/adtrack.js">` loads the first-party ad-click capture script on
+`index.html`'s closing `<script src="/sitetrack.js">` (also on `landing.html`, every `usecase-*.html`,
+`resources.html`, `tutorial.html`) sets the first-touch `treg_utm` cookie and initialises PostHog with
+pageviews on; `initAnalytics()` in the SPA defers to it (`window.__phInit`) and only identifies, keeping
+its inline init as the fallback for a stale bundle. Landing-page visitors used to be invisible to
+analytics — PostHog first met them on `/app` after OAuth, as `$direct` — so this ordering is the whole
+point. The next `<script src="/adtrack.js">` loads the first-party ad-click capture script on
 every page render (dashboard included, since a visitor can arrive on `/app` from an ad) — no Google
 tag, first-party cookie only; see [ads-conversions](../architecture/ads-conversions.md).
 
@@ -395,6 +402,15 @@ page (Connect looked dead).
 > There is no second implementation of any of this; see [seo](seo.md) for why, and for the `#prerender`
 > fallback that carries the text to crawlers that run no scripts. `index.html`'s own `robots: noindex`
 > is stripped on those two URLs only.
+>
+> **The Platform tab fills for signed-out visitors too.** The public-catalog boot branch calls
+> `loadConnections()`, not just `loadPlatforms()` — `/oauth/providers` is an open endpoint, and the
+> `/connections` half fails and is caught. (It once called only `loadPlatforms()`, and an incognito
+> visitor who reached the tab saw "Platform 0" and a blank shelf.) In public mode the shelf's
+> actions swap: "Add key"/"Connect" opens the sign-in dialog, and a provider row navigates to the
+> server-rendered public page at `/tools/<service>` via `goPublicTool` — a real method, because a
+> Vue template expression cannot reach the `location` global (not on the expression allowlist; an
+> inline `location.href=` fails silently).
 
 The marketplace's second browse surface answers "what data can I actually pull?" rather than "whose
 account can I attach?" — see `architecture/catalog.md` for the data behind it, and it is the marketplace's
@@ -640,8 +656,11 @@ and in a merged row's provider sub-row, because both paths share the one `.lep` 
 one-line setup (`epTrySetupLine`, with team + token embedded **here only**, a copy-and-run-now context;
 the setup line everywhere else stays clean) plus a ready "Use treg to call `<id>` — `<summary>`" prompt
 (`epTryAgentUse`); **CLI** — install/login, `treg catalog get <id>`, and the filled `treg call <id>
---query …` (`epTryCliCall`); **API** — the `curl {BASE}/call/<id>?<query>` passthrough with the token
-header (`epTryCurl`, adding `X-Treg-Org` in session mode since the minted token is an identity token);
+--query …` (`epTryCliCall`), with `--method` and a shell-quoted `--data` JSON body for non-GET
+requests; **API** — the `curl -X <method> {BASE}/call/<id>?<query>` passthrough with the token header
+(`epTryCurl`, adding `X-Treg-Org` in session mode since the minted token is an identity token), plus
+`Content-Type: application/json` and the same shell-quoted, editable `epTryBody` for a non-GET request
+that has a body;
 and **Manual** — the live test form (params + `❯ Run`, disabled with a reason when the access dry-run
 says this org can't call it) that the drawer used to be by itself.
 

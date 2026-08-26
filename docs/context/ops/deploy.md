@@ -2,6 +2,7 @@
 title: Running & deploying the server
 status: shipped
 sources:
+  - pyproject.toml
   - src/treg/__main__.py
   - src/treg/web/selfhost.sh
   - src/treg/config.py
@@ -20,9 +21,13 @@ related:
 ## Entry point (`__main__.py`)
 `python -m treg` → `main()` → `uvicorn.run("treg.api:app", host="0.0.0.0", port=int($PORT or 18790))`
 (`--reload` optional). It honors `$PORT` (Render/Heroku route + health-check that port). `python -m treg
-keygen` prints a Fernet key for `TREG_SECRET_KEY`.
+keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
+`bootstrap.create_app(role="all")`; the compatibility import and deployed behavior are unchanged.
 
 ## Startup safety (`db.py init_db`)
+- **Migration execution is unchanged:** Alembic ships in the `[server]` extra and has a validated
+  current-schema baseline, but startup still runs `init_db`. No existing database is stamped or
+  upgraded through Alembic in stage 1; that execution switch is reserved for refactor stage 5.
 - **Fails loud on a missing key + real DB:** if `TREG_SECRET_KEY` is empty and `database_url` isn't
   SQLite, `init_db` raises (an ephemeral key would make every stored secret undecryptable after a
   restart — silent total loss). On SQLite dev it only logs a warning.
@@ -278,6 +283,15 @@ count was observed live). The account is FUNDED: set the env var and add `influe
 `TREG_PLATFORM_PROVIDERS`. Mind the 60s gateway 504 on cold enrichment calls: under `per_success`
 settlement a 504 relays as a failure and settles at 0, but the vendor charged two of ours — a small,
 bounded leak on the 0.03 tier, worth watching in the first reconcile report.
+
+## Crustdata and Aviato platform keys (2026-08-25)
+
+`TREG_PLATFORM_KEY_CRUSTDATA` and `TREG_PLATFORM_KEY_AVIATO` are funded pay-as-you-go keys. Add both
+services to `TREG_PLATFORM_PROVIDERS` to serve them on tier 4. Crustdata's platform binding also
+injects the provider metadata pin `x-api-version: 2025-11-01`; Aviato uses its normal Bearer header.
+The `fx.yaml` rates are the replacement costs configured on the accounts: Crustdata $150/500 credits
+($0.30), Aviato $10/1,000 credits ($0.01). Crustdata settles from `X-Credits-Used`; Aviato fixed and
+conditional prices are derived from the authenticated rate card plus request/response shape.
 
 ## A db.py change needs a Postgres-shaped deploy plan
 
