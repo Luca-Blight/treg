@@ -3,6 +3,7 @@ title: Onboarding — the first-run demo team (dashboard + CLI)
 status: shipped
 sources:
   - src/treg/application/auth.py
+  - src/treg/application/onboard.py
   - src/treg/demo.py
   - src/treg/cli.py
   - src/treg/routers/auth.py
@@ -93,12 +94,17 @@ Idempotent — `existing_demo_org` reuses the caller's demo org instead of stack
 `_cascade_delete_org`), drops demo-teammate memberships from the caller's REAL teams too, and sweeps
 any demo user left with zero memberships — a clean exit, no litter.
 
+`application.onboard` owns the session and commit boundary for each onboarding journey. The router
+keeps identity and role dependencies plus HTTP error translation; demo provisioning, skip/reset,
+tool seeding, and teammate acceptance run in short use-case-owned sessions.
+
 ## Endpoints (`routers/onboard.py`, all identity/member-scoped)
 
-- `POST /onboard/demo {team_name}` (`require_identity`) → `demo.provision` (CLI quick mode: full seed).
-- `POST /onboard/seed-tool` (`require_member`, member+) → `demo.seed_tool` into the active team.
+- `POST /onboard/demo {team_name}` (`require_identity`) → `application.onboard.provision_demo`
+  (CLI quick mode: full seed).
+- `POST /onboard/seed-tool` (`require_member`, member+) → `application.onboard.seed_tool` into the active team.
 - `POST /onboard/accept-teammate {email}` (`require_member`, admin+, demo-domain only) →
-  `demo.accept_demo_invite` — auto-joins the teammate the user just invited.
+  `application.onboard.accept_teammate` — auto-joins the teammate the user just invited.
 - `POST /onboard/skip` → sets `onboarded=True` without seeding (dismiss, don't re-offer).
 - `POST /onboard/reset` → `demo.reset`.
 - `GET /auth/me` returns `onboarded`; `GET /orgs` rows carry `demo`. `create_invite` **skips the Resend

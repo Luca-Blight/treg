@@ -43,6 +43,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/application/__init__.py` | architecture/import-boundaries.md |
 | `src/treg/application/auth.py` | architecture/data-model.md, architecture/mcp-oauth.md, architecture/multi-tenancy.md, interface/api.md, interface/onboarding.md |
 | `src/treg/application/connect.py` | architecture/auth-secrets.md, architecture/composition.md, guides/expanding-a-category.md, interface/api.md |
+| `src/treg/application/onboard.py` | interface/api.md, interface/onboarding.md |
 | `src/treg/application/signup.py` | architecture/ads-conversions.md, architecture/money.md, architecture/multi-tenancy.md, interface/api.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
@@ -179,13 +180,13 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/super-admin.md` | `api.py`, `admin.py`, `access.py`, `config.py` |
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |
 | `guides/expanding-a-category.md` | `oauth_providers.py`, `connect.py`, `connections.py`, `config.py` |
-| `interface/api.md` | `sitetrack.js`, `api.py`, `bootstrap_http.py`, `caller_metadata.py`, `auth.py`, `connect.py`, `signup.py`, `__init__.py`, `admin.py`, `auth.py`, `auth_helpers.py`, `catalog.py`, `connections.py`, `onboard.py`, `orgs.py`, `resources.py`, `signup_cookies.py`, `web.py`, `access.py`, `teams.py`, `mcp_oauth.py`, `session.py`, `timeutil.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
+| `interface/api.md` | `sitetrack.js`, `api.py`, `bootstrap_http.py`, `caller_metadata.py`, `auth.py`, `connect.py`, `onboard.py`, `signup.py`, `__init__.py`, `admin.py`, `auth.py`, `auth_helpers.py`, `catalog.py`, `connections.py`, `onboard.py`, `orgs.py`, `resources.py`, `signup_cookies.py`, `web.py`, `access.py`, `teams.py`, `mcp_oauth.py`, `session.py`, `timeutil.py`, `catalog_store.py`, `email.py`, `runner.py`, `ratestore.py` |
 | `interface/catalog-review-proposal.md` | `catalog_store.py`, `capabilities.yaml` |
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
 | `interface/dashboard.md` | `sitetrack.js`, `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `web.py`, `session.py`, `session.py` |
 | `interface/env-import.md` | `providers.py`, `skills.py` |
 | `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `api.py`, `web.py`, `index.html`, `install.sh` |
-| `interface/onboarding.md` | `auth.py`, `demo.py`, `cli.py`, `auth.py`, `onboard.py`, `index.html` |
+| `interface/onboarding.md` | `auth.py`, `onboard.py`, `demo.py`, `cli.py`, `auth.py`, `onboard.py`, `index.html` |
 | `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `web.py`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |

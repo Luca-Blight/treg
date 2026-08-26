@@ -8,6 +8,7 @@ sources:
   - src/treg/caller_metadata.py
   - src/treg/application/auth.py
   - src/treg/application/connect.py
+  - src/treg/application/onboard.py
   - src/treg/application/signup.py
   - src/treg/routers/__init__.py
   - src/treg/routers/admin.py
