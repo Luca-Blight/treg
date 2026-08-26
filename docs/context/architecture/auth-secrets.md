@@ -7,6 +7,8 @@ sources:
   - src/treg/infra/upstream/ssrf.py
   - src/treg/crypto.py
   - src/treg/oauth.py
+  - src/treg/domain/connections/__init__.py
+  - src/treg/domain/connections/refresh.py
   - src/treg/oauth_providers.py
   - src/treg/health.py
   - src/treg/application/connect.py
@@ -42,7 +44,7 @@ restart — a loud signal to set the key). `new_key()` mints one. Caller tokens:
 (urlsafe random) + `hash_token()` (SHA-256); the DB stores only the hash. Values are never returned to
 clients.
 
-## OAuth freshness (`oauth.py`)
+## OAuth freshness (`domain/connections/refresh.py`)
 Two modes, detected by `is_refreshable(blob)` (has `refresh_token` + `client_id` + `client_secret`):
 - **auto:** `ensure_fresh(secret, db, client)` — if `is_stale()` (past `expires_at`/`expiry` minus
   `_SKEW=60s`), `refresh()` POSTs `token_uri` (default `_DEFAULT_TOKEN_URI`), re-encrypts + persists the
@@ -53,7 +55,8 @@ Two modes, detected by `is_refreshable(blob)` (has `refresh_token` + `client_id`
   `refresh()` updates both `access_token` and `token` keys so either binding `secret_field` stays fresh.
 - **manual:** a bare uploaded token (not refreshable) is injected as-is; the user re-uploads on expiry.
 
-`ensure_fresh` is called by `call_tool()` before injecting, and by the health runner. The injector
+`treg.oauth` re-exports the refresh family for compatibility with connect, health, call, and lazy local-run
+consumers. `ensure_fresh` is called by `call_tool()` before injecting, and by the health runner. The injector
 stays dumb; one refresh function serves both. Its write-back is **conditional on the prior ciphertext**
 (`UPDATE … WHERE value = old`) then reloads the row — so under multiple workers a second refresh can't
 clobber a refresh_token the first already rotated (the in-process lock alone doesn't cross processes). `refresh` always stamps a fallback `expires_at` (so a
