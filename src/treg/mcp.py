@@ -1136,6 +1136,24 @@ def _allowed_origins() -> list[str]:
     return sorted(dict.fromkeys(origins))
 
 
+class NormalizeDirectoryMCPPath:
+    """Make the directory transport accept its URL with or without the final slash.
+
+    Starlette mounts match ``/mcp/v2/`` but not the exact no-slash path. Hosted Claude removes the
+    slash before its first POST, so the request otherwise falls through to the legacy ``/mcp``
+    mount, discovers V1 OAuth metadata, obtains a V1 token, and then receives a 404. Rewriting the
+    ASGI path before route matching keeps both spellings on the same V2 transport and audience.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope.get("path") == "/mcp/v2":
+            scope = dict(scope, path="/mcp/v2/", raw_path=b"/mcp/v2/")
+        return await self.app(scope, receive, send)
+
+
 class RequireAuthForProtectedTools:
     """Answer 401 with `WWW-Authenticate` for any uncredentialed MCP request — eager, not lazy.
 

@@ -68,6 +68,12 @@ loaded, so this makes rendering consistent for everyone), `--r:14 / --rb:9`, a `
 shared `.btn` / `.iconbtn` height so controls align. The logged-out `/` is now the **landing + sandbox
 studio** (see [landing-sandbox](landing-sandbox.md)), not a login box; sign-in is a modal.
 
+An OAuth authorization that needs sign-in redirects to `/?signin=oauth`. The dashboard reads this as
+a UI cue, removes it from the visible URL, and opens the same modal with generic connection copy. It
+does not create a sandbox session. The protected OAuth return path stays in an HttpOnly cookie, so
+GitHub, Google, and email-code sign-in all resume the same authorization flow without putting OAuth
+request data in the URL.
+
 The **authed** shell is sidebar-first. The **top bar** is just brand + search. The **left sidebar**
 stacks: (top) an **org block** — role + team name — that on click opens a switcher **dropdown** where
 each team carries its own **⚙ Settings** (`orgSettings` → switch into it, then open its settings) and

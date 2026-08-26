@@ -22,6 +22,13 @@ TUTORIAL = (Path(api.__file__).parent / "web" / "tutorial.html").read_text(encod
 SHARED_DIALOGS = ["tokenAsk", "capAsk", "resPick"]
 
 
+def test_oauth_entry_opens_the_existing_sign_in_modal_without_minting_a_sandbox():
+    assert "qs.get('signin')==='oauth'" in INDEX
+    assert "else if(oauthSignin) this.demo.signin=true" in INDEX
+    assert "Sign in to continue connecting Treg" in INDEX
+    assert "After sign-in, review the requested access before you approve it." in INDEX
+
+
 # Every <template> open/close, because only a balanced count locates the view boundaries: the file
 # nests plain `v-if`/`v-for` templates inside views, and each of those closes with a `</template>`
 # that would otherwise be read as closing the view. (Corollary: don't write a literal `<template`

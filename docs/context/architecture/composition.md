@@ -30,8 +30,9 @@ related:
 attaches concern routers at compatibility-sensitive registration points, and calls the factory once at
 EOF so the deployed `treg.api:app` import path remains the default `all` role.
 
-The factory owns concrete assembly: the three pure-ASGI middleware registrations, five exception handlers,
-static mounts, optional MCP mount and lifespan, GET-to-HEAD widening, the OpenAPI wrapper that hides
+The factory owns concrete assembly: the three core pure-ASGI middleware registrations, the optional
+V2 path normalizer, five exception handlers, static mounts, optional MCP mounts and lifespans,
+GET-to-HEAD widening, the OpenAPI wrapper that hides
 implied HEAD operations, shared HTTP client creation, startup work, shutdown drains, and the Ads
 conversion worker. Registration order is compatibility behavior. The four stage-0 snapshots stay
 byte-identical for `role="all"` unless that composition intentionally changes.
@@ -80,6 +81,10 @@ route cannot silently expand the dataplane. Role separation is preparatory in st
 `TREG_CLAUDE_CONNECTOR_ENABLED=true` adds `/mcp/v2` and starts its lifespan. When the flag is false
 or missing, only the legacy `/mcp` mount starts. The nested V2 mount is registered first so the
 parent `/mcp` mount cannot consume it.
+
+When V2 is enabled, `NormalizeDirectoryMCPPath` rewrites the exact `/mcp/v2` path to `/mcp/v2/`
+before route matching. Claude can remove the final slash from a custom-connector URL. Both spellings
+must stay on the V2 transport and OAuth audience.
 
 ## Route cloning
 

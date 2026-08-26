@@ -248,6 +248,11 @@ class Settings(BaseSettings):
     # surface before its production Inspector and custom-connector gates have passed.
     claude_connector_enabled: bool = False
 
+    # Browser-only OAuth/MCP test harness. It handles real grants and therefore belongs on local
+    # and staging deployments, not on the public product surface. Explicitly enable it where an
+    # engineer is testing the protocol end to end.
+    connect_demo_enabled: bool = False
+
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
     # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.
     public_url: str = "https://treg.to"

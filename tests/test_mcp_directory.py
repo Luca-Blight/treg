@@ -101,11 +101,44 @@ async def test_v2_feature_flag_enables_mount_metadata_and_resource(monkeypatch):
         async with AsyncClient(transport=ASGITransport(app=enabled),
                                base_url="http://registry") as client:
             metadata = await client.get("/.well-known/oauth-protected-resource/mcp/v2")
+            body = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+                "protocolVersion": "2025-06-18", "capabilities": {},
+                "clientInfo": {"name": "slash-test", "version": "1"},
+            }}
+            challenges = [
+                await client.post(path, json=body, headers=MCP_HEADERS)
+                for path in ("/mcp/v2", "/mcp/v2/")
+            ]
         assert metadata.status_code == 200
         assert metadata.json()["resource"].endswith("/mcp/v2/")
+        for challenge in challenges:
+            assert challenge.status_code == 401
+            assert "/.well-known/oauth-protected-resource/mcp/v2" in \
+                challenge.headers["www-authenticate"]
 
         resource = mcp_oauth.mcp_resource_url("v2")
         assert treg_api._wrong_resource(resource) is None
+    finally:
+        get_settings.cache_clear()
+
+
+async def test_v2_no_slash_path_rejects_a_v1_token_with_the_v2_challenge(monkeypatch):
+    """Claude strips the final slash. That spelling must never fall through to the V1 mount."""
+    monkeypatch.setenv("TREG_CLAUDE_CONNECTOR_ENABLED", "true")
+    get_settings.cache_clear()
+    try:
+        enabled = create_app("all")
+        token = mcp_oauth.make_access_token(
+            user_id=1, org_id=1, audience=mcp_oauth.mcp_resource_url("v1"))
+        async with AsyncClient(transport=ASGITransport(app=enabled),
+                               base_url="http://registry") as client:
+            response = await client.post("/mcp/v2", json={
+                "jsonrpc": "2.0", "id": 1, "method": "tools/list",
+            }, headers={**MCP_HEADERS, "Authorization": f"Bearer {token}"})
+        assert response.status_code == 401
+        assert 'error="invalid_token"' in response.headers["www-authenticate"]
+        assert "/.well-known/oauth-protected-resource/mcp/v2" in \
+            response.headers["www-authenticate"]
     finally:
         get_settings.cache_clear()
 

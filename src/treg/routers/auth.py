@@ -875,7 +875,8 @@ async def oauth_authorize(
         # query the sign-in page would have to understand — the first version invented that
         # convention and nothing implemented it, so the user signed in and landed on the dashboard
         # with the authorization silently dropped.
-        resp = RedirectResponse("/", status_code=302)
+        # The query is only a UI cue. The validated request stays in the HttpOnly return cookie.
+        resp = RedirectResponse("/?signin=oauth", status_code=302)
         _remember_oauth_return(resp, request)
         return resp
 

@@ -29,6 +29,10 @@ Protocol. Both use one deployment, database, and enforcement layer:
 - `/mcp/v2/` is the catalog-only Claude directory surface. It cannot list or call arbitrary
   team-owned tools, including a team tool whose name matches a catalog endpoint.
 
+`NormalizeDirectoryMCPPath` makes `/mcp/v2` and `/mcp/v2/` the same V2 resource. This is required
+because a real Claude custom-connector flow removed the trailing slash. Without normalization, the
+request can fall through to the legacy `/mcp` mount and receive the wrong OAuth resource identity.
+
 ## Claude connector feature flag
 
 `TREG_CLAUDE_CONNECTOR_ENABLED` defaults to `false`. When false, V2 is not mounted, its lifespan does
@@ -375,18 +379,25 @@ perfectly while every tool still forwarded the raw bearer and got "not signed in
 
 ## Sign-in mid-authorization
 
-A signed-out visitor to `/oauth/authorize` has the destination parked in a short-lived cookie and
-resumed at the **dashboard**, which is the one point every browser sign-in door ends at. It stores a
-relative path and honours only `/oauth/authorize`, so it cannot become a general "send me anywhere
-after login" primitive.
+A signed-out visitor to `/oauth/authorize` has the destination parked in a short-lived HttpOnly
+cookie and is redirected to `/?signin=oauth`. The dashboard opens the existing sign-in modal with
+generic connection copy, removes the query parameter from the visible URL, and does not create a
+sandbox session. The query parameter is only a UI cue; it contains no OAuth request data. Google,
+GitHub, and email-code sign-in all return to the dashboard, which resumes the parked authorization
+request. The cookie stores a relative path and honours only `/oauth/authorize`, so it cannot become a
+general "send me anywhere after login" primitive.
 
 ## `/connect-demo`
 
 A page that pretends to be someone else's app and runs the whole flow — register, consent popup,
 token exchange, tool calls. It uses only public endpoints; being served from treg's domain gives it
-nothing. It exists because a failure inside ChatGPT surfaces as a shrug, and it earned itself
-immediately: it found that browsers were refused outright (`"*"` is not a wildcard in the SDK's
-origin check) and that consent failed intermittently on `Origin: null`.
+nothing. `TREG_CONNECT_DEMO_ENABLED` gates both the page and its callback and defaults to `false`, so
+production should return 404. The local development script enables it; staging can enable it
+explicitly for tests. The browser holds working tokens in tab-local session storage for the demo,
+but the visible log shows only `[received]` and never displays a token prefix. Disconnect revokes the
+grant and clears the stored tokens. The page exists because a failure inside an agent client surfaces
+as a shrug, and it earned itself immediately: it found that browsers were refused outright (`"*"` is
+not a wildcard in the SDK's origin check) and that consent failed intermittently on `Origin: null`.
 
 ## What is deliberately NOT here
 

@@ -17,6 +17,7 @@ import time
 import pytest
 
 from treg import mcp, mcp_oauth, session
+from treg.config import Settings, get_settings
 
 # The MCP transport helpers live with the MCP tests; a token is only interesting here because it can
 # drive a tool, so reuse them rather than keeping a second copy that can drift.
@@ -51,6 +52,11 @@ async def test_v2_metadata_names_only_the_directory_resource(clients):
     assert response.json()["resource"] == mcp_oauth.mcp_resource_url("v2")
     assert response.json()["resource"].endswith("/mcp/v2/")
     assert response.json()["resource"] != mcp_oauth.mcp_resource_url("v1")
+
+
+async def test_connect_demo_defaults_off(monkeypatch):
+    monkeypatch.delenv("TREG_CONNECT_DEMO_ENABLED", raising=False)
+    assert Settings(_env_file=None).connect_demo_enabled is False
 
 
 async def test_authorization_server_metadata_offers_only_safe_choices(clients):
@@ -889,6 +895,7 @@ async def test_a_signed_out_user_is_returned_to_the_consent_screen(clients):
     clients.cookies.clear()
     sent_away = await clients.get("/oauth/authorize", params=params, follow_redirects=False)
     assert sent_away.status_code == 302
+    assert sent_away.headers["location"] == "/?signin=oauth"
     parked = (sent_away.cookies.get("treg_oauth_return") or "").strip('"')
     assert parked.startswith("/oauth/authorize?"), f"nothing was parked: {parked!r}"
     assert params["client_id"] in parked, "the parked destination must be THIS request"
@@ -899,6 +906,28 @@ async def test_a_signed_out_user_is_returned_to_the_consent_screen(clients):
     back = await clients.get("/app", follow_redirects=False)
     assert back.status_code == 302, "the dashboard must resume the parked authorization"
     assert back.headers["location"].startswith("/oauth/authorize?")
+
+
+async def test_connect_demo_is_explicitly_enabled_and_never_displays_token_prefixes(
+    monkeypatch, clients,
+):
+    monkeypatch.setenv("TREG_CONNECT_DEMO_ENABLED", "false")
+    get_settings.cache_clear()
+    try:
+        assert (await clients.get("/connect-demo")).status_code == 404
+        assert (await clients.get("/connect-demo/callback")).status_code == 404
+
+        monkeypatch.setenv("TREG_CONNECT_DEMO_ENABLED", "true")
+        get_settings.cache_clear()
+        page = await clients.get("/connect-demo")
+        callback = await clients.get("/connect-demo/callback")
+        assert page.status_code == callback.status_code == 200
+        assert 'access_token: "[received]"' in page.text
+        assert 'refresh_token: "[received]"' in page.text
+        assert "body.access_token.slice" not in page.text
+        assert "body.refresh_token.slice" not in page.text
+    finally:
+        get_settings.cache_clear()
 
 
 async def test_the_parked_destination_cannot_be_used_as_an_open_redirect(clients):

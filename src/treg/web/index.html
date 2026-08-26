@@ -3868,8 +3868,9 @@ treg login</pre></div>
     <div class="lc-modal" role="dialog" aria-modal="true" aria-label="Sign in">
       <button class="cls" @click="demo.signin=false" aria-label="Close">✕</button>
       <div style="font-size:26px">▚</div>
-      <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{invitePrefill?'Accept your invite':(shareGate?'Sign in to view it':(publicCatalog?'Start calling':'Make it yours'))}}</h2>
-      <p v-if="invitePrefill" class="sub">Sign in with <b>{{invitePrefill}}</b> and you'll drop straight into the team.</p>
+      <h2 style="margin:8px 0 2px;font-family:var(--mono)">{{oauthSignin?'Sign in to continue connecting Treg':(invitePrefill?'Accept your invite':(shareGate?'Sign in to view it':(publicCatalog?'Start calling':'Make it yours')))}}</h2>
+      <p v-if="oauthSignin" class="sub">After sign-in, review the requested access before you approve it.</p>
+      <p v-else-if="invitePrefill" class="sub">Sign in with <b>{{invitePrefill}}</b> and you'll drop straight into the team.</p>
       <p v-else-if="shareGate" class="sub">You'll land on “{{shareGate.name}}” right after.</p>
       <!-- The default line is the SANDBOX's ("bring it into a real account"), which is nonsense to
            someone who arrived on a catalog page from a search result and has no sandbox. -->
@@ -3909,7 +3910,7 @@ createApp({
       // unauthenticated, so the same marketplace views render for a signed-out visitor — that is
       // what makes the catalog indexable without maintaining a second copy of the UI. Everything
       // that needs a session (org switcher, vault, activity, team, try-it) is hidden on `authed`.
-      publicCatalog:false,
+      publicCatalog:false, oauthSignin:false,
       cfg, tokenInput:'', busy:false, loginErr:'', addOrg:false, orgMenu:false, orgMenuStyle:null,
       emailInput:'', codeInput:'', emailStage:false, devCode:'', pendingInvites:[], invitePrefill:'', inviteChoice:false, inviteBusy:false,
       inviteSel:{}, inviteLinkOrg:null, inviteErr:'',  // multi-select accept: checked ids, the org_id the clicked email link was for, partial-failure note
@@ -6259,8 +6260,9 @@ createApp({
     // Invite-link params, parsed BEFORE the session check: ?invite_org= arrives freshly signed in
     // from the email link's POST-confirm; ?invite= is the legacy code path (prefilled login).
     const qs = new URLSearchParams(location.search);
-    const linkOrg = qs.get('invite_org'), inv = qs.get('invite');
-    if(linkOrg || inv || qs.get('invite_expired')){ history.replaceState(null,'',location.pathname+location.hash); }  // strip one-shot params so reload/share doesn't replay them
+    const linkOrg = qs.get('invite_org'), inv = qs.get('invite'), oauthSignin = qs.get('signin')==='oauth';
+    this.oauthSignin=oauthSignin;
+    if(linkOrg || inv || qs.get('invite_expired') || oauthSignin){ history.replaceState(null,'',location.pathname+location.hash); }  // strip one-shot params so reload/share doesn't replay them
     if(linkOrg){ this.inviteLinkOrg=parseInt(linkOrg,10)||null; }
     // A shared detail deep link (/app/skills/<x>, /app/tools/<x>) — from the URL itself, or stashed
     // before an OAuth hop (the callback always lands on /app, which would otherwise drop the path).
@@ -6324,8 +6326,9 @@ createApp({
       // renders blank in an incognito window.
       if(catRoute.slug) this.openPlatform(catRoute.slug, true); else { this.view='connections'; this.loadConnections(); }
       return; }
-    if(!inv && !linkOrg && !route && !qs.get('invite_expired') && !qs.get('ref')){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door. `ref` is NOT a plain visit: it is a use-case page's CTA (/app?ref=p1), and bouncing that visitor to the front door throws away the page they arrived on — on a paid click, the one we bought.
+    if(!inv && !linkOrg && !route && !qs.get('invite_expired') && !qs.get('ref') && !oauthSignin){ location.replace('/'); return; }  // logged-out plain visit → the marketing landing owns the front door. `ref` is NOT a plain visit: it is a use-case page's CTA (/app?ref=p1), and bouncing that visitor to the front door throws away the page they arrived on — on a paid click, the one we bought.
     if(route){ this.shareGate=route; this.demo.signin=true; }  // shared link while logged out: the focused gate (no sandbox mint, no tour); after sign-in the boot lands on it (email verify reloads in place; OAuth restores via the treg-next stash)
+    else if(oauthSignin) this.demo.signin=true;     // OAuth already has a pending return cookie; open login directly and do not mint a sandbox
     else this.sbxInit();                            // other logged-out flows → the in-app landing + sign-in modal
     if(inv){ this.invitePrefill=inv; this.emailInput=inv; this.emailStage=false; this.demo.signin=true; }  // legacy code link while logged out: prefill + open sign-in; the invite auto-accepts after login (maybeOnboard)
   },

@@ -2790,12 +2790,16 @@ async def connect_demo_page():
     browser before trusting it inside ChatGPT, where a failure surfaces as a shrug rather than an
     error message.
     """
+    if not get_settings().connect_demo_enabled:
+        raise HTTPException(status_code=404, detail="connect demo is not enabled")
     return _legal_page("connect-demo.html")
 
 
 @app.get("/connect-demo/callback", include_in_schema=False)
 async def connect_demo_callback():
     """Where treg sends the browser back. Hands the code to the opener and closes."""
+    if not get_settings().connect_demo_enabled:
+        raise HTTPException(status_code=404, detail="connect demo is not enabled")
     return _legal_page("connect-demo-callback.html")
 
 
