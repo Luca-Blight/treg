@@ -176,6 +176,42 @@
       "GET",
       "HEAD"
     ],
+    "name": "workflow_csv",
+    "path": "/workflows/{slug}.csv"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "workflow_page",
+    "path": "/workflows/{slug}"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "workflow_page",
+    "path": "/workflows/{slug}.md"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "workflows_hub",
+    "path": "/workflows"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
     "name": "catalog_css",
     "path": "/catalog.css"
   },

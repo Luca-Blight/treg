@@ -348,8 +348,9 @@ async def test_use_cases_hub_lists_every_written_page(clients: AsyncClient):
 
 # Every page that ships, not a hand-kept list: this set grows by 59 as the use-case pages land, and
 # a title that overflows is invisible in exactly the way nobody notices during review.
-ALL_PAGES = ([f"/agents/{a}" for a in agent_pages.AGENTS] + ["/use-cases"]
-             + [f"/use-cases/{j}" for j in agent_pages.USE_CASE_PAGES])
+ALL_PAGES = ([f"/agents/{a}" for a in agent_pages.AGENTS] + ["/use-cases", "/workflows"]
+             + [f"/use-cases/{j}" for j in agent_pages.USE_CASE_PAGES]
+             + [f"/workflows/{w}" for w in agent_pages.WORKFLOWS])
 
 
 @pytest.mark.parametrize("path", ALL_PAGES)
@@ -488,3 +489,103 @@ def test_every_category_has_a_blurb_and_a_prompt():
     for c, _ in agent_pages.USE_CASES:
         assert agent_pages.CATEGORY_BLURBS.get(c), c
         assert agent_pages.CATEGORY_PROMPTS.get(c), c
+
+
+# ------------------------------------------------------------------ workflow pages (/workflows)
+
+WORKFLOW = "/workflows/find-and-verify-a-lead-list"
+
+
+async def test_workflow_page_is_served_with_the_crawler_essentials(clients: AsyncClient):
+    r = await clients.get(WORKFLOW)
+    assert r.status_code == 200, r.text[:300]
+    html = r.text
+    assert f'<link rel="canonical" href="{_base()}{WORKFLOW}"/>' in html
+    title = re.search(r"<title>(.*?)</title>", html).group(1)
+    assert "treg.to" in title
+    assert "noindex" not in html
+    ld = _ld(html)
+    howto = next(b for b in ld if b["@type"] == "HowTo")
+    assert len(howto["step"]) == 5
+    assert any(b["@type"] == "FAQPage" for b in ld)
+    spec = agent_pages.WORKFLOWS["find-and-verify-a-lead-list"]
+    md = await clients.get(WORKFLOW + ".md")
+    assert md.status_code == 200 and md.headers["content-type"].startswith("text/markdown")
+    for name, *_ in spec["steps"]:
+        assert name in md.text, name
+    assert md.text.rstrip().endswith(f"HTML version: {_base()}{WORKFLOW}")
+    csv = await clients.get(WORKFLOW + ".csv")
+    assert csv.status_code == 200 and csv.headers["content-type"].startswith("text/csv")
+    assert csv.text.startswith("company,domain,person,title,email")
+    hub = await clients.get("/workflows")
+    assert hub.status_code == 200 and f'href="{WORKFLOW}"' in hub.text
+    loud = "/workflows/" + WORKFLOW.rsplit("/", 1)[1].upper()
+    r = await clients.get(loud, follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == WORKFLOW
+    r = await clients.get(loud + ".md", follow_redirects=False)
+    assert r.status_code == 301 and r.headers["location"] == WORKFLOW + ".md"
+    assert (await clients.get("/workflows/teleport")).status_code == 404
+    assert (await clients.get("/workflows/teleport.csv")).status_code == 404
+    # the hubs cross-link, and the sitemap carries both
+    assert 'href="/workflows"' in (await clients.get("/use-cases")).text
+    sitemap = (await clients.get("/sitemap.xml")).text
+    assert f"{_base()}/workflows" in sitemap and f"{_base()}{WORKFLOW}" in sitemap
+
+
+async def test_workflow_pages_are_hosted_only(monkeypatch):
+    monkeypatch.setenv("TREG_PUBLIC_URL", "https://registry.example.com")
+    get_settings.cache_clear()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://registry") as c:
+            assert (await c.get(WORKFLOW)).status_code == 404
+            assert (await c.get("/workflows")).status_code == 404
+    finally:
+        get_settings.cache_clear()
+
+
+def test_every_workflow_step_capability_and_endpoint_exist():
+    """A step names a capability and the endpoint the worked run used. Both must be in the catalog,
+    or the page prices a step from nothing."""
+    cat = catalog_store.load()
+    for key, spec in agent_pages.WORKFLOWS.items():
+        for name, cap, _asks, ep_id, _why in spec["steps"]:
+            eps = [e for e in cat.for_capability(cap) if e["kind"] not in catalog_store.HIDDEN_KINDS]
+            assert eps, (key, name, cap)
+            assert ep_id in {e["id"] for e in eps}, (key, name, ep_id)
+
+
+@pytest.mark.parametrize("key", list(agent_pages.WORKFLOWS))
+def test_no_workflow_ships_with_an_empty_section(key):
+    spec = agent_pages.WORKFLOWS[key]
+    for field in ("sentence", "title", "lede", "prompt"):
+        assert spec.get(field), (key, field)
+    assert len(spec["prompt_why"]) == 4, (key, "prompt_why")
+    assert len(spec["steps"]) >= 3, (key, "steps")
+    assert spec["run"]["receipt"], (key, "receipt")
+    assert spec["run"]["narrative"], (key, "narrative")
+    assert spec["run"].get("date") and spec["run"].get("csv"), (key, "run date/csv")
+    assert len(spec["failure_modes"]) >= 4, (key, "failure_modes")
+    assert len(spec["faq"]) == 4, (key, "faq")
+    assert len(spec["related"]) == 4, (key, "related")
+    menu = {lbl for _c, jobs in agent_pages.USE_CASES for lbl, _ in jobs}
+    for lbl in spec["related"]:
+        assert lbl in menu, (key, lbl)
+
+
+def _walk_strings(x):
+    if isinstance(x, str):
+        yield x
+    elif isinstance(x, dict):
+        for v in x.values():
+            yield from _walk_strings(v)
+    elif isinstance(x, (list, tuple)):
+        for v in x:
+            yield from _walk_strings(v)
+
+
+def test_workflow_copy_has_no_em_dashes():
+    """Same house rule as the use-case pages; SETUP_LINE is the one exception and is not part of
+    a workflow entry."""
+    for key, spec in agent_pages.WORKFLOWS.items():
+        for s in _walk_strings(spec):
+            assert "—" not in s and "–" not in s, (key, s)
