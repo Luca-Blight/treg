@@ -56,8 +56,8 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
 - `api_token` — a bootstrap caller token (MVP leftover; per-user tokens are the real auth).
 - `topup_min_usd`, `topup_default_usd`, `topup_presets`, `topup_bonus_tiers`, `topup_default_cap_usd`
   — Stripe top-up amounts in whole USD. The reference defaults are a $10 minimum, $10 first default,
-  presets of $10, $50, $100 and $200 (plus "Other"), bonus tiers `{10: 0, 50: 5, 100: 10, 200: 15}`
-  (percent of a MANUAL top-up granted as a separate `bonus` block), and a $50 cap on the preselected
+  presets of $10, $50, $100 and $200 (plus "Other"), bonus tiers `{10: 0, 50: 500, 100: 750, 200: 1000}`
+  (basis points of a MANUAL top-up granted as a separate `bonus` block; the top tier is the ceiling), and a $50 cap on the preselected
   amount's climb after each payment; `billing_state` publishes presets, tiers and the per-org default
   to the dashboard.
 - `admin_token` — the cross-tenant **super-admin** bearer (`TREG_ADMIN_TOKEN`); empty disables the env

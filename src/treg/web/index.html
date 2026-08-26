@@ -4021,7 +4021,7 @@ createApp({
     topupUsd(){ if(!this.billing) return 0; if(this.topupPick==='other'){ const v=Number(this.topupOther); return Number.isInteger(v)&&v>0?v:0; } return this.topupPick; },
     topupValid(){ if(!this.billing||!this.topupUsd) return false; const t=this.billing.topup; return this.topupUsd>=t.min_usd&&this.topupUsd<=t.max_usd; },
     topupBonusMicro(){ return this.tierBonus(this.topupUsd)+this.refPresetBonus(this.topupUsd); },
-    maxBonusPct(){ const t=this.billing&&this.billing.topup.bonus_tiers; return t?Math.max(0,...Object.values(t)):0; },
+    maxBonusPct(){ const t=this.billing&&this.billing.topup.bonus_tiers; return t?Math.max(0,...Object.values(t))/100:0; },
     // The monthly cap is a server-side runaway guardrail, not something the payer is asked to pick:
     // the modal sets it to the single-top-up ceiling (effectively unlimited) so a big payer is never
     // locked out mid-month by a default sized for $10 refills. The manage panel below can lower it.
@@ -5013,9 +5013,10 @@ createApp({
     // away from theirs. Only on first pick - a value they typed survives re-selecting the card.
     pickOther(){ if(this.topupPick!=='other'&&!this.topupOther){ const top=Math.max(...this.billing.topup.presets); this.topupOther=Math.min(this.billing.topup.max_usd, top>=200?500:top*2); } this.topupPick='other'; },
     tierBonus(usd){ const t=this.billing&&this.billing.topup.bonus_tiers; if(!t||!usd) return 0;
-      // Keys arrive as strings from JSON; the highest floor at or below the amount applies.
-      let pct=0; Object.keys(t).map(Number).sort((a,b)=>a-b).forEach(k=>{ if(usd>=k) pct=t[k]; });
-      return Math.floor(usd*1e6*pct/100); },
+      // Keys arrive as strings from JSON; values are basis points; the highest floor at or below the
+      // amount applies (and the top tier is the ceiling). Integer micro-USD, same as the server.
+      let bp=0; Object.keys(t).map(Number).sort((a,b)=>a-b).forEach(k=>{ if(usd>=k) bp=t[k]; });
+      return Math.floor(usd*1e6*bp/10000); },
     async payTopup(){ const usd=this.topupUsd; if(!this.topupValid) return;
       this.billingBusy=true; this.topupErr=''; this.topupAmount=usd;
       this.track('topup_checkout_opened',{amount_usd:usd, auto_opt_in:this.topupAuto, bonus_micro:this.topupBonusMicro});

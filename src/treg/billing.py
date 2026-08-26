@@ -97,22 +97,23 @@ def cents_to_micro(amount_cents: int) -> int:
 
 
 def bonus_for_topup(amount_micro: int) -> tuple[int, int]:
-    """The promotional bonus a MANUAL top-up of `amount_micro` earns, as `(bonus_micro, percent)`.
+    """The promotional bonus a MANUAL top-up of `amount_micro` earns, as `(bonus_micro, basis_points)`.
 
-    Tiered by size (`topup_bonus_tiers`): the highest tier at or below the amount applies, so $99 gets
-    the $50 rate and $250 the $200 rate. Integer micro-USD throughout — `amount * pct // 100`
-    truncates the sub-micro remainder, which is at most a millionth of a dollar in treg's favour.
-    Callers decide whether the top-up qualifies at all (automatic refills never do).
+    Tiered by size (`topup_bonus_tiers`, values in basis points): the highest tier at or below the
+    amount applies, so $99 gets the $50 rate and $2,000 the $200 rate — the top tier is the ceiling.
+    Integer micro-USD throughout — `amount * bp // 10_000` truncates the sub-micro remainder, which
+    is at most a millionth of a dollar in treg's favour. Callers decide whether the top-up
+    qualifies at all (automatic refills never do).
     """
     tiers = get_settings().topup_bonus_tiers or {}
     usd = int(amount_micro) // MICRO_PER_USD
-    pct = 0
+    bp = 0
     for floor_usd in sorted(int(k) for k in tiers):
         if usd >= floor_usd:
-            pct = int(tiers[floor_usd] if floor_usd in tiers else tiers[str(floor_usd)])
-    if pct <= 0:
+            bp = int(tiers[floor_usd] if floor_usd in tiers else tiers[str(floor_usd)])
+    if bp <= 0:
         return 0, 0
-    return int(amount_micro) * pct // 100, pct
+    return int(amount_micro) * bp // 10_000, bp
 
 
 async def next_default_usd(db: AsyncSession, org_id: int | None) -> int:
@@ -920,22 +921,22 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
                         # every object this session is tracking, `block` included, and reading an
                         # expired attribute outside an awaited call raises MissingGreenlet.
     fresh = not already
-    bonus_micro, bonus_pct = 0, 0
+    bonus_micro, bonus_bp = 0, 0
     if fresh and not auto:
         # The tiered bonus on a MANUAL top-up, as its own promotional block: it burns first and is
         # never refundable, so it must not inflate the purchased (refundable) block above. `fresh` is
         # the idempotency guard — a webhook redelivery finds `already` and grants nothing. Swallowed
         # like the referral qualification below: a failure here must not 500 the handler and make
         # Stripe retry a payment that has already credited.
-        bonus_micro, bonus_pct = bonus_for_topup(amount_micro)
+        bonus_micro, bonus_bp = bonus_for_topup(amount_micro)
         if bonus_micro > 0:
             try:
                 await ledger.grant(db, org_id, amount_micro=bonus_micro, kind="bonus", once=False,
                                    meta={"source": "topup_bonus", "payment_intent": pi_id,
-                                         "pct": bonus_pct, "topup_block_id": block_id})
+                                         "bp": bonus_bp, "topup_block_id": block_id})
             except Exception as e:  # noqa: BLE001
                 await db.rollback()
-                bonus_micro, bonus_pct = 0, 0
+                bonus_micro, bonus_bp = 0, 0
                 log.warning("billing: bonus grant failed for org %s on %s: %s", org_id, pi_id, e)
     after = await ledger.balance_of(db, org_id)
     if fresh:
@@ -958,7 +959,7 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
                           {"amount_micro": amount_micro,
                            "amount_usd": amount_micro / 1_000_000,  # display-only, never computed against
                            "auto": auto, "balance_after_micro": after,
-                           "bonus_micro": bonus_micro, "bonus_pct": bonus_pct,
+                           "bonus_micro": bonus_micro, "bonus_bp": bonus_bp,
                            "org": org.slug if org else ""},
                           groups={"team": org.slug if org else ""})
         # First top-up only: `fresh` is already the "this delivery moved money" branch, and the
@@ -1169,7 +1170,7 @@ async def billing_state(db: AsyncSession, org: Org) -> dict:
                   # Per-org: one preset above the last manual top-up, capped (see next_default_usd).
                   "default_usd": await next_default_usd(db, org.id),
                   "presets": list(s.topup_presets),
-                  # {usd: percent}; JSON turns the keys into strings — the UI compares numerically.
+                  # {usd: basis points}; JSON turns the keys into strings — the UI compares numerically.
                   "bonus_tiers": {int(k): int(v) for k, v in (s.topup_bonus_tiers or {}).items()}},
         "autotopup": {
             "enabled": bool(org.autotopup_enabled),

@@ -184,20 +184,21 @@ built. A 100%-off code collects nothing, so the session credits nothing: `_on_ch
 drops it as `zero amount`. Grant free balance through `ledger.grant`, never through a Stripe coupon.
 
 **The top-up bonus IS that `ledger.grant` on top — tiered, and manual only.** `topup_bonus_tiers`
-(`{10: 0, 50: 5, 100: 10, 200: 15}`, `{min_usd: percent}`) gives a manual top-up a `bonus` block
-worth the highest tier at or below the amount (`bonus_for_topup`: $99 earns the $50 rate, $250 the
-$200 rate; integer `amount * pct // 100`). It is granted inside `_credit`'s `fresh` branch — the one
+(`{10: 0, 50: 500, 100: 750, 200: 1000}`, `{min_usd: basis points}` — 7.5% has to stay an
+integer) gives a manual top-up a `bonus` block worth the highest tier at or below the amount
+(`bonus_for_topup`: $99 earns the $50 rate, $2,000 the $200 rate — the top tier is the ceiling;
+integer `amount * bp // 10_000`). It is granted inside `_credit`'s `fresh` branch — the one
 point that knows money moved for the first time, so a webhook redelivery grants nothing — as a
 **separate block** with `_KIND_ORDER` rank 0: it burns with promo and referral credit, before the
 purchased block, and the purchased block stays exactly what the card paid. That is the whole
 reason it is not folded into `ledger.topup`: purchased credit is a refundable liability, the bonus
 is marketing spend. Automatic refills (`auto=True`) earn nothing — they repeat a chosen amount, and
-a bonus there would be a permanent 9–15% margin cut on every refill rather than a reason to come
+a bonus there would be a permanent 5–10% margin cut on every refill rather than a reason to come
 back and buy bigger. A refund or dispute does **not** reverse it: like an already-granted referral
 bonus it is logged for a human (`_on_payment_reversed` → `bonus_blocks_flagged`), because the ledger
 has no path that drives a balance down and this is not the reason to add one. The grant entry's
-meta carries `payment_intent`, `pct` and `topup_block_id`; `topup_history` joins on it to show
-`bonus_micro` per payment, and the receipt says "$100 + $10 bonus" so a balance that rose $110 on a
+meta carries `payment_intent`, `bp` and `topup_block_id`; `topup_history` joins on it to show
+`bonus_micro` per payment, and the receipt says "$100 + $7.50 bonus" so a balance that rose $107.50 on a
 $100 charge reads as intended rather than as a mistake.
 
 **The preselected amount climbs a ladder, capped.** `next_default_usd` looks at the org's last
