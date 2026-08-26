@@ -3655,6 +3655,123 @@ USE_CASE_PAGES["backlink-profile-of-a-domain"] = {
 }
 
 
+USE_CASE_PAGES["search-posts-by-keyword"] = {
+    "label": "Search posts by keyword",
+    "sentence": "Reddit search API and X search API: posts by keyword on Reddit, X, LinkedIn and TikTok, per call",
+    "title": "Reddit and X search API: posts by keyword, per call | treg.to",
+    "lede": (
+        "Give your agent a keyword and get the posts back as rows: title, text, author, "
+        "score, date and the link, from Reddit, X, LinkedIn or TikTok, each through the same "
+        "treg.to key, from {cheapest} at the provider's own rate with no markup. No Reddit "
+        "developer app to apply for, no X Basic tier to subscribe to, and no account of yours "
+        "on the line. The networks are not alternatives to each other; the platform is the "
+        "choice, and the rows are relayed as the provider returns them."),
+    "prompt": "Using treg, search Reddit and X for posts mentioning our product name from the "
+              "last week, show me the price per platform first, then group them by theme, "
+              "flag anything that reads as a complaint, and give me the link for each.",
+    "prompt_why": [
+        ("Name the platforms", "Each network is its own shelf with its own providers. Reddit and X is two calls; all four is four."),
+        ("Put a window on it", "X's official recent search covers the last seven days and the archive call the rest. Say which week you mean."),
+        ("Ask for the price per platform", "The rates differ by an order of magnitude between rows. treg.to prints each before the call, so the agent can say what a daily watch will spend."),
+        ("Keep the link", "The rows carry the permalink. A complaint is only useful if a human can open it."),
+    ],
+    "result_noun": "post",
+    "result_image": None,
+    "q_cheapest": "Which search API is cheapest, per platform?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do the providers compare, per platform?",
+    "what_is_heading": "What is a Reddit search API, and what happened to the official one?",
+    "what_is": (
+        "A Reddit search API returns the posts matching a keyword as data, across every "
+        "subreddit, with the score, the comment count and the permalink. Reddit's own API "
+        "still exists, but self-service app keys stopped, anonymous JSON calls now answer with "
+        "a 403, and access runs through an approval queue, which is why the forum's Reddit "
+        "MCP servers keep breaking and rebuilding on RSS. X's official search API is open but "
+        "priced per post returned and capped per month. The providers on this page read "
+        "both networks for you, plus LinkedIn's public posts as Google indexes them and "
+        "TikTok's keyword search, and return rows; the official X call is here too, on your "
+        "own X developer account."),
+    "notes": [
+        "Reddit is three third-party providers, none of them Reddit. ScrapeCreators bills one "
+        "credit a call, TikHub a tenth of a cent per successful call, JustOneAPI per "
+        "success in yuan; all run on treg.to's own key with no developer app. What they "
+        "search is Reddit's own search, so relevance is Reddit's, and the rows are posts: "
+        "comment trees, votes and anything that writes to Reddit still need an approved app "
+        "of your own.",
+        "X is the one platform with an official row. X's recent search runs on your own X "
+        "developer account at X's own per-post rate, never metered by treg.to; the archive "
+        "call covers history at the same rate. The two scraper rows are cheaper and, on the "
+        "traffic treg.to has measured, answer more often, and they use no account of yours. "
+        "They are also scraping, and the provider carries that risk, not the page; the "
+        "reliability section shows what the live traffic looks like rather than promising.",
+        "LinkedIn and TikTok are narrower shelves. LinkedIn post search is one provider "
+        "reading what Google has indexed of public posts, so a post the index has not "
+        "reached is not there. TikTok keyword search returns videos, with three providers. "
+        "There is no Facebook or Instagram keyword search in the catalog, and monitoring is "
+        "the agent's loop: no alerts, no schedule and no sentiment score come with the rows.",
+    ],
+    "faq": [
+        ("Do I need a Reddit API key?",
+         "No. The three Reddit rows are third-party providers on treg.to's own key, billed per "
+         "call from your team's balance at the provider's rate with $0.000 added. If you hold "
+         "an approved Reddit app, that is for posting and comment trees; searching posts "
+         "does not need it here."),
+        ("How much does the X search cost?",
+         "Two ways. The official recent search bills at X's own per-post rate on your own X "
+         "developer account, and treg.to meters none of it. The scraper rows bill per "
+         "successful call on treg.to's key, at a rate the page prints beside each. Neither "
+         "needs an X Basic subscription."),
+        ("Can I monitor a keyword continuously?",
+         "The agent can, by calling on a schedule you give it. treg.to has no alerting, no "
+         "scheduler and no sentiment layer; it returns the posts and the price. A daily watch "
+         "on two platforms is two calls a day."),
+        ("Which provider should my agent use?",
+         "The platform decides the shelf. Within it, treg.to shows each row's rate and "
+         "measured success side by side, and the agent picks, or you tell it; treg.to does "
+         "not route or fail over between them."),
+    ],
+    "voices_intro": (
+        "Keyword-monitoring threads are a vendor parade: of the ~165 Reddit and X posts read "
+        "in August 2026, one launch campaign ran to six near-identical tweets and two "
+        "reposts into vendor-run subreddits, and a dozen monitoring tools pitched themselves "
+        "to the same questions. These five are people hitting the wall themselves."),
+    "voices": [
+        ("Reddit closed the side door",
+         "Reddit now blocks anonymous access to its JSON API at the network level.",
+         "r/ClaudeAI, 20 points", "https://www.reddit.com/r/ClaudeAI/comments/1tsis6e/i_built_a_tiny_mcp_server_to_use_reddit_from/",
+         "That poster's Reddit MCP stopped returning rows and was rebuilt on RSS. The Reddit "
+         "rows here are providers with their own access, priced per call, and the agent "
+         "calls them with the same setup line it uses for everything else."),
+        ("A developer app just to search is the wrong shape",
+         "They require setting up Reddit developer apps and OAuth tokens just to do basic searches.",
+         "r/mcp, 57 points", "https://www.reddit.com/r/mcp/comments/1vtig8g/redditmcpai_an_mcp_server_for_searching_reddit/",
+         "Agreed, and none of the Reddit rows here asks for one. The honest limit is that "
+         "they return posts through Reddit's own search; the comment tree and the vote are "
+         "still the official API's."),
+        ("The official X rate adds up fast",
+         "25 cents for 2 requests? This is just for a basic post search.",
+         "X", "https://x.com/i/status/2074000371908043033",
+         "That is X's per-post rate, and the official row here carries exactly it, on your own "
+         "account. The two scraper rows sit beside it at a fraction of the price, with what "
+         "the live traffic says about each, so the choice is yours with the numbers in front "
+         "of you."),
+        ("Searching from your own account can get it flagged",
+         "doing any programmatic actions outside of the official API will flag an account—including simply using search.",
+         "X, 1,287 likes", "https://x.com/i/status/2030491364056830011",
+         "That warning is about your account. The scraper providers here use none of yours, "
+         "so the risk sits with the provider; the page does not call that safe, it calls it "
+         "theirs, and shows their measured success instead."),
+        ("The old objection, still the objection",
+         "Why is he charging for low volume pull requests too?",
+         "r/sysadmin, 5,377 points", "https://www.reddit.com/r/sysadmin/comments/12s95sl/is_elon_on_crack_im_not_paying_42k_per_month_for/",
+         "Low volume is what per-call pricing is for. Ten posts a day on a scraper row is "
+         "cents a month, with no tier, no minimum and the rate printed before each call."),
+    ],
+    "related": ("Mine the comments", "Find creators by keyword",
+                "A competitor's recent posts", "Posts under a hashtag"),
+}
+
+
 # The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
 # use-case page answers one job; a workflow chains several, with a per-step price pulled live from
 # the catalog and a receipt from a real run. `run` is hand-recorded from that run and dated. A
