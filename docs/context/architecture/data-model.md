@@ -10,6 +10,7 @@ sources:
   - src/treg/timeutil.py
   - src/treg/db.py
   - src/treg/referrals.py
+  - src/treg/domain/referrals.py
   - src/treg/audit.py
   - src/treg/analytics.py
   - src/treg/ratestore.py
@@ -332,7 +333,7 @@ NOT NULL with **no server default**, so raw SQL must supply it (ops/deploy.md §
 
 ## `Referral` — one invitation, and what it owes
 
-Written by `referrals.py`; the money it results in is granted through `ledger.grant`. See
+Written by `domain/referrals.py`; the money it results in is granted through `ledger.grant`. See
 [money](money.md) for the policy and the gates. Two things about the SHAPE belong here:
 
 **Two UNIQUE columns do the arbitration, not application code.** `referred_org_id` (an org can be

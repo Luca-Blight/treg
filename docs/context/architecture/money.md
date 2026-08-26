@@ -10,6 +10,7 @@ sources:
   - src/treg/infra/stripe.py
   - src/treg/reconcile.py
   - src/treg/referrals.py
+  - src/treg/domain/referrals.py
   - src/treg/api.py
   - src/treg/application/signup.py
   - src/treg/routers/admin.py
@@ -615,7 +616,7 @@ and it replaces editing one env var that would lift the blast-radius rail for ev
 
 ## Referrals — paying for growth out of the one margin we have
 
-`referrals.py` decides; `ledger.py` moves. The only crossing is `ledger.grant(...)`, exactly as
+`domain/referrals.py` decides; `ledger.py` moves. The only crossing is `ledger.grant(...)`, exactly as
 `billing.py`'s only crossing is `ledger.topup(...)`.
 
 **Why a flat bounty and not a percentage.** `platform_margin` is 0.0 and "we add no markup" is a
