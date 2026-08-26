@@ -220,12 +220,10 @@ class Settings(BaseSettings):
     # Four presets plus "Other" (any whole amount ≥ min). Deliberately few and skewed big: with eight
     # cards from $5 up nobody ever picked $100+, and repeat payers stayed flat ($10 → $10).
     topup_presets: list[int] = [10, 50, 100, 200]
-    # Bonus credit on a MANUAL top-up, as {min_usd: basis points} (100 bp = 1%): the highest key ≤
-    # the amount applies, and the last tier is the ceiling — $2,000 earns the $200 rate. Basis points
-    # because 7.5% has to stay an integer (money code never sees a float). It is promotional credit
-    # (a separate block that burns first and is never refundable), never purchased balance — see
-    # billing.bonus_for_topup. Automatic refills get no bonus.
-    topup_bonus_tiers: dict[int, int] = {10: 0, 50: 500, 100: 750, 200: 1000}
+    # Bonus credit on a MANUAL top-up, as {min_usd: percent}: the highest key ≤ the amount applies.
+    # It is promotional credit (a separate block that burns first and is never refundable), never
+    # purchased balance — see billing.bonus_for_topup. Automatic refills get no bonus.
+    topup_bonus_tiers: dict[int, int] = {10: 0, 50: 5, 100: 10, 200: 15}
     # After each manual top-up the dashboard's preselected amount steps one preset up, but never past
     # this — the ladder nudges $10 payers toward $50 without preselecting $200 at anyone.
     topup_default_cap_usd: int = 50

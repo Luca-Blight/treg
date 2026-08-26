@@ -3685,13 +3685,8 @@ def _billing_autotopup(cfg: dict) -> dict | None:
         return None
 
 
-def _pct(bp: int) -> str:
-    """Basis points as a human percent: 750 → '7.5%', 1000 → '10%'."""
-    return f"{bp / 100:g}%"
-
-
 def _billing_bonus_tiers(cfg: dict) -> dict[int, int]:
-    """`{min_usd: basis points}` from GET /billing, or {} when unavailable. Same never-raises posture as
+    """`{min_usd: percent}` from GET /billing, or {} when unavailable. Same never-raises posture as
     `_billing_autotopup`: this decorates the top-up output."""
     try:
         with _client(cfg) as c:
@@ -3727,12 +3722,12 @@ def cmd_topup(args, cfg) -> None:
     tiers = _billing_bonus_tiers(cfg)
     if tiers:
         usd = out["amount_micro"] // 1_000_000
-        bp = max([v for k, v in tiers.items() if usd >= k], default=0)
-        if bp:
-            print(f"  {_G}+{_pct(bp)} bonus credit{_R} ({_usd(out['amount_micro'] * bp // 10_000)}) added when it lands")
-        nxt = [(k, v) for k, v in sorted(tiers.items()) if k > usd and v > bp]
+        pct = max([v for k, v in tiers.items() if usd >= k], default=0)
+        if pct:
+            print(f"  {_G}+{pct}% bonus credit{_R} ({_usd(out['amount_micro'] * pct // 100)}) added when it lands")
+        nxt = [(k, v) for k, v in sorted(tiers.items()) if k > usd and v > pct]
         if nxt:
-            print(f"  {_M}top up ${nxt[0][0]} or more for +{_pct(nxt[0][1])} bonus credit{_R}")
+            print(f"  {_M}top up ${nxt[0][0]} or more for +{nxt[0][1]}% bonus credit{_R}")
     print(f"\n  Pay on Stripe's secure page:\n\n    {_TEAL}{out['url']}{_R}")
     print(f"\n  {_M}Your balance updates as soon as Stripe confirms the payment "
           f"(seconds). Check it with `treg balance`.{_R}\n")
@@ -5505,7 +5500,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     tu = mk(sub, "topup", "Add funds to your team's balance, or set up automatic top-ups.",
             "treg topup                                     # a Checkout link for the default amount",
-            "treg topup 100                                 # …for $100 (+7.5% bonus credit)",
+            "treg topup 100                                 # …for $100 (+10% bonus credit)",
             "treg topup --auto on --threshold 5 --amount 20 # refill $20 whenever it drops below $5",
             "treg topup --auto off")
     tu.add_argument("amount", nargs="?", type=float, default=None,

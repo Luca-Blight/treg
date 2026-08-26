@@ -155,7 +155,7 @@ async def test_billing_get_reports_state_for_an_admin(c: AsyncClient, monkeypatc
     assert body["topup"]["min_usd"] == 10
     assert body["topup"]["presets"] == [10, 50, 100, 200]
     assert body["topup"]["default_usd"] == 10  # no history yet
-    assert body["topup"]["bonus_tiers"] == {"10": 0, "50": 500, "100": 750, "200": 1000}
+    assert body["topup"]["bonus_tiers"] == {"10": 0, "50": 5, "100": 10, "200": 15}
 
 
 async def test_billing_is_503_when_stripe_is_not_configured(c: AsyncClient, monkeypatch):
@@ -1022,13 +1022,12 @@ async def test_pm_and_fingerprint_survives_sdk_objects(monkeypatch):
 
 
 # ---- tiered bonus + the ladder default ---------------------------------------------------------
-@pytest.mark.parametrize("usd,bonus,bp", [
-    (10, 0, 0), (49, 0, 0), (50, 2_500_000, 500), (99, 4_950_000, 500), (100, 7_500_000, 750),
-    (199, 14_925_000, 750), (200, 20_000_000, 1000), (250, 25_000_000, 1000),
-    (2_000, 200_000_000, 1000),  # the top tier is the ceiling
+@pytest.mark.parametrize("usd,bonus,pct", [
+    (10, 0, 0), (49, 0, 0), (50, 2_500_000, 5), (99, 4_950_000, 5), (100, 10_000_000, 10),
+    (250, 37_500_000, 15), (2_000, 300_000_000, 15),
 ])
-def test_bonus_tiers_apply_the_highest_floor_at_or_below_the_amount_and_cap_at_the_top(usd, bonus, bp):
-    assert billing.bonus_for_topup(usd * 1_000_000) == (bonus, bp)
+def test_bonus_tiers_apply_the_highest_floor_at_or_below_the_amount(usd, bonus, pct):
+    assert billing.bonus_for_topup(usd * 1_000_000) == (bonus, pct)
 
 
 @pytest.mark.parametrize("amount", [1, 5, 0.5, 2.5, 99_999, "x"])
@@ -1042,7 +1041,7 @@ def test_threshold_validation_is_not_the_topup_minimum(amount):
 
 
 async def test_manual_topup_grants_a_bonus_block_once_and_auto_never_does(c: AsyncClient, monkeypatch):
-    """$100 by hand → $100 purchased + $7.50 bonus, and a redelivery adds nothing. The bonus is its own
+    """$100 by hand → $100 purchased + $10 bonus, and a redelivery adds nothing. The bonus is its own
     promotional-rank block: the purchased (refundable) block stays exactly what the card paid."""
     org_id, owner = await _org(c)
     monkeypatch.setattr(billing, "_sdk", _no_sdk)
@@ -1051,20 +1050,20 @@ async def test_manual_topup_grants_a_bonus_block_once_and_auto_never_does(c: Asy
     assert (await _deliver(c, event)).json()["credited"] is True
     assert (await _deliver(c, event)).json()["credited"] is False
     body = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()
-    assert body["balance_micro"] == promo + 100_000_000 + 7_500_000
+    assert body["balance_micro"] == promo + 100_000_000 + 10_000_000
     kinds = [b["kind"] for b in body["blocks"]]
     assert kinds.count("purchased") == 1 and kinds.count("bonus") == 1
     purchased = [b for b in body["blocks"] if b["kind"] == "purchased"][0]
     assert purchased["amount_micro"] == 100_000_000
     grants = [e for e in body["entries"]["items"] if e["kind"] == "grant" and e["meta"].get("source") == "topup_bonus"]
-    assert len(grants) == 1 and grants[0]["meta"]["payment_intent"] == "pi_bonus" and grants[0]["meta"]["bp"] == 750
+    assert len(grants) == 1 and grants[0]["meta"]["payment_intent"] == "pi_bonus" and grants[0]["meta"]["pct"] == 10
 
     # An automatic refill of the same size earns nothing.
     r = await _deliver(c, _pi_event(org_id, pi="pi_bonus_auto", cents=10_000, auto="1"))
     assert r.json()["credited"] is True
     body = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()
     assert [b["kind"] for b in body["blocks"]].count("bonus") == 1
-    assert body["balance_micro"] == promo + 207_500_000
+    assert body["balance_micro"] == promo + 210_000_000
 
 
 async def test_bonus_burns_before_purchased_credit(c: AsyncClient, monkeypatch):
