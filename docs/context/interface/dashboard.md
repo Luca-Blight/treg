@@ -210,16 +210,29 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
     argv deny patterns with their source (skill vs catalog), under a line naming all three deny
     layers — HTTP rules, argv patterns, OS sandbox — so the whole "what is blocked" picture is one
     screen.
-  - **Billing** (admin+) — balance, one-click top-up cards rendered from `billing.topup.presets` (the
-    reference defaults live in [deployment config](../ops/deploy.md#config-configpy)), the auto-top-up
+  - **Billing** (admin+) — balance, a **Top up** button that opens the top-up modal, the auto-top-up
     toggle with its verbatim PSD2/SCA mandate text, and below them **Payment history**: date, amount, an
-    `auto` marker, and one link per row — *Invoice* when Stripe issued one (manual top-ups do; automatic
+    `auto` marker, the `+$X bonus` the payment earned, and one link per row — *Invoice* when Stripe issued one (manual top-ups do; automatic
     ones can't), else
     *Receipt*, else an em dash. Amounts come from our own ledger and the links from Stripe, so when
     Stripe is unreachable the table still renders and a line under it says the links, not the numbers,
     are missing. A **Manage billing** button opens Stripe's hosted portal (card, billing address, tax
     ID, the full invoice archive); it is hidden until `billing.portal` is true, which needs a Stripe
     customer, which a team gets on its first payment — so a new team never sees a button that errors.
+
+    The **top-up modal** (`topupOpen`) is one decision, not three: the four preset cards from
+    `billing.topup.presets` plus **Other** (a whole-dollar input bounded by `topup.min_usd`/`max_usd`),
+    each card naming the tier bonus it earns (`tierBonus`, from `topup.bonus_tiers`; the referral
+    bonus stacks via `refPresetBonus`), a summary box (credit + bonus, total due = the amount — treg
+    charges no fee, so there is no fee line), and an **auto top-up toggle that defaults ON** for a
+    team with no mandate yet. The toggle's label is the mandate text with the amount being chosen
+    right now, the $5 threshold and a monthly cap of `max(configured cap, 4 × amount)` — never a
+    config default the payer did not see. Pay with the toggle on POSTs `/billing/autotopup`
+    (`consent: true`, those numbers, `setup_url: false` because the top-up Checkout saves the card
+    itself) **before** `/billing/topup`, so consent exists before the card that will be charged under
+    it; the setup webhook then arms the policy. A team that already has a mandate sees a read-only
+    "auto top-up is on" line instead. The preselected card is `topup.default_usd`, which is per-org:
+    one preset above the last manual top-up, capped at $50 (see [money](../architecture/money.md)).
   - **Team settings** — deliberately JUST the **Danger zone** (leave / delete), visible to EVERY role
     (leaving is self-service, and `loadOrgAdmin` lands a non-admin here). New team / Join by code /
     Paste token live only in the sidebar picker — cut from this tab on founder review; a personal

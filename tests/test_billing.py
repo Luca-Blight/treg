@@ -126,7 +126,7 @@ def test_amount_validation_rejects_what_we_will_not_charge(amount):
         billing.validate_topup_usd(amount)
 
 
-@pytest.mark.parametrize("amount", [5, 10, 25, 50, 37, 2_000])
+@pytest.mark.parametrize("amount", [10, 25, 50, 37, 2_000])
 def test_amount_validation_accepts_the_minimum_and_above(amount):
     assert billing.validate_topup_usd(amount) == amount
 
@@ -152,8 +152,10 @@ async def test_billing_get_reports_state_for_an_admin(c: AsyncClient, monkeypatc
     assert body["configured"] is True and body["customer"] is False and body["card_on_file"] is False
     assert body["balance_micro"] == get_settings().promo_grant_micro
     assert body["autotopup"]["enabled"] is False and body["autotopup"]["consented_at"] is None
-    assert body["topup"]["min_usd"] == 5
-    assert body["topup"]["presets"] == [5, 10, 25, 50, 100, 200, 300, 400]
+    assert body["topup"]["min_usd"] == 10
+    assert body["topup"]["presets"] == [10, 50, 100, 200]
+    assert body["topup"]["default_usd"] == 10  # no history yet
+    assert body["topup"]["bonus_tiers"] == {"10": 0, "50": 5, "100": 10, "200": 15}
 
 
 async def test_billing_is_503_when_stripe_is_not_configured(c: AsyncClient, monkeypatch):
@@ -1017,3 +1019,95 @@ async def test_pm_and_fingerprint_survives_sdk_objects(monkeypatch):
     monkeypatch.setattr(stripe.PaymentIntent, "retrieve", staticmethod(fake_retrieve))
     pm_id, fingerprint = await billing._pm_and_fingerprint("pi_real")
     assert (pm_id, fingerprint) == ("pm_real", "fp_real")
+
+
+# ---- tiered bonus + the ladder default ---------------------------------------------------------
+@pytest.mark.parametrize("usd,bonus,pct", [
+    (10, 0, 0), (49, 0, 0), (50, 2_500_000, 5), (99, 4_950_000, 5), (100, 10_000_000, 10),
+    (250, 37_500_000, 15), (2_000, 300_000_000, 15),
+])
+def test_bonus_tiers_apply_the_highest_floor_at_or_below_the_amount(usd, bonus, pct):
+    assert billing.bonus_for_topup(usd * 1_000_000) == (bonus, pct)
+
+
+@pytest.mark.parametrize("amount", [1, 5, 0.5, 2.5, 99_999, "x"])
+def test_threshold_validation_is_not_the_topup_minimum(amount):
+    """A $5 threshold is fine even though a $5 top-up is not: the threshold is not a charge."""
+    if amount in (1, 5):
+        assert billing.validate_threshold_usd(amount) == amount
+    else:
+        with pytest.raises(billing.TopupRejected):
+            billing.validate_threshold_usd(amount)
+
+
+async def test_manual_topup_grants_a_bonus_block_once_and_auto_never_does(c: AsyncClient, monkeypatch):
+    """$100 by hand → $100 purchased + $10 bonus, and a redelivery adds nothing. The bonus is its own
+    promotional-rank block: the purchased (refundable) block stays exactly what the card paid."""
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    promo = get_settings().promo_grant_micro
+    event = _pi_event(org_id, pi="pi_bonus", cents=10_000)
+    assert (await _deliver(c, event)).json()["credited"] is True
+    assert (await _deliver(c, event)).json()["credited"] is False
+    body = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()
+    assert body["balance_micro"] == promo + 100_000_000 + 10_000_000
+    kinds = [b["kind"] for b in body["blocks"]]
+    assert kinds.count("purchased") == 1 and kinds.count("bonus") == 1
+    purchased = [b for b in body["blocks"] if b["kind"] == "purchased"][0]
+    assert purchased["amount_micro"] == 100_000_000
+    grants = [e for e in body["entries"]["items"] if e["kind"] == "grant" and e["meta"].get("source") == "topup_bonus"]
+    assert len(grants) == 1 and grants[0]["meta"]["payment_intent"] == "pi_bonus" and grants[0]["meta"]["pct"] == 10
+
+    # An automatic refill of the same size earns nothing.
+    r = await _deliver(c, _pi_event(org_id, pi="pi_bonus_auto", cents=10_000, auto="1"))
+    assert r.json()["credited"] is True
+    body = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()
+    assert [b["kind"] for b in body["blocks"]].count("bonus") == 1
+    assert body["balance_micro"] == promo + 210_000_000
+
+
+async def test_bonus_burns_before_purchased_credit(c: AsyncClient, monkeypatch):
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    await _deliver(c, _pi_event(org_id, pi="pi_burn", cents=5_000))  # $50 + $2.50 bonus
+    spend = get_settings().promo_grant_micro + 1_000_000  # the whole promo grant plus $1 of bonus
+    async with session_maker() as db:
+        call_id = await ledger.reserve(db, org_id, "ep_burn", spend)
+        await ledger.settle(db, call_id, spend)
+    body = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()
+    by_kind = {b["kind"]: b for b in body["blocks"]}
+    assert by_kind["purchased"]["remaining_micro"] == 50_000_000, "purchased credit was touched first"
+    assert by_kind["bonus"]["remaining_micro"] == 1_500_000
+
+
+async def test_the_next_default_steps_one_preset_up_and_caps_at_fifty(c: AsyncClient, monkeypatch):
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    state = lambda: c.get("/billing", headers=_h(owner))  # noqa: E731
+    assert (await state()).json()["topup"]["default_usd"] == 10
+    await _deliver(c, _pi_event(org_id, pi="pi_l1", cents=1_000))            # $10 → next is $50
+    assert (await state()).json()["topup"]["default_usd"] == 50
+    await _deliver(c, _pi_event(org_id, pi="pi_l2", cents=20_000, auto="1"))  # auto refills don't count
+    assert (await state()).json()["topup"]["default_usd"] == 50
+    await _deliver(c, _pi_event(org_id, pi="pi_l3", cents=5_000))            # $50 → would be $100, capped
+    assert (await state()).json()["topup"]["default_usd"] == 50
+    await _deliver(c, _pi_event(org_id, pi="pi_l4", cents=20_000))           # $200 → stays at the cap
+    assert (await state()).json()["topup"]["default_usd"] == 50
+
+
+async def test_topup_without_an_amount_uses_the_ladder_default(c: AsyncClient, monkeypatch):
+    org_id, owner = await _org(c)
+    monkeypatch.setattr(billing, "_sdk", _no_sdk)
+    await _deliver(c, _pi_event(org_id, pi="pi_ld", cents=1_000))
+    seen = {}
+
+    async def fake_sdk(fn, /, **kw):
+        if "Customer" in str(fn):
+            return {"id": "cus_ld"}
+        seen.update(kw)
+        return {"id": "cs_ld", "url": "https://checkout.stripe.com/c/pay/cs_ld"}
+
+    monkeypatch.setattr(billing, "_sdk", fake_sdk)
+    r = await c.post("/billing/topup", json={}, headers=_h(owner))
+    assert r.status_code == 200, r.text
+    assert r.json()["amount_usd"] == 50
