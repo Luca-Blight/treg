@@ -223,6 +223,16 @@ admin-only, which meant a machine identity could not read the balance it was spe
 `treg balance` after a call. Refusing the number there while shipping it in an error was incoherent.
 (Reported by Jason, 2026-08-07.)
 
+The 402 also carries `autotopup_enabled` and an `auto top-up:` line in `message`. Off → the one
+command that turns it on. On → the amount, threshold, cooldown and monthly cap, plus the flags that
+raise them — because a team that is out of money *with* auto top-up on is being held by the cooldown
+or the cap, and "add funds" alone reads as "auto top-up is broken" (cobl.ai, 2026-08-25: ~1,500
+refusals between hourly $20 refills against a $60/day burn). The org fields are read **before**
+`reserve`: a failed reserve rolls the session back and expires the ORM instance, so a lazy read in
+the except path raises `MissingGreenlet`. The MCP path still scrubs the payment link from the same
+body (`mcp.py`, ChatGPT digital-goods rule) — the auto top-up line survives because it names a CLI
+command, not a URL.
+
 ## The spend ceiling (`api.py`)
 
 `_enforce_platform_daily_cap` is a per-org, per-UTC-day ceiling on platform spend, and it is

@@ -297,6 +297,30 @@ async def test_empty_balance_is_a_402_an_agent_can_act_on(clients: AsyncClient, 
     assert d["balance_micro"] == 0
     assert d["estimated_cost_micro"] == EP_MICRO
     assert d["topup_url"] == "/app#billing"
+    # The team refilling by hand every hour is the one that should hear auto top-up exists.
+    assert d["autotopup_enabled"] is False
+    assert "treg topup --auto on" in d["message"]
+
+
+async def test_402_with_autotopup_on_names_the_policy_not_a_missing_card(clients: AsyncClient, platform_on):
+    """Auto top-up ON and still out of money means the cooldown or the cap is holding. Saying "add
+    funds" alone reads as "auto top-up is broken"; the message names the amount/threshold/cap and
+    the command that raises them (cobl.ai, 2026-08-25: 1,500 refusals between hourly $20 refills)."""
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        org = await db.get(Org, org_id)
+        org.autotopup_enabled = True
+        org.autotopup_consented_at = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC: TIMESTAMP WITHOUT TIME ZONE
+        org.autotopup_amount_micro = 20_000_000
+        org.autotopup_threshold_micro = 5_000_000
+        await db.commit()
+        await A.ledger.reserve(db, org_id, "drain", 1_000_000)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 402, r.text
+    d = r.json()["detail"]
+    assert d["autotopup_enabled"] is True
+    assert "auto top-up:    on" in d["message"] and "$20" in d["message"] and "$5" in d["message"]
+    assert "--auto on" in d["message"]
     assert "treg connections connect --provider tikhub" in d["message"]
     assert PLATFORM_KEYS["TIKHUB"] not in json.dumps(d), "an error must never carry the key"
     row = await _telemetry(clients)
@@ -1563,3 +1587,15 @@ async def test_brightdata_snapshot_download_bills_the_jobs_records(
     assert r.status_code == 200, r.text
     assert await _balance(clients) == before - 40 * 1500, "40 records at $0.0015 each"
     assert (await _telemetry(clients))["cost_observed_micro"] == 40 * 1500
+
+
+def test_hunter_people_enrich_accepts_linkedin_handle_without_email():
+    """Hunter's /people/find takes `email` OR `linkedin_handle`. The catalog marked email required,
+    so treg refused every handle-keyed call with a 400 before Hunter ever saw it — 2,369 times for
+    one team in a week (org 2125, 2026-08-18..25), logged with no evidence. One-of is expressed
+    the way the rest of the catalog does it: every alternative optional, the rule in the note."""
+    ep = A.catalog_store.load().by_id["hunter.people.enrich"]
+    qp = ep["input"]["queryParams"]
+    assert not qp["email"].get("required") and not qp["linkedin_handle"].get("required")
+    assert "linkedin_handle" in ep["input"]["note"]
+    assert not any(v.get("required") for v in qp.values() if isinstance(v, dict))

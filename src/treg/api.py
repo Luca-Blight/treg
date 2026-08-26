@@ -8208,6 +8208,10 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
     await _enforce_tag_budgets(caller, meta, db, add_micro=mk.estimate_micro)
     await _enforce_platform_daily_cap(caller, mk.estimate_micro, db)
     await _enforce_trial_allowance(caller, mk.provider, db)
+    # Read before `reserve`: a failed reserve rolls the session back and expires the ORM instance, and
+    # a lazy attribute load inside the except would raise MissingGreenlet on the 402 path.
+    auto_on = bool(caller.org.autotopup_enabled and caller.org.autotopup_consented_at)
+    prefs = billing.autotopup_prefs(caller.org) if auto_on else None
     try:
         mk.call_id = await ledger.reserve(
             db, caller.org_id, mk.endpoint_id, mk.estimate_micro,
@@ -8225,15 +8229,28 @@ async def _platform_reserve(mk: MarketplaceCall, caller: Caller, db: AsyncSessio
         alt = (f"  or bring your own {mk.provider} developer app (BYO OAuth) — those calls are never metered"
                if mk.billed_oauth else
                f"  or use your own key: treg connections connect --provider {mk.provider}")
+        # A team that keeps hitting this by hand is the one that should hear about auto top-up; a team
+        # that already has it on needs to know it is the cooldown/cap holding, not a missing card —
+        # otherwise the natural reading of "add funds" is that auto top-up is broken.
+        if auto_on:
+            auto_line = (f"  auto top-up:    on — adds ${ledger.usd(prefs['amount_micro']):g} when the balance "
+                         f"drops below ${ledger.usd(prefs['threshold_micro']):g}, at most once per "
+                         f"{get_settings().autotopup_cooldown_s // 60} min and "
+                         f"${ledger.usd(prefs['monthly_cap_micro']):g}/month. Raise the amount or the "
+                         f"cap if your burn outruns it: treg topup --auto on --amount 50 --cap 500")
+        else:
+            auto_line = "  auto top-up:    off — refill automatically instead: treg topup --auto on --threshold 5 --amount 20"
         raise HTTPException(status_code=402, detail={
             "error": "insufficient_balance",
             "message": (f"{mk.endpoint_id} would cost ~${ledger.usd(exc.required_micro):g} on {wallet} "
                         f"and this team's balance is ${ledger.usd(exc.balance_micro):g}.\n"
                         f"  add funds:      {get_settings().public_url}/app#billing\n"
+                        f"{auto_line}\n"
                         + alt),
             "balance_micro": exc.balance_micro,
             "estimated_cost_micro": exc.required_micro,
             "topup_url": "/app#billing",
+            "autotopup_enabled": auto_on,
             "provider": mk.provider,
             "endpoint_id": mk.endpoint_id,
         })
