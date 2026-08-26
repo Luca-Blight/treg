@@ -3245,7 +3245,7 @@ product, including per-customer usage tracking and billing.</pre>
             <span v-if="tierBonus(p)" style="color:var(--green)">+{{money(tierBonus(p))}} bonus</span>
             <span v-else-if="refPresetBonus(p)" style="color:var(--green)">+{{money(refPresetBonus(p))}} bonus</span>
           </button>
-          <button class="fundcard" :class="{sel:topupPick==='other'}" :disabled="billingBusy" @click="topupPick='other'">
+          <button class="fundcard" :class="{sel:topupPick==='other'}" :disabled="billingBusy" @click="pickOther()">
             <b>Other</b>
           </button>
         </div>
@@ -5003,6 +5003,10 @@ createApp({
       // Default ON only for a team with no mandate; a team that already decided is not re-asked.
       this.topupAuto=!(this.billing.autotopup.enabled||this.billing.autotopup.consented_at);
       this.topupOpen=true; },
+    // "Other" starts one rung above the biggest card, not blank: the card row ends at $200, so the
+    // amount a payer reaches for here is larger than that, and a prefilled number is one keystroke
+    // away from theirs. Only on first pick - a value they typed survives re-selecting the card.
+    pickOther(){ if(this.topupPick!=='other'&&!this.topupOther){ const top=Math.max(...this.billing.topup.presets); this.topupOther=Math.min(this.billing.topup.max_usd, top>=200?500:top*2); } this.topupPick='other'; },
     tierBonus(usd){ const t=this.billing&&this.billing.topup.bonus_tiers; if(!t||!usd) return 0;
       // Keys arrive as strings from JSON; the highest floor at or below the amount applies.
       let pct=0; Object.keys(t).map(Number).sort((a,b)=>a-b).forEach(k=>{ if(usd>=k) pct=t[k]; });
