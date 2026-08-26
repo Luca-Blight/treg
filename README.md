@@ -83,6 +83,15 @@ the command line **and** treg's tools. Other agents: `npx skills add superdesign
 See [docs/CLAUDE-PLUGIN.md](docs/CLAUDE-PLUGIN.md). MiniMax Code / MiniMax Agent users: the same
 skill ships via the MiniMax Plugin Marketplace ([docs/MINIMAX-PLUGIN.md](docs/MINIMAX-PLUGIN.md)).
 
+### Claude.ai connector
+
+The Claude Connectors Directory surface is `https://treg.to/mcp/v2/`. It exposes only curated
+catalog endpoints and separates read calls from write calls so Claude receives accurate safety
+signals. The existing `/mcp/` surface remains available for catalog endpoints, team-owned tools,
+and imported skills. See the [MCP and OAuth architecture](docs/context/architecture/mcp-oauth.md)
+for the boundary and implementation, and the
+[submission runbook](docs/CLAUDE-CONNECTOR-SUBMISSION.md) for release gates.
+
 ## Call a tool you don't have a key for
 
 The catalog is grouped by what endpoints **do**: keyword and rank tracking, backlinks and authority,

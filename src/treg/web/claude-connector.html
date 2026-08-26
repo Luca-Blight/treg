@@ -24,7 +24,7 @@
 <div class="page"><div class="doc">
   <div class="eyebrow">Community connector</div>
   <h1>Treg for Claude</h1>
-  <div class="stamp"><span>Published by Superdesign</span><span>Catalog-only V1</span></div>
+  <div class="stamp"><span>Published by Superdesign</span><span>Connector release V1</span></div>
 
   <div class="summary">
     <h2>Live data and APIs for Claude, without API keys</h2>
@@ -41,9 +41,10 @@
   </ol>
   <p>While the directory listing is under review, the same connector can be tested as a custom
   connector using <code>{BASE}/mcp/v2/</code>. Authentication uses OAuth with PKCE; do not paste a
-  Treg token or provider API key into Claude.</p>
+  Treg token or provider API key into Claude. The <code>v2</code> in this URL identifies Treg's
+  restricted MCP transport; it is separate from connector release V1.</p>
 
-  <h2 class="sec" id="scope"><span class="n">02</span>V1 scope and tools</h2>
+  <h2 class="sec" id="scope"><span class="n">02</span>Connector V1 scope and tools</h2>
   <p>This version exposes the curated Treg catalog only. It cannot list or invoke team-owned tools,
   imported skills, arbitrary URLs, or arbitrary HTTP methods.</p>
   <ul>
@@ -86,7 +87,7 @@
 </div>
 
 <nav class="toc">
-  <a href="#setup">Connect</a><a href="#scope">V1 scope</a><a href="#pricing">Pricing</a>
+  <a href="#setup">Connect</a><a href="#scope">Connector V1 scope</a><a href="#pricing">Pricing</a>
   <a href="#data">Data flow</a><a href="#disconnect">Disconnect</a><a href="#support">Support</a>
 </nav></div>
 

@@ -29,6 +29,21 @@ Protocol. Both use one deployment, database, and enforcement layer:
 - `/mcp/v2/` is the catalog-only Claude directory surface. It cannot list or call arbitrary
   team-owned tools, including a team tool whose name matches a catalog endpoint.
 
+## Why V2 exists
+
+The legacy `/mcp/` must keep its general `call` tool because existing users use it for catalog
+endpoints, team-owned tools, and imported skills. Treg cannot reliably classify the side effects of
+an arbitrary private tool, so that surface cannot give Claude a precise read-versus-write safety
+signal without breaking its existing contract.
+
+V2 keeps `/mcp/` unchanged and exposes a narrower directory boundary. It accepts only curated
+catalog ids and splits calls by the HTTP method stored in the catalog. Claude can therefore treat
+GET, HEAD, and OPTIONS as reads and request approval for POST, PUT, PATCH, and DELETE. Both surfaces
+still use the same internal credential, policy, metering, audit, and relay machinery.
+
+The two version labels describe different things. `/mcp/v2/` is Treg's second MCP transport
+surface. **Connector release V1** is the first product release submitted to Claude's directory.
+
 `NormalizeDirectoryMCPPath` makes `/mcp/v2` and `/mcp/v2/` the same V2 resource. This is required
 because a real Claude custom-connector flow removed the trailing slash. Without normalization, the
 request can fall through to the legacy `/mcp` mount and receive the wrong OAuth resource identity.
