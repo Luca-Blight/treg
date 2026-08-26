@@ -999,6 +999,13 @@ async def oauth_protected_resource():
                         headers={"Cache-Control": "public, max-age=3600"})
 
 
+@app.get("/.well-known/oauth-protected-resource/mcp/v2", include_in_schema=False)
+async def oauth_protected_resource_v2():
+    """Protected-resource metadata for the catalog-only connector."""
+    return JSONResponse(mcp_oauth.protected_resource_metadata("v2"),
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
 @app.get("/.well-known/oauth-authorization-server", include_in_schema=False)
 async def oauth_authorization_server():
     """How to get a token: the authorize and token endpoints, S256, and that we accept both dynamic

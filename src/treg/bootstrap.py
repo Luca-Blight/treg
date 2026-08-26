@@ -97,6 +97,7 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/legal.css', ('GET',), 'legal_css'),
     ('/terms', ('GET',), 'terms_page'),
     ('/privacy', ('GET',), 'privacy_page'),
+    ('/connectors/claude', ('GET',), 'claude_connector_page'),
     ('/adtrack.js', ('GET',), 'adtrack_js'),
     ('/resources', ('GET',), 'resources_page'),
     ('/usecase.css', ('GET',), 'usecase_css'),
@@ -240,9 +241,13 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
 })
 _DATAPLANE_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ("/call/{rest:path}", ("DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"), "call_tool"),
+    ("/catalog/call/{rest:path}",
+     ("DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"),
+     "call_catalog_endpoint"),
     # MCP is calling traffic, so its mount and its RFC 9728 resource metadata belong to the
     # dataplane. Token issuance (consent, /oauth/*) stays on control; the dataplane only validates.
     ('/.well-known/oauth-protected-resource/mcp', ('GET',), 'oauth_protected_resource'),
+    ('/.well-known/oauth-protected-resource/mcp/v2', ('GET',), 'oauth_protected_resource_v2'),
 })
 
 ROLE_BACKGROUND_TASKS: dict[AppRole, tuple[str, ...]] = {
@@ -415,7 +420,7 @@ def _lifespan(api_module, role: AppRole):
             if role == "control" or _mcp is None:
                 yield
             else:
-                async with _mcp.mcp_lifespan():
+                async with _mcp.all_mcp_lifespans():
                     yield
         finally:
             if ads_task is not None:
@@ -457,6 +462,8 @@ def create_app(role: AppRole = "all") -> FastAPI:
     _install_head_and_openapi(app)
 
     if role != "control" and _mcp is not None:
+        # Register the nested mount first so the /mcp parent does not consume it.
+        app.mount("/mcp/v2", _mcp.directory_mcp_app)
         app.mount("/mcp", _mcp.mcp_app)
 
     startup_checks = list(ROLE_STARTUP_CHECKS[role])

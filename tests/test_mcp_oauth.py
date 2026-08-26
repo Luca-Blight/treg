@@ -45,6 +45,14 @@ async def test_the_metadata_is_served_at_BOTH_lookup_paths(clients):
     assert a.json() == b.json()
 
 
+async def test_v2_metadata_names_only_the_directory_resource(clients):
+    response = await clients.get("/.well-known/oauth-protected-resource/mcp/v2")
+    assert response.status_code == 200
+    assert response.json()["resource"] == mcp_oauth.mcp_resource_url("v2")
+    assert response.json()["resource"].endswith("/mcp/v2/")
+    assert response.json()["resource"] != mcp_oauth.mcp_resource_url("v1")
+
+
 async def test_authorization_server_metadata_offers_only_safe_choices(clients):
     """OAuth 2.1 drops the implicit grant, and `plain` PKCE makes the challenge equal to the secret —
     anyone who sees the authorization request could redeem the code. Offering either would be a
@@ -362,6 +370,36 @@ async def test_the_whole_flow_end_to_end(clients):
     claims = mcp._oauth_claims(access)
     assert claims is not None, "the MCP server must accept what we just issued"
     assert claims["org"] == org_id, "the token spends from the team the human picked"
+
+
+async def test_v2_dcr_flow_mints_only_a_v2_audience(clients):
+    """The directory resource reuses DCR, PKCE and the team picker, but not the legacy audience."""
+    client_id = await _register(clients)
+    _, org_id = await _signed_in(clients, "oauth-v2@superdesign.dev")
+    verifier, challenge = _pkce()
+    resource = mcp_oauth.mcp_resource_url("v2")
+    params = {"client_id": client_id, "redirect_uri": "https://client.test/cb",
+              "response_type": "code", "code_challenge": challenge,
+              "code_challenge_method": "S256", "state": "v2", "resource": resource,
+              "scope": "treg:call"}
+
+    shown = await clients.get("/oauth/authorize", params=params,
+                              headers={"Accept": "application/json"})
+    assert shown.status_code == 200
+    assert any(team["org_id"] == org_id for team in shown.json()["teams"])
+    approved = await clients.post("/oauth/authorize", data={**params, "org_id": org_id},
+                                  follow_redirects=False)
+    assert approved.status_code == 302
+    code = approved.headers["location"].split("code=")[1].split("&")[0]
+    token = await clients.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code,
+        "redirect_uri": "https://client.test/cb", "client_id": client_id,
+        "code_verifier": verifier, "resource": resource,
+    })
+    assert token.status_code == 200, token.text
+    access = token.json()["access_token"]
+    assert mcp_oauth.read_access_token_any(access, "v2") is not None
+    assert mcp_oauth.read_access_token_any(access, "v1") is None
 
 
 async def test_a_code_can_be_redeemed_only_ONCE(clients):

@@ -696,11 +696,11 @@ def _wrong_resource(resource: str) -> str | None:
     if not resource:
         return None
     canonical = mcp_oauth.mcp_resource_url()
-    # The legacy hosts' resource URLs stay valid: a pre-move client discovered its `resource` from
-    # the old domain's metadata and will keep sending it for the lifetime of the grant.
-    if any(resource.rstrip("/") == aud.rstrip("/") for aud in mcp_oauth.mcp_resource_audiences()):
+    # Host aliases and slash variants stay valid within one surface. V1 and V2 stay distinct.
+    if mcp_oauth.mcp_resource_version(resource) is not None:
         return None
-    return (f"this server issues tokens for {canonical} only — use the `resource` value from "
+    return (f"this server issues tokens for {canonical} or {mcp_oauth.mcp_resource_url('v2')} only "
+            "— use the `resource` value from "
             f"/.well-known/oauth-protected-resource")
 
 
@@ -712,8 +712,9 @@ def _same_mcp_resource(a: str, b: str) -> bool:
     na, nb = mcp_oauth.normalize_resource(a), mcp_oauth.normalize_resource(b)
     if a == b or na == nb:
         return True
-    auds = mcp_oauth.mcp_resource_audiences()
-    return na in auds and nb in auds
+    a_version = mcp_oauth.mcp_resource_version(na)
+    b_version = mcp_oauth.mcp_resource_version(nb)
+    return a_version is not None and a_version == b_version
 
 
 async def _authorize_request(client_id: str, redirect_uri: str, response_type: str,

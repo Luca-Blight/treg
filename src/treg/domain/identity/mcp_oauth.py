@@ -68,7 +68,15 @@ def _unb64(s: str) -> bytes:
     return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
 
 
-def mcp_resource_url() -> str:
+def _mcp_path(version: str) -> str:
+    if version == "v1":
+        return "mcp/"
+    if version == "v2":
+        return "mcp/v2/"
+    raise ValueError(f"unknown MCP resource version {version!r}")
+
+
+def mcp_resource_url(version: str = "v1") -> str:
     """The canonical identifier for the thing being protected — our MCP endpoint.
 
     Must match what clients send as `resource`, byte for byte, because that string is what ends up in
@@ -76,16 +84,26 @@ def mcp_resource_url() -> str:
     is mounted at `/mcp` and served at `/mcp/`, and a client that resolves the metadata will use the
     form we publish here.
     """
-    return urljoin(get_settings().public_url.rstrip("/") + "/", "mcp/")
+    return urljoin(get_settings().public_url.rstrip("/") + "/", _mcp_path(version))
 
 
-def mcp_resource_audiences() -> set[str]:
+def mcp_resource_audiences(version: str = "v1") -> set[str]:
     """Every audience an access token may legitimately carry: the canonical resource URL plus every
     reference-deployment alias. A grant keeps the audience that was consented to for its whole
     lifetime — refresh reissues `row.resource` — so validating against the canonical URL alone
     would 401 every pre-move grant forever, with refresh unable to recover. SYMMETRIC on purpose:
     grants minted on treg.to must equally survive a TREG_PUBLIC_URL rollback to the old name."""
-    return {mcp_resource_url(), *(f"https://{h}/mcp/" for h in PUBLIC_HOST_ALIASES)}
+    path = _mcp_path(version)
+    return {mcp_resource_url(version), *(f"https://{h}/{path}" for h in PUBLIC_HOST_ALIASES)}
+
+
+def mcp_resource_version(resource: str) -> str | None:
+    """Return the MCP surface named by a host or slash variant, without crossing versions."""
+    value = (resource or "").rstrip("/")
+    for version in ("v1", "v2"):
+        if any(value == audience.rstrip("/") for audience in mcp_resource_audiences(version)):
+            return version
+    return None
 
 
 def normalize_resource(resource: str) -> str:
@@ -93,28 +111,29 @@ def normalize_resource(resource: str) -> str:
     `mcp_resource_audiences()`; anything else passes through untouched. Authorization accepts
     `…/mcp` via a forgiving compare, but a token whose audience is stored with that spelling would
     fail the exact audience match forever — so every store/mint/compare site normalizes first."""
-    r = (resource or "").rstrip("/")
-    for aud in mcp_resource_audiences():
-        if r == aud.rstrip("/"):
-            return aud
+    version = mcp_resource_version(resource)
+    if version is not None:
+        for audience in mcp_resource_audiences(version):
+            if resource.rstrip("/") == audience.rstrip("/"):
+                return audience
     return resource
 
 
-def read_access_token_any(token: str) -> dict | None:
+def read_access_token_any(token: str, version: str = "v1") -> dict | None:
     """`read_access_token` against each legitimate audience — the resource-server-side companion to
     `mcp_resource_audiences()`."""
-    for aud in mcp_resource_audiences():
+    for aud in mcp_resource_audiences(version):
         claims = read_access_token(token, expected_audience=aud)
         if claims is not None:
             return claims
     return None
 
 
-def protected_resource_metadata() -> dict:
+def protected_resource_metadata(version: str = "v1") -> dict:
     """`/.well-known/oauth-protected-resource` — "who guards this, and what may you ask for?"."""
     base = get_settings().public_url.rstrip("/")
     return {
-        "resource": mcp_resource_url(),
+        "resource": mcp_resource_url(version),
         "authorization_servers": [base],
         "scopes_supported": ["treg:catalog", "treg:call", "treg:read"],
         "bearer_methods_supported": ["header"],

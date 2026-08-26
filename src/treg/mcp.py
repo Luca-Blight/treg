@@ -327,7 +327,8 @@ def _oauth_claims(token: str) -> dict | None:
     """
     from .domain.identity import mcp_oauth
 
-    return mcp_oauth.read_access_token_any(token)
+    return (mcp_oauth.read_access_token_any(token, "v1")
+            or mcp_oauth.read_access_token_any(token, "v2"))
 
 
 def _need_token() -> dict:
@@ -388,7 +389,7 @@ async def _internal_auth(token: str) -> dict[str, str]:
 
 
 @asynccontextmanager
-async def _api(token: str):
+async def _api(token: str, *, client_name: str = "mcp"):
     """An in-process client bound to treg's own ASGI app, carrying the caller's identity."""
     from .api import app  # deferred: bootstrap imports THIS module while assembling api:app
 
@@ -398,7 +399,7 @@ async def _api(token: str):
         timeout=_TIMEOUT,
         # X-Treg-Client is attribution, not auth: without it every MCP-originated call lands
         # in the audit trail as client="", indistinguishable from unreported CLI traffic.
-        headers={**await _internal_auth(token), "X-Treg-Client": "mcp"},
+        headers={**await _internal_auth(token), "X-Treg-Client": client_name},
     ) as client:
         yield client
 
@@ -682,6 +683,19 @@ async def call(endpoint_id: str, params: dict | list | None = None,
                query: dict | None = None, body: dict | list | str | None = None,
                headers: dict | None = None, content_type: str | None = None,
                ctx: Context = None) -> CallOut:  # type: ignore[assignment]
+    return await _call_impl(
+        endpoint_id, params=params, method=method, idempotency_key=idempotency_key,
+        query=query, body=body, headers=headers, content_type=content_type, ctx=ctx,
+        catalog_only=False, client_name="mcp", allowed_methods=None,
+    )
+
+
+async def _call_impl(endpoint_id: str, params: dict | list | None = None,
+                     method: str | None = None, idempotency_key: str | None = None,
+                     query: dict | None = None, body: dict | list | str | None = None,
+                     headers: dict | None = None, content_type: str | None = None,
+                     ctx: Context = None, *, catalog_only: bool, client_name: str,
+                     allowed_methods: frozenset[str] | None) -> CallOut:
     token = _bearer(ctx) if ctx else ""
     if not token:
         return _need_token()
@@ -692,10 +706,11 @@ async def call(endpoint_id: str, params: dict | list | None = None,
     # could see and never call — which is how this gap was found.
     cat = catalog_store.load()
     ep = cat.by_id.get(endpoint_id)
-    if ep is None and "/" not in endpoint_id:
+    if ep is None and (catalog_only or "/" not in endpoint_id):
         near = catalog_store.near_ids(endpoint_id, cat)
         return {"error": f"unknown endpoint {endpoint_id!r}",
                 "hint": ("did you mean " + ", ".join(near) + "?" if near else
+                         "use catalog_search for a catalog endpoint id" if catalog_only else
                          "use catalog_search for a catalog id, or my_tools then "
                          "'<tool-name>/<path>' for one of this team's own tools"),
                 "did_you_mean": near}
@@ -704,6 +719,12 @@ async def call(endpoint_id: str, params: dict | list | None = None,
     # mismatch, so making `body` just work beats asking the caller to repeat what the catalog knows.
     method = (method or (ep.get("method") if ep else None)
               or ("POST" if body is not None else "GET")).upper()
+    if allowed_methods is not None and method not in allowed_methods:
+        expected = "GET, HEAD or OPTIONS" if "GET" in allowed_methods else "POST, PUT, PATCH or DELETE"
+        return {"error": f"{endpoint_id} is {method}; this tool accepts only {expected} endpoints",
+                "endpoint_id": endpoint_id,
+                "hint": ("use catalog_call_read for safe-method endpoints" if "GET" not in allowed_methods
+                         else "use catalog_call_write for unsafe-method endpoints")}
     reads_query = method in ("GET", "HEAD", "DELETE")
     # A LIST is a legitimate body, not a mistake. DataForSEO — the largest provider in the catalog at
     # 217 endpoints — takes an ARRAY of task objects on every one of its `live` POST routes, so a
@@ -765,7 +786,11 @@ async def call(endpoint_id: str, params: dict | list | None = None,
                 ctype = "text/plain"
         extra_headers["content-type"] = ctype
 
-    async with _api(token) as client:
+    # Keep the legacy call shape intact for integrations/tests that wrap `_api(token)`. The v2
+    # connector opts into its own attribution header without changing the established surface.
+    api_context = (_api(token) if client_name == "mcp"
+                   else _api(token, client_name=client_name))
+    async with api_context as client:
         # Resolve the team the same way `balance`/`my_tools` do BEFORE spending anything: a
         # multi-team identity token otherwise reaches /call and bounces off its raw
         # "choose an org (send X-Treg-Org)" 400 — a header hint an MCP caller cannot act on.
@@ -802,7 +827,8 @@ async def call(endpoint_id: str, params: dict | list | None = None,
                 kw["content"] = the_body.encode()
             else:
                 kw["json"] = the_body
-        r = await client.request(method, f"/call/{endpoint_id}", **kw)
+        route = "/catalog/call" if catalog_only else "/call"
+        r = await client.request(method, f"{route}/{endpoint_id}", **kw)
 
     out: dict[str, Any] = {"status": r.status_code, "endpoint_id": endpoint_id, "body": _body(r)}
     if r.headers.get("X-Treg-Idempotent-Replay") == "true":
@@ -900,6 +926,150 @@ async def my_tools(ctx: Context) -> MyToolsOut:
 
 
 # --------------------------------------------------------------------------------------------
+# Directory-reviewed catalog surface. Additive: the legacy `mcp` server above stays byte-for-byte
+# compatible for clients that rely on `call` + `my_tools`; this server deliberately cannot resolve
+# arbitrary team-tool paths.
+# --------------------------------------------------------------------------------------------
+
+_DIRECTORY_READS = ToolAnnotations(
+    read_only_hint=True, destructive_hint=False, open_world_hint=False, idempotent_hint=True,
+)
+_DIRECTORY_OPEN_READ = ToolAnnotations(
+    read_only_hint=True, destructive_hint=False, open_world_hint=True, idempotent_hint=False,
+)
+_DIRECTORY_WRITE = ToolAnnotations(
+    read_only_hint=False, destructive_hint=True, open_world_hint=True, idempotent_hint=False,
+)
+_DIRECTORY_ADDITIVE = ToolAnnotations(
+    read_only_hint=False, destructive_hint=False, open_world_hint=False, idempotent_hint=False,
+)
+
+directory_mcp = MCPServer(
+    name="treg",
+    title="Treg",
+    description=(
+        "Search and call Treg's curated catalog of external data APIs, with price and reliability "
+        "information available before a call."
+    ),
+    instructions=(
+        "This connector exposes Treg catalog endpoints only. catalog_search finds endpoint ids; "
+        "catalog_get returns parameters, provider documentation, price and reliability; "
+        "catalog_call_read and catalog_call_write execute the selected endpoint."
+    ),
+)
+
+
+@directory_mcp.tool(
+    name="catalog_search",
+    title="Search Treg Catalog",
+    description=(
+        "Searches Treg's catalog by capability or task words and returns matching endpoint ids, "
+        "providers, prices and measured reliability."
+    ),
+    annotations=_DIRECTORY_READS,
+    structured_output=True,
+)
+async def directory_catalog_search(query: str, limit: int = 8) -> SearchOut:
+    return await catalog_search(query, limit)
+
+
+@directory_mcp.tool(
+    name="catalog_get",
+    title="Get Catalog Endpoint",
+    description=(
+        "Returns one catalog endpoint's parameters, provider API documentation, price, example "
+        "response and measured reliability, plus comparable providers for the same capability."
+    ),
+    annotations=_DIRECTORY_READS,
+    structured_output=True,
+)
+async def directory_catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
+    return await catalog_get(endpoint_id, ctx)
+
+
+@directory_mcp.tool(
+    name="catalog_call_read",
+    title="Call a Read Endpoint",
+    description=(
+        "Calls a catalog endpoint whose documented HTTP method is GET, HEAD or OPTIONS. The "
+        "endpoint must come from catalog_search; catalog_get supplies its provider API documentation, "
+        "parameters and price. A successful call may deduct that displayed price from the team's "
+        "Treg balance."
+    ),
+    annotations=_DIRECTORY_OPEN_READ,
+    structured_output=True,
+)
+async def directory_catalog_call_read(
+    endpoint_id: str,
+    params: dict | None = None,
+    idempotency_key: str | None = None,
+    query: dict | None = None,
+    headers: dict | None = None,
+    ctx: Context = None,  # type: ignore[assignment]
+) -> CallOut:
+    return await _call_impl(
+        endpoint_id, params=params, idempotency_key=idempotency_key, query=query, headers=headers,
+        ctx=ctx, catalog_only=True, client_name="claude-connector",
+        allowed_methods=frozenset({"GET", "HEAD", "OPTIONS"}),
+    )
+
+
+@directory_mcp.tool(
+    name="catalog_call_write",
+    title="Call a Write Endpoint",
+    description=(
+        "Calls a catalog endpoint whose documented HTTP method is POST, PUT, PATCH or DELETE. The "
+        "endpoint must come from catalog_search; catalog_get supplies its provider API documentation, "
+        "parameters and price. The provider may create, change or delete external data, and a "
+        "successful call may deduct the displayed price from the team's Treg balance."
+    ),
+    annotations=_DIRECTORY_WRITE,
+    structured_output=True,
+)
+async def directory_catalog_call_write(
+    endpoint_id: str,
+    params: dict | list | None = None,
+    idempotency_key: str | None = None,
+    query: dict | None = None,
+    body: dict | list | str | None = None,
+    headers: dict | None = None,
+    content_type: str | None = None,
+    ctx: Context = None,  # type: ignore[assignment]
+) -> CallOut:
+    return await _call_impl(
+        endpoint_id, params=params, idempotency_key=idempotency_key, query=query, body=body,
+        headers=headers, content_type=content_type, ctx=ctx, catalog_only=True,
+        client_name="claude-connector",
+        allowed_methods=frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+    )
+
+
+@directory_mcp.tool(
+    name="balance",
+    title="Check Treg Balance",
+    description="Returns the connected team's Treg balance, in-flight holds, team and identity.",
+    annotations=_DIRECTORY_READS,
+    structured_output=True,
+)
+async def directory_balance(ctx: Context) -> BalanceOut:
+    return await balance(ctx)
+
+
+@directory_mcp.tool(
+    name="catalog_request",
+    title="Request a Catalog Capability",
+    description=(
+        "Records a request for a provider or capability that is missing from Treg's catalog. "
+        "This creates a request in Treg and does not call an external provider or spend balance."
+    ),
+    annotations=_DIRECTORY_ADDITIVE,
+    structured_output=True,
+)
+async def directory_catalog_request(capability: str, ctx: Context, note: str = "") -> RequestOut:
+    return await catalog_request(capability, ctx, note)
+
+
+# --------------------------------------------------------------------------------------------
 # Mounting
 # --------------------------------------------------------------------------------------------
 
@@ -958,6 +1128,9 @@ def _allowed_origins() -> list[str]:
     origins += [f"http://localhost:{p}" for p in ("8000", "18790")]
     origins += [f"http://127.0.0.1:{p}" for p in ("8000", "18790")]
     origins += ["http://localhost", "http://127.0.0.1"]
+    # Claude's hosted custom/directory connector UI. Exact, never a wildcard; the transport still
+    # rejects every other browser origin.
+    origins += ["https://claude.ai"]
     origins += [o.strip() for o in os.environ.get("TREG_MCP_ALLOWED_ORIGINS", "").split(",") if o.strip()]
     return sorted(dict.fromkeys(origins))
 
@@ -982,8 +1155,9 @@ class RequireAuthForProtectedTools:
     everything below.
     """
 
-    def __init__(self, app):
+    def __init__(self, app, *, resource_version: str = "v1"):
         self.app = app
+        self.resource_version = resource_version
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http" or scope.get("method") != "POST":
@@ -1021,8 +1195,7 @@ class RequireAuthForProtectedTools:
 
         return await self.app(scope, replay, send)
 
-    @staticmethod
-    def _auth_verdict(scope, body: bytes) -> str | None:
+    def _auth_verdict(self, scope, body: bytes) -> str | None:
         """None = pass through. "missing" = no credential. "invalid" = a DEAD access token.
 
         **Eager, not lazy.** Every treg tool needs auth, so there is nothing to browse anonymously —
@@ -1063,14 +1236,14 @@ class RequireAuthForProtectedTools:
             return "missing"
         from .domain.identity import mcp_oauth
         if mcp_oauth.looks_like_access_token(token) and \
-                mcp_oauth.read_access_token_any(token) is None:
+                mcp_oauth.read_access_token_any(token, self.resource_version) is None:
             return "invalid"
         return None             # a live access token, or a per-org token the tool validates itself
 
-    @staticmethod
-    async def _challenge(send, *, invalid: bool = False) -> None:
+    async def _challenge(self, send, *, invalid: bool = False) -> None:
         base = get_settings().public_url.rstrip("/")
-        meta = f"{base}/.well-known/oauth-protected-resource"
+        suffix = "/mcp/v2" if self.resource_version == "v2" else ""
+        meta = f"{base}/.well-known/oauth-protected-resource{suffix}"
         # The spec SHOULDs a `scope` in the challenge so a client requests the right scopes up front,
         # least-privilege, without a second round-trip. These match scopes_supported in the metadata.
         scope = "treg:catalog treg:call treg:read"
@@ -1138,7 +1311,7 @@ class NoTransformResponses:
         return await self.app(scope, receive, send_stamped)
 
 
-def build_mcp_app():
+def build_mcp_app(*, server: MCPServer | None = None, resource_version: str = "v1"):
     """A fresh ASGI app for the MCP transport.
 
     A factory rather than a bare module-level value because each call builds its own session
@@ -1151,7 +1324,8 @@ def build_mcp_app():
     would need sticky routing; `json_response` because these are request/response tools with nothing
     to stream, and skipping SSE framing is most of the speed.
     """
-    transport = mcp.streamable_http_app(
+    server = server or mcp
+    transport = server.streamable_http_app(
         streamable_http_path="/", stateless_http=True, json_response=True,
         transport_security=TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
@@ -1176,11 +1350,13 @@ def build_mcp_app():
     # too; gzip sits between so challenges and answers alike are origin-encoded.
     from starlette.middleware.gzip import GZipMiddleware
 
-    return NoTransformResponses(GZipMiddleware(RequireAuthForProtectedTools(transport),
+    return NoTransformResponses(GZipMiddleware(RequireAuthForProtectedTools(
+                                                   transport, resource_version=resource_version),
                                                minimum_size=1024))
 
 
 mcp_app = build_mcp_app()
+directory_mcp_app = build_mcp_app(server=directory_mcp, resource_version="v2")
 
 
 @asynccontextmanager
@@ -1194,3 +1370,11 @@ async def mcp_lifespan(target=None):
         inner = inner.app
     async with inner.router.lifespan_context(inner):
         yield
+
+
+@asynccontextmanager
+async def all_mcp_lifespans():
+    """Start both mounted transports; Starlette does not run mounted-app lifespans itself."""
+    async with mcp_lifespan(mcp_app):
+        async with mcp_lifespan(directory_mcp_app):
+            yield

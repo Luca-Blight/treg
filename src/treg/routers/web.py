@@ -2441,6 +2441,7 @@ _SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
     ("/resources", "resources.html", "0.8"),
     ("/vendor-listing", "vendor-listing.md", "0.5"),
     ("/support", "support.html", "0.4"),
+    ("/connectors/claude", "claude-connector.html", "0.6"),
     ("/terms", "terms.html", "0.2"),
     ("/privacy", "privacy.html", "0.2"),
     # The outcome pages. Listed WITHOUT a trailing slash on purpose: `/use-cases/<slug>/` 307s to
@@ -2670,6 +2671,12 @@ async def privacy_page():
     (Google requires a reachable privacy policy carrying the Limited Use disclosure), so this path
     is effectively public API — don't rename it without updating the provider consoles."""
     return _legal_page("privacy.html")
+
+
+@app.get("/connectors/claude", include_in_schema=False)
+async def claude_connector_page():
+    """Setup, scope, billing, privacy, and removal instructions for the Claude connector."""
+    return _legal_page("claude-connector.html")
 
 
 @app.get("/adtrack.js", include_in_schema=False)

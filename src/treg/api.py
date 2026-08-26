@@ -3751,7 +3751,8 @@ async def call_tool(
     # valid percent-escapes, so the original bytes travel through to the upstream one-to-one.
     raw_path = request.scope.get("raw_path")
     if raw_path:
-        _, sep, raw_rest = raw_path.decode("ascii", "replace").partition("/call/")
+        call_prefix = "/catalog/call/" if getattr(request.state, "catalog_only", False) else "/call/"
+        _, sep, raw_rest = raw_path.decode("ascii", "replace").partition(call_prefix)
         if sep:
             rest = raw_rest
     # The caller's tags, parsed ONCE and read by everything below — the budgets, the ledger, the
@@ -3794,18 +3795,29 @@ async def call_tool(
     drop_params: set[str] = set()
     mk: MarketplaceCall | None = None
     own_tool_miss: dict | None = None
-    try:
-        tool, upstream_url = await _await_before_reserve(
-            _resolve_call(rest, caller, db), request, call_ref)
-    except HTTPException as exc:
-        # Not a tool → maybe a marketplace endpoint id (`treg call tikhub.tiktok.video.comments`).
-        # Only the 404 falls through, so an org tool with the same name always wins.
-        ep = _catalog_endpoint_for(rest) if exc.status_code == 404 else None
+    catalog_only = bool(getattr(request.state, "catalog_only", False))
+    if catalog_only:
+        # This reviewed surface accepts only a catalog id. A same-named team tool cannot shadow it.
+        ep = _catalog_endpoint_for(rest)
         if ep is None:
-            raise
-        if (isinstance(exc.detail, dict)
-                and str(exc.detail.get("hint", "")).startswith("your org has tool ")):
-            own_tool_miss = exc.detail
+            raise HTTPException(status_code=404, detail=(
+                f"unknown catalog endpoint {rest!r} — use catalog_search for a valid endpoint id"))
+    else:
+        try:
+            tool, upstream_url = await _await_before_reserve(
+                _resolve_call(rest, caller, db), request, call_ref)
+        except HTTPException as exc:
+            # Not a tool → maybe a marketplace endpoint id (`treg call tikhub.tiktok.video.comments`).
+            # Only the 404 falls through, so an org tool with the same name always wins.
+            ep = _catalog_endpoint_for(rest) if exc.status_code == 404 else None
+            if ep is None:
+                raise
+            if (isinstance(exc.detail, dict)
+                    and str(exc.detail.get("hint", "")).startswith("your org has tool ")):
+                own_tool_miss = exc.detail
+        else:
+            ep = None
+    if ep is not None:
         try:
             mk = await _await_before_reserve(
                 _resolve_marketplace_call(ep, request, caller, db), request, call_ref)
@@ -4187,6 +4199,22 @@ async def call_tool(
         request.state.idem_claim = None
     response.headers["X-Treg-Call-Id"] = call_ref
     return response
+
+
+@app.api_route(
+    "/catalog/call/{rest:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+    include_in_schema=False,
+)
+async def call_catalog_endpoint(
+    rest: str,
+    request: Request,
+    caller: Caller = Depends(require_member),
+    db: AsyncSession = Depends(get_session),
+):
+    """Call one catalog endpoint through the same policy, billing, audit, and relay path as /call."""
+    request.state.catalog_only = True
+    return await call_tool(rest, request, caller, db)
 
 
 # ---- server-side CLI execution (Tier 0 `treg run`) ---------------------------------------

@@ -582,6 +582,11 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   `sqlalchemy.exc.TimeoutError`) rather than a 30 s wait and an anonymous 500. A **platform binding** carries no `secret_id`
   (its value comes from settings at relay time), so secret-loading now skips `secret_id is None`. Detail
   in [proxy-model](../architecture/proxy-model.md).
+  `call_catalog_endpoint` (`* /catalog/call/{rest:path}`, hidden from public OpenAPI) is the narrower
+  internal entrance used by catalog-only MCP surfaces: it requires an exact catalog id and skips
+  `_resolve_call`, so an exact same-named team tool cannot shadow the catalog endpoint. From the
+  credential ladder onward it delegates to `call_tool`, retaining provider/user credentials, ACLs,
+  deny rules, caps, metering, audit, idempotency and faithful relay.
 
 ## Schemas
 Pydantic input models: `UserIn`, `OrgIn` / `InviteIn` / `AcceptIn`, `EmailStartIn` / `EmailVerifyIn`,
@@ -647,7 +652,9 @@ why that widening must be kept out of the schema.
 treg is an OAuth authorization server for its own MCP endpoint. Detail in
 `architecture/mcp-oauth.md`; this is the surface.
 
-    GET  /.well-known/oauth-protected-resource      what guards /mcp/ (served at BOTH lookup paths)
+    GET  /.well-known/oauth-protected-resource      what guards /mcp/ (served at BOTH v1 lookup paths)
+    GET  /.well-known/oauth-protected-resource/mcp/v2
+                                                    distinct metadata for /mcp/v2/
     GET  /.well-known/oauth-authorization-server    endpoints, S256, DCR + CIMD support
     POST /oauth/register                            dynamic client registration (RFC 7591)
     GET  /oauth/authorize                           the consent screen (JSON with Accept: application/json)
@@ -657,9 +664,11 @@ treg is an OAuth authorization server for its own MCP endpoint. Detail in
     GET  /oauth/grants                              live (non-retired, non-expired) grant families
     POST /oauth/grants/{family}/team                move family authority to another member team
     POST /mcp/                                      the MCP transport itself
+    POST /mcp/v2/                                   catalog-only Claude directory transport
 
     GET  /connect-demo                              a page that pretends to be an MCP client
     GET  /connect-demo/callback                     its OAuth callback
+    GET  /connectors/claude                         setup, scope, pricing, data flow and removal docs
 
 `/call/` gained one thing for this: a metered response now carries `X-Treg-Cost-Micro`, so a caller
 can report what it spent instead of diffing the balance. Absent on an unmetered call — a team's own
