@@ -3308,6 +3308,121 @@ USE_CASE_PAGES["live-crypto-prices-and-history"] = {
 }
 
 
+USE_CASE_PAGES["employee-reviews-of-a-company"] = {
+    "label": "Employee reviews of a company",
+    "sentence": "Glassdoor API and Glassdoor scraper, through one key: a company's employee reviews as rows your agent can read",
+    "title": "Glassdoor API for {agent}: employee reviews as data | treg.to",
+    "lede": (
+        "Give your agent a company and get its employee reviews back as rows: rating, title, "
+        "pros, cons, date and whether the reviewer still works there. Glassdoor closed its "
+        "partner API, so the two providers here read the reviews for you, by company website "
+        "or by Glassdoor page URL, {cheapest}, at the provider's own rate with no markup. "
+        "There is no Glassdoor login, no bot wall and no give-to-get review to write first. "
+        "What comes back is what Glassdoor shows; nobody here vets the reviewers."),
+    "prompt": "Using treg, pull the last 100 employee reviews for canva.com, show me the price "
+              "first, then split them into current and former staff, give me the three "
+              "complaints that recur most in the cons, and flag any month where the rating "
+              "dropped sharply.",
+    "prompt_why": [
+        ("Give the website, or the Glassdoor URL", "Akta keys on the company's website; Bright Data on the Glassdoor page URL. Say which one you have and the agent picks the row that takes it."),
+        ("Ask for a count you can afford", "Akta bills per 50 reviews returned and defaults to 10. A hundred reviews is a few cents; every review a big employer has is not."),
+        ("Split current from former", "Each row carries the reviewer's status. The two groups tell different stories, and a mean over both hides both."),
+        ("Ask for the price first", "treg.to returns the rate before the call, so the agent can say what a list of fifty companies will spend."),
+    ],
+    "result_noun": "review",
+    "result_image": None,
+    "q_cheapest": "Which Glassdoor reviews provider is cheapest per review?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do Akta and Bright Data compare?",
+    "what_is_heading": "Is there a Glassdoor API?",
+    "what_is": (
+        "Not one you can sign up for. Glassdoor ran a partner API and stopped taking new "
+        "partners, so the phrase on the forums, Glassdoor API, now means one of two things: a "
+        "scraper you run yourself against pages that block plain requests and render reviews "
+        "through GraphQL, or a data provider that does the reading and returns rows. The two "
+        "providers here are the second kind. Akta returns employee reviews and ratings for a "
+        "company by its website, so a list of company names and domains is enough; Bright "
+        "Data's Glassdoor reviews dataset takes the Glassdoor company page URL and returns "
+        "the records, pay per record delivered."),
+    "notes": [
+        "The input decides the provider. Akta takes a company website, which is what a "
+        "spreadsheet of targets usually has, and returns reviews in pages of up to 100. Bright "
+        "Data wants the Glassdoor page URL itself, and finding that URL from a company name is "
+        "the step the forum's scrapers kept failing at. If you have websites, start at Akta; "
+        "if you have Glassdoor URLs, either row works.",
+        "Neither endpoint has been called live through treg.to yet, and the page says so "
+        "rather than hiding it. Akta's rate is documented as 1.5 credits per 50 reviews, Bright "
+        "Data's as $1.50 per 1,000 records on a pay-per-success basis, and both are the "
+        "provider's own rate with $0.000 added. Bright Data's scraper answers within a minute "
+        "for a handful of URLs and falls back to a snapshot id past that, so a long list is a "
+        "job to poll, not a single call.",
+        "Rows are what Glassdoor shows, not what is true. The research has retail investors "
+        "using review scrapes for due diligence and hiring managers reading the cons before an "
+        "offer, and it also has the same people asking how many reviews are bots or bought. No "
+        "provider here answers that. What the rows do carry is date, status and sub-ratings, "
+        "which is enough for an agent to weight recent reviews, separate current staff from "
+        "former, and show its working.",
+    ],
+    "faq": [
+        ("Does Glassdoor have a public API?",
+         "No. The partner programme stopped accepting new partners, which is why the people "
+         "who asked for access on the forums were turned away. The providers here read the "
+         "public review pages for you and return rows; you never fetch glassdoor.com yourself."),
+        ("Do I need a Glassdoor account?",
+         "No. Both calls run on treg.to's own key and return review text without a login, so "
+         "the sign-up wall that asks you to review your own employer first does not apply to "
+         "the agent. Register your own Akta or Bright Data key and the calls are never metered."),
+        ("Can it tell me which reviews are fake?",
+         "No, and this page will not pretend otherwise. The rows are Glassdoor's, unvetted. "
+         "Use the date and the current-or-former flag to weight them, and treat a cluster of "
+         "five-star reviews in one week as a question, not an answer."),
+        ("Which provider should my agent use?",
+         "The one whose input you hold: website for Akta, Glassdoor URL for Bright Data. "
+         "treg.to shows both with the rate side by side; it compares, it does not route or "
+         "fail over for you."),
+    ],
+    "voices_intro": (
+        "Glassdoor threads split in two: people who want the data and people who hate the "
+        "sign-up wall. Of the ~165 Reddit and X posts read in August 2026, about 25 were "
+        "organic and on the job; the vendor share was scraper launches, one identical "
+        "cross-post in two subreddits, and a review-removal service. These five are the "
+        "people doing the work."),
+    "voices": [
+        ("The API everyone reaches for first is closed",
+         "I was planning to use Glassdoor’s API to gather this data, but unfortunately, they’ve stopped API partnerships for now.",
+         "r/learnprogramming", "https://www.reddit.com/r/learnprogramming/comments/1j8k0ji/glassdoor_api_access_denied_any_alternatives_for/",
+         "Still closed, and the page does not know a way in. What it does have is two "
+         "providers that return the reviews as rows without a Glassdoor app, priced per "
+         "review or per record, with the rate shown before the call."),
+        ("A company name is not a Glassdoor URL",
+         "For Glassdoor it is more complicated. I cannot just add the company website to the Glassdoor url to locate and scrape the correct page",
+         "r/learnpython", "https://www.reddit.com/r/learnpython/comments/wcxmdk/glassdoor_web_scraping/",
+         "That is the exact input Akta takes: the company website, no Glassdoor URL needed. "
+         "A dataframe of names and domains is the whole job, one call per company."),
+        ("Is it even worth trying to scrape it for free?",
+         "is it possible to scrape Glassdoor reviews (completely free). I don’t want to waste my time if I can’t.",
+         "r/webscraping", "https://www.reddit.com/r/webscraping/comments/13ef7yh/glassdoor_reviews/",
+         "The honest answer from the same thread is that plain requests get a bot page. "
+         "Through treg.to it is not free, it is a fraction of a cent per review at the "
+         "provider's rate, and the first dollar is on the house for a new team."),
+        ("Nobody knows how many of the reviews are real",
+         "there is not much transparency about how many reviews on the website are made by nefarious actors (e.g. bots).",
+         "r/RKLB, 13 points", "https://www.reddit.com/r/RKLB/comments/143o18g/glassdoor_reviews_vacancies_analysis/",
+         "No comparison table can answer that, and neither provider vets a reviewer. What "
+         "an agent can do is what that investor did by hand: pull the rows, weight by date "
+         "and status, and compare the shape against peers."),
+        ("The rating is a hiring signal, whether or not it is fair",
+         "developers are keen to weed out companies with ratings like this.",
+         "r/cscareerquestions, 1,108 points", "https://www.reddit.com/r/cscareerquestions/comments/sofqaq/my_ceos_rating_on_glassdoor_is_so_bad_that_all_we/",
+         "Which is why a list of target companies with their recent reviews is worth a few "
+         "cents a row to a recruiter, a seller or a candidate. The agent reads the cons; "
+         "the page only gets it the rows."),
+    ],
+    "related": ("Job postings across companies", "Enrich a company from its domain",
+                "A business's reviews", "Hiring, headcount and news signals"),
+}
+
+
 # The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
 # use-case page answers one job; a workflow chains several, with a per-step price pulled live from
 # the catalog and a receipt from a real run. `run` is hand-recorded from that run and dated. A
