@@ -3887,7 +3887,7 @@ treg login</pre></div>
         <div class="field"><input v-model="codeInput" inputmode="numeric" placeholder="6-digit code" @keyup.enter="emailVerify"/></div>
         <button class="btn primary" style="width:100%" @click="emailVerify" :disabled="busy">{{busy?'Verifying…':'Sign in'}}</button>
       </div>
-      <details style="margin-top:12px;text-align:left">
+      <details v-if="!oauthSignin" style="margin-top:12px;text-align:left">
         <summary class="sub" style="cursor:pointer;text-align:center">or paste an org token (agents &amp; CLI)</summary>
         <div class="field" style="margin-top:8px"><input v-model="tokenInput" type="password" placeholder="X-Treg-Token" @keyup.enter="addToken(tokenInput)"/></div>
         <button class="btn" style="width:100%" @click="addToken(tokenInput)" :disabled="busy">{{busy?'Checking…':'Sign in with token'}}</button>

@@ -70,9 +70,10 @@ studio** (see [landing-sandbox](landing-sandbox.md)), not a login box; sign-in i
 
 An OAuth authorization that needs sign-in redirects to `/?signin=oauth`. The dashboard reads this as
 a UI cue, removes it from the visible URL, and opens the same modal with generic connection copy. It
-does not create a sandbox session. The protected OAuth return path stays in an HttpOnly cookie, so
-GitHub, Google, and email-code sign-in all resume the same authorization flow without putting OAuth
-request data in the URL.
+does not create a sandbox session. During this flow the modal hides the agent/CLI token fallback,
+because that token does not create the browser session required to resume authorization. The
+protected OAuth return path stays in an HttpOnly cookie, so GitHub, Google, and email-code sign-in all
+resume the same authorization flow without putting OAuth request data in the URL.
 
 The **authed** shell is sidebar-first. The **top bar** is just brand + search. The **left sidebar**
 stacks: (top) an **org block** — role + team name — that on click opens a switcher **dropdown** where

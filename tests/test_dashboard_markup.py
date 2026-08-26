@@ -27,6 +27,7 @@ def test_oauth_entry_opens_the_existing_sign_in_modal_without_minting_a_sandbox(
     assert "else if(oauthSignin) this.demo.signin=true" in INDEX
     assert "Sign in to continue connecting Treg" in INDEX
     assert "After sign-in, review the requested access before you approve it." in INDEX
+    assert '<details v-if="!oauthSignin" style="margin-top:12px;text-align:left">' in INDEX
 
 
 # Every <template> open/close, because only a balanced count locates the view boundaries: the file
