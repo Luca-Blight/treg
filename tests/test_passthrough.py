@@ -11,19 +11,21 @@ from __future__ import annotations
 import asyncio
 
 import httpx
+import pytest
 from httpx import AsyncClient
 
 from treg.api import app
 
 
 class _CloseTrackingStream(httpx.AsyncByteStream):
-    def __init__(self) -> None:
+    def __init__(self, chunks: int = 1000) -> None:
+        self.chunks = chunks
         self.close_calls = 0
         self.chunks_yielded = 0
         self.exhausted = False
 
     async def __aiter__(self):
-        for _ in range(1000):
+        for _ in range(self.chunks):
             self.chunks_yielded += 1
             yield b"chunk"
             await asyncio.sleep(0)
@@ -110,6 +112,46 @@ async def test_completed_relay_closes_the_upstream_response(clients: AsyncClient
         assert body_chunks >= 5
         assert stream.exhausted is False
         assert stream.chunks_yielded < 1000
+        assert stream.close_calls == 1
+    finally:
+        app.state.http = original
+        await tracked.aclose()
+
+
+async def test_fully_consumed_relay_closes_the_upstream_response_once(clients: AsyncClient):
+    stream = _CloseTrackingStream(chunks=3)
+    tracked = AsyncClient(transport=_CloseTrackingTransport(stream), base_url="http://tracked-full")
+    original = app.state.http
+    app.state.http = tracked
+    try:
+        await _register(clients, "tracked-full", "http://tracked-full")
+        response = await clients.get("/call/tracked-full/resource")
+
+        assert response.status_code == 200
+        assert response.content == b"chunk" * 3
+        assert stream.exhausted is True
+        assert stream.close_calls == 1
+    finally:
+        app.state.http = original
+        await tracked.aclose()
+
+
+async def test_interrupted_relay_closes_the_upstream_response_once(clients: AsyncClient):
+    class InterruptedStream(_CloseTrackingStream):
+        async def __aiter__(self):
+            self.chunks_yielded += 1
+            yield b"partial"
+            raise httpx.ReadError("provider stream interrupted")
+
+    stream = InterruptedStream()
+    tracked = AsyncClient(transport=_CloseTrackingTransport(stream), base_url="http://tracked-error")
+    original = app.state.http
+    app.state.http = tracked
+    try:
+        await _register(clients, "tracked-error", "http://tracked-error")
+        with pytest.raises(httpx.ReadError, match="provider stream interrupted"):
+            await clients.get("/call/tracked-error/resource")
+
         assert stream.close_calls == 1
     finally:
         app.state.http = original

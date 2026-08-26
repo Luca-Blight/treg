@@ -17,12 +17,14 @@ httpx client (rule 1: keepalive). Secrets are passed already-loaded (api does th
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable, Callable
+
 import httpx
 from fastapi import HTTPException, Request
-from fastapi.responses import StreamingResponse
-from starlette.background import BackgroundTask
 
 from ... import crypto
+from ...application.call.types import UpstreamResponse
 from ...config import get_settings
 from ...models import Secret, Tool
 from . import injectors
@@ -81,7 +83,7 @@ async def relay(
     client: httpx.AsyncClient,
     drop_params: set[str] | None = None,
     force_identity: bool = False,
-) -> StreamingResponse:
+) -> UpstreamResponse:
     # Headers: preserve everything (incl. duplicates / cookies) except hop-by-hop + our token.
     # `.raw` is the original (bytes, bytes) pairs; httpx.Headers is a multidict, so binding
     # injection (headers[name]=v) overwrites only its target and leaves the rest untouched.
@@ -143,11 +145,6 @@ async def relay(
         raise HTTPException(status_code=502, detail="upstream host resolves to a non-public address")
     upstream_resp = await client.send(upstream_req, stream=True)
 
-    response = StreamingResponse(
-        upstream_resp.aiter_raw(),
-        status_code=upstream_resp.status_code,
-        background=BackgroundTask(upstream_resp.aclose),
-    )
     # Response drop set: hop-by-hop + whatever the upstream marked hop-by-hop via its Connection
     # header. Keep upstream Content-Length on a bodyless reply (HEAD/204/304) — that's the whole
     # point of HEAD; for a normal GET we re-frame so it's dropped.
@@ -157,7 +154,7 @@ async def relay(
     # Relay every remaining upstream header verbatim (incl. multiple Set-Cookie), EXCEPT a
     # Set-Cookie for one of treg's own cookies — a registered upstream must not be able to
     # overwrite the operator's treg_session / treg_oauth_state under treg's origin (fixation).
-    response.raw_headers = [
+    raw_headers = [
         (k.encode("latin-1"), v.encode("latin-1"))
         for k, v in upstream_resp.headers.multi_items()
         if k.lower() not in drop_resp and not _is_treg_setcookie(k, v)
@@ -166,9 +163,35 @@ async def relay(
     # cookie) and render arbitrary upstream text/html AS AN ACTIVE DOCUMENT under treg's own origin —
     # reflected XSS with access to the operator's same-origin session. Neutralize it: nosniff + a
     # sandbox CSP (no script execution, no same-origin) on every relayed response. Agents ignore these.
-    response.raw_headers.append((b"x-content-type-options", b"nosniff"))
-    response.raw_headers.append((b"content-security-policy", b"sandbox"))
-    return response
+    raw_headers.append((b"x-content-type-options", b"nosniff"))
+    raw_headers.append((b"content-security-policy", b"sandbox"))
+    return UpstreamResponse(
+        status=upstream_resp.status_code,
+        raw_headers=tuple(raw_headers),
+        body_stream=upstream_resp.aiter_raw(),
+        close=_close_once(upstream_resp.aclose),
+    )
+
+
+def _close_once(close: Callable[[], Awaitable[None]]) -> Callable[[], Awaitable[None]]:
+    """Join one close task even when its caller is cancelled or invokes cleanup repeatedly."""
+    task: asyncio.Task[None] | None = None
+
+    async def close_once() -> None:
+        nonlocal task
+        if task is None:
+            task = asyncio.create_task(close())
+        interrupted = False
+        while not task.done():
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                interrupted = True
+        await task
+        if interrupted:
+            raise asyncio.CancelledError
+
+    return close_once
 
 
 def _connection_named(conn: str | None) -> frozenset[str]:

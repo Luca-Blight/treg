@@ -191,9 +191,17 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/tutorial.js` | interface/dashboard.md |
 | `src/treg/web/vendor/README.md` | interface/dashboard.md |
 | `src/treg/web/vendor/vue-3.5.41.global.prod.js` | interface/dashboard.md |
+| `tests/test_call_application_contract.py` | architecture/proxy-model.md |
+| `tests/test_call_cancellation.py` | architecture/proxy-model.md |
+| `tests/test_error_capture.py` | architecture/proxy-model.md |
 | `tests/test_import_lightness.py` | architecture/import-boundaries.md |
+| `tests/test_marketplace_call.py` | architecture/proxy-model.md |
+| `tests/test_oauth_billed.py` | architecture/proxy-model.md |
 | `tests/test_oauth_refresh.py` | architecture/auth-secrets.md |
+| `tests/test_passthrough.py` | architecture/proxy-model.md |
 | `tests/test_router_dependencies.py` | architecture/multi-tenancy.md |
+| `tests/test_tag_billing.py` | architecture/proxy-model.md |
+| `tests/test_tag_billing_adversarial.py` | architecture/proxy-model.md |
 
 ## Fragment → sources
 
@@ -210,7 +218,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/mcp-oauth.md` | `auth.py`, `mcp.py`, `mcp_oauth.py`, `health.py`, `mcp_oauth.py`, `session.py`, `auth.py`, `connect-demo.html` |
 | `architecture/money.md` | `ledger.py`, `__init__.py`, `models.py`, `billing.py`, `billing.py`, `idempotency.py`, `intake.py`, `resolve.py`, `reserve.py`, `referrals.py`, `budgets.py`, `__init__.py`, `stripe.py`, `reconcile.py`, `referrals.py`, `referrals.py`, `api.py`, `signup.py`, `admin.py`, `billing.py`, `call.py`, `orgs.py`, `referrals.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `caller_metadata.py`, `auth.py`, `signup.py`, `access.py`, `budgets.py`, `publicdemo.py`, `teams.py`, `usage.py`, `access.py`, `session.py`, `auth.py`, `orgs.py`, `resources.py`, `db.py`, `test_router_dependencies.py` |
-| `architecture/proxy-model.md` | `proxy.py`, `relay.py`, `ssrf.py`, `api.py`, `authorize.py`, `idempotency.py`, `intake.py`, `resolve.py`, `reserve.py`, `types.py`, `access.py`, `publicdemo.py`, `usage.py`, `call.py` |
+| `architecture/proxy-model.md` | `proxy.py`, `relay.py`, `ssrf.py`, `api.py`, `authorize.py`, `idempotency.py`, `intake.py`, `resolve.py`, `reserve.py`, `types.py`, `access.py`, `publicdemo.py`, `usage.py`, `call.py`, `test_call_application_contract.py`, `test_call_cancellation.py`, `test_error_capture.py`, `test_marketplace_call.py`, `test_oauth_billed.py`, `test_passthrough.py`, `test_tag_billing.py`, `test_tag_billing_adversarial.py` |
 | `architecture/super-admin.md` | `api.py`, `admin.py`, `access.py`, `config.py` |
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |
 | `guides/expanding-a-category.md` | `oauth_providers.py`, `connect.py`, `connections.py`, `config.py` |

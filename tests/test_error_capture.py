@@ -21,11 +21,11 @@ from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
-from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 from sqlalchemy import select
 
 from treg import api as A
+from treg.application.call.types import UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
 from treg.db import session_maker
@@ -101,7 +101,14 @@ def _fake_relay(status_code: int, body: bytes = b"{}", *, headers: dict | None =
         async def _stream():
             yield body
 
-        return StreamingResponse(_stream(), status_code=status_code, headers=headers or {})
+        async def _close():
+            return None
+
+        raw_headers = tuple(
+            (name.lower().encode("latin-1"), value.encode("latin-1"))
+            for name, value in (headers or {}).items()
+        )
+        return UpstreamResponse(status_code, raw_headers, _stream(), _close)
 
     return _relay
 
@@ -279,8 +286,12 @@ async def test_streaming_4xx_reaches_caller_byte_for_byte_and_keeps_evidence(
         async def stream():
             for chunk in chunks:
                 yield chunk
-        return StreamingResponse(stream(), status_code=400,
-                                 headers={"x-request-id": "req-stream-1"})
+
+        async def close():
+            return None
+
+        return UpstreamResponse(
+            400, ((b"x-request-id", b"req-stream-1"),), stream(), close)
 
     monkeypatch.setattr(call_routes, "relay", chunked)
     r = await clients.get("/call/stream-own/fail?part=all")

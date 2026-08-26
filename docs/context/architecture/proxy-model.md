@@ -16,6 +16,14 @@ sources:
   - src/treg/domain/governance/publicdemo.py
   - src/treg/domain/governance/usage.py
   - src/treg/routers/call.py
+  - tests/test_call_application_contract.py
+  - tests/test_call_cancellation.py
+  - tests/test_error_capture.py
+  - tests/test_marketplace_call.py
+  - tests/test_oauth_billed.py
+  - tests/test_passthrough.py
+  - tests/test_tag_billing.py
+  - tests/test_tag_billing_adversarial.py
 related:
   - architecture/data-model.md
   - architecture/auth-secrets.md
@@ -67,9 +75,11 @@ Faithfulness mechanics inside `relay()`:
   still forwards the real plaintext bytes verbatim upstream. See [api](../interface/api.md).
 - upstream call uses the **shared** `client` (the long-lived `httpx.AsyncClient` at `app.state.http`,
   created in `lifespan` — keepalive is the biggest latency win).
-- response streamed back with `StreamingResponse(upstream_resp.aiter_raw(), …)`; every upstream response
-  header (incl. multiple `Set-Cookie`) is re-attached via `response.raw_headers` minus `_DROP_RESPONSE`,
-  and cleaned up with `BackgroundTask(upstream_resp.aclose)`.
+- the infra relay returns framework-neutral `UpstreamResponse(status, raw_headers, body_stream, close)`.
+  The router wraps it in `StreamingResponse` and copies every upstream response header (incl. multiple
+  `Set-Cookie`) minus `_DROP_RESPONSE`. Its body wrapper and background task share the same idempotent
+  close operation, so full reads, partial disconnects, stream errors, and cancellation close the upstream
+  response exactly once.
 
 A request may carry several credentials: `relay()` loops `tool.bindings` and calls
 `injectors.inject(headers, params, binding, crypto.decrypt(secret.value))` per binding.

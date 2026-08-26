@@ -20,12 +20,11 @@ import httpx
 from datetime import datetime, timezone
 
 import pytest
-from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 
 from treg import api as A, audit
 from treg.application.call import resolve as call_resolution
-from treg.application.call.types import ResolutionFailed
+from treg.application.call.types import ResolutionFailed, UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
 from treg.db import session_maker
@@ -85,7 +84,10 @@ def _fake_relay(status_code: int, body: bytes = b"{}", *, raises: Exception | No
         async def _stream():
             yield body
 
-        return StreamingResponse(_stream(), status_code=status_code)
+        async def _close():
+            return None
+
+        return UpstreamResponse(status_code, (), _stream(), _close)
 
     return _relay
 

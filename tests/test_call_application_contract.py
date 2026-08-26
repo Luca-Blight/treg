@@ -17,6 +17,7 @@ from treg.application.call.types import (
     ResolvedTarget,
     ResolutionFailed,
     ReservationFailed,
+    UpstreamResponse,
 )
 
 
@@ -81,6 +82,9 @@ def test_call_dto_and_port_shapes_are_frozen() -> None:
         "client_ip",
     ]
     assert [field.name for field in fields(UpstreamResponseContract)] == [
+        "status", "raw_headers", "body_stream", "close",
+    ]
+    assert [field.name for field in fields(UpstreamResponse)] == [
         "status", "raw_headers", "body_stream", "close",
     ]
     assert CallInputContract.__dataclass_params__.frozen is True

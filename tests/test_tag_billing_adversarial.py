@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 
 import pytest
 from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +15,7 @@ from sqlmodel import select
 from starlette.requests import Request
 
 from treg import api as A, audit, crypto, ledger, localproxy
+from treg.application.call.types import UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
 from treg.db import session_maker
@@ -414,7 +414,11 @@ async def test_review_distinct_memberships_never_share_idempotent_bodies(
         async def stream():
             yield body
 
-        return StreamingResponse(stream(), status_code=200, media_type="text/plain")
+        async def close():
+            return None
+
+        return UpstreamResponse(
+            200, ((b"content-type", b"text/plain; charset=utf-8"),), stream(), close)
 
     monkeypatch.setattr(call_routes, "relay", relay_by_token)
     common = {"X-Treg-Meta": "customer=same", "Idempotency-Key": "same-key"}

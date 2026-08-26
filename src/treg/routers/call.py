@@ -9,7 +9,8 @@ from urllib.parse import urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
+from starlette.background import BackgroundTask
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import analytics, audit, catalog_store, ledger, oauth, oauth_providers
@@ -44,7 +45,7 @@ from ..application.call.intake import (
     _tag_telemetry,
     prepare_call_intake,
 )
-from ..application.call.types import CallFailure
+from ..application.call.types import CallFailure, UpstreamResponse
 from ..caller_metadata import _client_of
 from ..config import get_settings
 from ..db import get_session
@@ -80,6 +81,28 @@ _safe_secret_renderings: Any
 # The app alias preserves the moved handlers' decorator text byte-for-byte.
 app = APIRouter()
 router = app
+
+
+def _http_upstream_response(upstream: UpstreamResponse) -> StreamingResponse:
+    async def body_stream():
+        completed = False
+        try:
+            async for chunk in upstream.body_stream:
+                yield chunk
+            completed = True
+        finally:
+            # A normal stream closes from Starlette's background task after the final ASGI body
+            # frame. Error, disconnect, and cancellation never reach that frame, so close here.
+            if not completed:
+                await upstream.close()
+
+    response = StreamingResponse(
+        body_stream(),
+        status_code=upstream.status,
+        background=BackgroundTask(upstream.close),
+    )
+    response.raw_headers = list(upstream.raw_headers)
+    return response
 
 
 def _require_tool_use_http(caller: Caller, tool: Tool) -> None:
@@ -574,9 +597,11 @@ async def call_tool(
         # is `expire_on_commit=False`, so `tool`/`secrets`/`caller.org` stay usable without a reload.
         await db.commit()
         try:
-            response = await relay(request, upstream_url, tool, secrets, request.app.state.http,
-                                   drop_params=drop_params or None,
-                                   force_identity=mk is not None and mk.metered)
+            response = _http_upstream_response(await relay(
+                request, upstream_url, tool, secrets, request.app.state.http,
+                drop_params=drop_params or None,
+                force_identity=mk is not None and mk.metered,
+            ))
             if mk is not None and mk.metered:
                 # Metered calls don't stream: settling needs the provider's own reported cost, which is
                 # in the body (see _buffer_response). A failure while draining is still an upstream

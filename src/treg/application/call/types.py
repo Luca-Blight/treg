@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, AsyncIterator, Awaitable, Callable, Literal
 
 if TYPE_CHECKING:
     from ...models import Tool
@@ -92,3 +92,11 @@ class IdempotentReplay:
 class ResolvedTarget:
     tool: Tool
     upstream: str
+
+
+@dataclass
+class UpstreamResponse:
+    status: int
+    raw_headers: tuple[tuple[bytes, bytes], ...]
+    body_stream: AsyncIterator[bytes]
+    close: Callable[[], Awaitable[None]]

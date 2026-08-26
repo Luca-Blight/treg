@@ -223,12 +223,15 @@ def test_billed_endpoint_match_prefers_exact_over_template():
 def _stub_relay(status_code: int, body: bytes):
     """A relay stand-in returning a fixed upstream outcome (same shape as
     test_marketplace_call._fake_relay — duplicated to keep the two files importable alone)."""
-    from fastapi.responses import StreamingResponse
+    from treg.application.call.types import UpstreamResponse
 
     async def _relay(request, upstream_url, tool, secrets, client, drop_params=None, force_identity=False):
         async def _stream():
             yield body
 
-        return StreamingResponse(_stream(), status_code=status_code)
+        async def _close():
+            return None
+
+        return UpstreamResponse(status_code, (), _stream(), _close)
 
     return _relay
