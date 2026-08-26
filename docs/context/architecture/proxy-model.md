@@ -11,6 +11,8 @@ sources:
   - src/treg/application/call/intake.py
   - src/treg/application/call/resolve.py
   - src/treg/application/call/reserve.py
+  - src/treg/application/call/settle.py
+  - src/treg/application/call/evidence.py
   - src/treg/application/call/types.py
   - src/treg/domain/governance/access.py
   - src/treg/domain/governance/publicdemo.py
@@ -55,7 +57,8 @@ incl. duplicates, headers, cookies, body bytes):
 > — is the exception: `CallRecord.error_request` / `error_response` retain a redacted, truncated copy
 > of what the caller sent and what the provider (or treg-side 502) answered. Without it a failure is a
 > bare status code: `path` holds the catalog URL rather than the caller's parameters and `params_hash`
-> is one-way. Metered responses are already buffered by `_buffer_response`; `_peek_stream_head` reads
+> is one-way. `application.call.settle` buffers metered responses with `_buffer_response`, while
+> `_peek_stream_head` reads
 > only the first 8 KiB of a failed unmetered response and replays every consumed byte before the rest
 > of the original iterator, preserving status, raw headers, streaming, and the upstream-close task.
 > Caller bodies on unmetered paths are cached only when `Content-Length` is declared and at most 64

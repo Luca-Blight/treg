@@ -38,6 +38,24 @@ from ..application.call.resolve import (
     resolve_marketplace_target,
 )
 from ..application.call.reserve import _enforce_tag_budgets, _platform_reserve
+from ..application.call import settle as settle_helpers
+from ..application.call.evidence import (
+    _ERROR_BODY_SLICE,
+    _ERROR_CALLER_BODY_MAX,
+    _ERROR_MASKING_FAILED,
+    _ERROR_RESPONSE_MAX,
+    _caller_request_snippet,
+    _error_response_evidence,
+    _redact_snippet,
+    _safe_secret_renderings,
+)
+from ..application.call.settle import (
+    _buffer_response,
+    _finish_cancelled_call,
+    _peek_stream_head,
+    _platform_settle,
+    _record_first_call,
+)
 from ..application.call.intake import (
     META_HEADER,
     CallMeta,
@@ -60,22 +78,9 @@ from .orgs import count_today
 
 # Stage 4b moves the HTTP surface before its call-kernel collaborators. These annotations are
 # populated by api.py and retire one phase at a time as commits 6 through 19 assign final owners.
-_ERROR_BODY_SLICE: Any
-_ERROR_CALLER_BODY_MAX: Any
-_ERROR_MASKING_FAILED: Any
-_ERROR_RESPONSE_MAX: Any
 _await_before_reserve: Any
-_buffer_response: Any
-_caller_request_snippet: Any
-_error_response_evidence: Any
-_finish_cancelled_call: Any
 _now_ms: Any
-_peek_stream_head: Any
-_platform_settle: Any
-_record_first_call: Any
-_redact_snippet: Any
 _relay_live_demo: Any
-_safe_secret_renderings: Any
 
 
 # The app alias preserves the moved handlers' decorator text byte-for-byte.
@@ -150,6 +155,9 @@ async def _release_idempotent_claim(request: Request) -> None:
     claim = getattr(request.state, "idem_claim", None)
     request.state.idem_claim = None
     await release_idempotent_claim(claim)
+
+
+settle_helpers._release_idempotent_claim = _release_idempotent_claim
 
 
 def _query_values(request: Request) -> QueryValues:

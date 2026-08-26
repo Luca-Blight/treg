@@ -13,6 +13,8 @@ sources:
   - src/treg/application/call/intake.py
   - src/treg/application/call/resolve.py
   - src/treg/application/call/reserve.py
+  - src/treg/application/call/settle.py
+  - src/treg/application/call/evidence.py
   - src/treg/application/call/types.py
   - src/treg/application/connect.py
   - src/treg/application/onboard.py

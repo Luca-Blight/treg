@@ -25,6 +25,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 from treg import api as A
+from treg.application.call import evidence as call_evidence
 from treg.application.call.types import UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
@@ -268,7 +269,7 @@ async def test_oauth_provisioned_own_tool_failure_keeps_evidence(
 
 async def test_masking_render_failure_is_redacted_not_a_500(clients: AsyncClient, monkeypatch):
     await _own_tool(clients, name="masking-fails")
-    monkeypatch.setattr(A, "_secret_renderings", lambda *args: (_ for _ in ()).throw(ValueError("bad")))
+    monkeypatch.setattr(call_evidence, "_secret_renderings", lambda *args: (_ for _ in ()).throw(ValueError("bad")))
     monkeypatch.setattr(call_routes, "relay", _fake_relay(400, b'{"error":"credential echoed here"}'))
     r = await clients.get("/call/masking-fails/fail?case=render")
     assert r.status_code == 400
