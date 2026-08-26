@@ -44,7 +44,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/application/auth.py` | architecture/data-model.md, architecture/mcp-oauth.md, architecture/multi-tenancy.md, interface/api.md, interface/onboarding.md |
 | `src/treg/application/connect.py` | architecture/auth-secrets.md, architecture/composition.md, guides/expanding-a-category.md, interface/api.md |
 | `src/treg/application/onboard.py` | interface/api.md |
-| `src/treg/application/onboard/__init__.py` | interface/onboarding.md |
+| `src/treg/application/onboard/__init__.py` | interface/landing-sandbox.md, interface/onboarding.md |
 | `src/treg/application/onboard/demo.py` | interface/onboarding.md |
 | `src/treg/application/onboard/pubfeed.py` | interface/landing-sandbox.md |
 | `src/treg/application/onboard/sandbox.py` | interface/landing-sandbox.md |
@@ -101,6 +101,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/demo.py` | interface/onboarding.md |
 | `src/treg/domain/__init__.py` | architecture/import-boundaries.md |
 | `src/treg/domain/governance/__init__.py` | architecture/import-boundaries.md |
+| `src/treg/domain/governance/sandbox.py` | interface/landing-sandbox.md |
 | `src/treg/domain/governance/teams.py` | architecture/import-boundaries.md, architecture/multi-tenancy.md, interface/api.md |
 | `src/treg/domain/identity/__init__.py` | architecture/import-boundaries.md |
 | `src/treg/domain/identity/access.py` | architecture/multi-tenancy.md, architecture/super-admin.md, interface/api.md |
@@ -189,7 +190,7 @@ Regenerate via `scripts/build-map.py`.
 | `interface/cli.md` | `cli.py`, `convert.py`, `agents.py` |
 | `interface/dashboard.md` | `sitetrack.js`, `index.html`, `README.md`, `vue-3.5.41.global.prod.js`, `tutorial.js`, `tutorial.html`, `tour.js`, `index.html`, `api.py`, `web.py`, `session.py`, `session.py` |
 | `interface/env-import.md` | `providers.py`, `skills.py` |
-| `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `pubfeed.py`, `sandbox.py`, `api.py`, `onboard.py`, `web.py`, `index.html`, `install.sh` |
+| `interface/landing-sandbox.md` | `sandbox.py`, `pubfeed.py`, `pubfeed.py`, `sandbox.py`, `__init__.py`, `sandbox.py`, `api.py`, `onboard.py`, `web.py`, `index.html`, `install.sh` |
 | `interface/onboarding.md` | `auth.py`, `__init__.py`, `demo.py`, `demo.py`, `cli.py`, `auth.py`, `onboard.py`, `index.html` |
 | `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |

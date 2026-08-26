@@ -6,6 +6,8 @@ sources:
   - src/treg/pubfeed.py
   - src/treg/application/onboard/pubfeed.py
   - src/treg/application/onboard/sandbox.py
+  - src/treg/application/onboard/__init__.py
+  - src/treg/domain/governance/sandbox.py
   - src/treg/api.py
   - src/treg/routers/onboard.py
   - src/treg/routers/web.py
@@ -32,7 +34,7 @@ Provisioning, export, samples, and garbage collection live in `application/onboa
 the call-side sandbox engine remains in `sandbox.py`. The routes in `routers/onboard.py` drive them
 from the front-end's `sbx*` Vue methods.
 
-## The throwaway team (`sandbox.py`)
+## The throwaway team (`application/onboard/sandbox.py`)
 `mint(db)` creates a login-free team: a `visitor-<hex>@sandbox.treg.local` `User` (can never sign in),
 a `demo` `Org` slugged `sbx-<hex>`, a member `Membership` whose **token is returned** (unlike
 onboarding's `demo.py`, which discards it), plus seeded starters from `DEFAULTS` — real-brand names,
@@ -118,11 +120,10 @@ a deploy without the secret exposes no unauthenticated POST surface. Design poin
   `KEEPALIVE_S`; a subscriber that lags past `_MAX_SUBSCRIBER_LAG` is dropped rather than buffered forever. The
   SSE response sets `X-Accel-Buffering: no` so a reverse proxy does not buffer it. `reset()` is a test hook.
 
-Bounds: `MAX_TOOLS`/`MAX_SECRETS` (3) enforced by `_enforce_sandbox_cap` on `POST /tools|/secrets`;
-`SANDBOX_TTL_MIN` (60) + `gc(db)` reaps expired visitors (their org + all org-scoped rows), run
-opportunistically on each mint; a per-IP in-memory limiter (`_SANDBOX_HITS`, `SANDBOX_RATE_MAX`, via the
-shared `_rate_limit`/`_rate_sweep` sliding window — which now also evicts cold IP keys so the map can't
-grow unbounded) guards `POST /demo/sandbox` (`demo_sandbox_mint`). The browser reuses one sandbox across reloads via
+Bounds: `MAX_TOOLS`/`MAX_SECRETS` (3) are enforced by `domain/governance/sandbox.py` on
+`POST /tools|/secrets`; `SANDBOX_TTL_MIN` (60) + `gc(db)` reaps expired visitors (their org + all
+org-scoped rows), run opportunistically on each mint. A DB-backed `ratestore` window keyed by client
+IP and `SANDBOX_RATE_MAX` guards `POST /demo/sandbox`. The browser reuses one sandbox across reloads via
 `localStorage['treg-sbx']`. **Skill import is disabled in a sandbox org** — `POST /skills` (register),
 `POST /skills/analyze`, and `POST /skills/import` all check `is_sandbox(caller.org)` and 403 ("skill
 import is disabled in the sandbox"), because a skill package could register unlimited tools/secrets past

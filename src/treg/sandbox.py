@@ -103,6 +103,11 @@ def synthesize(method: str, upstream_url: str, tool: Tool, secrets: dict[int, Se
 
 
 
+from .application.onboard import sandbox as _sandbox_management
+
+# Mint and the call path share one visitor identity generator until Stage 4b assigns a neutral owner.
+_sandbox_management.visitor_name = visitor_name
+
 from .application.onboard.sandbox import (
     DEFAULTS,
     MAX_SECRETS,

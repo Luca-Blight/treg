@@ -911,15 +911,6 @@ async def _enforce_public_demo_ip_cap(request: Request, db: AsyncSession) -> Non
             f"demo limit reached ({PUBLIC_DEMO_RATE_MAX} calls/min per IP) — try again in a minute"))
 
 
-async def _enforce_sandbox_cap(caller: Caller, model, cap: int, noun: str, db: AsyncSession) -> None:
-    """Sandbox orgs may hold only a few secrets/endpoints — keep the public playground bounded."""
-    if not demo_sandbox.is_sandbox(caller.org):
-        return
-    n = (await db.execute(select(func.count()).select_from(model).where(model.org_id == caller.org_id))).scalar_one()
-    if n >= cap:
-        raise HTTPException(status_code=422, detail=f"the sandbox is limited to {cap} {noun} — sign up for more")
-
-
 # ---- per-user daily usage cap (usage-metering v1) -------------------------------------------
 
 
@@ -1356,10 +1347,9 @@ async def clear_capability_pin(
 router.routes.extend(org_routes.policy_router.routes)
 
 
-# ACL bridges retire with Stage 4 call extraction; the sandbox-cap bridge with onboard extraction.
+# ACL bridges retire with Stage 4 call extraction.
 resources_routes._tool_usable = _tool_usable
 resources_routes._require_tool_use = _require_tool_use
-resources_routes._enforce_sandbox_cap = _enforce_sandbox_cap
 router.routes.extend(resources_routes.crud_router.routes)
 
 

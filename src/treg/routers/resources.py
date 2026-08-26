@@ -22,6 +22,7 @@ from .. import providers as _providers
 from .. import skills as _skills
 from ..config import get_settings
 from ..db import get_session
+from ..domain.governance import sandbox as sandbox_policy
 from ..domain.identity.access import (
     Caller,
     _can_manage,
@@ -78,7 +79,13 @@ async def create_secret(
     body: SecretIn, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> dict:
     _require_can_register(caller)
-    await _enforce_sandbox_cap(caller, Secret, demo_sandbox.MAX_SECRETS, "secrets", db)
+    try:
+        await sandbox_policy.enforce_sandbox_cap(
+            sandbox=demo_sandbox.is_sandbox(caller.org), org_id=caller.org_id,
+            model=Secret, cap=demo_sandbox.MAX_SECRETS, noun="secrets", db=db)
+    except sandbox_policy.SandboxLimitError as exc:
+        raise HTTPException(status_code=422, detail=(
+            f"the sandbox is limited to {exc.cap} {exc.noun} — sign up for more")) from exc
     await _validate_bundle_id(body.bundle_id, caller.org_id, db)
     secret = Secret(
         org_id=caller.org_id, name=body.name, owner=caller.email, kind=body.kind,
@@ -361,7 +368,13 @@ async def create_tool(
     body: ToolIn, caller: Caller = Depends(require_member), db: AsyncSession = Depends(get_session)
 ) -> dict:
     _require_can_register(caller)
-    await _enforce_sandbox_cap(caller, Tool, demo_sandbox.MAX_TOOLS, "endpoints", db)
+    try:
+        await sandbox_policy.enforce_sandbox_cap(
+            sandbox=demo_sandbox.is_sandbox(caller.org), org_id=caller.org_id,
+            model=Tool, cap=demo_sandbox.MAX_TOOLS, noun="endpoints", db=db)
+    except sandbox_policy.SandboxLimitError as exc:
+        raise HTTPException(status_code=422, detail=(
+            f"the sandbox is limited to {exc.cap} {exc.noun} — sign up for more")) from exc
     if body.bindings is not None:
         bindings = body.bindings
     elif body.secret_id is not None:
