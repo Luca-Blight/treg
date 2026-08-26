@@ -54,9 +54,12 @@ keygen` prints a Fernet key for `TREG_SECRET_KEY`. `treg.api:app` is
   phase with `scripts/smoke-domain.sh pre|post`. Self-hosters set
   `TREG_PUBLIC_URL`. Used to build the OAuth callback URI.
 - `api_token` — a bootstrap caller token (MVP leftover; per-user tokens are the real auth).
-- `topup_min_usd`, `topup_default_usd`, `topup_presets` — Stripe top-up amounts in whole USD. The
-  reference defaults are a $5 minimum, $10 default, and one-click presets of $5, $10, $25, $50,
-  $100, $200, $300 and $400; `billing_state` publishes the configured preset list to the dashboard.
+- `topup_min_usd`, `topup_default_usd`, `topup_presets`, `topup_bonus_tiers`, `topup_default_cap_usd`
+  — Stripe top-up amounts in whole USD. The reference defaults are a $10 minimum, $10 first default,
+  presets of $10, $50, $100 and $200 (plus "Other"), bonus tiers `{10: 0, 50: 5, 100: 10, 200: 15}`
+  (percent of a MANUAL top-up granted as a separate `bonus` block), and a $50 cap on the preselected
+  amount's climb after each payment; `billing_state` publishes presets, tiers and the per-org default
+  to the dashboard.
 - `admin_token` — the cross-tenant **super-admin** bearer (`TREG_ADMIN_TOKEN`); empty disables the env
   path (only `is_superadmin` users reach `/admin`). Keep it long + secret. See
   [super-admin](../architecture/super-admin.md).

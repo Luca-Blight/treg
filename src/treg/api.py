@@ -3776,6 +3776,9 @@ class AutoTopupIn(BaseModel):
     threshold_usd: float | None = None
     amount_usd: float | None = None
     monthly_cap_usd: float | None = None
+    # False when the caller is about to open a top-up Checkout anyway (the dashboard's modal): that
+    # page saves the card too, so a second card-capture session would be a wasted Stripe call.
+    setup_url: bool = True
     # Explicit, per-request agreement to unattended charges — the MIT mandate. Required to ENABLE when
     # there is no timestamp on file; ignored when disabling (nobody consents to stopping).
     consent: bool = False
@@ -3828,7 +3831,7 @@ async def billing_topup(
     redirect by hand — can create balance.
     """
     org = _billing_org(caller)
-    amount = body.amount_usd if body.amount_usd is not None else get_settings().topup_default_usd
+    amount = body.amount_usd if body.amount_usd is not None else await billing.next_default_usd(db, org.id)
     try:
         out = await billing.create_topup_checkout(
             db, org, amount, return_base=_return_base(request), email=caller.email)
@@ -3869,7 +3872,7 @@ async def billing_autotopup(
     except billing.TopupRejected as e:
         raise HTTPException(status_code=422, detail=str(e))
     state = await billing.billing_state(db, org)
-    if body.enabled and not org.stripe_default_pm:
+    if body.enabled and body.setup_url and not org.stripe_default_pm:
         try:
             state["setup_url"] = (await billing.create_setup_checkout(
                 db, org, return_base=_return_base(request), email=caller.email))["url"]
