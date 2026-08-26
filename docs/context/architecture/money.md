@@ -5,6 +5,7 @@ sources:
   - src/treg/ledger.py
   - src/treg/models.py
   - src/treg/billing.py
+  - src/treg/application/billing.py
   - src/treg/reconcile.py
   - src/treg/referrals.py
   - src/treg/api.py
@@ -44,7 +45,7 @@ providers is what the reserve takes, and a test walks the provider asserting the
 | Module | Job | May it write money? |
 |---|---|---|
 | `ledger.py` | the only code path that moves money | **yes — exclusively** |
-| `billing.py` | the only code path that talks to Stripe | no (it calls `ledger.topup`) |
+| `application/billing.py` | billing orchestration and the only code path that talks to Stripe | no (it calls `ledger.topup`) |
 | `reconcile.py` | read-only reports that check the ledger against the world | no |
 
 The seam between the first two is one function: `ledger.topup(org, amount_micro, payment_ref)`.
@@ -56,7 +57,7 @@ into the other's job.
 1 micro = 1e-6 USD. A catalog call costs ~600 micro ($0.0006), so **cents cannot represent one call**
 and floats cannot be summed for a year without drifting. The only float is the margin *rate*, turned
 into an integer immediately (`with_margin`). Stripe speaks integer **cents**, so 1 cent = 10,000
-micro and every crossing goes through `micro_to_cents` / `cents_to_micro` in `billing.py` — the one
+micro and every crossing goes through `micro_to_cents` / `cents_to_micro` in `application/billing.py` — the one
 file where two unit systems meet. Whole dollars appear only in settings and in what a human types.
 Every `*_micro` value has a display-only `*_usd` twin: **never compute against the USD field.**
 
@@ -138,7 +139,7 @@ SELECT is an optimisation, not the guarantee — two concurrent deliveries of on
 miss it. (Fixed in #45; the migration is `db.py` A28, placed above the `(B)` legacy block because that
 block returns early on a fresh database — precisely the one that needs it.)
 
-## Stripe (`billing.py`)
+## Stripe (`application/billing.py`)
 
 **Credit happens on the WEBHOOK, never on the browser's return from Checkout.** The success redirect
 is a URL the payer controls; treating it as proof of payment would let anyone mint balance by typing
