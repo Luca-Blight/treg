@@ -28,6 +28,7 @@ async def test_probe_marks_ok(clients: AsyncClient):
     health = {h["name"]: h for h in (await clients.get("/health")).json()}
     assert health["k"]["status"] == "ok"
     assert "HTTP 200" in health["k"]["detail"]
+    assert "+00:00" not in health["k"]["checked_at"]
 
 
 async def test_probe_failure_marks_invalid(clients: AsyncClient):
