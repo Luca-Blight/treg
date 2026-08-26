@@ -506,7 +506,8 @@ That is also what bounds storage: bodies are kept only for calls that actually c
 
 ### Concurrency, and giving the label back
 
-A `pending` row is written **before** the upstream call, and that row is the lock: two retries
+A `pending` row is written in an application-owned short transaction **before** the upstream call,
+and that row is the lock: two retries
 arriving together race on the unique constraint, and the loser is told to wait (409) instead of
 duplicating the spend. Same reasoning as the conditional UPDATE in `ledger.reserve` — where two paths
 can read before either writes, the database has to arbitrate.
@@ -533,7 +534,7 @@ X-Treg-Meta: customer=cust_8123, workspace=ws_9, feature=email-finder
 
 Up to 5 pairs. It is a **header, never a tool argument** — a model asked to pass an id drops it
 somewhere in a chain, and a figure you cannot reconcile is worse than no figure. The builder's backend
-already sets `Authorization` on the request; this is the same call site. `api._parse_call_meta` parses
+already sets `Authorization` on the request; this is the same call site. `application.call.intake` parses
 it **once** per request, before the idempotency block, and everything downstream reads that one
 object. A second parse site would be a second chance to disagree about who pays.
 

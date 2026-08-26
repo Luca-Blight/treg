@@ -110,7 +110,9 @@ from .routers import call as call_routes
 from .routers import referrals as referral_routes
 from .routers import onboard as onboard_routes
 from .routers.call import (
+    _parse_call_meta,
     _refusal_kind,
+    _release_idempotent_claim,
     _stamp_call_exit,
     call_tool,
     catalog_endpoint_access,
@@ -308,7 +310,6 @@ from .application.call.idempotency import (
     _claim_idempotent,
     _idem_display,
     _idempotency_key,
-    _release_idempotent_claim,
     _replay_idempotent,
     _request_fingerprint,
     _scoped_idempotency_key,
@@ -319,7 +320,6 @@ from .application.call.intake import (
     _META_MAX_HEADER,
     CallMeta,
     _NO_META,
-    _parse_call_meta,
     _tag_telemetry,
 )
 from .routers import orgs as org_routes
@@ -3176,34 +3176,24 @@ call_routes._billed_marketplace = _billed_marketplace
 call_routes._buffer_response = _buffer_response
 call_routes._caller_request_snippet = _caller_request_snippet
 call_routes._catalog_endpoint_for = _catalog_endpoint_for
-call_routes._claim_idempotent = _claim_idempotent
 call_routes._enforce_daily_cap = _enforce_daily_cap
 call_routes._enforce_deny = _enforce_deny
 call_routes._enforce_public_demo_ip_cap = _enforce_public_demo_ip_cap
 call_routes._enforce_tag_budgets = _enforce_tag_budgets
 call_routes._error_response_evidence = _error_response_evidence
 call_routes._finish_cancelled_call = _finish_cancelled_call
-call_routes._idem_display = _idem_display
-call_routes._idempotency_key = _idempotency_key
 call_routes._may_have_body = _may_have_body
 call_routes._now_ms = _now_ms
 call_routes._oauth_billed_provider = _oauth_billed_provider
-call_routes._parse_call_meta = _parse_call_meta
 call_routes._peek_stream_head = _peek_stream_head
 call_routes._platform_reserve = _platform_reserve
 call_routes._platform_settle = _platform_settle
 call_routes._record_first_call = _record_first_call
 call_routes._redact_snippet = _redact_snippet
 call_routes._relay_live_demo = _relay_live_demo
-call_routes._release_idempotent_claim = _release_idempotent_claim
-call_routes._replay_idempotent = _replay_idempotent
-call_routes._request_fingerprint = _request_fingerprint
 call_routes._require_tool_use_http = _require_tool_use_http
 call_routes._resolve_marketplace_call = _resolve_marketplace_call
 call_routes._safe_secret_renderings = _safe_secret_renderings
-call_routes._scoped_idempotency_key = _scoped_idempotency_key
-call_routes._store_idempotent = _store_idempotent
-call_routes._tag_telemetry = _tag_telemetry
 router.routes.extend(call_routes.router.routes)
 
 

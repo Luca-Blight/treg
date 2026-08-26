@@ -6,6 +6,8 @@ from typing import Awaitable, Callable, Literal, Protocol
 import pytest
 
 from treg import api as A
+from treg.application.call import idempotency, intake
+from treg.application.call.types import IdempotencyFailed, IntakeFailed
 
 
 class RequestBodyPort(Protocol):
@@ -128,3 +130,24 @@ def test_compatibility_surface_stays_literal_during_boundary_extraction() -> Non
     assert {mapping[3] for mapping in GATEWAY_FAILURES.values()} == {"1"}
     assert FINALIZATION_TABLE["ssrf_refused"][0] == "release"
     assert FINALIZATION_TABLE["upstream_2xx"][0] == "settle"
+
+
+def test_call_intake_modules_are_framework_neutral() -> None:
+    for module in (intake, idempotency):
+        source = module.__loader__.get_source(module.__name__)
+        assert "fastapi" not in source
+        assert "starlette" not in source
+
+
+def test_intake_failures_keep_mechanism_and_blame_separate() -> None:
+    with pytest.raises(IntakeFailed) as malformed:
+        intake._parse_call_meta("not-a-pair")
+    assert (malformed.value.kind, malformed.value.blame, malformed.value.status_code) == (
+        "metadata_invalid", "caller", 422)
+
+    waiting = IdempotencyFailed(
+        "idempotency_in_progress", blame="treg", status_code=409, detail="wait")
+    mismatch = IdempotencyFailed(
+        "idempotency_mismatch", blame="caller", status_code=422, detail="new key")
+    assert waiting.blame == "treg"
+    assert mismatch.blame == "caller"

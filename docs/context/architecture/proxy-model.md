@@ -6,6 +6,7 @@ sources:
   - src/treg/api.py
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
+  - src/treg/application/call/types.py
   - src/treg/routers/call.py
 related:
   - architecture/data-model.md

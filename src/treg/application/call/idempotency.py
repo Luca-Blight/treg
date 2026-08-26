@@ -5,9 +5,8 @@ from __future__ import annotations
 import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING
 
-from fastapi import HTTPException, Request
-from fastapi.responses import Response
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +15,10 @@ from sqlmodel import select
 from ...db import session_maker
 from ...domain.identity.access import Caller
 from ...models import IdempotentCall
-from .intake import CallMeta
+from .types import IdempotencyFailed, IdempotentReplay
+
+if TYPE_CHECKING:
+    from .intake import CallMeta
 
 
 IDEMPOTENCY_WINDOW_S = 24 * 3600   # retries happen in seconds; a day is generous and easy to reason about
@@ -24,14 +26,14 @@ IDEMPOTENCY_HEADER = "idempotency-key"
 _IDEM_MAX_KEY = 200
 
 
-def _idempotency_key(request: Request) -> str:
+def _idempotency_key(raw_header: str | None) -> str:
     """The caller's label for this request, or "" when they sent none.
 
     Only ever the client's. A server-invented key — hashing the URL and body, say — would silently
     collapse two calls a caller genuinely MEANT to make twice, and "do this again" is a legitimate
     thing to ask of an API. No header means today's behaviour exactly: no lookup, no storage.
     """
-    return (request.headers.get(IDEMPOTENCY_HEADER) or "").strip()[:_IDEM_MAX_KEY]
+    return (raw_header or "").strip()[:_IDEM_MAX_KEY]
 
 
 _IDEM_SCOPE_SEP = "\x1f"
@@ -88,7 +90,7 @@ def _request_fingerprint(method: str, rest: str, body: bytes, query: str = "") -
 
 
 async def _replay_idempotent(key: str, fingerprint: str, caller: Caller,
-                             db: AsyncSession) -> Response | None:
+                             db: AsyncSession) -> IdempotentReplay | None:
     """The stored answer for this caller's label, or None if there is nothing to replay.
 
     Returns a real response, so the provider is never reached and no money moves. That is the whole
@@ -106,36 +108,36 @@ async def _replay_idempotent(key: str, fingerprint: str, caller: Caller,
         await db.commit()
         return None
     if row.request_fingerprint and row.request_fingerprint != fingerprint:
-        raise HTTPException(status_code=422, detail=(
-            f"Idempotency-Key {_idem_display(key)!r} was already used for a different request. Use a new key, or "
-            f"repeat the original request exactly."))
+        raise IdempotencyFailed(
+            "idempotency_mismatch", blame="caller", status_code=422,
+            detail=(f"Idempotency-Key {_idem_display(key)!r} was already used for a different request. Use a new key, or "
+                    f"repeat the original request exactly."))
     if row.status != "done" or row.response_status is None:
         # Still in flight. The first call is talking to the provider right now; telling the caller to
         # retry is honest and cheap, and it is what stops the second one duplicating the spend.
-        raise HTTPException(status_code=409, detail=(
-            f"a call with Idempotency-Key {_idem_display(key)!r} is still in progress — retry shortly"))
-    return Response(
-        content=row.response_body or b"",
+        raise IdempotencyFailed(
+            "idempotency_in_progress", blame="treg", status_code=409,
+            detail=(f"a call with Idempotency-Key {_idem_display(key)!r} "
+                    "is still in progress — retry shortly"))
+    return IdempotentReplay(
+        body=row.response_body or b"",
         status_code=row.response_status,
         media_type=row.response_media_type or "application/json",
-        headers={"X-Treg-Idempotent-Replay": "true",
-                 "X-Treg-Cost-Micro": str(row.charged_micro),
-                 # The ORIGINAL call's id: a retry must resolve to the row that actually holds the
-                 # money, not to a fresh reference for work that never happened.
-                 **({"X-Treg-Call-Id": row.call_ref} if row.call_ref else {})},
+        charged_micro=row.charged_micro,
+        # The ORIGINAL call's id: a retry must resolve to the row that actually holds the
+        # money, not to a fresh reference for work that never happened.
+        call_ref=row.call_ref or "",
     )
 
 
-async def _release_idempotent_claim(request: Request) -> None:
+async def _release_idempotent_claim(claim: tuple[int, str] | None) -> None:
     """Drop a claim this request took and never completed, so the label is usable again at once.
 
-    Reads what the handler parked on `request.state`; does nothing when there is no claim, which is
-    every request that sent no key. Never raises: this runs while an error is already being returned.
+    Does nothing when there is no claim, which is every request that sent no key. Never raises: this
+    runs while an error is already being returned.
     """
-    claim = getattr(request.state, "idem_claim", None)
     if not claim:
         return
-    request.state.idem_claim = None
     membership_id, key = claim
     try:
         async with session_maker() as db:

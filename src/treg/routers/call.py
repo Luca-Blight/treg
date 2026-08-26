@@ -14,6 +14,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import analytics, audit, catalog_store, ledger, oauth, oauth_providers
 from .. import sandbox as demo_sandbox
+from ..application.call.idempotency import (
+    IDEMPOTENCY_HEADER,
+    _release_idempotent_claim as release_idempotent_claim,
+    _store_idempotent,
+)
+from ..application.call.intake import (
+    META_HEADER,
+    CallMeta,
+    _parse_call_meta as parse_call_meta,
+    _tag_telemetry,
+    prepare_call_intake,
+)
+from ..application.call.types import CallFailure
 from ..caller_metadata import _client_of
 from ..config import get_settings
 from ..db import get_session
@@ -38,39 +51,46 @@ _billed_marketplace: Any
 _buffer_response: Any
 _caller_request_snippet: Any
 _catalog_endpoint_for: Any
-_claim_idempotent: Any
 _enforce_daily_cap: Any
 _enforce_deny: Any
 _enforce_public_demo_ip_cap: Any
 _enforce_tag_budgets: Any
 _error_response_evidence: Any
 _finish_cancelled_call: Any
-_idem_display: Any
-_idempotency_key: Any
 _may_have_body: Any
 _now_ms: Any
 _oauth_billed_provider: Any
-_parse_call_meta: Any
 _peek_stream_head: Any
 _platform_reserve: Any
 _platform_settle: Any
 _record_first_call: Any
 _redact_snippet: Any
 _relay_live_demo: Any
-_release_idempotent_claim: Any
-_replay_idempotent: Any
-_request_fingerprint: Any
 _require_tool_use_http: Any
 _resolve_marketplace_call: Any
 _safe_secret_renderings: Any
-_scoped_idempotency_key: Any
-_store_idempotent: Any
-_tag_telemetry: Any
 
 
 # The app alias preserves the moved handlers' decorator text byte-for-byte.
 app = APIRouter()
 router = app
+
+
+def _translate_call_failure(exc: CallFailure) -> HTTPException:
+    return HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
+def _parse_call_meta(request: Request, caller: Caller | None = None) -> CallMeta:
+    try:
+        return parse_call_meta(request.headers.get(META_HEADER), caller)
+    except CallFailure as exc:
+        raise _translate_call_failure(exc) from exc
+
+
+async def _release_idempotent_claim(request: Request) -> None:
+    claim = getattr(request.state, "idem_claim", None)
+    request.state.idem_claim = None
+    await release_idempotent_claim(claim)
 
 
 async def _stamp_call_exit(request: Request, resp: Response, status_code: int) -> None:
@@ -198,33 +218,34 @@ async def call_tool(
     # our records to theirs on a single value.
     call_ref = uuid.uuid4().hex
     request.state.call_ref = call_ref
-    # Blocked status and the per-tag call count, BEFORE the replay below: a blocked user must neither
-    # take an idempotency lock nor be handed an answer this team cached before they were blocked.
-    await _enforce_tag_budgets(caller, meta, db)
-    # A retry the caller has labelled: answer it from what we already returned, before resolving
-    # anything or reaching a provider. Nothing happens without the header, so a caller who sends none
-    # sees exactly today's behaviour.
-    # Scoped by the primary tag: two of a builder's users WILL both send `retry-1`, and without
-    # this the second would be served the first's stored response.
-    idem_key = _scoped_idempotency_key(_idempotency_key(request), meta)
-    idem_fingerprint = ""
-    if idem_key:
-        idem_body = await request.body()
-        idem_fingerprint = _request_fingerprint(
-            request.method, rest, idem_body, request.url.query or "")
-        replayed = await _replay_idempotent(idem_key, idem_fingerprint, caller, db)
-        if replayed is not None:
-            return replayed
-        # Claim it now, before anything reaches a provider. Two retries can arrive together and both
-        # miss the lookup above; the unique constraint is what makes the loser wait instead of making
-        # a second upstream call. A check-then-act in Python would leave exactly the window this
-        # feature exists to close — the same reasoning as the conditional UPDATE in ledger.reserve.
-        if not await _claim_idempotent(idem_key, idem_fingerprint, rest, caller, db):
-            raise HTTPException(status_code=409, detail=(
-                f"a call with Idempotency-Key {_idem_display(idem_key)!r} is already in progress — retry shortly"))
-        # Park it so a failure anywhere below can give the label back. Set AFTER the claim succeeds,
-        # so losing the race above never releases the winner's row.
-        request.state.idem_claim = (caller.membership.id, idem_key)
+    try:
+        intake = await prepare_call_intake(
+            meta=meta,
+            idempotency_header=request.headers.get(IDEMPOTENCY_HEADER),
+            method=request.method,
+            rest=rest,
+            raw_query=request.url.query or "",
+            read_body=request.body,
+            caller=caller,
+            enforce_tag_budgets=_enforce_tag_budgets,
+        )
+    except CallFailure as exc:
+        raise _translate_call_failure(exc) from exc
+    idem_key = intake.idempotency_key
+    idem_fingerprint = intake.fingerprint
+    if intake.replay is not None:
+        replayed = intake.replay
+        return Response(
+            content=replayed.body,
+            status_code=replayed.status_code,
+            media_type=replayed.media_type,
+            headers={"X-Treg-Idempotent-Replay": "true",
+                     "X-Treg-Cost-Micro": str(replayed.charged_micro),
+                     **({"X-Treg-Call-Id": replayed.call_ref} if replayed.call_ref else {})},
+        )
+    # Park it so a failure anywhere below can give the label back. Set AFTER the claim succeeds,
+    # so losing the race above never releases the winner's row.
+    request.state.idem_claim = intake.claim
 
     drop_params: set[str] = set()
     mk: MarketplaceCall | None = None
