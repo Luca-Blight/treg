@@ -4,6 +4,7 @@ status: shipped
 sources:
   - src/treg/web/sitetrack.js
   - src/treg/api.py
+  - src/treg/bootstrap_http.py
   - src/treg/caller_metadata.py
   - src/treg/application/auth.py
   - src/treg/application/connect.py

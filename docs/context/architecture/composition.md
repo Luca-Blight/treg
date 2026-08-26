@@ -3,6 +3,7 @@ title: Application composition and deployment roles
 status: shipped
 sources:
   - src/treg/bootstrap.py
+  - src/treg/bootstrap_http.py
   - src/treg/application/connect.py
   - src/treg/domain/identity/mcp_oauth.py
   - src/treg/domain/identity/session.py
@@ -32,7 +33,8 @@ implied HEAD operations, shared HTTP client creation, startup work, shutdown dra
 conversion worker. Registration order is compatibility behavior. The four stage-0 snapshots stay
 byte-identical for `role="all"` unless that composition intentionally changes.
 
-The middleware stack is `_BodyDecodeMiddleware` -> `_SecurityHeadersMiddleware` ->
+`bootstrap_http.py` owns the app-wide middleware implementations. The middleware stack is
+`_BodyDecodeMiddleware` -> `_SecurityHeadersMiddleware` ->
 `_LegacyHostRedirectMiddleware` -> routes/mounts. All three are pure ASGI. The security wrapper adds
 headers at `http.response.start` with case-insensitive setdefault semantics, and the redirect wrapper
 either sends the same 301/302 response as before or calls its child directly. Keeping
