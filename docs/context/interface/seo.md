@@ -379,6 +379,20 @@ checker` 590 against `google indexing api` 260, and the Indexing API is the wron
 job, so the page carries the checker term and says so; `financial news api` 170 sits beside
 `stock news api` 210.
 
+**`{cheapest}` expands to a bare price, so the lede must carry the preposition** (2026-08-27).
+On a metered page it becomes `$0.002`, on a trial-pool page the `free_words` phrase, so "one key,
+{cheapest}, at the provider's rate" reads "one key, $0.002, at". Write "from {cheapest}" and let
+the phrase follow. Three of the 2026-08-27 pages shipped the bare form past 116 green tests and
+were caught by reading the `.md`; the same pass caught a note calling Majestic unpriced while the
+table printed $0.0008 per result for it, because `cost_view` converts index item units to USD.
+
+**Demand keeps outrunning the worklist term, sixth time** (2026-08-27). `coingecko api` 1,300
+against `crypto price api` 170, so the crypto page's H1 leads with CoinGecko; `reddit api` 5,400
+and `reddit mcp` 590 against `reddit search api` 140; `free backlink checker` 2,900 and `ahrefs
+api` 320 against `backlink api` 140, with Ahrefs not in the catalog, which the page says in its
+first paragraph; `competitor keyword research` 1,300 and `semrush api` 720 against `competitor
+ppc keywords` 140. The Glassdoor term held: `glassdoor api` 210, `glassdoor scraper` 110.
+
 **A `related` card resolves by label, not inside the current category.** Four categories carry
 fewer than five jobs (advertising and market research three, e-commerce and local businesses four),
 so their pages have to point at least one of their four cards outside the category. The card used to
