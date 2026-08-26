@@ -341,13 +341,17 @@ async def _platform_settle(
     async def _close() -> int:
         async with session_maker() as db:
             if billable:
-                return await ledger.settle(db, call_id, observed, meta={
+                charged = await ledger.settle_in_transaction(db, call_id, observed, meta={
                     "provider": mk.provider, "status_code": status_code, "cost_type": mk.cost_type,
                     "cost_source": "provider" if observed is not None else "estimate"})
-            await ledger.release(db, call_id, reason=reason or f"not_billable_{status_code}",
-                                 meta={"provider": mk.provider, "cost_type": mk.cost_type,
-                                       "status_code": status_code})
-            return 0
+            else:
+                await ledger.release_in_transaction(
+                    db, call_id, reason=reason or f"not_billable_{status_code}",
+                    meta={"provider": mk.provider, "cost_type": mk.cost_type,
+                          "status_code": status_code})
+                charged = 0
+            await db.commit()
+            return charged
 
     try:
         try:
@@ -391,13 +395,14 @@ async def _finish_cancelled_call(
             mk.call_id = None
             try:
                 async with session_maker() as cleanup_db:
-                    await ledger.release(
+                    await ledger.release_in_transaction(
                         cleanup_db,
                         call_ref,
                         reason="call_cancelled",
                         meta={"provider": mk.provider, "cost_type": mk.cost_type,
                               "status_code": None},
                     )
+                    await cleanup_db.commit()
             except (Exception, asyncio.CancelledError):  # noqa: BLE001
                 logging.getLogger("treg.ledger").error(
                     "cancellation release failed for call %s", call_ref, exc_info=True)
@@ -442,4 +447,3 @@ async def _record_first_call(org_id: int) -> None:
     except Exception:  # noqa: BLE001 — loudly, but never into the caller's response
         logging.getLogger("treg.adsconv").error(
             "first_call_at update/queue failed for org %s", org_id, exc_info=True)
-

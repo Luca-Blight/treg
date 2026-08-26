@@ -114,7 +114,8 @@ for `identity` keeps what the caller receives matching what the caller requested
 `application.call.reserve` owns and closes the short reservation session. The router commits its
 secret-loading session before opening that transaction and again immediately before `relay()` (and
 before `_relay_live_demo()`), so from the moment the upstream is called until the settle, the request
-holds **zero** pooled connections. Everything after the relay — `_platform_settle`, `_record_first_call`,
+holds **zero** pooled connections. `application.call.settle` owns the short settlement or release
+transaction after the relay; `_record_first_call`
 `_store_idempotent` — already runs on its own short-lived session, and the request session is
 `expire_on_commit=False`, so `tool`, `secrets` and `caller.org` stay usable without a reload.
 

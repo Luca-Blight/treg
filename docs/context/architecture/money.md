@@ -93,8 +93,8 @@ swallows exceptions, which is right for analytics and fatal for money.
 | `grant` | new promotional block, balance up (org creation, the referral bonus, the top-up bonus) |
 | `topup` | new purchased block, balance up (after Stripe authorized) |
 | `reserve` / `reserve_in_transaction` | balance down by the estimate, `Hold` opened — committed by the compatibility wrapper or the call application |
-| `settle` | blocks down by the observed cost, hold closed, difference refunded |
-| `release` | hold closed, balance refunded in full (upstream failure — not billable) |
+| `settle` / `settle_in_transaction` | blocks down by the observed cost, hold closed, difference refunded - committed by the compatibility wrapper or the call application |
+| `release` / `release_in_transaction` | hold closed, balance refunded in full - committed by the compatibility wrapper or the call application |
 
 Release metadata distinguishes a failed call from a normal non-billable provider response, and says
 which side failed. A provider that answered 5xx releases as `provider_failed_<status>`; a call treg

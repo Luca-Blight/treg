@@ -326,9 +326,27 @@ async def settle(
     A no-op returning 0 when the hold is already gone — the reaper or a retry got there first, and a
     double settle must not charge twice.
     """
+    consumed, claimed = await _settle_in_transaction(
+        db, call_id, actual_micro, meta=meta)
+    if claimed:
+        await db.commit()
+    return consumed
+
+
+async def settle_in_transaction(
+    db: AsyncSession, call_id: str, actual_micro: int | None = None, *, meta: dict | None = None,
+) -> int:
+    """Stage settlement in the caller-owned transaction and return the consumed amount."""
+    consumed, _ = await _settle_in_transaction(db, call_id, actual_micro, meta=meta)
+    return consumed
+
+
+async def _settle_in_transaction(
+    db: AsyncSession, call_id: str, actual_micro: int | None = None, *, meta: dict | None = None,
+) -> tuple[int, bool]:
     hold = await _claim_hold(db, call_id)
     if hold is None:
-        return 0
+        return 0, False
     reserved = hold.amount_micro
     # ONE instant for this settlement — shared by the ledger entry and the tag rows below.
     settled_at = _now()
@@ -360,17 +378,33 @@ async def settle(
     # at reserve time, such a call showed up in the org total but not in any tag total.
     await db.execute(update(TagSpend).where(TagSpend.hold_id == call_id)
                      .values(amount_micro=consumed, settled=True, created_at=settled_at))
-    await db.commit()
-    return consumed
+    return consumed, True
 
 
 async def release(db: AsyncSession, call_id: str, *, reason: str = "", meta: dict | None = None) -> int:
     """Return a hold in FULL and close it — the call produced nothing billable (provider 5xx, network
     error, our own crash before relay). Returns the amount returned; 0 if the hold is already gone.
     Commits."""
+    amount, claimed = await _release_in_transaction(db, call_id, reason=reason, meta=meta)
+    if claimed:
+        await db.commit()
+    return amount
+
+
+async def release_in_transaction(
+    db: AsyncSession, call_id: str, *, reason: str = "", meta: dict | None = None,
+) -> int:
+    """Stage a full hold release in the caller-owned transaction."""
+    amount, _ = await _release_in_transaction(db, call_id, reason=reason, meta=meta)
+    return amount
+
+
+async def _release_in_transaction(
+    db: AsyncSession, call_id: str, *, reason: str = "", meta: dict | None = None,
+) -> tuple[int, bool]:
     hold = await _claim_hold(db, call_id)
     if hold is None:
-        return 0
+        return 0, False
     amount = hold.amount_micro
     await _add_balance(db, hold.org_id, amount)
     await _entry(db, org_id=hold.org_id, kind="release", amount_micro=amount, call_id=call_id,
@@ -378,8 +412,7 @@ async def release(db: AsyncSession, call_id: str, *, reason: str = "", meta: dic
     # Nothing was billable, so nothing is attributable: the tag rows go with the hold. Leaving them
     # would bill a builder's user for a call the provider never completed.
     await db.execute(delete(TagSpend).where(TagSpend.hold_id == call_id))
-    await db.commit()
-    return amount
+    return amount, True
 
 
 async def _consume_blocks(

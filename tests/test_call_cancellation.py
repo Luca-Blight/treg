@@ -226,7 +226,7 @@ async def test_repeated_cancellation_cannot_interrupt_compensation(
     original_http = app.state.http
     original_commit = AsyncSession.commit
     original_delete = AsyncSession.delete
-    original_release = ledger.release
+    original_release = ledger.release_in_transaction
     cleanup_commit_reached = asyncio.Event()
     allow_cleanup_commit = asyncio.Event()
     claim_commit_reached = asyncio.Event()
@@ -251,7 +251,7 @@ async def test_repeated_cancellation_cannot_interrupt_compensation(
             await allow_claim_commit.wait()
         await original_commit(db)
 
-    monkeypatch.setattr(ledger, "release", _tag_cancelled_release)
+    monkeypatch.setattr(ledger, "release_in_transaction", _tag_cancelled_release)
     monkeypatch.setattr(AsyncSession, "delete", _tag_claim_delete)
     monkeypatch.setattr(AsyncSession, "commit", _gate_cleanup_commit)
     app.state.http = tracked
@@ -353,7 +353,7 @@ async def test_cancellation_while_failure_release_is_in_flight_finishes_compensa
     release_commit_reached = asyncio.Event()
     never_finish_first_release = asyncio.Event()
     original_commit = AsyncSession.commit
-    original_release = ledger.release
+    original_release = ledger.release_in_transaction
     gated = False
     call_id: str | None = None
 
@@ -376,7 +376,7 @@ async def test_cancellation_while_failure_release_is_in_flight_finishes_compensa
         await original_commit(db)
 
     monkeypatch.setattr(call_routes, "relay", _fail_relay)
-    monkeypatch.setattr(ledger, "release", _tag_first_release)
+    monkeypatch.setattr(ledger, "release_in_transaction", _tag_first_release)
     monkeypatch.setattr(AsyncSession, "commit", _gate_first_release)
     task = asyncio.create_task(clients.get(
         f"/call/{EP}?aweme_id=failure-release",

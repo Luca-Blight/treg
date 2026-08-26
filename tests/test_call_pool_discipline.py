@@ -139,7 +139,7 @@ async def test_a_settle_that_loses_the_pool_once_retries_and_still_charges(
 ):
     """A settle that gives up forfeits real revenue (the hold is reaped in the org's favour), so a
     transient pool wait gets exactly one retry — and nothing else does."""
-    original = ledger.settle
+    original = ledger.settle_in_transaction
     calls = 0
 
     async def _flaky_settle(*args, **kwargs):
@@ -149,7 +149,7 @@ async def test_a_settle_that_loses_the_pool_once_retries_and_still_charges(
             raise PoolTimeoutError("QueuePool limit reached")
         return await original(*args, **kwargs)
 
-    monkeypatch.setattr(ledger, "settle", _flaky_settle)
+    monkeypatch.setattr(ledger, "settle_in_transaction", _flaky_settle)
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
     before = (await clients.get(f"/orgs/{org_id}/balance")).json()["balance_micro"]
     r = await clients.get(f"/call/{EP}?aweme_id=7")
