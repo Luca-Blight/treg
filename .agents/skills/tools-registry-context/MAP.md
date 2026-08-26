@@ -114,6 +114,8 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/endpoint_stats.py` | architecture/catalog.md |
 | `src/treg/fsjail.py` | architecture/local-run.md |
 | `src/treg/health.py` | architecture/auth-secrets.md |
+| `src/treg/infra/__init__.py` | architecture/money.md |
+| `src/treg/infra/stripe.py` | architecture/money.md |
 | `src/treg/injectors.py` | architecture/auth-secrets.md |
 | `src/treg/ledger.py` | architecture/money.md |
 | `src/treg/localproxy.py` | architecture/local-proxy.md |
@@ -182,7 +184,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `auth.py`, `mcp.py`, `mcp_oauth.py`, `health.py`, `mcp_oauth.py`, `session.py`, `auth.py`, `connect-demo.html` |
-| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `billing.py`, `reconcile.py`, `referrals.py`, `api.py`, `signup.py`, `admin.py`, `billing.py`, `orgs.py`, `referrals.py` |
+| `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `billing.py`, `__init__.py`, `stripe.py`, `reconcile.py`, `referrals.py`, `api.py`, `signup.py`, `admin.py`, `billing.py`, `orgs.py`, `referrals.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `caller_metadata.py`, `auth.py`, `signup.py`, `teams.py`, `access.py`, `session.py`, `auth.py`, `orgs.py`, `resources.py`, `db.py`, `test_router_dependencies.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
 | `architecture/super-admin.md` | `api.py`, `admin.py`, `access.py`, `config.py` |

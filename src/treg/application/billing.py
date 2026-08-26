@@ -33,13 +33,10 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import logging
 import sys
 from datetime import datetime, timezone
 
-import anyio.to_thread
-import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -50,6 +47,7 @@ from .. import email as email_mod
 from .. import ledger
 from .. import referrals
 from ..config import get_settings
+from ..infra import stripe as stripe_adapter
 from ..models import CreditBlock, LedgerEntry, Membership, Org, User
 
 
@@ -222,8 +220,7 @@ async def _sdk(fn, /, **kwargs):
     `to_dict()` is deep: nested objects and list `data` items all come back as plain dicts.
     """
     key = _require_configured()
-    result = await anyio.to_thread.run_sync(lambda: fn(api_key=key, **kwargs))
-    return result.to_dict() if isinstance(result, stripe.StripeObject) else result
+    return await stripe_adapter.call(fn, api_key=key, **kwargs)
 
 
 # ---- policy reads ------------------------------------------------------------------------------
@@ -291,7 +288,7 @@ async def get_or_create_customer(db: AsyncSession, org: Org, *, email: str = "")
     if not email:
         email = await owner_email(db, org.id)
     customer = await _sdk(
-        stripe.Customer.create,
+        stripe_adapter.CUSTOMER_CREATE,
         name=org.name or org.slug,
         **({"email": email} if email else {}),
         # The org id travels with the customer so a Stripe-side investigation ("who is this charge
@@ -361,7 +358,7 @@ async def _pm_and_fingerprint(pi_id: str) -> tuple[str | None, str | None]:
     Checkout completion, and one round trip on the webhook path is enough.
     """
     try:
-        pi = await _sdk(stripe.PaymentIntent.retrieve, id=pi_id, expand=["payment_method"])
+        pi = await _sdk(stripe_adapter.PAYMENT_INTENT_RETRIEVE, id=pi_id, expand=["payment_method"])
     except Exception as e:  # noqa: BLE001 — a card we can't look up just means no auto-top-up yet
         log.warning("billing: could not retrieve PaymentIntent %s: %s", pi_id, e)
         return None, None
@@ -410,7 +407,7 @@ async def create_topup_checkout(
     customer = await get_or_create_customer(db, org, email=email)
     base = (return_base or get_settings().public_url).rstrip("/")
     session = await _sdk(
-        stripe.checkout.Session.create,
+        stripe_adapter.CHECKOUT_SESSION_CREATE,
         mode="payment",
         customer=customer,
         # No `payment_method_types`: omitting it lets Stripe pick the methods most likely to convert
@@ -473,7 +470,7 @@ async def create_setup_checkout(db: AsyncSession, org: Org, *, return_base: str 
     customer = await get_or_create_customer(db, org, email=email)
     base = (return_base or get_settings().public_url).rstrip("/")
     session = await _sdk(
-        stripe.checkout.Session.create,
+        stripe_adapter.CHECKOUT_SESSION_CREATE,
         mode="setup",
         customer=customer,
         # `off_session` tells Stripe the saved card is destined for unattended charges, which is what
@@ -510,7 +507,7 @@ async def create_portal_session(db: AsyncSession, org: Org, *, return_base: str 
         raise TopupRejected("no billing details yet — add funds once and the portal opens after that")
     base = (return_base or get_settings().public_url).rstrip("/")
     session = await _sdk(
-        stripe.billing_portal.Session.create,
+        stripe_adapter.PORTAL_SESSION_CREATE,
         customer=org.stripe_customer_id,
         return_url=f"{base}/app#billing",
     )
@@ -597,8 +594,8 @@ async def _payment_documents(org: Org, wanted: int) -> tuple[dict[str, dict], bo
         return {}, bool(configured())
     window = max(wanted, 100)
     try:
-        charges = await _sdk(stripe.Charge.list, customer=org.stripe_customer_id, limit=window)
-        invoices = await _sdk(stripe.Invoice.list, customer=org.stripe_customer_id, limit=window)
+        charges = await _sdk(stripe_adapter.CHARGE_LIST, customer=org.stripe_customer_id, limit=window)
+        invoices = await _sdk(stripe_adapter.INVOICE_LIST, customer=org.stripe_customer_id, limit=window)
     except Exception as e:  # noqa: BLE001 — see docstring: links are optional, the history is not
         log.warning("billing: could not load payment documents for org %s: %s", org.id, e)
         return {}, False
@@ -727,7 +724,7 @@ async def attempt_auto_topup(db: AsyncSession, org_id: int) -> dict:
         to = await owner_email(db, org_id)
         try:
             pi = await _sdk(
-                stripe.PaymentIntent.create,
+                stripe_adapter.PAYMENT_INTENT_CREATE,
                 amount=micro_to_cents(amount_micro),
                 currency="usd",                    # explicit: the account's own default is AUD
                 customer=org.stripe_customer_id,
@@ -738,7 +735,7 @@ async def attempt_auto_topup(db: AsyncSession, org_id: int) -> dict:
                 **({"receipt_email": to} if to else {}),
                 idempotency_key=_idempotency_key(org_id, amount_micro, crossing, org.stripe_default_pm),
             )
-        except stripe.CardError as e:
+        except stripe_adapter.CardError as e:
             code = (getattr(e, "code", "") or (e.error.code if getattr(e, "error", None) else "") or "")
             # The declined PaymentIntent hangs off the error as a StripeObject (not a dict), so reach
             # for it defensively — a missing id must not turn a decline into a crash.
@@ -860,14 +857,7 @@ def verify_event(payload: bytes, signature: str) -> dict:
     secret = get_settings().stripe_webhook_secret
     if not secret:
         raise ValueError("no webhook secret configured")
-    try:
-        # `verify_header` signs a STRING (`f"{t}.{payload}"`), so bytes must be decoded first or the
-        # HMAC is computed over the literal `b'…'` repr and every genuine event fails to verify.
-        body = payload.decode("utf-8") if isinstance(payload, bytes) else payload
-        stripe.WebhookSignature.verify_header(body, signature, secret, stripe.Webhook.DEFAULT_TOLERANCE)
-        return json.loads(body)
-    except Exception as e:  # SignatureVerificationError, ValueError, … — all mean "don't trust this"
-        raise ValueError(f"bad signature or payload: {e}") from e
+    return stripe_adapter.verify_event(payload, signature, secret)
 
 
 def _org_id_from(obj: dict) -> int | None:
@@ -1023,7 +1013,7 @@ async def _on_checkout_completed(db: AsyncSession, session: dict) -> dict:
         si_id = si if isinstance(si, str) else (si or {}).get("id")
         if si_id:
             try:
-                si_obj = await _sdk(stripe.SetupIntent.retrieve, id=si_id)
+                si_obj = await _sdk(stripe_adapter.SETUP_INTENT_RETRIEVE, id=si_id)
             except Exception as e:  # noqa: BLE001
                 log.warning("billing: could not retrieve SetupIntent %s: %s", si_id, e)
                 return {"handled": False, "reason": "setup_intent unreadable"}

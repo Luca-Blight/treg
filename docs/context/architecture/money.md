@@ -6,6 +6,8 @@ sources:
   - src/treg/models.py
   - src/treg/billing.py
   - src/treg/application/billing.py
+  - src/treg/infra/__init__.py
+  - src/treg/infra/stripe.py
   - src/treg/reconcile.py
   - src/treg/referrals.py
   - src/treg/api.py
@@ -45,12 +47,13 @@ providers is what the reserve takes, and a test walks the provider asserting the
 | Module | Job | May it write money? |
 |---|---|---|
 | `ledger.py` | the only code path that moves money | **yes — exclusively** |
-| `application/billing.py` | billing orchestration and the only code path that talks to Stripe | no (it calls `ledger.topup`) |
+| `application/billing.py` | billing policy, transactions, and webhook orchestration | no (it calls `ledger.topup`) |
+| `infra/stripe.py` | the only Stripe SDK, signature verification, and network adapter | no |
 | `reconcile.py` | read-only reports that check the ledger against the world | no |
 
-The seam between the first two is one function: `ledger.topup(org, amount_micro, payment_ref)`.
-Stripe authorizes a payment on one side, the ledger credits balance on the other, and neither reaches
-into the other's job.
+The money seam is one function: `ledger.topup(org, amount_micro, payment_ref)`. Billing orchestration
+asks the Stripe adapter to authorize or verify a payment, then asks the ledger to credit it; neither
+adapter reaches into the ledger.
 
 ## Units: integer micro-USD, everywhere
 
@@ -139,7 +142,7 @@ SELECT is an optimisation, not the guarantee — two concurrent deliveries of on
 miss it. (Fixed in #45; the migration is `db.py` A28, placed above the `(B)` legacy block because that
 block returns early on a fresh database — precisely the one that needs it.)
 
-## Stripe (`application/billing.py`)
+## Stripe (`application/billing.py` and `infra/stripe.py`)
 
 **Credit happens on the WEBHOOK, never on the browser's return from Checkout.** The success redirect
 is a URL the payer controls; treating it as proof of payment would let anyone mint balance by typing
@@ -156,10 +159,11 @@ the several-signatures case during rotation) rather than `construct_event`, so a
 type this SDK version predates is accepted and then ignored, not rejected as forged. A handler failure
 returns 500 **on purpose**: that is how Stripe is told to retry.
 
-The Stripe SDK is synchronous, so every call goes through `_sdk()` onto a worker thread — a blocking
-network call on the event loop would stall every in-flight request, including the proxy's hot path.
-`_sdk()` also converts the SDK's return value to a plain dict (`StripeObject.to_dict()`, which is
-deep): the SDK's objects stopped subclassing dict, so `.get()` on one raises, and every consumer —
+The Stripe SDK is synchronous, so the application `_sdk()` seam delegates every call to
+`infra/stripe.py`, which runs it on a worker thread. A blocking network call on the event loop would
+stall every in-flight request, including the proxy's hot path. The adapter also converts the SDK's
+return value to a plain dict (`StripeObject.to_dict()`, which is deep): the SDK's objects stopped
+subclassing dict, so `.get()` on one raises, and every consumer —
 plus every test fake, which returns plain dicts through this same funnel — reads dict-style. Keep it
 that way: a consumer written against the object API would pass prod and break the fakes, and the
 last divergence shipped a webhook handler that 500'd on every live checkout while the suite was green.
