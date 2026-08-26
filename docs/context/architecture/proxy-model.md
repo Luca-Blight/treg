@@ -8,6 +8,7 @@ sources:
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
   - src/treg/application/call/resolve.py
+  - src/treg/application/call/reserve.py
   - src/treg/application/call/types.py
   - src/treg/domain/governance/access.py
   - src/treg/domain/governance/publicdemo.py

@@ -10,6 +10,7 @@ sources:
   - src/treg/application/call/idempotency.py
   - src/treg/application/call/intake.py
   - src/treg/application/call/resolve.py
+  - src/treg/application/call/reserve.py
   - src/treg/application/referrals.py
   - src/treg/domain/governance/budgets.py
   - src/treg/infra/__init__.py
@@ -561,8 +562,8 @@ rows and both apply to a call carrying both tags. Every declared dimension is ev
 breach in declaration order refuses, so the outcome is deterministic. The refusal **names the
 dimension** — a builder running stacked budgets otherwise cannot tell a workspace breach from a
 per-user one.
-Validation, dimension selection, effective daily caps, and tag-budget row lookup share the
-`domain.governance.budgets` owner across the call and control surfaces. A newly observed tag returns
+Validation and dimension selection share the `domain.governance.budgets` owner across the call and
+control surfaces. `application.call.reserve` owns the call-side spend caps and tag-budget lookup. A newly observed tag returns
 an explicit `created` result without committing; the call intake and governance router commit at the
 same boundary that makes the row visible.
 

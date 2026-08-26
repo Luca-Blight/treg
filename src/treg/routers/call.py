@@ -36,6 +36,7 @@ from ..application.call.resolve import (
     resolve_call_target,
     resolve_marketplace_target,
 )
+from ..application.call.reserve import _enforce_tag_budgets, _platform_reserve
 from ..application.call.intake import (
     META_HEADER,
     CallMeta,
@@ -65,12 +66,10 @@ _ERROR_RESPONSE_MAX: Any
 _await_before_reserve: Any
 _buffer_response: Any
 _caller_request_snippet: Any
-_enforce_tag_budgets: Any
 _error_response_evidence: Any
 _finish_cancelled_call: Any
 _now_ms: Any
 _peek_stream_head: Any
-_platform_reserve: Any
 _platform_settle: Any
 _record_first_call: Any
 _redact_snippet: Any
