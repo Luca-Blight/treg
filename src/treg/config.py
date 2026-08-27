@@ -249,6 +249,9 @@ class Settings(BaseSettings):
     # fresh hits from the store). Any other value degrades to "off" — a typo must disable, never
     # enable. Staged deliberately so production can sit in "shadow" while phase 0 measures.
     archive_mode: str = "off"
+    # Bodies above this size are hash-counted but never stored (skipped whole, not truncated):
+    # the archive is for API JSON answers, not downloads. Statistics still record size_bytes.
+    archive_max_body_bytes: int = 2_000_000
 
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
     # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.

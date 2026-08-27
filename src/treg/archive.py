@@ -156,3 +156,145 @@ def content_hash(body: bytes) -> str:
     (Change DETECTION will strip noisy fields before comparing — that arrives with the learner in
     a later PR and never alters what is stored: bytes are kept verbatim, always.)"""
     return hashlib.sha256(body).hexdigest()
+
+
+# ---------------------------------------------------------------------------------------------
+# The recorder (PR 2) — fire-and-forget, audit's discipline: bounded, swallowed, drainable.
+# A recording hiccup must NEVER surface into a call's result, and a burst must never OOM the
+# server. Unlike audit there is no shed-counter subtlety: a dropped snapshot is one lost sample
+# in a statistics stream that the next identical call re-supplies.
+
+import asyncio
+import logging
+from datetime import datetime, timezone
+
+_log = logging.getLogger("treg.archive")
+_pending: set[asyncio.Task] = set()
+_MAX_PENDING = 512
+
+
+def _utcnow() -> datetime:
+    # Naive UTC, matching every models.py datetime column (see models._now).
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def key_url(upstream_url: str, query_items: list[tuple[str, str]], exclude: set[str]) -> str:
+    """The URL as the vendor effectively sees it, before credential injection: the resolved
+    upstream (fixed query included) plus the caller's forwarded params — minus `exclude`, the
+    resolution-consumed names the relay drops. Order does not matter; cache_key sorts."""
+    from urllib.parse import urlencode
+    q = urlencode([(k, v) for k, v in query_items if k not in exclude])
+    if not q:
+        return upstream_url
+    return f"{upstream_url}&{q}" if "?" in upstream_url else f"{upstream_url}?{q}"
+
+
+def record(
+    *,
+    method: str,
+    endpoint_id: str,
+    provider: str,
+    url: str,
+    caller_body: bytes,
+    headers: dict[str, str],
+    status_code: int,
+    media_type: str,
+    body: bytes,
+) -> None:
+    """Schedule one observation of a metered platform answer. Returns immediately; the write runs
+    off-request on its own session. Call sites gate on `recording()` and 2xx — this function
+    trusts them and never raises."""
+    if len(_pending) >= _MAX_PENDING:  # shed load; the stream self-heals on the next call
+        return
+    task = asyncio.create_task(_store(
+        method=method, endpoint_id=endpoint_id, provider=provider, url=url,
+        caller_body=caller_body, headers=headers, status_code=status_code,
+        media_type=media_type, body=body))
+    _pending.add(task)
+    task.add_done_callback(_pending.discard)
+
+
+async def drain() -> None:
+    """Flush in-flight recordings — shutdown and tests."""
+    while _pending:
+        await asyncio.gather(*list(_pending), return_exceptions=True)
+
+
+async def _store(
+    *,
+    method: str,
+    endpoint_id: str,
+    provider: str,
+    url: str,
+    caller_body: bytes,
+    headers: dict[str, str],
+    status_code: int,
+    media_type: str,
+    body: bytes,
+) -> None:
+    """One recording: upsert the key, append a version, keep the change statistics honest.
+
+    The license decides what is KEPT, not what is COUNTED: statistics and the content hash are
+    recorded for every metered 2xx (a hash is an identity, not the content), while the body bytes
+    are stored only when the catalog entry's cache policy allows it AND the body fits the size
+    cap. Oversized bodies are skipped whole, never truncated. Consecutive identical answers
+    deduplicate: the new version row points at the row carrying the bytes (`body_of`) — and when
+    an identical answer arrives at a key whose bytes were never kept (policy or cap changed), the
+    bytes are stored now, so a policy upgrade heals the store forward without a backfill."""
+    try:
+        from sqlalchemy import select
+        from sqlalchemy.exc import IntegrityError
+
+        from . import catalog_store
+        from .db import session_maker
+        from .models import ArchiveKey, ArchiveSnapshot
+
+        entry = catalog_store.load().by_id.get(endpoint_id)
+        pol = policy(entry)
+        kh = cache_key(method, endpoint_id, url, caller_body, headers)
+        ch = content_hash(body)
+        cap = get_settings().archive_max_body_bytes
+        keep_bytes = pol in _STORABLE and len(body) <= cap
+        now = _utcnow()
+
+        async with session_maker() as s:
+            key = (await s.execute(
+                select(ArchiveKey).where(ArchiveKey.key_hash == kh))).scalars().one_or_none()
+            if key is None:
+                key = ArchiveKey(key_hash=kh, endpoint_id=endpoint_id, provider=provider,
+                                 policy=pol, fetched_at=now, last_requested_at=now)
+                s.add(key)
+                try:
+                    await s.commit()
+                except IntegrityError:  # two first-calls raced; the winner's row is the key
+                    await s.rollback()
+                    key = (await s.execute(
+                        select(ArchiveKey).where(ArchiveKey.key_hash == kh))).scalars().one()
+
+            newest = (await s.execute(
+                select(ArchiveSnapshot).where(ArchiveSnapshot.key_id == key.id)
+                .order_by(ArchiveSnapshot.version.desc()).limit(1))).scalars().first()
+
+            snap = ArchiveSnapshot(
+                key_id=key.id, version=1 if newest is None else newest.version + 1,
+                status_code=status_code, media_type=media_type, content_hash=ch,
+                body=body if keep_bytes else None, size_bytes=len(body),
+                fetched_at=now, origin="caller")
+            if newest is not None:
+                if newest.content_hash == ch:
+                    key.stable_seen += 1
+                    carrier = newest.body_of or (newest.id if newest.body is not None else None)
+                    if carrier is not None:      # bytes already on file — reference, don't repeat
+                        snap.body, snap.body_of = None, carrier
+                else:
+                    key.change_seen += 1
+                    key.last_changed_at = now
+            key.fetched_at, key.last_requested_at, key.policy = now, now, pol
+            s.add(key)
+            s.add(snap)
+            try:
+                await s.commit()
+            except IntegrityError:  # version race with a concurrent recording — drop this sample
+                await s.rollback()
+    except Exception:  # noqa: BLE001 — recording must never surface anywhere
+        _log.warning("archive recording dropped for %s", endpoint_id, exc_info=True)
