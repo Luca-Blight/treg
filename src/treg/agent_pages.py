@@ -3785,7 +3785,7 @@ USE_CASE_PAGES["app-store-search"] = {
         "two stores are separate shelves here, not two views of one dataset, so ask for both "
         "when you want both."),
     "prompt": "Using treg, search the Apple App Store and Google Play for apps matching "
-              "\"habit tracker\", show me the price per search first, then put the results "
+              "a habit tracker, show me the price per search first, then put the results "
               "from each store in one table with developer, rating, review count and price, "
               "and mark the apps that appear in both.",
     "prompt_why": [
@@ -4014,8 +4014,8 @@ USE_CASE_PAGES["get-a-linkedin-profile"] = {
     "lede": (
         "Give your agent a LinkedIn profile URL and get the profile back as data: name, "
         "headline, location, current role, past roles and education. {n} providers answer "
-        "through one treg.to key, from {cheapest}, each at its own rate with no markup and "
-        "none of them behind a monthly seat. No session cookie of yours, no browser "
+        "through one treg.to key, the cheapest of them a tenth of a cent a profile, each "
+        "at its own rate with no markup and none behind a monthly seat. No session cookie of yours, no browser "
         "extension, no Sales Navigator subscription and no account of yours making the "
         "request. LinkedIn's own row is here too and it is honest about what it is: it "
         "returns the profile of the account you connected, and nobody else's."),
@@ -4213,7 +4213,7 @@ USE_CASE_PAGES["find-phone-numbers"] = {
          "stay yours."),
     ],
     "voices_intro": (
-        "This category is the most heavily seeded the loop has read: of the ~380 Reddit and X "
+        "This is the most heavily seeded category behind any of these pages: of the ~380 Reddit and X "
         "posts read in August 2026 roughly seven in ten were vendor marketing, including a "
         "ring of six fabricated review subreddits and one post that hid a combining grapheme "
         "joiner inside half its words. That post was the most quotable in the set, and it is "
@@ -4253,6 +4253,134 @@ USE_CASE_PAGES["find-phone-numbers"] = {
     ],
     "related": ("Find professional emails", "Check a phone number is real",
                 "Enrich a person from an email or LinkedIn URL", "Get a LinkedIn profile"),
+}
+
+
+USE_CASE_PAGES["keyword-volume-cpc-and-competition"] = {
+    "label": "Keyword volume, CPC and competition",
+    "sentence": "Keyword research API: Google search volume, CPC and competition for a list of keywords",
+    "title": "Keyword research API: Google search volume and CPC | treg.to",
+    "lede": (
+        "Hand your agent a list of keywords and get a figure back for each one: average "
+        "monthly searches, the competition level and the top of page bid range. {n} providers "
+        "answer through one treg.to key: a twentieth of a cent per keyword on the cheapest "
+        "row, a flat rate per request on another, each at the provider's own rate with no markup. Google's own row is free on your connected "
+        "Google Ads account and never metered, and it answers with a number per keyword rather "
+        "than the bucket the Keyword Planner screen shows you. It is the row the research "
+        "behind these pages runs on."),
+    "prompt": "Using treg, get the average monthly searches, competition and top of page bid "
+              "for these 200 keywords in the US in English, show me the price per provider "
+              "first, batch them into as few calls as the provider allows, and sort the table "
+              "by volume with the ones that returned no data listed separately.",
+    "prompt_why": [
+        ("Batch, do not loop", "One row charges a flat rate per request for up to a thousand keywords. Sending them one at a time on that row multiplies the bill by a thousand for the same answer."),
+        ("Name the country and language", "Volume is per market. A keyword measured across everywhere is a number that describes nowhere, and every row here wants the market stated."),
+        ("Ask for the price per provider first", "The rows meter in three different ways: per request, per keyword returned, and free on your own account. treg.to prints each before the call."),
+        ("Keep the empty rows visible", "Google returns nothing for some ordinary words, and a provider that drops them quietly leaves you reading a shorter list than you sent."),
+    ],
+    "result_noun": "keyword",
+    "result_image": None,
+    "q_cheapest": "Which keyword research API is cheapest?",
+    "q_reliable": "Which keyword data provider is the most reliable?",
+    "q_compare": "How do the keyword data providers compare?",
+    "what_is_heading": "What is a keyword research API?",
+    "what_is": (
+        "It is a call that takes a list of keywords and returns what an advertiser's data set "
+        "knows about each one: roughly how many times a month people search it, how "
+        "contested it is, and what advertisers are paying at the top of the page. The reason "
+        "people want it as an API rather than a screen is volume and shape. The Keyword "
+        "Planner screen shows bucketed ranges to accounts that are not spending, its CSV "
+        "export collapses everything to a handful of round numbers, and neither is something "
+        "you can join onto twenty thousand rows. Every provider here answers per keyword, in "
+        "a response an agent can put in a table."),
+    "notes": [
+        "The Google Ads row is free, and it is the real thing. It runs on your team's "
+        "connected Google Ads account, is never metered by treg.to, counts only against the "
+        "developer token's own daily operation limit, and it returns a figure per keyword "
+        "rather than the range the Keyword Planner screen shows. The figure is Google's own "
+        "rounded number and not a raw count. The cost of this row is not money, it is access: "
+        "Google's flow pushes you towards creating a campaign on the way in, and the "
+        "developer token is its own approval.",
+        "The paid rows meter in two different shapes, and the shape decides the bill. "
+        "DataForSEO charges a flat rate per request that covers one keyword or a thousand "
+        "alike, so batching is the whole game; the catalog uses the rate card's price rather "
+        "than the lower one on the public pricing page, because the rate card is what the "
+        "account is actually charged. Serpstat and SE Ranking charge per keyword returned, "
+        "and Serpstat bills its one credit minimum even when a keyword comes back empty. "
+        "Semrush charges API units with no published dollar rate, so the page prints no price "
+        "for it and it runs on your own Semrush plan.",
+        "The numbers will not agree, and no row here is ground truth. Each provider models "
+        "Google's data its own way, so the same keyword comes back with different volumes on "
+        "different rows, and Search Console will show you clicks on queries that none of them "
+        "list at all. The bid range is an estimate of an auction rather than the auction: "
+        "practitioners regularly report paying many times the figure, or a fraction of it. "
+        "Use these fields to rank keywords against each other and take your real cost from "
+        "your own campaign data. treg.to puts the rows side by side; the agent picks, and "
+        "treg.to never routes or fails over between them.",
+    ],
+    "faq": [
+        ("Is this the same data as Google Keyword Planner?",
+         "The Google Ads row is, on your own connected account, and it answers with a figure "
+         "per keyword instead of the range the screen shows. The other rows are each "
+         "provider's own model of the same underlying signal, which is why their numbers "
+         "differ from Google's and from each other."),
+        ("Do I need a Google Ads account?",
+         "Only for the free row, which runs on your own connection and is never metered. The "
+         "paid rows need nothing of yours: they run on treg.to's key and bill from your "
+         "team's prepaid balance at the provider's rate with $0.000 added, so a list of "
+         "keywords does not require a developer token or an ad campaign."),
+        ("Why do the volume numbers differ between providers?",
+         "Because none of them is counting searches. Each one models Google's published "
+         "signal in its own way, and this page will not crown one, because there is no "
+         "ground truth to crown it against. Pull the same list from two rows for a few cents "
+         "and treat the disagreement as the error bar."),
+        ("How much does ten thousand keywords cost?",
+         "It depends entirely on which row and how you batch. A flat per request row covering "
+         "up to a thousand keywords is ten calls; a per keyword row is ten thousand "
+         "chargeable results however you send them; the Google Ads row is free and bounded by "
+         "a daily operation limit instead. treg.to prints each rate before the call so the "
+         "agent can say the number first."),
+    ],
+    "voices_intro": (
+        "SEO tooling threads are seeded on an industrial scale: of the ~180 Reddit and X "
+        "posts read in August 2026, three near identical six week bake off posts landed on "
+        "the same recommendation in the same house style, two subreddits in the results were "
+        "review farms, and one post ran word for word from two different accounts. These "
+        "five are people with a spreadsheet and a problem."),
+    "voices": [
+        ("The screen answers in buckets",
+         "It keeps showing me ranges such as 100-1k. This is very hard for me to guess for any good decision I wish to make.",
+         "r/googleads", "https://www.reddit.com/r/googleads/comments/1dodfc3/how_do_i_see_the_exact_monthly_search_volume/",
+         "The free row on this page is the same Keyword Planner data through the API, and it "
+         "answers with a figure per keyword rather than a range. That figure is Google's own "
+         "rounded number, so treat it as a rank rather than a count."),
+        ("The export rounds everything to nothing",
+         "when i export in CSV it's either 50, 500, 5000 or 50000 for all results",
+         "r/googleads", "https://www.reddit.com/r/googleads/comments/1dz73xx/important_features_missing_from_keyword_planner/",
+         "That is the data quality floor the API is worth having for. Every row here returns "
+         "a per keyword field an agent can sort, join and put in a table, which the export "
+         "cannot give you at any spend level."),
+        ("The bid estimate and the invoice are different numbers",
+         "Keyword planner says Low competition keyword top page bid high range is 0.03 cent. Why am I paying 1.28?",
+         "r/PPC, 8 points", "https://www.reddit.com/r/PPC/comments/1grv58y/google_ads_keyword_planner_says_low_competition/",
+         "No provider on this page fixes that, and any page that says otherwise is selling. "
+         "The bid fields are an estimate of an auction. Use them to rank keywords against one "
+         "another, and take what you actually pay from your own campaign data."),
+        ("Twenty thousand keywords is not a spreadsheet job",
+         "there are like 20,000 keywords, so it's not something a standard VLOOKUP will work for",
+         "r/SEO", "https://www.reddit.com/r/SEO/comments/1dj6b4z/keyword_api_suggestions/",
+         "This is the case per call pricing is for. A flat per request row batches up to a "
+         "thousand keywords at a time, so twenty thousand is twenty calls at a rate printed "
+         "before the first one, with no plan to be on."),
+        ("The tools do not know about traffic you are already getting",
+         "lately we've been seeing a lot of traffic in Google Search Console from keywords that don't even exist in the tools we're using",
+         "r/SEO", "https://www.reddit.com/r/SEO/comments/1ry5v7o/should_i_trust_tools_on_keyword_search_volume/",
+         "Which is the honest limit of every row here. These are models of demand, not "
+         "records of it. Your own Search Console data is the one source that is actually "
+         "counting, and it is a free own account row in this same catalog."),
+    ],
+    "related": ("Keyword ideas from a seed", "Google results for a keyword",
+                "Keywords a domain ranks for", "Keywords a domain bids on"),
 }
 
 
