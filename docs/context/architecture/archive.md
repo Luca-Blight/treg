@@ -6,6 +6,8 @@ sources:
   - alembic/versions/0002_archive_tables.py
   - src/treg/api.py
   - src/treg/bootstrap.py
+  - src/treg/catalog_store.py
+  - src/treg/routers/admin.py
 related:
   - architecture/data-model.md
   - architecture/proxy-model.md
@@ -20,10 +22,33 @@ fresh; **archive** is every version of every answer, kept with its timestamp. Th
 archive's top layer. History is kept on purpose: it is the future data product (per-key
 time-series — backlink profiles over time, price history), not waste.
 
-**Build state (PR 2 of 5).** The skeleton (PR 1) and the recorder (PR 2) exist: in `shadow` or
-`serve` mode, every metered 2xx platform answer is observed. The catalog `cache` field at scale
-(PR 3), the serve path (PR 4) and the timer learner + refresh worker (PR 5) land behind the same
-switch. Do not document any of those as existing until they do.
+**Build state (PR 3 of 5).** The skeleton (PR 1), the recorder (PR 2) and the catalog `cache`
+field + phase-0 report (PR 3) exist. The serve path (PR 4) and the timer learner + refresh worker
+(PR 5) land behind the same switch. Do not document either as existing until they do.
+
+## The catalog `cache` field (PR 3)
+
+One licence judgment per PROVIDER, written once at the YAML file header and inherited by every
+endpoint below it; an endpoint's own `cache:` overrides. `catalog_store` carries the header form
+into `provider_meta["cache"]` (dict, not stringified) and stamps the effective value onto each
+normalized endpoint (`entry["cache"]`, absent ⇒ None ⇒ forbidden). The provenance form is
+`{mode, license_quote, source_url, checked}` plus optional `max_age_s` — a vendor-imposed refresh
+ceiling the learner (PR 5) must treat as a hard cap. `tests/test_archive.py` validates every
+declared field in the shipped catalog: a judged entry must carry its quote, source and date.
+
+First judged set (checked 2026-08-27): **coingecko** `transient` with `max_age_s: 86400` — their
+API terms permit caching with a mandatory 24-hour refresh and §6.2 forbids anything longer-lived;
+**finnhub** `forbidden` — their terms bar sharing data or derived results with any third party,
+and serving one team's cached fetch to another is exactly that. DataForSEO and SerpApi terms were
+read the same day and are SILENT on storage — left absent (= forbidden) rather than guessed.
+36 other platform providers remain unjudged: absent, forbidden, safe.
+
+## The phase-0 report (PR 3)
+
+`GET /admin/archive` (superadmin): totals (mode, keys, snapshots, bodies kept, kept bytes) and
+per-endpoint rows — keys, refetches (stable+changed), `change_ratio` = changed/refetches (the raw
+how-fast-does-it-move signal), newest fetch. This is the evidence surface for cache judgments and
+later for the timers; it complements `/admin/reconcile/repeats`, which prices what repeats cost.
 
 ## The recorder (PR 2)
 

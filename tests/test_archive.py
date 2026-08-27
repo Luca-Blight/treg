@@ -286,3 +286,74 @@ async def test_a_recorder_crash_never_fails_the_call(clients: AsyncClient, shado
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 200, r.text
     await archive.drain()
+
+
+# ---------------------------------------------------------------------------------------------
+# The catalog cache field (PR 3): one judgment at the file header covers the provider
+
+def test_header_cache_is_inherited_by_endpoints():
+    c = catalog_store.load()
+    entry = c.by_id["coingecko.simple.price"]
+    assert entry["cache"]["mode"] == "transient"          # inherited from the file header
+    assert archive.policy(entry) == "transient"
+    assert entry["cache"]["max_age_s"] == 86400           # CoinGecko's own 24h refresh ceiling
+    assert archive.policy(c.by_id["finnhub.quote"]) == "forbidden"   # judged forbidden
+    assert c.by_id["finnhub.quote"]["cache"]["license_quote"]        # …with its evidence attached
+    assert c.by_id["tikhub.tiktok.video.comments"]["cache"] is None  # unjudged stays absent
+
+
+def test_every_declared_cache_field_in_the_catalog_is_valid():
+    """A judged entry must be complete: a known mode, and provenance when declared as a dict.
+    Absent is always legal (⇒ forbidden). This is the validator for the whole shipped catalog."""
+    for ep in catalog_store.load().by_id.values():
+        declared = ep.get("cache")
+        if declared is None:
+            continue
+        if isinstance(declared, dict):
+            assert declared.get("mode") in ("forbidden", "transient", "archive"), ep["id"]
+            assert declared.get("license_quote"), f"{ep['id']}: judged cache needs its quote"
+            assert declared.get("source_url"), f"{ep['id']}: judged cache needs its source"
+            assert declared.get("checked"), f"{ep['id']}: judged cache needs its check date"
+        else:
+            assert declared in ("forbidden", "transient", "archive"), ep["id"]
+
+
+@pytest.mark.anyio
+async def test_recorder_respects_a_judged_forbidden(clients: AsyncClient, shadow, monkeypatch):
+    """A provider judged forbidden is counted, never kept — even though the policy is declared."""
+    monkeypatch.setitem(catalog_store.load().by_id[EP], "cache",
+                        {"mode": "forbidden", "license_quote": "q", "source_url": "u", "checked": "d"})
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    keys, snaps = await _rows()
+    assert keys[0].policy == "forbidden"
+    assert snaps[0].body is None and snaps[0].size_bytes > 0
+
+
+# ---------------------------------------------------------------------------------------------
+# The phase-0 report (PR 3): GET /admin/archive
+
+@pytest.mark.anyio
+async def test_admin_archive_report(clients: AsyncClient, shadow, monkeypatch):
+    monkeypatch.setenv("TREG_ADMIN_TOKEN", "ADM-TOKEN")
+    get_settings.cache_clear()
+    try:
+        monkeypatch.setattr(get_settings(), "archive_mode", "shadow")
+        monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+        await clients.get(f"/call/{EP}?aweme_id=7")
+        await clients.get(f"/call/{EP}?aweme_id=7")   # refetch, identical ⇒ stable
+        await clients.get(f"/call/{EP}?aweme_id=9")   # second key
+        await archive.drain()
+
+        assert (await clients.get("/admin/archive")).status_code == 403  # org token is not admin
+        r = await clients.get("/admin/archive", headers={"X-Treg-Token": "ADM-TOKEN"})
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert d["mode"] == "shadow" and d["keys"] == 2 and d["snapshots"] == 3
+        assert d["bodies_kept"] == 2 and d["kept_bytes"] > 0   # v2 deduplicated, never re-stored
+        row = next(x for x in d["endpoints"] if x["endpoint_id"] == EP)
+        assert row == {"endpoint_id": EP, "provider": "tikhub", "policy": "transient",
+                       "keys": 2, "refetches": 1, "stable": 1, "changed": 0,
+                       "change_ratio": 0.0, "newest_fetch": row["newest_fetch"]}
+        assert row["newest_fetch"] is not None
+    finally:
+        get_settings.cache_clear()

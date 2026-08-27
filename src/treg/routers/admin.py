@@ -13,7 +13,7 @@ from sqlmodel import select
 from .. import reconcile
 from ..config import get_settings
 from ..db import get_session, session_maker
-from ..models import Bundle, CallRecord, Membership, Org, Referral, Secret, Tool, User
+from ..models import ArchiveKey, ArchiveSnapshot, Bundle, CallRecord, Membership, Org, Referral, Secret, Tool, User
 from ..timeutil import as_naive as _as_naive
 from ..timeutil import utcnow_naive as _utcnow_naive
 from .dependencies import require_superadmin
@@ -321,6 +321,50 @@ async def admin_reconcile_repeats(
     since = reconcile.window_start(since_days)
     return {"since": since.isoformat(), "since_days": since_days,
             **await reconcile.repeat_rate(db, since, top=top)}
+
+
+@app.get("/admin/archive")
+async def admin_archive(
+    top: int = 50,
+    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Phase 0's read-out: what the recorder has observed, per endpoint — the evidence for the
+    per-provider cache judgments (PR 3) and later for the timers. `refetches` counts repeat
+    observations of an existing key (stable + changed); `change_ratio` is changed/refetches, the
+    raw signal for how fast an endpoint's answers move. `kept_bytes` only grows where a judged
+    licence allows storing (docs/context/architecture/archive.md)."""
+    from .. import archive as archive_mod
+
+    keys = func.count(ArchiveKey.id)
+    stable = func.coalesce(func.sum(ArchiveKey.stable_seen), 0)
+    changed = func.coalesce(func.sum(ArchiveKey.change_seen), 0)
+    per_ep = (await db.execute(
+        select(ArchiveKey.endpoint_id, ArchiveKey.provider, ArchiveKey.policy,
+               keys, stable, changed, func.max(ArchiveKey.fetched_at))
+        .group_by(ArchiveKey.endpoint_id, ArchiveKey.provider, ArchiveKey.policy)
+        .order_by((stable + changed).desc(), keys.desc()).limit(max(1, min(top, 500))))).all()
+
+    snap_totals = (await db.execute(
+        select(func.count(ArchiveSnapshot.id),
+               func.coalesce(func.sum(ArchiveSnapshot.size_bytes), 0))
+        .where(ArchiveSnapshot.body.is_not(None)))).one()
+    all_snaps = (await db.execute(select(func.count(ArchiveSnapshot.id)))).scalar_one()
+    total_keys = (await db.execute(select(func.count(ArchiveKey.id)))).scalar_one()
+
+    rows = []
+    for endpoint_id, provider, pol, n_keys, n_stable, n_changed, newest in per_ep:
+        refetches = int(n_stable) + int(n_changed)
+        rows.append({
+            "endpoint_id": endpoint_id, "provider": provider, "policy": pol,
+            "keys": int(n_keys), "refetches": refetches,
+            "stable": int(n_stable), "changed": int(n_changed),
+            "change_ratio": round(int(n_changed) / refetches, 4) if refetches else None,
+            "newest_fetch": newest.isoformat() if newest else None,
+        })
+    return {"mode": archive_mod.mode(),
+            "keys": int(total_keys), "snapshots": int(all_snaps),
+            "bodies_kept": int(snap_totals[0]), "kept_bytes": int(snap_totals[1]),
+            "endpoints": rows}
 
 
 @app.get("/admin/referrals")
