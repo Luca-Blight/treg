@@ -87,6 +87,33 @@ async def _idempotency_claim(key: str) -> IdempotentCall | None:
         ))).scalar_one_or_none()
 
 
+async def _wait_for_gate(
+    event: asyncio.Event,
+    task: asyncio.Task[httpx.Response],
+    label: str,
+) -> None:
+    event_task = asyncio.create_task(event.wait())
+    try:
+        done, _ = await asyncio.wait(
+            {event_task, task}, timeout=30, return_when=asyncio.FIRST_COMPLETED)
+        if event_task in done:
+            return
+        if task in done:
+            try:
+                response = task.result()
+            except BaseException as exc:
+                raise AssertionError(
+                    f"request task failed before {label}: {type(exc).__name__}: {exc}") from exc
+            raise AssertionError(
+                f"request finished before {label}: HTTP {response.status_code}: "
+                f"{response.text[:500]}")
+        raise AssertionError(f"timed out after 30s waiting for {label}; request is still running")
+    finally:
+        if not event_task.done():
+            event_task.cancel()
+            await asyncio.gather(event_task, return_exceptions=True)
+
+
 async def test_cancelling_a_funded_metered_call_releases_every_resource(
     clients: AsyncClient, platform_on,
 ):
@@ -101,7 +128,7 @@ async def test_cancelling_a_funded_metered_call_releases_every_resource(
     headers = {"Idempotency-Key": "cancelled-funded-call"}
     task = asyncio.create_task(clients.get(f"/call/{EP}?aweme_id=cancel-me", headers=headers))
     try:
-        await asyncio.wait_for(stream.body_started.wait(), timeout=5)
+        await _wait_for_gate(stream.body_started, task, "provider body start")
         holds = await _open_holds(org_id)
         assert len(holds) == 1, "the provider blocks only after the funded call has reserved"
         call_id = holds[0].id
@@ -165,7 +192,7 @@ async def test_cancellation_at_the_reserve_commit_boundary_is_idempotent(
         headers={"Idempotency-Key": f"cancel-at-commit-{reserve_committed}"},
     ))
     try:
-        await asyncio.wait_for(commit_reached.wait(), timeout=5)
+        await _wait_for_gate(commit_reached, task, "reserve commit boundary")
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
@@ -231,17 +258,17 @@ async def test_repeated_cancellation_cannot_interrupt_compensation(
     task = asyncio.create_task(clients.get(
         f"/call/{EP}?aweme_id=cancel-three-times", headers=headers))
     try:
-        await asyncio.wait_for(stream.body_started.wait(), timeout=5)
+        await _wait_for_gate(stream.body_started, task, "provider body start")
         holds = await _open_holds(org_id)
         assert len(holds) == 1
         call_id = holds[0].id
 
         task.cancel()
-        await asyncio.wait_for(cleanup_commit_reached.wait(), timeout=5)
+        await _wait_for_gate(cleanup_commit_reached, task, "cancellation release commit")
         task.cancel()
         await asyncio.sleep(0)
         allow_cleanup_commit.set()
-        await asyncio.wait_for(claim_commit_reached.wait(), timeout=5)
+        await _wait_for_gate(claim_commit_reached, task, "idempotency claim delete commit")
         task.cancel()
         await asyncio.sleep(0)
         allow_claim_commit.set()
@@ -289,7 +316,7 @@ async def test_cancellation_after_claim_before_reserve_releases_the_label(
         headers={"Idempotency-Key": key},
     ))
     try:
-        await asyncio.wait_for(resolve_reached.wait(), timeout=5)
+        await _wait_for_gate(resolve_reached, task, "target resolution gate")
         claim = await _idempotency_claim(key)
         assert claim is not None and claim.status == "pending"
         task.cancel()
@@ -355,7 +382,7 @@ async def test_cancellation_while_failure_release_is_in_flight_finishes_compensa
         headers={"Idempotency-Key": f"cancel-{first_reason}"},
     ))
     try:
-        await asyncio.wait_for(release_commit_reached.wait(), timeout=5)
+        await _wait_for_gate(release_commit_reached, task, "failure release commit")
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task

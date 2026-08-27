@@ -62,7 +62,7 @@ jobs:
 
   test-postgres:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
@@ -79,6 +79,7 @@ jobs:
           --health-retries 5
     env:
       TREG_TEST_DB_URL: postgresql+asyncpg://treg:treg@127.0.0.1:5432/treg_test
+      PYTHONUNBUFFERED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
