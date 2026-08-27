@@ -747,6 +747,15 @@ queue) and the referral application journey for `GET /referrals` (someone checki
 the one who makes it land), following the same lazy, caller-pays bargain as `reap_stale_holds`. It
 never raises: neither its Stripe webhook caller nor its page-load caller may fail over a bonus.
 
+The recovery paths have to honour that contract *in their own logging*: the rollback that contains a
+failed payout expires every ORM row the session tracks, and reading an expired attribute in an async
+session is implicit async I/O (MissingGreenlet) - so the warning line itself was the raise, exactly
+when it mattered. `_grant_referee` and `sweep` therefore copy the row ids to primitives before the
+try and log those (sweep copies the whole batch before the loop, since one rollback expires every
+due row), and the page journey (`application/referrals.py`) logs the `user_id` it was called with
+and revives the expired user row (`sa_inspect(...).expired` then `refresh`, the signup idiom) before
+rendering the summary.
+
 **The referee is told, on the screen where it changes their behaviour.** `offer_for_org` is the
 mirror of `summary`: a team that arrived through a link has a `pending` row and no idea a bonus
 exists. `GET /billing` carries a `referral_offer` (merged by the application journey so the referral

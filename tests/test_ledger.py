@@ -180,7 +180,117 @@ async def test_concurrent_sweeps_pay_a_referral_once(c: AsyncClient):
     assert await _assert_invariant(referred_org) == promo + s.referral_referred_micro
 
 
-async def test_signup_promo_and_its_conversion_land_or_fail_together(c: AsyncClient, monkeypatch):
+async def test_referee_instant_grant_failure_after_staging_never_raises(
+        c: AsyncClient, monkeypatch, caplog):
+    """`_grant_referee`'s recovery rollback expires the Referral row, so its warning log must read
+    primitives copied beforehand - `row.id` off the expired row is implicit async I/O
+    (MissingGreenlet), which broke the never-raises contract exactly when it mattered."""
+    import logging as _logging
+
+    from treg import referrals
+    from treg.models import Referral
+
+    r = await c.post("/users", json={"email": "ref-boom-a@superdesign.dev"})
+    referrer_user = r.json()["id"]
+    r = await c.post("/users", json={"email": "ref-boom-b@superdesign.dev"})
+    referred_org, referred_user = r.json()["org_id"], r.json()["id"]
+    async with session_maker() as db:
+        db.add(Referral(code="ref-instant-boom", referrer_user_id=referrer_user,
+                        referred_user_id=referred_user, referred_org_id=referred_org,
+                        status="qualified", qualified_at=referrals._now()))
+        await db.commit()
+
+    real_grant = ledger.grant
+
+    async def grant_then_boom(db, org_id, *a, **kw):
+        await real_grant(db, org_id, *a, **kw)  # SQL has staged, so the recovery rollback expires rows
+        raise RuntimeError("grant broke after staging")
+
+    monkeypatch.setattr(ledger, "grant", grant_then_boom)
+    # Alembic's fileConfig (disable_existing_loggers=True) elsewhere in the suite disables the
+    # "treg" logger; re-enable it so caplog sees the warning regardless of test order.
+    monkeypatch.setattr(_logging.getLogger("treg"), "disabled", False)
+    with caplog.at_level(_logging.WARNING, logger="treg"):
+        async with session_maker() as db:
+            row = (await db.execute(select(Referral))).scalars().first()
+            await referrals._grant_referee(db, row)  # must swallow, never raise
+    assert "instant referee grant failed" in caplog.text
+
+    async with session_maker() as db:  # nothing landed: no stamp, no money
+        row = (await db.execute(select(Referral))).scalars().first()
+        assert row.referred_block_id is None
+        assert [e for e in await ledger.entries_of(db, referred_org)
+                if e.meta.get("block_kind") == "referral"] == []
+
+
+async def test_sweep_grant_failure_after_staging_never_raises(c: AsyncClient, monkeypatch, caplog):
+    """The sweep's recovery path, same contract: a grant that fails after staging rolls the session
+    back, which expires EVERY due row - so the ids the warning logs must have been copied out before
+    the loop, or the second failure raises MissingGreenlet out of a webhook or a page load."""
+    import logging as _logging
+    from datetime import timedelta
+
+    from treg import referrals
+    from treg.models import Referral
+
+    r = await c.post("/users", json={"email": "sweep-boom-ref@superdesign.dev"})
+    referrer_user = r.json()["id"]
+    rows = []
+    for i in range(2):  # TWO due rows: the second iteration's log is the one a loop-local copy misses
+        r = await c.post("/users", json={"email": f"sweep-boom-{i}@superdesign.dev"})
+        rows.append((r.json()["org_id"], r.json()["id"]))
+    async with session_maker() as db:
+        for i, (org_id, user_id) in enumerate(rows):
+            db.add(Referral(code=f"ref-sweep-boom-{i}", referrer_user_id=referrer_user,
+                            referred_user_id=user_id, referred_org_id=org_id, status="qualified",
+                            qualified_at=referrals.hold_cutoff() - timedelta(days=1)))
+        await db.commit()
+
+    real_grant = ledger.grant
+
+    async def grant_then_boom(db, org_id, *a, **kw):
+        await real_grant(db, org_id, *a, **kw)
+        raise RuntimeError("grant broke after staging")
+
+    monkeypatch.setattr(ledger, "grant", grant_then_boom)
+    monkeypatch.setattr(_logging.getLogger("treg"), "disabled", False)  # see the referee test
+    with caplog.at_level(_logging.WARNING, logger="treg"):
+        async with session_maker() as db:
+            paid = await referrals.sweep(db)  # must swallow both failures, never raise
+    assert paid == 0
+    assert caplog.text.count("payout failed, will retry") == 2
+
+    async with session_maker() as db:  # neither payout landed any money or stamps
+        for row in (await db.execute(select(Referral))).scalars().all():
+            assert row.referred_block_id is None and row.referrer_block_id is None
+        for org_id, _ in rows:
+            assert [e for e in await ledger.entries_of(db, org_id)
+                    if e.meta.get("block_kind") == "referral"] == []
+
+
+async def test_referrals_page_survives_a_sweep_rollback(c: AsyncClient, monkeypatch, caplog):
+    """The referrals-page journey logs around ensure_code and sweep; both logs must use the
+    `user_id` primitive the journey already holds, because a rollback inside either call expires
+    the user row and `user.id` in the handler would 500 the page it protects."""
+    import logging as _logging
+
+    from treg import referrals
+    from treg.application import referrals as referrals_app
+
+    r = await c.post("/users", json={"email": "page-boom@superdesign.dev"})
+    user_id = r.json()["id"]
+
+    async def sweep_boom(db, **kw):
+        await db.execute(select(1))  # the real sweep's SELECT begins the transaction the rollback ends
+        await db.rollback()  # what the domain recovery path does; it expires every tracked object
+        raise RuntimeError("sweep broke")
+
+    monkeypatch.setattr(referrals, "sweep", sweep_boom)
+    monkeypatch.setattr(_logging.getLogger("treg"), "disabled", False)  # see the referee test
+    with caplog.at_level(_logging.WARNING, logger="treg"):
+        summary = await referrals_app.get_referral_summary(user_id)  # must not raise
+    assert "referral sweep failed for user" in caplog.text
+    assert summary["code"]  # the page still renders
     """The one-transaction property, in both directions: a failed commit loses the grant AND the
     queued ad conversion (and does not raise - the never-500-the-signup contract), and the retry
     makes both durable in one commit."""
