@@ -5,6 +5,7 @@ sources:
   - alembic.ini
   - alembic/env.py
   - alembic/versions/0001_baseline_current_schema.py
+  - alembic/versions/0002_archive_tables.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/timeutil.py
@@ -14,6 +15,7 @@ sources:
   - src/treg/analytics.py
   - src/treg/ratestore.py
 related:
+  - architecture/archive.md
   - architecture/proxy-model.md
   - architecture/auth-secrets.md
   - architecture/ads-conversions.md
