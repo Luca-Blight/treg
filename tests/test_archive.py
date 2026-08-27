@@ -8,6 +8,8 @@ in the sqlite suite and in CI's serial Postgres job).
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from treg import api as A, archive, audit
@@ -476,3 +478,156 @@ async def test_a_lookup_crash_degrades_to_live(clients: AsyncClient, serve, monk
     monkeypatch.setattr(archive, "lookup", _boom)
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 200 and "x-treg-cache" not in r.headers
+
+
+# ---------------------------------------------------------------------------------------------
+# The learner (PR 5): timers that adjust, noise that stops counting, keys that opt out
+
+@pytest.mark.anyio
+async def test_stable_refetch_grows_the_timer(clients: AsyncClient, shadow, monkeypatch):
+    monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await clients.get(f"/call/{EP}?aweme_id=7")     # identical echo answer ⇒ stable
+    keys, _ = await _rows()
+    # other.* capability default is 3600; one stable step ⇒ ×1.5
+    assert keys[0].ttl_s == int(keys[0].ttl_s)  # int stays int
+    assert keys[0].stable_seen == 1 and keys[0].ttl_s > 3600 * 1.4
+
+
+@pytest.mark.anyio
+async def test_changed_refetch_shrinks_the_timer(clients: AsyncClient, shadow, monkeypatch):
+    monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+    from tests.test_marketplace_call import _fake_relay
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"n": 1}'))
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"n": 2}'))
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    keys, _ = await _rows()
+    assert keys[0].change_seen == 1 and keys[0].ttl_s == 1800   # 3600 × 0.5
+
+
+@pytest.mark.anyio
+async def test_repeated_noise_counts_as_stable(clients: AsyncClient, shadow, monkeypatch):
+    monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+    from tests.test_marketplace_call import _fake_relay
+    bodies = [json.dumps({"req_id": i, "ts": i * 10,
+                          "data": {"a": 1, "b": 2, "c": 3, "d": 4}}).encode() for i in range(3)]
+    for b in bodies:
+        monkeypatch.setattr(A, "relay", _fake_relay(200, b))
+        await clients.get(f"/call/{EP}?aweme_id=7")
+    keys, _ = await _rows()
+    # fetch 2 differs (first diff: counts changed, remembers the set); fetch 3 repeats the SAME
+    # small diff-set ⇒ noise ⇒ stable.
+    assert keys[0].change_seen == 1 and keys[0].stable_seen == 1
+    assert keys[0].volatile_paths == ["$.req_id", "$.ts"]
+
+
+@pytest.mark.anyio
+async def test_always_changing_key_marks_itself_never_cache(clients: AsyncClient, serve, monkeypatch):
+    from tests.test_marketplace_call import _fake_relay
+    for i in range(5):   # tiny 1-leaf body: the noise guard must NEVER rescue a moving price
+        monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps({"price": i}).encode()))
+        r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Cache-Control": "no-cache"})
+        assert r.status_code == 200
+        await archive.drain()
+    keys, _ = await _rows()
+    assert keys[0].ttl_s == archive.TTL_NEVER and keys[0].stable_seen == 0
+    # …and a fresh call is NOT served from the store, however young the newest snapshot is.
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"price": 99}'))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert "x-treg-cache" not in r.headers
+
+
+# ---------------------------------------------------------------------------------------------
+# The refresh worker (PR 5): due + demanded + capped, through the real injection shape
+
+class _FakeUpstream:
+    """Stands in for app.state.http: answers like the vendor and remembers each request."""
+    def __init__(self, body: bytes = b'{"fresh": true}'):
+        self.body, self.calls = body, []
+
+    async def request(self, method, url, params=None, headers=None, content=None):
+        self.calls.append({"method": method, "url": url, "params": params or [],
+                           "headers": headers or {}})
+        import httpx
+        return httpx.Response(200, content=self.body,
+                              headers={"content-type": "application/json"})
+
+
+async def _age_key(days: float, *, demanded: bool = True):
+    from datetime import timedelta
+    async with session_maker() as s:
+        key = (await s.execute(select(ArchiveKey))).scalars().one()
+        key.fetched_at = key.fetched_at - timedelta(days=days)
+        key.last_requested_at = (key.fetched_at + timedelta(seconds=60)) if demanded else None
+        s.add(key)
+        await s.commit()
+        return key.key_hash
+
+
+@pytest.mark.anyio
+async def test_refresh_worker_refreshes_a_due_demanded_key(clients: AsyncClient, serve):
+    r = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
+    assert r.status_code == 200
+    await archive.drain()
+    await _age_key(days=1)               # window 3600s ⇒ a day old is far past 80%
+    fake = _FakeUpstream()
+    assert await archive.refresh_once(fake) == 1
+    assert len(fake.calls) == 1
+    call = fake.calls[0]
+    assert call["method"] == "GET" and "fetch_post_comment" in call["url"]
+    assert ("aweme_id", "7") in [tuple(x) for x in _qs(call["url"])]
+    # treg's platform key rode the provider's own injection shape (tikhub: Bearer header).
+    assert call["headers"].get("Authorization") == "Bearer PLATFORM-TIKHUB-KEY"
+    keys, snaps = await _rows()
+    assert [s_.origin for s_ in snaps] == ["caller", "refresh"]
+    assert keys[0].last_requested_at < keys[0].fetched_at   # a refresh is never demand
+
+
+def _qs(url: str):
+    from urllib.parse import parse_qsl, urlsplit
+    return parse_qsl(urlsplit(url).query)
+
+
+@pytest.mark.anyio
+async def test_refresh_skips_undemanded_and_fresh_keys(clients: AsyncClient, serve):
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    fake = _FakeUpstream()
+    assert await archive.refresh_once(fake) == 0            # fresh: not due
+    await _age_key(days=1, demanded=False)
+    assert await archive.refresh_once(fake) == 0            # due but nobody asked
+    assert fake.calls == []
+
+
+@pytest.mark.anyio
+async def test_refresh_daily_cap_holds(clients: AsyncClient, serve, monkeypatch):
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await clients.get(f"/call/{EP}?aweme_id=8")
+    await archive.drain()
+    from datetime import timedelta
+    async with session_maker() as s:                        # both keys due and demanded
+        for key in (await s.execute(select(ArchiveKey))).scalars().all():
+            key.fetched_at = key.fetched_at - timedelta(days=1)
+            key.last_requested_at = key.fetched_at + timedelta(seconds=60)
+            s.add(key)
+        await s.commit()
+    monkeypatch.setattr(get_settings(), "archive_refresh_daily_cap", 1)
+    fake = _FakeUpstream()
+    assert await archive.refresh_once(fake) == 1            # the cap, not the queue, decided
+    assert await archive.refresh_once(fake) == 0            # today's budget is spent
+    assert len(fake.calls) == 1
+
+
+@pytest.mark.anyio
+async def test_refresh_disabled_off_serve_or_at_cap_zero(clients: AsyncClient, serve, monkeypatch):
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    await _age_key(days=1)
+    fake = _FakeUpstream()
+    monkeypatch.setattr(get_settings(), "archive_refresh_daily_cap", 0)
+    assert await archive.refresh_once(fake) == 0
+    monkeypatch.setattr(get_settings(), "archive_refresh_daily_cap", 50)
+    monkeypatch.setattr(get_settings(), "archive_mode", "shadow")
+    assert await archive.refresh_once(fake) == 0
+    assert fake.calls == []

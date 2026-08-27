@@ -22,9 +22,41 @@ fresh; **archive** is every version of every answer, kept with its timestamp. Th
 archive's top layer. History is kept on purpose: it is the future data product (per-key
 time-series — backlink profiles over time, price history), not waste.
 
-**Build state (PR 4 of 5).** The skeleton, the recorder, the catalog `cache` field + report,
-and the serve path exist. The timer learner + refresh worker (PR 5) land behind the same switch.
-Do not document them as existing until they do.
+**Build state: COMPLETE (PR 5 of 5).** All five slices exist behind `TREG_ARCHIVE_MODE`:
+skeleton, recorder, catalog `cache` field + report, serve path, and the learner + refresh worker.
+What does NOT exist: any billing difference for a cached hit (deferred founder decision), and the
+phase-3 aggregator surfaces (history endpoints) — do not document either as existing.
+
+## The learner (PR 5)
+
+Runs inside the recorder on every refetch of a known key. AIMD on `ttl_s`: stable ⇒ ×1.5, capped
+by min(30 d, the judged `cache.max_age_s`); changed ⇒ ×0.5, floored at 60 s. A key whose first
+`_NEVER_AFTER` (4) refetches ALL changed marks itself `ttl_s = TTL_NEVER (-1)` — never served
+until a stable refetch resets it. The lookup prefers the learned timer (`ttl_s > 0`) over the
+fixed phase-1 guesses.
+
+**Noise vs change.** When a refetch differs, the diff's leaf paths (lists collapse to `[]`,
+bounded depth 6 / 400 paths) are compared to the previous diff-set (`volatile_paths`, kept per
+key). The SAME set repeating counts as noise ⇒ stable, under two guards: it must be a minor
+share (< 40%) of a body with ≥ 5 leaves — a tiny body whose one value moves every fetch is a
+price and stays "changed". First occurrence always counts as changed. Stored bytes are never
+touched; stripping exists only in comparison.
+
+## The refresh worker (PR 5)
+
+`archive.refresh_worker` runs in-process from lifespan (adsconv's discipline), gated by
+`worker_enabled()` = serve mode AND `archive_refresh_daily_cap > 0`; interval
+`archive_refresh_interval_s` (300 s). A key EARNS refreshing: window ≥ 80% consumed AND
+`last_requested_at > fetched_at` (a caller asked since the last fetch — a refresh itself never
+counts as demand). Brakes: per-provider daily call cap (counted from `origin="refresh"`
+snapshots — no bookkeeping table to drift) and 10 per pass. The call replays the stored
+request shape — method, vendor-facing URL, body, and the KEYING headers (`req_headers`; without
+them the recording lands under a different key, found the hard way in tests) — with injection
+built by the ONE authoritative builder (`api._platform_bindings`, imported lazily inside the
+call: api imports this module, so the import cannot live at the top) and the key value from
+settings. The refresh spend is treg's own, attached to no org and absent from the ledger — the
+cap is the brake. Each refresh records through the same `_store` (`origin="refresh"`), so
+refreshing IS the sampling that teaches the timer.
 
 ## Serving (PR 4)
 

@@ -405,6 +405,14 @@ def _lifespan(api_module, role: AppRole):
             if ROLE_BACKGROUND_TASKS[role] and adsconv.enabled()
             else None
         )
+        # The archive's refresh worker (docs/context/architecture/archive.md): serve mode only,
+        # and a zero daily cap disables it without touching serving. Same discipline as the ads
+        # task — in-process, cancelled on shutdown, a bad pass never kills the loop.
+        archive_task = (
+            asyncio.create_task(archive.refresh_worker(app.state.http))
+            if ROLE_BACKGROUND_TASKS[role] and archive.worker_enabled()
+            else None
+        )
         try:
             if role == "dataplane" or _mcp is None:
                 yield
@@ -414,6 +422,8 @@ def _lifespan(api_module, role: AppRole):
         finally:
             if ads_task is not None:
                 ads_task.cancel()
+            if archive_task is not None:
+                archive_task.cancel()
             await audit.drain()
             await analytics.drain()
             await archive.drain()

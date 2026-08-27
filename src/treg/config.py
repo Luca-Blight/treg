@@ -252,6 +252,11 @@ class Settings(BaseSettings):
     # Bodies above this size are hash-counted but never stored (skipped whole, not truncated):
     # the archive is for API JSON answers, not downloads. Statistics still record size_bytes.
     archive_max_body_bytes: int = 2_000_000
+    # The refresh worker (serve mode only): how often it scans for due keys, and how many
+    # refresh calls ONE provider may spend per UTC day. A refresh is treg's own vendor spend with
+    # no caller attached, so the cap is the brake — 0 disables refreshing without touching serving.
+    archive_refresh_interval_s: int = 300
+    archive_refresh_daily_cap: int = 50
 
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
     # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.
