@@ -39,7 +39,14 @@ a block of that kind. Every org gets a `promotional` block at signup, so `once=T
 silently no-op and report success. This passes `once=False` and supplies its own guard instead:
 `--ref` is recorded at `meta.ref` on the ledger entry, and a run whose ref is already present on a
 grant for that org refuses. Reuse the same `--ref` (a ticket id works well) for a given comp and a
-double-run cannot double-credit.
+sequential re-run refuses instead of crediting again.
+
+That guard is BEST-EFFORT, against sequential reuse only - it is a scan of prior ledger entries in
+application code with no database uniqueness behind it (`meta` is JSON; nothing constrains
+`meta.ref`), so it is NOT concurrency-safe: two simultaneous invocations with the same `--ref` both
+pass the scan and both credit. That is acceptable for a human-driven ops script - one operator, one
+terminal - and the fix if it ever stops being true is a unique column, not a smarter scan. Do not
+run two of these at once for the same comp.
 
 WHAT IT DOES TO PRODUCTION
 --------------------------
@@ -185,8 +192,10 @@ async def _work(db, args, money, User, Membership, Org, CreditBlock, LedgerEntry
         print(f"\norg {args.org_id} is not one of {args.email}'s teams — refusing.", file=sys.stderr)
         return 1
 
-    # The idempotency guard `once=False` gives up. `meta` is JSON, so this filters in Python rather
-    # than betting on one dialect's JSON operators.
+    # The guard replacing the idempotency `once=False` gives up - BEST-EFFORT, sequential-only.
+    # `meta` is JSON, so this filters in Python rather than betting on one dialect's JSON operators,
+    # and no unique index backs it: two simultaneous invocations with the same --ref both pass this
+    # scan and both credit (see the module docstring).
     prior = (await db.execute(
         select(LedgerEntry).where(LedgerEntry.org_id == org.id, LedgerEntry.kind == "grant")
     )).scalars().all()
@@ -226,7 +235,8 @@ def main() -> None:
     p.add_argument("--email", required=True, help="the member whose team is being credited")
     p.add_argument("--org-id", type=int, help="which of their teams (see the read-only listing)")
     p.add_argument("--amount-usd", help='e.g. "100"')
-    p.add_argument("--ref", help="idempotency key — reuse it and a re-run cannot double-credit")
+    p.add_argument("--ref", help="dedupe key - a sequential re-run with the same ref refuses "
+                                 "(best-effort only; not safe against concurrent runs)")
     p.add_argument("--reason", help="recorded on the ledger entry")
     p.add_argument("--by", default=os.environ.get("USER", ""), help="who authorised this")
     p.add_argument("--confirm", action="store_true", help="actually write; omit to only look")
