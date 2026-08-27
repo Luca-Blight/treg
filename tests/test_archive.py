@@ -355,8 +355,9 @@ async def test_admin_archive_report(clients: AsyncClient, shadow, monkeypatch):
         row = next(x for x in d["endpoints"] if x["endpoint_id"] == EP)
         assert row == {"endpoint_id": EP, "provider": "tikhub", "policy": "transient",
                        "keys": 2, "refetches": 1, "stable": 1, "changed": 0,
-                       "change_ratio": 0.0, "newest_fetch": row["newest_fetch"]}
-        assert row["newest_fetch"] is not None
+                       "change_ratio": 0.0, "newest_fetch": row["newest_fetch"],
+                       "hits": row["hits"], "kept_bytes": row["kept_bytes"]}
+        assert row["newest_fetch"] is not None and row["kept_bytes"] > 0
     finally:
         get_settings.cache_clear()
 
@@ -631,3 +632,72 @@ async def test_refresh_disabled_off_serve_or_at_cap_zero(clients: AsyncClient, s
     monkeypatch.setattr(get_settings(), "archive_mode", "shadow")
     assert await archive.refresh_once(fake) == 0
     assert fake.calls == []
+
+
+# ---------------------------------------------------------------------------------------------
+# The panel (PR 6): the keys endpoint, the extended report, and the page shell
+
+@pytest.mark.anyio
+async def test_admin_archive_keys_endpoint(clients: AsyncClient, serve, monkeypatch):
+    monkeypatch.setenv("TREG_ADMIN_TOKEN", "ADM-TOKEN")
+    get_settings.cache_clear()
+    try:
+        monkeypatch.setattr(get_settings(), "archive_mode", "serve")
+        monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+        await clients.get(f"/call/{EP}?aweme_id=7")   # live, recorded
+        await clients.get(f"/call/{EP}?aweme_id=7")   # hit
+        await archive.drain()
+        await audit.drain()
+
+        assert (await clients.get(f"/admin/archive/keys?endpoint_id={EP}")).status_code == 403
+        r = await clients.get(f"/admin/archive/keys?endpoint_id={EP}",
+                              headers={"X-Treg-Token": "ADM-TOKEN"})
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert d["endpoint_id"] == EP and len(d["keys"]) == 1
+        k = d["keys"][0]
+        assert k["ttl_s"] > 0 and k["question"].startswith("GET http")
+        assert [v["stored"] for v in k["versions"]] == ["body"]
+        # events carry the hit/live distinction the panel's feed shows
+        assert [e["cached"] for e in d["events"]] == [True, False]
+
+        rep = (await clients.get("/admin/archive", headers={"X-Treg-Token": "ADM-TOKEN"})).json()
+        assert rep["hits_today"] == 1 and "worker_on" in rep and "refresh_daily_cap" in rep
+        row = next(x for x in rep["endpoints"] if x["endpoint_id"] == EP)
+        assert row["hits"] == 1 and row["kept_bytes"] > 0
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.anyio
+async def test_archive_panel_page_serves(clients: AsyncClient):
+    r = await clients.get("/admin/archive/panel")
+    assert r.status_code == 200
+    assert "Archive" in r.text and "TREG_ADMIN_TOKEN" in r.text  # the shell + its token gate
+    assert "data-tip" in r.text                                  # the explanations shipped
+
+
+@pytest.mark.anyio
+async def test_admin_archive_body_viewer(clients: AsyncClient, serve, monkeypatch):
+    monkeypatch.setenv("TREG_ADMIN_TOKEN", "ADM-TOKEN")
+    get_settings.cache_clear()
+    try:
+        monkeypatch.setattr(get_settings(), "archive_mode", "serve")
+        monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+        await clients.get(f"/call/{EP}?aweme_id=7", headers={"Cache-Control": "no-cache"})
+        await clients.get(f"/call/{EP}?aweme_id=7", headers={"Cache-Control": "no-cache"})
+        await archive.drain()
+        keys, snaps = await _rows()
+        kh = keys[0].key_hash
+        assert (await clients.get(f"/admin/archive/body?key_hash={kh}&version=1")).status_code == 403
+        adm = {"X-Treg-Token": "ADM-TOKEN"}
+        v1 = (await clients.get(f"/admin/archive/body?key_hash={kh}&version=1", headers=adm)).json()
+        assert v1["stored"] is True and v1["body_text"] and v1["carried_by_version"] is None
+        # v2 was identical ⇒ stored by reference; the viewer follows to the carrier
+        v2 = (await clients.get(f"/admin/archive/body?key_hash={kh}&version=2", headers=adm)).json()
+        assert v2["stored"] is True and v2["body_text"] == v1["body_text"]
+        assert v2["carried_by_version"] == 1
+        r = await clients.get(f"/admin/archive/body?key_hash={kh}&version=99", headers=adm)
+        assert r.status_code == 404
+    finally:
+        get_settings.cache_clear()

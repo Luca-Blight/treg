@@ -22,7 +22,7 @@ fresh; **archive** is every version of every answer, kept with its timestamp. Th
 archive's top layer. History is kept on purpose: it is the future data product (per-key
 time-series — backlink profiles over time, price history), not waste.
 
-**Build state: COMPLETE (PR 5 of 5).** All five slices exist behind `TREG_ARCHIVE_MODE`:
+**Build state: COMPLETE (PR 6 of 6 — the panel shipped after the original five).** All five slices exist behind `TREG_ARCHIVE_MODE`:
 skeleton, recorder, catalog `cache` field + report, serve path, and the learner + refresh worker.
 What does NOT exist: any billing difference for a cached hit (deferred founder decision), and the
 phase-3 aggregator surfaces (history endpoints) — do not document either as existing.
@@ -180,3 +180,19 @@ stripping exists only on comparison copies inside change detection.
 
 `tests/test_archive.py` — mode degradation, policy refusal-by-default, key canonicalization, and
 table round-trips; listed in CI's serial Postgres job (never xdist — shared database).
+
+## The panel (PR 6)
+
+`GET /admin/archive/panel` serves `src/treg/web/archive-panel.html` — a data-free page SHELL,
+deliberately unauthenticated: every number arrives via fetch() with the admin token the page asks
+the operator to paste (kept in localStorage; a refused token reopens the gate). It polls
+`/admin/archive` every 5 s, and a clicked endpoint row loads `/admin/archive/keys?endpoint_id=`
+(keys newest-demanded first, each with timer state and its last 12 versions, plus the endpoint's
+recent call events with their `cached` flag — the panel's HIT/LIVE feed). Clicking a version
+square opens `/admin/archive/body?key_hash=&version=` — the stored bytes pretty-printed; a dedup
+reference follows `body_of` to its carrier and says which version carries it; a hash-only version
+answers honestly that nothing was kept. Every metric, chip, bar, tag and version square carries a
+`data-tip` popover explaining itself — the panel is expected to be read by people who forgot what
+the numbers mean, so the explanations are part of the product, not decoration. The report gained
+additive fields for the panel: per-endpoint `hits` and `kept_bytes`, and totals `hits_today`,
+`refreshes_today`, `worker_on`, `refresh_daily_cap`.

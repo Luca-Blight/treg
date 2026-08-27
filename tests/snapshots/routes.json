@@ -1816,6 +1816,33 @@
       "GET",
       "HEAD"
     ],
+    "name": "admin_archive_keys",
+    "path": "/admin/archive/keys"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "admin_archive_body",
+    "path": "/admin/archive/body"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
+    "name": "admin_archive_panel",
+    "path": "/admin/archive/panel"
+  },
+  {
+    "kind": "APIRoute",
+    "methods": [
+      "GET",
+      "HEAD"
+    ],
     "name": "admin_referrals",
     "path": "/admin/referrals"
   },
