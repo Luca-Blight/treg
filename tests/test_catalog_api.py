@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import re
 
 from httpx import AsyncClient
 
@@ -552,6 +553,32 @@ def test_call_templates_share_wire_encoding_and_quote_complete_query_arguments()
     assert "'phrase=two words'" in line
 
 
+def test_gtm_catalog_paths_and_declared_parameters_are_the_same_contract():
+    """Every GTM catalog command must ask for the atomic ids its path actually substitutes.
+
+    Google Discovery describes these as one semantic parent/path resource, but passing
+    ``accounts/…/containers/…`` through one treg placeholder encodes the hierarchy as ``%2F``.
+    The curated and generated tiers therefore expose the flattened path segments instead.
+    """
+    cat = cs.load()
+    endpoints = [ep for ep in cat.by_id.values() if ep["provider"] == "google-tag-manager"]
+    assert endpoints
+    for ep in endpoints:
+        placeholders = set(re.findall(r"{([A-Za-z0-9_]+)}", ep.get("path") or ""))
+        declared = set((((ep.get("input") or {}).get("pathParams")) or {}))
+        assert placeholders == declared, ep["id"]
+
+    core = [ep for ep in endpoints if ep["tier"] == "core"]
+    for ep in core:
+        for spec in (((ep.get("input") or {}).get("pathParams")) or {}).values():
+            assert "/" not in str((spec or {}).get("example") or ""), ep["id"]
+
+    line = cs.call_template(cat.by_id["google-tag-manager.workspaces"])
+    assert "--query account_id=123456" in line
+    assert "--query container_id=789" in line
+    assert "parent=" not in line
+
+
 def test_catalog_validator_rejects_an_unknown_endpoint_array_encoding(tmp_path, capsys):
     """The endpoint encoding declaration is schema, not free-form prose. Exercise the real
     validator so deleting its validation block cannot leave a falsely green test suite."""
@@ -909,6 +936,28 @@ def test_the_ingester_puts_a_POST_routes_arguments_in_the_BODY():
     # …and a POST whose spec declares NO json body keeps its query string
     no_body, _, _ = tikhub_input_and_test(doc_op, {}, method="POST", spec_op={"post": {}})
     assert "queryParams" in no_body and "body" not in no_body
+
+
+def test_gtm_ingestion_expands_semantic_resource_names_into_atomic_path_ids():
+    """The checked-in extended YAML must stay fixed after the next Discovery re-ingest."""
+    import sys
+    sys.path.insert(0, "scripts")
+    from catalog_ingest import google_flat_path_params
+
+    entry = {
+        "path": "/tagmanager/v2/accounts/{accountsId}/containers/{containersId}/workspaces",
+        "input": {
+            "pathParams": {
+                "parent": {"type": "string", "required": True, "note": "container resource path"},
+            },
+            "queryParams": {"pageToken": {"type": "string", "required": False}},
+        },
+    }
+    assert google_flat_path_params(entry) is entry
+    params = entry["input"]["pathParams"]
+    assert list(params) == ["accountsId", "containersId"]
+    assert all(spec["required"] for spec in params.values())
+    assert "pageToken" in entry["input"]["queryParams"]
 
 
 def test_a_published_spec_outranks_the_OPTIONS_probe():

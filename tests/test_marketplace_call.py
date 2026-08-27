@@ -24,7 +24,7 @@ from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 
-from treg import api as A, audit
+from treg import api as A, audit, catalog_store, oauth_providers
 from treg.config import get_settings
 from treg.db import session_maker
 from treg.models import Org
@@ -175,6 +175,21 @@ def test_path_placeholders_fill_from_query_and_are_consumed():
     with pytest.raises(HTTPException) as exc:
         A._marketplace_upstream(ep, provider, {})
     assert exc.value.status_code == 400 and "siteUrl" in exc.value.detail
+
+
+def test_gtm_catalog_builds_hierarchy_from_atomic_ids_without_encoded_slashes():
+    ep = catalog_store.load().by_id["google-tag-manager.workspaces"]
+    url, consumed = A._marketplace_upstream(
+        ep,
+        oauth_providers.GOOGLE_TAG_MANAGER,
+        {"account_id": "123", "container_id": "456", "pageToken": "next"},
+    )
+    assert url == (
+        "https://tagmanager.googleapis.com/tagmanager/v2/"
+        "accounts/123/containers/456/workspaces"
+    )
+    assert "%2F" not in url
+    assert consumed == {"account_id", "container_id"}
 
 
 async def test_deny_rules_cover_marketplace_calls(clients: AsyncClient):
