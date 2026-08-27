@@ -42,8 +42,11 @@ sources:
   - src/treg/catalog/google-search-console.extended.yaml
   - src/treg/catalog/justoneapi.extended.yaml
   - src/treg/catalog/tikhub.extended.yaml
+  - src/treg/domain/catalog/__init__.py
   - src/treg/domain/catalog/store.py
   - src/treg/domain/catalog/stats.py
+  - src/treg/catalog_store.py
+  - src/treg/endpoint_stats.py
   - src/treg/routers/catalog.py
 related:
   - architecture/money.md
