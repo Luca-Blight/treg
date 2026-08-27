@@ -403,6 +403,13 @@ The rules (applied catalog-wide in the 2026-08-20 rewrite; every new provider fo
 6. No dead words: "API", "data", "get", "fetch", "endpoint" are soft tokens worth nothing.
 7. No stuffing. If it does not read as a title, it is wrong. Overflow vocabulary belongs in the
    capability description (weight 3, shared by the group) or `aliases.yaml`, never in the name.
+   Worked case (2026-08-27): "find instagram influencers by niche…" returned ZERO results because
+   influencers.club's name/summary said only "creators" — fixed by naming the job in the endpoint
+   (`…influencers by niche & size`), carrying the facet words (country, followers, engagement,
+   Instagram/TikTok/YouTube) in the `creators.search` capability description, and aliasing
+   `influencer(s)/kol(s)/microinfluencer(s) → creators` and `ig → instagram`. Long natural-language
+   queries still require every rare word to appear somewhere; the `near:` hint tells the agent
+   which words to drop.
 8. TRUTH over vocabulary: derive the name only from the row's own summary, path and input fields.
    A name claiming an output the endpoint does not return is a lie an agent will spend money on.
 
