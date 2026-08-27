@@ -88,6 +88,16 @@ never got an answer for (timeout, connect error, SSRF refusal, a failed oauth re
 apart — and it has to, because the error evidence that would otherwise explain the difference is
 purged after 14 days while the journal is permanent.
 
+A caller or task cancelled after reserve releases as `call_cancelled`. Compensation runs under a
+shield before the cancellation is re-raised: it closes an acquired upstream response exactly once,
+releases the hold, and gives back any pending idempotency label. The release uses the call reference
+minted before reserve rather than the later `MarketplaceCall.call_id`, because a database commit may
+have succeeded before `reserve` returned to assign that field. The ledger's conditional hold claim
+makes both outcomes safe: a committed hold is refunded and a rolled-back reserve is a no-op. A DB
+failure still leaves the committed hold to the lazy reaper. The same shielded cleanup covers
+cancellation after an idempotency claim but before reserve; with no hold yet, it gives the label
+back immediately so the next attempt does not wait for claim expiry.
+
 A release that itself fails is logged and left to the reaper (`_platform_settle` never raises).
 The response still reports `X-Treg-Cost-Micro: 0`, which is what the call ends up costing — but the
 balance only catches up when the hold is reaped, so a caller reading its balance immediately after

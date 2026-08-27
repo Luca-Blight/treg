@@ -23,8 +23,9 @@ job installs the hand-maintained lock with `uv sync --frozen`, then runs
 `uv run --frozen lint-imports` before the test suite. Keeping the check in that job reuses the
 development environment and avoids a second install for a fast static architecture check.
 The separate `test-postgres` job runs its database-sensitive subset serially against Postgres 16;
-it includes agent attribution, credential health, local-run reporting and ads-conversion coverage so
-naive-UTC assumptions are exercised by asyncpg rather than hidden by SQLite's permissive adapter.
+it uses unbuffered Python output and a 15-minute job budget so a slow test remains diagnosable. The
+subset includes agent attribution, credential health, local-run reporting and ads-conversion coverage
+so naive-UTC assumptions are exercised by asyncpg rather than hidden by SQLite's permissive adapter.
 
 Stage 1 activated the first two contracts:
 
