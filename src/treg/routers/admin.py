@@ -6,7 +6,9 @@ from datetime import timedelta
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy import func, or_, update
+from sqlalchemy.orm import defer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -351,6 +353,26 @@ async def admin_archive(
     all_snaps = (await db.execute(select(func.count(ArchiveSnapshot.id)))).scalar_one()
     total_keys = (await db.execute(select(func.count(ArchiveKey.id)))).scalar_one()
 
+    # Served-hit counts per endpoint, and today's totals — the panel's headline numbers. All
+    # additive: nothing the report already promised changes shape.
+    hit_rows = (await db.execute(
+        select(CallRecord.endpoint_id, func.count(CallRecord.id))
+        .where(CallRecord.cached.is_(True)).group_by(CallRecord.endpoint_id))).all()
+    hits_by_ep = {ep: int(n) for ep, n in hit_rows}
+    today = _utcnow_naive().replace(hour=0, minute=0, second=0, microsecond=0)
+    hits_today = (await db.execute(
+        select(func.count(CallRecord.id))
+        .where(CallRecord.cached.is_(True), CallRecord.created_at >= today))).scalar_one()
+    refreshes_today = (await db.execute(
+        select(func.count(ArchiveSnapshot.id))
+        .where(ArchiveSnapshot.origin == "refresh",
+               ArchiveSnapshot.fetched_at >= today))).scalar_one()
+    kept_rows = (await db.execute(
+        select(ArchiveKey.endpoint_id, func.coalesce(func.sum(ArchiveSnapshot.size_bytes), 0))
+        .join(ArchiveSnapshot, ArchiveSnapshot.key_id == ArchiveKey.id)
+        .where(ArchiveSnapshot.body.is_not(None)).group_by(ArchiveKey.endpoint_id))).all()
+    kept_by_ep = {ep: int(n) for ep, n in kept_rows}
+
     rows = []
     for endpoint_id, provider, pol, n_keys, n_stable, n_changed, newest in per_ep:
         refetches = int(n_stable) + int(n_changed)
@@ -360,11 +382,113 @@ async def admin_archive(
             "stable": int(n_stable), "changed": int(n_changed),
             "change_ratio": round(int(n_changed) / refetches, 4) if refetches else None,
             "newest_fetch": newest.isoformat() if newest else None,
+            "hits": hits_by_ep.get(endpoint_id, 0),
+            "kept_bytes": kept_by_ep.get(endpoint_id, 0),
         })
     return {"mode": archive_mod.mode(),
+            "worker_on": archive_mod.worker_enabled(),
+            "refresh_daily_cap": get_settings().archive_refresh_daily_cap,
             "keys": int(total_keys), "snapshots": int(all_snaps),
             "bodies_kept": int(snap_totals[0]), "kept_bytes": int(snap_totals[1]),
+            "hits_today": int(hits_today), "refreshes_today": int(refreshes_today),
             "endpoints": rows}
+
+
+@app.get("/admin/archive/keys")
+async def admin_archive_keys(
+    endpoint_id: str, limit: int = 20,
+    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """The panel's inspector feed: this endpoint's keys (most recently demanded first), each with
+    its timer state and its last versions, plus the endpoint's recent call events (served hits and
+    live calls, from the audit rows). Read-only; superadmin like every /admin route."""
+    from ..models import ArchiveKey as AK
+    from ..models import ArchiveSnapshot as AS
+
+    limit = max(1, min(limit, 100))
+    keys = (await db.execute(
+        select(AK).where(AK.endpoint_id == endpoint_id)
+        .order_by(AK.last_requested_at.desc().nulls_last(), AK.fetched_at.desc())
+        .limit(limit))).scalars().all()
+    out_keys = []
+    for k in keys:
+        vers = (await db.execute(
+            select(AS).where(AS.key_id == k.id).order_by(AS.version.desc()).limit(12)
+        )).scalars().all()
+        out_keys.append({
+            "key_hash": k.key_hash, "ttl_s": k.ttl_s, "policy": k.policy,
+            "stable": k.stable_seen, "changed": k.change_seen,
+            "fetched_at": k.fetched_at.isoformat(),
+            "last_requested_at": k.last_requested_at.isoformat() if k.last_requested_at else None,
+            "last_changed_at": k.last_changed_at.isoformat() if k.last_changed_at else None,
+            "volatile_paths": k.volatile_paths or [],
+            "question": f"{k.req_method} {k.req_url}"[:200] if k.req_url else "",
+            "versions": [{
+                "version": v.version, "origin": v.origin, "size_bytes": v.size_bytes,
+                "stored": "body" if v.body is not None else ("ref" if v.body_of else "hash"),
+                "fetched_at": v.fetched_at.isoformat(),
+            } for v in reversed(vers)],
+        })
+    events = (await db.execute(
+        select(CallRecord).where(CallRecord.endpoint_id == endpoint_id)
+        .options(defer(CallRecord.error_request), defer(CallRecord.error_response))
+        .order_by(CallRecord.id.desc()).limit(30))).scalars().all()
+    return {"endpoint_id": endpoint_id, "keys": out_keys,
+            "events": [{
+                "at": e.created_at.isoformat(), "cached": e.cached, "status": e.status_code,
+                "charged_micro": e.cost_charged_micro,
+            } for e in events]}
+
+
+@app.get("/admin/archive/body")
+async def admin_archive_body(
+    key_hash: str, version: int,
+    _: str = Depends(require_superadmin), db: AsyncSession = Depends(get_session),
+) -> dict:
+    """One stored answer's BYTES, for the panel's version viewer. Follows a dedup reference to
+    the row that carries the body; a hash-only version answers honestly that nothing was kept.
+    Superadmin like every /admin route — this is provider content held under a judged licence."""
+    from ..models import ArchiveKey as AK
+    from ..models import ArchiveSnapshot as AS
+
+    key = (await db.execute(select(AK).where(AK.key_hash == key_hash))).scalars().one_or_none()
+    if key is None:
+        raise HTTPException(status_code=404, detail="no such key")
+    snap = (await db.execute(select(AS).where(AS.key_id == key.id, AS.version == version)
+                             )).scalars().one_or_none()
+    if snap is None:
+        raise HTTPException(status_code=404, detail="no such version")
+    body = snap.body
+    carrier = None
+    if body is None and snap.body_of is not None:
+        ref = await db.get(AS, snap.body_of)
+        if ref is not None:
+            body, carrier = ref.body, ref.version
+    text = None
+    if body is not None:
+        try:
+            text = body.decode("utf-8")
+        except UnicodeDecodeError:
+            text = None
+    return {"key_hash": key_hash, "version": snap.version, "origin": snap.origin,
+            "fetched_at": snap.fetched_at.isoformat(), "media_type": snap.media_type,
+            "size_bytes": snap.size_bytes, "stored": body is not None,
+            "carried_by_version": carrier,
+            "body_text": text,
+            "note": None if body is not None else
+            "hash-only: the licence (or the size cap) did not allow keeping the bytes"}
+
+
+@app.get("/admin/archive/panel", response_class=HTMLResponse, include_in_schema=False)
+async def admin_archive_panel() -> FileResponse:
+    """The archive panel's page SHELL — deliberately unauthenticated, because it contains no data:
+    every number on it arrives via fetch() to /admin/archive*, each of which requires the admin
+    token the page asks the operator to paste (kept in the browser's localStorage)."""
+    from pathlib import Path
+    page = Path(__file__).parent.parent / "web" / "archive-panel.html"
+    if not page.exists():
+        raise HTTPException(status_code=404, detail="archive-panel.html not bundled")
+    return FileResponse(page, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/admin/referrals")

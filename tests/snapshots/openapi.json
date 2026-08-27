@@ -1467,6 +1467,149 @@
         "summary": "Admin Archive"
       }
     },
+    "/admin/archive/body": {
+      "get": {
+        "description": "One stored answer's BYTES, for the panel's version viewer. Follows a dedup reference to\nthe row that carries the body; a hash-only version answers honestly that nothing was kept.\nSuperadmin like every /admin route — this is provider content held under a judged licence.",
+        "operationId": "admin_archive_body_admin_archive_body_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key_hash",
+            "required": true,
+            "schema": {
+              "title": "Key Hash",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-treg-token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Treg-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "treg_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Treg Session",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Archive Body Admin Archive Body Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Archive Body"
+      }
+    },
+    "/admin/archive/keys": {
+      "get": {
+        "description": "The panel's inspector feed: this endpoint's keys (most recently demanded first), each with\nits timer state and its last versions, plus the endpoint's recent call events (served hits and\nlive calls, from the audit rows). Read-only; superadmin like every /admin route.",
+        "operationId": "admin_archive_keys_admin_archive_keys_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "endpoint_id",
+            "required": true,
+            "schema": {
+              "title": "Endpoint Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-treg-token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Treg-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "treg_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Treg Session",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Archive Keys Admin Archive Keys Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Archive Keys"
+      }
+    },
     "/admin/calls": {
       "get": {
         "operationId": "admin_calls_admin_calls_get",
