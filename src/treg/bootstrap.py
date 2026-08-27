@@ -17,6 +17,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import BaseRoute, Mount
 
 from . import adsconv, analytics, audit
+from .bootstrap_http import (
+    _BodyDecodeMiddleware,
+    _LegacyHostRedirectMiddleware,
+    _SecurityHeadersMiddleware,
+)
 from .config import get_settings
 from .db import init_db, session_maker
 
@@ -441,9 +446,9 @@ def create_app(role: AppRole = "all") -> FastAPI:
     )
 
     # Registration order is part of the compatibility surface. add_middleware prepends entries.
-    app.add_middleware(api_module._LegacyHostRedirectMiddleware)
-    app.add_middleware(api_module._SecurityHeadersMiddleware)
-    app.add_middleware(api_module._BodyDecodeMiddleware)
+    app.add_middleware(_LegacyHostRedirectMiddleware)
+    app.add_middleware(_SecurityHeadersMiddleware)
+    app.add_middleware(_BodyDecodeMiddleware)
     app.add_exception_handler(OverflowError, api_module._id_out_of_range)
     app.add_exception_handler(PoolTimeoutError, api_module._pool_saturated)
     app.add_exception_handler(StarletteHTTPException, api_module._mark_treg_own_errors)

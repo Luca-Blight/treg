@@ -4,18 +4,24 @@ status: shipped
 sources:
   - src/treg/web/sitetrack.js
   - src/treg/api.py
+  - src/treg/bootstrap_http.py
   - src/treg/caller_metadata.py
   - src/treg/application/auth.py
   - src/treg/application/connect.py
+  - src/treg/application/onboard.py
+  - src/treg/application/referrals.py
   - src/treg/application/signup.py
   - src/treg/routers/__init__.py
   - src/treg/routers/admin.py
   - src/treg/routers/auth.py
   - src/treg/routers/auth_helpers.py
+  - src/treg/routers/billing.py
   - src/treg/routers/catalog.py
   - src/treg/routers/connections.py
+  - src/treg/routers/onboard.py
   - src/treg/routers/orgs.py
   - src/treg/routers/resources.py
+  - src/treg/routers/referrals.py
   - src/treg/routers/signup_cookies.py
   - src/treg/routers/web.py
   - src/treg/domain/identity/access.py
