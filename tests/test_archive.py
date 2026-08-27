@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from treg import api as A, archive
+from treg import api as A, archive, audit
 from treg.archive import cache_key, content_hash, policy, storable
 from treg.models import ArchiveKey, ArchiveSnapshot
 
@@ -357,3 +357,122 @@ async def test_admin_archive_report(clients: AsyncClient, shadow, monkeypatch):
         assert row["newest_fetch"] is not None
     finally:
         get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------------------------------------
+# Serving (PR 4): the cache answers instead of the vendor; money is IDENTICAL to a live call
+
+def test_ttl_fixed_guesses_and_vendor_ceiling():
+    assert archive.ttl_for({"capability": "crypto.price.current"}) == 300
+    assert archive.ttl_for({"capability": "ads.library.search"}) == 3600      # table default
+    assert archive.ttl_for({"capability": "people.email.verify"}) == 7 * 86400
+    # The vendor's declared ceiling CAPS, never widens.
+    assert archive.ttl_for({"capability": "people.email.verify",
+                            "cache": {"mode": "transient", "max_age_s": 60}}) == 60
+    assert archive.ttl_for({"capability": "crypto.price.current",
+                            "cache": {"mode": "transient", "max_age_s": 86400}}) == 300
+
+
+@pytest.fixture
+def serve(platform_on, monkeypatch):
+    monkeypatch.setattr(get_settings(), "archive_mode", "serve")
+    monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+
+
+async def _spend_entries(clients):
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    return (await clients.get(f"/orgs/{org_id}/balance")).json()["entries"]["items"]
+
+
+@pytest.mark.anyio
+async def test_a_hit_serves_stored_bytes_and_bills_like_live(clients: AsyncClient, serve):
+    r1 = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
+    assert r1.status_code == 200 and "x-treg-cache" not in r1.headers
+    await archive.drain()
+    r2 = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
+    assert r2.status_code == 200, r2.text
+    assert r2.headers["X-Treg-Cache"] == "hit"
+    assert int(r2.headers["X-Treg-Age"]) >= 0 and r2.headers["X-Treg-Fetched-At"]
+    assert r2.content == r1.content                      # verbatim stored bytes
+    # Money identical to live, ON PURPOSE: both calls reserved and settled at the same price.
+    assert r2.headers.get("X-Treg-Cost-Micro") == r1.headers.get("X-Treg-Cost-Micro")
+    kinds = [e["kind"] for e in await _spend_entries(clients)]
+    assert kinds[:4] == ["settle", "reserve", "settle", "reserve"]
+    # The audit rows disagree only on the tag.
+    await audit.drain()
+    rows = (await clients.get("/calls")).json()
+    assert [row.get("cached") for row in rows[:2]] == [True, False]
+
+
+@pytest.mark.anyio
+async def test_a_hit_is_not_a_new_observation(clients: AsyncClient, serve):
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    await clients.get(f"/call/{EP}?aweme_id=7")          # hit
+    keys, snaps = await _rows()
+    assert len(snaps) == 1                                # no snapshot added by the hit
+    assert keys[0].stable_seen == 0 and keys[0].change_seen == 0
+    assert keys[0].last_requested_at is not None          # …but demand was noted
+
+
+@pytest.mark.anyio
+async def test_no_cache_forces_live(clients: AsyncClient, serve):
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Cache-Control": "no-cache"})
+    assert r.status_code == 200 and "x-treg-cache" not in r.headers
+    _, snaps = await _rows()
+    assert len(snaps) == 2                                # the forced live call was recorded
+
+
+@pytest.mark.anyio
+async def test_max_age_zero_forces_live(clients: AsyncClient, serve):
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"X-Treg-Max-Age": "0"})
+    assert r.status_code == 200 and "x-treg-cache" not in r.headers
+
+
+@pytest.mark.anyio
+async def test_a_stale_snapshot_is_not_served(clients: AsyncClient, serve, monkeypatch):
+    from datetime import timedelta
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    async with session_maker() as s:                      # age the snapshot past every window
+        snap = (await s.execute(select(ArchiveSnapshot))).scalars().one()
+        snap.fetched_at = snap.fetched_at - timedelta(days=30)
+        s.add(snap)
+        await s.commit()
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200 and "x-treg-cache" not in r.headers
+
+
+@pytest.mark.anyio
+async def test_unjudged_policy_never_serves(clients: AsyncClient, platform_on, monkeypatch):
+    monkeypatch.setattr(get_settings(), "archive_mode", "serve")
+    # EP carries no cache judgment here: recorded hash-only, and never served.
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200 and "x-treg-cache" not in r.headers
+
+
+@pytest.mark.anyio
+async def test_shadow_mode_never_serves(clients: AsyncClient, shadow, monkeypatch):
+    monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200 and "x-treg-cache" not in r.headers
+
+
+@pytest.mark.anyio
+async def test_a_lookup_crash_degrades_to_live(clients: AsyncClient, serve, monkeypatch):
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()
+    async def _boom(**kwargs):
+        raise RuntimeError("lookup exploded")
+    monkeypatch.setattr(archive, "_touch", lambda kh: (_ for _ in ()).throw(RuntimeError))
+    monkeypatch.setattr(archive, "lookup", _boom)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200 and "x-treg-cache" not in r.headers

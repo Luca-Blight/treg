@@ -22,9 +22,33 @@ fresh; **archive** is every version of every answer, kept with its timestamp. Th
 archive's top layer. History is kept on purpose: it is the future data product (per-key
 time-series — backlink profiles over time, price history), not waste.
 
-**Build state (PR 3 of 5).** The skeleton (PR 1), the recorder (PR 2) and the catalog `cache`
-field + phase-0 report (PR 3) exist. The serve path (PR 4) and the timer learner + refresh worker
-(PR 5) land behind the same switch. Do not document either as existing until they do.
+**Build state (PR 4 of 5).** The skeleton, the recorder, the catalog `cache` field + report,
+and the serve path exist. The timer learner + refresh worker (PR 5) land behind the same switch.
+Do not document them as existing until they do.
+
+## Serving (PR 4)
+
+`archive.lookup()` runs in `call_tool` at the RELAY's position — after every access/deny/cap gate
+AND after the money reserve, replacing only the network trip. **Money on a hit is identical to a
+live call, on purpose**: reserve, settle, cost header and ledger rows are byte-for-byte the same;
+the response carries `X-Treg-Cache: hit`, `X-Treg-Fetched-At`, `X-Treg-Age`, and the audit row
+(+ `/calls`) carries `cached: true`. The founder's deferred pricing decision attaches to that tag
+later without touching this code. A hit is NOT a new observation: no snapshot, no change
+statistics — only `last_requested_at` (fire-and-forget `_touch`), the demand signal PR 5 reads.
+
+Freshness (phase 1) is `archive.ttl_for(entry)`: FIXED guesses per capability prefix
+(`crypto.price` 5 min, `web.search` 1 h, `people.`/`company.` 7 d, default 1 h), always capped by
+a judged `cache.max_age_s` (CoinGecko's 24 h duty). The learner (PR 5) replaces these per key.
+
+Caller controls, always honored: `Cache-Control: no-cache`/`no-store` forces a live call (the
+read-after-write escape — the archive never guesses cross-endpoint effects); `X-Treg-Max-Age`
+tightens (never widens) the window; malformed values are ignored. None on every uncertain branch
+— serving off, veto, unjudged policy, no/stale/hash-only snapshot — and a lookup fault degrades
+to a live call (an api-side belt catches even a fault in lookup's own plumbing; tested by making
+it explode).
+
+`CallRecord.cached` (migration 0003) is declared LAST in the model to match ALTER TABLE's
+append position — the baseline parity test compares column order.
 
 ## The catalog `cache` field (PR 3)
 
