@@ -1,7 +1,7 @@
 # treg — the tool catalog for your agent
 
 > **OpenRouter, but for agent tools instead of models.** Point an agent at ONE base URL with ONE
-> token and it can do the *job*: 2,895 catalogued endpoints across 60 providers (SEO and SERP
+> token and it can do the *job*: 2,896 catalogued endpoints across 60 providers (SEO and SERP
 > data, backlinks, social and trends, people and company enrichment, ads, scraping) — plus your
 > own team's keys, skills and CLIs. Every credential is injected **server-side**; nothing
 > sensitive lands on the agent's machine, and every call is audited.
