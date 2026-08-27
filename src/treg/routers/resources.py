@@ -3,7 +3,6 @@
 import json
 import os
 from pathlib import Path
-import re
 import shutil
 import sys
 import tempfile
@@ -16,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from .. import convert as _convert
-from .. import crypto, health, injectors, localrun, sandbox as demo_sandbox
+from .. import crypto, health, injectors, sandbox as demo_sandbox
 from .. import db as _db
 from .. import providers as _providers
 from .. import skills as _skills
@@ -24,6 +23,9 @@ from ..config import get_settings
 from ..db import get_session
 from ..domain.governance import access as access_policy
 from ..domain.governance import sandbox as sandbox_policy
+from ..domain.tools import SecretOwnershipError, ToolConfigError
+from ..domain.tools import bindings as binding_rules
+from ..domain.tools import bundles as bundle_rules
 from ..domain.identity.access import (
     Caller,
     _can_manage,
@@ -184,13 +186,10 @@ def _require_not_live_demo_secret(caller: Caller, secret: Secret) -> None:
 
 
 async def _validate_bundle_id(bundle_id: int | None, org_id: int, db: AsyncSession) -> None:
-    """A resource may only attach to a bundle in its OWN org — else it'd be counted by, rendered in,
-    and swept up by a foreign org's bundle view/delete (org-scoping leak)."""
-    if bundle_id is None:
-        return
-    bundle = await db.get(Bundle, bundle_id)
-    if bundle is None or bundle.org_id != org_id:
-        raise HTTPException(status_code=422, detail=f"bundle_id {bundle_id} not found in this org")
+    try:
+        await bundle_rules.require_bundle_in_org(bundle_id, org_id, db)
+    except ToolConfigError as exc:
+        raise HTTPException(status_code=422, detail=exc.detail) from exc
 
 
 def _secret_view(s: Secret) -> dict:
@@ -273,91 +272,44 @@ def _require_public_base_url(base_url: str) -> None:
 
 
 async def _require_secret_ownership(secret: Secret, caller: Caller) -> None:
-    """A member may bind/inject only a secret they OWN; admins/owners may use any team secret (they set
-    up shared tools). Without this, a member could attach a teammate's key to a tool they control and
-    exfiltrate it — via the proxy (an attacker `base_url`) or `/grant` on a local-run tool."""
-    if not (secret.owner == caller.email or _role_at_least(caller.role, "admin")):
-        raise HTTPException(
-            status_code=403,
-            detail=f"you can only bind a secret you own — secret {secret.id} belongs to another member "
-                   "(ask an org admin to wire up a shared-key tool)")
+    try:
+        await binding_rules.require_secret_ownership(
+            secret, caller_email=caller.email,
+            caller_is_admin=_role_at_least(caller.role, "admin"))
+    except SecretOwnershipError as exc:
+        raise HTTPException(status_code=403, detail=exc.detail) from exc
 
 
 async def _validate_bindings(bindings: list[dict], caller: Caller, db: AsyncSession,
                              grandfather: frozenset = frozenset()) -> None:
-    org_id = caller.org_id
-    for b in bindings:
-        # A `platform_setting` binding injects one of TREG's own credentials (a tier-4 provider key, the
-        # Google Ads developer token) — relay resolves it from settings and never looks at secret_id, so
-        # a caller-supplied one would be a straight read of our key through any tool they register.
-        # Only the server builds these (_provider_bindings / _platform_bindings); user input never may.
-        if b.get("platform_setting"):
-            raise HTTPException(status_code=422, detail=(
-                "a binding may not name a platform_setting — treg's own credentials are server-managed "
-                "(they are attached by `connections connect`, or injected by the marketplace ladder)"))
-        injector = b.get("injector", "env")
-        if injector not in injectors.INJECTORS:  # unknown injector 500s the proxy at call time — reject now
-            raise HTTPException(status_code=422, detail=f"unknown injector {injector!r}")
-        fmt = b.get("format", "{secret}")  # rendered as fmt.format(secret=…) on the hot path
-        if not isinstance(fmt, str):
-            raise HTTPException(status_code=422, detail="binding format must be a string")
-        try:
-            fmt.format(secret="x")  # an unexpected placeholder / literal brace would KeyError/ValueError → 500
-        except (KeyError, IndexError, ValueError):
-            raise HTTPException(status_code=422, detail=f"invalid binding format {fmt!r} — use only {{secret}}")
-        # name/secret_field, if present, feed httpx header/param setters and the JSON extractor —
-        # a null or non-string there AttributeErrors on the hot path; location must be header|query.
-        for key in ("name", "secret_field"):
-            if key in b and not (isinstance(b[key], str) and b[key]):
-                raise HTTPException(status_code=422, detail=f"binding {key} must be a non-empty string")
-        loc = b.get("location", "header")
-        if loc not in ("header", "query"):
-            raise HTTPException(status_code=422, detail="binding location must be 'header' or 'query'")
-        sid = b.get("secret_id")
-        secret = await db.get(Secret, sid) if sid is not None else None
-        if secret is None or secret.org_id != org_id:
-            raise HTTPException(status_code=422, detail=f"binding secret_id {sid} not found")
-        if sid not in grandfather:  # a binding already on the tool is grandfathered (don't lock the owner out on edit)
-            await _require_secret_ownership(secret, caller)  # can't ADD a teammate's secret
-    # Two bindings with the same target name silently overwrite each other at call time (the first
-    # credential is dropped) — reject the collision at registration, for BOTH query and header
-    # (header names are case-insensitive; `httpx.Headers[name]=…` overwrites just like a query param).
-    qnames = [b.get("name", "Authorization") for b in bindings if b.get("location", "header") == "query"]
-    qdupes = sorted({n for n in qnames if qnames.count(n) > 1})
-    if qdupes:
-        raise HTTPException(status_code=422, detail=f"duplicate query binding name(s): {qdupes}")
-    hnames = [b.get("name", "Authorization").lower() for b in bindings if b.get("location", "header") == "header"]
-    hdupes = sorted({n for n in hnames if hnames.count(n) > 1})
-    if hdupes:
-        raise HTTPException(status_code=422, detail=f"duplicate header binding name(s): {hdupes}")
+    try:
+        await binding_rules.validate_bindings(
+            bindings, org_id=caller.org_id, caller_email=caller.email,
+            caller_is_admin=_role_at_least(caller.role, "admin"),
+            known_injectors=frozenset(injectors.INJECTORS), db=db, grandfather=grandfather)
+    except SecretOwnershipError as exc:
+        raise HTTPException(status_code=403, detail=exc.detail) from exc
+    except ToolConfigError as exc:
+        raise HTTPException(status_code=422, detail=exc.detail) from exc
 
 
 def _validate_cli_profile(cli: dict | None) -> None:
-    """422 (not a write-through) for a malformed local-run profile — a bad deny regex or inject shape
-    must fail HERE, never at grant time (localrun.check_deny skips uncompilable legacy patterns)."""
-    if cli is None:
-        return
     try:
-        localrun.validate_cli_profile(cli)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        binding_rules.validate_cli_profile(cli)
+    except ToolConfigError as exc:
+        raise HTTPException(status_code=422, detail=exc.detail) from exc
 
 
 async def _validate_cli_secrets(cli: dict | None, caller: Caller, db: AsyncSession,
                                 grandfather: frozenset = frozenset()) -> None:
-    """Ownership check for secrets a cli.inject entry names by secret_id — same rule as bindings, so a
-    member can't launder a teammate's secret into a local-run tool and extract it via /grant."""
-    if not cli:
-        return
-    for e in cli.get("inject") or []:
-        sid = e.get("secret_id")
-        if sid is None:
-            continue
-        secret = await db.get(Secret, sid)
-        if secret is None or secret.org_id != caller.org_id:
-            raise HTTPException(status_code=422, detail=f"cli.inject secret_id {sid} not found")
-        if sid not in grandfather:
-            await _require_secret_ownership(secret, caller)
+    try:
+        await binding_rules.validate_cli_secrets(
+            cli, org_id=caller.org_id, caller_email=caller.email,
+            caller_is_admin=_role_at_least(caller.role, "admin"), db=db, grandfather=grandfather)
+    except SecretOwnershipError as exc:
+        raise HTTPException(status_code=403, detail=exc.detail) from exc
+    except ToolConfigError as exc:
+        raise HTTPException(status_code=422, detail=exc.detail) from exc
 
 
 def _allowed_server_bins() -> set[str]:
@@ -567,24 +519,8 @@ async def register_skill(
     return await _register_skill_bundle(body, caller, db)
 
 
-_SECRET_DIR_RE = re.compile(r"(^|/)\.secrets?(/|$)")
-
-
-def _sanitize_bundle_files(files: dict) -> dict:
-    """Defense-in-depth before persisting companion files (the CLI/dashboard already exclude these):
-    drop path-traversal / absolute paths, SKILL.md (that's `recipe`), and anything under a secret dir —
-    a secret must NEVER live in the shipped file blob. `skill install` re-checks on the way out too."""
-    clean: dict[str, str] = {}
-    for raw, content in (files or {}).items():
-        p = str(raw).replace("\\", "/")
-        if not p or p.startswith("/") or ".." in p.split("/"):   # absolute or traversal → drop
-            continue
-        if p == "SKILL.md" or _SECRET_DIR_RE.search(p):
-            continue
-        if not isinstance(content, str):
-            continue
-        clean[p] = content
-    return clean
+_SECRET_DIR_RE = bundle_rules._SECRET_DIR_RE
+_sanitize_bundle_files = bundle_rules.sanitize_bundle_files
 
 
 async def _register_skill_bundle(body: SkillIn, caller: Caller, db: AsyncSession) -> dict:

@@ -15,6 +15,9 @@ sources:
   - src/treg/application/connect.py
   - src/treg/routers/connections.py
   - src/treg/routers/resources.py
+  - src/treg/domain/tools/__init__.py
+  - src/treg/domain/tools/bindings.py
+  - src/treg/domain/tools/bundles.py
   - tests/test_oauth_refresh.py
 related:
   - architecture/proxy-model.md
@@ -275,7 +278,9 @@ member: on Linux the CLI runs as a dedicated `treg-run` user, so the credential 
 (unreadable by the member's uid), not on the member's own account. A deliberate, narrow exception.
 
 **Ownership boundary (who may use which secret).** A member may only **bind/inject a secret they own**
-(`_validate_bindings` / `_validate_cli_secrets`, both calling `_require_secret_ownership`); admins/owners
+(`domain/tools/bindings.py` — `validate_bindings` / `validate_cli_secrets`, both calling
+`require_secret_ownership`; `routers/resources.py` keeps same-named wrappers that translate the
+domain's `ToolConfigError`/`SecretOwnershipError` into 422/403); admins/owners
 may wire up shared-key tools. This stops a
 member laundering a teammate's key into a tool they control (then exfiltrating it via the proxy's
 `base_url` or via `/grant`). Editing a tool **grandfathers** the secrets already on it — only a

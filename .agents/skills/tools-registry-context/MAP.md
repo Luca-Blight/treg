@@ -131,6 +131,9 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/domain/identity/session.py` | architecture/composition.md, architecture/mcp-oauth.md, architecture/multi-tenancy.md, interface/api.md, interface/dashboard.md |
 | `src/treg/domain/money/__init__.py` | architecture/import-boundaries.md, architecture/money.md |
 | `src/treg/domain/referrals.py` | architecture/data-model.md, architecture/money.md |
+| `src/treg/domain/tools/__init__.py` | architecture/auth-secrets.md |
+| `src/treg/domain/tools/bindings.py` | architecture/auth-secrets.md |
+| `src/treg/domain/tools/bundles.py` | architecture/auth-secrets.md, architecture/multi-tenancy.md |
 | `src/treg/egress.py` | architecture/local-run.md |
 | `src/treg/email.py` | interface/api.md, ops/deploy.md |
 | `src/treg/fsjail.py` | architecture/local-run.md |
@@ -215,7 +218,7 @@ Regenerate via `scripts/build-map.py`.
 | Fragment | Sources |
 |---|---|
 | `architecture/ads-conversions.md` | `adsconv.py`, `signup.py`, `adtrack.js` |
-| `architecture/auth-secrets.md` | `injectors.py`, `injectors.py`, `ssrf.py`, `crypto.py`, `oauth.py`, `__init__.py`, `refresh.py`, `oauth_refresh.py`, `oauth_providers.py`, `health.py`, `connect.py`, `connections.py`, `resources.py`, `test_oauth_refresh.py` |
+| `architecture/auth-secrets.md` | `injectors.py`, `injectors.py`, `ssrf.py`, `crypto.py`, `oauth.py`, `__init__.py`, `refresh.py`, `oauth_refresh.py`, `oauth_providers.py`, `health.py`, `connect.py`, `connections.py`, `resources.py`, `__init__.py`, `bindings.py`, `bundles.py`, `test_oauth_refresh.py` |
 | `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `fx.yaml`, `aviato.yaml`, `crustdata.yaml`, `aviato.companies.acquisitions.json`, `aviato.companies.employees.json`, `aviato.companies.enrich.bulk.json`, `aviato.companies.enrich.json`, `aviato.companies.founders.json`, `aviato.companies.funding_rounds.json`, `aviato.companies.investments.json`, `aviato.companies.outbound_investments.json`, `aviato.companies.search.json`, `aviato.linkedin.company.posts.json`, `aviato.linkedin.post.comments.json`, `aviato.linkedin.post.reactions.json`, `aviato.linkedin.post.reposts.json`, `aviato.linkedin.user.posts.json`, `aviato.people.contact.get.json`, `aviato.people.email.find.json`, `aviato.people.enrich.bulk.json`, `aviato.people.enrich.json`, `aviato.people.phone.find.json`, `aviato.people.search.json`, `aviato.people.search.simple.json`, `crustdata.companies.autocomplete.json`, `crustdata.companies.enrich.json`, `crustdata.companies.identify.json`, `crustdata.companies.jobs.search.json`, `crustdata.companies.search.json`, `crustdata.people.autocomplete.json`, `crustdata.people.enrich.json`, `crustdata.people.search.json`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `store.py`, `stats.py`, `catalog.py` |
 | `architecture/composition.md` | `bootstrap.py`, `bootstrap_handlers.py`, `bootstrap_http.py`, `connect.py`, `mcp_oauth.py`, `session.py`, `admin.py`, `auth.py`, `billing.py`, `call.py`, `connections.py`, `onboard.py`, `orgs.py`, `resources.py`, `referrals.py`, `web.py`, `dump_surface.py` |
 | `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `sitetrack.js`, `models.py`, `timeutil.py`, `db.py`, `referrals.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py`, `auth.py`, `test_postgres_reset.py` |
@@ -224,7 +227,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `auth.py`, `mcp.py`, `mcp_oauth.py`, `health.py`, `mcp_oauth.py`, `session.py`, `auth.py`, `connect-demo.html` |
 | `architecture/money.md` | `ledger.py`, `__init__.py`, `models.py`, `billing.py`, `billing.py`, `idempotency.py`, `intake.py`, `resolve.py`, `reserve.py`, `settle.py`, `referrals.py`, `budgets.py`, `__init__.py`, `stripe.py`, `reconcile.py`, `referrals.py`, `referrals.py`, `api.py`, `signup.py`, `admin.py`, `billing.py`, `call.py`, `orgs.py`, `referrals.py`, `test_call_architecture.py` |
-| `architecture/multi-tenancy.md` | `models.py`, `api.py`, `caller_metadata.py`, `auth.py`, `signup.py`, `access.py`, `budgets.py`, `publicdemo.py`, `teams.py`, `usage.py`, `access.py`, `session.py`, `auth.py`, `orgs.py`, `resources.py`, `db.py`, `test_router_dependencies.py` |
+| `architecture/multi-tenancy.md` | `models.py`, `api.py`, `caller_metadata.py`, `auth.py`, `signup.py`, `access.py`, `budgets.py`, `publicdemo.py`, `teams.py`, `usage.py`, `access.py`, `session.py`, `auth.py`, `orgs.py`, `resources.py`, `bundles.py`, `db.py`, `test_router_dependencies.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `relay.py`, `ssrf.py`, `api.py`, `authorize.py`, `idempotency.py`, `intake.py`, `resolve.py`, `reserve.py`, `settle.py`, `evidence.py`, `service.py`, `types.py`, `client_identity.py`, `sandbox_identity.py`, `access.py`, `publicdemo.py`, `usage.py`, `call.py`, `test_call_application_contract.py`, `test_call_cancellation.py`, `test_error_capture.py`, `test_marketplace_call.py`, `test_oauth_billed.py`, `test_passthrough.py`, `test_tag_billing.py`, `test_tag_billing_adversarial.py`, `test_call_architecture.py` |
 | `architecture/super-admin.md` | `api.py`, `admin.py`, `access.py`, `config.py` |
 | `foundation/charter.md` | `2026-06-30-jason-tools-registry.md`, `README.md` |

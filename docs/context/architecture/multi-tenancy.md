@@ -17,6 +17,7 @@ sources:
   - src/treg/routers/auth.py
   - src/treg/routers/orgs.py
   - src/treg/routers/resources.py
+  - src/treg/domain/tools/bundles.py
   - src/treg/db.py
   - tests/test_router_dependencies.py
 related:

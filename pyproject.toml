@@ -182,6 +182,26 @@ allow_indirect_imports = true
 as_packages = true
 
 [[tool.importlinter.contracts]]
+name = "Tools domain does not depend on outer layers or unsanctioned domains"
+type = "forbidden"
+source_modules = ["treg.domain.tools"]
+# tools → connections is the one sanctioned intra-domain edge, so it is absent here.
+forbidden_modules = [
+    "treg.api",
+    "treg.bootstrap",
+    "treg.routers",
+    "treg.application",
+    "treg.domain.catalog",
+    "treg.domain.governance",
+    "treg.domain.identity",
+    "treg.domain.money",
+    "fastapi",
+    "starlette",
+]
+allow_indirect_imports = true
+as_packages = true
+
+[[tool.importlinter.contracts]]
 name = "Upstream infrastructure does not depend on HTTP adapters"
 type = "forbidden"
 source_modules = ["treg.infra.upstream"]
