@@ -242,6 +242,44 @@ async def test_a_grant_failure_cannot_fail_signup(c: AsyncClient, monkeypatch):
         assert await ledger.blocks_of(db, org_id) == []
 
 
+async def test_a_grant_failure_after_staging_still_returns_the_signup(c: AsyncClient, monkeypatch):
+    """The sharper variant of the test above: the grant fails AFTER its SQL has staged, so the
+    recovery rollback expires every object the session tracks. Both signup doors must still answer
+    with the fields they promised, and the referral must still be attributed - the never-500-the-
+    signup contract does not stop at objects that now need a reload."""
+    from treg.api import REFERRAL_COOKIE
+    from treg.models import Referral
+
+    _, ann_token = await _org(c, "ref-ann@superdesign.dev")
+    code = (await c.post("/referrals/code", headers=_h(ann_token))).json()["code"]
+
+    real_grant = ledger.grant
+
+    async def grant_then_boom(db, org_id, *a, **kw):
+        await real_grant(db, org_id, *a, **kw)  # SQL has run, so the rollback below expires objects
+        raise RuntimeError("grant broke after staging")
+
+    monkeypatch.setattr(ledger, "grant", grant_then_boom)
+
+    r = await c.post("/users", json={"email": "promo-fails-late@superdesign.dev"},
+                     headers={"Cookie": f"{REFERRAL_COOKIE}={code}"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["email"] == "promo-fails-late@superdesign.dev"
+    assert body["id"] and body["org"] and body["org_id"] and body["token"]
+    org_id = body["org_id"]
+
+    r2 = await c.post("/orgs", json={"name": "second-team"}, headers=_h(body["token"]))
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["org"] and r2.json()["org_id"] and r2.json()["name"] == "second-team"
+
+    async with session_maker() as db:
+        assert await ledger.balance_of(db, org_id) == 0  # the credit is lost, never the signup
+        referred = (await db.execute(select(Referral).where(
+            Referral.referred_org_id == org_id))).scalars().all()
+    assert len(referred) == 1  # the failed grant did not cost the referral attribution either
+
+
 # ---- the call path -----------------------------------------------------------------------------
 async def test_reserve_settle_round_trip(c: AsyncClient):
     org_id, _ = await _org(c)

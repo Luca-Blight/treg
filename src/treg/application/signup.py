@@ -3,6 +3,7 @@
 import logging
 from urllib.parse import unquote
 
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -88,6 +89,10 @@ async def _grant_signup_promo(db: AsyncSession, org: Org) -> None:
         # the commit is empty and harmless - simpler than making it conditional.
         await db.commit()
     except Exception as exc:  # noqa: BLE001 — the team is already created; don't 500 the signup over credit
+        # End the transaction the failure poisoned so the referral redemption that follows still has
+        # a working session. The rollback also expires every object this session tracks, which is
+        # why both doors read their response fields BEFORE calling here and why _redeem_referral
+        # revives its arguments.
         await db.rollback()
         logging.getLogger("treg").warning("promo grant failed for org %s: %s", org_id, exc)
 
@@ -144,12 +149,20 @@ async def _redeem_referral(
     A referral is a marketing nicety and a signup is not. Nothing here may ever be the reason
     someone cannot make a team.
     """
+    org_id = None
     try:
+        # A failed promo grant just before this rolled the session back, which expired every object
+        # it tracks; revive both before their first attribute read becomes implicit async I/O
+        # (MissingGreenlet). No-ops on the happy path.
+        for obj in (user, org):
+            if sa_inspect(obj).expired:
+                await db.refresh(obj)
+        org_id = org.id
         code = referrals.normalize_code((raw_cookie or "").strip('"'))
         if code:
             await referrals.attribute(db, user=user, org=org, code=code)
     except Exception as exc:  # noqa: BLE001
-        logging.getLogger("treg").warning("referral attribution failed for org %s: %s", org.id, exc)
+        logging.getLogger("treg").warning("referral attribution failed for org %s: %s", org_id, exc)
 
 
 async def register_user(
@@ -185,10 +198,9 @@ async def register_user(
             await db.commit()
         except IntegrityError as exc:
             raise SignupError("email_exists") from exc
-        await _grant_signup_promo(db, org)
-        # Both org-creating doors redeem because both end with a person owning a fresh team.
-        await _redeem_referral(db, referral_cookie, user, org)
-        return {
+        # Read the response now: a failed promo grant below rolls the session back, which expires
+        # every tracked object, and a lazy reload after that is implicit async I/O (MissingGreenlet).
+        response = {
             "id": user.id,
             "email": user.email,
             "org": org.slug,
@@ -196,6 +208,10 @@ async def register_user(
             "role": "owner",
             "token": token,
         }
+        await _grant_signup_promo(db, org)
+        # Both org-creating doors redeem because both end with a person owning a fresh team.
+        await _redeem_referral(db, referral_cookie, user, org)
+        return response
 
 
 async def create_org(
@@ -226,12 +242,14 @@ async def create_org(
                 await db.rollback()
         else:
             raise SignupError("slug_conflict")
-        await _grant_signup_promo(db, org)
-        await _redeem_referral(db, referral_cookie, user, org)
-        return {
+        # Read the response now, before the grant can roll back and expire it (see register_user).
+        response = {
             "org": org.slug,
             "org_id": org.id,
             "name": org.name,
             "role": "owner",
             "token": token,
         }
+        await _grant_signup_promo(db, org)
+        await _redeem_referral(db, referral_cookie, user, org)
+        return response
