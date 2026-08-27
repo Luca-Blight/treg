@@ -4007,6 +4007,255 @@ USE_CASE_PAGES["transcripts-of-x-and-facebook-video-posts"] = {
 }
 
 
+USE_CASE_PAGES["get-a-linkedin-profile"] = {
+    "label": "Get a LinkedIn profile",
+    "sentence": "LinkedIn API and LinkedIn scraper: a person's profile by URL, headline, experience and education",
+    "title": "LinkedIn API: fetch a profile by URL, {n} providers | treg.to",
+    "lede": (
+        "Give your agent a LinkedIn profile URL and get the profile back as data: name, "
+        "headline, location, current role, past roles and education. {n} providers answer "
+        "through one treg.to key, from {cheapest}, each at its own rate with no markup and "
+        "none of them behind a monthly seat. No session cookie of yours, no browser "
+        "extension, no Sales Navigator subscription and no account of yours making the "
+        "request. LinkedIn's own row is here too and it is honest about what it is: it "
+        "returns the profile of the account you connected, and nobody else's."),
+    "prompt": "Using treg, fetch these 40 LinkedIn profile URLs from the cheapest verified "
+              "provider, show me the price per profile first, then give me name, headline, "
+              "current company and years in the current role as a table, and list the URLs "
+              "that came back empty.",
+    "prompt_why": [
+        ("Give the profile URL", "Most rows take the public profile URL or its slug. A name and a company is a different job, and a different page."),
+        ("Say which fields you need", "A full profile is a large object. Naming the columns keeps the table readable and keeps the agent from spending its context on someone's volunteering history."),
+        ("Ask for the price first", "The rates here differ by more than an order of magnitude per profile. treg.to prints the rate before the call, so 40 profiles has a number on it before anything runs."),
+        ("Ask for the misses by name", "Every provider misses some profiles. A list of the URLs that came back empty is worth more than a table that quietly has 34 rows instead of 40."),
+    ],
+    "result_noun": "profile",
+    "result_image": None,
+    "q_cheapest": "Which LinkedIn API is cheapest per profile?",
+    "q_reliable": "Which LinkedIn API is the most reliable?",
+    "q_compare": "How do the LinkedIn providers compare?",
+    "what_is_heading": "What is a LinkedIn API, and why is there no official one?",
+    "what_is": (
+        "A LinkedIn API, as people mean the phrase, returns a person's public profile as "
+        "structured data: headline, location, the roles they have held with dates, and where "
+        "they studied. LinkedIn's official API does not do this. It is an OAuth API for the "
+        "account that authorised it, so it can tell you your own name and email and it cannot "
+        "tell you a stranger's job history; that product does not exist for you. Everything "
+        "else on this page is a third-party provider that reads public profiles with its own "
+        "infrastructure and sells the result per profile. Proxycurl, which was the default "
+        "answer here for years, shut down, which is why the question keeps being asked."),
+    "notes": [
+        "Five third-party rows and one official one, and the official one is a different job. "
+        "LinkedIn's own OAuth row is free, runs on your team's connected account and is never "
+        "metered, and it returns that account's own profile: name, email, member id. It "
+        "cannot fetch a prospect. The other five fetch anyone's public profile and none of "
+        "them uses an account of yours, so no cookie of yours, no extension in your browser "
+        "and no view on your activity log.",
+        "The units differ, so read the rate and the word after it. TikHub bills per "
+        "successful call, ScrapeCreators per call whether or not the profile comes back, "
+        "Bright Data per record delivered, JustOneAPI per success priced in yuan and "
+        "converted, and Fiber per credit for a live fetch. The cheapest claim on this page is "
+        "made inside one unit and never across them. ScrapeCreators, Bright Data, TikHub and "
+        "JustOneAPI have been called live and carry a verified date in the catalog; the Fiber "
+        "row and the LinkedIn OAuth row are documented from the provider's own docs and have "
+        "not been verified through treg.to.",
+        "What nobody can promise is coverage, and this page will not. Each provider reads "
+        "LinkedIn its own way, so a profile one returns in full is one another returns "
+        "thin, and the fields most often missing are exactly the ones people want: the dated "
+        "experience list. The cheap experiment is the honest answer: run the same twenty URLs "
+        "through three rows for a few cents and count who filled the columns you need. "
+        "treg.to shows the rows side by side and the agent picks; it does not route between "
+        "them and it does not fail over.",
+    ],
+    "faq": [
+        ("Is there an official LinkedIn API for other people's profiles?",
+         "No. LinkedIn's OAuth API returns the profile of the member who authorised your app, "
+         "so it answers \"who am I\" and never \"who is this person\". The row on this page "
+         "is that call, marked free and run on your own connection. Everything else here is a "
+         "third party."),
+        ("Will this get my LinkedIn account banned?",
+         "None of the five third-party rows uses an account of yours: no cookie, no session, "
+         "no extension, so there is nothing of yours for LinkedIn to restrict. That is not "
+         "the same as zero risk in general, because the restriction stories in the forum "
+         "include people who were only browsing. The risk these rows remove is the automation "
+         "risk on your own login; the provider carries its own."),
+        ("What replaced Proxycurl?",
+         "Nothing single replaced it. The five third-party rows here are what the catalog "
+         "carries for a person profile by URL, priced per profile with no plan, and the "
+         "honest note is that they are not a drop-in: the field coverage and the freshness "
+         "are each provider's own. Company pages, job changes and people search are separate "
+         "jobs on separate rows."),
+        ("Which provider should my agent use?",
+         "The one whose fields survive your list at a rate that fits the volume. treg.to puts "
+         "the rate, the billing unit and the measured success rate beside each other and the "
+         "agent chooses, or you tell it which to use. treg.to compares; it does not pick for "
+         "you."),
+    ],
+    "voices_intro": (
+        "LinkedIn data is one of the most seeded topics on Reddit: of the ~170 posts read in "
+        "August 2026, one account posted fourteen actor listings in a subreddit it appears to "
+        "run, one promo shipped with its template placeholder still in the body, and one "
+        "seeded thread carried a zero-width space. These five are practitioners, and the last "
+        "one is the reason the page will not claim zero risk."),
+    "voices": [
+        ("An extension got an SDR restricted in days",
+         "My SDR got his account limited after using PhantomBuster for like 3 days.",
+         "r/b2bmarketing, 16 points", "https://www.reddit.com/r/b2bmarketing/comments/1sv9jwv/linkedin_lead_scraping_tools_whats_safe_that_wont/",
+         "That risk is the one thing these rows genuinely remove. A call here runs on the "
+         "provider's infrastructure, not on your seat, so there is no cookie of yours and no "
+         "activity on your account to flag."),
+        ("Being banned is not survivable for some jobs",
+         "I review hundreds of Linkedin profiles a week for a living and it is not viable to be banned from the platform.",
+         "r/apify", "https://www.reddit.com/r/apify/comments/1u7pogx/how_concerned_about_a_linkedin_ban_should_i_be/",
+         "Which is the argument for keeping the fetch off your login entirely. Read the "
+         "profiles through a provider, keep your own account for the human work, and pay per "
+         "profile rather than per seat."),
+        ("The enrichment tools are priced for a different buyer",
+         "Tools like Clay's 'Enrich Profile' feature or APIs like Brightdata feel quite pricey. Any suggestions or alternative approaches?",
+         "r/revops, 5 points", "https://www.reddit.com/r/revops/comments/1i4xwzh/cheapest_way_to_enrich_full_linkedin_profile/",
+         "Bright Data is one of the rows here, at its own per-record rate with nothing added, "
+         "and it is not the cheapest one. The point is the shape: a profile is a call, there "
+         "is no plan to be on, and the rate is printed before the agent spends it."),
+        ("The default answer shut down",
+         "Looking for a good alternative to Proxycurl (they shut down) for B2B sales automation",
+         "r/n8n, 6 points", "https://www.reddit.com/r/n8n/comments/1myqu0v/looking_for_a_good_alternative_to_proxycurl_they/",
+         "This page is five of the alternatives with their prices next to each other. It is "
+         "worth saying that the forum has not moved on to one successor, so the checklist "
+         "that thread asks for, profile plus company plus job changes, is three jobs here and "
+         "three rows."),
+        ("The restriction can arrive with no automation at all",
+         "the funny thing is i wasnt using anything to automate linkedin, just clicking around and opening new tabs",
+         "X, 199 likes", "https://x.com/i/status/2059841283674533977",
+         "Which is why this page says the rows remove the automation risk on your own login "
+         "and stops there. Nothing here makes LinkedIn safer for the account you browse with; "
+         "it just stops needing it."),
+    ],
+    "related": ("Find people by role, company or location",
+                "Enrich a person from an email or LinkedIn URL",
+                "Find professional emails", "Find phone numbers"),
+}
+
+
+USE_CASE_PAGES["find-phone-numbers"] = {
+    "label": "Find phone numbers",
+    "sentence": "Phone number lookup API: a prospect's mobile from a LinkedIn URL or work email",
+    "title": "Phone number lookup API: a mobile from a LinkedIn URL | treg.to",
+    "lede": (
+        "Give your agent a LinkedIn profile URL, a work email or a name and company, and get "
+        "a direct mobile number back where one exists. {n} providers answer through one "
+        "treg.to key, from {cheapest}, each at its own rate with no markup and none of them "
+        "behind a seat or an annual contract. This runs one way only: person to number. It is "
+        "not a reverse lookup, it will not tell you who owns a number you already have, and "
+        "no provider here finds a number for everyone you ask about."),
+    "prompt": "Using treg, find mobile numbers for these 25 LinkedIn URLs, show me the price "
+              "per found number for each provider first, use the cheapest one, then give me a "
+              "table of who was found and who was not, and do not guess a number for anyone "
+              "who came back empty.",
+    "prompt_why": [
+        ("Give the identifier, not the name alone", "Most rows resolve from a LinkedIn URL or a work email. A bare name and company is the weakest input and the one that misses most."),
+        ("Ask for the misses explicitly", "A list of 25 that returns 11 numbers is the normal outcome. The 14 that missed are the information; a table that silently has 11 rows is not."),
+        ("Ask for the price per found number", "The rates here span more than five times per number. treg.to prints each before the call, so 25 people has a worst case before anything runs."),
+        ("Never let the agent infer a number", "A model asked for a phone number will happily produce a plausible one. Say out loud that an empty answer stays empty."),
+    ],
+    "result_noun": "number",
+    "result_image": None,
+    "q_cheapest": "Which phone finder is cheapest per number found?",
+    "q_reliable": "Which phone finder is the most reliable?",
+    "q_compare": "How do the phone finders compare?",
+    "what_is_heading": "What is a phone number lookup API?",
+    "what_is": (
+        "In business-to-business terms it is a call that takes a person, usually as a LinkedIn "
+        "profile URL or a work email, and returns a direct mobile number for them if the "
+        "provider has one. The direction matters: this is person to number. The consumer "
+        "product that goes the other way, number to person, is a different thing entirely and "
+        "is not on this page. Every provider here is assembling the same kind of data from "
+        "the same kinds of sources, which is why the useful question is not who has the best "
+        "database in the abstract but who fills your list, in your countries, this month."),
+    "notes": [
+        "The prices are per number found, and they span the page. Tomba is the cheapest per "
+        "found number, Aviato next, then LeadMagic, Findymail and LeadsForge, which is more "
+        "than five times the cheapest; LeadsForge also has a bulk row at the same rate per "
+        "row. Ocean.io meters in credits and publishes no dollar rate, so the page prints "
+        "none. All of it is the provider's own rate with $0.000 added, from a prepaid balance "
+        "with no minimum.",
+        "Read the miss rule carefully, because it is where the money goes. The rate cards say "
+        "a miss is free, and one row on this page proves it through treg.to: LeadMagic "
+        "reports its own charge back on every call, so a miss settles at zero. The others do "
+        "not report a charge, so the call settles at the catalog rate whether or not a number "
+        "came back. Until that changes, budget the printed rate times every attempt, not "
+        "times the numbers you keep.",
+        "Nobody publishes an honest hit rate, including this page. What the practitioners in "
+        "the forum say instead is that coverage swings by geography and vertical, that a "
+        "provider strong on US technology can be thin on European professional services, and "
+        "that a number being current is not the same as somebody answering it. The cheap "
+        "experiment is the only real answer: run the same twenty rows through three providers "
+        "for a couple of dollars and count. treg.to shows the rates side by side; the agent "
+        "picks, and treg.to never routes or fails over between them.",
+    ],
+    "faq": [
+        ("Can I find out who owns a phone number I already have?",
+         "No. Every row here runs person to number: you give a profile URL, an email or a "
+         "name and company, and get a mobile back. Reverse lookup is a consumer product and a "
+         "different job, and the catalog does not carry it."),
+        ("What hit rate should I expect?",
+         "Nobody on this page will give you a number, and any published match rate you find "
+         "elsewhere was written by whoever is selling. Expect a minority of a cold list to "
+         "resolve, expect it to be worse outside the US, and measure it on your own rows: "
+         "twenty people through three providers costs a couple of dollars."),
+        ("Do I pay for a miss?",
+         "By the providers' rate cards, no. Through treg.to today, only LeadMagic settles a "
+         "miss at zero, because it is the one row that reports its own charge back on the "
+         "call. On the others the call settles at the catalog rate, so budget per attempt."),
+        ("Is a found number safe to call?",
+         "That is your call to make, not the data's. These rows return a number and nothing "
+         "about consent: do not call screening, no suppression list and no country by country "
+         "guidance. Whatever your obligations are under the rules that apply to you, they "
+         "stay yours."),
+    ],
+    "voices_intro": (
+        "This category is the most heavily seeded the loop has read: of the ~380 Reddit and X "
+        "posts read in August 2026 roughly seven in ten were vendor marketing, including a "
+        "ring of six fabricated review subreddits and one post that hid a combining grapheme "
+        "joiner inside half its words. That post was the most quotable in the set, and it is "
+        "not quoted here. These five are practitioners."),
+    "voices": [
+        ("Better data does not make somebody answer",
+         "Post Covid, office lines don't even seem to exist now and connect rates on cell phones are abysmal.",
+         "r/sales, 102 points", "https://www.reddit.com/r/sales/comments/1jfuzv7/cold_calling_is_it_actually_harder_now_or_am_i/",
+         "So this page will not claim to fix connect rates. What a row here can raise is the "
+         "share of your dials that reach a current mobile at all. Whether anyone picks up is "
+         "carrier screening and human behaviour, and no provider sells that."),
+        ("Paying for the data is not the same as the data being right",
+         "The mistake is assuming that paying for contact data means every record will be correct.",
+         "r/RecruitmentAgencies", "https://www.reddit.com/r/RecruitmentAgencies/comments/1v1gi34/best_tools_to_grow_a_recruiting_desk/",
+         "Agreed, and the shape of this page follows from it. Per call pricing means testing "
+         "three providers on your own rows costs less than one seat's first day, which beats "
+         "trusting anyone's accuracy claim, this page's included."),
+        ("It is hard to tell what is good from what is hype",
+         "I've looked at tools like Apollo, ZoomInfo, Lusha, Seamless, Cognism, etc., but it's hard to tell what's good vs hype.",
+         "r/salestechniques, 8 points", "https://www.reddit.com/r/salestechniques/comments/1qi5fx8/b2b_prospecting_tools_that_actually_work_in_europe/",
+         "It is hard because most of what you find when you search is seeded, which the "
+         "research behind this page ran into head first. The answer this page offers is not "
+         "another review: it is the raw result on your own list, for cents, from several "
+         "providers at once."),
+        ("Coverage is a function of where your buyers are",
+         "We tested a few vendors and the data quality changes a lot depending on region. Some are strong in US but weak in Europe.",
+         "r/AppBusiness", "https://www.reddit.com/r/AppBusiness/comments/1s28iwb/what_are_the_best_enrichment_tools_for_mobile/",
+         "No comparison table can tell you which of these is strong in your market, and this "
+         "one does not try. It puts the rates and the billing units side by side so the "
+         "experiment that would tell you is cheap enough to actually run."),
+        ("The ask is plain and nobody answers it plainly",
+         "Basically looking for a reliable provider for cold calling that gives accurate direct dials without breaking the bank.",
+         "r/sales_intelligence", "https://www.reddit.com/r/sales_intelligence/comments/1vh77bm/need_suggestions_on_providers_for_cold_calling/",
+         "The honest version: here are six, here is what each charges per number found, here "
+         "is which one gives you a free miss today, and here is how to test them on twenty of "
+         "your own rows before you commit to any of them."),
+    ],
+    "related": ("Find professional emails", "Check a phone number is real",
+                "Enrich a person from an email or LinkedIn URL", "Get a LinkedIn profile"),
+}
+
+
 # The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
 # use-case page answers one job; a workflow chains several, with a per-step price pulled live from
 # the catalog and a receipt from a real run. `run` is hand-recorded from that run and dated. A
