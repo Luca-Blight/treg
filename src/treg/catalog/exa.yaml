@@ -327,6 +327,40 @@ endpoints:
       note: "$0.007 per call for up to 10 results (OBSERVED 2026-08-27: 5 results → costDollars.total 0.007), plus $0.001 per result beyond 10. Platform billing settles the exact costDollars.total."
     docs_url: https://docs.exa.ai/reference/find-similar-links
 
+  - id: exa.creators.search
+    domain: creators
+    capability: creators.search
+    platform: creators
+    scope: any_account
+    method: POST
+    path: /search
+    name: "Find influencers & creators by describing them"
+    summary: "The search endpoint lets you intelligently search the web and extract contents from the results."
+    input:
+      bodyType: json
+      body:
+        query: {type: string, required: true, note: "describe the creators in words — niche, city/region, language, audience, brand mentions, follower scale ('Italian specialty-coffee baristas who post latte art', 'Belo Horizonte food guides recommending restaurants'). Keep city and niche words in the query; they are how Exa matches profile and post text", example: "Instagram creators who post their trucks fitted with Nitto tires, 8k+ followers"}
+        includeDomains: {type: "array[string]", required: true, note: "pin the platform: [\"instagram.com\"] | [\"tiktok.com\"] | [\"youtube.com\"] | [\"x.com\", \"twitter.com\"] | [\"twitch.tv\"]. Without it results drift to news and LinkedIn", example: ["instagram.com"]}
+        numResults: {type: integer, required: false, note: "1-100, default 10; beyond 10 adds $0.001 each", example: 15}
+        contents: {type: object, required: false, note: "{highlights: {query, maxCharacters: 400}} returns the matching caption/bio lines — the evidence a reviewer needs", example: {highlights: {query: "nitto tires", maxCharacters: 400}}}
+      note: "Do NOT set category: people — that returns LinkedIn profiles, not creators. Results are profile and post URLs on the platform (instagram.com/<handle>/p/…); take the handle from the URL, dedupe on it. This is the SEMANTIC shape of creator discovery: it follows meaning (niche, brand mentions, city) but cannot enforce follower ranges or engagement. The STRUCTURED shape is influencersclub.creators.search (follower/engagement/location/language filters, audience data). Best results come from running both and merging on handle — on the LessieAI people-search-bench influencer track (2026-08-27) Exa rows qualified 100% and influencers.club rows 63%, and the union scored 55 vs 38 for either alone."
+    test_request:
+      body: {query: "Instagram creators who post their trucks fitted with Nitto tires", includeDomains: ["instagram.com"], numResults: 3}
+    verified: '2026-08-27'
+    example_response: examples/exa.creators.search.json
+    cost:
+      type: per_call
+      value: 7
+      currency: USD
+      per: 1000
+      unit: call
+      source: observed
+      source_url: https://exa.ai/pricing
+      checked: '2026-08-27'
+      confidence: verified
+      note: "$0.007 per call for up to 10 results (OBSERVED 2026-08-27: includeDomains instagram.com, 15 results → costDollars.total 0.012 = base + 5 riders), plus $0.001 per result beyond 10. Highlights inside the call were not billed on top. Platform billing settles the exact costDollars.total."
+    docs_url: https://docs.exa.ai/reference/search
+
   - id: exa.web.answer
     domain: answer
     capability: web.answer

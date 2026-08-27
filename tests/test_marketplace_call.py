@@ -830,7 +830,7 @@ def test_exa_catalog_is_platform_priced():
     """Exa prices in dollars per call, so every curated route converts natively and is eligible."""
     cat = A.catalog_store.load()
     rows = cat.for_provider("exa")
-    assert len(rows) == 9
+    assert len(rows) == 10
     assert all(cat.platform_eligible(ep) for ep in rows)
     assert all(cat.cost_view(ep["cost"], "exa")["usd"] > 0 for ep in rows)
 
