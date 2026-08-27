@@ -418,6 +418,17 @@ branches on the row's `free` flag: `metered_single` states the rate and the mark
 description does not claim "never metered". Both were found the same way as the Semrush one: by
 reading the stock and AI-visibility pages after the tests went green.
 
+**`{cheapest}` is the cheapest of ONE unit, not of the page** (2026-08-28). `_uc_providers` groups
+rows by billing unit and `{cheapest}` expands to `cheapest_by_unit[units[0]]`, whichever unit is
+found first. On a mixed-unit page that is not the lowest number the reader can see: the keyword
+volume job printed "from $0.09" (DataForSEO's flat per-request row) above a table whose first line
+is Serpstat at $0.0005 per keyword, and the LinkedIn profile job printed "from $0.0015" above a
+$0.001 row. The comparison block itself is correct, because it prints a cheapest per unit with the
+units-are-not-interchangeable caveat; only the interpolated lede lies. Both ledes now state the
+rate in prose instead. **Do not write "from {cheapest}" on a page whose providers meter in more
+than one unit**, and read the rendered lede against the rendered table before shipping. Found the
+same way as the two above.
+
 The five flat ad pages predate all of this, keep their URLs and their `build_html.py` ownership, and
 are served first by the same flat handler; `test_legacy_flat_use_case_pages_still_answer` proves a
 rendered job page cannot shadow one. `/use-cases` is the crawlable hub they hang from; before it existed the only link into a spoke
