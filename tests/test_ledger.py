@@ -106,24 +106,94 @@ async def test_two_deliveries_of_one_payment_credit_once(c: AsyncClient):
     and the loser's savepoint rollback preserves its own caller's transaction, so its re-SELECT
     returns the winner's block instead of a 500.
 
+    Each task stages an UNRELATED row before calling topup, and every one of those rows must land:
+    that is what proves "preserves its own caller's transaction" - a loser recovered with a session
+    rollback instead of the savepoint would answer correctly and silently discard its caller's
+    staged work.
+
     Each task needs its OWN session: two coroutines sharing one AsyncSession is a different bug.
     """
+    from treg.models import AdConversion
+
     org_id, _ = await _org(c)
     promo = get_settings().promo_grant_micro
 
-    async def _deliver():
+    async def _deliver(n: int):
         async with session_maker() as db:
+            # Staged BEFORE topup, committed by the same caller commit: the losers' savepoint
+            # rollbacks must leave this pending row alive.
+            db.add(AdConversion(org_id=org_id, action=f"race-probe-{n}"))
             block = await ledger.topup(db, org_id, 5_000_000, "pi_concurrent")
             await db.commit()
             return block
 
-    blocks = await asyncio.gather(_deliver(), _deliver(), _deliver(), return_exceptions=True)
+    blocks = await asyncio.gather(*(_deliver(n) for n in range(3)), return_exceptions=True)
     assert not [b for b in blocks if isinstance(b, Exception)], blocks   # none may error out
     assert len({b.id for b in blocks}) == 1                              # all three: the same block
 
     assert await _assert_invariant(org_id) == promo + 5_000_000          # credited ONCE
     async with session_maker() as db:
         assert len([e for e in await ledger.entries_of(db, org_id) if e.kind == "topup"]) == 1
+        staged = (await db.execute(select(AdConversion).where(
+            AdConversion.org_id == org_id))).scalars().all()
+    # BOTH losers' staged work survived their IntegrityError savepoint rollbacks, not just the winner's.
+    assert sorted(row.action for row in staged) == [f"race-probe-{n}" for n in range(3)]
+
+
+async def test_topup_stages_only_and_the_caller_owns_durability(c: AsyncClient):
+    """The durability probe that distinguishes caller ownership: nothing a topup stages is durable
+    until the CALLER commits, and the caller's rollback discards all of it. This is the test that
+    fails against an internally-committing topup, where block, balance and entry are durable the
+    moment the call returns."""
+    org_id, _ = await _org(c)
+    promo = get_settings().promo_grant_micro
+
+    async with session_maker() as db:
+        block = await ledger.topup(db, org_id, 5_000_000, "pi_staged_only")
+        assert block is not None
+        # Before this session commits, a SECOND session must see none of it: no block, no balance
+        # change, no ledger entry.
+        async with session_maker() as probe:
+            assert (await probe.execute(select(CreditBlock).where(
+                CreditBlock.stripe_payment_intent == "pi_staged_only"))).scalars().first() is None
+            assert await ledger.balance_of(probe, org_id) == promo
+            assert [e for e in await ledger.entries_of(probe, org_id) if e.kind == "topup"] == []
+        await db.rollback()
+
+    async with session_maker() as db:  # after the rollback, all three remain absent
+        assert (await db.execute(select(CreditBlock).where(
+            CreditBlock.stripe_payment_intent == "pi_staged_only"))).scalars().first() is None
+        assert await ledger.balance_of(db, org_id) == promo
+        assert [e for e in await ledger.entries_of(db, org_id) if e.kind == "topup"] == []
+    assert await _assert_invariant(org_id) == promo
+
+
+async def test_grant_stages_only_and_the_caller_owns_durability(c: AsyncClient):
+    """Same probe for grant. The E2E promo test intercepts a commit, but an internally-committing
+    grant would satisfy it too (the intercepted commit would just be grant's own) - visibility from
+    a second session before and after the caller's commit is what proves who owns the transaction."""
+    async with session_maker() as db:
+        org = Org(name="grant-staged", slug="grant-staged")
+        db.add(org)
+        await db.commit()
+        await db.refresh(org)
+        org_id = org.id
+
+    promo = get_settings().promo_grant_micro
+    async with session_maker() as db:
+        block = await ledger.grant(db, org_id)
+        assert block is not None
+        # Staged, not durable: a second session sees no block and no balance change yet.
+        async with session_maker() as probe:
+            assert await ledger.blocks_of(probe, org_id) == []
+            assert await ledger.balance_of(probe, org_id) == 0
+            assert await ledger.entries_of(probe, org_id) == []
+        await db.commit()
+
+    async with session_maker() as db:  # the caller's commit is what lands it
+        assert [b.kind for b in await ledger.blocks_of(db, org_id)] == ["promotional"]
+        assert [e.kind for e in await ledger.entries_of(db, org_id)] == ["grant"]
+    assert await _assert_invariant(org_id) == promo
 
 
 @pytest.mark.parametrize("amount,ref", [(0, "pi_x"), (-1, "pi_x"), (1_000, "")])
@@ -178,6 +248,54 @@ async def test_concurrent_sweeps_pay_a_referral_once(c: AsyncClient):
     s = get_settings()
     assert await _assert_invariant(referrer_org) == promo + s.referral_referrer_micro
     assert await _assert_invariant(referred_org) == promo + s.referral_referred_micro
+
+
+async def test_sweep_grants_and_stamps_commit_together(c: AsyncClient, monkeypatch):
+    """Failure injection for the claim-then-grant saga: the REFERRER grant raises after the claim
+    commit, with the referee grant already STAGED. The new invariant is that the grants and the
+    block-id stamps commit together, so after the failure NEITHER a grant's ledger entry/block NOR
+    a stamp may exist. (The row staying claimed - paid with null block ids - is the deliberate
+    err-toward-paying-once design and is asserted as such, not changed.) The old non-atomic shape,
+    where each grant committed itself, leaves the referee's money durable with no stamp."""
+    from datetime import timedelta
+
+    from treg import referrals
+    from treg.models import Referral
+
+    r = await c.post("/users", json={"email": "atomic-ref@superdesign.dev"})
+    referrer_org, referrer_user = r.json()["org_id"], r.json()["id"]
+    r = await c.post("/users", json={"email": "atomic-referee@superdesign.dev"})
+    referred_org, referred_user = r.json()["org_id"], r.json()["id"]
+    promo = get_settings().promo_grant_micro
+
+    async with session_maker() as db:
+        db.add(Referral(code="ref-atomic", referrer_user_id=referrer_user,
+                        referred_user_id=referred_user, referred_org_id=referred_org,
+                        status="qualified",
+                        qualified_at=referrals.hold_cutoff() - timedelta(days=1)))
+        await db.commit()
+
+    real_grant = ledger.grant
+
+    async def referrer_grant_boom(db, org_id, *a, **kw):
+        if (kw.get("meta") or {}).get("side") == "referrer":
+            raise RuntimeError("crashed after the claim commit, mid-payout")
+        return await real_grant(db, org_id, *a, **kw)  # the referee grant stages normally
+
+    monkeypatch.setattr(ledger, "grant", referrer_grant_boom)
+    async with session_maker() as db:
+        assert await referrals.sweep(db) == 0  # the failure is contained, and nothing counts as paid
+
+    async with session_maker() as db:
+        row = (await db.execute(select(Referral))).scalars().first()
+        assert row.status == "paid"  # the claim commit stands: visible, and errs toward paying once
+        assert row.referred_block_id is None and row.referrer_block_id is None  # no stamp...
+        for org_id in (referrer_org, referred_org):  # ...and no grant. They land or vanish together.
+            assert [e for e in await ledger.entries_of(db, org_id)
+                    if e.kind == "grant" and e.meta.get("block_kind") == "referral"] == []
+            assert [b for b in await ledger.blocks_of(db, org_id) if b.kind == "referral"] == []
+    assert await _assert_invariant(referrer_org) == promo
+    assert await _assert_invariant(referred_org) == promo
 
 
 async def test_referee_instant_grant_failure_after_staging_never_raises(
