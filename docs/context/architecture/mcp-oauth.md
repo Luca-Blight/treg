@@ -2,8 +2,13 @@
 title: MCP — the front door for assistants, and treg as an OAuth authorization server
 status: shipped
 sources:
+  - src/treg/application/auth.py
   - src/treg/mcp.py
   - src/treg/mcp_oauth.py
+  - src/treg/domain/identity/health.py
+  - src/treg/domain/identity/mcp_oauth.py
+  - src/treg/domain/identity/session.py
+  - src/treg/routers/auth.py
   - src/treg/web/connect-demo.html
 related:
   - architecture/auth-secrets.md
@@ -211,8 +216,12 @@ partial-body message and the real disconnect are replayed unchanged without inve
 Elsewhere treg speaks OAuth as a **client** (`oauth.py` signs in with GitHub, connects a provider
 account). Here it is the thing that **issues** tokens. Different direction, different module.
 
-Built refusal-first: the metadata and the `aud` check landed before anything could issue a token, so
-there was never a window where the server accepted credentials it had not learned to check.
+`routers.auth` owns OAuth HTTP translation and consent rendering. `application.auth` sequences client
+registration, authorization, code exchange, refresh rotation/replay response, revocation, and grant-team
+changes; it opens each session and owns every commit. The identity leaf owns token/resource validation and
+grant-family primitives in `domain.identity.mcp_oauth`; `treg.mcp_oauth` remains a compatibility alias.
+Its client-metadata fetch imports `health` lazily, and `domain.identity.health` aliases the root
+credential-network safety module so both paths retain one module object and monkeypatch target.
 
 ## The `aud` claim carries the weight
 
@@ -234,7 +243,7 @@ minted on either name survive a `TREG_PUBLIC_URL` flip in either direction). A p
 the old resource URL as its audience for its whole lifetime, because refresh reissues the audience
 that was consented to (`row.resource`); validating against the canonical URL alone would 401 every
 pre-move grant with refresh unable to recover. The transport validates via `read_access_token_any`,
-and `/oauth/token` treats the two names as the same resource (`api._same_mcp_resource`).
+and `/oauth/token` treats the two names as the same resource (`routers.auth._same_mcp_resource`).
 Slash-variant spellings are healed by `normalize_resource()` at every store/mint/compare site:
 authorize accepts `…/mcp` via a forgiving compare, and a token whose audience kept that spelling
 would fail the exact audience match forever.

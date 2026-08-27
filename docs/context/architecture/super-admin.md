@@ -4,7 +4,7 @@ status: shipped
 sources:
   - src/treg/api.py
   - src/treg/routers/admin.py
-  - src/treg/routers/dependencies.py
+  - src/treg/domain/identity/access.py
   - src/treg/config.py
 related:
   - architecture/multi-tenancy.md
@@ -16,7 +16,7 @@ related:
 Everything else is org-scoped; super-admin is the one capability that sees **across all orgs**. It's
 deliberately separate from org roles.
 
-## Authorization (`require_superadmin` in `routers.dependencies`) — hybrid
+## Authorization (`require_superadmin` in `domain.identity.access`) — hybrid
 A caller is a super-admin if EITHER:
 - the presented `X-Treg-Token` equals the env `admin_token` (`get_settings().admin_token`, from
   `TREG_ADMIN_TOKEN`), compared with `hmac.compare_digest` → principal `"env-admin"`; OR
@@ -26,12 +26,12 @@ A caller is a super-admin if EITHER:
 Otherwise 403. The env key bootstraps; `POST /admin/users/{id}/superadmin` then grants named users the
 flag (so a web portal can log in with either). Returns a principal string (for audit).
 
-`api.py` re-exports this dependency during the staged router migration, so the existing admin route
-definitions and compatibility imports still refer to the same function object.
+`api.py` re-exports this dependency during the staged router migration, so compatibility imports refer
+to the same function object.
 
-The cross-tenant GET and reconciliation handlers live in `routers.admin`; `api.py` appends its two
-router blocks around the unchanged admin mutation block to preserve registration order. The mutation
-handlers and their control helpers remain in `api.py` for the later control-layer extraction.
+The cross-tenant read, mutation, and reconciliation handlers live in three ordered blocks in
+`routers.admin`. The mutation block shares the org deletion and member-rule cleanup helpers from
+`routers.orgs`.
 
 ## Suspension enforcement (in `require_member`)
 Two flags gate the **org-scoped** path: `require_member` raises 403 if `user.suspended` ("account

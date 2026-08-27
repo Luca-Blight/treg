@@ -4,11 +4,30 @@ status: shipped
 sources:
   - src/treg/web/sitetrack.js
   - src/treg/api.py
+  - src/treg/bootstrap_http.py
+  - src/treg/caller_metadata.py
+  - src/treg/application/auth.py
+  - src/treg/application/connect.py
+  - src/treg/application/onboard.py
+  - src/treg/application/referrals.py
+  - src/treg/application/signup.py
   - src/treg/routers/__init__.py
   - src/treg/routers/admin.py
+  - src/treg/routers/auth.py
+  - src/treg/routers/auth_helpers.py
+  - src/treg/routers/billing.py
   - src/treg/routers/catalog.py
-  - src/treg/routers/dependencies.py
+  - src/treg/routers/connections.py
+  - src/treg/routers/onboard.py
+  - src/treg/routers/orgs.py
+  - src/treg/routers/resources.py
+  - src/treg/routers/referrals.py
+  - src/treg/routers/signup_cookies.py
   - src/treg/routers/web.py
+  - src/treg/domain/identity/access.py
+  - src/treg/domain/governance/teams.py
+  - src/treg/domain/identity/mcp_oauth.py
+  - src/treg/domain/identity/session.py
   - src/treg/timeutil.py
   - src/treg/catalog_store.py
   - src/treg/email.py
@@ -23,11 +42,8 @@ related:
 
 # The API
 
-Route definitions live on `api.router`; the open Catalog JSON block is defined in
-`routers.catalog`, the three presentation blocks are defined in `routers.web`, and the two
-cross-tenant admin read/report blocks are defined in `routers.admin`. `api.py` attaches each block at
-its original registration point. `bootstrap.create_app()` assembles the combined route table into
-FastAPI roles.
+`api.router` preserves public registration order while concern routers contribute ordered route blocks.
+`bootstrap.create_app()` assembles the combined route table into FastAPI roles.
 `api.app` remains the deployed, backward-compatible `all` role. Everything the CLI + skill do is one
 HTTP call over this. The factory lifespan
 runs `init_db()`, then `_backfill_provider_extra_tools()` (the idempotent repair for provider registry
@@ -66,15 +82,34 @@ falls through and finds no usable marketplace credential. A genuine URL-passthro
 with the names of the colliding usable tools and the explicit `/call/<name>/<path>` escape hatch.
 
 ## Auth
-The shared HTTP dependency family is defined in `routers.dependencies` and re-exported by `api.py`
-during the staged route migration. `require_member()` reads the `X-Treg-Token` header, hashes it
+`require_member()` reads the `X-Treg-Token` header, hashes it
 (`crypto.hash_token`), looks up the
 `Membership` by `token_hash`, and returns a `Caller` (`membership, user, org` + `org_id`/`email`/`role`);
 401 on missing/invalid. Every scoped endpoint depends on it **except** `POST /users` + `POST
 /invites/accept` (open, self-registering) and `GET /oauth/callback` (browser-hit, protected by `state`).
+Each successful identity dependency commits its read-only transaction before the handler runs, so an
+application use case can open its own session without waiting behind the request's pool slot. The
+dependency-cached session remains usable because `session_maker` sets `expire_on_commit=False`.
 Authz = org scoping + a role gate: `_can_manage` lets admin/owner manage any org resource, a member only
 what they created; `_require_admin_of` gates the org-admin endpoints. See
 [multi-tenancy](../architecture/multi-tenancy.md).
+
+Cookie mechanics stay at the HTTP boundary because they interpret request cookies; the shared
+`_same_origin` CSRF check is available to every cookie-authenticated mutation.
+
+Email OTP and invite sign-in use cases own their sessions and every commit, including OTP rate, attempt,
+consumption, user provisioning, and invite-token consumption. They return framework-neutral results or
+semantic errors; the HTTP boundary maps them to responses and sets browser cookies. Every identity door
+reuses the same first-proof provisioning command.
+
+The CLI pairing state machine prunes before creating a pending entry, pops a completed result exactly
+once, and preserves session lookup, attempt decrement, pending pop, and result publication order. Its
+team-selection sessions are read-only. The three short-lived dictionaries are process-local and shared
+by every pairing door.
+
+Social login builds each authorization request, exchanges the provider code, validates the proven
+email, provisions the user, and commits before publishing a CLI result. Provider callback state is
+validated before resolving the shared HTTP client. `/auth/logout` remains an HTTP-only cookie action.
 
 ## Endpoints
 - **Users / orgs:** `register_user` (`POST /users`, open, legacy — used by the test fixture) creates the
@@ -311,9 +346,9 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   `/login?cli=<attacker-id>` link (whose code the victim doesn't have, or that was never `start`ed) can
   never complete. Deliberately a POST guarded by `_same_origin` (Origin must be the configured
   `public_url` **or** the request's own host — public_url alone broke localhost). The GitHub/Google
-  callbacks share `_finish_oauth_login`, which sets the session cookie then bounces a CLI handshake back
-  to `/login?cli=<id>` so **all four doors** go through the same picker. `auth_logout` uses the same
-  `_same_origin` guard.
+  callbacks validate cookie/query state before resolving the shared HTTP client; `_finish_oauth_login`
+  sets the session cookie and bounces to `/login?cli=<id>` for the shared picker. `auth_logout`
+  uses the same `_same_origin` guard.
   **Google** — `auth_google` / `auth_google_callback` (`GET /auth/google[/callback]`): the same
   session + CLI-handshake plumbing as GitHub (token from `google_token_url`, email from
   `google_userinfo_url`), gated on `google_client_id` and surfaced via `/meta`'s `google` flag. The
@@ -351,13 +386,13 @@ what they created; `_require_admin_of` gates the org-admin endpoints. See
   either way → `/?invite_expired=1`. `auth_me`
   (`GET /auth/me`) answers for a **token**
   (`X-Treg-Token`) as well as a session cookie, so the dashboard's token door can learn its own email.
-  `auth_cli_token` (`GET /auth/cli-token`, `require_identity`) mints a fresh **identity token** for the
-  caller (session OR token); the dashboard embeds it in copy-paste snippets + a "copy token" button (pair
-  with `X-Treg-Org` to pick the org). Signed session cookies + identity tokens carry a **`tv`
+  `auth_cli_token` (`GET /auth/cli-token`, `require_identity`) delegates token minting and optional team
+  pinning to `application.auth.issue_cli_token`; the dashboard embeds the fresh **identity token** in
+  copy-paste snippets and its "copy token" button. Signed sessions and identity tokens carry a **`tv`
   (token_version)** claim bound to the user row (`sess.make`/`read_claims`, checked in `_user_from_session`
   / `_user_from_identity_token`); `auth_revoke_tokens` (`POST /auth/revoke-tokens`, `require_identity`)
-  bumps `User.token_version`, invalidating every token that user holds at once — the kill switch for a
-  leaked token that (unlike suspension) keeps the account and (unlike rotating `TREG_SESSION_SECRET`)
+  delegates to `application.auth.revoke_identity_tokens`, which bumps `User.token_version` and invalidates
+  every token that user holds at once; this kill switch keeps the account active and
   affects only that user; it re-issues a fresh cookie + token so the caller stays signed in. A token with
   no `tv` (minted before this shipped) reads as `tv=0`, so a plain deploy revokes nobody.
   Plus `auth_me` (returns `onboarded`), `auth_logout`, and **onboarding** — `POST /onboard/demo|skip|reset`

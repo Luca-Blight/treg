@@ -17,6 +17,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import BaseRoute, Mount
 
 from . import adsconv, analytics, audit
+from .bootstrap_http import (
+    _BodyDecodeMiddleware,
+    _LegacyHostRedirectMiddleware,
+    _SecurityHeadersMiddleware,
+)
 from .config import get_settings
 from .db import init_db, session_maker
 
@@ -100,7 +105,6 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/oauth/authorize', ('POST',), 'oauth_authorize_approve'),
     ('/oauth/revoke', ('POST',), 'oauth_revoke'),
     ('/oauth/token', ('POST',), 'oauth_token'),
-    ('/.well-known/oauth-protected-resource/mcp', ('GET',), 'oauth_protected_resource'),
     ('/.well-known/oauth-protected-resource', ('GET',), 'oauth_protected_resource'),
     ('/.well-known/oauth-authorization-server', ('GET',), 'oauth_authorization_server'),
     ('/.well-known/openai-apps-challenge', ('GET',), 'openai_apps_challenge'),
@@ -236,6 +240,9 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
 })
 _DATAPLANE_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ("/call/{rest:path}", ("DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"), "call_tool"),
+    # MCP is calling traffic, so its mount and its RFC 9728 resource metadata belong to the
+    # dataplane. Token issuance (consent, /oauth/*) stays on control; the dataplane only validates.
+    ('/.well-known/oauth-protected-resource/mcp', ('GET',), 'oauth_protected_resource'),
 })
 
 ROLE_BACKGROUND_TASKS: dict[AppRole, tuple[str, ...]] = {
@@ -255,13 +262,13 @@ ROLE_STARTUP_CHECKS: dict[AppRole, tuple[str, ...]] = {
         "treg.db.init_db",
         "treg.api._backfill_provider_extra_tools",
         "app.state.http",
+        "treg.mcp.mcp_lifespan",
     ),
     "control": (
         "treg.db.init_db",
         "treg.api._backfill_provider_extra_tools",
         "treg.api._bootstrap_single_user",
         "app.state.http",
-        "treg.mcp.mcp_lifespan",
     ),
 }
 
@@ -405,7 +412,7 @@ def _lifespan(api_module, role: AppRole):
             else None
         )
         try:
-            if role == "dataplane" or _mcp is None:
+            if role == "control" or _mcp is None:
                 yield
             else:
                 async with _mcp.mcp_lifespan():
@@ -439,9 +446,9 @@ def create_app(role: AppRole = "all") -> FastAPI:
     )
 
     # Registration order is part of the compatibility surface. add_middleware prepends entries.
-    app.add_middleware(api_module._LegacyHostRedirectMiddleware)
-    app.add_middleware(api_module._SecurityHeadersMiddleware)
-    app.add_middleware(api_module._BodyDecodeMiddleware)
+    app.add_middleware(_LegacyHostRedirectMiddleware)
+    app.add_middleware(_SecurityHeadersMiddleware)
+    app.add_middleware(_BodyDecodeMiddleware)
     app.add_exception_handler(OverflowError, api_module._id_out_of_range)
     app.add_exception_handler(PoolTimeoutError, api_module._pool_saturated)
     app.add_exception_handler(StarletteHTTPException, api_module._mark_treg_own_errors)
@@ -449,7 +456,7 @@ def create_app(role: AppRole = "all") -> FastAPI:
     _include_role_routes(app, api_module, role)
     _install_head_and_openapi(app)
 
-    if role != "dataplane" and _mcp is not None:
+    if role != "control" and _mcp is not None:
         app.mount("/mcp", _mcp.mcp_app)
 
     startup_checks = list(ROLE_STARTUP_CHECKS[role])

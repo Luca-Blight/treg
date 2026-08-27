@@ -3,7 +3,8 @@ title: Expanding a marketplace category — the add-a-provider playbook
 status: guide
 sources:
   - src/treg/oauth_providers.py
-  - src/treg/api.py
+  - src/treg/application/connect.py
+  - src/treg/routers/connections.py
   - src/treg/config.py
 related:
   - architecture/auth-secrets.md
@@ -21,7 +22,8 @@ reconciled against the provider's own credit meter.
 
 Everything lives in **`oauth_providers.py`** (the `REGISTRY` of `OAuthProvider` entries). Connecting,
 verifying and auto-provisioning a pasted-key provider is **`connect_with_token`** (`POST /connections/token`)
-in `api.py`. Both are documented in [auth-secrets](../architecture/auth-secrets.md) + [api](../interface/api.md);
+in `routers.connections`, backed by `application.connect`. Both are documented in
+[auth-secrets](../architecture/auth-secrets.md) + [api](../interface/api.md);
 this fragment is the *process*, not the mechanics reference.
 
 ## The two kinds of provider
