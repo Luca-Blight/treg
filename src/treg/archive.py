@@ -663,12 +663,11 @@ async def refresh_once(client) -> int:
 
 async def _refresh_call(client, key) -> bool:
     """Re-make one stored question on treg's own key. Injection reuses the ONE authoritative
-    binding builder (api._platform_bindings, imported lazily — api imports this module, so the
-    import cannot live at the top) plus the same injectors that serve a live call; the key
-    value resolves from settings exactly as the relay does it."""
+    binding builder (oauth_providers.platform_bindings — moved there so this worker never
+    imports api; the routers→api boundary forbids that chain); the key value resolves from
+    settings exactly as the relay does it."""
     try:
-        from . import injectors, oauth_providers
-        from . import api as _api  # lazy: circular at module level, settled by now at runtime
+        from . import oauth_providers
 
         provider = oauth_providers.get(key.provider)
         secret_value = get_settings().platform_key_for(key.provider)
@@ -676,7 +675,7 @@ async def _refresh_call(client, key) -> bool:
             return False  # key withdrawn or provider de-listed — quietly not refreshable
         headers: dict[str, str] = dict(key.req_headers or {})  # replay what keyed the question
         params: list = []
-        for binding in _api._platform_bindings(provider):
+        for binding in oauth_providers.platform_bindings(provider):
             value = getattr(get_settings(), binding.get("platform_setting", ""), "") or ""
             fmt = binding.get("format") or "{secret}"
             rendered = fmt.replace("{secret}", value) if value else fmt

@@ -52,9 +52,9 @@ counts as demand). Brakes: per-provider daily call cap (counted from `origin="re
 snapshots — no bookkeeping table to drift) and 10 per pass. The call replays the stored
 request shape — method, vendor-facing URL, body, and the KEYING headers (`req_headers`; without
 them the recording lands under a different key, found the hard way in tests) — with injection
-built by the ONE authoritative builder (`api._platform_bindings`, imported lazily inside the
-call: api imports this module, so the import cannot live at the top) and the key value from
-settings. The refresh spend is treg's own, attached to no org and absent from the ledger — the
+built by the ONE authoritative builder (`oauth_providers.platform_bindings` — moved out of
+api.py so this worker never imports api; the routers→api import boundary forbids that chain)
+and the key value from settings. The refresh spend is treg's own, attached to no org and absent from the ledger — the
 cap is the brake. Each refresh records through the same `_store` (`origin="refresh"`), so
 refreshing IS the sampling that teaches the timer.
 
