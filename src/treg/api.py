@@ -8661,6 +8661,9 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
         charge for a 2xx whose payload is an embedded error (verified live 2026-07-30 — see
         docs/context/architecture/catalog.md, "the provider decides what counts as success").
 
+      - exa: REPORTED in dollars, `costDollars.total` on every 2xx body (same contract as
+        dataforseo's `cost`) — the only place the per-result and per-content riders exist.
+
     Everyone else settles at the estimate. This is the same signal the catalog's `observed_cost`
     harvests, which is what lets phase 5's drift detector compare the two numbers directly."""
     provider = mk.provider
@@ -8715,6 +8718,16 @@ def _observed_cost_micro(mk: MarketplaceCall, body: bytes, headers=None) -> int 
         cost = doc.get("cost")
         if isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost >= 0:
             return int(cost * 1_000_000 + 0.5)
+        return None
+    if provider == "exa":
+        # REPORTED in dollars: every Exa response carries `costDollars.total` — the search base,
+        # the per-result rider beyond 10, deep-mode uplifts and each contents type summed (verified
+        # live 2026-08-27: 20 results → 0.016, highlights+summary → 0.002). The catalog holds the
+        # base price; this is what makes a 20-result search settle at what Exa actually charged.
+        cost = doc.get("costDollars")
+        total = cost.get("total") if isinstance(cost, dict) else None
+        if isinstance(total, (int, float)) and not isinstance(total, bool) and total >= 0:
+            return int(total * 1_000_000 + 0.5)
         return None
     if provider in ("scrapecreators", "akta", "leadmagic"):
         credits = doc.get("credits_charged" if provider == "scrapecreators" else "credits_consumed")

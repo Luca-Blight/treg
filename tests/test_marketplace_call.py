@@ -457,6 +457,12 @@ def test_observed_cost_only_trusts_a_real_number():
     assert A._observed_cost_micro(_mk("dataforseo"), b"not json") is None
     assert A._observed_cost_micro(_mk("dataforseo"), b"[1,2,3]") is None
     assert A._observed_cost_micro(_mk("tikhub"), b'{"cost": 0.5}') is None, "tikhub doesn't report a charge"
+    # exa reports dollars one level down; a 20-result search is the base plus ten $0.001 riders
+    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": 0.016, "search": {"neural": 0.016}}}') == 16_000
+    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": 0}}') == 0
+    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": {"total": "0.007"}}') is None
+    assert A._observed_cost_micro(_mk("exa"), b'{"costDollars": 0.007}') is None
+    assert A._observed_cost_micro(_mk("exa"), b'{"results": []}') is None
     assert A._observed_cost_micro(_mk("scrapecreators"), b'{"credits_charged": 2}') == 2 * EP_CALL_MICRO
     assert A._observed_cost_micro(_mk("scrapecreators"), b'{"success": true}') is None
     # akta reports `credits_consumed` — the field that makes its per-section enrich billable at
@@ -818,6 +824,15 @@ def test_crustdata_and_aviato_catalogs_are_platform_priced():
     rows = cat.for_provider("crustdata") + cat.for_provider("aviato")
     assert len(rows) == 29
     assert all(cat.platform_eligible(ep) for ep in rows)
+
+
+def test_exa_catalog_is_platform_priced():
+    """Exa prices in dollars per call, so every curated route converts natively and is eligible."""
+    cat = A.catalog_store.load()
+    rows = cat.for_provider("exa")
+    assert len(rows) == 9
+    assert all(cat.platform_eligible(ep) for ep in rows)
+    assert all(cat.cost_view(ep["cost"], "exa")["usd"] > 0 for ep in rows)
 
 
 def test_brightdata_estimate_counts_the_body_array():

@@ -1064,6 +1064,7 @@ long strings clipped, ~10 KB cap) by the verifier, then human-reviewed for PII b
 | service | platform focus | auth (from oauth_providers.py) | overlap group |
 |---|---|---|---|
 | dataforseo | google, web | Basic (login:password base64) | SEO: web.backlinks.*, web.url.metrics |
+| exa (2026-08-27) | web, people, companies | `x-api-key` header; dollar-priced, settles from `costDollars.total` | Search: web.search*, web.contents.get, web.similar, web.answer; Enrichment: people.search, companies.search |
 | moz | web | Basic (AccessID:SecretKey base64), POST JSON API | SEO: web.backlinks.*, web.url.metrics |
 | tikhub | tiktok (+instagram, youtube, x) | Bearer key | Social: tiktok.* |
 | justoneapi | tiktok (+instagram, xiaohongshu, weibo) | `?token=` query param | Social: tiktok.* |
