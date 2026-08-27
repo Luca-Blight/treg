@@ -2,10 +2,10 @@
 
 A coding agent reaches treg through the CLI, and the skill tells it which commands to run. An agent
 inside ChatGPT or a Codex plugin has no CLI, and telling it to install one is where the visitor
-leaves. This module is the other door: five tools over MCP, so an agent can search the catalog, read
+leaves. This module is the other door: six tools over MCP, so an agent can search the catalog, read
 a price and make the call without anything being installed first.
 
-**Five tools, not 2,600.** The catalog stays *data* — one tool searches it, one reads an entry, one
+**Six tools, not 2,600.** The catalog stays *data* — one tool searches it, one reads an entry, one
 calls an endpoint. Exposing every endpoint as its own MCP tool would flood the model's context with
 2,600 schemas and make the catalog unusable, which is the opposite of the point.
 
@@ -39,6 +39,7 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from typing import Any, TypedDict
 from urllib.parse import parse_qsl, urlsplit
 
@@ -71,6 +72,27 @@ _CALLS = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world
 # route cheap enough to be the honest choice.
 _INTERNAL_BASE = "http://treg.internal"
 _TIMEOUT = httpx.Timeout(120.0, connect=5.0)
+
+
+@dataclass(frozen=True)
+class _SurfacePolicy:
+    """The small set of values that may differ between the two public MCP surfaces."""
+
+    client_name: str
+    event_source: str
+    next_call: str
+
+
+_TEAM_SURFACE = _SurfacePolicy(
+    client_name="mcp",
+    event_source="mcp",
+    next_call="call(...)"
+)
+_DIRECTORY_SURFACE = _SurfacePolicy(
+    client_name="claude-connector",
+    event_source="claude-connector",
+    next_call="catalog_call_read(...) or catalog_call_write(...), based on the documented method",
+)
 
 
 class _StaticSurfaceCapabilities:
@@ -520,6 +542,12 @@ async def _whose_grant(client: httpx.AsyncClient, slug: str | None, *, oauth: bo
     structured_output=True
 )
 async def catalog_search(query: str, limit: int = 8) -> SearchOut:
+    return await _catalog_search_impl(query, limit, surface=_TEAM_SURFACE)
+
+
+async def _catalog_search_impl(
+    query: str, limit: int = 8, *, surface: _SurfacePolicy
+) -> SearchOut:
     cat = catalog_store.load()
     limit = max(1, min(limit, 25))
     # Score, then let the evidence break the ties. Token scoring produces ties by the dozen — every
@@ -562,7 +590,7 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
         # Same miss log as GET /catalog/search (see models.SearchMiss) — this tool reads the catalog
         # in-process, so the HTTP route's logging never sees an MCP agent's empty search.
         if query.strip():
-            audit.record_search_miss(query=query.strip(), source="mcp")
+            audit.record_search_miss(query=query.strip(), source=surface.event_source)
         # the zero-result answer carries the rows that JUST missed the gate and which words they
         # missed — the caller is an LLM, and told exactly what to drop it re-queries correctly
         near = catalog_store.near_misses(query, cat)
@@ -582,7 +610,8 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
                 "requests steer which provider gets added next"
             )
     else:
-        out["next"] = "catalog_get(endpoint_id) for parameters and the exact price, then call(...)"
+        out["next"] = ("catalog_get(endpoint_id) for parameters and the exact price, then "
+                       f"{surface.next_call}")
     return out
 
 
@@ -598,6 +627,14 @@ async def catalog_search(query: str, limit: int = 8) -> SearchOut:
     structured_output=True
 )
 async def catalog_request(capability: str, ctx: Context, note: str = "") -> RequestOut:
+    return await _catalog_request_impl(
+        capability, ctx, note, surface=_TEAM_SURFACE,
+    )
+
+
+async def _catalog_request_impl(
+    capability: str, ctx: Context, note: str = "", *, surface: _SurfacePolicy
+) -> RequestOut:
     """Relays to POST /tool-requests so the rate limiting, field caps and attribution live in one
     place; the bearer (when the session has one) turns into who-asked on the stored row."""
     token = _bearer(ctx)
@@ -605,9 +642,11 @@ async def catalog_request(capability: str, ctx: Context, note: str = "") -> Requ
     # making the per-IP rate limit a single global bucket — forward the edge's X-Forwarded-For
     # so the API's limiter sees the real caller.
     xff = (ctx.headers or {}).get("x-forwarded-for") or (ctx.headers or {}).get("X-Forwarded-For") or ""
-    async with _api(token) as client:
+    api_context = (_api(token) if surface is _TEAM_SURFACE
+                   else _api(token, client_name=surface.client_name))
+    async with api_context as client:
         r = await client.post("/tool-requests", json={
-            "capability": capability, "note": note, "source": "mcp"},
+            "capability": capability, "note": note, "source": surface.event_source},
             headers={"X-Forwarded-For": xff} if xff else {})
     return _body(r)
 
@@ -623,10 +662,18 @@ async def catalog_request(capability: str, ctx: Context, note: str = "") -> Requ
     structured_output=True
 )
 async def catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
+    return await _catalog_get_impl(endpoint_id, ctx, surface=_TEAM_SURFACE)
+
+
+async def _catalog_get_impl(
+    endpoint_id: str, ctx: Context, *, surface: _SurfacePolicy
+) -> CatalogGetOut:
     """Goes through the HTTP route rather than the store: that route attaches the observed
     reliability figures and the capability siblings, and those come from the database."""
     token = _bearer(ctx)
-    async with _api(token) as client:
+    api_context = (_api(token) if surface is _TEAM_SURFACE
+                   else _api(token, client_name=surface.client_name))
+    async with api_context as client:
         r = await client.get(f"/catalog/endpoints/{endpoint_id}")
     if r.status_code == 404:
         cat = catalog_store.load()
@@ -686,7 +733,7 @@ async def call(endpoint_id: str, params: dict | list | None = None,
     return await _call_impl(
         endpoint_id, params=params, method=method, idempotency_key=idempotency_key,
         query=query, body=body, headers=headers, content_type=content_type, ctx=ctx,
-        catalog_only=False, client_name="mcp", allowed_methods=None,
+        catalog_only=False, surface=_TEAM_SURFACE, allowed_methods=None,
     )
 
 
@@ -694,8 +741,9 @@ async def _call_impl(endpoint_id: str, params: dict | list | None = None,
                      method: str | None = None, idempotency_key: str | None = None,
                      query: dict | None = None, body: dict | list | str | None = None,
                      headers: dict | None = None, content_type: str | None = None,
-                     ctx: Context = None, *, catalog_only: bool, client_name: str,
-                     allowed_methods: frozenset[str] | None) -> CallOut:
+                     ctx: Context = None, *, catalog_only: bool,
+                     allowed_methods: frozenset[str] | None,
+                     surface: _SurfacePolicy) -> CallOut:
     token = _bearer(ctx) if ctx else ""
     if not token:
         return _need_token()
@@ -786,10 +834,10 @@ async def _call_impl(endpoint_id: str, params: dict | list | None = None,
                 ctype = "text/plain"
         extra_headers["content-type"] = ctype
 
-    # Keep the legacy call shape intact for integrations/tests that wrap `_api(token)`. The v2
+    # Keep the existing team-MCP call shape intact for integrations/tests that wrap `_api(token)`. The V2
     # connector opts into its own attribution header without changing the established surface.
-    api_context = (_api(token) if client_name == "mcp"
-                   else _api(token, client_name=client_name))
+    api_context = (_api(token) if surface is _TEAM_SURFACE
+                   else _api(token, client_name=surface.client_name))
     async with api_context as client:
         # Resolve the team the same way `balance`/`my_tools` do BEFORE spending anything: a
         # multi-team identity token otherwise reaches /call and bounces off its raw
@@ -874,10 +922,16 @@ async def _call_impl(endpoint_id: str, params: dict | list | None = None,
     structured_output=True
 )
 async def balance(ctx: Context) -> BalanceOut:
+    return await _balance_impl(ctx, surface=_TEAM_SURFACE)
+
+
+async def _balance_impl(ctx: Context, *, surface: _SurfacePolicy) -> BalanceOut:
     token = _bearer(ctx)
     if not token:
         return _need_token()
-    async with _api(token) as client:
+    api_context = (_api(token) if surface is _TEAM_SURFACE
+                   else _api(token, client_name=surface.client_name))
+    async with api_context as client:
         org_id, slug, problem = await _resolve_org(client)
         if problem:
             return problem
@@ -926,7 +980,7 @@ async def my_tools(ctx: Context) -> MyToolsOut:
 
 
 # --------------------------------------------------------------------------------------------
-# Directory-reviewed catalog surface. Additive: the legacy `mcp` server above stays byte-for-byte
+# Directory-reviewed catalog surface. Additive: the team `mcp` server above stays byte-for-byte
 # compatible for clients that rely on `call` + `my_tools`; this server deliberately cannot resolve
 # arbitrary team-tool paths.
 # --------------------------------------------------------------------------------------------
@@ -971,7 +1025,7 @@ directory_mcp = MCPServer(
     structured_output=True,
 )
 async def directory_catalog_search(query: str, limit: int = 8) -> SearchOut:
-    return await catalog_search(query, limit)
+    return await _catalog_search_impl(query, limit, surface=_DIRECTORY_SURFACE)
 
 
 @directory_mcp.tool(
@@ -985,7 +1039,7 @@ async def directory_catalog_search(query: str, limit: int = 8) -> SearchOut:
     structured_output=True,
 )
 async def directory_catalog_get(endpoint_id: str, ctx: Context) -> CatalogGetOut:
-    return await catalog_get(endpoint_id, ctx)
+    return await _catalog_get_impl(endpoint_id, ctx, surface=_DIRECTORY_SURFACE)
 
 
 @directory_mcp.tool(
@@ -1010,7 +1064,7 @@ async def directory_catalog_call_read(
 ) -> CallOut:
     return await _call_impl(
         endpoint_id, params=params, idempotency_key=idempotency_key, query=query, headers=headers,
-        ctx=ctx, catalog_only=True, client_name="claude-connector",
+        ctx=ctx, catalog_only=True, surface=_DIRECTORY_SURFACE,
         allowed_methods=frozenset({"GET", "HEAD", "OPTIONS"}),
     )
 
@@ -1040,7 +1094,7 @@ async def directory_catalog_call_write(
     return await _call_impl(
         endpoint_id, params=params, idempotency_key=idempotency_key, query=query, body=body,
         headers=headers, content_type=content_type, ctx=ctx, catalog_only=True,
-        client_name="claude-connector",
+        surface=_DIRECTORY_SURFACE,
         allowed_methods=frozenset({"POST", "PUT", "PATCH", "DELETE"}),
     )
 
@@ -1053,7 +1107,7 @@ async def directory_catalog_call_write(
     structured_output=True,
 )
 async def directory_balance(ctx: Context) -> BalanceOut:
-    return await balance(ctx)
+    return await _balance_impl(ctx, surface=_DIRECTORY_SURFACE)
 
 
 @directory_mcp.tool(
@@ -1067,7 +1121,9 @@ async def directory_balance(ctx: Context) -> BalanceOut:
     structured_output=True,
 )
 async def directory_catalog_request(capability: str, ctx: Context, note: str = "") -> RequestOut:
-    return await catalog_request(capability, ctx, note)
+    return await _catalog_request_impl(
+        capability, ctx, note, surface=_DIRECTORY_SURFACE,
+    )
 
 
 # --------------------------------------------------------------------------------------------
@@ -1106,7 +1162,7 @@ def _allowed_hosts() -> list[str]:
     return sorted(dict.fromkeys(hosts))
 
 
-def _allowed_origins() -> list[str]:
+def _allowed_origins(resource_version: str = "v1") -> list[str]:
     """Which `Origin` headers the transport will answer to.
 
     `"*"` is NOT a wildcard here — the SDK compares origins literally, and only a `:*` port suffix is
@@ -1129,9 +1185,13 @@ def _allowed_origins() -> list[str]:
     origins += [f"http://localhost:{p}" for p in ("8000", "18790")]
     origins += [f"http://127.0.0.1:{p}" for p in ("8000", "18790")]
     origins += ["http://localhost", "http://127.0.0.1"]
-    # Claude's hosted custom/directory connector UI. Exact, never a wildcard; the transport still
-    # rejects every other browser origin.
-    origins += ["https://claude.ai"]
+    if resource_version == "v2":
+        # Claude's hosted custom/directory connector UI. Exact, never a wildcard; the transport
+        # still rejects every other browser origin. This permission belongs to V2 only: adding the
+        # directory connector must not widen the team MCP surface.
+        origins += ["https://claude.ai"]
+    elif resource_version != "v1":
+        raise ValueError(f"unknown MCP resource version {resource_version!r}")
     origins += [o.strip() for o in os.environ.get("TREG_MCP_ALLOWED_ORIGINS", "").split(",") if o.strip()]
     return sorted(dict.fromkeys(origins))
 
@@ -1140,7 +1200,7 @@ class NormalizeDirectoryMCPPath:
     """Make the directory transport accept its URL with or without the final slash.
 
     Starlette mounts match ``/mcp/v2/`` but not the exact no-slash path. Hosted Claude removes the
-    slash before its first POST, so the request otherwise falls through to the legacy ``/mcp``
+    slash before its first POST, so the request otherwise falls through to the team ``/mcp``
     mount, discovers V1 OAuth metadata, obtains a V1 token, and then receives a 404. Rewriting the
     ASGI path before route matching keeps both spellings on the same V2 transport and audience.
     """
@@ -1346,12 +1406,15 @@ def build_mcp_app(*, server: MCPServer | None = None, resource_version: str = "v
     to stream, and skipping SSE framing is most of the speed.
     """
     server = server or mcp
+    if (server is mcp and resource_version != "v1") or \
+            (server is directory_mcp and resource_version != "v2"):
+        raise ValueError("the MCP server and resource version do not name the same public surface")
     transport = server.streamable_http_app(
         streamable_http_path="/", stateless_http=True, json_response=True,
         transport_security=TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
             allowed_hosts=_allowed_hosts(),
-            allowed_origins=_allowed_origins(),
+            allowed_origins=_allowed_origins(resource_version),
         ),
     )
     # Wrapped HERE, not around the module-level value, so a caller that builds its own app gets the

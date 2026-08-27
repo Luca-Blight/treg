@@ -177,6 +177,9 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/web/vendor/README.md` | interface/dashboard.md |
 | `src/treg/web/vendor/vue-3.5.41.global.prod.js` | interface/dashboard.md |
 | `tests/test_import_lightness.py` | architecture/import-boundaries.md |
+| `tests/test_marketplace_call.py` | architecture/mcp-oauth.md |
+| `tests/test_mcp.py` | architecture/mcp-oauth.md |
+| `tests/test_mcp_directory.py` | architecture/mcp-oauth.md |
 | `tests/test_router_dependencies.py` | architecture/multi-tenancy.md |
 
 ## Fragment → sources
@@ -191,7 +194,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `__init__.py`, `__init__.py`, `__init__.py`, `teams.py`, `__init__.py`, `test_import_lightness.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
-| `architecture/mcp-oauth.md` | `auth.py`, `mcp.py`, `mcp_oauth.py`, `health.py`, `mcp_oauth.py`, `session.py`, `auth.py`, `claude-connector.html`, `connect-demo.html`, `CLAUDE-CONNECTOR-SUBMISSION.md` |
+| `architecture/mcp-oauth.md` | `auth.py`, `mcp.py`, `mcp_oauth.py`, `health.py`, `mcp_oauth.py`, `session.py`, `auth.py`, `claude-connector.html`, `connect-demo.html`, `CLAUDE-CONNECTOR-SUBMISSION.md`, `test_mcp.py`, `test_mcp_directory.py`, `test_marketplace_call.py` |
 | `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `billing.py`, `referrals.py`, `__init__.py`, `stripe.py`, `reconcile.py`, `referrals.py`, `referrals.py`, `api.py`, `signup.py`, `admin.py`, `billing.py`, `orgs.py`, `referrals.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `caller_metadata.py`, `auth.py`, `signup.py`, `teams.py`, `access.py`, `session.py`, `auth.py`, `orgs.py`, `resources.py`, `db.py`, `test_router_dependencies.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |

@@ -46,8 +46,9 @@ explicitly granted the corresponding label.
   pricing, metering, audit, idempotency, and error attribution.
 - [ ] MCP Inspector connects to `https://treg.to/mcp/v2/`, authenticates, lists exactly the six
   expected tools, and successfully invokes each tool.
-- [ ] The deployed connector emits `claude-connector` attribution for catalog provider calls.
-- [ ] The legacy `https://treg.to/mcp/` contract remains unchanged.
+- [ ] The deployed connector emits `claude-connector` attribution for catalog searches, requests,
+  details, balance reads, and provider calls.
+- [ ] The existing team MCP contract at `https://treg.to/mcp/` remains unchanged.
 - [ ] Save dated, secret-free evidence: test output, Inspector result, endpoint ids, expected/actual
   balance deltas, audit ids, and screenshots with private values redacted.
 

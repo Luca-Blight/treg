@@ -144,12 +144,14 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
 - **`ToolRequest`** — a "the catalog doesn't have X" report (`POST /tool-requests`, open + per-IP
   rate-limited): `capability` (the headline, ≤200 chars), `query` (the search that came up empty —
   auto-filled by agents, the dedup/priority signal), `note`, `contact`, `source` (`web` | `cli` |
-  `mcp` | `api`), `status` (`open` | `done` | `dismissed`, flipped by hand), and **nullable**
+  `mcp` | `claude-connector` | `api`), `status` (`open` | `done` | `dismissed`, flipped by hand), and
+  **nullable**
   `org_id`/`user_email` — identity is attribution when the caller happens to have one, never a
   requirement, because the usual filer is an agent with zero results and no token. Reviewed by
   querying the table; a Slack notifier may hang off the insert later, but the row is the record.
 - **`SearchMiss`** — a catalog search that returned **nothing**: `query` (capped to 300 chars),
-  `source` (`api` — the HTTP route serving web + CLI + raw API — or `mcp`), `created_at`. The demand
+  `source` (`api` for the HTTP route that serves web + CLI + raw API; `mcp` for the team MCP; or
+  `claude-connector` for V2), `created_at`. The demand
   signal one step before a `ToolRequest`: most agents that miss never file, so the query text is all
   they leave. Written fire-and-forget through `audit.record_search_miss` (dropped rows cost
   analytics, never a search) from both search paths — `GET /catalog/search` and the in-process MCP

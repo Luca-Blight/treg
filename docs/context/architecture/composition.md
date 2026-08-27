@@ -79,7 +79,7 @@ route cannot silently expand the dataplane. Role separation is preparatory in st
 `all` role is deployed.
 
 `TREG_CLAUDE_CONNECTOR_ENABLED=true` adds `/mcp/v2` and starts its lifespan. When the flag is false
-or missing, only the legacy `/mcp` mount starts. The nested V2 mount is registered first so the
+or missing, only the team `/mcp` mount starts. The nested V2 mount is registered first so the
 parent `/mcp` mount cannot consume it.
 
 When V2 is enabled, `NormalizeDirectoryMCPPath` rewrites the exact `/mcp/v2` path to `/mcp/v2/`

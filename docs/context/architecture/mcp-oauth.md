@@ -12,6 +12,9 @@ sources:
   - src/treg/web/claude-connector.html
   - src/treg/web/connect-demo.html
   - docs/CLAUDE-CONNECTOR-SUBMISSION.md
+  - tests/test_mcp.py
+  - tests/test_mcp_directory.py
+  - tests/test_marketplace_call.py
 related:
   - architecture/auth-secrets.md
   - architecture/proxy-model.md
@@ -25,13 +28,13 @@ Everything else in treg is reached by a CLI or an HTTP call. These are the doors
 comes through: ChatGPT, Claude, Claude Code, Cursor, or anything else that speaks the Model Context
 Protocol. Both use one deployment, database, and enforcement layer:
 
-- `/mcp/` keeps the legacy catalog, team-tool, and imported-skill behavior.
+- `/mcp/` is the team MCP surface. It keeps its catalog, team-tool, and imported-skill behavior.
 - `/mcp/v2/` is the catalog-only Claude directory surface. It cannot list or call arbitrary
   team-owned tools, including a team tool whose name matches a catalog endpoint.
 
 ## Why V2 exists
 
-The legacy `/mcp/` must keep its general `call` tool because existing users use it for catalog
+The team `/mcp/` must keep its general `call` tool because existing users use it for catalog
 endpoints, team-owned tools, and imported skills. Treg cannot reliably classify the side effects of
 an arbitrary private tool, so that surface cannot give Claude a precise read-versus-write safety
 signal without breaking its existing contract.
@@ -46,15 +49,53 @@ surface. **Connector release V1** is the first product release submitted to Clau
 
 `NormalizeDirectoryMCPPath` makes `/mcp/v2` and `/mcp/v2/` the same V2 resource. This is required
 because a real Claude custom-connector flow removed the trailing slash. Without normalization, the
-request can fall through to the legacy `/mcp` mount and receive the wrong OAuth resource identity.
+request can fall through to the team `/mcp` mount and receive the wrong OAuth resource identity.
 
 ## Claude connector feature flag
 
 `TREG_CLAUDE_CONNECTOR_ENABLED` defaults to `false`. When false, V2 is not mounted, its lifespan does
 not start, V2 resource metadata and new V2 grants are refused, and the catalog-only call route returns
-404. The legacy `/mcp/` surface does not depend on this flag.
+404. The team `/mcp/` surface does not depend on this flag.
 
-## Legacy `/mcp/`: six tools
+## MCP surface maintenance contract
+
+The two public surfaces have different contracts, but they must not have different implementations
+of shared behavior.
+
+| Area | Must stay shared | Intentional difference |
+|---|---|---|
+| catalog search | loading, ranking, price view, observed data, near misses | next-call guidance and event source |
+| endpoint details | the `/catalog/endpoints/{id}` route and error shape | client attribution |
+| calls | request assembly, credentials, policy, limits, idempotency, relay, errors, metering, audit | team MCP accepts team tools; V2 accepts catalog ids only and splits read/write methods |
+| balance | team selection, grant labels, balance route, error shape | client attribution |
+| catalog requests | `/tool-requests`, rate limit, field limits, caller IP | event source and client attribution |
+| transport | host checks, compression, cache headers, eager auth, static capabilities | V2 has a separate audience, metadata path, scope marker, and Claude browser origin |
+| lifecycle | the transport factory and `mcp_lifespan` | V2 mount and lifespan depend on its feature flag |
+
+`_SurfacePolicy` contains the small set of values that can differ inside shared tool behavior. Public
+tool registrations remain separate because their names, descriptions, input schemas, and safety
+annotations are public contracts. `build_mcp_app` refuses a server and OAuth resource-version pair
+that names different surfaces.
+
+When either MCP surface or shared MCP code changes, review both surfaces. The tests must compare the
+shared behavior and must also prove the listed differences. Keep these V2 properties fixed unless a
+new directory review approves a contract change:
+
+- `/mcp/v2/` is the stable URL, and `/mcp/v2` resolves to the same resource.
+- The tool list has exactly six tools.
+- V2 accepts catalog ids only. It does not list or call arbitrary team tools or passthrough paths.
+- Read and write calls stay separate, and their annotations match their method classes.
+- V1 and V2 OAuth audiences do not cross.
+- The feature flag controls the V2 mount, metadata, new grants, call route, and lifespan.
+- V2 directory titles, descriptions, schemas, annotations, and neutral review copy stay under test.
+
+`tests/test_mcp.py` protects team MCP behavior. `tests/test_mcp_directory.py` protects the V2 surface
+and calls both public URLs with the same inputs to compare search results and prices, endpoint
+details, balance, catalog-call results, errors, catalog-only hints, and client attribution.
+`tests/test_marketplace_call.py` proves that the catalog-only API route cannot be shadowed by a
+same-named team tool. A change is incomplete if only one relevant MCP test file is reviewed.
+
+## Team MCP at `/mcp/`: six tools
 
 | Tool | Job |
 |---|---|
@@ -92,8 +133,9 @@ nothing upstream, nothing spent), so it stays closed-world and non-destructive. 
 `X-Forwarded-For` — the in-process relay would otherwise collapse every MCP caller into one
 rate-limit bucket. `catalog_search`'s zero-result hint names it, so an agent that just searched
 and found nothing can file the gap in the same session — and the miss itself is logged as a
-`SearchMiss` row (`audit.record_search_miss`, `source="mcp"`): this tool reads the catalog
-in-process, so the HTTP route's own miss logging never sees an MCP agent's empty search.
+`SearchMiss` row (`audit.record_search_miss`, `source="mcp"` on the team MCP and
+`source="claude-connector"` on V2): this tool reads the catalog in-process, so the HTTP route's own
+miss logging never sees an MCP agent's empty search.
 
 ## In-process, not over the network
 
@@ -101,8 +143,9 @@ Tools reach the rest of treg through `httpx.ASGITransport` against our own app �
 through the real routes, without a socket. That matters because the enforcement rules (deny rules,
 capability pins, per-member tool access, the credential ladder, metering) live in those routes. A
 second path that "just read the database" would be a second implementation of every one of them,
-drifting quietly. The in-process client stamps `X-Treg-Client: mcp` (attribution, never a gate), so
-MCP traffic is distinguishable from unreported CLI traffic in the audit trail and analytics.
+drifting quietly. The in-process client stamps `X-Treg-Client: mcp` for the team MCP and
+`X-Treg-Client: claude-connector` for V2 (attribution, never a gate), so each MCP surface is
+distinguishable from unreported CLI traffic and from the other MCP surface.
 
 The catalog is the one exception: read straight from `catalog_store`, which is already parsed in
 memory, so a search answers in about a millisecond. That is a **speed** choice, not a permission one.

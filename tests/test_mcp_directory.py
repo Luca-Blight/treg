@@ -1,7 +1,8 @@
-"""The Claude directory MCP is catalog-only and OAuth-isolated from the legacy MCP."""
+"""The Claude directory MCP is catalog-only and OAuth-isolated from the team MCP."""
 
 from __future__ import annotations
 
+import json
 from contextlib import asynccontextmanager
 
 import pytest
@@ -30,14 +31,46 @@ async def directory_session():
             yield client
 
 
-async def _rpc(client: AsyncClient, method: str, params=None, token: str | None = None):
+@asynccontextmanager
+async def paired_mcp_session():
+    """Serve both public MCP surfaces on one app for direct contract comparisons."""
+    team = mcp.build_mcp_app(resource_version="v1")
+    directory = mcp.build_mcp_app(server=mcp.directory_mcp, resource_version="v2")
+    host = FastAPI()
+    host.mount("/mcp/v2", directory)
+    host.mount("/mcp", team)
+    async with mcp.mcp_lifespan(team):
+        async with mcp.mcp_lifespan(directory):
+            async with AsyncClient(transport=ASGITransport(app=host),
+                                   base_url="http://localhost") as client:
+                yield client
+
+
+async def _rpc(client: AsyncClient, method: str, params=None, token: str | None = None,
+               extra_headers: dict | None = None, *, path: str = "/mcp/v2/"):
     headers = dict(MCP_HEADERS)
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    headers.update(extra_headers or {})
     body = {"jsonrpc": "2.0", "id": 1, "method": method}
     if params is not None:
         body["params"] = params
-    return await client.post("http://localhost/mcp/v2/", json=body, headers=headers)
+    return await client.post(path, json=body, headers=headers)
+
+
+async def _call_tool(client: AsyncClient, name: str, args: dict, token: str,
+                     extra_headers: dict | None = None, *, path: str = "/mcp/v2/") -> dict:
+    await _rpc(client, "initialize", {
+        "protocolVersion": "2025-06-18", "capabilities": {},
+        "clientInfo": {"name": "directory-test", "version": "1"},
+    }, token, extra_headers, path=path)
+    response = await _rpc(client, "tools/call", {"name": name, "arguments": args},
+                          token, extra_headers, path=path)
+    payload = response.json()
+    content = (payload.get("result") or {}).get("content") or []
+    if content and content[0].get("type") == "text":
+        return json.loads(content[0]["text"])
+    return payload
 
 
 async def _modern_rpc(client: AsyncClient, method: str, params=None,
@@ -160,6 +193,9 @@ async def test_v2_declares_exact_directory_contract():
     assert "my_tools" not in tools and "call" not in tools
     assert "method" not in tools["catalog_call_read"].input_schema["properties"]
     assert "method" not in tools["catalog_call_write"].input_schema["properties"]
+    for tool in tools.values():
+        assert tool.output_schema and tool.output_schema.get("properties")
+        assert not tool.output_schema.get("required")
     blob = " ".join(tool.description.lower() for tool in tools.values())
     for disallowed in ("use treg first", "official", "anthropic verified", "best provider"):
         assert disallowed not in blob
@@ -254,6 +290,226 @@ async def test_v2_serializes_the_scanner_facing_contract(clients):
     assert "method" not in tools["catalog_call_write"]["inputSchema"]["properties"]
 
 
+async def test_v2_shared_catalog_details_balance_and_guidance_work_end_to_end(clients):
+    token = clients.headers["X-Treg-Token"]
+    async with directory_session() as client:
+        search = await _call_tool(client, "catalog_search", {"query": "tiktok comments"}, token)
+        endpoint = await _call_tool(client, "catalog_get", {
+            "endpoint_id": "tikhub.tiktok.video.comments",
+        }, token)
+        balance = await _call_tool(client, "balance", {}, token)
+
+    assert search["results"] and search["results"][0].get("usd_per_call") is not None
+    assert "catalog_call_read" in search["next"]
+    assert "catalog_call_write" in search["next"]
+    assert "then call(...)" not in search["next"]
+    assert endpoint["endpoint"]["id"] == "tikhub.tiktok.video.comments"
+    assert endpoint["endpoint"].get("cost")
+    assert balance["team"] and balance["balance_micro"] is not None
+
+
+async def test_team_and_directory_catalog_search_results_and_prices_match(clients):
+    token = clients.headers["X-Treg-Token"]
+    args = {"query": "tiktok comments", "limit": 5}
+    async with paired_mcp_session() as client:
+        team = await _call_tool(client, "catalog_search", args, token, path="/mcp/")
+        directory = await _call_tool(client, "catalog_search", args, token)
+
+    team_shared = {key: value for key, value in team.items() if key != "next"}
+    directory_shared = {key: value for key, value in directory.items() if key != "next"}
+    assert team_shared == directory_shared
+    assert team["results"] and all("usd_per_call" in row for row in team["results"])
+    assert team["next"].endswith("then call(...)")
+    assert "catalog_call_read" in directory["next"]
+    assert "catalog_call_write" in directory["next"]
+
+
+async def test_team_and_directory_endpoint_details_and_balance_match(clients):
+    token = clients.headers["X-Treg-Token"]
+    endpoint_args = {"endpoint_id": "tikhub.tiktok.video.comments"}
+    async with paired_mcp_session() as client:
+        team_endpoint = await _call_tool(
+            client, "catalog_get", endpoint_args, token, path="/mcp/",
+        )
+        directory_endpoint = await _call_tool(client, "catalog_get", endpoint_args, token)
+        team_balance = await _call_tool(client, "balance", {}, token, path="/mcp/")
+        directory_balance = await _call_tool(client, "balance", {}, token)
+
+    assert team_endpoint == directory_endpoint
+    assert team_endpoint["endpoint"]["id"] == endpoint_args["endpoint_id"]
+    assert team_endpoint["endpoint"]["cost"] == directory_endpoint["endpoint"]["cost"]
+    assert team_balance == directory_balance
+
+
+async def test_team_and_directory_catalog_call_results_match_except_attribution(clients):
+    from treg import audit
+
+    await clients.post("/secrets", json={"name": "tikhub", "value": "PAIRED-KEY"})
+    token = clients.headers["X-Treg-Token"]
+    args = {
+        "endpoint_id": "tikhub.tiktok.video.comments",
+        "params": {"aweme_id": "7"},
+        "headers": {"X-Paired-Test": "same"},
+    }
+    async with paired_mcp_session() as client:
+        team = await _call_tool(client, "call", args, token, path="/mcp/")
+        directory = await _call_tool(client, "catalog_call_read", args, token)
+    await audit.drain()
+
+    assert team == directory
+    assert team["status"] == 200
+    assert team["body"]["auth"] == "Bearer PAIRED-KEY"
+    assert team["body"]["headers"]["x-paired-test"] == "same"
+    rows = (await clients.get("/calls")).json()
+    assert {row["client"] for row in rows} == {"mcp", "claude-connector"}
+
+
+async def test_team_and_directory_catalog_call_errors_match_or_keep_the_documented_boundary(clients):
+    token = clients.headers["X-Treg-Token"]
+    ambiguous = {
+        "endpoint_id": "tikhub.tiktok.video.comments",
+        "params": {"aweme_id": "7"},
+        "query": {"aweme_id": "7"},
+    }
+    unknown = {"endpoint_id": "not.a.catalog.endpoint"}
+    async with paired_mcp_session() as client:
+        team_ambiguous = await _call_tool(client, "call", ambiguous, token, path="/mcp/")
+        directory_ambiguous = await _call_tool(
+            client, "catalog_call_read", ambiguous, token,
+        )
+        team_unknown = await _call_tool(client, "call", unknown, token, path="/mcp/")
+        directory_unknown = await _call_tool(client, "catalog_call_read", unknown, token)
+
+    assert team_ambiguous == directory_ambiguous
+    assert "query string" in team_ambiguous["error"]
+    assert team_unknown["error"] == directory_unknown["error"]
+    assert team_unknown["did_you_mean"] == directory_unknown["did_you_mean"]
+    assert "my_tools" in team_unknown["hint"]
+    assert "my_tools" not in directory_unknown["hint"]
+    assert "catalog endpoint id" in directory_unknown["hint"]
+
+
+async def test_v2_search_and_catalog_request_keep_directory_attribution(clients):
+    from sqlmodel import select
+
+    from treg import audit
+    from treg.db import session_maker
+    from treg.models import SearchMiss, ToolRequest
+
+    token = clients.headers["X-Treg-Token"]
+    async with directory_session() as client:
+        miss = await _call_tool(client, "catalog_search", {
+            "query": "zzzz-directory-only-miss",
+        }, token)
+        request = await _call_tool(client, "catalog_request", {
+            "capability": "directory attribution test",
+        }, token)
+    await audit.drain()
+
+    assert miss["count"] == 0
+    assert request["status"] == "received"
+    async with session_maker() as db:
+        search_row = (await db.execute(select(SearchMiss))).scalars().one()
+        request_row = (await db.execute(select(ToolRequest))).scalars().one()
+    assert search_row.source == "claude-connector"
+    assert request_row.source == "claude-connector"
+
+
+async def test_v2_catalog_call_uses_shared_credentials_headers_errors_and_audit(clients):
+    from treg import audit
+
+    await clients.post("/secrets", json={"name": "tikhub", "value": "DIRECTORY-KEY"})
+    token = clients.headers["X-Treg-Token"]
+    async with directory_session() as client:
+        result = await _call_tool(client, "catalog_call_read", {
+            "endpoint_id": "tikhub.tiktok.video.comments",
+            "params": {"aweme_id": "7"},
+            "headers": {"X-Test-Header": "kept", "X-Treg-Token": "blocked"},
+        }, token, {"X-Treg-Meta": "customer=directory_test"})
+    await audit.drain()
+
+    assert result["status"] == 200
+    assert result["body"]["auth"] == "Bearer DIRECTORY-KEY"
+    assert result["body"]["headers"]["x-test-header"] == "kept"
+    assert result["body"]["headers"].get("x-treg-token") != "blocked"
+    assert "cost_usd" not in result or result["cost_usd"] is None
+    row = (await clients.get("/calls")).json()[0]
+    assert row["client"] == "claude-connector"
+    assert row["tags"] == {"customer": "directory_test"}
+
+
+async def test_v2_metering_and_idempotency_use_the_shared_money_path(clients, monkeypatch):
+    monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "DIRECTORY-PLATFORM-KEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub")
+    get_settings.cache_clear()
+    try:
+        org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+
+        async def current_balance() -> int:
+            body = (await clients.get(f"/orgs/{org_id}/balance")).json()
+            return body["balance_micro"]
+
+        token = clients.headers["X-Treg-Token"]
+        args = {
+            "endpoint_id": "tikhub.tiktok.video.comments",
+            "params": {"aweme_id": "7"},
+            "idempotency_key": "directory-one-call",
+        }
+        before = await current_balance()
+        async with directory_session() as client:
+            first = await _call_tool(client, "catalog_call_read", args, token)
+            second = await _call_tool(client, "catalog_call_read", args, token)
+        after = await current_balance()
+
+        assert first["status"] == 200 and first["cost_usd"] > 0
+        assert second["status"] == 200 and second["replayed"] is True
+        assert second["body"] == first["body"]
+        assert before - after == round(first["cost_usd"] * 1_000_000)
+    finally:
+        get_settings.cache_clear()
+
+
+async def test_v2_write_call_and_insufficient_balance_errors_use_shared_behavior(
+    clients, monkeypatch,
+):
+    from sqlmodel import select
+
+    from treg.db import session_maker
+    from treg.models import Org
+
+    await clients.post("/secrets", json={"name": "dataforseo", "value": "user:password"})
+    token = clients.headers["X-Treg-Token"]
+    async with directory_session() as client:
+        write = await _call_tool(client, "catalog_call_write", {
+            "endpoint_id": "dataforseo.web.page.audit",
+            "body": [{"url": "https://example.com"}],
+        }, token)
+    assert write["status"] == 200
+    assert json.loads(write["body"]["body"]) == [{"url": "https://example.com"}]
+
+    monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "DIRECTORY-PLATFORM-KEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub")
+    get_settings.cache_clear()
+    try:
+        org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+        async with session_maker() as db:
+            org = (await db.execute(select(Org).where(Org.id == org_id))).scalar_one()
+            org.balance_micro = 0
+            db.add(org)
+            await db.commit()
+        async with directory_session() as client:
+            refused = await _call_tool(client, "catalog_call_read", {
+                "endpoint_id": "tikhub.tiktok.video.comments",
+                "params": {"aweme_id": "7"},
+            }, token)
+        blob = json.dumps(refused)
+        assert refused["status"] == 402
+        assert "topup_url" not in blob and "http://" not in blob and "https://" not in blob
+        assert "not enough for this call" in refused["hint"]
+    finally:
+        get_settings.cache_clear()
+
+
 async def test_transports_reject_the_other_mcp_versions_token():
     v1 = mcp_oauth.make_access_token(user_id=1, org_id=1,
                                      audience=mcp_oauth.mcp_resource_url("v1"))
@@ -263,10 +519,10 @@ async def test_transports_reject_the_other_mcp_versions_token():
         assert (await _rpc(client, "tools/list", token=v1)).status_code == 401
         assert (await _rpc(client, "tools/list", token=v2)).status_code == 200
 
-    legacy = mcp.build_mcp_app(resource_version="v1")
+    team_mcp = mcp.build_mcp_app(resource_version="v1")
     host = FastAPI()
-    host.mount("/mcp", legacy)
-    async with mcp.mcp_lifespan(legacy):
+    host.mount("/mcp", team_mcp)
+    async with mcp.mcp_lifespan(team_mcp):
         async with AsyncClient(transport=ASGITransport(app=host),
                                base_url="http://localhost") as client:
             body = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
@@ -279,9 +535,11 @@ async def test_transports_reject_the_other_mcp_versions_token():
 
 
 async def test_claude_origin_is_explicitly_allowed_and_unknown_origins_are_not():
-    origins = mcp._allowed_origins()
-    assert origins.count("https://claude.ai") == 1
-    assert "https://attacker.example" not in origins
+    v1_origins = mcp._allowed_origins("v1")
+    v2_origins = mcp._allowed_origins("v2")
+    assert "https://claude.ai" not in v1_origins
+    assert v2_origins.count("https://claude.ai") == 1
+    assert "https://attacker.example" not in v2_origins
 
     token = mcp_oauth.make_access_token(user_id=1, org_id=1,
                                         audience=mcp_oauth.mcp_resource_url("v2"))
@@ -296,3 +554,28 @@ async def test_claude_origin_is_explicitly_allowed_and_unknown_origins_are_not()
         })
     assert allowed.status_code == 200
     assert blocked.status_code == 403
+
+
+async def test_team_mcp_does_not_inherit_the_claude_origin_permission():
+    token = mcp_oauth.make_access_token(user_id=1, org_id=1,
+                                        audience=mcp_oauth.mcp_resource_url("v1"))
+    team_mcp = mcp.build_mcp_app(resource_version="v1")
+    host = FastAPI()
+    host.mount("/mcp", team_mcp)
+    async with mcp.mcp_lifespan(team_mcp):
+        async with AsyncClient(transport=ASGITransport(app=host),
+                               base_url="http://localhost") as client:
+            response = await client.post("/mcp/", json={
+                "jsonrpc": "2.0", "id": 1, "method": "tools/list",
+            }, headers={
+                **MCP_HEADERS, "Authorization": f"Bearer {token}",
+                "Origin": "https://claude.ai",
+            })
+    assert response.status_code == 403
+
+
+def test_transport_factory_refuses_a_server_audience_mismatch():
+    with pytest.raises(ValueError, match="same public surface"):
+        mcp.build_mcp_app(server=mcp.directory_mcp, resource_version="v1")
+    with pytest.raises(ValueError, match="same public surface"):
+        mcp.build_mcp_app(server=mcp.mcp, resource_version="v2")

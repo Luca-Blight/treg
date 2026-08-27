@@ -693,7 +693,7 @@ router.routes.extend(web_routes.catalog_pages_router.routes)
 TOOLREQ_HIT_NS = "toolreq"
 TOOLREQ_RATE_MAX = 10          # filings per IP per window
 TOOLREQ_RATE_WINDOW_S = 3600   # 1 hour
-TOOLREQ_SOURCES = {"web", "cli", "mcp", "api"}
+TOOLREQ_SOURCES = {"web", "cli", "mcp", "claude-connector", "api"}
 
 
 class ToolRequestIn(BaseModel):
@@ -701,7 +701,7 @@ class ToolRequestIn(BaseModel):
     query: str = ""          # the catalog search that came up empty (agents auto-fill this)
     note: str = ""
     contact: str = ""        # optional reach-back; free text, unverified
-    source: str = "web"      # web | cli | mcp | api
+    source: str = "web"      # web | cli | mcp | claude-connector | api
 
 
 @app.post("/tool-requests", include_in_schema=False)

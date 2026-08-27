@@ -319,7 +319,8 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   wants, so no signup wall. The miss itself is also logged as a `SearchMiss` row (fire-and-forget
   via `audit.record_search_miss`, from this route and from the MCP `catalog_search` tool alike) —
   most missing agents never file a request, and the queries they leave behind are what
-  `scripts/usage_report.py` reports as un-served demand.
+  `scripts/usage_report.py` reports as un-served demand. MCP rows use `mcp` for the team MCP and
+  `claude-connector` for V2, so reports can separate the two surfaces.
 - **Auth — three identity doors** (all resolve to a user via the shared `_find_or_create_user`, so
   first-proof = registration — the **user only, no auto personal org**; a brand-new user lands with zero
   teams and names their first via the mandatory welcome / `treg org create`): **GitHub** — `auth_github` (`GET /auth/github`,
