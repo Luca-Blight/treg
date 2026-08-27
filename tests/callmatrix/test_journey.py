@@ -193,7 +193,7 @@ async def test_j1_signup_to_topup_and_recovery(
     ]) == 1
     assert len([
         block for block in funded.json()["blocks"] if block["kind"] == "purchased"
-    ]) == 1  # one payment, one block — the redelivery moved nothing
+    ]) == 1  # one payment, one block - the redelivery moved nothing
 
     recovered = await matrix_clients.get(
         f"/call/{EP}?aweme_id=after-topup", headers=owner_headers,

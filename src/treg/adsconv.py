@@ -72,7 +72,7 @@ async def queue(db: AsyncSession, org: Org, action: str, *,
 
     Call this INSIDE the caller's transaction: the event and its pending conversion must commit
     together, or a crash between them loses a conversion with no trace. The `paid` caller
-    (`billing._credit`) deliberately does not honour this — it commits the credit before calling
+    (`billing._credit`) deliberately does not honour this: it commits the credit before calling
     queue, so the paid conversion is a second, separate commit: a known, accepted trade-off
     (2026-08-17; see `docs/context/architecture/ads-conversions.md`).
 

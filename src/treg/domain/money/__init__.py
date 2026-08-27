@@ -197,7 +197,7 @@ async def topup(
         await db.flush()
     except IntegrityError:
         # Lost to a concurrent delivery. The flush blocked on the winner's row until the winner's
-        # transaction committed, so this re-SELECT (a fresh statement) sees the winner's block —
+        # transaction committed, so this re-SELECT (a fresh statement) sees the winner's block:
         # same answer as the sequential path, no 500, and the caller's pending writes survive.
         await nested.rollback()
         winner = await _block_for_payment(db, payment_ref)

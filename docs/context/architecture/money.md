@@ -97,12 +97,14 @@ swallows exceptions, which is right for analytics and fatal for money.
 | `settle` / `settle_in_transaction` | blocks down by the observed cost, hold closed, difference refunded - committed by the compatibility wrapper or the call application |
 | `release` / `release_in_transaction` | hold closed, balance refunded in full - committed by the compatibility wrapper or the call application |
 
-The call-only `reserve_in_transaction`, `settle_in_transaction`, and `release_in_transaction`
-primitives may stage work but never commit or roll back. `tests/test_call_architecture.py` enforces
-that boundary and pins reserve's exception: its lazy stale-hold sweep calls the public committing
-`release`, so each old refund remains durable even if the new reservation returns 402. Converting
-`grant` and `topup` callers to application-owned transactions is tracked as
-`money-funding-transactions` and is required before Stage 5.
+All five primitives stage only: `grant`, `topup`, `reserve_in_transaction`, `settle_in_transaction`,
+and `release_in_transaction` never commit or roll back the caller's transaction. Commits are owned by
+the application (signup, billing, the call application) or by the two documented exceptions: the lazy
+stale-hold reap boundary (reserve's sweep calls the public committing `release`, so each old refund
+remains durable even if the new reservation returns 402), and the referrals saga checkpoints
+(`domain/referrals` commits at named recovery points - claim, stamp, qualify - on a session the
+application opened). `tests/test_call_architecture.py` enforces the no-commit boundary over the real
+bodies of all five, with a mutation self-check that proves an injected commit is still detected.
 
 Release metadata distinguishes a failed call from a normal non-billable provider response, and says
 which side failed. A provider that answered 5xx releases as `provider_failed_<status>`; a call treg
@@ -200,7 +202,7 @@ On the same `fresh` branch, `_credit` also queues a `paid` Google Ads conversion
 the org has a click to attribute to — but this one is **not** atomic with the credit: the credit is
 durable before the conversion is queued, and the conversion is a second, separate commit. A crash
 between the two loses the conversion permanently (the money is still correctly credited). Found in
-review and accepted deliberately (2026-08-17) — coupling the credit's fate to the conversion commit
+review and accepted deliberately (2026-08-17): coupling the credit's fate to the conversion commit
 would be backwards, because the credit must stand whatever happens after it; full reasoning and the
 cheap future fix in [ads-conversions](ads-conversions.md).
 
