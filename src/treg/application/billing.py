@@ -925,6 +925,9 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
     block_id = block.id  # captured now: a later rollback (the ad-conversion except below) expires
                         # every object this session is tracking, `block` included, and reading an
                         # expired attribute outside an awaited call raises MissingGreenlet.
+    # THE durability line: the credit is committed before anything else in this handler can fail -
+    # every later rollback (bonus, adsconv, qualify, sweep) rolls back to here.
+    await db.commit()
     fresh = not already
     bonus_micro, bonus_pct = 0, 0
     if fresh and not auto:
@@ -939,6 +942,7 @@ async def _credit(db: AsyncSession, org_id: int, amount_micro: int, pi_id: str, 
                 await ledger.grant(db, org_id, amount_micro=bonus_micro, kind="bonus", once=False,
                                    meta={"source": "topup_bonus", "payment_intent": pi_id,
                                          "pct": bonus_pct, "topup_block_id": block_id})
+                await db.commit()
             except Exception as e:  # noqa: BLE001
                 await db.rollback()
                 bonus_micro, bonus_pct = 0, 0

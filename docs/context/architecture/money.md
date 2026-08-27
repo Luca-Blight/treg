@@ -195,12 +195,12 @@ retry a payment that already credited. Amounts travel as canonical integer `amou
 `amount_usd` on the event is display-only.
 
 On the same `fresh` branch, `_credit` also queues a `paid` Google Ads conversion (`adsconv.queue`) when
-the org has a click to attribute to — but this one is **not** atomic with the credit: `ledger.topup()`
-already committed by the time `_credit` gets here, so the conversion is a second, separate commit. A
-crash between the two loses the conversion permanently (the money is still correctly credited). Found
-in review and accepted deliberately (2026-08-17) rather than restructuring `domain/money`'s commit-inside
-convention; full reasoning and the cheap future fix in
-[ads-conversions](ads-conversions.md).
+the org has a click to attribute to — but this one is **not** atomic with the credit: the credit is
+durable before the conversion is queued, and the conversion is a second, separate commit. A crash
+between the two loses the conversion permanently (the money is still correctly credited). Found in
+review and accepted deliberately (2026-08-17) — coupling the credit's fate to the conversion commit
+would be backwards, because the credit must stand whatever happens after it; full reasoning and the
+cheap future fix in [ads-conversions](ads-conversions.md).
 
 **Invoices exist on the manual path only.** The top-up Checkout sets `invoice_creation`, so a
 one-off purchase produces a real Stripe Invoice — number, PDF, billing address, tax ID — which is the
