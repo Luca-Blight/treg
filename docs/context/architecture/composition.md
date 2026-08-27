@@ -3,7 +3,14 @@ title: Application composition and deployment roles
 status: shipped
 sources:
   - src/treg/bootstrap.py
+  - src/treg/application/connect.py
+  - src/treg/domain/identity/mcp_oauth.py
+  - src/treg/domain/identity/session.py
   - src/treg/routers/admin.py
+  - src/treg/routers/auth.py
+  - src/treg/routers/connections.py
+  - src/treg/routers/orgs.py
+  - src/treg/routers/resources.py
   - src/treg/routers/web.py
   - scripts/dump_surface.py
 related:
@@ -15,10 +22,9 @@ related:
 
 # Application composition
 
-`bootstrap.create_app(role)` is the FastAPI composition root. `api.py` hosts the ordered route table;
-the Catalog, web, and admin modules define concern-specific `APIRouter` blocks that `api.py` appends
-at their legacy registration points. It then calls the factory once at EOF so the deployed and
-documented `treg.api:app` import path remains the default `all` role.
+`bootstrap.create_app(role)` is the FastAPI composition root. `api.py` hosts the ordered route table,
+attaches concern routers at compatibility-sensitive registration points, and calls the factory once at
+EOF so the deployed `treg.api:app` import path remains the default `all` role.
 
 The factory owns concrete assembly: the three pure-ASGI middleware registrations, five exception handlers,
 static mounts, optional MCP mount and lifespan, GET-to-HEAD widening, the OpenAPI wrapper that hides
@@ -52,8 +58,14 @@ Every created app exposes `app.state.role_manifest` with explicit `routes`, `bac
 | Role | HTTP routes and mounts | Background tasks | Startup checks |
 |---|---|---|---|
 | `all` | The complete existing surface, including `/run`, static files, and `/mcp` | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client, MCP lifespan |
-| `dataplane` | Only `/call/{rest:path}`; no `/run`, static files, docs, OpenAPI, or MCP | None | DB init, provider-tool backfill, HTTP client |
-| `control` | Everything except `/call/{rest:path}`; includes `/run`, static files, and `/mcp` | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client, MCP lifespan |
+| `dataplane` | `/call/{rest:path}`, the `/mcp` mount, and its RFC 9728 resource-metadata route; no `/run`, static files, docs, or OpenAPI | None | DB init, provider-tool backfill, HTTP client, MCP lifespan |
+| `control` | Everything except the calling surface (`/call/{rest:path}`, `/mcp`, and its resource metadata); includes `/run` and static files | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client |
+
+MCP is calling traffic (the refactor plan's role table assigns `mcp.py` to the dataplane), so a future
+dataplane deployment serves agents on both entry points. OAuth token issuance - consent pages and the
+`/oauth/*` endpoints - stays on control; the MCP surface only validates tokens, which is a read.
+`domain.identity.session` is therefore a both-role primitive: control signs browser and identity
+tokens, while both roles share its signing-key validation through `domain.identity.mcp_oauth`.
 
 `_CONTROL_ROUTE_KEYS` and `_DATAPLANE_ROUTE_KEYS` assign every `api.router` route to exactly one
 owner. App creation fails on an unclassified, stale, duplicate, or multiply-owned key, so adding a
@@ -67,7 +79,3 @@ Each factory call must produce an independent app whose dependency overrides bel
 at the new FastAPI instance, and rebuilds its request handler. This also avoids the internal
 `_IncludedRouter` wrapper added by the current FastAPI `include_router()` implementation, which would
 otherwise change route inspection and the committed surface snapshot.
-
-`scripts.dump_surface._lifespan` records the optional MCP lifespan condition against
-`treg.bootstrap._mcp`, where optional MCP composition now lives. This is a documentation-only snapshot
-correction; the mounted lifespan behavior is unchanged.

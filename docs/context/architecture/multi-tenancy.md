@@ -4,7 +4,15 @@ status: shipped
 sources:
   - src/treg/models.py
   - src/treg/api.py
-  - src/treg/routers/dependencies.py
+  - src/treg/caller_metadata.py
+  - src/treg/application/auth.py
+  - src/treg/application/signup.py
+  - src/treg/domain/governance/teams.py
+  - src/treg/domain/identity/access.py
+  - src/treg/domain/identity/session.py
+  - src/treg/routers/auth.py
+  - src/treg/routers/orgs.py
+  - src/treg/routers/resources.py
   - src/treg/db.py
   - tests/test_router_dependencies.py
 related:
@@ -58,7 +66,7 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   (creator email) is kept for audit + the member role gate. `Tool.name` is unique **per `(org_id, name)`**
   (`UniqueConstraint("org_id", "name")`), so two orgs may reuse a name.
 
-## Enforcement (`routers/dependencies.py`, consumed by `api.py`)
+## Enforcement (`domain.identity.access`, consumed by `api.py` and routers)
 - **`require_member`** resolves `X-Treg-Token` → a `Membership` → a `Caller` (`membership, user, org`,
   with `org_id`/`email`/`role` properties). 401 if the token matches no membership.
 - **`_role_at_least` + `_can_manage`**: admin/owner may manage any resource in the org; a member only
@@ -134,13 +142,11 @@ pair, so every list/create/mutation and the proxy are scoped to the caller's org
   `owner = caller.email`; `_resolve_call` scopes **both** the named lookup and the host/longest-prefix
   passthrough to the org; `call_tool` loads only same-org secrets. See [proxy-model](proxy-model.md).
 
-The shared HTTP dependency family now lives in `routers.dependencies`: `Caller`, token/session/org
-resolution, `require_identity`, `require_member`, `require_superadmin`, role comparison, and machine
-identity classification. `api.py` re-exports the same objects so existing callers and route definitions
-retain their import path while presentation routes move out incrementally. This is a location change,
-not the Stage 3 identity or auth use-case extraction.
-- **Registration is shared across doors:** `_find_or_create_user(db, email)` finds a user or creates them
-  — **the user ONLY, no auto personal org** (as of the no-personal-org change). Every identity door calls
+`domain.identity.access` is the shared identity/access boundary: `Caller`, token/session/org resolution,
+dependencies, role comparison, and machine classification. Session signing and validation live in
+`domain.identity.session`.
+- **Registration is shared across doors:** `application.signup.find_or_create_user(db, email)` finds a user or creates them
+  — **the user ONLY, no auto personal org**. Every identity door calls
   it (GitHub / Google callbacks, email OTP), so "first proof = registration" is identical. A brand-new
   user therefore lands with **zero teams** and must name + create their first one (the dashboard's
   mandatory welcome, or `treg org create`); their identity token is user-scoped so it works before any
@@ -152,7 +158,7 @@ not the Stage 3 identity or auth use-case extraction.
 - **Org management endpoints:** `register_user` (`POST /users`, legacy open-registration, used by the
   test fixture) still creates the user + an org + owner membership via `_make_org_membership` (mints the
   token) — NOT reached by the dashboard/CLI login doors, which no longer auto-make an org. Both this door
-  and `create_org` below now also read the first-party ad-click cookie (`api._ad_attribution_from`) and,
+  and `create_org` read the first-party ad-click cookie (`application.signup._ad_attribution_from`) and,
   when enabled and present, stamp `Org.ad_gclid`/`ad_click_id_type`/`ad_landing`/`ad_click_at` on the
   new org — preserving whether the click was a GCLID, GBRAID or WBRAID — see
   [ads-conversions](ads-conversions.md). `create_org`
@@ -261,6 +267,7 @@ Two consequences worth stating plainly:
 
 - **`TagBudget` never grows a balance column.** One org, one balance. Budgets are ceilings on a shared
   pot, not sub-accounts; per-user balances would be a second money authority and are out of scope.
-- **`TagSpend` and `TagBudget` are org-scoped** and registered in `api._ORG_SCOPED_MODELS`, `TagSpend`
+- **`TagSpend` and `TagBudget` are org-scoped** and registered in
+  `routers.orgs._ORG_SCOPED_MODELS`, `TagSpend`
   ahead of `LedgerEntry`/`Hold` because it references them. `tests/test_orgs.py` walks the models and
   fails if a new `org_id` table is missed.

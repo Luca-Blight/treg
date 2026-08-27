@@ -1,4 +1,4 @@
-"""Shared HTTP authentication dependencies and cookie helpers."""
+"""Caller identity, token, role, and authorization resolution."""
 
 from __future__ import annotations
 
@@ -9,79 +9,11 @@ from fastapi import Cookie, Depends, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from .. import crypto, referrals
-from .. import session as sess
-from ..config import get_settings
-from ..db import get_session
-from ..models import ROLE_RANK, Membership, Org, User
-
-
-def _is_https(request: Request) -> bool:
-    # behind a reverse proxy (Render), TLS is terminated upstream and forwarded as http + X-Forwarded-Proto.
-    return request.headers.get("x-forwarded-proto", "").lower() == "https" or request.url.scheme == "https"
-
-
-OAUTH_RETURN_COOKIE = "treg_oauth_return"
-
-
-def _remember_oauth_return(resp, request: Request) -> None:
-    """Park where to come back to after the user signs in.
-
-    A RELATIVE path, deliberately — never a full URL. A stored absolute URL would have to be
-    validated against our own origin before being redirected to, and getting that check subtly wrong
-    is how open redirects happen. A path cannot leave the site.
-
-    Short-lived: this is a detour of seconds, and a stale one would silently hijack the next sign-in.
-    """
-    target = request.url.path + (f"?{request.url.query}" if request.url.query else "")
-    resp.set_cookie(OAUTH_RETURN_COOKIE, target, httponly=True, samesite="lax",
-                    secure=_is_https(request), max_age=600)
-
-
-def _take_oauth_return(request: Request) -> str | None:
-    """The parked destination, if it is one we actually park — else None.
-
-    Only `/oauth/authorize` is honoured. Accepting any path would turn this cookie into a general
-    "redirect me anywhere after login" primitive, which is a phishing aid rather than a feature.
-    """
-    # Starlette quotes a cookie value containing separators, and not every client strips the quotes
-    # back off. Tolerating them here costs nothing; assuming they are absent cost a failing test and
-    # would have cost a silently-dropped authorization in production.
-    target = (request.cookies.get(OAUTH_RETURN_COOKIE) or "").strip('"')
-    return target if target.startswith("/oauth/authorize?") else None
-
-
-REFERRAL_COOKIE = "treg_ref"
-# A month. The gap between clicking a friend's link and actually creating a team is measured in days
-# for the people this program is for — they read the landing, think about it, and come back. Shorter
-# would silently drop the referrals that took the longest to convert, which are exactly the genuine
-# ones; much longer would keep attributing a signup to a link somebody forgot they ever clicked.
-REFERRAL_COOKIE_MAX_AGE = 30 * 24 * 3600
-
-
-def _remember_referral(resp, request: Request, code: str) -> None:
-    """Park a referral code from `/?ref=…` until the visitor creates their first team.
-
-    Same shape as `_remember_oauth_return`: httponly (no script needs it), `samesite=lax` so it
-    survives the click through to a GitHub/Google sign-in and back, and `secure` only when we are
-    actually on HTTPS so local development still works.
-
-    First code wins is NOT enforced here — the cookie is simply overwritten. Someone who clicks two
-    different referral links before signing up gets attributed to the second, which is both the
-    normal advertising convention (last touch) and the one that needs no extra state.
-    """
-    resp.set_cookie(REFERRAL_COOKIE, code, httponly=True, samesite="lax",
-                    secure=_is_https(request), max_age=REFERRAL_COOKIE_MAX_AGE)
-
-
-def _take_referral(request: Request) -> str:
-    """The parked code, revalidated. "" when there is none or it is not a shape we ever mint.
-
-    Validated on READ as well as on write, exactly like `_take_oauth_return`: a cookie is
-    attacker-supplied, and this value reaches a database query. `normalize_code` is a strict
-    allowlist, so anything odd becomes "" and the signup simply proceeds unreferred.
-    """
-    return referrals.normalize_code((request.cookies.get(REFERRAL_COOKIE) or "").strip('"'))
+from ... import crypto
+from ...config import get_settings
+from ...db import get_session
+from ...models import ROLE_RANK, Membership, Org, User
+from . import session as sess
 
 
 @dataclass
@@ -164,10 +96,14 @@ async def require_identity(
                 "this token belongs to a machine identity — it can call this team's tools, "
                 "but cannot act as a user"))
         if user is not None and not user.suspended:
+            # Release the auth read transaction before a handler opens an application session;
+            # holding this pool slot while waiting for a second one can deadlock a bounded pool.
+            await db.commit()
             return user
         raise HTTPException(status_code=401, detail="invalid token")
     user = await _user_from_session(treg_session, db)
     if user is not None:
+        await db.commit()
         return user
     raise HTTPException(status_code=401, detail="not authenticated")
 
@@ -233,6 +169,7 @@ async def require_member(
         if not (request.url.path.startswith("/call/") or request.method in ("GET", "HEAD", "OPTIONS")):
             raise HTTPException(status_code=403, detail=(
                 "this is a public demo team — its token can only call tools and read"))
+    await db.commit()
     return Caller(membership=membership, user=user, org=org)
 
 
@@ -245,6 +182,7 @@ async def require_superadmin(
     is_superadmin, OR a session whose user is is_superadmin. Returns a principal (for audit)."""
     admin = get_settings().admin_token
     if x_treg_token and admin and hmac.compare_digest(x_treg_token, admin):
+        await db.commit()
         return "env-admin"
     user: User | None = None
     if x_treg_token:
@@ -253,6 +191,7 @@ async def require_superadmin(
     else:
         user = await _user_from_session(treg_session, db)
     if user is not None and user.is_superadmin and not user.suspended:
+        await db.commit()
         return user.email
     if not x_treg_token and not treg_session:  # nothing presented → not authenticated
         raise HTTPException(status_code=401, detail="not authenticated")
@@ -261,6 +200,17 @@ async def require_superadmin(
 
 def _role_at_least(role: str, minimum: str) -> bool:
     return ROLE_RANK.get(role, -1) >= ROLE_RANK.get(minimum, 99)
+
+
+def _can_manage(caller: Caller, resource) -> bool:
+    """Admin/owner may manage any resource in the org; a member only what they created."""
+    return _role_at_least(caller.role, "admin") or resource.owner == caller.email
+
+
+def _require_can_register(caller: Caller) -> None:
+    """Registering (secrets/tools/skills/oauth) needs member+. A viewer may only call + read."""
+    if not _role_at_least(caller.role, "member"):
+        raise HTTPException(status_code=403, detail="viewers can call and read, but cannot register")
 
 
 def _norm_email(email: str) -> str:
