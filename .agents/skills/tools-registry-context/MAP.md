@@ -40,11 +40,11 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/agent_pages.py` | interface/seo.md |
 | `src/treg/agents.py` | interface/cli.md |
 | `src/treg/analytics.py` | architecture/data-model.md |
-| `src/treg/api.py` | architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
+| `src/treg/api.py` | architecture/archive.md, architecture/money.md, architecture/multi-tenancy.md, architecture/proxy-model.md, architecture/super-admin.md, guides/expanding-a-category.md, interface/api.md, interface/dashboard.md, interface/landing-sandbox.md, interface/seo.md |
 | `src/treg/archive.py` | architecture/archive.md |
 | `src/treg/audit.py` | architecture/data-model.md, ops/deploy.md |
 | `src/treg/billing.py` | architecture/money.md |
-| `src/treg/bootstrap.py` | architecture/composition.md |
+| `src/treg/bootstrap.py` | architecture/archive.md, architecture/composition.md |
 | `src/treg/catalog/aliases.yaml` | architecture/catalog.md |
 | `src/treg/catalog/aviato.yaml` | architecture/catalog.md |
 | `src/treg/catalog/capabilities.yaml` | interface/catalog-review-proposal.md |
@@ -147,7 +147,7 @@ Regenerate via `scripts/build-map.py`.
 | Fragment | Sources |
 |---|---|
 | `architecture/ads-conversions.md` | `adsconv.py`, `adtrack.js` |
-| `architecture/archive.md` | `archive.py`, `0002_archive_tables.py` |
+| `architecture/archive.md` | `archive.py`, `0002_archive_tables.py`, `api.py`, `bootstrap.py` |
 | `architecture/auth-secrets.md` | `injectors.py`, `crypto.py`, `oauth.py`, `oauth_providers.py`, `health.py` |
 | `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_validate.py`, `aliases.yaml`, `fx.yaml`, `aviato.yaml`, `crustdata.yaml`, `aviato.companies.acquisitions.json`, `aviato.companies.employees.json`, `aviato.companies.enrich.bulk.json`, `aviato.companies.enrich.json`, `aviato.companies.founders.json`, `aviato.companies.funding_rounds.json`, `aviato.companies.investments.json`, `aviato.companies.outbound_investments.json`, `aviato.companies.search.json`, `aviato.linkedin.company.posts.json`, `aviato.linkedin.post.comments.json`, `aviato.linkedin.post.reactions.json`, `aviato.linkedin.post.reposts.json`, `aviato.linkedin.user.posts.json`, `aviato.people.contact.get.json`, `aviato.people.email.find.json`, `aviato.people.enrich.bulk.json`, `aviato.people.enrich.json`, `aviato.people.phone.find.json`, `aviato.people.search.json`, `aviato.people.search.simple.json`, `crustdata.companies.autocomplete.json`, `crustdata.companies.enrich.json`, `crustdata.companies.identify.json`, `crustdata.companies.jobs.search.json`, `crustdata.companies.search.json`, `crustdata.people.autocomplete.json`, `crustdata.people.enrich.json`, `crustdata.people.search.json`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `catalog_store.py`, `endpoint_stats.py`, `catalog.py` |
 | `architecture/composition.md` | `bootstrap.py`, `admin.py`, `web.py`, `dump_surface.py` |

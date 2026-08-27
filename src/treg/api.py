@@ -52,7 +52,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 from sqlmodel import select
 
-from . import adsconv, agent_pages, analytics, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, health, injectors, ledger, localrun, oauth
+from . import adsconv, agent_pages, analytics, archive, audit, billing, catalog_store, crypto, demo as demo_seed, email as email_sender, health, injectors, ledger, localrun, oauth
 from . import oauth_providers
 from . import pubfeed, ratestore, reconcile, referrals, runner, sandbox as demo_sandbox, session as sess
 from .config import LEGACY_PUBLIC_HOSTS, PUBLIC_HOST_ALIASES, get_settings, platform_setting_name
@@ -9275,6 +9275,20 @@ async def call_tool(
                 # in the body (see _buffer_response). A failure while draining is still an upstream
                 # failure, so it becomes a 502 and the hold goes back.
                 response, body = await _buffer_response(response)
+                # The archive's recorder (docs/context/architecture/archive.md): the body is already
+                # in memory here for the settle, so observing it costs nothing on-request. Metered
+                # 2xx only — gate 3 of eligibility is exactly "this fact, at this line". Off unless
+                # TREG_ARCHIVE_MODE says otherwise; record() is fire-and-forget and never raises.
+                if archive.recording() and 200 <= response.status_code < 300:
+                    archive.record(
+                        method=request.method, endpoint_id=mk.endpoint_id, provider=mk.provider,
+                        url=archive.key_url(upstream_url, request.query_params.multi_items(),
+                                            drop_params or set()),
+                        caller_body=caller_body,
+                        headers={k: request.headers.get(k, "") for k in ("accept", "accept-language")},
+                        status_code=response.status_code,
+                        media_type=response.headers.get("content-type", ""),
+                        body=body)
             elif response.status_code >= 400:
                 # Preserve streaming for own-key and own-tool calls while retaining only the small
                 # diagnostic head. The replacement response replays every consumed byte verbatim.

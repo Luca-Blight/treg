@@ -16,7 +16,7 @@ from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import BaseRoute, Mount
 
-from . import adsconv, analytics, audit
+from . import adsconv, analytics, archive, audit
 from .config import get_settings
 from .db import init_db, session_maker
 
@@ -415,6 +415,7 @@ def _lifespan(api_module, role: AppRole):
                 ads_task.cancel()
             await audit.drain()
             await analytics.drain()
+            await archive.drain()
             await app.state.http.aclose()
 
     return lifespan

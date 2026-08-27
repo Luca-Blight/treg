@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from treg import archive
+from treg import api as A, archive
 from treg.archive import cache_key, content_hash, policy, storable
 from treg.models import ArchiveKey, ArchiveSnapshot
 
@@ -159,3 +159,130 @@ async def test_key_hash_is_unique(clients):
         s.add(ArchiveKey(key_hash="dup", endpoint_id="b"))
         with pytest.raises(IntegrityError):
             await s.commit()
+
+
+# ---------------------------------------------------------------------------------------------
+# The recorder (PR 2): observe metered platform answers, never touch the call
+
+from httpx import AsyncClient
+from sqlalchemy import select
+
+from treg import catalog_store
+from treg.config import get_settings
+from treg.db import session_maker
+
+EP = "tikhub.tiktok.video.comments"   # tier-4 eligible in the test allow-list, GET, $0.001/call
+
+
+@pytest.fixture
+def platform_on(monkeypatch):
+    """Tier 4 the way a deploy turns it on (mirrors test_marketplace_call)."""
+    monkeypatch.setenv("TREG_PLATFORM_KEY_TIKHUB", "PLATFORM-TIKHUB-KEY")
+    monkeypatch.setenv("TREG_PLATFORM_PROVIDERS", "tikhub")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+@pytest.fixture
+def shadow(platform_on, monkeypatch):
+    monkeypatch.setattr(get_settings(), "archive_mode", "shadow")
+
+
+async def _rows():
+    await archive.drain()
+    async with session_maker() as s:
+        keys = (await s.execute(select(ArchiveKey))).scalars().all()
+        snaps = (await s.execute(
+            select(ArchiveSnapshot).order_by(ArchiveSnapshot.version))).scalars().all()
+        return keys, snaps
+
+
+@pytest.mark.anyio
+async def test_recorder_observes_a_metered_call(clients: AsyncClient, shadow):
+    r = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
+    assert r.status_code == 200, r.text
+    keys, snaps = await _rows()
+    assert len(keys) == 1 and len(snaps) == 1
+    assert keys[0].endpoint_id == EP and keys[0].provider == "tikhub"
+    # No cache field on this entry yet → policy forbidden → hash-only: counted, never kept.
+    assert keys[0].policy == "forbidden"
+    assert snaps[0].body is None and snaps[0].body_of is None
+    assert snaps[0].size_bytes > 0 and len(snaps[0].content_hash) == 64
+    assert snaps[0].origin == "caller"
+
+
+@pytest.mark.anyio
+async def test_recorder_off_by_default(clients: AsyncClient, platform_on):
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200
+    keys, snaps = await _rows()
+    assert keys == [] and snaps == []
+
+
+@pytest.mark.anyio
+async def test_storable_policy_keeps_bytes_and_dedups(clients: AsyncClient, shadow, monkeypatch):
+    entry = catalog_store.load().by_id[EP]
+    monkeypatch.setitem(entry, "cache", "transient")
+    r1 = await clients.get(f"/call/{EP}?aweme_id=7")
+    r2 = await clients.get(f"/call/{EP}?aweme_id=7")   # same key, identical echo answer
+    assert r1.status_code == r2.status_code == 200
+    keys, snaps = await _rows()
+    assert len(keys) == 1 and [s.version for s in snaps] == [1, 2]
+    assert keys[0].policy == "transient"
+    assert snaps[0].body is not None                    # bytes kept once…
+    assert snaps[1].body is None and snaps[1].body_of == snaps[0].id  # …then referenced
+    assert keys[0].stable_seen == 1 and keys[0].change_seen == 0
+
+
+@pytest.mark.anyio
+async def test_different_answer_counts_as_change(clients: AsyncClient, shadow, monkeypatch):
+    monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+    from tests.test_marketplace_call import _fake_relay
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"n": 1}'))
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"n": 2}'))
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    keys, snaps = await _rows()
+    assert len(keys) == 1 and len(snaps) == 2
+    assert keys[0].change_seen == 1 and keys[0].stable_seen == 0
+    assert keys[0].last_changed_at is not None
+    assert snaps[0].body == b'{"n": 1}' and snaps[1].body == b'{"n": 2}'
+
+
+@pytest.mark.anyio
+async def test_different_params_are_different_keys(clients: AsyncClient, shadow):
+    await clients.get(f"/call/{EP}?aweme_id=7")
+    await clients.get(f"/call/{EP}?aweme_id=8")
+    keys, _ = await _rows()
+    assert len(keys) == 2
+
+
+@pytest.mark.anyio
+async def test_oversized_body_is_counted_not_kept(clients: AsyncClient, shadow, monkeypatch):
+    monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
+    monkeypatch.setattr(get_settings(), "archive_max_body_bytes", 4)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200
+    _, snaps = await _rows()
+    assert len(snaps) == 1 and snaps[0].body is None and snaps[0].size_bytes > 4
+
+
+@pytest.mark.anyio
+async def test_error_responses_are_not_recorded(clients: AsyncClient, shadow, monkeypatch):
+    from tests.test_marketplace_call import _fake_relay
+    monkeypatch.setattr(A, "relay", _fake_relay(500, b"boom"))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 500
+    keys, snaps = await _rows()
+    assert keys == [] and snaps == []
+
+
+@pytest.mark.anyio
+async def test_a_recorder_crash_never_fails_the_call(clients: AsyncClient, shadow, monkeypatch):
+    async def _boom(**kwargs):
+        raise RuntimeError("recorder exploded")
+    monkeypatch.setattr(archive, "_store", _boom)
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200, r.text
+    await archive.drain()

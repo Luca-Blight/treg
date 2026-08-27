@@ -17,7 +17,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [Google Ads conversion tracking — capture, outbox, upload](architecture/ads-conversions.md) | shipped | adsconv.py, adtrack.js |
-| [Archive — every platform answer, kept and versioned (cache = the newest layer)](architecture/archive.md) | building | archive.py, 0002_archive_tables.py |
+| [Archive — every platform answer, kept and versioned (cache = the newest layer)](architecture/archive.md) | building | archive.py, 0002_archive_tables.py, api.py, bootstrap.py |
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, crypto.py, oauth.py, oauth_providers.py, … |
 | [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog-drift.yml, catalog_drift.py, catalog_validate.py, aliases.yaml, … |
 | [Application composition and deployment roles](architecture/composition.md) | shipped | bootstrap.py, admin.py, web.py, dump_surface.py |

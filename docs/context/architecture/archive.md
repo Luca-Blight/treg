@@ -4,6 +4,8 @@ status: building
 sources:
   - src/treg/archive.py
   - alembic/versions/0002_archive_tables.py
+  - src/treg/api.py
+  - src/treg/bootstrap.py
 related:
   - architecture/data-model.md
   - architecture/proxy-model.md
@@ -18,10 +20,29 @@ fresh; **archive** is every version of every answer, kept with its timestamp. Th
 archive's top layer. History is kept on purpose: it is the future data product (per-key
 time-series — backlink profiles over time, price history), not waste.
 
-**Build state (PR 1 of 5).** Only the skeleton exists: the mode gate, the eligibility policy, the
-cache key, and the two tables. Nothing writes or reads them yet. The recorder (PR 2), the catalog
-`cache` field at scale (PR 3), the serve path (PR 4) and the timer learner + refresh worker
-(PR 5) land behind the same switch. Do not document any of those as existing until they do.
+**Build state (PR 2 of 5).** The skeleton (PR 1) and the recorder (PR 2) exist: in `shadow` or
+`serve` mode, every metered 2xx platform answer is observed. The catalog `cache` field at scale
+(PR 3), the serve path (PR 4) and the timer learner + refresh worker (PR 5) land behind the same
+switch. Do not document any of those as existing until they do.
+
+## The recorder (PR 2)
+
+Hooked in `call_tool` immediately after `_buffer_response` — the one line where "metered platform
+call, body already in memory" is a fact, which IS eligibility gate 3. Metered 2xx only; the
+`X-Treg-Cache`-style serve headers do not exist yet. `archive.record()` is fire-and-forget with
+audit's discipline: bounded pending set (512), failures swallowed with a log line, `drain()` on
+shutdown (bootstrap) and in tests. A recorder crash cannot fail a call (tested).
+
+**Counted vs kept.** Statistics and the raw-body `content_hash` are recorded for every observed
+answer (a hash is an identity, not the content); body BYTES are kept only when the entry's cache
+policy is `transient`/`archive` AND the body fits `archive_max_body_bytes` (default 2 MB —
+skipped whole, never truncated). Consecutive identical answers dedup via `body_of`; an identical
+answer arriving where bytes were never kept stores them now, so a policy upgrade heals forward
+without a backfill. The key URL is rebuilt as the vendor sees it (resolved upstream + forwarded
+caller params, resolution-consumed names excluded) — credential injection happens later, in the
+relay, so a credential cannot enter the key or the store from the request side. One considered
+edge for PR 3's per-provider judgment: a vendor that ECHOES the request credential in a 2xx body
+would have it stored — judge `cache` per provider with that in mind.
 
 ## The mode switch
 
