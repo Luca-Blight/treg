@@ -7359,34 +7359,6 @@ def _params_hash(endpoint_id: str, query_items: list[tuple[str, str]], body: byt
     return h.hexdigest()
 
 
-def _platform_bindings(provider) -> list[dict]:
-    """Tier 4's injection: the SAME header/param shape a pasted key of this provider gets
-    (`_provider_bindings`), except the value is named rather than carried — `relay` reads
-    `platform_setting` from settings at call time. That is the whole security model: treg's key is
-    never written to a Secret row (unreadable by the tenant, unexportable by a local run, and
-    `api.py`'s cross-org secret check would reject it anyway)."""
-    setting = platform_setting_name(provider.service)
-    if provider.token_location == "query":
-        bindings = [{"platform_setting": setting, "injector": "env", "location": "query",
-                     "name": provider.token_param, "format": provider.token_format}]
-    else:
-        bindings = [{"platform_setting": setting, "injector": "env", "location": "header",
-                     "name": provider.token_header, "format": provider.token_format}]
-    # Keep tier 4 protocol-identical to BYOK. Required provider headers are constants, but they
-    # still use the same platform setting reference so the normal binding validator and injector
-    # own the whole shape. Crustdata's x-api-version pin is the first provider that needs this.
-    source = {k: v for k, v in bindings[0].items()
-              if k in ("platform_setting", "injector", "secret_field")}
-    bindings.extend({**source, "location": "header", "name": name, "format": value}
-                    for name, value in provider.required_headers)
-    # A per-user credential PAIR (Tomba's key+secret headers) needs treg's own second half on
-    # tier 4. platform_extra_setting is tier-4-only by design: extra_credential_setting would also
-    # ride user connects, pairing a user's key with treg's secret — a pair the provider rejects.
-    if provider.needs_extra_credential and provider.platform_extra_setting:
-        bindings.append({"platform_setting": provider.platform_extra_setting, "injector": "env",
-                         "location": "header", "name": provider.extra_credential_header,
-                         "format": "{secret}"})
-    return bindings
 
 
 def _platform_offer(ep: dict, provider, org: Org) -> dict | None:
@@ -7945,7 +7917,7 @@ async def _resolve_marketplace_call(
         virtual = Tool(
             org_id=caller.org_id, name=ep["id"], owner=caller.email,
             base_url=provider.base_url, host=_host_of(provider.base_url),
-            bindings=_platform_bindings(provider),
+            bindings=oauth_providers.platform_bindings(provider),
         )
         return MarketplaceCall(tool=virtual, tier="platform", **{
             **common, "cost_type": str(cost.get("type") or "per_call"),

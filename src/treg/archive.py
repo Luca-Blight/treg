@@ -123,7 +123,7 @@ def cache_key(
     kept_headers = sorted(
         (k.lower(), v.strip())
         for k, v in (headers or {}).items()
-        if k.lower() in ("accept", "accept-language")
+        if k.lower() in ("accept", "accept-language") and v.strip()
     )
     material = json.dumps(
         {
@@ -200,6 +200,7 @@ def record(
     status_code: int,
     media_type: str,
     body: bytes,
+    origin: str = "caller",
 ) -> None:
     """Schedule one observation of a metered platform answer. Returns immediately; the write runs
     off-request on its own session. Call sites gate on `recording()` and 2xx — this function
@@ -209,7 +210,7 @@ def record(
     task = asyncio.create_task(_store(
         method=method, endpoint_id=endpoint_id, provider=provider, url=url,
         caller_body=caller_body, headers=headers, status_code=status_code,
-        media_type=media_type, body=body))
+        media_type=media_type, body=body, origin=origin))
     _pending.add(task)
     task.add_done_callback(_pending.discard)
 
@@ -231,6 +232,7 @@ async def _store(
     status_code: int,
     media_type: str,
     body: bytes,
+    origin: str = "caller",
 ) -> None:
     """One recording: upsert the key, append a version, keep the change statistics honest.
 
@@ -261,8 +263,17 @@ async def _store(
             key = (await s.execute(
                 select(ArchiveKey).where(ArchiveKey.key_hash == kh))).scalars().one_or_none()
             if key is None:
+                # The request shape is stored WITH the key so the refresh worker can re-ask the
+                # exact question later. It is the pre-injection request: credentials cannot be in
+                # it (they are added inside the relay, after this shape is fixed).
+                kept = {k.lower(): v.strip() for k, v in (headers or {}).items()
+                        if k.lower() in ("accept", "accept-language") and v.strip()}
                 key = ArchiveKey(key_hash=kh, endpoint_id=endpoint_id, provider=provider,
-                                 policy=pol, fetched_at=now, last_requested_at=now)
+                                 policy=pol, fetched_at=now,
+                                 last_requested_at=now if origin == "caller" else None,
+                                 ttl_s=ttl_for(entry),
+                                 req_method=method.upper(), req_url=url,
+                                 req_body=caller_body or None, req_headers=kept)
                 s.add(key)
                 try:
                     await s.commit()
@@ -279,17 +290,30 @@ async def _store(
                 key_id=key.id, version=1 if newest is None else newest.version + 1,
                 status_code=status_code, media_type=media_type, content_hash=ch,
                 body=body if keep_bytes else None, size_bytes=len(body),
-                fetched_at=now, origin="caller")
+                fetched_at=now, origin=origin)
             if newest is not None:
                 if newest.content_hash == ch:
                     key.stable_seen += 1
+                    learn(key, stable=True, entry=entry)
                     carrier = newest.body_of or (newest.id if newest.body is not None else None)
                     if carrier is not None:      # bytes already on file — reference, don't repeat
                         snap.body, snap.body_of = None, carrier
                 else:
-                    key.change_seen += 1
-                    key.last_changed_at = now
-            key.fetched_at, key.last_requested_at, key.policy = now, now, pol
+                    old_body = newest.body
+                    if old_body is None and newest.body_of is not None:
+                        old = await s.get(ArchiveSnapshot, newest.body_of)
+                        old_body = old.body if old is not None else None
+                    if _noise_only(old_body, body, key):
+                        # Learned request ids / server timestamps moved; the data did not.
+                        key.stable_seen += 1
+                        learn(key, stable=True, entry=entry)
+                    else:
+                        key.change_seen += 1
+                        key.last_changed_at = now
+                        learn(key, stable=False, entry=entry)
+            key.fetched_at, key.policy = now, pol
+            if origin == "caller":     # a refresh is treg asking itself — never demand
+                key.last_requested_at = now
             s.add(key)
             s.add(snap)
             try:
@@ -389,12 +413,7 @@ async def lookup(
         entry = catalog_store.load().by_id.get(endpoint_id)
         if not storable(entry):
             return None
-        window = ttl_for(entry)
         wanted = caller_max_age_s(request_headers)
-        if wanted is not None:
-            window = min(window, wanted)
-        if window <= 0:
-            return None
 
         kh = cache_key(method, endpoint_id, url, caller_body, {
             k: request_headers.get(k, "") for k in ("accept", "accept-language")})
@@ -402,6 +421,15 @@ async def lookup(
             key = (await s.execute(
                 select(ArchiveKey).where(ArchiveKey.key_hash == kh))).scalars().one_or_none()
             if key is None:
+                return None
+            if key.ttl_s == TTL_NEVER:   # the key marked itself: changes on every fetch
+                return None
+            # The learned per-key timer when one exists, else the fixed phase-1 guess; the
+            # caller's own bar tightens, never widens.
+            window = key.ttl_s if key.ttl_s > 0 else ttl_for(entry)
+            if wanted is not None:
+                window = min(window, wanted)
+            if window <= 0:
                 return None
             newest = (await s.execute(
                 select(ArchiveSnapshot).where(ArchiveSnapshot.key_id == key.id)
@@ -450,3 +478,222 @@ async def _touch_write(key_hash: str) -> None:
             await s.commit()
     except Exception:  # noqa: BLE001
         _log.warning("archive touch dropped", exc_info=True)
+
+
+# ---------------------------------------------------------------------------------------------
+# The learner (PR 5) — AIMD timers and noise detection, applied inside the recorder.
+
+TTL_FLOOR_S = 60
+TTL_CEILING_S = 30 * 86400
+TTL_NEVER = -1          # the key marked itself never-cache: changes on every fetch
+_NEVER_AFTER = 4        # consecutive changed refetches (no stables) before self-marking
+_NOISE_MAX_LEAF_SHARE = 0.4   # a repeated identical diff-set is noise only if it is a MINOR
+_NOISE_MIN_LEAVES = 5         # corner of a body with at least this many leaves — a tiny body
+#                               whose one value moves (a price) must stay "changed", never noise.
+
+
+def _leaf_paths(node: Any, prefix: str = "$", *, depth: int = 0, out: list | None = None) -> list[str]:
+    """Dotted leaf paths of a JSON tree; list items collapse to `[]` so per-row ids do not
+    explode one logical path into hundreds. Bounded by depth and count — comparison machinery
+    must never be the expensive part of a recording."""
+    if out is None:
+        out = []
+    if len(out) >= 400 or depth > 6:
+        return out
+    if isinstance(node, dict):
+        for k, v in node.items():
+            _leaf_paths(v, f"{prefix}.{k}", depth=depth + 1, out=out)
+    elif isinstance(node, list):
+        for v in node[:50]:
+            _leaf_paths(v, f"{prefix}[]", depth=depth + 1, out=out)
+    else:
+        out.append(prefix)
+    return out
+
+
+def _changed_paths(old: Any, new: Any, prefix: str = "$", *, depth: int = 0,
+                   out: set | None = None) -> set[str]:
+    """Leaf paths whose values differ between two JSON trees (same collapse rules as above)."""
+    if out is None:
+        out = set()
+    if len(out) >= 400 or depth > 6:
+        return out
+    if isinstance(old, dict) and isinstance(new, dict):
+        for k in set(old) | set(new):
+            _changed_paths(old.get(k), new.get(k), f"{prefix}.{k}", depth=depth + 1, out=out)
+    elif isinstance(old, list) and isinstance(new, list):
+        for a, b in zip(old[:50], new[:50]):
+            _changed_paths(a, b, f"{prefix}[]", depth=depth + 1, out=out)
+        if len(old) != len(new):
+            out.add(f"{prefix}[]")
+    elif old != new:
+        out.add(prefix)
+    return out
+
+
+def _noise_only(old_body: bytes | None, new_body: bytes, key) -> bool:
+    """True when this refetch's difference is the SAME small diff-set as last time — learned
+    request ids and server timestamps, not data. Two guards keep a real signal out of the noise
+    bin: the identical set must repeat (first occurrence always counts as changed, and gets
+    remembered as the candidate), and it must be a minor share (< 40%) of a body with at least
+    5 leaves — a tiny body whose one value moves every fetch is a PRICE, not noise."""
+    if not old_body:
+        return False
+    try:
+        old_json, new_json = json.loads(old_body), json.loads(new_body)
+    except (ValueError, UnicodeDecodeError):
+        return False
+    changed = _changed_paths(old_json, new_json)
+    if not changed:
+        return False
+    known = set(key.volatile_paths or [])
+    leaves = len(_leaf_paths(new_json))
+    is_noise = (changed <= known
+                and leaves >= _NOISE_MIN_LEAVES
+                and len(changed) / leaves < _NOISE_MAX_LEAF_SHARE)
+    # Remember this diff-set as the next candidate either way (bounded), so the SAME noise
+    # repeating is recognized from its second occurrence on.
+    key.volatile_paths = sorted(changed)[:50]
+    return is_noise
+
+
+def learn(key, *, stable: bool, entry: dict[str, Any] | None) -> None:
+    """One AIMD step on the key's timer. Grow slowly on stability (×1.5, capped), shrink fast on
+    change (×0.5, floored). The vendor's declared ceiling always caps; a key that only ever
+    changes marks itself TTL_NEVER and is never served again until a stable refetch resets it."""
+    ceiling = TTL_CEILING_S
+    declared = (entry or {}).get("cache")
+    if isinstance(declared, dict):
+        try:
+            cap = int(declared.get("max_age_s") or 0)
+        except (TypeError, ValueError):
+            cap = 0
+        if cap > 0:
+            ceiling = min(ceiling, cap)
+    current = key.ttl_s if key.ttl_s > 0 else ttl_for(entry)
+    if stable:
+        key.ttl_s = min(int(current * 1.5), ceiling)
+    elif key.change_seen >= _NEVER_AFTER and key.stable_seen == 0:
+        key.ttl_s = TTL_NEVER
+    else:
+        key.ttl_s = max(int(current * 0.5), TTL_FLOOR_S)
+
+
+# ---------------------------------------------------------------------------------------------
+# The refresh worker (PR 5) — serve mode only. A key EARNS refreshing; it is never entitled:
+# refreshed only when its window is ≥80% consumed AND a caller asked for it since its last fetch.
+# A refresh is treg's own vendor spend with no caller attached, so two brakes bound it — the
+# per-provider daily call cap (archive_refresh_daily_cap; 0 disables) and the per-pass limit.
+# Every refresh is an observation: it lands through the same _store, teaching the timer.
+
+_REFRESH_PER_PASS = 10
+_DUE_SHARE = 0.8
+
+
+def worker_enabled() -> bool:
+    return serving() and get_settings().archive_refresh_daily_cap > 0
+
+
+async def refresh_worker(client) -> None:
+    """Run forever from lifespan, adsconv.worker's discipline: a bad pass must never kill the
+    loop, and only cancellation ends it."""
+    while True:
+        try:
+            done = await refresh_once(client)
+            if done:
+                _log.info("archive refresh: %d key(s) refreshed", done)
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001
+            _log.warning("archive refresh pass failed", exc_info=True)
+        await asyncio.sleep(get_settings().archive_refresh_interval_s)
+
+
+async def refresh_once(client) -> int:
+    """One pass: find due-and-demanded keys, re-ask each question on treg's platform key, and
+    record the answers (origin="refresh"). Returns how many were refreshed."""
+    if not worker_enabled():
+        return 0
+    from sqlalchemy import func, select
+
+    from . import catalog_store
+    from .db import session_maker
+    from .models import ArchiveKey, ArchiveSnapshot
+
+    now = _utcnow()
+    cat = catalog_store.load()
+    async with session_maker() as s:
+        candidates = (await s.execute(
+            select(ArchiveKey)
+            .where(ArchiveKey.ttl_s > 0, ArchiveKey.req_url != "",
+                   ArchiveKey.last_requested_at.is_not(None))
+            .order_by(ArchiveKey.fetched_at))).scalars().all()
+        # Today's refresh spend per provider — counted from the snapshots themselves, no extra
+        # bookkeeping table to drift.
+        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        spent_rows = (await s.execute(
+            select(ArchiveKey.provider, func.count(ArchiveSnapshot.id))
+            .join(ArchiveSnapshot, ArchiveSnapshot.key_id == ArchiveKey.id)
+            .where(ArchiveSnapshot.origin == "refresh", ArchiveSnapshot.fetched_at >= day_start)
+            .group_by(ArchiveKey.provider))).all()
+    spent = {provider: int(n) for provider, n in spent_rows}
+    cap = get_settings().archive_refresh_daily_cap
+
+    refreshed = 0
+    for key in candidates:
+        if refreshed >= _REFRESH_PER_PASS:
+            break
+        entry = cat.by_id.get(key.endpoint_id)
+        if not storable(entry):
+            continue  # judgment changed since recording — never refresh what may not be kept
+        window = key.ttl_s if key.ttl_s > 0 else ttl_for(entry)
+        age = (now - key.fetched_at).total_seconds()
+        demanded = key.last_requested_at is not None and key.last_requested_at > key.fetched_at
+        if age < window * _DUE_SHARE or not demanded:
+            continue
+        if spent.get(key.provider, 0) >= cap:
+            continue
+        if await _refresh_call(client, key):
+            spent[key.provider] = spent.get(key.provider, 0) + 1
+            refreshed += 1
+    if refreshed:
+        await drain()  # the recordings ARE this pass's output — land them before returning
+    return refreshed
+
+
+async def _refresh_call(client, key) -> bool:
+    """Re-make one stored question on treg's own key. Injection reuses the ONE authoritative
+    binding builder (oauth_providers.platform_bindings — moved there so this worker never
+    imports api; the routers→api boundary forbids that chain); the key value resolves from
+    settings exactly as the relay does it."""
+    try:
+        from . import oauth_providers
+
+        provider = oauth_providers.get(key.provider)
+        secret_value = get_settings().platform_key_for(key.provider)
+        if provider is None or not secret_value:
+            return False  # key withdrawn or provider de-listed — quietly not refreshable
+        headers: dict[str, str] = dict(key.req_headers or {})  # replay what keyed the question
+        params: list = []
+        for binding in oauth_providers.platform_bindings(provider):
+            value = getattr(get_settings(), binding.get("platform_setting", ""), "") or ""
+            fmt = binding.get("format") or "{secret}"
+            rendered = fmt.replace("{secret}", value) if value else fmt
+            if binding.get("location") == "query":
+                params.append((binding.get("name"), rendered))
+            else:
+                headers[binding.get("name", "")] = rendered
+        resp = await client.request(key.req_method or "GET", key.req_url, params=params or None,
+                                    headers=headers, content=key.req_body or None)
+        body = resp.content
+        if not (200 <= resp.status_code < 300):
+            _log.warning("archive refresh got %s for %s", resp.status_code, key.endpoint_id)
+            return False
+        record(method=key.req_method or "GET", endpoint_id=key.endpoint_id,
+               provider=key.provider, url=key.req_url, caller_body=key.req_body or b"",
+               headers=dict(key.req_headers or {}), status_code=resp.status_code,
+               media_type=resp.headers.get("content-type", ""), body=body, origin="refresh")
+        return True
+    except Exception:  # noqa: BLE001 — one dead key must not stop the pass
+        _log.warning("archive refresh call failed for %s", key.endpoint_id, exc_info=True)
+        return False

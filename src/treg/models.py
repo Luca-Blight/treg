@@ -1075,6 +1075,15 @@ class ArchiveKey(SQLModel, table=True):
     heat: float = Field(default=0.0)               # decayed request rate, updated on each hit/miss
     last_requested_at: datetime | None = Field(default=None)
     created_at: datetime = Field(default_factory=_now)
+    # The pre-injection request shape, stored so the refresh worker can re-ask the exact question.
+    # Credentials cannot appear here: injection happens inside the relay, after this shape is
+    # fixed. Declared LAST to match the migration's ALTER TABLE append position (parity test).
+    req_method: str = Field(default="")
+    req_url: str = Field(default="")
+    req_body: bytes | None = Field(default=None)
+    # Only the headers that KEY (Accept / Accept-Language, when the caller sent them): the worker
+    # must replay them or its recording lands under a different key than the caller's question.
+    req_headers: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
 
 class ArchiveSnapshot(SQLModel, table=True):
