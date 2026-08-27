@@ -230,6 +230,7 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/admin/reconcile/drift', ('GET',), 'admin_reconcile_drift'),
     ('/admin/reconcile/spend', ('GET',), 'admin_reconcile_spend'),
     ('/admin/reconcile/repeats', ('GET',), 'admin_reconcile_repeats'),
+    ('/admin/archive', ('GET',), 'admin_archive'),
     ('/admin/referrals', ('GET',), 'admin_referrals'),
     ('/catalog/endpoints/{endpoint_id}/access', ('GET',), 'catalog_endpoint_access'),
     ('/run', ('POST',), 'run_tool_server'),

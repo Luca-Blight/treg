@@ -1404,6 +1404,69 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/admin/archive": {
+      "get": {
+        "description": "Phase 0's read-out: what the recorder has observed, per endpoint — the evidence for the\nper-provider cache judgments (PR 3) and later for the timers. `refetches` counts repeat\nobservations of an existing key (stable + changed); `change_ratio` is changed/refetches, the\nraw signal for how fast an endpoint's answers move. `kept_bytes` only grows where a judged\nlicence allows storing (docs/context/architecture/archive.md).",
+        "operationId": "admin_archive_admin_archive_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "top",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Top",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-treg-token",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "X-Treg-Token",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "treg_session",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Treg Session",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Archive Admin Archive Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Archive"
+      }
+    },
     "/admin/calls": {
       "get": {
         "operationId": "admin_calls_admin_calls_get",
