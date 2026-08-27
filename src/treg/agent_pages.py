@@ -3772,6 +3772,241 @@ USE_CASE_PAGES["search-posts-by-keyword"] = {
 }
 
 
+USE_CASE_PAGES["app-store-search"] = {
+    "label": "App store search",
+    "sentence": "App store API: search the Apple App Store and Google Play by keyword, per call",
+    "title": "App store API: search the App Store and Google Play | treg.to",
+    "lede": (
+        "Give your agent a keyword and get the store listing rows back: app name, developer, "
+        "rating, review count, price and the store link, from the Apple App Store and from "
+        "Google Play, both through one treg.to key from {cheapest} a search at the provider's "
+        "own rate with $0.000 added. No Apple developer account, no Play console, no proxy "
+        "pool and no scraper of your own to keep alive when a store changes its markup. The "
+        "two stores are separate shelves here, not two views of one dataset, so ask for both "
+        "when you want both."),
+    "prompt": "Using treg, search the Apple App Store and Google Play for apps matching "
+              "\"habit tracker\", show me the price per search first, then put the results "
+              "from each store in one table with developer, rating, review count and price, "
+              "and mark the apps that appear in both.",
+    "prompt_why": [
+        ("Name both stores", "Apple and Google Play are separate calls with separate app ids and separate rankings. One store is one search; both is two."),
+        ("Say which country", "Store results are per storefront. The US list and the UK list are different lists, and the agent will pick for you if you do not."),
+        ("Ask for the columns", "The rows carry the developer, the rating, the review count, the price and the link. Name the ones you want or the whole listing comes back."),
+        ("Ask for the price first", "treg.to prints the rate before the call, so a hundred keywords across two stores has a number on it before anything runs."),
+    ],
+    "result_noun": "app",
+    "result_image": None,
+    "q_cheapest": "What does an app store search cost?",
+    "q_reliable": "Which store search is the most reliable?",
+    "q_compare": "How do the two stores compare?",
+    "what_is_heading": "What is an app store API?",
+    "what_is": (
+        "An app store API returns what a store's search results page holds, as data: the apps "
+        "matching a keyword, in the store's own order, with the developer, the rating, the "
+        "review count, the price and the listing link. It is not App Store Connect and it is "
+        "not the Google Play Developer API. Those are the accounts you own, and they only "
+        "cover your own apps. It is also not Apple's public iTunes Search endpoint, which is "
+        "free, answers a different query shape, and is not in this catalog. The two rows here "
+        "read the two public stores and relay what the store returned."),
+    "notes": [
+        "One provider serves both stores at one rate. SerpApi runs the Apple App Store engine "
+        "and the Google Play engine at the same flat price per successful search, metered "
+        "from your team's prepaid balance at SerpApi's own rate with $0.000 added, and its "
+        "rate card says a failed or cached search is not billed. Both rows were verified "
+        "against the live API on 2026-07-28. A new team's free dollar is a few dozen searches "
+        "across both stores.",
+        "The two engines take different parameters, and the Play row does two jobs. Apple's "
+        "engine wants a search term; Google Play's wants a query, and the same row answers "
+        "the store charts as well as a keyword search depending on what you send. Read the "
+        "docs linked on each row before an agent loops, because treg.to relays the store's "
+        "own response verbatim and models neither store's API.",
+        "What is not here is the part most people are really after. This is search, not rank "
+        "tracking: nothing stores yesterday's position, and there is no keyword popularity "
+        "index, no download or revenue estimate and no review feed on these two rows. Google "
+        "Play also stops exposing results publicly at shallow depth, which android developers "
+        "have measured for themselves, so a position deeper than the first page or two is not "
+        "a number any public search can honestly return. An agent can rebuild position over "
+        "time by running the same search on a schedule you give it and keeping the results.",
+    ],
+    "faq": [
+        ("Do I need an Apple or Google developer account?",
+         "No. Both rows run on treg.to's own key and bill per successful search from your "
+         "team's balance at SerpApi's rate with no markup. A developer account is for "
+         "publishing apps and reading your own; this reads the public store."),
+        ("Is this App Store Connect or the Play Developer API?",
+         "No. Those two are your own account's APIs and they only see apps you publish: your "
+         "installs, your ratings, your revenue. This page is the public store search, so it "
+         "sees any app but none of the private numbers behind it."),
+        ("Can I track where my app ranks for a keyword over time?",
+         "Your agent can, by running the search on a schedule you set and keeping the "
+         "results. treg.to has no scheduler, no history and no ASO rank tracker. The honest "
+         "limit is depth: the stores expose only so many results, and a rank below that is a "
+         "guess wherever you read it."),
+        ("Can I get reviews, downloads or keyword volume?",
+         "Not from these two rows. They return the search listing and nothing more. The "
+         "catalog carries app review and app data endpoints from other providers on their own "
+         "shelves, and Apple's keyword popularity is a relative index behind an Apple Search "
+         "Ads account, not a search volume figure anyone can resell."),
+    ],
+    "voices_intro": (
+        "App store threads are unusually seeded: of the ~140 Reddit and X posts read in "
+        "August 2026, more than half were builders announcing their own scrapers, one ran the "
+        "same review-scraper copy through seven subreddits, and one post seeded zero-width "
+        "spaces at every paragraph break. These five are developers hitting the wall in "
+        "public."),
+    "voices": [
+        ("Deep store ranks are interpolated, not measured",
+         "The paid SERP APIs go deeper, but tools that don't pay for them and still show you 'rank #63' are interpolating, not measuring.",
+         "r/androiddev, 11 points", "https://www.reddit.com/r/androiddev/comments/1va99d9/psa_google_play_only_exposes_30_search_results/",
+         "That is the honest ceiling and this page will not pretend past it. The rows return "
+         "the store's own results in the store's own order, as deep as the store exposes "
+         "them, and treg.to publishes no rank number of its own."),
+        ("Apple's free endpoint stops answering without notice",
+         "As of this morning (April 16), all my requests to the /search endpoint are returning HTTP 404 Not Found.",
+         "r/iOSProgramming, 11 points", "https://www.reddit.com/r/iOSProgramming/comments/1sn3k1m/itunes_search_api_returning_404_for_search/",
+         "That is Apple's public iTunes Search endpoint, which is free, undocumented in "
+         "practice, and not in this catalog. The rows here are a paid provider's store "
+         "engines, billed only on a successful search, with what the live traffic shows "
+         "rather than an uptime promise."),
+        ("Everything is API first except the store itself",
+         "To have to scrape them from the app store pages when everything else is so API first seems like a miss.",
+         "X, 19 likes", "https://x.com/i/status/2092565867145879853",
+         "Agreed, and that is the whole reason this row exists. The agent sends a keyword and "
+         "a country and gets rows; the scraping, the proxies and the markup changes are the "
+         "provider's problem, at a price printed before the call."),
+        ("The free endpoint carries none of the numbers you want",
+         "the itunes search api does not give downloads, subscriptions, or any financial metrics, and it does not provide subscription pricing either.",
+         "X, 69 likes", "https://x.com/i/status/1994112990866518506",
+         "True, and neither do these rows. Listing price, rating and review count come back; "
+         "installs and revenue do not exist in any public store response, and no provider on "
+         "this page can conjure them."),
+        ("The whole store is bigger than the context window",
+         "welp, even using a 1M token context limit, the data is too large.",
+         "r/shopifyDev, 77 points", "https://www.reddit.com/r/shopifyDev/comments/1o4ugbp/an_analysis_of_15003_apps_in_the_shopify_app_store/",
+         "Which is the argument for asking for columns rather than everything. Say which "
+         "fields a row needs in the prompt, cap the result count, and the agent reads a table "
+         "instead of drowning in a store dump."),
+    ],
+    "related": ("Amazon search and best sellers", "TikTok Shop products and reviews",
+                "Product reviews", "Google results for a keyword"),
+}
+
+
+USE_CASE_PAGES["transcripts-of-x-and-facebook-video-posts"] = {
+    "label": "Transcripts of X and Facebook video posts",
+    "sentence": "Facebook video transcript and X video transcript: the words in a video post, from its URL",
+    "title": "Facebook and X video transcript by URL, per call | treg.to",
+    "lede": (
+        "Paste your agent the URL of a Facebook video post or an X video post and get the "
+        "spoken words back as text, through one treg.to key from {cheapest} a call at the "
+        "provider's own rate with $0.000 added. No download step, no ffmpeg, no Whisper run "
+        "of your own and no developer account on either network. The price is per call, not "
+        "per minute of video, so a fifty minute livestream and a twenty second clip cost the "
+        "same. Public posts only, and a post that has been taken down is gone for everyone."),
+    "prompt": "Using treg, get the transcript of this Facebook video post and this X video "
+              "post, show me the price per call first, then give me the text of each with the "
+              "source link above it, and tell me plainly if either one came back empty.",
+    "prompt_why": [
+        ("Give the post URL, not the video file", "Both rows take the URL of the post. Getting the media off the platform is the part that normally breaks, and it is the provider's job here."),
+        ("Say which network", "Facebook and X are separate rows behind separate calls. One post is one call, on the network the URL belongs to."),
+        ("Ask for the text, not a summary", "The rows return what was said. A summary is the agent's own work afterwards, and it is worth reading the transcript first."),
+        ("Handle the empty case out loud", "A post with no speech, or one the provider cannot reach, comes back with nothing and still costs the call. Tell the agent to say so rather than invent."),
+    ],
+    "result_noun": "transcript",
+    "result_image": None,
+    "q_cheapest": "What does a transcript cost, per network?",
+    "q_reliable": "Which one is the most reliable?",
+    "q_compare": "How do the two networks compare?",
+    "what_is_heading": "What is a Facebook video transcript API?",
+    "what_is": (
+        "It is a call that takes the URL of a video post and returns the words spoken in it as "
+        "text. The hard part was never the speech recognition: it is getting the media out of "
+        "a network that does not want to hand it over. Facebook Reels carry no automatic "
+        "transcription and Facebook blocks the usual downloaders, so the do it yourself path "
+        "runs download, extract audio, transcribe, and falls over at the first step. X posts "
+        "have their own wall around saving the file. Both rows here take the URL and do all "
+        "of it on the provider's side, so your agent gets text and never touches the video."),
+    "notes": [
+        "One provider covers both networks at one rate. ScrapeCreators bills a credit per "
+        "call for the X row and for the Facebook row alike, metered from your team's prepaid "
+        "balance at ScrapeCreators' own rate with $0.000 added. Per call means per call: an "
+        "empty answer is billed the same as a full transcript, so budget the rate times the "
+        "number of posts, not the number of transcripts you keep.",
+        "Neither row has been called live through treg.to yet, and the catalog says so. Both "
+        "carry a documented price and a documented shape from the provider's docs, neither "
+        "has a verified date, and the Facebook row's stored test request does not even name a "
+        "URL. Treat them as documented rather than proven, run one post before an agent runs "
+        "a thousand, and read the docs linked on each row.",
+        "The limits are the platforms', and they are worth saying out loud. Public posts "
+        "only: a friends only, group only or age gated Facebook video is not reachable. A "
+        "deleted post is gone, and no provider recovers it. YouTube transcripts are a "
+        "different and much cheaper shelf with its own page, and TikTok and Instagram "
+        "transcripts are not in the catalog at all. Grok will also transcribe an X video "
+        "inside X if a human is doing it by hand; these rows are for the case where an agent "
+        "needs a hundred of them.",
+    ],
+    "faq": [
+        ("Do I need an X or Facebook developer account?",
+         "No. Both rows run on treg.to's own key and bill per call from your team's balance at "
+         "the provider's rate with no markup. Nothing uses an account of yours, so nothing "
+         "puts one at risk."),
+        ("Does it work on any post?",
+         "Video posts, and public ones. A text post has nothing to transcribe, a private or "
+         "age gated Facebook video is not reachable, and a post that has been removed is gone "
+         "for the provider too. The call still costs its rate when the answer comes back "
+         "empty, which is why the prompt above asks the agent to say so."),
+        ("What about YouTube, TikTok or Instagram?",
+         "YouTube has its own page and its own much cheaper row. TikTok and Instagram video "
+         "transcripts are not in the catalog today, and this page will not pretend otherwise. "
+         "Rumble is there, on its own shelf."),
+        ("Is this cheaper than running Whisper myself?",
+         "That depends on what your time is worth. Whisper is free and the audio is not: the "
+         "download is what fails, and the published attempts at doing this with an agent end "
+         "in blocked downloaders, expired tokens and a fallback to a paid speech API anyway. "
+         "These rows are one call at a printed rate, with no pipeline to maintain."),
+    ],
+    "voices_intro": (
+        "This is a thin corpus honestly reported: of the ~180 Reddit and X posts read in "
+        "August 2026 only about twenty were on the job, and the loudest block of pain "
+        "language in the Facebook dumps came from one bot posting the same six templates. "
+        "These five are people doing it the hard way."),
+    "voices": [
+        ("Facebook Reels have no captions to fall back on",
+         "Facebook blocks most AIs by default, and Reels don't have automatic transcription, so there's no shortcut.",
+         "r/claude, 6 points", "https://www.reddit.com/r/claude/comments/1s22ccw/i_tested_claude_to_see_if_they_could_get_a/",
+         "That is the honest state of Facebook video, and it is why this row exists. The "
+         "shortcut is somebody else's fetch: your agent sends the post URL and reads text "
+         "back, at a rate printed before the call."),
+        ("The agent's problem was the fetch, never the transcription",
+         "It tried again, used yt-dlp, said that it was blocked because FB blocks bots.",
+         "r/claude, 6 points", "https://www.reddit.com/r/claude/comments/1s22ccw/i_tested_claude_to_see_if_they_could_get_a/",
+         "In that thread the model eventually got there through a third party downloader, an "
+         "expired token and a paid speech API, after four nudges. One call replaces the "
+         "chain; what it cannot do is reach a post that is private or gone."),
+        ("Hand typing is the fallback people actually use",
+         "Please note, the transcript may not be 100% accurate as it was typed out by hand.",
+         "r/Superstonk, 6,923 points", "https://www.reddit.com/r/Superstonk/comments/qmnan7/computershare_ama_part_1_video_link_with/",
+         "Machine text is faster and it is not automatically better on accents or crosstalk. "
+         "The useful version is both: get the transcript in a second, then spot check the "
+         "lines you are going to quote against the video."),
+        ("Nobody asked for a summary, they asked what was said",
+         "For those who can't wade through the whole 12 minutes or so, here's a rough and ready transcript.",
+         "X, 6 likes", "https://x.com/i/status/2092561667783573707",
+         "Which is why the prompt on this page asks for the text first. The rows return the "
+         "words; summarising, quoting and pulling a clip out of them is your agent's own work "
+         "afterwards, on data it can show you."),
+        ("A video post with nothing to read",
+         "Finally found a video on Facebook that doesn't have captions or a transcript. WTH.",
+         "X", "https://x.com/i/status/1716876952337068536",
+         "That is the ordinary case on Facebook rather than the unlucky one. The row does not "
+         "read captions off the post, so a video with none is still readable, as long as the "
+         "post is public."),
+    ],
+    "related": ("Get a video's transcript", "Search posts by keyword",
+                "A competitor's recent posts", "Video details, views and stats"),
+}
+
+
 # The workflow pages (`/workflows/<slug>`): the sequence a person actually runs, as ONE prompt. A
 # use-case page answers one job; a workflow chains several, with a per-step price pulled live from
 # the catalog and a receipt from a real run. `run` is hand-recorded from that run and dated. A
