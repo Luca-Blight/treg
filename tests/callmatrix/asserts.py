@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
@@ -51,7 +53,28 @@ async def assert_outcome(
     expect: Expect,
 ) -> dict:
     """Check the HTTP response, money journal, audit row, and provider hit book."""
-    await audit.drain()
+    # Diagnostic guard for the CI-only stall: if the audit queue cannot drain, dump every pending
+    # task's coroutine stack and the pool state instead of hanging until the runner kills the job.
+    try:
+        await asyncio.wait_for(audit.drain(), timeout=90)
+    except asyncio.TimeoutError:
+        import traceback
+        from treg.db import _engine
+        lines = [f"audit.drain stalled; pending={len(audit._pending)}"]
+        try:
+            lines.append(f"pool: {_engine.pool.status()}")
+        except Exception as exc:  # noqa: BLE001
+            lines.append(f"pool status unavailable: {exc}")
+        for task in list(audit._pending):
+            lines.append(f"--- pending task {task!r}")
+            for frame in task.get_stack():
+                lines.extend(traceback.format_stack(frame, limit=3))
+        for task in asyncio.all_tasks():
+            if task is not asyncio.current_task():
+                lines.append(f"--- live task {task!r}")
+                for frame in task.get_stack():
+                    lines.extend(traceback.format_stack(frame, limit=2))
+        raise AssertionError("\n".join(lines))
 
     assert response.status_code == expect.status, response.text
     if expect.body is not None:
