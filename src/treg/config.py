@@ -243,6 +243,12 @@ class Settings(BaseSettings):
     # default; the test suite disables it (its upstream is an in-process ASGI transport, not real DNS).
     proxy_ssrf_check: bool = True
 
+    # The archive's rollout switch (see treg/archive.py): "off" (default) | "shadow" (record +
+    # learn from metered platform responses, serve nothing) | "serve" (shadow + answer eligible
+    # fresh hits from the store). Any other value degrades to "off" — a typo must disable, never
+    # enable. Staged deliberately so production can sit in "shadow" while phase 0 measures.
+    archive_mode: str = "off"
+
     # treg's own public base URL — used to build the OAuth callback (must be whitelisted in the
     # provider's OAuth app). Self-hosting? Set TREG_PUBLIC_URL to your deployment's URL.
     public_url: str = "https://treg.to"
