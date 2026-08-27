@@ -333,6 +333,7 @@ async def test_history_links_each_purchase_to_its_invoice(c: AsyncClient, monkey
     async with session_maker() as db:
         await ledger.topup(db, org_id, 10_000_000, "pi_manual", meta={"source": "stripe"})
         await ledger.topup(db, org_id, 25_000_000, "pi_auto", meta={"auto": True, "source": "stripe"})
+        await db.commit()
 
     monkeypatch.setattr(billing, "_sdk", _docs_sdk(
         [_charge("pi_manual", invoice="in_1"), _charge("pi_auto")], [_invoice("in_1")]))
@@ -368,6 +369,7 @@ async def test_history_survives_a_stripe_outage(c: AsyncClient, monkeypatch):
     await _set_org(org_id, stripe_customer_id="cus_test_1")
     async with session_maker() as db:
         await ledger.topup(db, org_id, 10_000_000, "pi_manual", meta={"source": "stripe"})
+        await db.commit()
 
     async def boom(fn, /, **kw):
         raise stripe.APIConnectionError("stripe is down")
@@ -386,6 +388,7 @@ async def test_history_never_moves_money(c: AsyncClient, monkeypatch):
     await _set_org(org_id, stripe_customer_id="cus_test_1")
     async with session_maker() as db:
         await ledger.topup(db, org_id, 10_000_000, "pi_manual", meta={"source": "stripe"})
+        await db.commit()
     monkeypatch.setattr(billing, "_sdk", _docs_sdk([_charge("pi_manual", invoice="in_1")], [_invoice("in_1")]))
     before = (await c.get(f"/orgs/{org_id}/balance", headers=_h(owner))).json()["balance_micro"]
     await c.get("/billing/history", headers=_h(owner))
@@ -683,6 +686,7 @@ async def test_monthly_spend_counts_only_automatic_topups(c: AsyncClient, monkey
     async with session_maker() as db:
         await ledger.topup(db, org_id, 50_000_000, "pi_manual", meta={"auto": False})
         await ledger.topup(db, org_id, 10_000_000, "pi_auto", meta={"auto": True})
+        await db.commit()
         assert await billing.monthly_autotopup_spend(db, org_id) == 10_000_000
 
 

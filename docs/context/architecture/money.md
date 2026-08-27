@@ -63,8 +63,8 @@ providers is what the reserve takes, and a test walks the provider asserting the
 | `reconcile.py` | read-only reports that check the ledger against the world | no |
 
 The money seam is one function: `ledger.topup(org, amount_micro, payment_ref)`. Billing orchestration
-asks the Stripe adapter to authorize or verify a payment, then asks the ledger to credit it; neither
-adapter reaches into the ledger.
+asks the Stripe adapter to authorize or verify a payment, then asks the ledger to stage the credit
+and owns the commit that lands it; neither adapter reaches into the ledger.
 
 ## Units: integer micro-USD, everywhere
 
@@ -92,7 +92,7 @@ swallows exceptions, which is right for analytics and fatal for money.
 | Op | Effect |
 |---|---|
 | `grant` | new promotional block, balance up (org creation, the referral bonus, the top-up bonus) - staged; committed by the application (signup, billing) or the referrals saga checkpoint |
-| `topup` | new purchased block, balance up (after Stripe authorized) |
+| `topup` | new purchased block, balance up (after Stripe authorized) - staged; committed promptly by the application (billing) |
 | `reserve` / `reserve_in_transaction` | balance down by the estimate, `Hold` opened — committed by the compatibility wrapper or the call application |
 | `settle` / `settle_in_transaction` | blocks down by the observed cost, hold closed, difference refunded - committed by the compatibility wrapper or the call application |
 | `release` / `release_in_transaction` | hold closed, balance refunded in full - committed by the compatibility wrapper or the call application |
@@ -155,11 +155,13 @@ balance to strand. Each stale release commits independently before the new balan
 rolls back only the failed reservation, never a refund the reaper already made durable.
 
 **Idempotency on `topup` is enforced by the database.** `stripe_payment_intent` is UNIQUE, and `topup`
-FLUSHES immediately after adding the block, before the balance moves: the loser of a race rolls back
-and returns the winner's block, giving the same answer as the sequential path. The application-level
-SELECT is an optimisation, not the guarantee — two concurrent deliveries of one PaymentIntent both
-miss it. (Fixed in #45; the migration is `db.py` A28, placed above the `(B)` legacy block because that
-block returns early on a fresh database — precisely the one that needs it.)
+FLUSHES its INSERT inside a SAVEPOINT, before the balance moves: the loser of a race rolls back only
+that savepoint - the caller's other staged work survives - and its re-SELECT returns the winner's
+committed block, the same answer as the sequential path. The loser's flush blocks until the winner's
+transaction commits, which is why the caller must commit promptly after `topup` returns. The
+application-level SELECT is an optimisation, not the guarantee — two concurrent deliveries of one
+PaymentIntent both miss it. (Fixed in #45; the migration is `db.py` A28, placed above the `(B)` legacy
+block because that block returns early on a fresh database — precisely the one that needs it.)
 
 ## Stripe (`application/billing.py` and `infra/stripe.py`)
 

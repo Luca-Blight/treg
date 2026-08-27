@@ -167,7 +167,9 @@ async def grant(
 async def topup(
     db: AsyncSession, org_id: int, amount_micro: int, payment_ref: str, *, meta: dict | None = None,
 ) -> CreditBlock:
-    """Credit PURCHASED balance for an already-authorized payment. Commits.
+    """Credit PURCHASED balance for an already-authorized payment. Stages in the caller-owned
+    transaction - the caller must commit PROMPTLY: a concurrent redelivery of the same
+    `payment_ref` blocks at its flush until this transaction commits.
 
     `payment_ref` (a Stripe PaymentIntent id in phase 4) is the idempotency key: webhooks redeliver,
     so a second call with the same ref returns the existing block and moves no money. This module
@@ -182,16 +184,22 @@ async def topup(
         return existing  # already credited — a redelivered webhook, not a second purchase
     block = CreditBlock(id=_id(), org_id=org_id, kind="purchased", amount_micro=int(amount_micro),
                         remaining_micro=int(amount_micro), stripe_payment_intent=payment_ref)
-    db.add(block)
+    # A SAVEPOINT, not a session rollback: this runs inside the CALLER's transaction now, and a
+    # plain db.rollback() on the lost race would destroy their other staged work. The savepoint is
+    # HELD OPEN rather than released here, for the same SQLite reason as adsconv.queue: the driver
+    # defers BEGIN, so a savepoint opened as the transaction's first statement IS the transaction,
+    # and releasing it would COMMIT the block before the balance moves. Held open, block, balance
+    # and entry land or vanish together with the caller's commit or rollback, on both backends.
+    # The UNIQUE index on stripe_payment_intent still fires at the flush, BEFORE any balance moves.
+    nested = await db.begin_nested()
     try:
-        # FLUSH before anything else moves. The check above is a SELECT and this is the INSERT, so a
-        # concurrent delivery of the same PaymentIntent can land between them; the UNIQUE index is
-        # what actually stops the second credit. Flushing here means the loser finds out BEFORE the
-        # balance is touched — and losing the race then gives the same answer as the sequential path
-        # instead of a 500 that makes Stripe retry forever.
+        db.add(block)
         await db.flush()
     except IntegrityError:
-        await db.rollback()
+        # Lost to a concurrent delivery. The flush blocked on the winner's row until the winner's
+        # transaction committed, so this re-SELECT (a fresh statement) sees the winner's block —
+        # same answer as the sequential path, no 500, and the caller's pending writes survive.
+        await nested.rollback()
         winner = await _block_for_payment(db, payment_ref)
         if winner is None:  # pragma: no cover — the constraint fired, so a row exists
             raise
@@ -199,7 +207,6 @@ async def topup(
     await _add_balance(db, org_id, int(amount_micro))
     await _entry(db, org_id=org_id, kind="topup", amount_micro=int(amount_micro), block_id=block.id,
                  meta={**(meta or {}), "payment_ref": payment_ref})
-    await db.commit()
     return block
 
 

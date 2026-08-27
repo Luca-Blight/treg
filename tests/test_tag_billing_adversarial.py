@@ -502,6 +502,7 @@ async def test_review_every_ledger_writer_overrides_false_provenance(clients: As
         await db.commit()
         topup = await ledger.topup(
             db, org_id, 10, f"payment-{suffix}", meta={"payment_ref": "spoofed"})
+        await db.commit()
         call_id = await ledger.reserve(
             db, org_id, EP, 10, call_id=f"settle-{suffix}",
             meta={"estimated_micro": -1, "charged_micro": -1, "margin": "spoofed"})

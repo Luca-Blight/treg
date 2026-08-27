@@ -85,7 +85,9 @@ async def test_topup_credits_purchased_and_is_idempotent_on_payment_ref(c: Async
     promo = get_settings().promo_grant_micro
     async with session_maker() as db:
         first = await ledger.topup(db, org_id, 5_000_000, "pi_test_1")
+        await db.commit()
         again = await ledger.topup(db, org_id, 5_000_000, "pi_test_1")
+        await db.commit()
     assert first.id == again.id and first.kind == "purchased"
     assert await _assert_invariant(org_id) == promo + 5_000_000
     async with session_maker() as db:
@@ -99,6 +101,11 @@ async def test_two_deliveries_of_one_payment_credit_once(c: AsyncClient):
     Stripe delivers at least once, retries after the 500 the webhook deliberately returns, and prod
     runs more than one instance. Both would SELECT nothing and both would credit.
 
+    THIS is the race proof for the caller-owned transaction (it runs against Postgres in CI): the
+    loser's flush blocks on the winner's uncommitted unique key until the winner's PROMPT commit,
+    and the loser's savepoint rollback preserves its own caller's transaction, so its re-SELECT
+    returns the winner's block instead of a 500.
+
     Each task needs its OWN session: two coroutines sharing one AsyncSession is a different bug.
     """
     org_id, _ = await _org(c)
@@ -106,7 +113,9 @@ async def test_two_deliveries_of_one_payment_credit_once(c: AsyncClient):
 
     async def _deliver():
         async with session_maker() as db:
-            return await ledger.topup(db, org_id, 5_000_000, "pi_concurrent")
+            block = await ledger.topup(db, org_id, 5_000_000, "pi_concurrent")
+            await db.commit()
+            return block
 
     blocks = await asyncio.gather(_deliver(), _deliver(), _deliver(), return_exceptions=True)
     assert not [b for b in blocks if isinstance(b, Exception)], blocks   # none may error out
@@ -367,6 +376,7 @@ async def test_promotional_burns_before_purchased_then_oldest_purchased(c: Async
     async with session_maker() as db:
         old = await ledger.topup(db, org_id, 2_000_000, "pi_old")
         new = await ledger.topup(db, org_id, 2_000_000, "pi_new")
+        await db.commit()
     async with session_maker() as db:  # make the age order unambiguous regardless of clock resolution
         row = await db.get(CreditBlock, new.id)
         row.created_at = row.created_at.replace(year=row.created_at.year + 1)
@@ -492,6 +502,7 @@ async def test_every_movement_writes_exactly_one_entry(c: AsyncClient):
     org_id, _ = await _org(c)
     async with session_maker() as db:
         await ledger.topup(db, org_id, 1_000_000, "pi_1")
+        await db.commit()
         await ledger.settle(db, await ledger.reserve(db, org_id, "e.1", 500), 500)
         await ledger.release(db, await ledger.reserve(db, org_id, "e.2", 500))
         rows = (await db.execute(select(LedgerEntry).where(LedgerEntry.org_id == org_id))).scalars().all()
