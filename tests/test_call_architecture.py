@@ -180,7 +180,16 @@ def test_dataplane_write_allowlist_rejects_an_unlisted_mutation() -> None:
 
 @pytest.mark.parametrize(
     "owner",
-    [money.reserve_in_transaction, money.settle_in_transaction, money.release_in_transaction],
+    [
+        money.reserve_in_transaction,
+        # The private bodies, not the public delegating wrappers: settle_in_transaction and
+        # release_in_transaction are 3-line pass-throughs, so inspecting them proves nothing —
+        # a commit injected into the real logic sailed past the wrapper-keyed version of this test.
+        money._settle_in_transaction,
+        money._release_in_transaction,
+        money.settle_in_transaction,
+        money.release_in_transaction,
+    ],
 )
 def test_call_money_transaction_primitives_never_commit(owner) -> None:
     source = inspect.getsource(owner)
