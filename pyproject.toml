@@ -163,6 +163,25 @@ allow_indirect_imports = true
 as_packages = true
 
 [[tool.importlinter.contracts]]
+name = "Catalog domain is a leaf: no outer layers, no sibling domains"
+type = "forbidden"
+source_modules = ["treg.domain.catalog"]
+forbidden_modules = [
+    "treg.api",
+    "treg.bootstrap",
+    "treg.routers",
+    "treg.application",
+    "treg.domain.connections",
+    "treg.domain.governance",
+    "treg.domain.identity",
+    "treg.domain.money",
+    "fastapi",
+    "starlette",
+]
+allow_indirect_imports = true
+as_packages = true
+
+[[tool.importlinter.contracts]]
 name = "Upstream infrastructure does not depend on HTTP adapters"
 type = "forbidden"
 source_modules = ["treg.infra.upstream"]

@@ -371,7 +371,7 @@ def test_sections_are_domains_with_other_pinned_last():
     """`other` is the junk drawer: it is the one section whose position carries meaning, and it
     can't be allowed to outrank a real subject just because it is large. The order is decided
     server-side so the API, the CLI and this page can't disagree about it."""
-    src = (Path(api.__file__).parent / "catalog_store.py").read_text(encoding="utf-8")
+    src = (Path(api.__file__).parent / "domain" / "catalog" / "store.py").read_text(encoding="utf-8")
     fn = src[src.index("def domain_rows("):]
     assert "key=lambda d: (d == DOMAIN_OTHER, -len(sections[d]), d)" in fn
     # ...and the page renders that order rather than re-sorting it.
@@ -382,7 +382,7 @@ def test_sections_are_domains_with_other_pinned_last():
 def test_merged_rows_come_before_single_rows_in_a_section():
     """A job several providers do is the comparison the catalog exists to make, so it leads its
     section; the endpoints only one provider offers follow."""
-    src = (Path(api.__file__).parent / "catalog_store.py").read_text(encoding="utf-8")
+    src = (Path(api.__file__).parent / "domain" / "catalog" / "store.py").read_text(encoding="utf-8")
     fn = src[src.index("def domain_rows("):]
     assert 'section.sort(key=lambda r: (r["kind"] != "merged"' in fn
 
@@ -461,7 +461,7 @@ def test_a_single_row_is_led_by_a_short_title_never_a_paragraph():
     assert "lastIndexOf(' ')" in clip, "clip at a word boundary, not mid-token"
     assert ".lsum b{display:-webkit-box;-webkit-line-clamp:2" in INDEX
     # ...and the server picks name-over-summary before it ever reaches the row.
-    src = (Path(api.__file__).parent / "catalog_store.py").read_text(encoding="utf-8")
+    src = (Path(api.__file__).parent / "domain" / "catalog" / "store.py").read_text(encoding="utf-8")
     fn = src[src.index("def domain_rows("):]
     assert '"description": e["name"] or e["summary"] or title' in fn
     assert '"description": view["name"] or view["summary"]' in fn

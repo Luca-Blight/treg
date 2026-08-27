@@ -2,7 +2,7 @@
 title: Catalog browse review — categories, platform placement, and domain sections
 status: reference
 sources:
-  - src/treg/catalog_store.py
+  - src/treg/domain/catalog/store.py
   - src/treg/catalog/capabilities.yaml
 related:
   - architecture/catalog.md
@@ -104,7 +104,7 @@ capabilities); all three carry no `capability`, so the move is validator-safe.
 
 ---
 
-## (c) Domain section names — APPLIED (`src/treg/catalog_store.py`)
+## (c) Domain section names — APPLIED (`src/treg/domain/catalog/store.py`)
 
 Two mechanism fixes, **29 endpoints re-sectioned**, no validator or test regressions.
 

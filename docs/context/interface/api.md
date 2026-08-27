@@ -46,7 +46,7 @@ sources:
   - src/treg/domain/identity/mcp_oauth.py
   - src/treg/domain/identity/session.py
   - src/treg/timeutil.py
-  - src/treg/catalog_store.py
+  - src/treg/domain/catalog/store.py
   - src/treg/email.py
   - src/treg/runner.py
   - src/treg/ratestore.py

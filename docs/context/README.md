@@ -35,7 +35,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | Fragment | Status | Covers |
 |---|---|---|
 | [The API — the only brain (FastAPI)](interface/api.md) | shipped | sitetrack.js, api.py, bootstrap_handlers.py, bootstrap_http.py, … |
-| [Catalog browse review — categories, platform placement, and domain sections](interface/catalog-review-proposal.md) | reference | catalog_store.py, capabilities.yaml |
+| [Catalog browse review — categories, platform placement, and domain sections](interface/catalog-review-proposal.md) | reference | store.py, capabilities.yaml |
 | [The CLI (treg) + skill scaffolding](interface/cli.md) | shipped | cli.py, convert.py, agents.py |
 | [The web dashboard (Ledger, served from FastAPI)](interface/dashboard.md) | shipped | sitetrack.js, index.html, README.md, vue-3.5.41.global.prod.js, … |
 | [Import — scan a .env AND/OR a skills dir, auto-register as tools + bundles](interface/env-import.md) | in-progress | providers.py, skills.py |
