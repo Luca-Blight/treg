@@ -298,3 +298,155 @@ async def _store(
                 await s.rollback()
     except Exception:  # noqa: BLE001 — recording must never surface anywhere
         _log.warning("archive recording dropped for %s", endpoint_id, exc_info=True)
+
+
+# ---------------------------------------------------------------------------------------------
+# Serving (PR 4) — the cache answers instead of the vendor, and NOTHING about money changes.
+# The lookup replaces only the network trip: reserve, settle, audit and the cost header all run
+# exactly as on a live call, at today's price, and the response is tagged cached. Whatever
+# billing rule the founder later chooses attaches to that tag without touching this code.
+
+# Phase-1 freshness: FIXED guesses per capability prefix, longest prefix wins, seconds. These are
+# deliberately conservative starting values, not knowledge — the learner (PR 5) replaces them per
+# key. A vendor-declared `cache.max_age_s` (CoinGecko's 24h refresh duty) always CAPS the result.
+_TTL_DEFAULTS: tuple[tuple[str, int], ...] = (
+    ("crypto.price", 300),        # live-ish market numbers: minutes, not hours
+    ("crypto.", 3600),
+    ("web.search", 3600),         # SERPs move within hours
+    ("web.papers", 86400),        # scholarly metadata barely moves
+    ("people.", 7 * 86400),       # person/company enrichment: weeks in practice, start at one
+    ("company.", 7 * 86400),
+    ("seo.", 86400),              # backlink/rank profiles: days
+)
+DEFAULT_TTL_S = 3600
+
+
+def ttl_for(entry: dict[str, Any] | None) -> int:
+    """The phase-1 freshness window for one endpoint, in seconds. Longest matching capability
+    prefix from the fixed table (else the 1-hour default), always capped by the vendor's own
+    declared ceiling when the judged `cache` block carries `max_age_s`."""
+    capability = str((entry or {}).get("capability") or "")
+    ttl = DEFAULT_TTL_S
+    best = -1
+    for prefix, seconds in _TTL_DEFAULTS:
+        if capability.startswith(prefix) and len(prefix) > best:
+            best, ttl = len(prefix), seconds
+    declared = (entry or {}).get("cache")
+    if isinstance(declared, dict):
+        try:
+            cap = int(declared.get("max_age_s") or 0)
+        except (TypeError, ValueError):
+            cap = 0
+        if cap > 0:
+            ttl = min(ttl, cap)
+    return ttl
+
+
+def caller_forces_live(headers) -> bool:
+    """`Cache-Control: no-cache` (or no-store) is the caller's veto — always honored, billed as
+    the live call it causes. This is also the read-after-write escape: the archive never guesses
+    cross-endpoint effects (that would be modeling the upstream)."""
+    cc = (headers.get("cache-control") or "").lower()
+    return "no-cache" in cc or "no-store" in cc
+
+
+def caller_max_age_s(headers) -> int | None:
+    """`X-Treg-Max-Age`: the caller's own freshness bar in seconds, tightening (never widening)
+    the endpoint's window. Malformed values are ignored — a typo must not change behavior."""
+    raw = headers.get("x-treg-max-age")
+    if raw is None:
+        return None
+    try:
+        v = int(str(raw).strip())
+    except (TypeError, ValueError):
+        return None
+    return v if v >= 0 else None
+
+
+async def lookup(
+    *,
+    method: str,
+    endpoint_id: str,
+    url: str,
+    caller_body: bytes,
+    request_headers,
+) -> dict[str, Any] | None:
+    """A fresh stored answer for this exact question, or None (= make the live call).
+
+    None on every uncertain branch: serving off, caller veto, unjudged/forbidden policy, no
+    snapshot, stale snapshot, bytes not on file. The age check runs against the newest snapshot's
+    own fetch time, and the window is min(endpoint TTL, caller X-Treg-Max-Age). Returns the
+    verbatim stored bytes plus what the hook needs for headers: fetched_at and age_s."""
+    try:
+        if not serving() or caller_forces_live(request_headers):
+            return None
+        from sqlalchemy import select
+
+        from . import catalog_store
+        from .db import session_maker
+        from .models import ArchiveKey, ArchiveSnapshot
+
+        entry = catalog_store.load().by_id.get(endpoint_id)
+        if not storable(entry):
+            return None
+        window = ttl_for(entry)
+        wanted = caller_max_age_s(request_headers)
+        if wanted is not None:
+            window = min(window, wanted)
+        if window <= 0:
+            return None
+
+        kh = cache_key(method, endpoint_id, url, caller_body, {
+            k: request_headers.get(k, "") for k in ("accept", "accept-language")})
+        async with session_maker() as s:
+            key = (await s.execute(
+                select(ArchiveKey).where(ArchiveKey.key_hash == kh))).scalars().one_or_none()
+            if key is None:
+                return None
+            newest = (await s.execute(
+                select(ArchiveSnapshot).where(ArchiveSnapshot.key_id == key.id)
+                .order_by(ArchiveSnapshot.version.desc()).limit(1))).scalars().first()
+            if newest is None or not (200 <= newest.status_code < 300):
+                return None
+            age_s = int((_utcnow() - newest.fetched_at).total_seconds())
+            if age_s < 0 or age_s > window:
+                return None
+            body = newest.body
+            if body is None and newest.body_of is not None:  # deduplicated — follow the carrier
+                carrier = await s.get(ArchiveSnapshot, newest.body_of)
+                body = carrier.body if carrier is not None else None
+            if body is None:  # hash-only history (policy or size cap at record time)
+                return None
+        _touch(kh)
+        return {"body": body, "media_type": newest.media_type,
+                "status_code": newest.status_code, "fetched_at": newest.fetched_at,
+                "age_s": age_s}
+    except Exception:  # noqa: BLE001 — a lookup fault must degrade to a live call, never a 500
+        _log.warning("archive lookup failed for %s — serving live", endpoint_id, exc_info=True)
+        return None
+
+
+def _touch(key_hash: str) -> None:
+    """Note that a stored answer was actually wanted (last_requested_at) — fire-and-forget, the
+    demand signal the refresh worker (PR 5) will read. A served hit is NOT a recording: it adds
+    no snapshot and no change statistics, because nothing new was observed."""
+    if len(_pending) >= _MAX_PENDING:
+        return
+    task = asyncio.create_task(_touch_write(key_hash))
+    _pending.add(task)
+    task.add_done_callback(_pending.discard)
+
+
+async def _touch_write(key_hash: str) -> None:
+    try:
+        from sqlalchemy import update
+
+        from .db import session_maker
+        from .models import ArchiveKey
+
+        async with session_maker() as s:
+            await s.execute(update(ArchiveKey).where(ArchiveKey.key_hash == key_hash)
+                            .values(last_requested_at=_utcnow()))
+            await s.commit()
+    except Exception:  # noqa: BLE001
+        _log.warning("archive touch dropped", exc_info=True)

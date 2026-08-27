@@ -5723,6 +5723,9 @@ async def list_calls(
             "endpoint_id": c.endpoint_id,
             "provider": c.provider,
             "credential_tier": c.credential_tier,
+            # The archive answered instead of the vendor; the money columns are still identical to
+            # a live call on purpose (docs/context/architecture/archive.md).
+            "cached": c.cached,
             "cost_estimated_micro": c.cost_estimated_micro,
             "cost_observed_micro": c.cost_observed_micro,
             "cost_charged_micro": c.cost_charged_micro,
@@ -9028,6 +9031,7 @@ async def call_tool(
         request.state.idem_claim = (caller.membership.id, idem_key)
 
     drop_params: set[str] = set()
+    served_hit = False  # a cached hit — set where the archive answers instead of the vendor
     mk: MarketplaceCall | None = None
     own_tool_miss: dict | None = None
     try:
@@ -9120,6 +9124,9 @@ async def call_tool(
         if mk is not None:
             telemetry |= {
                 "endpoint_id": mk.endpoint_id, "provider": mk.provider, "credential_tier": mk.tier,
+                # The archive answered instead of the vendor; money columns are identical to a
+                # live call ON PURPOSE (the pricing of a hit is a deferred founder decision).
+                **({"cached": True} if served_hit else {}),
                 # An org credential riding treg's pay-per-use OAuth app: tier stays tool/credential
                 # (the credential IS theirs), this says who the upstream billed.
                 **({"oauth_billed": True} if mk.billed_oauth else {}),
@@ -9267,10 +9274,34 @@ async def call_tool(
         # is `expire_on_commit=False`, so `tool`/`secrets`/`caller.org` stay usable without a reload.
         await db.commit()
         try:
-            response = await relay(request, upstream_url, tool, secrets, request.app.state.http,
-                                   drop_params=drop_params or None,
-                                   force_identity=mk is not None and mk.metered)
-            if mk is not None and mk.metered:
+            # The archive's serve path (docs/context/architecture/archive.md): a fresh stored
+            # answer replaces ONLY the network trip. Reserve already ran, settle/audit/cost header
+            # run below unchanged — a cached hit is billed exactly like the live call it stands in
+            # for, tagged `cached`, and the founder's later pricing decision attaches to that tag.
+            served = None
+            if mk is not None and mk.metered and archive.serving():
+                try:
+                    served = await archive.lookup(
+                        method=request.method, endpoint_id=mk.endpoint_id,
+                        url=archive.key_url(upstream_url, request.query_params.multi_items(),
+                                            drop_params or set()),
+                        caller_body=caller_body, request_headers=request.headers)
+                except Exception:  # noqa: BLE001 — lookup swallows internally; this catches even a
+                    served = None  # fault in its own plumbing. Cache trouble must cost a vendor
+                    #              call, never a 500.
+            if served is not None:
+                body = served["body"]
+                response = Response(content=body, status_code=served["status_code"],
+                                    media_type=served["media_type"] or None)
+                response.headers["X-Treg-Cache"] = "hit"
+                response.headers["X-Treg-Fetched-At"] = served["fetched_at"].isoformat() + "Z"
+                response.headers["X-Treg-Age"] = str(served["age_s"])
+                served_hit = True
+            else:
+                response = await relay(request, upstream_url, tool, secrets, request.app.state.http,
+                                       drop_params=drop_params or None,
+                                       force_identity=mk is not None and mk.metered)
+            if served is None and mk is not None and mk.metered:
                 # Metered calls don't stream: settling needs the provider's own reported cost, which is
                 # in the body (see _buffer_response). A failure while draining is still an upstream
                 # failure, so it becomes a 502 and the hold goes back.

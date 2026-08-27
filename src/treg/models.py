@@ -285,6 +285,11 @@ class CallRecord(SQLModel, table=True):
     budget_val: str = Field(default="", index=True)
     tags: dict | None = Field(default=None, sa_column=Column("tags", JSON, nullable=True))
     created_at: datetime = Field(default_factory=_now)
+    # True when the archive served this answer instead of the vendor (X-Treg-Cache: hit).
+    # Money columns stay identical to a live call on purpose — pricing a hit is a deferred
+    # founder decision (docs/context/architecture/archive.md). Declared LAST to match the
+    # migration's ALTER TABLE ADD COLUMN position (the baseline parity test compares order).
+    cached: bool = Field(default=False)
 
 
 class RunRecord(SQLModel, table=True):
