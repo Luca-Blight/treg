@@ -64,6 +64,7 @@ async def _funded_org(clients: AsyncClient) -> tuple[int, int]:
             kind="cancellation_test",
             once=False,
         )
+        await db.commit()
     balance = (await clients.get(f"/orgs/{org_id}/balance")).json()["balance_micro"]
     return org_id, balance
 

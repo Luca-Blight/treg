@@ -29,6 +29,13 @@ It never reverses a grant that has already landed. Referral credit burns before 
 a negative-balance path would mean a second module that can move money. A dispute inside the hold
 cancels the payout; a dispute after it is logged for a human. That boundary is the whole reason
 the hold exists.
+
+WHO OWNS THE TRANSACTIONS
+-------------------------
+This module is the checkpoint owner of a multi-transaction saga on a session the application
+opened (the Stripe webhook's, or the Referrals page's); the money primitives it calls never
+commit - every commit here is a named recovery point (claim, stamp, qualify), and the ORDER of
+those durable checkpoints is the whole safety argument for paying at most once.
 """
 
 from __future__ import annotations
@@ -276,7 +283,9 @@ async def _grant_referee(db: AsyncSession, row: Referral) -> None:
 
     `referred_block_id` is the guard AND the record: set means paid, so a retry cannot double-grant
     and `sweep` knows to skip this side. A failure here is not fatal — the row stays qualified with
-    the field unset, and the sweep pays it as a fallback.
+    the field unset, and the sweep pays it as a fallback. The grant only stages, so the one commit
+    below lands block, balance, entry and the row stamp in ONE transaction - a crash can no longer
+    grant without stamping.
     """
     if row.referred_block_id:
         return
@@ -401,7 +410,8 @@ async def _pay(db: AsyncSession, row: Referral) -> bool:
     The cost of that ordering is the opposite failure: a crash between the claim and the grant pays
     nobody and leaves the row saying otherwise. That is the right way round for money — it is
     visible in `/admin/referrals` as a paid row with a null block id, and it errs toward paying
-    once rather than twice.
+    once rather than twice. The grants only stage, so they and the block-id stamp land in ONE
+    commit after the separate claim commit.
     """
     s = get_settings()
     referred_org = await db.get(Org, row.referred_org_id)

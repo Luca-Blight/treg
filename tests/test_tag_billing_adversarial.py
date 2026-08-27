@@ -48,6 +48,7 @@ async def _make_org(name: str, slug: str, *, grant_micro: int = 100_000) -> int:
         await db.commit()
         await db.refresh(org)
         await ledger.grant(db, org.id, amount_micro=grant_micro, once=False)
+        await db.commit()
         return org.id
 
 
@@ -498,6 +499,7 @@ async def test_review_every_ledger_writer_overrides_false_provenance(clients: As
         grant = await ledger.grant(
             db, org_id, amount_micro=10, kind=f"promo-{suffix}", once=False,
             meta={"block_kind": "spoofed"})
+        await db.commit()
         topup = await ledger.topup(
             db, org_id, 10, f"payment-{suffix}", meta={"payment_ref": "spoofed"})
         call_id = await ledger.reserve(

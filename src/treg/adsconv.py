@@ -82,15 +82,20 @@ async def queue(db: AsyncSession, org: Org, action: str, *,
     """
     if not enabled() or not org.ad_gclid:
         return False
+    # A SAVEPOINT, not a bare flush: this runs inside the CALLER's transaction (the signup grant,
+    # the Stripe credit), and a plain `db.rollback()` on the duplicate would roll back THEIR work
+    # too — a redelivered webhook would undo a credit. The savepoint is deliberately HELD OPEN
+    # rather than released here: SQLite's driver defers BEGIN, so a savepoint opened as the
+    # transaction's first statement IS the transaction, and releasing it would COMMIT the row even
+    # if the caller later rolls back. Held open, the row lands or vanishes with the caller's own
+    # commit or rollback, on both backends (the caller's commit releases it implicitly).
+    nested = await db.begin_nested()
     try:
-        # A SAVEPOINT, not a bare flush: this runs inside the CALLER's transaction (the signup
-        # grant, the Stripe credit), and a plain `db.rollback()` on the duplicate would roll back
-        # THEIR work too — a redelivered webhook would undo a credit. The nested block confines the
-        # rollback to this insert.
-        async with db.begin_nested():
-            db.add(AdConversion(org_id=org.id, action=action, dedupe_key=dedupe_key,
-                                value_usd_micro=value_usd_micro))
+        db.add(AdConversion(org_id=org.id, action=action, dedupe_key=dedupe_key,
+                            value_usd_micro=value_usd_micro))
+        await db.flush()
     except IntegrityError:
+        await nested.rollback()
         return False
     return True
 

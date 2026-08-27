@@ -171,6 +171,68 @@ async def test_concurrent_sweeps_pay_a_referral_once(c: AsyncClient):
     assert await _assert_invariant(referred_org) == promo + s.referral_referred_micro
 
 
+async def test_signup_promo_and_its_conversion_land_or_fail_together(c: AsyncClient, monkeypatch):
+    """The one-transaction property, in both directions: a failed commit loses the grant AND the
+    queued ad conversion (and does not raise - the never-500-the-signup contract), and the retry
+    makes both durable in one commit."""
+    from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
+
+    from treg import adsconv
+    from treg.application import signup
+    from treg.models import AdConversion
+
+    monkeypatch.setattr(adsconv, "enabled", lambda: True)
+    async with session_maker() as db:
+        org = Org(name="promo-atomic", slug="promo-atomic", ad_gclid="CLICK_SIGNUP")
+        db.add(org)
+        await db.commit()
+        await db.refresh(org)
+        org_id = org.id
+
+    real_commit = SAAsyncSession.commit
+    state = {"failed": False}
+
+    async def failing_commit(self):
+        if not state["failed"]:
+            state["failed"] = True
+            raise RuntimeError("simulated commit failure")
+        return await real_commit(self)
+
+    monkeypatch.setattr(SAAsyncSession, "commit", failing_commit)
+    async with session_maker() as db:
+        await signup._grant_signup_promo(db, await db.get(Org, org_id))  # must not raise
+    assert state["failed"], "the promo commit was never attempted"
+
+    async with session_maker() as db:  # neither half survived the failed commit
+        assert [e for e in await ledger.entries_of(db, org_id) if e.kind == "grant"] == []
+        assert (await db.execute(select(AdConversion).where(
+            AdConversion.org_id == org_id))).scalars().all() == []
+    assert await _assert_invariant(org_id) == 0
+
+    async with session_maker() as db:  # the retry lands BOTH, in one commit
+        await signup._grant_signup_promo(db, await db.get(Org, org_id))
+    async with session_maker() as db:
+        assert [e.kind for e in await ledger.entries_of(db, org_id)] == ["grant"]
+        assert len((await db.execute(select(AdConversion).where(
+            AdConversion.org_id == org_id))).scalars().all()) == 1
+    assert await _assert_invariant(org_id) == get_settings().promo_grant_micro
+
+
+async def test_a_grant_failure_cannot_fail_signup(c: AsyncClient, monkeypatch):
+    """The promo is a nicety: a broken grant must cost the team its $1, never their signup."""
+    async def boom(*a, **kw):
+        raise RuntimeError("grant broke")
+
+    monkeypatch.setattr(ledger, "grant", boom)
+    r = await c.post("/users", json={"email": "promo-fails@superdesign.dev"})
+    assert r.status_code == 200, r.text
+    org_id = r.json()["org_id"]
+    async with session_maker() as db:
+        assert await db.get(Org, org_id) is not None
+        assert await ledger.balance_of(db, org_id) == 0
+        assert await ledger.blocks_of(db, org_id) == []
+
+
 # ---- the call path -----------------------------------------------------------------------------
 async def test_reserve_settle_round_trip(c: AsyncClient):
     org_id, _ = await _org(c)

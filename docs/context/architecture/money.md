@@ -91,7 +91,7 @@ swallows exceptions, which is right for analytics and fatal for money.
 
 | Op | Effect |
 |---|---|
-| `grant` | new promotional block, balance up (org creation, the referral bonus, the top-up bonus) |
+| `grant` | new promotional block, balance up (org creation, the referral bonus, the top-up bonus) - staged; committed by the application (signup, billing) or the referrals saga checkpoint |
 | `topup` | new purchased block, balance up (after Stripe authorized) |
 | `reserve` / `reserve_in_transaction` | balance down by the estimate, `Hold` opened — committed by the compatibility wrapper or the call application |
 | `settle` / `settle_in_transaction` | blocks down by the observed cost, hold closed, difference refunded - committed by the compatibility wrapper or the call application |

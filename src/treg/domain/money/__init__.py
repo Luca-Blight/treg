@@ -137,11 +137,15 @@ async def grant(
     db: AsyncSession, org_id: int, *, amount_micro: int | None = None,
     kind: str = "promotional", meta: dict | None = None, once: bool = True,
 ) -> CreditBlock | None:
-    """Credit an org with a non-purchased block (the signup promo). Commits.
+    """Credit an org with a non-purchased block (the signup promo). Stages in the caller-owned
+    transaction - the caller commits.
 
     `once=True` (the default) makes it idempotent per (org, kind): an org that already holds a block
     of this kind gets nothing and `None` comes back. That is what lets the org-creation hook be safe
-    to call from more than one door, and what keeps a retry from double-granting.
+    to call from more than one door, and what keeps a retry from double-granting. The `once` check
+    remains a check-then-act with no backing unique index, so it is NOT safe under concurrency:
+    callers racing for money owed to a third party pass `once=False` and bring their own unique row
+    to arbitrate (see `Referral`).
     """
     amount = get_settings().promo_grant_micro if amount_micro is None else int(amount_micro)
     if amount <= 0:
@@ -157,7 +161,6 @@ async def grant(
     await _add_balance(db, org_id, amount)
     await _entry(db, org_id=org_id, kind="grant", amount_micro=amount, block_id=block.id,
                  meta={**(meta or {}), "block_kind": kind})
-    await db.commit()
     return block
 
 
