@@ -110,6 +110,14 @@ concurrency limit, and `llms.txt` says so. `tests/test_call_pool_discipline.py` 
 orgs resolve independently and may reuse a tool name or upstream host; `call_tool` then loads only
 same-org secrets. After resolution `call_tool` runs `_enforce_daily_cap` (the per-user daily usage cap —
 429 when over; `-1`/default is a no-op, so the hot path adds no query for unmetered members). Two shapes:
+
+`* /catalog/call/{rest:path}` is the narrower entrance used by catalog-only MCP surfaces.
+`call_catalog_endpoint` sets `request.state.catalog_only` and then enters the same `call_tool`
+implementation. Resolution accepts only an exact catalog endpoint id and does not call `_resolve_call`,
+so a private team tool or arbitrary passthrough path cannot shadow the catalog entry. Everything after
+catalog resolution stays shared: credentials, ACLs, deny rules, caps, cancellation cleanup, metering,
+audit, idempotency, and faithful relay.
+
 - **URL-passthrough (agent-native):** `rest` is the real upstream URL (`/call/https://api.intercom.io/me`).
   `_normalize_scheme()` restores the `https://` a path param collapses to `https:/`. The tool is resolved
   by **host** (`_host_of()` = `urlsplit(...).netloc`, matched against the indexed `Tool.host`) then the

@@ -19,6 +19,7 @@ Regenerate via `scripts/build-map.py`.
 | `alembic/env.py` | architecture/data-model.md |
 | `alembic/versions/0001_baseline_current_schema.py` | architecture/data-model.md |
 | `assets/brand/og-card.html` | interface/seo.md |
+| `docs/CLAUDE-CONNECTOR-SUBMISSION.md` | architecture/mcp-oauth.md |
 | `dsh/cordis.patch.yml` | interface/skill.md |
 | `dsh/index.js` | interface/skill.md |
 | `examples/proxy-demo/server.js` | architecture/local-proxy.md |
@@ -33,6 +34,7 @@ Regenerate via `scripts/build-map.py`.
 | `scripts/catalog_drift.py` | architecture/catalog.md |
 | `scripts/catalog_ingest.py` | architecture/catalog.md |
 | `scripts/catalog_validate.py` | architecture/catalog.md |
+| `scripts/dev-local.sh` | ops/deploy.md |
 | `scripts/dump_surface.py` | architecture/composition.md |
 | `scripts/minimax_plugin.py` | interface/skill.md |
 | `src/treg/__main__.py` | ops/deploy.md |
@@ -158,6 +160,7 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/timeutil.py` | architecture/data-model.md, interface/api.md |
 | `src/treg/web/adtrack.js` | architecture/ads-conversions.md |
 | `src/treg/web/catalog.css` | interface/seo.md |
+| `src/treg/web/claude-connector.html` | architecture/mcp-oauth.md |
 | `src/treg/web/connect-demo.html` | architecture/mcp-oauth.md |
 | `src/treg/web/index.html` | interface/dashboard.md, interface/landing-sandbox.md, interface/onboarding.md, interface/seo.md |
 | `src/treg/web/install.sh` | interface/landing-sandbox.md |
@@ -188,7 +191,7 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `__init__.py`, `__init__.py`, `__init__.py`, `teams.py`, `__init__.py`, `test_import_lightness.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
-| `architecture/mcp-oauth.md` | `auth.py`, `mcp.py`, `mcp_oauth.py`, `health.py`, `mcp_oauth.py`, `session.py`, `auth.py`, `connect-demo.html` |
+| `architecture/mcp-oauth.md` | `auth.py`, `mcp.py`, `mcp_oauth.py`, `health.py`, `mcp_oauth.py`, `session.py`, `auth.py`, `claude-connector.html`, `connect-demo.html`, `CLAUDE-CONNECTOR-SUBMISSION.md` |
 | `architecture/money.md` | `ledger.py`, `models.py`, `billing.py`, `billing.py`, `referrals.py`, `__init__.py`, `stripe.py`, `reconcile.py`, `referrals.py`, `referrals.py`, `api.py`, `signup.py`, `admin.py`, `billing.py`, `orgs.py`, `referrals.py` |
 | `architecture/multi-tenancy.md` | `models.py`, `api.py`, `caller_metadata.py`, `auth.py`, `signup.py`, `teams.py`, `access.py`, `session.py`, `auth.py`, `orgs.py`, `resources.py`, `db.py`, `test_router_dependencies.py` |
 | `architecture/proxy-model.md` | `proxy.py`, `api.py` |
@@ -205,5 +208,5 @@ Regenerate via `scripts/build-map.py`.
 | `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `web.py`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |
-| `ops/deploy.md` | `pyproject.toml`, `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `render.yaml` |
+| `ops/deploy.md` | `pyproject.toml`, `__main__.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `dev-local.sh`, `render.yaml` |
 | `reference/glossary.md` | `2026-06-30-jason-tools-registry.md` |

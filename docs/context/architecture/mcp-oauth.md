@@ -273,16 +273,16 @@ challenge scopes while omitting the RFC 8707 `resource` parameter. In that case,
 `_effective_mcp_resource` selects the V2 audience. An explicit resource always wins, and all other
 requests keep the V1 default.
 
-**The audience set is canonical + legacy** (`mcp_resource_audiences()`: `public_url` plus
-`config.PUBLIC_HOST_ALIASES` — the treg.superdesign.dev → treg.to move, SYMMETRIC so grants
-minted on either name survive a `TREG_PUBLIC_URL` flip in either direction). A pre-move grant carries
-the old resource URL as its audience for its whole lifetime, because refresh reissues the audience
-that was consented to (`row.resource`); validating against the canonical URL alone would 401 every
-pre-move grant with refresh unable to recover. The transport validates via `read_access_token_any`,
-and `/oauth/token` treats the two names as the same resource (`routers.auth._same_mcp_resource`).
-Slash-variant spellings are healed by `normalize_resource()` at every store/mint/compare site:
-authorize accepts `…/mcp` via a forgiving compare, and a token whose audience kept that spelling
-would fail the exact audience match forever.
+**Each MCP version has its own audience set.** `mcp_resource_audiences(version)` includes the
+configured `public_url` plus `config.PUBLIC_HOST_ALIASES` for that version. This is symmetric so a
+grant survives a host change or rollback. Host and trailing-slash aliases can normalize within V1 or
+within V2, but they never cross versions. A V1 token fails on `/mcp/v2/`, and a V2 token fails on
+`/mcp/`.
+
+A grant keeps its consented audience for its lifetime because refresh reissues `row.resource`.
+`read_access_token_any` validates against the selected version, `_same_mcp_resource` accepts aliases
+only when both values resolve to that version, and `normalize_resource()` heals slash spellings at
+each store, mint, and comparison point.
 
 ## Two doors in, one row out
 
