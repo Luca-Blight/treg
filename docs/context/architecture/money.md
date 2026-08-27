@@ -687,7 +687,8 @@ where two paths can read before either writes, the database has to be the one th
 then does credit move. The opposite order would mean the loser of a race had already granted. The
 cost is the mirror failure — a crash between claim and grant pays nobody and says otherwise — which
 is the right way round for money, is visible in `/admin/referrals` as a paid row with a null block
-id, and errs toward paying once rather than twice.
+id, and errs toward paying once rather than twice. The grants and the block-id stamp are then
+committed together, in one transaction after the separate claim commit.
 
 **The two sides are paid at different times, on purpose.** The REFEREE is credited the instant they
 qualify; only the REFERRER waits out `referral_hold_days` (7).

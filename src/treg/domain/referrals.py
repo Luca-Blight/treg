@@ -438,7 +438,9 @@ async def _pay(db: AsyncSession, row: Referral) -> bool:
         fresh.referrer_block_id = referrer_block.id if referrer_block else None
         fresh.referrer_reward_micro = referrer_block.amount_micro if referrer_block else 0
         db.add(fresh)
-        await db.commit()
+    # UNCONDITIONAL: the grants above are staged on this session, so skipping the commit when
+    # `fresh` went missing would leave money staged and silently discarded with the session.
+    await db.commit()
     return True
 
 

@@ -125,6 +125,52 @@ async def test_topup_rejects_nonsense(c: AsyncClient, amount, ref):
             await ledger.topup(db, org_id, amount, ref)
 
 
+async def test_concurrent_sweeps_pay_a_referral_once(c: AsyncClient):
+    """Two instances sweep the same due referral at once. The claim UPDATE (qualified -> paid,
+    committed before any credit moves) is what arbitrates, so exactly one sweep pays and each side
+    is credited exactly once. Runs against Postgres in CI, where the race is real.
+    """
+    from datetime import timedelta
+
+    from treg import referrals
+    from treg.models import Referral
+
+    r = await c.post("/users", json={"email": "referrer@superdesign.dev"})
+    referrer_org, referrer_user = r.json()["org_id"], r.json()["id"]
+    r = await c.post("/users", json={"email": "referee@superdesign.dev"})
+    referred_org, referred_user = r.json()["org_id"], r.json()["id"]
+    promo = get_settings().promo_grant_micro
+
+    async with session_maker() as db:
+        db.add(Referral(code="ref-sweep-race", referrer_user_id=referrer_user,
+                        referred_user_id=referred_user, referred_org_id=referred_org,
+                        status="qualified",
+                        qualified_at=referrals.hold_cutoff() - timedelta(days=1)))
+        await db.commit()
+
+    async def one_sweep() -> int:
+        async with session_maker() as db:
+            return await referrals.sweep(db)
+
+    results = await asyncio.gather(one_sweep(), one_sweep(), return_exceptions=True)
+    assert not [x for x in results if isinstance(x, Exception)], results
+    assert sum(results) == 1  # exactly one sweep won the claim and paid
+
+    async with session_maker() as db:
+        row = (await db.execute(select(Referral))).scalars().first()
+        assert row.status == "paid"
+        assert row.referrer_block_id and row.referred_block_id
+        referral_grants = [
+            e for org in (referrer_org, referred_org)
+            for e in await ledger.entries_of(db, org)
+            if e.kind == "grant" and e.meta.get("block_kind") == "referral"
+        ]
+    assert len(referral_grants) == 2  # referee + referrer, each paid exactly once
+    s = get_settings()
+    assert await _assert_invariant(referrer_org) == promo + s.referral_referrer_micro
+    assert await _assert_invariant(referred_org) == promo + s.referral_referred_micro
+
+
 # ---- the call path -----------------------------------------------------------------------------
 async def test_reserve_settle_round_trip(c: AsyncClient):
     org_id, _ = await _org(c)
