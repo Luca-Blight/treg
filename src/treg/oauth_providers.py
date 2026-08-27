@@ -1511,6 +1511,43 @@ AVIATO = OAuthProvider(
     probe_path="/billing/balance",
 )
 
+EXA = OAuthProvider(
+    service="exa",
+    display_name="Exa",
+    auth_kind="key",
+    token_label="API key",
+    token_placeholder="your Exa API key",
+    # Exa takes the key as an x-api-key header (or Authorization: Bearer). Header, so the key never
+    # lands in a logged URL.
+    token_header="x-api-key",
+    token_format="{secret}",
+    setup_url="https://dashboard.exa.ai/api-keys",
+    setup_action_label="Get your Exa API key",
+    setup_steps=(
+        "Sign in to the Exa dashboard and open API Keys.",
+        "Create a key and copy it.",
+    ),
+    setup_note=(
+        "Every call is metered in dollars from your Exa balance (search $7/1k, page contents $1/1k, "
+        "answer $5/1k). Connecting spends one cached contents call, $0.001."
+    ),
+    auth_uri="", token_uri="",
+    scopes={},
+    client_id_setting="", client_secret_setting="",
+    category="SEO",
+    summary=(
+        "Semantic web search, people/company/news/publication search, page contents, similar links "
+        "and cited answers over Exa's own web index."
+    ),
+    base_url="https://api.exa.ai",
+    docs_url="https://docs.exa.ai/reference/getting-started",
+    # Exa has no free account route (/v0/teams/me answers 404 on every key, 2026-08-27). The cheapest
+    # authenticated call is /contents on a cached public page: $0.001, 401 INVALID_API_KEY on a bad key.
+    probe_path="/contents",
+    probe_method="POST",
+    probe_json={"urls": ["https://example.com"], "text": {"maxCharacters": 1}},
+)
+
 
 # ---- more Enrichment API-key providers (2026-08 category expansion) ---------------------------
 # Eight providers added together to deepen Enrichment: company/people enrichment with prospecting
@@ -2313,7 +2350,7 @@ REGISTRY: dict[str, OAuthProvider] = {
         APOLLO, PDL, AKTA, HUNTER, CRUNCHBASE, TIKHUB, BRIGHTDATA, SEMRUSH, JUSTONEAPI,
         SCRAPECREATORS,
         # SEO API-key providers
-        DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT,
+        DATAFORSEO, SERANKING, MOZ, MAJESTIC, SERPSTAT, EXA,
         # more Enrichment API-key providers
         LUSHA, CORESIGNAL, DIFFBOT, THECOMPANIESAPI, LEADMAGIC, FIBER_AI, CRUSTDATA, AVIATO,
         COMPANYENRICH, OCEANIO, TOMBA, PREDICTLEADS, FINDYMAIL, BRANDDEV, ICYPEAS, LEADSFORGE,

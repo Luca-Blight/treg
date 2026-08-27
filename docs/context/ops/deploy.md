@@ -296,6 +296,15 @@ The `fx.yaml` rates are the replacement costs configured on the accounts: Crustd
 ($0.30), Aviato $10/1,000 credits ($0.01). Crustdata settles from `X-Credits-Used`; Aviato fixed and
 conditional prices are derived from the authenticated rate card plus request/response shape.
 
+## Exa platform key (2026-08-27)
+
+`TREG_PLATFORM_KEY_EXA` is Jason's own Exa API key (dollar-metered, $20 signup credit + $10/month
+free tier; top up on the Exa dashboard). Add `exa` to `TREG_PLATFORM_PROVIDERS` to serve its nine
+routes on tier 4. Binding is the plain `x-api-key` header; no `fx.yaml` row because Exa prices in
+USD. Platform billing settles every call from the response's `costDollars.total`, so a 20-result
+search or a contents call with three content types bills exactly what Exa charged, not the catalog
+base. Verified on the dev server before merge: reserve $0.007 → settle $0.009 on a 12-result search.
+
 ## A db.py change needs a Postgres-shaped deploy plan
 
 SQLite cannot catch this class: it has no connection pool and no lock queue. Two rules, both from the

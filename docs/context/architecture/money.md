@@ -306,7 +306,9 @@ are admin-scale windows over a bounded number of metered calls, the same tradeof
               (dataforseo `cost`, scrapecreators `credits_charged`, akta `credits_consumed` —
               the last is what makes akta's per-section enrich billable: the estimate is an
               upper bound, the settle is the real charge; Crustdata reports `X-Credits-Used` in
-              a response header), else at the estimate;
+              a response header; Exa reports dollars as `costDollars.total` on every body —
+              the per-result rider beyond 10 and each contents type live only there), else at
+              the estimate;
               release instead when the call was not billable
 
 Two providers do not report a charge but have a rule the RESPONSE decides, so `_observed_cost_micro`
