@@ -19,10 +19,11 @@ def routed_endpoint(contract: Contract, children: list[dict], adapters: dict[str
     prices = sorted(p for p in ((cost_view(e.get("cost"), e["provider"]) or {}).get("usd") for e in kids) if p is not None)
     lo, hi = (prices[0], prices[-1]) if prices else (None, None)
     body = {}
+    variants = " | ".join("{" + ", ".join(v) + "}" for v in contract.identity)
     for variant in contract.identity:
         for k in variant:
             body.setdefault(k, {"type": contract.identity_types.get(k, "str"), "required": False,
-                                "note": "identity — supply exactly one variant: " + " | ".join("+".join(v) for v in contract.identity)})
+                                "note": f"identity key (part of {', '.join('+'.join(v) for v in contract.identity if k in v)})"})
     cap = contract.capability
     return {
         "id": f"{ROUTED_PROVIDER}.{cap}",
@@ -37,7 +38,8 @@ def routed_endpoint(contract: Contract, children: list[dict], adapters: dict[str
         "name": f"{cap} — routed: best of {len(kids)} providers, own keys first",
         "summary": contract.summary,
         "input": {"bodyType": "json", "body": body,
-                  "note": ("Routing options ride as headers, never in the body: X-Treg-Route-Waterfall: 1 "
+                  "note": (f"Send exactly ONE identity variant: {variants}. "
+                           "Routing options ride as headers, never in the body: X-Treg-Route-Waterfall: 1 "
                            "(keep trying providers on a miss), X-Treg-Route-Max-Cost: 0.10 (USD ceiling for "
                            "the whole call), X-Treg-Route-Prefer / X-Treg-Route-Exclude: <provider>. The "
                            "response is {output, raw, _treg: {served_by, tried}}; X-Treg-Served-By names the child.")},

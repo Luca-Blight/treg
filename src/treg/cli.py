@@ -4850,10 +4850,19 @@ def _print_params(inp: dict) -> None:
             note = spec.get("note") or ""
             if spec.get("example") not in (None, ""):
                 note = f"{note} (e.g. {spec['example']})".strip()
+            # The note is the contract ("one of domain | company", "THIS IS THE PRICE DIAL") — never
+            # clipped: an agent reading this table to build a call must see the whole rule. Long
+            # notes wrap under the NOTE column instead.
+            import textwrap
+            lines = textwrap.wrap(note, width=72) or [""]
             print(f"  {where:<6} {_clip(name, 26):<26} {_clip(str(spec.get('type') or '-'), 9):<9} "
-                  f"{'yes' if spec.get('required') else '·':<4} {_clip(note, 60)}")
+                  f"{'yes' if spec.get('required') else '·':<4} {lines[0]}")
+            for cont in lines[1:]:
+                print(f"  {'':<6} {'':<26} {'':<9} {'':<4} {cont}")
     if inp.get("note"):
-        print(f"  {_M}note{_R}   {inp['note']}")
+        import textwrap
+        for i, line in enumerate(textwrap.wrap(inp["note"], width=90)):
+            print(f"  {_M}{'note' if i == 0 else '':<6}{_R} {line}")
 
 
 def cmd_connections_ls(args, cfg) -> None:
