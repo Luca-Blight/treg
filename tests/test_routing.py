@@ -261,3 +261,20 @@ def test_a_per_success_miss_settles_at_zero_when_the_adapter_can_tell():
     assert A._observed_cost_micro(_mk("leadsforge", endpoint_id="leadsforge.people.email.find", cost_type="per_success"), b'{"email": null, "status": "failed"}') == 0
     assert A._observed_cost_micro(_mk("leadsforge", endpoint_id="leadsforge.people.email.find", cost_type="per_call"), b'{"email": null}') is None, "per_call bills the call"
     assert A._observed_cost_micro(_mk("tomba", endpoint_id="tomba.companies.emails.count", cost_type="per_success"), b'{"data": {}}') is None, "no adapter → no opinion"
+
+
+async def test_discovery_puts_the_routed_parent_first_and_its_children_under_it(clients: AsyncClient):
+    r = await clients.get("/catalog/search", params={"q": "find work email"})
+    rows = r.json()["results"]
+    ids = [x["id"] for x in rows]
+    parent = ids.index(ROUTED)
+    kids = [i for i, x in enumerate(rows) if x["capability"] == "people.email.find" and x["id"] != ROUTED]
+    assert kids and parent < min(kids), "the routed parent leads its capability group"
+    assert kids == list(range(parent + 1, parent + 1 + len(kids))), "children sit right under the parent"
+    assert rows[parent]["routed_children"] and any("ROUTED" in h for h in r.json()["hints"])
+    p = await clients.get("/catalog/platforms/people")
+    group = next(c for c in p.json()["capabilities"] if c["id"] == "people.email.find")
+    assert group["endpoints"][0]["id"] == ROUTED
+    from treg.domain.catalog.store import group_routed
+    plain = [{"id": "a", "capability": "x", "kind": "data"}, {"id": "b", "capability": "y", "kind": "data"}]
+    assert group_routed(plain) == plain, "no routed row → order untouched"

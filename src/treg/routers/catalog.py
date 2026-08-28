@@ -99,8 +99,9 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
         else:
             extended.append(view)
     for views in grouped.values():
-        # core before mapped-extended, verified before not — same convention as search ranking
-        views.sort(key=lambda v: (v["tier"] != "core", not v["verified"], v["id"]))
+        # routed parent first, then core before mapped-extended, verified before not — same
+        # convention as search ranking
+        views.sort(key=lambda v: (v.get("kind") != "routed", v["tier"] != "core", not v["verified"], v["id"]))
     return {
         "platform": {"slug": slug,
                      "label": cat.platforms.get(slug, {}).get("label", slug),
@@ -165,6 +166,7 @@ async def catalog_search(q: str = "", limit: int = 25,
         | {"score": score, "observed": stats.get(ep["id"])}
         for ep, score in ranked
     ]
+    results = catalog_store.group_routed(results)
     if not q.strip():
         hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
     elif not results:
@@ -178,7 +180,12 @@ async def catalog_search(q: str = "", limit: int = 25,
                  "requests steer which provider gets added next"]
     else:
         hints = [f"treg catalog get {results[0]['id']}   # params, cost and an example response",
-                 f"{catalog_store.call_template(ranked[0][0])}   # run it — key injected server-side"]
+                 f"{catalog_store.call_template(cat.by_id.get(results[0]['id'], ranked[0][0]))}   # run it — key injected server-side"]
+        routed_row = next((r for r in results if r.get("kind") == "routed"), None)
+        if routed_row is not None:
+            hints.insert(1, f"{routed_row['id']} is ROUTED: treg picks among {len(routed_row.get('routed_children') or [])} "
+                            f"providers (own keys first, then cheapest per hit) and names the one that served; "
+                            f"call a child id to choose the provider yourself")
         if total > len(results):
             hints.append(f"{total - len(results)} more matches — raise limit (max 100)")
         if tie_truncated:

@@ -545,7 +545,30 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
         # verbatim (it also carries the ground truth the input spec can't express: whether the
         # body is a bare object or an ARRAY of tasks, which dataforseo requires)
         "test_request": ep.get("test_request") or None,
+        # A generated routed row (`treg.<capability>`) names the children it chooses among, so a
+        # discovery surface can draw the hierarchy without a second request.
+        **({"routed_children": list(ep.get("routed_children") or [])} if ep.get("kind") == "routed" else {}),
     }
+
+
+def group_routed(rows: list[dict], key=lambda r: r) -> list[dict]:
+    """Discovery order with routed parents FIRST: a capability that has a routed row in `rows` is
+    shown as a group — the parent at the position its best member earned, its children (same
+    capability) right under it — and everything else keeps its order. Relevance still decides
+    where the group sits; within it, "let treg choose" leads and the specific providers follow."""
+    routed_caps = {key(r)["capability"] for r in rows if key(r).get("kind") == "routed"}
+    if not routed_caps:
+        return rows
+    first_pos: dict[str, int] = {}
+    for i, r in enumerate(rows):
+        first_pos.setdefault(key(r)["capability"], i)
+    def _k(item):
+        i, r = item
+        v = key(r)
+        if v["capability"] in routed_caps:
+            return (first_pos[v["capability"]], 0 if v.get("kind") == "routed" else 1, i)
+        return (i, 0, i)
+    return [r for _, r in sorted(enumerate(rows), key=_k)]
 
 
 def endpoint_context(ep: dict, cat: Catalog) -> dict:
