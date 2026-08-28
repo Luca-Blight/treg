@@ -57,6 +57,7 @@ from httpx import ASGITransport, AsyncClient  # noqa: E402
 
 from treg import audit  # noqa: E402
 from treg.api import app  # noqa: E402
+from treg import archive  # noqa: E402
 from treg.db import reset_db  # noqa: E402
 
 
@@ -215,6 +216,11 @@ async def clients():
     # lets fire-and-forget audit writes survive between tests, so drain both sides of reset_db():
     # before it, to keep an old write out of the new schema, and after the test, to finish its own.
     await audit.drain()
+    # Same discipline for the archive's fire-and-forget recordings: a still-open recording
+    # transaction from the PREVIOUS test blocks reset_db's DROP TABLE on Postgres (sqlite
+    # forgives it) — the serial CI job hung exactly here, 5-minute faulthandler timeouts on
+    # whichever archive test ran next (2026-08-28, twice).
+    await archive.drain()
     await reset_db()
     await app.state.endpoint_observation_reader.reset()
     app.state.hook_hits = []  # webhook POSTs the upstream received (for alerting assertions)
@@ -227,6 +233,7 @@ async def clients():
             yield c
     finally:
         await audit.drain()
+        await archive.drain()
         await app.state.http.aclose()
 
 

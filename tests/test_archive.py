@@ -116,7 +116,6 @@ def test_content_hash_is_raw_identity():
 # ---------------------------------------------------------------------------------------------
 # Tables: round-trip on the running engine (sqlite locally, Postgres in CI's serial job)
 
-@pytest.mark.anyio
 async def test_tables_round_trip(clients):  # clients fixture resets the schema on this engine
     from sqlmodel import select
     from treg.db import session_maker
@@ -151,7 +150,6 @@ async def test_tables_round_trip(clients):  # clients fixture resets the schema 
         assert stored.change_seen == 0 and stored.heat == 0.0
 
 
-@pytest.mark.anyio
 async def test_key_hash_is_unique(clients):
     from sqlalchemy.exc import IntegrityError
     from treg.db import session_maker
@@ -201,7 +199,6 @@ async def _rows():
         return keys, snaps
 
 
-@pytest.mark.anyio
 async def test_recorder_observes_a_metered_call(clients: AsyncClient, shadow):
     r = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
     assert r.status_code == 200, r.text
@@ -215,7 +212,6 @@ async def test_recorder_observes_a_metered_call(clients: AsyncClient, shadow):
     assert snaps[0].origin == "caller"
 
 
-@pytest.mark.anyio
 async def test_recorder_off_by_default(clients: AsyncClient, platform_on):
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 200
@@ -223,11 +219,11 @@ async def test_recorder_off_by_default(clients: AsyncClient, platform_on):
     assert keys == [] and snaps == []
 
 
-@pytest.mark.anyio
 async def test_storable_policy_keeps_bytes_and_dedups(clients: AsyncClient, shadow, monkeypatch):
     entry = catalog_store.load().by_id[EP]
     monkeypatch.setitem(entry, "cache", "transient")
     r1 = await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()                              # land the recording before the repeat
     r2 = await clients.get(f"/call/{EP}?aweme_id=7")   # same key, identical echo answer
     assert r1.status_code == r2.status_code == 200
     keys, snaps = await _rows()
@@ -238,12 +234,12 @@ async def test_storable_policy_keeps_bytes_and_dedups(clients: AsyncClient, shad
     assert keys[0].stable_seen == 1 and keys[0].change_seen == 0
 
 
-@pytest.mark.anyio
 async def test_different_answer_counts_as_change(clients: AsyncClient, shadow, monkeypatch):
     monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
     from tests.test_marketplace_call import _fake_relay
     monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"n": 1}'))
     await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()                              # land v1 before the differing answer
     monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"n": 2}'))
     await clients.get(f"/call/{EP}?aweme_id=7")
     keys, snaps = await _rows()
@@ -253,7 +249,6 @@ async def test_different_answer_counts_as_change(clients: AsyncClient, shadow, m
     assert snaps[0].body == b'{"n": 1}' and snaps[1].body == b'{"n": 2}'
 
 
-@pytest.mark.anyio
 async def test_different_params_are_different_keys(clients: AsyncClient, shadow):
     await clients.get(f"/call/{EP}?aweme_id=7")
     await clients.get(f"/call/{EP}?aweme_id=8")
@@ -261,7 +256,6 @@ async def test_different_params_are_different_keys(clients: AsyncClient, shadow)
     assert len(keys) == 2
 
 
-@pytest.mark.anyio
 async def test_oversized_body_is_counted_not_kept(clients: AsyncClient, shadow, monkeypatch):
     monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
     monkeypatch.setattr(get_settings(), "archive_max_body_bytes", 4)
@@ -271,7 +265,6 @@ async def test_oversized_body_is_counted_not_kept(clients: AsyncClient, shadow, 
     assert len(snaps) == 1 and snaps[0].body is None and snaps[0].size_bytes > 4
 
 
-@pytest.mark.anyio
 async def test_error_responses_are_not_recorded(clients: AsyncClient, shadow, monkeypatch):
     from tests.test_marketplace_call import _fake_relay
     monkeypatch.setattr(call_service, "relay", _fake_relay(500, b"boom"))
@@ -281,7 +274,6 @@ async def test_error_responses_are_not_recorded(clients: AsyncClient, shadow, mo
     assert keys == [] and snaps == []
 
 
-@pytest.mark.anyio
 async def test_a_recorder_crash_never_fails_the_call(clients: AsyncClient, shadow, monkeypatch):
     async def _boom(**kwargs):
         raise RuntimeError("recorder exploded")
@@ -321,7 +313,6 @@ def test_every_declared_cache_field_in_the_catalog_is_valid():
             assert declared in ("forbidden", "transient", "archive"), ep["id"]
 
 
-@pytest.mark.anyio
 async def test_recorder_respects_a_judged_forbidden(clients: AsyncClient, shadow, monkeypatch):
     """A provider judged forbidden is counted, never kept — even though the policy is declared."""
     monkeypatch.setitem(catalog_store.load().by_id[EP], "cache",
@@ -335,7 +326,6 @@ async def test_recorder_respects_a_judged_forbidden(clients: AsyncClient, shadow
 # ---------------------------------------------------------------------------------------------
 # The phase-0 report (PR 3): GET /admin/archive
 
-@pytest.mark.anyio
 async def test_admin_archive_report(clients: AsyncClient, shadow, monkeypatch):
     monkeypatch.setenv("TREG_ADMIN_TOKEN", "ADM-TOKEN")
     get_settings.cache_clear()
@@ -388,7 +378,6 @@ async def _spend_entries(clients):
     return (await clients.get(f"/orgs/{org_id}/balance")).json()["entries"]["items"]
 
 
-@pytest.mark.anyio
 async def test_a_hit_serves_stored_bytes_and_bills_like_live(clients: AsyncClient, serve):
     r1 = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
     assert r1.status_code == 200 and "x-treg-cache" not in r1.headers
@@ -408,7 +397,6 @@ async def test_a_hit_serves_stored_bytes_and_bills_like_live(clients: AsyncClien
     assert [row.get("cached") for row in rows[:2]] == [True, False]
 
 
-@pytest.mark.anyio
 async def test_a_hit_is_not_a_new_observation(clients: AsyncClient, serve):
     await clients.get(f"/call/{EP}?aweme_id=7")
     await archive.drain()
@@ -419,7 +407,6 @@ async def test_a_hit_is_not_a_new_observation(clients: AsyncClient, serve):
     assert keys[0].last_requested_at is not None          # …but demand was noted
 
 
-@pytest.mark.anyio
 async def test_no_cache_forces_live(clients: AsyncClient, serve):
     await clients.get(f"/call/{EP}?aweme_id=7")
     await archive.drain()
@@ -429,7 +416,6 @@ async def test_no_cache_forces_live(clients: AsyncClient, serve):
     assert len(snaps) == 2                                # the forced live call was recorded
 
 
-@pytest.mark.anyio
 async def test_max_age_zero_forces_live(clients: AsyncClient, serve):
     await clients.get(f"/call/{EP}?aweme_id=7")
     await archive.drain()
@@ -437,7 +423,6 @@ async def test_max_age_zero_forces_live(clients: AsyncClient, serve):
     assert r.status_code == 200 and "x-treg-cache" not in r.headers
 
 
-@pytest.mark.anyio
 async def test_a_stale_snapshot_is_not_served(clients: AsyncClient, serve, monkeypatch):
     from datetime import timedelta
     await clients.get(f"/call/{EP}?aweme_id=7")
@@ -451,7 +436,6 @@ async def test_a_stale_snapshot_is_not_served(clients: AsyncClient, serve, monke
     assert r.status_code == 200 and "x-treg-cache" not in r.headers
 
 
-@pytest.mark.anyio
 async def test_unjudged_policy_never_serves(clients: AsyncClient, platform_on, monkeypatch):
     monkeypatch.setattr(get_settings(), "archive_mode", "serve")
     # EP carries no cache judgment here: recorded hash-only, and never served.
@@ -461,7 +445,6 @@ async def test_unjudged_policy_never_serves(clients: AsyncClient, platform_on, m
     assert r.status_code == 200 and "x-treg-cache" not in r.headers
 
 
-@pytest.mark.anyio
 async def test_shadow_mode_never_serves(clients: AsyncClient, shadow, monkeypatch):
     monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
     await clients.get(f"/call/{EP}?aweme_id=7")
@@ -470,7 +453,6 @@ async def test_shadow_mode_never_serves(clients: AsyncClient, shadow, monkeypatc
     assert r.status_code == 200 and "x-treg-cache" not in r.headers
 
 
-@pytest.mark.anyio
 async def test_a_lookup_crash_degrades_to_live(clients: AsyncClient, serve, monkeypatch):
     await clients.get(f"/call/{EP}?aweme_id=7")
     await archive.drain()
@@ -485,10 +467,10 @@ async def test_a_lookup_crash_degrades_to_live(clients: AsyncClient, serve, monk
 # ---------------------------------------------------------------------------------------------
 # The learner (PR 5): timers that adjust, noise that stops counting, keys that opt out
 
-@pytest.mark.anyio
 async def test_stable_refetch_grows_the_timer(clients: AsyncClient, shadow, monkeypatch):
     monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
     await clients.get(f"/call/{EP}?aweme_id=7")
+    await archive.drain()                           # land the first recording
     await clients.get(f"/call/{EP}?aweme_id=7")     # identical echo answer ⇒ stable
     keys, _ = await _rows()
     # other.* capability default is 3600; one stable step ⇒ ×1.5
@@ -496,7 +478,6 @@ async def test_stable_refetch_grows_the_timer(clients: AsyncClient, shadow, monk
     assert keys[0].stable_seen == 1 and keys[0].ttl_s > 3600 * 1.4
 
 
-@pytest.mark.anyio
 async def test_changed_refetch_shrinks_the_timer(clients: AsyncClient, shadow, monkeypatch):
     monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
     from tests.test_marketplace_call import _fake_relay
@@ -508,7 +489,6 @@ async def test_changed_refetch_shrinks_the_timer(clients: AsyncClient, shadow, m
     assert keys[0].change_seen == 1 and keys[0].ttl_s == 1800   # 3600 × 0.5
 
 
-@pytest.mark.anyio
 async def test_repeated_noise_counts_as_stable(clients: AsyncClient, shadow, monkeypatch):
     monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
     from tests.test_marketplace_call import _fake_relay
@@ -517,6 +497,7 @@ async def test_repeated_noise_counts_as_stable(clients: AsyncClient, shadow, mon
     for b in bodies:
         monkeypatch.setattr(call_service, "relay", _fake_relay(200, b))
         await clients.get(f"/call/{EP}?aweme_id=7")
+        await archive.drain()                          # recordings must land in call order
     keys, _ = await _rows()
     # fetch 2 differs (first diff: counts changed, remembers the set); fetch 3 repeats the SAME
     # small diff-set ⇒ noise ⇒ stable.
@@ -524,7 +505,6 @@ async def test_repeated_noise_counts_as_stable(clients: AsyncClient, shadow, mon
     assert keys[0].volatile_paths == ["$.req_id", "$.ts"]
 
 
-@pytest.mark.anyio
 async def test_always_changing_key_marks_itself_never_cache(clients: AsyncClient, serve, monkeypatch):
     from tests.test_marketplace_call import _fake_relay
     for i in range(5):   # tiny 1-leaf body: the noise guard must NEVER rescue a moving price
@@ -567,7 +547,6 @@ async def _age_key(days: float, *, demanded: bool = True):
         return key.key_hash
 
 
-@pytest.mark.anyio
 async def test_refresh_worker_refreshes_a_due_demanded_key(clients: AsyncClient, serve):
     r = await clients.get(f"/call/{EP}?aweme_id=7&count=5")
     assert r.status_code == 200
@@ -591,7 +570,6 @@ def _qs(url: str):
     return parse_qsl(urlsplit(url).query)
 
 
-@pytest.mark.anyio
 async def test_refresh_skips_undemanded_and_fresh_keys(clients: AsyncClient, serve):
     await clients.get(f"/call/{EP}?aweme_id=7")
     await archive.drain()
@@ -602,7 +580,6 @@ async def test_refresh_skips_undemanded_and_fresh_keys(clients: AsyncClient, ser
     assert fake.calls == []
 
 
-@pytest.mark.anyio
 async def test_refresh_daily_cap_holds(clients: AsyncClient, serve, monkeypatch):
     await clients.get(f"/call/{EP}?aweme_id=7")
     await clients.get(f"/call/{EP}?aweme_id=8")
@@ -621,7 +598,6 @@ async def test_refresh_daily_cap_holds(clients: AsyncClient, serve, monkeypatch)
     assert len(fake.calls) == 1
 
 
-@pytest.mark.anyio
 async def test_refresh_disabled_off_serve_or_at_cap_zero(clients: AsyncClient, serve, monkeypatch):
     await clients.get(f"/call/{EP}?aweme_id=7")
     await archive.drain()
@@ -638,7 +614,6 @@ async def test_refresh_disabled_off_serve_or_at_cap_zero(clients: AsyncClient, s
 # ---------------------------------------------------------------------------------------------
 # The panel (PR 6): the keys endpoint, the extended report, and the page shell
 
-@pytest.mark.anyio
 async def test_admin_archive_keys_endpoint(clients: AsyncClient, serve, monkeypatch):
     monkeypatch.setenv("TREG_ADMIN_TOKEN", "ADM-TOKEN")
     get_settings.cache_clear()
@@ -670,7 +645,6 @@ async def test_admin_archive_keys_endpoint(clients: AsyncClient, serve, monkeypa
         get_settings.cache_clear()
 
 
-@pytest.mark.anyio
 async def test_archive_panel_page_serves(clients: AsyncClient):
     r = await clients.get("/admin/archive/panel")
     assert r.status_code == 200
@@ -678,7 +652,6 @@ async def test_archive_panel_page_serves(clients: AsyncClient):
     assert "data-tip" in r.text                                  # the explanations shipped
 
 
-@pytest.mark.anyio
 async def test_admin_archive_body_viewer(clients: AsyncClient, serve, monkeypatch):
     monkeypatch.setenv("TREG_ADMIN_TOKEN", "ADM-TOKEN")
     get_settings.cache_clear()
