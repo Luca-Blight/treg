@@ -111,6 +111,39 @@ async def test_findymail_shaped_402_on_tier4_runs_one_child_cycle(clients: Async
     assert tiers == {"platform", "platform-overflow"}
 
 
+async def test_overflow_substitutes_consumed_path_params_before_calling_aggregator(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    endpoint = "predictleads.companies.enrich"
+    monkeypatch.setenv("TREG_PLATFORM_KEY_PREDICTLEADS", "TEST-PREDICTLEADS-KEY")
+    monkeypatch.setenv(
+        "TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,brightdata,predictleads",
+    )
+    get_settings.cache_clear()
+    async with session_maker() as db:
+        db.add(OverflowRoute(
+            endpoint_id=endpoint, aggregator="orthogonal", provider="predictleads", method="GET",
+            path="/companies/{id_or_domain}", agg_slug="predictleads",
+            agg_path="/v3/companies/{id_or_domain}", agg_price_micro=40_000, agg_unit="call",
+            ratio=1.0, enabled=True, last_verified_at=utcnow_naive(),
+        ))
+        await db.commit()
+    routes_view.invalidate()
+    capacity_view.invalidate()
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"Insufficient balance"}'))
+    seen = []
+    envelope = {"success": True, "data": VENDOR_BODY, "priceCents": 4.0}
+    monkeypatch.setattr(O, "_send", _orthogonal([(200, envelope)], seen))
+
+    r = await clients.get(f"/call/{endpoint}?id_or_domain=stripe.com")
+
+    assert r.status_code == 200, r.text
+    assert len(seen) == 1
+    assert seen[0].json["path"] == "/v3/companies/stripe.com"
+    assert "{" not in seen[0].json["path"] and "}" not in seen[0].json["path"]
+    assert "query" not in seen[0].json
+
+
 async def test_aggregator_402_releases_the_child_marks_it_unhealthy_and_answers_a_typed_503(
     clients: AsyncClient, overflow_on, monkeypatch,
 ):

@@ -172,12 +172,13 @@ async def maybe_overflow(
         return None
     child = _child(mk, route)
     query = [(k, v) for k, v in query_items if k not in mk.consumed]
+    path_params = {k: v for k, v in query_items if k in mk.consumed}
     if mode == "on":
         # Child hold: own id, same call_ref family. Insufficient balance here is the normal 402.
         await _platform_reserve(child, caller, meta=meta, call_ref=f"{call_ref}:overflow")
     res: AggregatorResult | None = None
     try:
-        res = await _run(client, aggregator, route, key, query, caller_body or None, None)
+        res = await _run(client, aggregator, route, key, query, caller_body or None, path_params)
     except httpx.RequestError as exc:
         res = AggregatorResult(None, b"", 0, "malformed", f"{type(exc).__name__}: {exc}")
     delta = (res.cost_micro or 0) - int(mk.estimate_micro or 0)
