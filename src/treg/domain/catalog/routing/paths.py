@@ -106,6 +106,53 @@ def at_least(v: Any, floor: Any) -> Any:
         return floor
 
 
+def linkedin_handle(v: Any) -> str | None:
+    """`https://www.linkedin.com/in/patrickcollison/` → `patrickcollison` (hunter wants the handle)."""
+    if not isinstance(v, str) or not v:
+        return None
+    m = re.search(r"linkedin\.com/(?:in|company)/([^/?#]+)", v)
+    return m.group(1) if m else (v if "/" not in v else None)
+
+
+def linkedin_url(v: Any) -> str | None:
+    """A handle → the public profile URL; a URL passes through."""
+    if not isinstance(v, str) or not v:
+        return None
+    return v if v.startswith("http") else f"https://www.linkedin.com/in/{v.strip('/')}"
+
+
+def email_domain(v: Any) -> str | None:
+    if not isinstance(v, str) or "@" not in v:
+        return None
+    d = v.rsplit("@", 1)[1].lower()
+    return None if d in _FREE_MAIL else d
+
+
+_FREE_MAIL = {"gmail.com", "googlemail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "live.com",
+              "aol.com", "proton.me", "protonmail.com", "me.com", "msn.com", "qq.com", "163.com", "126.com"}
+
+
+def host(v: Any) -> str | None:
+    """`https://www.stripe.com/about` → `stripe.com`; a bare domain passes through."""
+    if not isinstance(v, str) or not v:
+        return None
+    s = re.sub(r"^[a-z]+://", "", v.strip().lower()).split("/")[0].split("?")[0]
+    return s[4:] if s.startswith("www.") else s or None
+
+
+def fmt(template: Any, *args: Any) -> str | None:
+    """`fmt('https://www.instagram.com/{}', username)` — a URL from a key. None if any arg is missing."""
+    if not isinstance(template, str) or any(a is None for a in args):
+        return None
+    return template.format(*args)
+
+
+def obj(*kv: Any) -> dict | None:
+    """`obj('domain', company_domain, 'limit', 5)` → {"domain": …, "limit": 5}; missing values are dropped."""
+    out = {kv[i]: kv[i + 1] for i in range(0, len(kv) - 1, 2) if kv[i + 1] is not None}
+    return out or None
+
+
 def as_list(v: Any) -> Any:
     """A scalar the provider wants as a one-element array (`domains: ["stripe.com"]`)."""
     if v is None:
@@ -115,7 +162,8 @@ def as_list(v: Any) -> Any:
 
 TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type, "len": length,
               "dfs_location": dfs_location, "seranking_source": seranking_source, "lower": lower, "upper": upper,
-              "list": as_list, "at_least": at_least}
+              "list": as_list, "at_least": at_least, "linkedin_handle": linkedin_handle, "linkedin_url": linkedin_url,
+              "email_domain": email_domain, "host": host, "fmt": fmt, "obj": obj}
 
 _CALL = re.compile(r"^(\w+)\((.*)\)$")
 _DIV = re.compile(r"^(.+?)\s*/\s*(\d+(?:\.\d+)?)$")
@@ -164,7 +212,7 @@ def evaluate(expr: str, doc: Any) -> Any:
             raise ValueError(f"unknown transform {name!r}")
         return fn(*vals)
     lit = _literal(e)
-    if lit is not _MISSING and not re.match(r"^[A-Za-z_]", e):
+    if lit is not _MISSING and (not re.match(r"^[A-Za-z_]", e) or e in ("null", "true", "false")):
         return lit
     return get_path(doc, e)
 

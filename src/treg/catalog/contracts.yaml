@@ -17,12 +17,15 @@ contracts:
       - {full_name: str, domain: str}
       - {first_name: str, last_name: str, domain: str}
       - {linkedin_url: url}
-    # `full_name` ⇄ `first_name`+`last_name` are derived from each other, so the two name variants
-    # match the same adapters; `linkedin_url` is a different subject and never crosses.
+      - {linkedin_handle: str}
+    # `full_name` ⇄ `first_name`+`last_name` and `linkedin_url` ⇄ `linkedin_handle` are derived from
+    # each other, so a caller may send whatever it holds; every provider gets only the fields it wants.
     derive:
       full_name: "join(first_name, last_name)"
       first_name: "split_first(full_name)"
       last_name: "split_last(full_name)"
+      linkedin_url: "linkedin_url(linkedin_handle)"
+      linkedin_handle: "linkedin_handle(linkedin_url)"
     filters: {}
     output:
       email: {type: str, required: true}
@@ -110,6 +113,9 @@ contracts:
       full_name: "join(first_name, last_name)"
       first_name: "split_first(full_name)"
       last_name: "split_last(full_name)"
+      domain: "email_domain(email)"
+      linkedin_url: "linkedin_url(linkedin_handle)"
+      linkedin_handle: "linkedin_handle(linkedin_url)"
     filters: {}
     output:
       phone: {type: str, required: true, note: "as the provider formats it; E.164 when it offers one"}
@@ -135,12 +141,16 @@ contracts:
     identity:
       - {email: str}
       - {linkedin_url: url}
+      - {linkedin_handle: str}
       - {full_name: str, domain: str}
       - {first_name: str, last_name: str, domain: str}
     derive:
       full_name: "join(first_name, last_name)"
       first_name: "split_first(full_name)"
       last_name: "split_last(full_name)"
+      domain: "email_domain(email)"
+      linkedin_url: "linkedin_url(linkedin_handle)"
+      linkedin_handle: "linkedin_handle(linkedin_url)"
     filters: {}
     output:
       full_name: {type: str, required: true}
@@ -246,4 +256,32 @@ contracts:
       count: {type: int}
       next_cursor: {type: str}
     miss: "people == []"
+    idempotent: true
+
+  # ---- batch 5: company enrichment (2026-08-28) -----------------------------------------------
+  companies.enrich:
+    summary: "Enrich a company from its domain, name, LinkedIn URL or a work email — treg picks the provider and names the one that served"
+    identity:
+      - {domain: str}
+      - {website: url}
+      - {name: str}
+      - {linkedin_url: url}
+      - {linkedin_handle: str}
+      - {email: str}
+    derive:
+      domain: "coalesce(email_domain(email), host(website))"
+      linkedin_url: "linkedin_url(linkedin_handle)"
+      linkedin_handle: "linkedin_handle(linkedin_url)"
+    filters: {}
+    output:
+      name: {type: str, required: true}
+      domain: {type: str}
+      website: {type: str}
+      description: {type: str}
+      industry: {type: str}
+      employees: {type: str, note: "headcount or a range, as the provider states it"}
+      founded: {type: int}
+      location: {type: str}
+      linkedin_url: {type: str}
+    miss: "name == null"
     idempotent: true

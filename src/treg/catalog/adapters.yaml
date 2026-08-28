@@ -263,8 +263,8 @@ adapters:
           company: data.company, company_domain: data.website_url, linkedin_url: data.linkedin, location: data.country}
     miss: "data.full_name == null"
   hunter.people.enrich:
-    accepts: [[email]]
-    in:  {email: queryParams.email}
+    accepts: [[email], [linkedin_handle]]
+    in:  {email: queryParams.email, linkedin_handle: queryParams.linkedin_handle}
     out: {full_name: data.name.fullName, first_name: data.name.givenName, last_name: data.name.familyName,
           title: data.employment.title, company: data.employment.name, company_domain: data.employment.domain,
           linkedin_url: data.linkedin.handle, location: "coalesce(data.location, data.geo.country)"}
@@ -467,3 +467,188 @@ adapters:
     in_expr: {body.filters.contacts.include.jobTitles: "list(title)", body.pagination.size: "at_least(limit, 10)", body.pagination.page: "0"}
     out: {people: results, count: pagination.total}
     miss: "results == []"
+
+  apollo.people.enrich:
+    accepts: [[email], [linkedin_url], [full_name, domain]]
+    in:  {email: queryParams.email, linkedin_url: queryParams.linkedin_url, full_name: queryParams.name, domain: queryParams.domain}
+    out: {full_name: person.name, first_name: person.first_name, last_name: person.last_name, title: person.title,
+          company: person.organization.name, company_domain: person.organization.primary_domain,
+          linkedin_url: person.linkedin_url, location: "join(person.city, person.country)"}
+    miss: "person == null"
+
+  # ---- Bright Data datasets: a URL-array body built from the identity (routing debt, 2026-08-28)
+  brightdata.instagram.user.profile:
+    accepts: [[username]]
+    in:  {}
+    in_expr: {body.url: "fmt('https://www.instagram.com/{}', username)"}
+    body_array: true
+    const: {queryParams.dataset_id: gd_l1vikfch901nx3by4, queryParams.format: json}
+    test_identity: {username: instagram}
+    out: {username: "[0].account", user_id: "[0].id", full_name: "[0].full_name", followers: "[0].followers",
+          following: "[0].following", posts_count: "[0].posts_count", is_verified: "[0].is_verified",
+          is_private: "[0].is_private", biography: "[0].biography"}
+    miss: "[0].account == null"
+  brightdata.x.tiktok-profiles:
+    accepts: [[username]]
+    in:  {}
+    in_expr: {body.url: "fmt('https://www.tiktok.com/@{}', username)"}
+    body_array: true
+    const: {queryParams.dataset_id: gd_l1villgoiiidt09ci, queryParams.format: json}
+    test_identity: {username: tiktok}
+    out: {username: "[0].account_id", user_id: "[0].id", sec_uid: "[0].secu_id", nickname: "[0].nickname",
+          followers: "[0].followers", following: "[0].following", likes: "[0].likes", videos_count: "[0].videos_count",
+          is_verified: "[0].is_verified", biography: "[0].biography"}
+    miss: "[0].account_id == null"
+  brightdata.x.instagram-posts:
+    accepts: [[url]]
+    in:  {url: body.url}
+    body_array: true
+    const: {queryParams.dataset_id: gd_lk5ns7kz21pck8jpis, queryParams.format: json}
+    out: {id: "[0].post_id", shortcode: "[0].shortcode", caption: "[0].description", likes: "[0].likes",
+          comments: "[0].num_comments", owner_username: "[0].user_posted"}
+    miss: "[0].post_id == null"
+  lusha.people.enrich:
+    accepts: [[first_name, last_name, domain], [full_name, domain]]
+    in:  {}
+    in_expr: {body.contacts: "list(obj('firstName', first_name, 'lastName', last_name, 'companyDomain', domain))"}
+    const: {body.reveal: [emails]}
+    test_identity: {first_name: Jane, last_name: Doe, domain: lusha.com}
+    out: {full_name: "results[0].fullName", first_name: "results[0].firstName", last_name: "results[0].lastName",
+          title: "results[0].jobTitle", company: "results[0].company.name", linkedin_url: "results[0].socialLinks.linkedin",
+          location: "results[0].location.raw"}
+    miss: "results[0].error != null"
+
+  # ---- companies.enrich (batch 5, 2026-08-28) --------------------------------------------------
+  thecompaniesapi.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: pathParams.domain}
+    out: {name: about.name, domain: domain.domain, industry: about.industry, description: descriptions.primary,
+          employees: "coalesce(about.totalEmployeesExact, about.totalEmployees)", founded: about.yearFounded,
+          location: "join(locations.headquarters.city.name, locations.headquarters.country.name)",
+          linkedin_url: socials.linkedin.url}
+    miss: "about.name == null"
+  thecompaniesapi.companies.enrich_by_email:
+    accepts: [[email]]
+    in:  {email: queryParams.email}
+    out: {name: company.about.name, domain: company.domain.domain, industry: company.about.industry,
+          description: company.descriptions.primary,
+          employees: "coalesce(company.about.totalEmployeesExact, company.about.totalEmployees)",
+          founded: company.about.yearFounded,
+          location: "join(company.locations.headquarters.city.name, company.locations.headquarters.country.name)",
+          linkedin_url: company.socials.linkedin.url}
+    miss: "company.about.name == null"
+  hunter.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: queryParams.domain}
+    out: {name: data.name, domain: data.domain, description: data.description, industry: data.category.industry,
+          employees: data.metrics.employees, founded: data.foundedYear, location: data.location,
+          linkedin_url: "fmt('https://www.linkedin.com/{}', data.linkedin.handle)"}
+    miss: "data.name == null"
+  tomba.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: queryParams.domain}
+    out: {name: data.name, domain: data.domain, description: data.description, location: data.location,
+          linkedin_url: "fmt('https://www.linkedin.com/company/{}', data.linkedin.handle)"}
+    miss: "data.name == null"
+  companyenrich.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: queryParams.domain}
+    out: {name: name, domain: domain, website: website, description: description, industry: industry,
+          employees: employees, founded: founded_year}
+    miss: "name == null"
+  companyenrich.companies.enrich.by_properties:
+    accepts: [[name], [linkedin_url]]
+    in:  {name: body.name, linkedin_url: body.linkedinUrl}
+    out: {name: name, domain: domain, website: website, description: description, industry: industry,
+          employees: employees, founded: founded_year}
+    miss: "name == null"
+  findymail.search.company:
+    accepts: [[domain]]
+    in:  {domain: body.domain}
+    out: {name: name, domain: domain, description: description, industry: industry, employees: company_size,
+          location: "join(city, country)", linkedin_url: linkedin_url}
+    miss: "name == null"
+  apollo.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: queryParams.domain}
+    out: {name: organization.name, domain: organization.primary_domain, website: organization.website_url,
+          description: organization.short_description, industry: organization.industry,
+          employees: organization.estimated_num_employees, founded: organization.founded_year,
+          location: "join(organization.city, organization.country)", linkedin_url: organization.linkedin_url}
+    miss: "organization.name == null"
+  leadmagic.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: body.company_domain}
+    out: {name: companyName, website: websiteUrl, description: description, industry: industry,
+          employees: employeeCount, founded: founded_year, location: "locations[0].description",
+          linkedin_url: linkedin_url}
+    miss: "companyName == null"
+  icypeas.companies.enrich:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: queryParams.url}
+    out: {name: result.name, website: result.website, description: result.description, industry: result.industry,
+          employees: result.numberOfEmployees, linkedin_url: result.url,
+          location: "join(result.address.addressLocality, result.address.addressCountry)"}
+    miss: "result.name == null"
+  branddev.brand.retrieve:
+    accepts: [[domain]]
+    in:  {domain: queryParams.domain}
+    out: {name: brand.title, domain: brand.domain, description: brand.description,
+          employees: "coalesce(brand.employees.exact, brand.employees.range)",
+          location: "join(brand.address.city, brand.address.country)"}
+    miss: "brand.title == null"
+  branddev.brand.retrieve-by-name:
+    accepts: [[name]]
+    in:  {name: queryParams.name}
+    out: {name: brand.title, domain: brand.domain, description: brand.description,
+          employees: "coalesce(brand.employees.exact, brand.employees.range)",
+          location: "join(brand.address.city, brand.address.country)"}
+    miss: "brand.title == null"
+  branddev.brand.retrieve-by-email:
+    accepts: [[email]]
+    in:  {email: queryParams.email}
+    out: {name: brand.title, domain: brand.domain, description: brand.description,
+          employees: "coalesce(brand.employees.exact, brand.employees.range)",
+          location: "join(brand.address.city, brand.address.country)"}
+    miss: "brand.title == null"
+  pdl.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: queryParams.website}
+    out: {name: display_name, website: website, description: summary, industry: industry,
+          employees: "coalesce(employee_count, size)", founded: founded, location: location.name,
+          linkedin_url: linkedin_url}
+    miss: "name == null"
+  predictleads.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: pathParams.id_or_domain}
+    out: {name: "data[0].attributes.friendly_company_name", domain: "data[0].attributes.domain",
+          description: "data[0].attributes.description_short", location: "data[0].attributes.location"}
+    miss: "data == []"
+  aviato.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: queryParams.website}
+    out: {name: name, website: URLs.website, linkedin_url: URLs.linkedin}
+    miss: "name == null"
+  fiber-ai.companies.enrich:
+    accepts: [[domain]]
+    in:  {domain: body.companyDomain.value}
+    out: {name: "output.data[0].preferred_name", domain: "output.data[0].domains[0]",
+          website: "output.data[0].websites[0]", description: "output.data[0].li_description",
+          industry: "output.data[0].standard_industries[0]", employees: "output.data[0].employee_count_consensus.gte",
+          location: "join(output.data[0].location_consensus.city, output.data[0].location_consensus.country_name)",
+          linkedin_url: "fmt('https://www.linkedin.com/company/{}', output.data[0].linkedin_primary_slug)"}
+    miss: "output.data == []"
+  lusha.companies.enrich:
+    accepts: [[domain]]
+    in:  {}
+    in_expr: {body.companies: "list(obj('domain', domain))"}
+    test_identity: {domain: lusha.com}
+    out: {name: "results[0].name", domain: "results[0].emailDomain", website: "results[0].homepageUrl",
+          description: "results[0].description", industry: "results[0].industry",
+          employees: "results[0].employeeCount.exact", founded: "results[0].yearFounded",
+          location: "join(results[0].location.city, results[0].location.country)",
+          linkedin_url: "results[0].socialLinks.linkedin"}
+    miss: "results[0].name == null"
+  # diffbot.companies.enrich: no adapter — its captured example truncates the entity, so `out`
+  # cannot be fixture-verified. akta.companies.enrich: example carries location only (no name).
+  # coresignal.companies.enrich: no example (402 at capture, empty account).

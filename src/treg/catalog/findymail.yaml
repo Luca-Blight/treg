@@ -157,6 +157,7 @@ endpoints:
     docs_url: https://app.findymail.com/docs/
 
   - id: findymail.search.company
+    test_request: {"body": {"domain": "stripe.com"}}
     domain: companies
     capability: companies.enrich
     platform: companies
@@ -171,7 +172,6 @@ endpoints:
         name: {type: string, required: false, note: "company name, if you have no domain"}
         linkedin_url: {type: string, required: false, note: "the company's public professional-network page URL"}
       note: "supply at least one of domain / name / linkedin_url. Returns {name, domain, company_size, industry, linkedin_url, description}"
-    test_request:
       body: {domain: "stripe.com"}
     cost:
       type: per_success

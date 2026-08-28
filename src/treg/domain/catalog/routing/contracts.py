@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -38,6 +40,7 @@ class Adapter:
     const: dict[str, Any] = field(default_factory=dict)   # fixed provider params (`body.type: work`)
     in_expr: dict[str, str] = field(default_factory=dict) # provider param ← expression over the request (filters)
     body_array: bool = False                   # the provider wants `[body]` (DataForSEO's task list)
+    test_identity: dict[str, Any] = field(default_factory=dict)  # what the endpoint's test_request stands for, when `in` cannot read it back
     verified: bool = False
     verify_note: str = ""
     _filter_keys: tuple[str, ...] = ()        # contract filter names, set at load (always sent)
@@ -116,6 +119,7 @@ def parse_adapters(doc: dict) -> dict[str, Adapter]:
         out[eid] = Adapter(
             endpoint_id=eid, accepts=_variants(a.get("accepts")), in_map=dict(a.get("in") or {}),
             in_expr=dict(a.get("in_expr") or {}), body_array=bool(a.get("body_array")),
+            test_identity=dict(a.get("test_identity") or {}),
             const=dict(a.get("const") or {}), out_map=dict(a.get("out") or {}), miss=str(a.get("miss") or ""))
     return out
 
@@ -168,6 +172,8 @@ def verify(adapter: Adapter, contract: Contract, endpoint: dict, example: Any) -
             v = v[0]  # `domains: ["stripe.com"]` in the fixture is the scalar `company_domain`
         if v not in (None, ""):
             ident[field_name] = v
+    if adapter.test_identity:  # the fixture's identity is stated, because `in` builds a value (a URL) rather than copying one
+        ident = dict(adapter.test_identity)
     ident, variant = canonical_identity(contract, ident)
     if variant is None or adapter_accepts(adapter, ident) is None:
         return False, "test_request does not express an accepted identity variant"
@@ -181,7 +187,13 @@ def verify(adapter: Adapter, contract: Contract, endpoint: dict, example: Any) -
         if k in {t.split(".", 1)[1] for t in adapter.in_map.values() if t.startswith("queryParams.")} and str(q.get(k)) != str(v):
             return False, f"in: queryParams.{k} → {q.get(k)!r}, test_request has {v!r}"
     for k, v in tr_body.items():
-        if k in {t.split(".", 1)[1].split(".")[0] for t in adapter.in_map.values() if t.startswith("body.")} and b.get(k) != v:
+        # `in_expr` targets count only when they are built from the identity (a URL from a handle);
+        # filter expressions carry defaults the fixture need not share.
+        ident_names = set(contract.identity_types)
+        expr_targets = [t for t, e in (adapter.in_expr or {}).items()
+                        if any(re.search(rf"\b{re.escape(n)}\b", e) for n in ident_names)]
+        mapped = {t.split(".", 1)[1].split(".")[0] for t in list(adapter.in_map.values()) + expr_targets if t.startswith("body.")}
+        if k in mapped and b.get(k) != v:
             return False, f"in: body.{k} → {b.get(k)!r}, test_request has {v!r}"
     if example is None:
         return False, "no example_response to verify `out` against"
