@@ -114,7 +114,9 @@ def candidates_for(contract: Contract, endpoints: list[dict], adapters: dict[str
             continue
         v = adapter_accepts(ad, identity)
         if v is None:
-            dropped.append({"endpoint_id": ep["id"], "why": "does not accept this identity variant"})
+            # Say what WOULD unlock it — an agent holding a LinkedIn URL can re-send with it.
+            wants = " | ".join("{" + ", ".join(a) + "}" for a in ad.accepts)
+            dropped.append({"endpoint_id": ep["id"], "why": f"needs {wants}", "accepts": [list(a) for a in ad.accepts]})
             continue
         out.append((ep, ad, v))
     return out, dropped
