@@ -351,3 +351,114 @@ contracts:
       linkedin_url: {type: str}
     miss: "full_name == null"
     idempotent: true
+
+  google.keywords.volume:
+    summary: "Monthly Google search volume (and CPC where the provider has it) for a list of keywords — one provider-native row per keyword in `rows`"
+    identity:
+      - {keywords: list}
+    filters:
+      country: {type: str, default: us, note: "ISO country code; mapped to each provider's location code / source"}
+      language: {type: str, default: en}
+    output:
+      rows: {type: list, required: true, note: "one row per keyword (keyword, volume/search_volume, cpc, competition…) — field names differ per provider"}
+    miss: "rows == []"
+    idempotent: true
+
+  google.keywords.trends:
+    summary: "Google Trends interest over time for one or more keywords — provider-native series in `series`"
+    identity:
+      - {keywords: list}
+    filters:
+      country: {type: str, default: us, note: "ISO country code; mapped to geo / location code"}
+    output:
+      series: {type: list, required: true, note: "the provider's own time series rows"}
+    miss: "series == []"
+    idempotent: true
+
+  google.serp.news:
+    summary: "Google News results for a keyword — provider-native result rows in `results`"
+    identity:
+      - {q: str}
+    filters:
+      country: {type: str, default: us}
+      language: {type: str, default: en}
+    output:
+      results: {type: list, required: true, note: "the provider's own news rows (title, link, source, date…)"}
+      count: {type: int}
+    miss: "results == []"
+    idempotent: true
+
+  instagram.search.reels:
+    summary: "Search Instagram reels by keyword — provider-native reel objects in `reels`"
+    identity:
+      - {q: str}
+    filters: {}
+    output:
+      reels: {type: list, required: true}
+      count: {type: int}
+      next_cursor: {type: str}
+    miss: "reels == []"
+    idempotent: true
+
+  tiktok.video.comments:
+    summary: "Comments on a TikTok video by aweme/video id or URL — provider-native comment objects in `comments`"
+    identity:
+      - {video_id: str}
+      - {url: url}
+    filters:
+      limit: {type: int, default: 10, note: "comments per page where the provider takes a count"}
+    output:
+      comments: {type: list, required: true}
+      count: {type: int}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "comments == []"
+    idempotent: true
+
+  tiktok.video.detail:
+    summary: "One TikTok video's full record by aweme/video id or URL — the provider's own video object in `video`"
+    identity:
+      - {video_id: str}
+      - {url: url}
+    filters: {}
+    output:
+      video: {type: object, required: true, note: "aweme_detail / itemStruct — shapes differ per provider; raw is the same body"}
+    miss: "video == null"
+    idempotent: true
+
+  youtube.channel.profile:
+    summary: "A YouTube channel's public profile by channel id — treg picks the provider and names the one that served"
+    identity:
+      - {channel_id: str}
+    filters: {}
+    output:
+      name: {type: str, required: true}
+      channel_id: {type: str}
+      handle: {type: str}
+      description: {type: str}
+      subscribers: {type: str, note: "count or the provider's display string"}
+      videos_count: {type: str}
+      country: {type: str}
+    miss: "name == null"
+    idempotent: true
+
+  youtube.search.videos:
+    summary: "Search YouTube videos by keyword — provider-native video rows in `videos`"
+    identity:
+      - {q: str}
+    filters: {}
+    output:
+      videos: {type: list, required: true}
+      next_cursor: {type: str}
+    miss: "videos == []"
+    idempotent: true
+
+  threads.search.posts:
+    summary: "Search Threads posts by keyword — provider-native post edges in `posts`"
+    identity:
+      - {q: str}
+    filters: {}
+    output:
+      posts: {type: list, required: true}
+    miss: "posts == []"
+    idempotent: true

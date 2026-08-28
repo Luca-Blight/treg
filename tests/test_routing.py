@@ -39,7 +39,7 @@ def enrichment_on(monkeypatch, platform_on):
 def _relay_by_provider(answers: dict[str, list[tuple[int, dict]]], seen: list):
     """A fake upstream keyed by the vendor host: each provider answers its scripted list in order."""
     async def _relay(request, upstream_url, tool, secrets, client, drop_params=None, force_identity=False):
-        provider = next(p for p in answers if p in upstream_url)
+        provider = next((p for p in answers if p != "*" and p in upstream_url), "*")  # "*": any other vendor
         body = b""
         async for chunk in request.body_stream():
             body += chunk
@@ -220,12 +220,24 @@ async def test_caller_fault_on_a_child_stops_and_own_key_ranks_first(clients: As
     r = await clients.post(f"/call/{ROUTED}", json={"full_name": "Patrick Collison", "domain": "stripe.com"})
     assert r.status_code == 200 and r.json()["_treg"]["served_by"] == "hunter.people.email.find"
     assert r.json()["_treg"]["tier"] == "credential" and await _balance(clients) == before, "own key: first, and free"
-    # a caller-caused 4xx on the child is relayed as an error outcome, not retried on another provider
+    # a vendor 4xx on the child goes on ONLY to providers that bill nothing for a rejected request
+    # (per_success / free): tomba is per_success, so it is asked; when it rejects too, the caller gets
+    # route_caller_fault naming both — and no paid-per-call provider was ever asked.
     seen.clear()
-    monkeypatch.setattr(call_service, "relay", _relay_by_provider({"hunter": [(400, {"errors": [{"details": "bad"}]})], "tomba": [(200, {})]}, seen))
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"hunter": [(400, {"errors": [{"details": "bad"}]})], "tomba": [(400, {"error": "bad"})], "*": [(400, {"error": "bad"})]}, seen))
     r = await clients.post(f"/call/{ROUTED}", json={"full_name": "Patrick Collison", "domain": "stripe.com"})
-    assert r.status_code == 400 and r.json()["detail"]["error"] == "route_caller_fault"
-    assert [p for p, *_ in seen] == ["hunter"], "never retried elsewhere"
+    assert r.status_code == 400 and r.json()["detail"]["error"] == "route_caller_fault", r.text
+    assert [p for p, *_ in seen][:2] == ["hunter", "tomba"] and len(seen) == 3, "at most two fallbacks, then the 4xx is the caller's"
+    outcomes = {t["endpoint_id"]: t["outcome"] for t in r.json()["detail"]["tried"]}
+    assert outcomes["hunter.people.email.find"] == "error" and outcomes["tomba.people.email.find"] == "error"
+    # a scraper's "please retry" 400 (tikhub, live 2026-08-28) is why: the next free-on-failure provider answers
+    seen.clear()
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"hunter": [(400, {"errors": [{"details": "bad"}]})],
+         "tomba": [(200, {"data": {"email": "p@stripe.com", "score": 90, "verification": {"status": "valid"}}})]}, seen))
+    r = await clients.post(f"/call/{ROUTED}", json={"full_name": "Patrick Collison", "domain": "stripe.com"})
+    assert r.status_code == 200 and r.json()["_treg"]["served_by"] == "tomba.people.email.find", r.text
 
 
 async def test_catalog_get_on_the_routed_endpoint_shows_the_plan(clients: AsyncClient, enrichment_on):

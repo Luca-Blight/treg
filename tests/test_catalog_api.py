@@ -273,13 +273,14 @@ async def test_search_finds_the_job_across_providers_best_first(clients: AsyncCl
     rows = body["results"]
     assert body["count"] == len(rows) <= body["total"]
 
-    top = [e["id"] for e in rows[:3]]
-    assert set(top) == {
+    top = [e["id"] for e in rows[:4]]
+    assert top[0] == "treg.tiktok.video.comments", "the routed endpoint for the job comes first"
+    assert set(top[1:]) == {
         "justoneapi.tiktok.video.comments",
         "tikhub.tiktok.video.comments",
         "scrapecreators.tiktok.video.comments",
     }
-    assert all(e["tier"] == "core" and e["verified"] for e in rows[:3])
+    assert all(e["tier"] == "core" and e["verified"] for e in rows[1:4])
     # rank is total and stable: score desc, then core before extended WITHIN a score tie — tier
     # never outranks relevance, so a strong extended match may sit above a weak core one
     scores = [e["score"] for e in rows]
@@ -288,12 +289,12 @@ async def test_search_finds_the_job_across_providers_best_first(clients: AsyncCl
         group = [e["tier"] for e in rows if e["score"] == score]
         assert group == sorted(group, key=lambda t: t != "core")
 
-    first = rows[0]
+    first = rows[1]  # the first CHILD; rows[0] is the generated treg.* row, whose provider is treg itself
     assert first["capability"] == "tiktok.video.comments" and first["capability_description"]
     assert first["platform"] == "tiktok" and first["platform_label"] == "TikTok"
     assert first["provider_display"] == P.get(first["provider"]).display_name
     assert first["cost"]["usd"] is not None, "a search row prices in one currency or comparison is fiction"
-    assert any(h.startswith(f"treg catalog get {first['id']}") for h in body["hints"])
+    assert any(h.startswith(f"treg catalog get {rows[0]['id']}") or h.startswith(f"treg catalog get {first['id']}") for h in body["hints"])
 
 
 async def test_search_requires_every_token_to_match(clients: AsyncClient):

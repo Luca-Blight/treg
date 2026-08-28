@@ -47,6 +47,14 @@ _DROP_FROM_CHILD = frozenset({b"content-length", b"content-type", b"transfer-enc
 _CALLER_FAULT = frozenset({400, 401, 403, 404, 405, 409, 422})
 
 
+def _free_on_failure(cand: Candidate) -> bool:
+    """A candidate that bills nothing for a rejected request: per_success pricing, a free endpoint, or
+    the org's own key (never metered)."""
+    if cand.tier == "credential" or not cand.price_micro:
+        return True
+    return (cand.endpoint.get("cost") or {}).get("type") == "per_success"
+
+
 DEFAULT_MAX_COST_MICRO = 1_000_000  # $1.00 per routed call unless the caller says otherwise — a runaway guard, not a budget
 
 
@@ -224,10 +232,16 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
     tried: list[Attempt] = []
     spent = 0
     errors = 0
+    rejected_by: set[str] = set()  # providers that answered a vendor 4xx
     winner: tuple[Candidate, dict, dict, bytes] | None = None
     for n, cand in enumerate(plan.candidates):
         if options.max_cost_micro is not None and spent + (cand.price_micro or 0) > options.max_cost_micro:
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "skipped", None, 0, "would exceed max cost"))
+            continue
+        if rejected_by and (cand.endpoint["provider"] in rejected_by or not _free_on_failure(cand)):
+            tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "skipped", None, 0,
+                                 "provider already rejected the request" if cand.endpoint["provider"] in rejected_by
+                                 else "not retried on a paid provider after a vendor 4xx"))
             continue
         query, body = cand.adapter.to_upstream(plan.identity, cand.variant)
         child = CallContext(input=_child_input(parent, cand.endpoint, query, body), call_ref=f"{parent.call_ref}:r{n}", meta=parent.meta)
@@ -246,14 +260,23 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         charged = int(_header(response, "X-Treg-Cost-Micro") or 0)
         spent += charged
         if 400 <= response.status < 500 and response.status not in (402, 408, 429):
-            # The vendor rejected the REQUEST: almost always the same answer everywhere, and a
-            # second reserve for the same mistake is money down the drain (plan §4).
+            # The vendor rejected the REQUEST. Usually the caller's mistake and the same answer
+            # everywhere — but a scraper's "Request failed. Please retry" is also a 400 (tikhub,
+            # live 2026-08-28), so the waterfall goes on to providers that are FREE ON FAILURE
+            # (per_success / free pricing, another provider, the usual error bound). A paid-per-call
+            # provider is never asked to bill the same mistake twice (plan §4).
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "error", response.status, charged, raw[:120].decode("utf-8", "replace")))
+            rejected_by.add(cand.endpoint["provider"])
+            errors += 1
+            if errors <= MAX_ERROR_FALLBACKS and plan.contract.idempotent and any(
+                    _free_on_failure(c) and c.endpoint["provider"] not in rejected_by for c in plan.candidates[n + 1:]):
+                continue
             _audit_parent(parent, ep, response.status, spent, audit_client)
             raise ResolutionFailed("route_caller_fault", status_code=response.status, detail={
                 "error": "route_caller_fault", "endpoint_id": ep["id"], "served_by": cand.endpoint["id"],
                 "tried": [t.view() for t in tried], "charged_micro": spent,
-                "message": f"{cand.endpoint['id']} rejected the request ({response.status}); not retried elsewhere",
+                "message": f"{cand.endpoint['id']} rejected the request ({response.status}); "
+                           + ("not retried elsewhere" if len(rejected_by) == 1 else "every free-on-failure provider rejected it too"),
                 "provider_response": raw[:600].decode("utf-8", "replace")})
         if not 200 <= response.status < 300:
             errors += 1

@@ -809,3 +809,184 @@ adapters:
     miss: "name == null"
   # tikhub.x.linkedin-web-get-user-profile is retired (web → web_v2); web_v2's captured example has data: null,
   # so its out cannot be verified.
+
+  # ---- google.keywords.volume / trends / serp.news (batch 5) ------------------------------------
+  dataforseo.google.keywords.volume:
+    accepts: [[keywords]]
+    in:  {keywords: body.keywords}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language}
+    body_array: true
+    out: {rows: "tasks[0].result"}
+    miss: "tasks[0].result == []"
+  seranking.google.keywords.volume:
+    accepts: [[keywords]]
+    in:  {keywords: body.keywords}
+    in_expr: {queryParams.source: "lower(country)"}
+    out: {rows: "."}
+    miss: ". == []"
+  dataforseo.x.keywords-data-dataforseo-trends-explore-live:
+    accepts: [[keywords]]
+    in:  {keywords: body.keywords}
+    in_expr: {body.location_code: "dfs_location(country)"}
+    body_array: true
+    out: {series: "tasks[0].result[0].items"}
+    miss: "tasks[0].result[0].items == []"
+  serpapi.x.google-trends:
+    accepts: [[keywords]]
+    in:  {}
+    in_expr: {queryParams.q: "csv(keywords)", queryParams.geo: "upper(country)"}
+    const: {queryParams.engine: google_trends, queryParams.data_type: TIMESERIES}
+    test_identity: {keywords: [coffee]}
+    out: {series: interest_over_time.timeline_data}
+    miss: "interest_over_time.timeline_data == []"
+  dataforseo.x.serp-google-news-live-advanced:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language}
+    body_array: true
+    out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
+    miss: "tasks[0].result[0].items == []"
+  serpapi.x.google-news:
+    accepts: [[q]]
+    in:  {q: queryParams.q}
+    in_expr: {queryParams.gl: "lower(country)", queryParams.hl: language}
+    const: {queryParams.engine: google_news}
+    out: {results: news_results}
+    miss: "news_results == []"
+
+  # ---- instagram.search.reels (batch 5) --------------------------------------------------------
+  justoneapi.x.instagram-search-reels-v1:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    out: {reels: data.data.items, count: data.data.count, next_cursor: data.pagination_token}
+    miss: "data.data.items == []"
+  tikhub.x.instagram-v2-search-reels:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    out: {reels: data.data.items, count: data.data.count, next_cursor: data.pagination_token}
+    miss: "data.data.items == []"
+  scrapecreators.x.v2-instagram-reels-search:
+    accepts: [[q]]
+    in:  {q: queryParams.query}
+    out: {reels: reels, next_cursor: next_page}
+    miss: "reels == []"
+
+  # ---- tiktok.video.comments (batch 5) ---------------------------------------------------------
+  justoneapi.tiktok.video.comments:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.awemeId}
+    const: {queryParams.cursor: "0"}
+    out: {comments: data.comments, count: data.total, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.comments == []"
+  tikhub.x.tiktok-app-v3-fetch-video-comments:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    in_expr: {queryParams.count: limit}
+    out: {comments: data.comments, count: data.total, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.comments == []"
+  tikhub.tiktok.video.comments:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    in_expr: {queryParams.count: limit}
+    out: {comments: data.comments, count: data.total, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.comments == []"
+  scrapecreators.tiktok.video.comments:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {comments: comments}
+    miss: "comments == []"
+
+  # ---- tiktok.video.detail (batch 5) -----------------------------------------------------------
+  justoneapi.tiktok.video.detail:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.postId}
+    out: {video: data.itemInfo.itemStruct}
+    miss: "data.itemInfo.itemStruct == null"
+  tikhub.tiktok.video.detail:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.itemId}
+    out: {video: data.itemInfo.itemStruct}
+    miss: "data.itemInfo.itemStruct == null"
+  tikhub.x.tiktok-web-fetch-post-detail-v2:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.itemId}
+    out: {video: data.itemInfo.itemStruct}
+    miss: "data.itemInfo.itemStruct == null"
+  tikhub.x.tiktok-app-v3-fetch-one-video:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.tiktok-app-v3-fetch-one-video-v2:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.tiktok-app-v3-fetch-one-video-v3:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.aweme_id}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  tikhub.x.tiktok-app-v3-fetch-one-video-by-share-url:
+    accepts: [[url]]
+    in:  {url: queryParams.share_url}
+    out: {video: data.aweme_detail}
+    miss: "data.aweme_detail == null"
+  scrapecreators.tiktok.video.detail:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {video: aweme_detail}
+    miss: "aweme_detail == null"
+
+  # ---- youtube.channel.profile / search.videos (batch 5) ---------------------------------------
+  scrapecreators.youtube.channel.profile:
+    accepts: [[channel_id]]
+    in:  {channel_id: queryParams.channelId}
+    out: {name: name, channel_id: channelId, handle: handle, description: description, subscribers: subscriberCount}
+    miss: "name == null"
+  tikhub.x.youtube-web-get-channel-info:
+    accepts: [[channel_id]]
+    in:  {channel_id: queryParams.channel_id}
+    out: {name: data.title, channel_id: data.channel_id, description: data.description, subscribers: data.subscriber_count,
+          videos_count: data.video_count, country: data.country}
+    miss: "data.title == null"
+  tikhub.x.youtube-web-v2-get-channel-description:
+    accepts: [[channel_id]]
+    in:  {channel_id: queryParams.channel_id}
+    out: {name: data.title, channel_id: data.channel_id, handle: data.handle, description: data.description,
+          subscribers: data.subscriber_count, videos_count: data.video_count}
+    miss: "data.title == null"
+  justoneapi.x.youtube-search-v1:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    out: {videos: data.videos, next_cursor: data.continuation_token}
+    miss: "data.videos == []"
+  tikhub.youtube.search.videos:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    const: {queryParams.type: video}
+    out: {videos: data.videos, next_cursor: data.continuation_token}
+    miss: "data.videos == []"
+  tikhub.x.youtube-web-search-video:
+    accepts: [[q]]
+    in:  {q: queryParams.search_query}
+    out: {videos: data.videos, next_cursor: data.continuation_token}
+    miss: "data.videos == []"
+  serpapi.youtube.search.videos:
+    accepts: [[q]]
+    in:  {q: queryParams.search_query}
+    const: {queryParams.engine: youtube}
+    out: {videos: video_results}
+    miss: "video_results == []"
+
+  # ---- threads.search.posts (batch 5) ----------------------------------------------------------
+  tikhub.x.threads-web-search-top:
+    accepts: [[q]]
+    in:  {q: queryParams.query}
+    out: {posts: data.searchResults.edges}
+    miss: "data.searchResults.edges == []"
+  tikhub.x.threads-web-search-recent:
+    accepts: [[q]]
+    in:  {q: queryParams.query}
+    out: {posts: data.searchResults.edges}
+    miss: "data.searchResults.edges == []"

@@ -13,7 +13,10 @@ _INDEX = re.compile(r"^(\w+)\[(\d+)\]$")
 
 
 def get_path(doc: Any, path: str) -> Any:
-    """`a.b[0].c` → value or None. Missing anywhere → None (never raises)."""
+    """`a.b[0].c` → value or None. Missing anywhere → None (never raises). `.` is the root (a body
+    that IS the list: seranking's keyword rows)."""
+    if path in (".", ""):
+        return doc
     cur = doc
     for seg in path.split("."):
         if cur is None:
@@ -162,6 +165,13 @@ def tca_filter(attribute: Any, value: Any) -> str | None:
     return json.dumps([{"attribute": attribute, "operator": "or", "sign": "equals", "values": [value]}])
 
 
+def csv(v: Any) -> str | None:
+    """`csv(keywords)` — a list as one comma-separated value (serpapi's `q` for several keywords)."""
+    if v is None:
+        return None
+    return ",".join(str(x) for x in v) if isinstance(v, list) else str(v)
+
+
 def as_list(v: Any) -> Any:
     """A scalar the provider wants as a one-element array (`domains: ["stripe.com"]`)."""
     if v is None:
@@ -172,7 +182,7 @@ def as_list(v: Any) -> Any:
 TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type, "len": length,
               "dfs_location": dfs_location, "seranking_source": seranking_source, "lower": lower, "upper": upper,
               "list": as_list, "at_least": at_least, "linkedin_handle": linkedin_handle, "linkedin_url": linkedin_url,
-              "email_domain": email_domain, "host": host, "fmt": fmt, "obj": obj, "tca_filter": tca_filter}
+              "email_domain": email_domain, "host": host, "fmt": fmt, "obj": obj, "tca_filter": tca_filter, "csv": csv}
 
 _CALL = re.compile(r"^(\w+)\((.*)\)$")
 _DIV = re.compile(r"^(.+?)\s*/\s*(\d+(?:\.\d+)?)$")
