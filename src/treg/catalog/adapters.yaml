@@ -67,3 +67,146 @@ adapters:
             body.validateEmails: true}
     out: {email: "output.profile.emails[0].email", verified: "output.profile.success == true"}
     miss: "output.profile.emails == []"
+
+  # ---- instagram.user.profile ---------------------------------------------------------------
+  tikhub.instagram.user.profile:
+    accepts: [[username]]
+    in:  {username: queryParams.username}
+    out: {username: "coalesce(data.data.user.username, params.username)", user_id: data.data.user.id,
+          full_name: data.data.user.full_name, followers: data.data.user.edge_followed_by.count,
+          following: data.data.user.edge_follow.count, posts_count: data.data.user.edge_owner_to_timeline_media.count,
+          is_verified: data.data.user.is_verified, is_private: data.data.user.is_private, biography: data.data.user.biography}
+    miss: "data.data.user == null"
+  tikhub.x.instagram-v1-fetch-user-info-by-username-v2:
+    accepts: [[username]]
+    in:  {username: queryParams.username}
+    out: {username: data.username, user_id: data.id, full_name: data.full_name, followers: data.edge_followed_by.count,
+          following: data.edge_follow.count, posts_count: data.edge_owner_to_timeline_media.count,
+          is_verified: data.is_verified, is_private: data.is_private, biography: data.biography}
+    miss: "data.username == null"
+  tikhub.x.instagram-v1-fetch-user-info-by-username-v3:
+    accepts: [[username]]
+    in:  {username: queryParams.username}
+    out: {username: data.username, user_id: data.id, full_name: data.full_name, followers: data.edge_followed_by.count,
+          following: data.edge_follow.count, posts_count: data.edge_owner_to_timeline_media.count,
+          is_verified: data.is_verified, is_private: data.is_private, biography: data.biography}
+    miss: "data.username == null"
+  tikhub.x.instagram-v1-fetch-user-info-by-id:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.user_id}
+    out: {username: data.username, user_id: data.id, full_name: data.full_name, followers: data.edge_followed_by.count,
+          following: data.edge_follow.count, posts_count: data.edge_owner_to_timeline_media.count,
+          is_verified: data.is_verified, is_private: data.is_private, biography: data.biography}
+    miss: "data.username == null"
+  tikhub.x.instagram-v1-fetch-user-info-by-id-v2:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.user_id}
+    out: {username: data.username, user_id: data.id, full_name: data.full_name, followers: data.edge_followed_by.count,
+          following: data.edge_follow.count, posts_count: data.edge_owner_to_timeline_media.count,
+          is_verified: data.is_verified, is_private: data.is_private, biography: data.biography}
+    miss: "data.username == null"
+  tikhub.x.instagram-v3-get-user-profile:
+    accepts: [[username]]
+    in:  {username: queryParams.username}
+    out: {username: data.username, user_id: data.id, full_name: data.full_name, followers: data.follower_count,
+          following: data.following_count, posts_count: data.media_count, is_verified: data.is_verified,
+          is_private: data.is_private, biography: data.biography}
+    miss: "data.username == null"
+  justoneapi.instagram.user.profile:
+    accepts: [[username]]
+    in:  {username: queryParams.username}
+    out: {username: data.username, user_id: data.id, full_name: data.full_name, followers: data.edge_followed_by.count,
+          following: data.edge_follow.count, posts_count: data.edge_owner_to_timeline_media.count,
+          is_verified: data.is_verified, is_private: data.is_private, biography: data.biography}
+    miss: "data.username == null"
+  scrapecreators.instagram.user.profile:
+    accepts: [[username]]
+    in:  {username: queryParams.handle}
+    out: {username: data.user.username, user_id: data.user.pk, full_name: data.user.full_name,
+          followers: data.user.follower_count, following: data.user.following_count, posts_count: data.user.media_count,
+          is_verified: data.user.is_verified, is_private: data.user.is_private, biography: data.user.biography}
+    miss: "data.user.username == null"
+  scrapecreators.x.v1-instagram-basic-profile:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.userId}
+    out: {username: username, user_id: pk, full_name: full_name, followers: follower_count, following: following_count,
+          posts_count: media_count, is_verified: is_verified, is_private: is_private, biography: biography}
+    miss: "username == null"
+  serpapi.x.instagram-profile:
+    accepts: [[username]]
+    in:  {username: queryParams.profile_id}
+    const: {queryParams.engine: instagram_profile}
+    out: {username: search_parameters.profile_id, full_name: full_name, followers: followers, following: following,
+          posts_count: posts_count, is_verified: is_verified, biography: biography}
+    miss: "error != null"
+
+  # ---- instagram.hashtag.posts --------------------------------------------------------------
+  # tikhub.x.instagram-v1-fetch-hashtag-posts: no adapter — its captured example truncates the
+  # `edge_hashtag_to_media` edges, so `out` cannot be fixture-verified; still callable via /call/.
+  tikhub.x.instagram-v2-fetch-hashtag-posts:
+    accepts: [[hashtag]]
+    in:  {hashtag: queryParams.keyword}
+    out: {posts: data.data.items, count: data.data.count, next_cursor: data.pagination_token}
+    miss: "data.data.items == []"
+  scrapecreators.x.v1-instagram-search-hashtag:
+    accepts: [[hashtag]]
+    in:  {hashtag: queryParams.hashtag}
+    out: {posts: posts, count: "len(posts)", next_cursor: cursor}
+    miss: "posts == []"
+  justoneapi.x.instagram-search-hashtag-posts-v1:
+    accepts: [[hashtag]]
+    in:  {hashtag: queryParams.hashtag}
+    out: {posts: data.data.hashtag.edge_hashtag_to_media.edges, count: data.data.hashtag.edge_hashtag_to_media.count,
+          next_cursor: data.data.hashtag.edge_hashtag_to_media.page_info.end_cursor}
+    miss: "data.data.hashtag == null"
+
+  # ---- x.user.posts -------------------------------------------------------------------------
+  tikhub.x.user.posts:
+    accepts: [[username], [user_id]]
+    in:  {username: queryParams.screen_name, user_id: queryParams.rest_id}
+    out: {posts: data.timeline, next_cursor: data.next_cursor}
+    miss: "data.timeline == []"
+  scrapecreators.x.user.posts:
+    accepts: [[username]]
+    in:  {username: queryParams.handle}
+    out: {posts: tweets}
+    miss: "tweets == []"
+  justoneapi.x.twitter-get-user-posts-v1:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.restId}
+    out: {posts: data.timeline, next_cursor: data.next_cursor}
+    miss: "data.timeline == []"
+
+  # ---- tiktok.user.profile ------------------------------------------------------------------
+  tikhub.tiktok.user.profile:
+    accepts: [[username], [sec_uid]]
+    in:  {username: queryParams.uniqueId, sec_uid: queryParams.secUid}
+    out: {username: data.userInfo.user.uniqueId, user_id: data.userInfo.user.id, sec_uid: data.userInfo.user.secUid,
+          nickname: data.userInfo.user.nickname, followers: data.userInfo.stats.followerCount,
+          following: data.userInfo.stats.followingCount, likes: data.userInfo.stats.heartCount,
+          videos_count: data.userInfo.stats.videoCount, is_verified: data.userInfo.user.verified,
+          biography: data.userInfo.user.signature}
+    miss: "data.userInfo.user.uniqueId == null"
+  justoneapi.tiktok.user.profile:
+    accepts: [[username], [sec_uid]]
+    in:  {username: queryParams.uniqueId, sec_uid: queryParams.secUid}
+    out: {username: data.userInfo.user.uniqueId, user_id: data.userInfo.user.id, sec_uid: data.userInfo.user.secUid,
+          nickname: data.userInfo.user.nickname, followers: data.userInfo.stats.followerCount,
+          following: data.userInfo.stats.followingCount, likes: data.userInfo.stats.heartCount,
+          videos_count: data.userInfo.stats.videoCount, is_verified: data.userInfo.user.verified,
+          biography: data.userInfo.user.signature}
+    miss: "data.userInfo.user.uniqueId == null"
+  scrapecreators.tiktok.user.profile:
+    accepts: [[username], [user_id]]
+    in:  {username: queryParams.handle, user_id: queryParams.user_id}
+    out: {username: user.uniqueId, user_id: user.id, sec_uid: user.secUid, nickname: user.nickname,
+          followers: stats.followerCount, following: stats.followingCount, likes: stats.heartCount,
+          videos_count: stats.videoCount, is_verified: user.verified, biography: user.signature}
+    miss: "user.uniqueId == null"
+  tikhub.x.tiktok-analytics-fetch-creator-info-and-milestones:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.user_id}
+    out: {username: data.creator_info.unique_id, user_id: data.user_id, sec_uid: data.creator_info.sec_user_id,
+          nickname: data.creator_info.nickname, followers: data.creator_info.follower_count,
+          likes: data.creator_info.like_count}
+    miss: "data.creator_info.unique_id == null"

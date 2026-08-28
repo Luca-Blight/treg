@@ -16,6 +16,10 @@ def get_path(doc: Any, path: str) -> Any:
     for seg in path.split("."):
         if cur is None:
             return None
+        if re.fullmatch(r"\[(\d+)\]", seg):  # a root-level list: `[0].followers`
+            i = int(seg[1:-1])
+            cur = cur[i] if isinstance(cur, list) and i < len(cur) else None
+            continue
         m = _INDEX.match(seg)
         if m:
             cur = cur.get(m.group(1)) if isinstance(cur, dict) else None
@@ -64,7 +68,11 @@ def has_type(items: Any, kind: Any) -> bool:
     return isinstance(items, list) and any(isinstance(i, dict) and i.get("type") == kind for i in items)
 
 
-TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type}
+def length(items: Any) -> int | None:
+    return len(items) if isinstance(items, (list, dict, str)) else None
+
+
+TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type, "len": length}
 
 _CALL = re.compile(r"^(\w+)\((.*)\)$")
 _DIV = re.compile(r"^(.+?)\s*/\s*(\d+(?:\.\d+)?)$")
