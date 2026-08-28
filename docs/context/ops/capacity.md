@@ -18,6 +18,7 @@ sources:
   - src/treg/application/call/overflow.py
   - alembic/versions/0007_overflow_spend.py
   - tests/test_capacity_overflow.py
+  - tests/test_capacity_overflow_spend.py
   - alembic/versions/0008_org_platform_overflow_disabled.py
   - tests/test_capacity_smoothing.py
   - src/treg/domain/capacity/overflow_seed.json
