@@ -90,7 +90,7 @@ unrenewable one earns a warning (`EXPIRING_SOON_DAYS=7`). `connection_view()` is
 ## Curated OAuth provider registry (`oauth_providers.py`)
 Two ways to connect a provider. **Bring-your-own (BYO):** `POST /oauth/start` takes a caller-supplied
 `client_id`/`client_secret`/URIs — works for any OAuth2 provider. **Curated:** for the providers where
-**treg itself holds the approved app** (Google Search Console/Analytics/Business Profile/Ads, YouTube,
+**treg itself holds the approved app** (Google Search Console/Analytics/Business Profile/Tag Manager/Ads, YouTube,
 LinkedIn, X, TikTok, Facebook, Instagram, Meta Ads — added PRs #20/#21), the user picks a provider and
 consents, supplying nothing. The asymmetry is the point of a hosted registry: the gating cost on these
 platforms is the *approval* (a Google Ads developer token, Meta App Review), not the OAuth dance — treg
@@ -103,6 +103,15 @@ bundle; `default_capability` is the broadest tier by design, so a plain Connect 
 Google Search Console's hand-written tool example calls out its distinct direct-tool convention:
 substitute `{site_url}` with a value encoded exactly once (`sc-domain%3Aexample.com`), and never encode
 again a property identifier returned by the sites list.
+
+Google Tag Manager shares the standard Google client credentials and exposes three cumulative tiers:
+`read` grants `tagmanager.readonly`; `write` adds `tagmanager.edit.containers`; `manage` adds
+`tagmanager.edit.containerversions` and `tagmanager.publish`. The account list is both the health probe
+and resource picker, with the selected `accounts/{id}` path stamped into the tool example. treg
+deliberately does **not** request `tagmanager.delete.containers`, `tagmanager.manage.users`, or
+`tagmanager.manage.accounts`: agents can audit configuration, prepare workspace changes, create
+versions, and publish (including rollback by publishing an earlier version), but cannot delete whole
+containers or administer access.
 
 Each entry is a frozen `OAuthProvider` dataclass; `REGISTRY` is the `{service: provider}` map. Key
 module symbols:
