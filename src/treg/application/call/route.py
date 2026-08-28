@@ -47,12 +47,18 @@ _DROP_FROM_CHILD = frozenset({b"content-length", b"content-type", b"transfer-enc
 _CALLER_FAULT = frozenset({400, 401, 403, 404, 405, 409, 422})
 
 
+CHEAP_RETRY_MICRO = 10_000  # ≤ 1¢: a per_call provider cheap enough to be asked after another's 4xx
+
+
 def _free_on_failure(cand: Candidate) -> bool:
-    """A candidate that bills nothing for a rejected request: per_success pricing, a free endpoint, or
-    the org's own key (never metered)."""
+    """A candidate worth asking after another provider's 4xx: it bills nothing for a rejected request
+    (per_success pricing, a free endpoint, the org's own key) or so little (≤ 1¢ per call) that a
+    repeated mistake costs less than failing the caller — scrapers answer 400 for their own outages."""
     if cand.tier == "credential" or not cand.price_micro:
         return True
-    return (cand.endpoint.get("cost") or {}).get("type") == "per_success"
+    if (cand.endpoint.get("cost") or {}).get("type") == "per_success":
+        return True
+    return cand.price_micro <= CHEAP_RETRY_MICRO
 
 
 DEFAULT_MAX_COST_MICRO = 1_000_000  # $1.00 per routed call unless the caller says otherwise — a runaway guard, not a budget
@@ -241,7 +247,7 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         if rejected_by and (cand.endpoint["provider"] in rejected_by or not _free_on_failure(cand)):
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "skipped", None, 0,
                                  "provider already rejected the request" if cand.endpoint["provider"] in rejected_by
-                                 else "not retried on a paid provider after a vendor 4xx"))
+                                 else "not retried on a paid provider (> 1¢/call) after a vendor 4xx"))
             continue
         query, body = cand.adapter.to_upstream(plan.identity, cand.variant)
         child = CallContext(input=_child_input(parent, cand.endpoint, query, body), call_ref=f"{parent.call_ref}:r{n}", meta=parent.meta)
@@ -263,8 +269,8 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
             # The vendor rejected the REQUEST. Usually the caller's mistake and the same answer
             # everywhere — but a scraper's "Request failed. Please retry" is also a 400 (tikhub,
             # live 2026-08-28), so the waterfall goes on to providers that are FREE ON FAILURE
-            # (per_success / free pricing, another provider, the usual error bound). A paid-per-call
-            # provider is never asked to bill the same mistake twice (plan §4).
+            # (per_success / free / ≤ 1¢ per call, another provider, the usual error bound). A dearer
+            # paid-per-call provider is never asked to bill the same mistake twice (plan §4).
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "error", response.status, charged, raw[:120].decode("utf-8", "replace")))
             rejected_by.add(cand.endpoint["provider"])
             errors += 1

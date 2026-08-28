@@ -409,6 +409,9 @@ def test_body_limit_reads_camel_case_and_nested_pagination_keys():
     assert call_resolution._body_limit(json.dumps({"query": "x", "numResults": 3}).encode()) == 3
     assert call_resolution._body_limit(json.dumps({"query": {}, "pagination": {"size": 4}}).encode()) == 4
     assert call_resolution._body_limit(json.dumps({"query": {}, "pagination": {"page": 0}}).encode()) is None
+    # one row per listed item: moz `targets` (a 1-target body settled 20 quota rows live, $0.27 for $0.013)
+    assert call_resolution._body_limit(json.dumps({"targets": ["moz.com"], "distributions": True}).encode()) == 1
+    assert call_resolution._body_limit(json.dumps({"domains": ["a.com", "b.com"]}).encode()) == 2
 
 
 async def test_provider_5xx_releases_the_hold(clients: AsyncClient, platform_on, monkeypatch):

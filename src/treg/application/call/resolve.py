@@ -318,6 +318,10 @@ def _body_limit(body: bytes) -> int | None:
         val = doc.get(name)
         if isinstance(val, int) and not isinstance(val, bool) and val > 0:
             return val
+    for name in ("targets", "keywords", "domains", "urls", "lookups", "emails"):
+        val = doc.get(name)  # one row per item: moz targets, dataforseo keywords, companyenrich domains, brightdata urls
+        if isinstance(val, list) and val:
+            return len(val)
     pagination = doc.get("pagination")  # icypeas / lusha: {"pagination": {"size": 10}}
     if isinstance(pagination, dict):
         for name in _LIMIT_PARAMS:

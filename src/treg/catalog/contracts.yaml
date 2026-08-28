@@ -462,3 +462,134 @@ contracts:
       posts: {type: list, required: true}
     miss: "posts == []"
     idempotent: true
+
+  # ---- batch 6: long tail (2026-08-28) ----------------------------------------------------------
+  instagram.search.users:
+    summary: "Search Instagram accounts by keyword — provider-native profile rows in `users`"
+    identity:
+      - {q: str}
+    filters: {}
+    output:
+      users: {type: list, required: true}
+      count: {type: int}
+      next_cursor: {type: str}
+    miss: "users == []"
+    idempotent: true
+
+  google.serp.local:
+    summary: "Google local pack / local finder results for a keyword — provider-native business rows in `results`"
+    identity:
+      - {q: str}
+    filters:
+      country: {type: str, default: us}
+      language: {type: str, default: en}
+    output:
+      results: {type: list, required: true}
+      count: {type: int}
+    miss: "results == []"
+    idempotent: true
+
+  companies.jobs.search:
+    summary: "Open job listings at a company, by name or domain — provider-native job rows in `jobs`"
+    identity:
+      - {name: str}
+      - {domain: str}
+    filters:
+      limit: {type: int, default: 10, note: "rows to return — most providers bill per row"}
+    output:
+      jobs: {type: list, required: true}
+      count: {type: int}
+      next_cursor: {type: str}
+    miss: "jobs == []"
+    idempotent: true
+
+  companies.news:
+    summary: "Recent news about a company by domain — provider-native article/event rows in `articles`"
+    identity:
+      - {domain: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      articles: {type: list, required: true}
+      count: {type: int}
+    miss: "articles == []"
+    idempotent: true
+
+  tiktok.search.users:
+    summary: "Search TikTok accounts by keyword — provider-native user rows in `users`"
+    identity:
+      - {q: str}
+    filters: {}
+    output:
+      users: {type: list, required: true}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "users == []"
+    idempotent: true
+
+  tiktok.search.videos:
+    summary: "Search TikTok videos by keyword — provider-native video rows in `videos`"
+    identity:
+      - {q: str}
+    filters:
+      limit: {type: int, default: 10, note: "videos per page where the provider takes a count"}
+    output:
+      videos: {type: list, required: true}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "videos == []"
+    idempotent: true
+
+  instagram.post.comments:
+    summary: "Comments on an Instagram post by shortcode or URL — provider-native comment rows in `comments`"
+    identity:
+      - {shortcode: str}
+      - {url: url}
+    filters: {}
+    output:
+      comments: {type: list, required: true}
+      count: {type: int}
+      next_cursor: {type: str}
+    miss: "comments == []"
+    idempotent: true
+
+  web.backlinks.summary:
+    summary: "Backlink profile summary for a domain — counts in `backlinks` / `referring_domains`, the provider's full row in `summary`"
+    identity:
+      - {target: str}
+    filters: {}
+    output:
+      summary: {type: object, required: true, note: "the provider's own summary row; field names differ per provider"}
+      backlinks: {type: int}
+      referring_domains: {type: int}
+    miss: "summary == null"
+    idempotent: true
+
+  reddit.subreddit.posts:
+    summary: "Recent posts in a subreddit — provider-native post rows in `posts`"
+    identity:
+      - {subreddit: str}
+    filters: {}
+    output:
+      posts: {type: list, required: true}
+      next_cursor: {type: str}
+    miss: "posts == []"
+    idempotent: true
+
+  youtube.video.detail:
+    summary: "One YouTube video's details by id or URL — treg picks the provider and names the one that served"
+    identity:
+      - {video_id: str}
+      - {url: url}
+    filters: {}
+    output:
+      video_id: {type: str, required: true}
+      title: {type: str}
+      channel: {type: str}
+      channel_id: {type: str}
+      description: {type: str}
+      views: {type: int}
+      duration_seconds: {type: int}
+      published: {type: str}
+    miss: "video_id == null"
+    idempotent: true

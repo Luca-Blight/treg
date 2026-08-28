@@ -990,3 +990,172 @@ adapters:
     in:  {q: queryParams.query}
     out: {posts: data.searchResults.edges}
     miss: "data.searchResults.edges == []"
+
+  # ---- batch 6: long tail (2026-08-28) ----------------------------------------------------------
+  scrapecreators.x.v1-instagram-search-profiles:
+    accepts: [[q]]
+    in:  {q: queryParams.query}
+    out: {users: profiles, next_cursor: cursor}
+    miss: "profiles == []"
+  tikhub.x.instagram-v2-search-users:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    out: {users: data.data.items, count: data.data.count}
+    miss: "data.data.items == []"
+  tikhub.x.instagram-v3-search-users:
+    accepts: [[q]]
+    in:  {q: queryParams.query}
+    out: {users: data.users, count: data.count}
+    miss: "data.users == []"
+
+  dataforseo.x.serp-google-local-finder-live-advanced:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language}
+    body_array: true
+    out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
+    miss: "tasks[0].result[0].items == []"
+  serpapi.x.google-local:
+    accepts: [[q]]
+    in:  {q: queryParams.q}
+    in_expr: {queryParams.hl: language, queryParams.gl: "lower(country)"}
+    const: {queryParams.engine: google_local}
+    out: {results: local_results}
+    miss: "local_results == []"
+
+  crustdata.companies.jobs.search:
+    accepts: [[name]]
+    in:  {name: body.filters.value}
+    in_expr: {body.filters: "obj('field', 'company.basic_info.name', 'type', '=', 'value', name)", body.limit: limit}
+    const: {body.fields: [job_details.title, job_details.url]}
+    out: {jobs: job_listings, count: total_count, next_cursor: next_cursor}
+    miss: "job_listings == []"
+  leadmagic.x.jobs-search-v3:
+    accepts: [[domain]]
+    in:  {domain: body.companies.include}
+    in_expr: {body.companies.include: "list(domain)", body.limit: limit}
+    out: {jobs: results, next_cursor: next_cursor}
+    miss: "results == []"
+
+  akta.companies.news:
+    accepts: [[domain]]
+    in:  {domain: queryParams.company}
+    in_expr: {queryParams.limit: limit}
+    out: {articles: data, count: total}
+    miss: "data == []"
+  predictleads.companies.news_events:
+    accepts: [[domain]]
+    in:  {domain: pathParams.company_id_or_domain}
+    in_expr: {queryParams.limit: limit}
+    out: {articles: data}
+    miss: "data == []"
+
+  justoneapi.x.tiktok-search-user-v1:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    const: {queryParams.cursor: "0"}
+    out: {users: data.user_list, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.user_list == []"
+  tikhub.x.tiktok-web-fetch-search-user:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    out: {users: data.user_list, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.user_list == []"
+
+  justoneapi.tiktok.search.videos:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    const: {queryParams.offset: "0"}
+    out: {videos: data.aweme_list, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.aweme_list == []"
+  scrapecreators.tiktok.search.videos:
+    accepts: [[q]]
+    in:  {q: queryParams.query}
+    out: {videos: search_item_list, next_cursor: cursor, has_more: has_more}
+    miss: "search_item_list == []"
+  tikhub.tiktok.search.videos:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    in_expr: {queryParams.count: limit}
+    out: {videos: data.search_item_list, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.search_item_list == []"
+
+  justoneapi.x.instagram-get-post-comments-v1:
+    accepts: [[shortcode]]
+    in:  {shortcode: queryParams.code}
+    out: {comments: data.comments, count: data.comment_count}
+    miss: "data.comments == []"
+  scrapecreators.instagram.post.comments:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {comments: comments, next_cursor: cursor}
+    miss: "comments == []"
+  tikhub.x.instagram-v2-fetch-post-comments:
+    accepts: [[shortcode]]
+    in:  {shortcode: queryParams.code_or_url}
+    out: {comments: data.data.items, count: data.data.count, next_cursor: data.pagination_token}
+    miss: "data.data.items == []"
+
+  dataforseo.web.backlinks.summary:
+    accepts: [[target]]
+    in:  {target: body.target}
+    body_array: true
+    out: {summary: "tasks[0].result[0]", backlinks: "tasks[0].result[0].backlinks", referring_domains: "tasks[0].result[0].referring_domains"}
+    miss: "tasks[0].result[0] == null"
+  seranking.web.backlinks.summary:
+    accepts: [[target]]
+    in:  {target: queryParams.target}
+    const: {queryParams.mode: domain}
+    out: {summary: "summary[0]", backlinks: "summary[0].backlinks", referring_domains: "summary[0].refdomains"}
+    miss: "summary == []"
+  moz.web.backlinks.summary:
+    accepts: [[target]]
+    in:  {target: body.targets}
+    in_expr: {body.targets: "list(target)"}
+    out: {summary: "results[0]", backlinks: "results[0].pages_to_subdomain", referring_domains: "results[0].root_domains_to_subdomain"}
+    miss: "results == []"
+
+  scrapecreators.reddit.subreddit.posts:
+    accepts: [[subreddit]]
+    in:  {subreddit: queryParams.subreddit}
+    out: {posts: posts, next_cursor: after}
+    miss: "posts == []"
+  tikhub.x.reddit-app-fetch-subreddit-feed:
+    accepts: [[subreddit]]
+    in:  {subreddit: queryParams.subreddit_name}
+    out: {posts: data.subredditV3.elements.edges, next_cursor: data.subredditV3.elements.pageInfo.endCursor}
+    miss: "data.subredditV3.elements.edges == []"
+
+  tikhub.x.youtube-web-v2-get-video-info:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.video_id}
+    out: {video_id: data.video_id, title: data.title, channel: data.author, channel_id: data.channel_id, description: data.description}
+    miss: "data.video_id == null"
+  tikhub.x.youtube-web-v2-get-video-info-v2:
+    accepts: [[video_id], [url]]
+    in:  {video_id: queryParams.video_id, url: queryParams.video_url}
+    out: {video_id: data.video_id, title: data.title, channel: data.author, channel_id: data.channel_id, description: data.description,
+          views: data.view_count, duration_seconds: data.length_seconds, published: data.publish_date}
+    miss: "data.video_id == null"
+  tikhub.youtube.video.detail:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.video_id}
+    out: {video_id: data.videoDetails.videoId, title: data.videoDetails.title, channel: data.videoDetails.author,
+          channel_id: data.videoDetails.channelId, description: data.videoDetails.shortDescription,
+          views: data.videoDetails.viewCount, duration_seconds: data.videoDetails.lengthSeconds}
+    miss: "data.videoDetails == null"
+  justoneapi.youtube.video.detail:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.videoId}
+    out: {video_id: data.videoDetails.videoId, title: data.videoDetails.title, channel: data.videoDetails.author,
+          channel_id: data.videoDetails.channelId, description: data.videoDetails.shortDescription,
+          views: data.videoDetails.viewCount, duration_seconds: data.videoDetails.lengthSeconds}
+    miss: "data.videoDetails == null"
+  scrapecreators.youtube.video.detail:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {video_id: id, title: title, description: description, views: viewCountInt, published: publishDateText}
+    miss: "id == null"
+  # tiktok.search.hashtags, google.domain.overview: one verifiable provider each — no waterfall yet.
+  # reddit.post.comments: tikhub's commentForest.trees and justoneapi's postInfoById are truncated/null in
+  # the fixtures; scrapecreators has no example.
