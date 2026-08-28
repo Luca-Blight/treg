@@ -1117,9 +1117,19 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   `X-Treg-Route-Outcome`, `X-Treg-Cost-Micro` = the sum, one `X-Treg-Call-Id`. The parent owns
   the idempotency label (a replay never touches a provider) and writes one audit row
   (`credential_tier: routed`) beside the children's.
-- **Not built** (plan R0/R4): tagging the untagged `.x.` tail, "prefer routed" in the agent files
-  after a shadow week, the `hit_rate` counter, `people.search` (`kind: filters`) and the `Location`
-  table. Only `people.email.find` ships a contract today.
+- **Hit rate** — `CallRecord.hit` (nullable, alembic `0006`, last column) is the adapter's verdict
+  written at settle; `stats.observed` publishes `hit_rate`/`hit_samples` (floor 20) and, for
+  per-success endpoints, reads historical rows too (a 2xx with `cost_observed_micro == 0` is a miss).
+  The plan, `catalog_get` and the CLI's HIT column read it; a registered tool (tier 1) or stored key
+  (tier 2) for a provider ranks first at cost 0.
+- **R0 done (2026-08-28)**: the top-traffic untagged `.x.` endpoints carry capabilities now
+  (`google.serp.maps/news/local/ai_mode`, `google.keywords.trends` — each dataforseo + serpapi —
+  plus `companies.jobs.search`, `companies.domain.find`, `amazon.product.sellers/variants`,
+  `tiktok.video.captions`); untagged platform traffic fell from 12% to 1.4%, and 202 capabilities
+  with 2+ eligible providers cover 88% of calls.
+- **Not built** (plan R4): "prefer routed" in the agent files after a shadow week; contracts beyond
+  `people.email.find` (next: `people.phone.find`, `people.enrich`); `people.search` (`kind:
+  filters`) and the shared `Location` table.
 
 ## Security
 

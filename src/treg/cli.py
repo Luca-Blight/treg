@@ -4731,7 +4731,10 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
     ])))
     if cost.get("note"):
         _line("", _clip(cost["note"], 96))
-    _line("verified", e.get("verified") or "not verified against the live API")
+    if e.get("kind") == "routed":
+        _line("verified", "generated from its children's verified adapters — not a live route itself")
+    else:
+        _line("verified", e.get("verified") or "not verified against the live API")
     _line("tier", e.get("tier", "core"))
     _line("limits", prov.get("limits", ""))
     _line("pricing", prov.get("pricing_url", ""))
@@ -4740,6 +4743,27 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
     if e.get("capability"):
         print(f"\n{_B}CAPABILITY{_R}  {e['capability']}"
               + (f" — {e['capability_description']}" if e.get("capability_description") else ""))
+    routing = body.get("routing")
+    if routing and routing.get("plan"):
+        # The QUOTE: what `treg call` on this routed id will try, in order, at treg's prices. Own
+        # keys jump to the front at call time (this route is open, so it cannot know yours).
+        print(f"\n{_A}ROUTING PLAN{_R}  {_M}treg tries these in order — a stored key of yours goes first, free{_R}")
+        print(f"  {'#':<3}{'ENDPOINT':<38} {'ACCEPTS':<28} {'PRICE':<10} {'HIT':<6} {'PER HIT':<10} {'WORKS':<9}")
+        for i, c in enumerate(routing["plan"], 1):
+            accepts = " | ".join("+".join(v) for v in (c.get("accepts") or []))
+            price = f"${c['price_micro'] / 1e6:.4g}" if c.get("price_micro") is not None else "—"
+            per_hit = f"${c['expected_cost_per_hit_micro'] / 1e6:.4g}" if c.get("expected_cost_per_hit_micro") is not None else "—"
+            hit = f"{c['hit_rate'] * 100:.0f}%" if c.get("hit_rate") is not None else f"{_M}—{_R}"
+            works = f"{c['ok_rate'] * 100:.0f}%" if c.get("ok_rate") is not None else f"{_M}—{_R}"
+            flag = f"  {_AM}exhausted{_R}" if c.get("exhausted") else ""
+            print(f"  {i:<3}{_clip(c['endpoint_id'], 38):<38} {_clip(accepts, 28):<28} {price:<10} {_pad(hit, 6)} {per_hit:<10} {_pad(works, 9)}{flag}")
+        for d in routing.get("dropped") or []:
+            _dim(f"      not a candidate: {d['endpoint_id']} — {d['why']}")
+        contract = routing.get("contract") or {}
+        if contract.get("identity"):
+            _dim("  identity — send exactly one: " + " | ".join("{" + ", ".join(v) + "}" for v in contract["identity"]))
+        _dim("  PER HIT = price × P(billed) / P(hit); HIT — is unmeasured, so the order is by price until traffic decides.")
+        _dim("  waterfall on a miss: --header 'X-Treg-Route-Waterfall: 1' --header 'X-Treg-Route-Max-Cost: 0.10'")
     sibs = body.get("siblings") or []
     if sibs:
         connected = _connected_providers(cfg)

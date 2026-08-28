@@ -30,7 +30,7 @@ from ...domain.catalog.routing.contracts import canonical_identity
 from ...domain.catalog.routing.plan import (
     MAX_ERROR_FALLBACKS, Candidate, Plan, candidates_for, cost_at, rank,
 )
-from .resolve import _marketplace_secret
+from .resolve import _host_of, _marketplace_secret
 from .types import CallContext, CallFailure, GatewayFailed, ResolutionFailed, UpstreamResponse
 
 log = logging.getLogger("treg.route")
@@ -109,20 +109,38 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
     ids = [e["id"] for e, _, _ in raw]
     stats: dict[str, dict] = {}
     own: set[str] = set()
+    own_tools: set[str] = set()
     if ids:
+        from sqlalchemy import select as _select
+        from ... import oauth_providers
+        from ...models import Tool
         async with session_maker() as db:
             try:
                 stats = await endpoint_stats.observed(
                     db, ids, per_success={e["id"] for e, _, _ in raw if (e.get("cost") or {}).get("type") == "per_success"})
             except Exception:  # noqa: BLE001 — stats are advisory
                 stats = {}
-            for service in {e["provider"] for e, _, _ in raw}:
+            services = {e["provider"] for e, _, _ in raw}
+            if caller.org_id is not None:
+                # tier 1: a tool the team REGISTERED for the provider's host (their credential,
+                # their ACLs) — the ladder would pick it anyway; the ranking must know it is free.
+                hosts = {}
+                for service in services:
+                    prov = oauth_providers.get(service)
+                    if prov is not None and prov.base_url:
+                        hosts.setdefault(_host_of(prov.base_url), service)
+                if hosts:
+                    tools = (await db.execute(_select(Tool.host).where(Tool.org_id == caller.org_id))).scalars().all()
+                    own_tools = {hosts[h] for h in tools if h in hosts}
+            for service in services:
+                if service in own_tools:
+                    continue
                 if caller.org_id is not None and await _marketplace_secret(service, caller.org_id, db) is not None:
                     own.add(service)
     cands: list[Candidate] = []
     for e, ad, v in raw:
         st = stats.get(e["id"]) or {}
-        tier = "credential" if e["provider"] in own else "platform"
+        tier = "tool" if e["provider"] in own_tools else "credential" if e["provider"] in own else "platform"
         cv = cat.cost_view(e.get("cost"), e["provider"])
         price = 0 if tier != "platform" else cost_at(cv, identity)
         c = Candidate(endpoint=e, adapter=ad, variant=v, tier=tier, price_micro=price, hit_rate=st.get("hit_rate"),
