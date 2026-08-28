@@ -13,6 +13,7 @@ sources:
   - src/treg/api.py
   - src/treg/routers/web.py
   - src/treg/session.py
+  - src/treg/domain/identity/session.py
 related:
   - interface/api.md
   - interface/landing-sandbox.md
@@ -67,6 +68,13 @@ loaded, so this makes rendering consistent for everyone), `--r:14 / --rb:9`, a `
 shared `.btn` / `.iconbtn` height so controls align. The logged-out `/` is now the **landing + sandbox
 studio** (see [landing-sandbox](landing-sandbox.md)), not a login box; sign-in is a modal.
 
+An OAuth authorization that needs sign-in redirects to `/?signin=oauth`. The dashboard reads this as
+a UI cue, removes it from the visible URL, and opens the same modal with generic connection copy. It
+does not create a sandbox session. During this flow the modal hides the agent/CLI token fallback,
+because that token does not create the browser session required to resume authorization. The
+protected OAuth return path stays in an HttpOnly cookie, so GitHub, Google, and email-code sign-in all
+resume the same authorization flow without putting OAuth request data in the URL.
+
 The **authed** shell is sidebar-first. The **top bar** is just brand + search. The **left sidebar**
 stacks: (top) an **org block** — role + team name — that on click opens a switcher **dropdown** where
 each team carries its own **⚙ Settings** (`orgSettings` → switch into it, then open its settings) and
@@ -83,7 +91,7 @@ account controls are gone.
 ## Auth — three doors
 Two are **session** (cookie) paths, one is a token fallback:
 - **GitHub (`githubLogin`):** `Continue with GitHub` → `/auth/github` → callback sets a signed HttpOnly
-  cookie (`session.py` HMAC). (Note: the button routes through a `githubLogin()` method — a Vue template
+  cookie (`domain.identity.session` HMAC). (Note: the button routes through a `githubLogin()` method — a Vue template
   expression can't reference the `location` global.)
 - **Google (`googleLogin`):** `Continue with Google` → `/auth/google` → callback, same cookie session as
   GitHub. The button shows when `/meta` reports `google:true`.
@@ -145,8 +153,9 @@ chat, which is also what `landing.html`/`support.html` do with a tiny `/meta`-ga
 `switchOrg`/team-create call `intercomUpdate()` so the company tracks the active team; `logout()`
 calls `Intercom('shutdown')` so the next user on the machine can't read the previous conversations.
 
-Server side (`api.py`): `require_identity` (who, from token OR session), `require_member` (a Caller in a
-specific org — token bakes the org in; a session picks it via `X-Treg-Org`), and `require_superadmin`
+Server side (`domain.identity.access`): `require_identity` (who, from token OR session),
+`require_member` (a Caller in a specific org — token bakes the org in; a session picks it via
+`X-Treg-Org`), and `require_superadmin`
 (env token, or a token/session whose user `is_superadmin`). Every fetch also sends
 `ngrok-skip-browser-warning: 1`.
 
@@ -332,7 +341,7 @@ specific org — token bakes the org in; a session picks it via `X-Treg-Org`), a
 
 ## Marketplace — the in-browser OAuth-connect UI (`view==='connections'` / `'provider'`)
 The dashboard now runs the whole **hosted connect flow** in the browser, so a member can attach a
-provider account (Google Analytics, Search Console, Google Ads, Slack, Meta/Facebook/Instagram, X,
+provider account (Google Analytics, Search Console, Google Tag Manager, Google Ads, Slack, Meta/Facebook/Instagram, X,
 TikTok, LinkedIn, YouTube, …) without touching the CLI. `loadConnections` fetches **`GET /oauth/providers`**
 (server route `oauth_providers_list` → `oauth_providers.listing()`, each row carrying `service`,
 `display_name`, `category`, `summary`, `capabilities`, `scope_detail`, `auth_kind`, `supports_discovery`,
@@ -360,6 +369,11 @@ still opens the provider page (`openProvider(service)`); each row has `id="prov-
 Rows show the **provider logo** served by convention from
 **`/logos/<service>.svg`** (`.plogo-tile`/`.plogo`, `@error` hides a missing file) — the `StaticFiles`
 mount `_LOGO_DIR` (`src/treg/web/logos/`). `connCount` labels how many accounts are already connected.
+Google Tag Manager follows that same generic UI: its capability picker offers cumulative
+read/write/manage access, account discovery labels each `accounts/{id}` resource by name, and the
+selected account stamps a runnable containers-list path into the provisioned tool. Its provider and
+platform logo assets both carry the Google Tag Manager mark, so the catalog tile, platform header,
+provider page, and expanded endpoint rows resolve to the same identity.
 The tab bar itself is `v-if`'d on `plats.list.length` and `mkTabActive` collapses to `'platform'` when
 the catalog is absent, so a build that predates `/catalog` renders exactly the old marketplace.
 

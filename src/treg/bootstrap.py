@@ -17,8 +17,15 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.routing import BaseRoute, Mount
 
 from . import adsconv, analytics, archive, audit
+from . import bootstrap_handlers
+from .bootstrap_http import (
+    _BodyDecodeMiddleware,
+    _LegacyHostRedirectMiddleware,
+    _SecurityHeadersMiddleware,
+)
 from .config import get_settings
 from .db import init_db, session_maker
+from .routers import call as call_routes
 
 
 AppRole = Literal["all", "dataplane", "control"]
@@ -92,6 +99,7 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/legal.css', ('GET',), 'legal_css'),
     ('/terms', ('GET',), 'terms_page'),
     ('/privacy', ('GET',), 'privacy_page'),
+    ('/connectors/claude', ('GET',), 'claude_connector_page'),
     ('/adtrack.js', ('GET',), 'adtrack_js'),
     ('/resources', ('GET',), 'resources_page'),
     ('/usecase.css', ('GET',), 'usecase_css'),
@@ -100,7 +108,6 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ('/oauth/authorize', ('POST',), 'oauth_authorize_approve'),
     ('/oauth/revoke', ('POST',), 'oauth_revoke'),
     ('/oauth/token', ('POST',), 'oauth_token'),
-    ('/.well-known/oauth-protected-resource/mcp', ('GET',), 'oauth_protected_resource'),
     ('/.well-known/oauth-protected-resource', ('GET',), 'oauth_protected_resource'),
     ('/.well-known/oauth-authorization-server', ('GET',), 'oauth_authorization_server'),
     ('/.well-known/openai-apps-challenge', ('GET',), 'openai_apps_challenge'),
@@ -240,6 +247,13 @@ _CONTROL_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
 })
 _DATAPLANE_ROUTE_KEYS: frozenset[RouteKey] = frozenset({
     ("/call/{rest:path}", ("DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"), "call_tool"),
+    ("/catalog/call/{rest:path}",
+     ("DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"),
+     "call_catalog_endpoint"),
+    # MCP is calling traffic, so its mount and its RFC 9728 resource metadata belong to the
+    # dataplane. Token issuance (consent, /oauth/*) stays on control; the dataplane only validates.
+    ('/.well-known/oauth-protected-resource/mcp', ('GET',), 'oauth_protected_resource'),
+    ('/.well-known/oauth-protected-resource/mcp/v2', ('GET',), 'oauth_protected_resource_v2'),
 })
 
 ROLE_BACKGROUND_TASKS: dict[AppRole, tuple[str, ...]] = {
@@ -259,13 +273,13 @@ ROLE_STARTUP_CHECKS: dict[AppRole, tuple[str, ...]] = {
         "treg.db.init_db",
         "treg.api._backfill_provider_extra_tools",
         "app.state.http",
+        "treg.mcp.mcp_lifespan",
     ),
     "control": (
         "treg.db.init_db",
         "treg.api._backfill_provider_extra_tools",
         "treg.api._bootstrap_single_user",
         "app.state.http",
-        "treg.mcp.mcp_lifespan",
     ),
 }
 
@@ -417,8 +431,11 @@ def _lifespan(api_module, role: AppRole):
             else None
         )
         try:
-            if role == "dataplane" or _mcp is None:
+            if role == "control" or _mcp is None:
                 yield
+            elif get_settings().claude_connector_enabled:
+                async with _mcp.all_mcp_lifespans():
+                    yield
             else:
                 async with _mcp.mcp_lifespan():
                     yield
@@ -454,17 +471,23 @@ def create_app(role: AppRole = "all") -> FastAPI:
     )
 
     # Registration order is part of the compatibility surface. add_middleware prepends entries.
-    app.add_middleware(api_module._LegacyHostRedirectMiddleware)
-    app.add_middleware(api_module._SecurityHeadersMiddleware)
-    app.add_middleware(api_module._BodyDecodeMiddleware)
+    app.add_middleware(_LegacyHostRedirectMiddleware)
+    app.add_middleware(_SecurityHeadersMiddleware)
+    app.add_middleware(_BodyDecodeMiddleware)
     app.add_exception_handler(OverflowError, api_module._id_out_of_range)
-    app.add_exception_handler(PoolTimeoutError, api_module._pool_saturated)
-    app.add_exception_handler(StarletteHTTPException, api_module._mark_treg_own_errors)
+    bootstrap_handlers._stamp_call_exit = call_routes._stamp_call_exit
+    app.add_exception_handler(PoolTimeoutError, bootstrap_handlers._pool_saturated)
+    app.add_exception_handler(StarletteHTTPException, bootstrap_handlers._mark_treg_own_errors)
 
     _include_role_routes(app, api_module, role)
     _install_head_and_openapi(app)
 
-    if role != "dataplane" and _mcp is not None:
+    if role != "control" and _mcp is not None:
+        if get_settings().claude_connector_enabled:
+            # Claude can remove the final slash. Normalize before the parent V1 mount can match.
+            app.add_middleware(_mcp.NormalizeDirectoryMCPPath)
+            # Register the nested mount first so the /mcp parent does not consume it.
+            app.mount("/mcp/v2", _mcp.directory_mcp_app)
         app.mount("/mcp", _mcp.mcp_app)
 
     startup_checks = list(ROLE_STARTUP_CHECKS[role])

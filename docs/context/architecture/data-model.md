@@ -11,9 +11,12 @@ sources:
   - src/treg/timeutil.py
   - src/treg/db.py
   - src/treg/referrals.py
+  - src/treg/domain/referrals.py
   - src/treg/audit.py
   - src/treg/analytics.py
   - src/treg/ratestore.py
+  - src/treg/application/auth.py
+  - tests/test_postgres_reset.py
 related:
   - architecture/archive.md
   - architecture/proxy-model.md
@@ -30,8 +33,9 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
 - **`Org`** — the tenant that owns resources: `id, name, slug` (unique), `suspended` (admin lock),
   `demo` (a sandbox team seeded by [onboarding](../interface/onboarding.md) — labeled + removable),
   `public_demo` (a team whose member token is PUBLISHED, e.g. on the landing page — non-admin members
-  are locked to `/call` + reads and may never act as a user; gated in `api.require_member` /
-  `require_identity`), `created_at`. **`ad_gclid`/`ad_click_id_type`/`ad_click_at`/`ad_landing`**
+  are locked to `/call` + reads and may never act as a user; gated in
+  `domain.identity.access.require_member` / `require_identity`), `created_at`.
+  **`ad_gclid`/`ad_click_id_type`/`ad_click_at`/`ad_landing`**
   (migration A37, all nullable) — set once, at signup, from the first-party `treg_ad` cookie; never
   overwritten. The historically named `ad_gclid` holds the click value; `ad_click_id_type` says
   `gclid`/`gbraid`/`wbraid`, with NULL meaning a legacy GCLID. **`utm_source`/`utm_medium`/
@@ -143,12 +147,14 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
 - **`ToolRequest`** — a "the catalog doesn't have X" report (`POST /tool-requests`, open + per-IP
   rate-limited): `capability` (the headline, ≤200 chars), `query` (the search that came up empty —
   auto-filled by agents, the dedup/priority signal), `note`, `contact`, `source` (`web` | `cli` |
-  `mcp` | `api`), `status` (`open` | `done` | `dismissed`, flipped by hand), and **nullable**
+  `mcp` | `claude-connector` | `api`), `status` (`open` | `done` | `dismissed`, flipped by hand), and
+  **nullable**
   `org_id`/`user_email` — identity is attribution when the caller happens to have one, never a
   requirement, because the usual filer is an agent with zero results and no token. Reviewed by
   querying the table; a Slack notifier may hang off the insert later, but the row is the record.
 - **`SearchMiss`** — a catalog search that returned **nothing**: `query` (capped to 300 chars),
-  `source` (`api` — the HTTP route serving web + CLI + raw API — or `mcp`), `created_at`. The demand
+  `source` (`api` for the HTTP route that serves web + CLI + raw API; `mcp` for the team MCP; or
+  `claude-connector` for V2), `created_at`. The demand
   signal one step before a `ToolRequest`: most agents that miss never file, so the query text is all
   they leave. Written fire-and-forget through `audit.record_search_miss` (dropped rows cost
   analytics, never a search) from both search paths — `GET /catalog/search` and the in-process MCP
@@ -173,10 +179,11 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   instances**: the emailed OTP code + its brute-force counter, and the auth rate-limit sliding windows.
   Keyed by `(ns, k)` — a namespace (`otp` | `otp_start` | `sandbox_hit`) plus the key within it — with an
   opaque JSON `v` and an `expires_at` (rows are swept lazily). This is the DB home for what used to be
-  per-process dicts in `api.py` (backlog #3): counters can no longer be reset by a redeploy, and a per-IP
-  / per-email cap can't be weakened by running more than one instance. The access helpers live in
+  per-process dicts in the auth HTTP layer (backlog #3): counters can no longer be reset by a redeploy,
+  and a per-IP / per-email cap can't be weakened by running more than one instance. The access helpers live in
   `ratestore.py` (`kv_put`/`kv_get`/`kv_pop`, `rate_check` sliding-window, `sweep`). NOT the CLI-login
-  handshake — that is deliberately still in-process (`api._cli_pending`, short-lived, self-heals on retry).
+  handshake — that is deliberately still in-process (`application.auth._cli_pending`, short-lived,
+  self-heals on retry).
 
 - **`DenyRule`** — org policy over what may be CALLED: `org_id`, nullable `user_id` (NULL = the whole
   org, set = one member/agent), nullable `project_id` (NULL = any tool, set = only calls **through**
@@ -211,8 +218,11 @@ columns (A17–A20) — guarded by a column-existence check, so it is idempotent
 **Postgres BOOLEAN default fix:** boolean columns added here use `DEFAULT false`, never `DEFAULT 0` —
 Postgres rejects an integer default on a `BOOLEAN` column (SQLite accepts both, so the test suite alone
 cannot catch it), which is why `pendingoauth.long_lived_exchange` is spelled `BOOLEAN NOT NULL DEFAULT
-false`. `reset_db()` is test-only (dispose the loop-bound pool, then drop +
-recreate); `get_session()` is the FastAPI dependency. SQLite locally (`aiosqlite`), Postgres on Render, same code. **Timestamps are
+false`. `reset_db()` is test-only: it disposes the loop-bound pool, then recreates the SQLite schema
+or truncates every application table with identities reset on Postgres. Avoiding per-test Postgres
+DDL keeps the hosted-runner database from accumulating schema WAL until an unrelated commit stalls.
+Schema-specific tests that remove tables still trigger a full rebuild. `get_session()` is the FastAPI
+dependency. SQLite locally (`aiosqlite`), Postgres on Render, same code. **Timestamps are
 naive UTC:** `_now()` (the `created_at` default) drops tzinfo because the columns are `TIMESTAMP WITHOUT
 TIME ZONE` and asyncpg rejects tz-aware values on Postgres; the app compares naive UTC throughout.
 Shared request-time conversions live in `timeutil.utcnow_naive` and `timeutil.as_naive`, re-exported
@@ -331,7 +341,7 @@ NOT NULL with **no server default**, so raw SQL must supply it (ops/deploy.md §
 
 ## `Referral` — one invitation, and what it owes
 
-Written by `referrals.py`; the money it results in is granted through `ledger.grant`. See
+Written by `domain/referrals.py`; the money it results in is granted through `ledger.grant`. See
 [money](money.md) for the policy and the gates. Two things about the SHAPE belong here:
 
 **Two UNIQUE columns do the arbitration, not application code.** `referred_org_id` (an org can be

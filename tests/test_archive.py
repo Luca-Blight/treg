@@ -12,7 +12,8 @@ import json
 
 import pytest
 
-from treg import api as A, archive, audit
+from treg import archive, audit
+from treg.application.call import service as call_service
 from treg.archive import cache_key, content_hash, policy, storable
 from treg.models import ArchiveKey, ArchiveSnapshot
 
@@ -241,9 +242,9 @@ async def test_storable_policy_keeps_bytes_and_dedups(clients: AsyncClient, shad
 async def test_different_answer_counts_as_change(clients: AsyncClient, shadow, monkeypatch):
     monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
     from tests.test_marketplace_call import _fake_relay
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"n": 1}'))
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"n": 1}'))
     await clients.get(f"/call/{EP}?aweme_id=7")
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"n": 2}'))
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"n": 2}'))
     await clients.get(f"/call/{EP}?aweme_id=7")
     keys, snaps = await _rows()
     assert len(keys) == 1 and len(snaps) == 2
@@ -273,7 +274,7 @@ async def test_oversized_body_is_counted_not_kept(clients: AsyncClient, shadow, 
 @pytest.mark.anyio
 async def test_error_responses_are_not_recorded(clients: AsyncClient, shadow, monkeypatch):
     from tests.test_marketplace_call import _fake_relay
-    monkeypatch.setattr(A, "relay", _fake_relay(500, b"boom"))
+    monkeypatch.setattr(call_service, "relay", _fake_relay(500, b"boom"))
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 500
     keys, snaps = await _rows()
@@ -499,9 +500,9 @@ async def test_stable_refetch_grows_the_timer(clients: AsyncClient, shadow, monk
 async def test_changed_refetch_shrinks_the_timer(clients: AsyncClient, shadow, monkeypatch):
     monkeypatch.setitem(catalog_store.load().by_id[EP], "cache", "transient")
     from tests.test_marketplace_call import _fake_relay
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"n": 1}'))
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"n": 1}'))
     await clients.get(f"/call/{EP}?aweme_id=7")
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"n": 2}'))
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"n": 2}'))
     await clients.get(f"/call/{EP}?aweme_id=7")
     keys, _ = await _rows()
     assert keys[0].change_seen == 1 and keys[0].ttl_s == 1800   # 3600 × 0.5
@@ -514,7 +515,7 @@ async def test_repeated_noise_counts_as_stable(clients: AsyncClient, shadow, mon
     bodies = [json.dumps({"req_id": i, "ts": i * 10,
                           "data": {"a": 1, "b": 2, "c": 3, "d": 4}}).encode() for i in range(3)]
     for b in bodies:
-        monkeypatch.setattr(A, "relay", _fake_relay(200, b))
+        monkeypatch.setattr(call_service, "relay", _fake_relay(200, b))
         await clients.get(f"/call/{EP}?aweme_id=7")
     keys, _ = await _rows()
     # fetch 2 differs (first diff: counts changed, remembers the set); fetch 3 repeats the SAME
@@ -527,14 +528,14 @@ async def test_repeated_noise_counts_as_stable(clients: AsyncClient, shadow, mon
 async def test_always_changing_key_marks_itself_never_cache(clients: AsyncClient, serve, monkeypatch):
     from tests.test_marketplace_call import _fake_relay
     for i in range(5):   # tiny 1-leaf body: the noise guard must NEVER rescue a moving price
-        monkeypatch.setattr(A, "relay", _fake_relay(200, json.dumps({"price": i}).encode()))
+        monkeypatch.setattr(call_service, "relay", _fake_relay(200, json.dumps({"price": i}).encode()))
         r = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Cache-Control": "no-cache"})
         assert r.status_code == 200
         await archive.drain()
     keys, _ = await _rows()
     assert keys[0].ttl_s == archive.TTL_NEVER and keys[0].stable_seen == 0
     # …and a fresh call is NOT served from the store, however young the newest snapshot is.
-    monkeypatch.setattr(A, "relay", _fake_relay(200, b'{"price": 99}'))
+    monkeypatch.setattr(call_service, "relay", _fake_relay(200, b'{"price": 99}'))
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert "x-treg-cache" not in r.headers
 

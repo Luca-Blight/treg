@@ -18,14 +18,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from .. import adsconv, agent_pages, catalog_store, oauth_providers, referrals
-from .. import session as sess
+from ..domain.identity import session as sess
 from ..config import PUBLIC_HOST_ALIASES, get_settings
 from ..db import get_session
 from ..models import User
 from .catalog import (_observed_or_empty, _platform_rows, _provider_display,
                       catalog_platform)
-from .dependencies import (OAUTH_RETURN_COOKIE, _is_https, _remember_referral,
-                           _take_oauth_return, _user_from_session)
+from ..domain.identity.access import _user_from_session
+from .auth_helpers import OAUTH_RETURN_COOKIE, _is_https, _take_oauth_return
+from .signup_cookies import _remember_referral
 
 
 LOCAL_USER_EMAIL = "you@local.treg"   # the single-user identity; a real address is never needed
@@ -2440,6 +2441,7 @@ _SITEMAP_PAGES: tuple[tuple[str, str, str], ...] = (
     ("/resources", "resources.html", "0.8"),
     ("/vendor-listing", "vendor-listing.md", "0.5"),
     ("/support", "support.html", "0.4"),
+    ("/connectors/claude", "claude-connector.html", "0.6"),
     ("/terms", "terms.html", "0.2"),
     ("/privacy", "privacy.html", "0.2"),
     # The outcome pages. Listed WITHOUT a trailing slash on purpose: `/use-cases/<slug>/` 307s to
@@ -2671,6 +2673,12 @@ async def privacy_page():
     return _legal_page("privacy.html")
 
 
+@app.get("/connectors/claude", include_in_schema=False)
+async def claude_connector_page():
+    """Setup, scope, billing, privacy, and removal instructions for the Claude connector."""
+    return _legal_page("claude-connector.html")
+
+
 @app.get("/adtrack.js", include_in_schema=False)
 async def adtrack_js():
     """First-party ad-click capture (see the file itself): sets the `treg_ad` cookie that
@@ -2782,12 +2790,16 @@ async def connect_demo_page():
     browser before trusting it inside ChatGPT, where a failure surfaces as a shrug rather than an
     error message.
     """
+    if not get_settings().connect_demo_enabled:
+        raise HTTPException(status_code=404, detail="connect demo is not enabled")
     return _legal_page("connect-demo.html")
 
 
 @app.get("/connect-demo/callback", include_in_schema=False)
 async def connect_demo_callback():
     """Where treg sends the browser back. Hands the code to the opener and closes."""
+    if not get_settings().connect_demo_enabled:
+        raise HTTPException(status_code=404, detail="connect demo is not enabled")
     return _legal_page("connect-demo-callback.html")
 
 

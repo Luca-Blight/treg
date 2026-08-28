@@ -145,11 +145,9 @@ none leaks a hardcoded host when `public_url` is overridden.
 
 **HEAD is widened after registration, and must not leak into the schema.** FastAPI's `APIRoute` pins
 `methods` to `{"GET"}` and never adds HEAD (unlike Starlette's plain `Route`), so every page 405'd on
-the probe crawlers send first. One loop at the bottom of `api.py` widens every GET-only route. But
-FastAPI derives one operation per (path, method), so that widening put **58 duplicate HEAD entries
-into `/openapi.json`**, each with a duplicate operation id. `_openapi_without_head()` narrows the
-widened routes for the duration of schema generation and puts them back. Only `/call/{rest}`, which
-declares HEAD itself, is documented with one.
+the probe crawlers send first. The composition root widens GET-only routes, while its OpenAPI wrapper
+temporarily hides those implied HEAD operations; only `/call/{rest}`, which declares HEAD itself, is
+documented with one. See [application composition](../architecture/composition.md).
 
 **`/catalog/<slug>` sits in front of the JSON routes.** `/catalog/platforms`, `/catalog/search`,
 `/catalog/endpoints/…` and `/catalog/examples/…` keep matching only because they are registered
@@ -419,6 +417,17 @@ OAuth connection; the AI-mentions job has one provider, DataForSEO, and it is me
 branches on the row's `free` flag: `metered_single` states the rate and the markup, and the meta
 description does not claim "never metered". Both were found the same way as the Semrush one: by
 reading the stock and AI-visibility pages after the tests went green.
+
+**`{cheapest}` is the cheapest of ONE unit, not of the page** (2026-08-28). `_uc_providers` groups
+rows by billing unit and `{cheapest}` expands to `cheapest_by_unit[units[0]]`, whichever unit is
+found first. On a mixed-unit page that is not the lowest number the reader can see: the keyword
+volume job printed "from $0.09" (DataForSEO's flat per-request row) above a table whose first line
+is Serpstat at $0.0005 per keyword, and the LinkedIn profile job printed "from $0.0015" above a
+$0.001 row. The comparison block itself is correct, because it prints a cheapest per unit with the
+units-are-not-interchangeable caveat; only the interpolated lede lies. Both ledes now state the
+rate in prose instead. **Do not write "from {cheapest}" on a page whose providers meter in more
+than one unit**, and read the rendered lede against the rendered table before shipping. Found the
+same way as the two above.
 
 The five flat ad pages predate all of this, keep their URLs and their `build_html.py` ownership, and
 are served first by the same flat handler; `test_legacy_flat_use_case_pages_still_answer` proves a

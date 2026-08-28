@@ -3,7 +3,20 @@ title: Application composition and deployment roles
 status: shipped
 sources:
   - src/treg/bootstrap.py
+  - src/treg/bootstrap_handlers.py
+  - src/treg/bootstrap_http.py
+  - src/treg/application/connect.py
+  - src/treg/domain/identity/mcp_oauth.py
+  - src/treg/domain/identity/session.py
   - src/treg/routers/admin.py
+  - src/treg/routers/auth.py
+  - src/treg/routers/billing.py
+  - src/treg/routers/call.py
+  - src/treg/routers/connections.py
+  - src/treg/routers/onboard.py
+  - src/treg/routers/orgs.py
+  - src/treg/routers/resources.py
+  - src/treg/routers/referrals.py
   - src/treg/routers/web.py
   - scripts/dump_surface.py
 related:
@@ -15,18 +28,23 @@ related:
 
 # Application composition
 
-`bootstrap.create_app(role)` is the FastAPI composition root. `api.py` hosts the ordered route table;
-the Catalog, web, and admin modules define concern-specific `APIRouter` blocks that `api.py` appends
-at their legacy registration points. It then calls the factory once at EOF so the deployed and
-documented `treg.api:app` import path remains the default `all` role.
+`bootstrap.create_app(role)` is the FastAPI composition root. `api.py` hosts the ordered route table,
+attaches concern routers at compatibility-sensitive registration points, and calls the factory once at
+EOF so the deployed `treg.api:app` import path remains the default `all` role.
 
-The factory owns concrete assembly: the three pure-ASGI middleware registrations, five exception handlers,
-static mounts, optional MCP mount and lifespan, GET-to-HEAD widening, the OpenAPI wrapper that hides
+The factory owns concrete assembly: the three core pure-ASGI middleware registrations, the optional
+V2 path normalizer, five exception handlers, static mounts, optional MCP mounts and lifespans,
+GET-to-HEAD widening, the OpenAPI wrapper that hides
 implied HEAD operations, shared HTTP client creation, startup work, shutdown drains, and the Ads
 conversion worker. Registration order is compatibility behavior. The four stage-0 snapshots stay
 byte-identical for `role="all"` unless that composition intentionally changes.
 
-The middleware stack is `_BodyDecodeMiddleware` -> `_SecurityHeadersMiddleware` ->
+`bootstrap_handlers.py` owns the app-wide pool-saturation and HTTP-exception adapters. The composition
+root supplies the call-specific `_stamp_call_exit` callback from `routers/call.py` before registration;
+the callback owns call ids, refusal classification, audit fallback, and idempotency-label release.
+
+`bootstrap_http.py` owns the app-wide middleware implementations. The middleware stack is
+`_BodyDecodeMiddleware` -> `_SecurityHeadersMiddleware` ->
 `_LegacyHostRedirectMiddleware` -> routes/mounts. All three are pure ASGI. The security wrapper adds
 headers at `http.response.start` with case-insensitive setdefault semantics, and the redirect wrapper
 either sends the same 301/302 response as before or calls its child directly. Keeping
@@ -47,18 +65,33 @@ callmatrix stream-failure case pins.
 ## Role manifests
 
 Every created app exposes `app.state.role_manifest` with explicit `routes`, `background_tasks`, and
-`startup_checks` lists. `tests/test_app_roles.py` pins all three lists for every role.
+`startup_checks` lists. `tests/test_app_roles.py` pins all three lists for every role, while the call
+architecture test separately pins the dataplane/control startup split and background-task ownership.
 
 | Role | HTTP routes and mounts | Background tasks | Startup checks |
 |---|---|---|---|
-| `all` | The complete existing surface, including `/run`, static files, and `/mcp` | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client, MCP lifespan |
-| `dataplane` | Only `/call/{rest:path}`; no `/run`, static files, docs, OpenAPI, or MCP | None | DB init, provider-tool backfill, HTTP client |
-| `control` | Everything except `/call/{rest:path}`; includes `/run`, static files, and `/mcp` | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client, MCP lifespan |
+| `all` | The complete surface, including `/run`, static files, `/mcp`, and the flagged `/mcp/v2` | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client, enabled MCP lifespans |
+| `dataplane` | `/call/{rest:path}`, `/catalog/call/{rest:path}`, MCP mounts, and their resource metadata; no `/run`, static files, docs, or OpenAPI | None | DB init, provider-tool backfill, HTTP client, enabled MCP lifespans |
+| `control` | Everything except the calling surfaces; includes OAuth issuance, `/run`, and static files | Ads conversion worker when enabled | DB init, provider-tool backfill, single-user bootstrap, HTTP client |
+
+MCP is calling traffic (the refactor plan's role table assigns `mcp.py` to the dataplane), so a future
+dataplane deployment serves agents on both entry points. OAuth token issuance - consent pages and the
+`/oauth/*` endpoints - stays on control; the MCP surface only validates tokens, which is a read.
+`domain.identity.session` is therefore a both-role primitive: control signs browser and identity
+tokens, while both roles share its signing-key validation through `domain.identity.mcp_oauth`.
 
 `_CONTROL_ROUTE_KEYS` and `_DATAPLANE_ROUTE_KEYS` assign every `api.router` route to exactly one
 owner. App creation fails on an unclassified, stale, duplicate, or multiply-owned key, so adding a
 route cannot silently expand the dataplane. Role separation is preparatory in stage 1; only the
 `all` role is deployed.
+
+`TREG_CLAUDE_CONNECTOR_ENABLED=true` adds `/mcp/v2` and starts its lifespan. When the flag is false
+or missing, only the team `/mcp` mount starts. The nested V2 mount is registered first so the
+parent `/mcp` mount cannot consume it.
+
+When V2 is enabled, `NormalizeDirectoryMCPPath` rewrites the exact `/mcp/v2` path to `/mcp/v2/`
+before route matching. Claude can remove the final slash from a custom-connector URL. Both spellings
+must stay on the V2 transport and OAuth audience.
 
 ## Route cloning
 
@@ -67,7 +100,3 @@ Each factory call must produce an independent app whose dependency overrides bel
 at the new FastAPI instance, and rebuilds its request handler. This also avoids the internal
 `_IncludedRouter` wrapper added by the current FastAPI `include_router()` implementation, which would
 otherwise change route inspection and the committed surface snapshot.
-
-`scripts.dump_surface._lifespan` records the optional MCP lifespan condition against
-`treg.bootstrap._mcp`, where optional MCP composition now lives. This is a documentation-only snapshot
-correction; the mounted lifespan behavior is unchanged.

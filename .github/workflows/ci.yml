@@ -58,11 +58,11 @@ jobs:
         # throttled runner turn minutes into tens of minutes. xdist arrives via --with rather than
         # the lockfile on purpose: it is a CI-only concern, and the team's older uv rewrites
         # uv.lock's whole format on any touch.
-        run: uv run --with pytest-xdist pytest -n auto -q
+        run: uv run --with pytest-xdist pytest -n auto -v -o faulthandler_timeout=300
 
   test-postgres:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
@@ -79,6 +79,7 @@ jobs:
           --health-retries 5
     env:
       TREG_TEST_DB_URL: postgresql+asyncpg://treg:treg@127.0.0.1:5432/treg_test
+      PYTHONUNBUFFERED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
@@ -89,8 +90,11 @@ jobs:
       - name: Run Postgres tests serially
         # Never add xdist here. Every worker would share this one database while reset_db() drops
         # and recreates its tables, reproducing the 1,022-error cross-worker failure shape.
+        # -v + faulthandler: this job has twice been killed at its time limit with zero output on
+        # this runner while the identical list passes locally in 2 minutes. Per-test lines locate
+        # the stall; the fault handler dumps every thread's stack after 300s of one test.
         run: >-
-          uv run --frozen python -m pytest -q
+          uv run --frozen python -m pytest -v -o faulthandler_timeout=300
           tests/callmatrix
           tests/test_ledger.py
           tests/test_ledger_claim_review.py
@@ -98,7 +102,9 @@ jobs:
           tests/test_migration_ddl.py
           tests/test_alembic_baseline.py
           tests/test_archive.py
+          tests/test_call_cancellation.py
           tests/test_call_pool_discipline.py
+          tests/test_postgres_reset.py
           tests/test_marketplace_call.py
           tests/test_billing.py
           tests/test_agent_capture.py

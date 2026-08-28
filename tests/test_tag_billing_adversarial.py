@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 
 import pytest
 from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
 from httpx import AsyncClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +15,12 @@ from sqlmodel import select
 from starlette.requests import Request
 
 from treg import api as A, audit, crypto, ledger, localproxy
+from treg.application.call import service as call_service
+from treg.application.call.types import UpstreamResponse
+from treg.routers import call as call_routes
 from treg.config import get_settings
 from treg.db import session_maker
+from treg.domain.governance import budgets as budget_policy
 from treg.models import CallRecord, CreditBlock, Hold, LedgerEntry, Membership, Org, TagSpend, User
 
 
@@ -83,8 +86,8 @@ async def test_attack_1_all_ingress_paths_reject_storage_key_delimiters(
     # Characters whose NFKC form contains punctuation, plus a combining sequence, must be rejected
     # before either TagSpend or the scoped idempotency key can receive them.
     for value in ("a，b", "a．b", "e\u0301"):
-        with pytest.raises(HTTPException) as exc:
-            A._validate_tag_pair("customer", value)
+        with pytest.raises(budget_policy.BudgetPolicyError) as exc:
+            budget_policy._validate_tag_pair("customer", value)
         assert exc.value.status_code == 422
 
     meta = A._parse_call_meta(_request_with_meta("customer=safe_value"))
@@ -214,7 +217,7 @@ async def test_attack_4_concurrent_prechecks_overshoot_is_bounded_not_exact(
                 all_prechecked.set()
             await asyncio.wait_for(all_prechecked.wait(), timeout=5)
 
-    monkeypatch.setattr(A, "_enforce_tag_budgets", synchronized_precheck)
+    monkeypatch.setattr(call_service, "_enforce_tag_budgets", synchronized_precheck)
     responses = await asyncio.gather(*(
         clients.get(
             f"/call/{EP}?aweme_id=race-{index}",
@@ -377,8 +380,8 @@ async def test_review_pin_bypass_matrix_never_attributes_a_different_value(
         assert response.status_code == expected, (headers, response.status_code, response.text)
         successes += response.status_code == 200
     # Exercise a non-ASCII lookalike through the shared pin/header validator.
-    with pytest.raises(HTTPException) as exc:
-        A._validate_tag_pair("customer", "cust_\u00c0")
+    with pytest.raises(budget_policy.BudgetPolicyError) as exc:
+        budget_policy._validate_tag_pair("customer", "cust_\u00c0")
     assert exc.value.status_code == 422
     async with session_maker() as db:
         assert await ledger.tag_invoice_since(
@@ -407,14 +410,19 @@ async def test_review_distinct_memberships_never_share_idempotent_bodies(
 
     async def relay_by_token(request, upstream_url, tool, secrets, client, drop_params=None,
                              force_identity=False):
-        body = request.headers["X-Treg-Token"].encode()
+        body = next(
+            value for name, value in request.raw_headers if name.lower() == b"x-treg-token")
 
         async def stream():
             yield body
 
-        return StreamingResponse(stream(), status_code=200, media_type="text/plain")
+        async def close():
+            return None
 
-    monkeypatch.setattr(A, "relay", relay_by_token)
+        return UpstreamResponse(
+            200, ((b"content-type", b"text/plain; charset=utf-8"),), stream(), close)
+
+    monkeypatch.setattr(call_service, "relay", relay_by_token)
     common = {"X-Treg-Meta": "customer=same", "Idempotency-Key": "same-key"}
     first_a = await clients.get(f"/call/{EP}?aweme_id=idem", headers={**common, "X-Treg-Token": token_a})
     first_b = await clients.get(f"/call/{EP}?aweme_id=idem", headers={**common, "X-Treg-Token": token_b})

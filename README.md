@@ -3,7 +3,7 @@
 ![treg — the tool catalog for your agent](docs/assets/treg-hero.png)
 
 **OpenRouter, but for agent tools instead of models.** Point an agent at one base URL with one token
-and it can do the job: **2,895 catalogued endpoints across 60 providers** — SEO and backlinks,
+and it can do the job: **2,896 catalogued endpoints across 60 providers** — SEO and backlinks,
 social and trends, people and company enrichment, ads, scraping — **priced per call, from a cent**,
 with no provider signup. Plus your own team's keys, skills and CLIs, callable by every teammate's
 agent without the credential ever leaving the server.
@@ -82,6 +82,15 @@ the command line **and** treg's tools. Other agents: `npx skills add superdesign
 (the `-s` matters — without it you also get this repo's internal dev skills).
 See [docs/CLAUDE-PLUGIN.md](docs/CLAUDE-PLUGIN.md). MiniMax Code / MiniMax Agent users: the same
 skill ships via the MiniMax Plugin Marketplace ([docs/MINIMAX-PLUGIN.md](docs/MINIMAX-PLUGIN.md)).
+
+### Claude.ai connector
+
+The Claude Connectors Directory surface is `https://treg.to/mcp/v2/`. It exposes only curated
+catalog endpoints and separates read calls from write calls so Claude receives accurate safety
+signals. The existing `/mcp/` surface remains available for catalog endpoints, team-owned tools,
+and imported skills. See the [MCP and OAuth architecture](docs/context/architecture/mcp-oauth.md)
+for the boundary and implementation, and the
+[submission runbook](docs/CLAUDE-CONNECTOR-SUBMISSION.md) for release gates.
 
 ## Call a tool you don't have a key for
 

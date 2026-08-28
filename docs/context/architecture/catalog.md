@@ -4,6 +4,7 @@ status: shipped
 sources:
   - .github/workflows/catalog-drift.yml
   - scripts/catalog_drift.py
+  - scripts/catalog_ingest.py
   - scripts/catalog_validate.py
   - src/treg/catalog/aliases.yaml
   - src/treg/catalog/fx.yaml
@@ -40,8 +41,13 @@ sources:
   - src/treg/catalog/examples/crustdata.people.search.json
   - src/treg/catalog/google-search-console.yaml
   - src/treg/catalog/google-search-console.extended.yaml
+  - src/treg/catalog/google-tag-manager.yaml
+  - src/treg/catalog/google-tag-manager.extended.yaml
   - src/treg/catalog/justoneapi.extended.yaml
   - src/treg/catalog/tikhub.extended.yaml
+  - src/treg/domain/catalog/__init__.py
+  - src/treg/domain/catalog/store.py
+  - src/treg/domain/catalog/stats.py
   - src/treg/catalog_store.py
   - src/treg/endpoint_stats.py
   - src/treg/routers/catalog.py
@@ -120,6 +126,11 @@ Path placeholders are substituted by the marketplace caller. Raw values are perc
 that already contains a valid `%HH` escape is kept verbatim so callers can safely reuse encoded resource
 names returned by an upstream API. An invalid/literal `%` is still encoded as `%25`. Search Console's
 `siteUrl` examples deliberately use the raw `sc-domain:example.com` form to demonstrate the default path.
+Google Tag Manager is the opposite case: its `parent`/`path` values describe a hierarchy rather than
+one opaque identifier, so the curated catalog exposes atomic account/container/workspace/version ids.
+`catalog_ingest.google_flat_path_params` makes the generated GTM input schema use the same atomic
+placeholders already present in Discovery's `flatPath`; no slash-delimited resource name is passed
+through one placeholder and accidentally encoded as `%2F`.
 
 ## Where things live
 
@@ -403,6 +414,13 @@ The rules (applied catalog-wide in the 2026-08-20 rewrite; every new provider fo
 6. No dead words: "API", "data", "get", "fetch", "endpoint" are soft tokens worth nothing.
 7. No stuffing. If it does not read as a title, it is wrong. Overflow vocabulary belongs in the
    capability description (weight 3, shared by the group) or `aliases.yaml`, never in the name.
+   Worked case (2026-08-27): "find instagram influencers by niche…" returned ZERO results because
+   influencers.club's name/summary said only "creators" — fixed by naming the job in the endpoint
+   (`…influencers by niche & size`), carrying the facet words (country, followers, engagement,
+   Instagram/TikTok/YouTube) in the `creators.search` capability description, and aliasing
+   `influencer(s)/kol(s)/microinfluencer(s) → creators` and `ig → instagram`. Long natural-language
+   queries still require every rare word to appear somewhere; the `near:` hint tells the agent
+   which words to drop.
 8. TRUTH over vocabulary: derive the name only from the row's own summary, path and input fields.
    A name claiming an output the endpoint does not return is a lie an agent will spend money on.
 
@@ -689,7 +707,7 @@ can say "bring your own key" *before* the call instead of relaying the 403 after
   calls it `douyin`; if both don't land on `douyin`, the marketplace shelf splits in two and the
   cross-provider comparison the catalog exists for silently stops working.
 
-### The first-party OAuth wave (2026-07-28)
+### The first-party OAuth wave (2026-07-28; Google Tag Manager added 2026-08-27)
 
 The scraper providers sell breadth and their extended tier reads as a menu. The nine providers
 where treg owns the OAuth app are the opposite question — *what can this one connected account
@@ -699,6 +717,7 @@ actually do?* — and their sources differ per provider:
 |---|---|---|---|
 | google-search-console | searchconsole v1 discovery | 7 | 0 |
 | google-analytics | analyticsdata + analyticsadmin v1beta discovery | 63 (55 on the admin host) | 32 |
+| google-tag-manager | tagmanager v2 discovery | 98 | 8 |
 | google-business-profile | six My Business discovery docs + 7 hand-listed legacy v4 routes | 60 (45 off-host) | n/a |
 | youtube | youtube v3 discovery + the published quota-cost table | 76 | 2 |
 | google-ads | the GAQL resource reference — one entry per queryable resource | 42 | 0 |
@@ -714,6 +733,10 @@ Three things generalise from it:
   HTML reference. Scopes are ALTERNATIVES (holding any one suffices), so coverage is an
   intersection, not a subset. The My Business documents are the exception that declares no scopes
   at all, which is why that provider has no computable gaps.
+- **Google Tag Manager keeps risky administration outside the grant.** Its core catalog presents an
+  audit → workspace edit → version/publish workflow across cumulative `read`/`write`/`manage` tiers.
+  The generated catalog still lists methods requiring container deletion or account/user management,
+  but marks all eight with `scope_gap`; those three scopes are intentionally never requested.
 - **Google Ads is a resource list, not a route list.** One endpoint (`googleAds:searchStream`)
   answers every read and what varies is the GAQL `FROM` clause, so the unit of coverage is the
   queryable resource. Forty entries share a path and differ in `input.note` and `docs_url`.
@@ -882,7 +905,7 @@ the core file's paths are relative to it (`/serp/google/organic/live/regular`). 
 two spellings — every DataForSEO route curated in core is also present in the extended file under
 a different id. Fixing that belongs in `catalog_ingest.py` and needs a regeneration.
 
-## Choosing between providers (`endpoint_stats.py`)
+## Choosing between providers (`domain/catalog/stats.py`)
 
 307 capabilities are served by more than one provider, and prices inside one capability differ by up
 to **261×**. So "which provider" is a real decision, made on every call.
