@@ -188,13 +188,14 @@ async def _claim_idempotent(key: str, fingerprint: str, rest: str, caller: Calle
 
 async def _store_idempotent(key: str, caller: Caller, *, status_code: int, body: bytes,
                             media_type: str, charged_micro: int, metered: bool,
-                            call_ref: str = "") -> None:
-    """Remember a METERED success so a retry can be answered without paying twice.
+                            call_ref: str = "", terminal: bool = False) -> None:
+    """Remember a metered success or an explicitly terminal, partially charged routed failure.
 
     Metered only. A team calling on its OWN key is billed by the provider, not by us, so there is
-    nothing to protect and no reason for treg to hold their response. Successes only, because a
-    failure was never billed — replaying one would freeze an error the caller should be free to
-    retry out of.
+    nothing to protect and no reason for treg to hold their response. Ordinary failures are not
+    retained, because no charge landed and the caller should be free to retry. A routed waterfall
+    may already have settled paid children before its terminal failure; `terminal=True` retains that
+    exact failure so a retry cannot repeat those charges.
 
     Anything else drops the claim, which frees the label immediately rather than making the caller
     wait out the window before they can try again.
@@ -202,7 +203,7 @@ async def _store_idempotent(key: str, caller: Caller, *, status_code: int, body:
     Never raises: the caller already has their answer, and a bookkeeping failure must not turn a
     served call into a 500. Its own session, because the request's may be mid-rollback.
     """
-    keep = metered and 200 <= status_code < 300
+    keep = metered and (200 <= status_code < 300 or terminal)
     try:
         async with session_maker() as db:
             row = (await db.execute(select(IdempotentCall).where(

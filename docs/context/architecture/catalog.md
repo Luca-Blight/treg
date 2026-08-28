@@ -950,9 +950,10 @@ Refresh is process-level singleflight. Concurrent misses join one shared Task, d
 already in flight are not queued again, and the Task batches the requested ids. Its
 `PostgresEndpointObservationReader` opens an independent session only around `stats.observed()` and
 closes it as soon as the two queries finish. HTTP `/catalog/search`, both MCP catalog-search tools,
-and the prose pages that print observed stats (`/use-cases/*`, `/workflows` and `/workflows/*`)
-receive the same reader instance from bootstrap, so their request paths have no observation DB
-dependency, check out zero connections, and join the same refresh Task. A refresh failure keeps stale
+routed planning in `application.call.route.build_plan`, and the prose pages that print observed stats
+(`/use-cases/*`, `/workflows` and `/workflows/*`) receive the same reader instance from bootstrap, so
+their request paths have no observation DB dependency, check out zero connections, and join the same
+refresh Task. A refresh failure keeps stale
 entries, backs off before retry, and never changes the Catalog response status; a failure with no
 cached entry is honest emptiness. The adapter exposes entry-level `fresh`, `stale`, and `miss`
 counters plus `refresh` and `refresh_failure` counts. Its invalidation story is the two TTLs: deploys
@@ -1148,7 +1149,9 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   `expected_cost_per_hit = cost_at(request) × P(billed) / P(hit)` where `cost_at` prices *this*
   request at its requested size (per-result × limit, credit-with-minimum rounded up) and `P(hit)`
   is the measured hit rate when ≥ 20 decided samples exist, else `ok_rate`, else 1.0 (flagged
-  `unmeasured`). `X-Treg-Route-Prefer` / `-Exclude` override; exhausted providers (capacity view)
+  `unmeasured`). `build_plan` reads that evidence through bootstrap's shared process cache; cold or
+  unavailable observations degrade to unmeasured ranking while the cache refreshes off the request
+  path. `X-Treg-Route-Prefer` / `-Exclude` override; exhausted providers (capacity view)
   and providers with no key on the deployment are dropped and named in `dropped` (`needs {…}`
   says which identity variant a dropped child wanted).
 - **Execution** — `application/call/route.py`, entered from `service._execute_call` when the
@@ -1160,8 +1163,13 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   rejected request — per_success, free, the org's own key, or per_call ≤ 1¢ (`CHEAP_RETRY_MICRO`)
   — never the same provider again, within the error bound; if every one rejects it, the caller
   gets `route_caller_fault` naming each attempt. Our 5xx/503/429 or a vendor 5xx/429/402 = error →
-  next candidate, at most two extra, only for idempotent contracts. A 2xx whose body lacks a
-  REQUIRED core field is a MISS, not a hit (dataforseo's `result: null` under a 20000 envelope). A
+  next candidate, at most two extra, only for idempotent contracts. A treg-side
+  `tool_access_denied`, `policy_denied`, or `capability_pinned` refusal is local to that child and
+  follows the same error fallback. A platform child's vendor 401/403 also falls back because it
+  indicates treg's provider credential, not the routed caller's request. Balance and spend-cap
+  refusals remain terminal because another provider cannot change the org-wide decision. A 2xx
+  response whose body lacks a REQUIRED core field is a MISS, not a hit (dataforseo's `result: null`
+  under a 20000 envelope). A
   MISS tries the next candidate — the waterfall is ON by default (decided
   2026-08-28: the endpoint's job is to find the thing, and misses on the per-success children are
   free); `X-Treg-Route-Waterfall: 0` stops at the first miss. Every attempt is settled at its real
@@ -1169,7 +1177,8 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   that would breach it is `skipped`). Response: `{output, raw, _treg: {served_by, provider, tier,
   outcome, tried[], charged_micro}}`, `X-Treg-Served-By`, `X-Treg-Providers-Tried`,
   `X-Treg-Route-Outcome`, `X-Treg-Cost-Micro` = the sum, one `X-Treg-Call-Id`. The parent owns
-  the idempotency label (a replay never touches a provider) and writes one audit row
+  the idempotency label (a success, or a terminal failure after a paid child, replays without
+  touching a provider) and writes one audit row
   (`credential_tier: routed`) beside the children's.
 - **Hit rate** — `CallRecord.hit` (nullable, alembic `0009`, last column) is the adapter's verdict
   written at settle; `stats.observed` publishes `hit_rate`/`hit_samples` (floor 20) and, for

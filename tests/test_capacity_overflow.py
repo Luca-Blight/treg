@@ -111,6 +111,57 @@ async def test_findymail_shaped_402_on_tier4_runs_one_child_cycle(clients: Async
     assert tiers == {"platform", "platform-overflow"}
 
 
+async def test_overflow_budget_reconciles_the_estimate_to_the_actual_cost(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    await _route(price_micro=3_000)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"out"}'))
+    seen = []
+    envelope = {"success": True, "data": VENDOR_BODY, "priceCents": 0.25}
+    monkeypatch.setattr(O, "_send", _orthogonal([(200, envelope)], seen))
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 200
+    assert response.headers["X-Treg-Cost-Micro"] == "2500"
+    spend = await _rows(OverflowSpend)
+    assert len(spend) == 1
+    assert (spend[0].calls, spend[0].cost_micro) == (1, 2_500)
+
+
+async def test_overflow_substitutes_consumed_path_params_before_calling_aggregator(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    endpoint = "predictleads.companies.enrich"
+    monkeypatch.setenv("TREG_PLATFORM_KEY_PREDICTLEADS", "TEST-PREDICTLEADS-KEY")
+    monkeypatch.setenv(
+        "TREG_PLATFORM_PROVIDERS", "tikhub,scrapecreators,dataforseo,brightdata,predictleads",
+    )
+    get_settings.cache_clear()
+    async with session_maker() as db:
+        db.add(OverflowRoute(
+            endpoint_id=endpoint, aggregator="orthogonal", provider="predictleads", method="GET",
+            path="/companies/{id_or_domain}", agg_slug="predictleads",
+            agg_path="/v3/companies/{id_or_domain}", agg_price_micro=40_000, agg_unit="call",
+            ratio=1.0, enabled=True, last_verified_at=utcnow_naive(),
+        ))
+        await db.commit()
+    routes_view.invalidate()
+    capacity_view.invalidate()
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"Insufficient balance"}'))
+    seen = []
+    envelope = {"success": True, "data": VENDOR_BODY, "priceCents": 4.0}
+    monkeypatch.setattr(O, "_send", _orthogonal([(200, envelope)], seen))
+
+    r = await clients.get(f"/call/{endpoint}?id_or_domain=stripe.com")
+
+    assert r.status_code == 200, r.text
+    assert len(seen) == 1
+    assert seen[0].json["path"] == "/v3/companies/stripe.com"
+    assert "{" not in seen[0].json["path"] and "}" not in seen[0].json["path"]
+    assert "query" not in seen[0].json
+
+
 async def test_aggregator_402_releases_the_child_marks_it_unhealthy_and_answers_a_typed_503(
     clients: AsyncClient, overflow_on, monkeypatch,
 ):
@@ -153,6 +204,81 @@ async def test_contract_refusal_falls_back_to_the_vendor_answer(clients: AsyncCl
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 402 and r.text == '{"detail":"nope"}'
     assert await _balance(clients) == before and await _holds() == []
+
+
+async def test_adapter_parse_crash_falls_back_to_vendor_answer_and_releases_child_hold(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    await _route()
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"vendor out"}'))
+    seen = []
+    monkeypatch.setattr(
+        O, "_send",
+        _orthogonal([(200, {"success": True, "data": VENDOR_BODY, "priceCents": 0.3})], seen),
+    )
+
+    def crash_parse(status, body):
+        raise RuntimeError("adapter parse crashed")
+
+    monkeypatch.setattr(O.by_name("orthogonal"), "parse", crash_parse)
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 402
+    assert response.content == b'{"detail":"vendor out"}'
+    assert len(seen) == 1
+    assert not any(hold.call_id.endswith(":overflow") for hold in await _holds())
+    spend = await _rows(OverflowSpend)
+    assert len(spend) == 1
+    assert (spend[0].calls, spend[0].cost_micro) == (1, 3_000)
+
+
+async def test_request_error_after_send_preserves_unknown_budget_estimate(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    await _route(price_micro=3_000)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"vendor out"}'))
+    seen = []
+
+    async def timeout_after_send(client, request):
+        seen.append(request)
+        raise httpx.ReadTimeout(
+            "aggregator response timed out",
+            request=httpx.Request(request.method, request.url),
+        )
+
+    monkeypatch.setattr(O, "_send", timeout_after_send)
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 503
+    assert len(seen) == 1
+    assert await _holds() == []
+    spend = await _rows(OverflowSpend)
+    assert len(spend) == 1
+    assert (spend[0].calls, spend[0].cost_micro) == (1, 3_000)
+
+
+async def test_vendor_500_cost_reported_by_aggregator_is_counted_in_daily_spend(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    await _route(price_micro=3_000)
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"out"}'))
+    seen = []
+    envelope = {
+        "success": False,
+        "error": "upstream returned status 500",
+        "data": {"error": "vendor failed"},
+        "priceCents": 0.3,
+    }
+    monkeypatch.setattr(O, "_send", _orthogonal([(500, envelope)], seen))
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 500
+    spend = await _rows(OverflowSpend)
+    assert len(spend) == 1
+    assert (spend[0].calls, spend[0].cost_micro) == (1, 3_000)
 
 
 async def test_budget_crossing_skips_overflow(clients: AsyncClient, overflow_on, monkeypatch):
@@ -249,6 +375,33 @@ async def test_an_exhausted_account_with_a_route_skips_the_direct_attempt(client
     replay = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "k1"})
     assert replay.status_code == 200 and replay.headers.get("X-Treg-Idempotent-Replay") == "true"
     assert len(seen) == 1, "the replay never touched the aggregator"
+
+
+async def test_skip_direct_budget_reservation_crash_falls_back_to_typed_capacity_503(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    from datetime import timedelta
+
+    await _route(price_micro=3_000)
+    now = utcnow_naive()
+    async with session_maker() as db:
+        await ratestore.kv_put(db, STATE_NS, "tikhub", LatestState(
+            "tikhub", 0.0, "USD", now, "exact", exhausted_until=now + timedelta(hours=1),
+            health="exhausted",
+        ).to_json(), ttl_s=3600)
+        await db.commit()
+    capacity_view.invalidate()
+
+    async def crash_reservation(db, aggregator, estimate_micro, cap_micro, *, day=None):
+        raise RuntimeError("budget reservation crashed")
+
+    monkeypatch.setattr(O.overflow_spend_ledger, "reserve_in_transaction", crash_reservation)
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"] == "provider_capacity_unavailable"
+    assert await _holds() == []
 
 
 async def test_an_exhausted_account_without_a_route_is_still_the_typed_503(clients: AsyncClient, overflow_on):

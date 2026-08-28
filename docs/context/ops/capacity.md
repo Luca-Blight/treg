@@ -18,6 +18,7 @@ sources:
   - src/treg/application/call/overflow.py
   - alembic/versions/0007_overflow_spend.py
   - tests/test_capacity_overflow.py
+  - tests/test_capacity_overflow_spend.py
   - alembic/versions/0008_org_platform_overflow_disabled.py
   - tests/test_capacity_smoothing.py
   - src/treg/domain/capacity/overflow_seed.json
@@ -167,13 +168,27 @@ the policy table. `rate_pressure` alerting is step C.
 
 `application/call/overflow.py` is documented in `architecture/proxy-model.md` § Overflow. Operating
 it: `TREG_OVERFLOW_MODE` = `off` (default) | `shadow` | `on`; `TREG_OVERFLOW_DAILY_BUDGET_USD` (20)
-per aggregator per UTC day, read from `OverflowSpend`; the aggregator keys `TREG_OVERFLOW_KEY_*` in
-the web service env (the cron pulls them). The route view (`routes_view.py`) is the call path's
+per aggregator per UTC day is a hard admission cap backed by `OverflowSpend`. Before either an
+`on` call or a `shadow` probe goes to the network, a conditional atomic upsert reserves the route's
+estimated micro-USD only if the resulting daily total fits under the cap. Completion reconciles the
+estimate to actual aggregator cost and increments `calls` once, including a vendor 5xx that the
+aggregator charged but treg cannot charge to the caller. Known no-charge failures return the whole
+estimate. Once network I/O has started, a timeout, disconnect, parser crash, cancellation, or any
+other outcome without a known actual fee keeps the estimate reserved. A process crash after the
+reservation commit can do the same; that bias is deliberately conservative because it reduces later
+service instead of allowing excess prepaid spend.
+The aggregator keys `TREG_OVERFLOW_KEY_*` live in the web service env (the cron pulls them). The
+route view (`routes_view.py`) is the call path's
 60 s copy of the enabled `OverflowRoute` rows; `overflow sync` / `overflow verify` are the only
 writers. **Rollout (plan §5):** run `shadow` for a week with routes enabled — every probe logs
 `overflow SHADOW <endpoint> via <aggregator>: … shape …` and lands a child audit row
 (`credential_tier=platform-overflow`, `error_response="treg overflow: shadow"`) — then switch to
 `on` (step F, which also adds the org opt-out and amends the charter).
+Overflow remains advisory across its full attempt: an unexpected budget, adapter, capacity-mark,
+or settlement-path failure is logged, any reserved child hold is released, and the caller falls
+back to the direct vendor response. A skip-direct call has no direct response, so the same fallback
+returns the original typed `provider_capacity` 503. Cancellation and typed call failures still
+propagate to the call service for their dedicated cleanup and response handling.
 
 ## Enabling overflow (step F) — the opt-out and the rollout
 

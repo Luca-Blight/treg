@@ -8,7 +8,9 @@ core `output` (via the child's adapter), the child's `raw` body, and `_treg: {se
 
 Fallback follows the overflow rules: on an ERROR (our 5xx/503, a vendor 5xx/429/402) the next
 candidate is tried, at most two extra, idempotent contracts only; a caller-caused refusal (4xx)
-stops at once — it would be the same 4xx everywhere. A MISS (2xx, `adapter.miss`) stops unless the
+stops at once — it would be the same 4xx everywhere. Child-local treg authorization failures and
+platform vendor 401/403 responses are errors because another child may work. A MISS (2xx,
+`adapter.miss`) stops unless the
 caller turned the waterfall off (`X-Treg-Route-Waterfall: 0`). The waterfall is ON by default —
 the endpoint's job is to find the thing — bounded by `X-Treg-Route-Max-Cost` (default $1.00).
 """
@@ -38,6 +40,32 @@ from .resolve import _host_of, _marketplace_secret
 from .types import CallContext, CallFailure, GatewayFailed, ResolutionFailed, UpstreamResponse
 
 log = logging.getLogger("treg.route")
+_endpoint_observation_reader: endpoint_stats.EndpointObservationReader | None = None
+
+
+def configure_endpoint_observation_reader(reader: endpoint_stats.EndpointObservationReader) -> None:
+    """Bind bootstrap's shared process cache to routed planning."""
+    global _endpoint_observation_reader
+    _endpoint_observation_reader = reader
+
+
+def clear_endpoint_observation_reader(reader: endpoint_stats.EndpointObservationReader) -> None:
+    """Unbind only the reader owned by the lifespan that is stopping."""
+    global _endpoint_observation_reader
+    if _endpoint_observation_reader is reader:
+        _endpoint_observation_reader = None
+
+
+async def _observed_stats(endpoint_ids: list[str]) -> endpoint_stats.ObservationSnapshot:
+    """Read advisory routing evidence without making the request wait for its DB aggregate."""
+    reader = _endpoint_observation_reader
+    if reader is None:
+        return {}
+    try:
+        return await reader.get_many(endpoint_ids)
+    except Exception:  # noqa: BLE001 - routing evidence always degrades to deterministic ranking
+        log.warning("endpoint stats unavailable for routed plan", exc_info=True)
+        return {}
 
 WATERFALL_HEADER = "x-treg-route-waterfall"
 MAX_COST_HEADER = "x-treg-route-max-cost"
@@ -47,6 +75,9 @@ _DROP_FROM_CHILD = frozenset({b"content-length", b"content-type", b"transfer-enc
                               b"x-treg-route-waterfall", b"x-treg-route-max-cost", b"x-treg-route-prefer",
                               b"x-treg-route-exclude", b"host"})
 _CALLER_FAULT = frozenset({400, 401, 403, 404, 405, 409, 422})
+_CANDIDATE_LOCAL_FAILURES = frozenset({"tool_access_denied", "policy_denied", "capability_pinned"})
+_GLOBAL_REFUSALS = frozenset({"insufficient_balance", "tag_spend_cap_reached",
+                              "platform_daily_cap_reached", "daily_cap_reached"})
 
 
 CHEAP_RETRY_MICRO = 10_000  # ≤ 1¢: a per_call provider cheap enough to be asked after another's 4xx
@@ -132,7 +163,7 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
             "variants": [list(v) for v in contract.identity]})
     raw, dropped = candidates_for(contract, cat.for_capability(ep["capability"]), cat.adapters, identity)
     ids = [e["id"] for e, _, _ in raw]
-    stats: dict[str, dict] = {}
+    stats = await _observed_stats(ids)
     own: set[str] = set()
     own_tools: set[str] = set()
     if ids:
@@ -140,11 +171,6 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
         from ... import oauth_providers
         from ...models import Tool
         async with session_maker() as db:
-            try:
-                stats = await endpoint_stats.observed(
-                    db, ids, per_success={e["id"] for e, _, _ in raw if (e.get("cost") or {}).get("type") == "per_success"})
-            except Exception:  # noqa: BLE001 — stats are advisory
-                stats = {}
             services = {e["provider"] for e, _, _ in raw}
             if caller.org_id is not None:
                 # tier 1: a tool the team REGISTERED for the provider's host (their credential,
@@ -265,8 +291,9 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         try:
             response = await execute_child(child, upstream_client)
         except CallFailure as exc:
-            if exc.status_code in _CALLER_FAULT or exc.kind in ("insufficient_balance", "tag_spend_cap_reached",
-                                                                  "platform_daily_cap_reached", "daily_cap_reached"):
+            if exc.kind in _GLOBAL_REFUSALS or (
+                exc.status_code in _CALLER_FAULT and exc.kind not in _CANDIDATE_LOCAL_FAILURES
+            ):
                 raise  # the same refusal everywhere; nothing to fall back to
             errors += 1
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "error", exc.status_code, 0, str(exc.detail)[:120]))
@@ -276,7 +303,9 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         raw = await _read(response)
         charged = int(_header(response, "X-Treg-Cost-Micro") or 0)
         spent += charged
-        if 400 <= response.status < 500 and response.status not in (402, 408, 429):
+        platform_auth_failure = cand.tier == "platform" and response.status in (401, 403)
+        if (400 <= response.status < 500 and response.status not in (402, 408, 429)
+                and not platform_auth_failure):
             # The vendor rejected the REQUEST. Usually the caller's mistake and the same answer
             # everywhere — but a scraper's "Request failed. Please retry" is also a 400 (tikhub,
             # live 2026-08-28), so the waterfall goes on to providers that are FREE ON FAILURE

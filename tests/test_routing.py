@@ -3,13 +3,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 import pytest
 from httpx import AsyncClient
 from sqlmodel import select
 
-from treg import audit
+from treg import audit, ledger
+from treg.application.call import route as call_route
 from treg.application.call import service as call_service
 from treg.application.call.types import UpstreamResponse
 from treg.config import get_settings
@@ -18,7 +20,8 @@ from treg.domain.catalog import store as catalog_store
 from treg.domain.catalog.routing import paths as P
 from treg.domain.catalog.routing.contracts import canonical_identity
 from treg.domain.catalog.routing.plan import Candidate, cost_at, rank
-from treg.models import Hold, LedgerEntry
+from treg.infra.catalog_observations import CachedEndpointObservationReader
+from treg.models import CallRecord, Hold, LedgerEntry
 
 from test_marketplace_call import _balance, platform_on  # noqa: F401
 
@@ -117,6 +120,99 @@ def test_cost_at_and_ranking_math():
     assert [c.endpoint["id"] for c in rank([a, b])] == ["b.x"]
 
 
+async def test_concurrent_routed_plans_share_one_cached_observation_refresh(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    from treg.domain.catalog import stats
+
+    class Source:
+        calls = 0
+
+        async def get_many(self, endpoint_ids):
+            self.calls += 1
+            return {
+                endpoint_id: {
+                    "samples": 20, "ok_rate": 1.0, "p50_ms": 20, "p95_ms": 40,
+                    "last_ok_days": 0, "hit_rate": 0.5, "hit_samples": 20,
+                }
+                for endpoint_id in endpoint_ids
+            }
+
+    async def request_time_aggregate(*args, **kwargs):
+        raise AssertionError("routed planning must not aggregate CallRecord on the request path")
+
+    source = Source()
+    reader = CachedEndpointObservationReader(source)
+    monkeypatch.setattr(call_route, "_endpoint_observation_reader", reader, raising=False)
+    monkeypatch.setattr(stats, "observed", request_time_aggregate)
+    ep = catalog_store.load().by_id[ROUTED]
+
+    class _Org:
+        id = 1
+
+    class _Caller:
+        org_id = 1
+        org = _Org()
+
+    try:
+        plans = await asyncio.gather(*(
+            call_route.build_plan(
+                ep, {"full_name": "Patrick Collison", "domain": "stripe.com"},
+                _Caller(), call_route.RouteOptions.from_headers(lambda key: None),
+            )
+            for _ in range(20)
+        ))
+        await reader.wait_for_idle()
+    finally:
+        await reader.aclose()
+
+    assert all(plan.candidates for plan in plans)
+    assert source.calls == 1
+
+
+async def test_routed_plan_keeps_per_success_hit_fallback_from_the_cache(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    from treg import api as A
+    from treg.domain.catalog import stats
+
+    endpoint_id = "tomba.people.email.find"
+    async with session_maker() as db:
+        for cost_micro in (8_900, 8_900, 0):
+            db.add(CallRecord(
+                org_id=1, user_email="a@b.c", tool_name=endpoint_id, method="GET", path="/x",
+                status_code=200, endpoint_id=endpoint_id, cost_observed_micro=cost_micro, hit=None,
+            ))
+        await db.commit()
+    monkeypatch.setattr(stats, "MIN_HIT_SAMPLES", 3)
+    reader = A.app.state.endpoint_observation_reader
+    assert await reader.get_many([endpoint_id]) == {}
+    await reader.wait_for_idle()
+    warm = await reader.get_many([endpoint_id])
+    assert warm[endpoint_id]["hit_rate"] == pytest.approx(2 / 3, abs=1e-3)
+
+    async def request_time_aggregate(*args, **kwargs):
+        raise AssertionError("the routed plan must use the warm observation cache")
+
+    monkeypatch.setattr(stats, "observed", request_time_aggregate)
+    monkeypatch.setattr(call_route, "_endpoint_observation_reader", reader, raising=False)
+    ep = catalog_store.load().by_id[ROUTED]
+
+    class _Org:
+        id = 1
+
+    class _Caller:
+        org_id = 1
+        org = _Org()
+
+    plan = await call_route.build_plan(
+        ep, {"full_name": "Patrick Collison", "domain": "stripe.com"},
+        _Caller(), call_route.RouteOptions.from_headers(lambda key: None),
+    )
+    tomba = next(candidate for candidate in plan.candidates if candidate.endpoint["id"] == endpoint_id)
+    assert tomba.hit_rate == pytest.approx(2 / 3, abs=1e-3)
+
+
 # ---- the call path ---------------------------------------------------------------------------
 
 async def test_routed_call_runs_the_cheapest_child_and_returns_output_raw_and_provenance(clients: AsyncClient, enrichment_on, monkeypatch):
@@ -160,6 +256,88 @@ async def test_error_on_the_first_child_falls_back_to_the_second(clients: AsyncC
     assert r.headers["X-Treg-Providers-Tried"] == "tomba,findymail"
     assert before - await _balance(clients) == 19_800, "the failed child released its hold; only findymail charged"
     assert seen[1] == ("findymail", "POST", {}, {"name": "Patrick Collison", "domain": "stripe.com"})
+
+
+async def test_child_capability_pin_refusal_falls_back_to_the_pinned_provider(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    pinned = await clients.post(
+        f"/orgs/{org_id}/pins",
+        json={"capability": "people.email.find", "provider": "hunter"},
+    )
+    assert pinned.status_code == 200, pinned.text
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider({
+        "hunter": [(200, {"data": {
+            "email": "patrick@stripe.com", "score": 90,
+            "verification": {"status": "valid"},
+        }})],
+    }, seen))
+
+    response = await clients.post(
+        f"/call/{ROUTED}",
+        json={"full_name": "Patrick Collison", "domain": "stripe.com"},
+        headers={"X-Treg-Route-Prefer": "tomba,hunter"},
+    )
+
+    assert response.status_code == 200, response.text
+    doc = response.json()
+    assert doc["_treg"]["served_by"] == "hunter.people.email.find"
+    assert [attempt["outcome"] for attempt in doc["_treg"]["tried"]] == ["error", "hit"]
+    assert doc["_treg"]["tried"][0]["endpoint_id"] == "tomba.people.email.find"
+    assert [provider for provider, *_ in seen] == ["hunter"]
+
+
+async def test_platform_vendor_401_falls_back_to_the_next_provider(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    findymail = catalog_store.load().by_id["findymail.search.name"]
+    monkeypatch.setitem(findymail, "cost", {**findymail["cost"], "type": "per_call"})
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider({
+        "tomba": [(401, {"error": "invalid platform key"})],
+        "findymail": [(200, {"contact": {
+            "name": "Patrick Collison", "email": "patrick@stripe.com",
+        }})],
+    }, seen))
+
+    response = await clients.post(
+        f"/call/{ROUTED}",
+        json={"full_name": "Patrick Collison", "domain": "stripe.com"},
+        headers={
+            "X-Treg-Route-Prefer": "tomba,findymail",
+            "X-Treg-Route-Exclude": "hunter,leadmagic,leadsforge,aviato,fiber-ai",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    doc = response.json()
+    assert doc["_treg"]["served_by"] == "findymail.search.name"
+    assert [attempt["outcome"] for attempt in doc["_treg"]["tried"]] == ["error", "hit"]
+    assert [provider for provider, *_ in seen] == ["tomba", "findymail"]
+
+
+async def test_routed_insufficient_balance_still_stops_before_fallback(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        await ledger.reserve(db, org_id, "drain routed balance", 1_000_000)
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider({
+        "tomba": [(200, {"data": {"email": "should-not-run@example.com"}})],
+    }, seen))
+
+    response = await clients.post(
+        f"/call/{ROUTED}",
+        json={"full_name": "Patrick Collison", "domain": "stripe.com"},
+        headers={"X-Treg-Route-Prefer": "tomba,findymail"},
+    )
+
+    assert response.status_code == 402
+    assert response.json()["detail"]["error"] == "insufficient_balance"
+    assert seen == []
 
 
 async def test_waterfall_is_on_by_default_can_be_turned_off_and_respects_max_cost(clients: AsyncClient, enrichment_on, monkeypatch):
@@ -279,6 +457,41 @@ async def test_idempotent_replay_of_a_routed_call_never_calls_a_provider_twice(c
     assert r2.json() == r1.json() and len(seen) == 1
 
 
+@pytest.mark.parametrize(
+    ("terminal", "expected_status", "expected_error"),
+    [
+        ((400, {"message": "invalid email"}), 400, "route_caller_fault"),
+        ((503, {"message": "provider down"}), 502, "route_failed"),
+    ],
+)
+async def test_idempotent_replay_preserves_a_routed_failure_after_partial_charge(
+    clients: AsyncClient, enrichment_on, monkeypatch, terminal, expected_status, expected_error,
+):
+    routed = "treg.people.email.verify"
+    tomba_miss = (200, {"data": {"email": {"status": None, "score": None}}})
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"tomba": [tomba_miss, tomba_miss], "leadmagic": [terminal, terminal]},
+        seen,
+    ))
+    headers = {
+        "Idempotency-Key": "route-partially-charged-failure",
+        "X-Treg-Route-Prefer": "tomba,leadmagic",
+        "X-Treg-Route-Exclude": "hunter",
+    }
+    before = await _balance(clients)
+
+    r1 = await clients.post(f"/call/{routed}", json={"email": "bad@example.com"}, headers=headers)
+    r2 = await clients.post(f"/call/{routed}", json={"email": "bad@example.com"}, headers=headers)
+
+    assert r1.status_code == expected_status and r1.json()["detail"]["error"] == expected_error
+    assert r2.status_code == r1.status_code and r2.json() == r1.json()
+    assert r2.headers.get("X-Treg-Idempotent-Replay") == "true"
+    assert r1.headers["X-Treg-Cost-Micro"] == r2.headers["X-Treg-Cost-Micro"] == "8900"
+    assert before - await _balance(clients) == 8_900
+    assert [provider for provider, *_ in seen] == ["tomba", "leadmagic"]
+
+
 def test_a_per_success_miss_settles_at_zero_when_the_adapter_can_tell():
     """Live 2026-08-28: the first waterfall charged tomba, findymail and leadsforge for misses the
     catalog calls free. The adapter's `miss` predicate is the missing knowledge."""
@@ -344,6 +557,7 @@ async def test_hit_verdict_is_recorded_and_becomes_a_hit_rate(clients: AsyncClie
     # the catalog reads observations through the process cache: a cold entry answers nothing and
     # refreshes in the background, so warm it the way test_endpoint_stats does
     from treg import api as A
+    monkeypatch.setattr(call_route, "_endpoint_observation_reader", A.app.state.endpoint_observation_reader)
     await clients.get(f"/catalog/endpoints/{ROUTED}")
     await A.app.state.endpoint_observation_reader.wait_for_idle()
     r = await clients.get(f"/catalog/endpoints/{ROUTED}")
