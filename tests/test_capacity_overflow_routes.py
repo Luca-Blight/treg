@@ -214,9 +214,10 @@ def test_orthogonal_parse_success_price_upstream_error_and_contract():
 
 def test_monid_build_and_parse_fixtures():
     r = _route(aggregator="monid", agg_slug="hunterio", agg_path="/domain-search", agg_unit="result")
-    req = monid.build(r, "K", {"domain": "stripe.com", "limit": "1"}, None)
+    req = monid.build(r, "K", {"domain": "stripe.com", "limit": "1", "score": "0.5", "raw": "true", "id": "007a"}, None)
     assert req.json == {"provider": "hunterio", "endpoint": "/domain-search",
-                        "input": {"queryParams": {"domain": "stripe.com", "limit": "1"}, "body": {}, "pathParams": {}}}
+                        "input": {"queryParams": {"domain": "stripe.com", "limit": 1, "score": 0.5, "raw": True, "id": "007a"},
+                                  "body": {}, "pathParams": {}}}, "Monid validates JSON types: numeric strings become numbers (live 2026-08-28)"
     alt = monid.build(r, "K", {"domain": "stripe.com"}, None, params_as_body=True)
     assert alt.json["input"] == {"queryParams": {}, "body": {"domain": "stripe.com"}, "pathParams": {}}
     ok = _fixture("monid_ok_sync")

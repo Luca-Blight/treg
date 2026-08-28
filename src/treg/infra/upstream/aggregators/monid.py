@@ -11,6 +11,7 @@ models some GET params as `body` (hunter /domain-search); the route's `agg_path`
 from __future__ import annotations
 
 import json
+import re
 
 from . import AggregatorRequest, AggregatorResult
 
@@ -18,9 +19,29 @@ BASE = "https://api.monid.ai/v1"
 NAME = "monid"
 
 
+_INT = re.compile(r"-?\d{1,15}")
+_FLOAT = re.compile(r"-?\d+\.\d+")
+
+
+def _typed(v):
+    """Monid validates `input` against the vendor's JSON schema, so a numeric query value must be a
+    JSON number and a flag a JSON boolean — but a proxied query string is text. The vendor's own
+    GET parser would coerce exactly these shapes, so restoring them is faithful, not a rewrite.
+    Live 2026-08-28: akta `limit=1` and hunter `limit=1` were refused as strings."""
+    if not isinstance(v, str):
+        return v
+    if _INT.fullmatch(v):
+        return int(v)
+    if _FLOAT.fullmatch(v):
+        return float(v)
+    if v in ("true", "false"):
+        return v == "true"
+    return v
+
+
 def build(route, key: str, query: list[tuple[str, str]] | dict, body: bytes | None,
           path_params: dict | None = None, *, params_as_body: bool = False) -> AggregatorRequest:
-    items = dict(query) if not isinstance(query, dict) else dict(query)
+    items = {k: _typed(v) for k, v in (query.items() if isinstance(query, dict) else query)}
     parsed: dict = {}
     if body:
         try:
@@ -29,7 +50,7 @@ def build(route, key: str, query: list[tuple[str, str]] | dict, body: bytes | No
             parsed = {"_raw": body.decode("utf-8", "replace")}
     inp = {"queryParams": {} if params_as_body else items,
            "body": (items if params_as_body and not parsed else parsed) or {},
-           "pathParams": dict(path_params or {})}
+           "pathParams": {k: _typed(v) for k, v in (path_params or {}).items()}}
     return AggregatorRequest("POST", f"{BASE}/run",
                              {"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                              {"provider": route.agg_slug, "endpoint": route.agg_path, "input": inp})
