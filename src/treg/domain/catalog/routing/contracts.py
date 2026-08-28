@@ -40,15 +40,24 @@ class Adapter:
     body_array: bool = False                   # the provider wants `[body]` (DataForSEO's task list)
     verified: bool = False
     verify_note: str = ""
+    _filter_keys: tuple[str, ...] = ()        # contract filter names, set at load (always sent)
 
-    def to_upstream(self, identity: dict[str, Any]) -> tuple[dict[str, str], Any]:
-        """(query params, JSON body) for this provider from a canonical request (identity + filters)."""
+    def to_upstream(self, identity: dict[str, Any], variant: tuple[str, ...] | None = None) -> tuple[dict[str, str], Any]:
+        """(query params, JSON body) for this provider from a canonical request (identity + filters).
+
+        Only the MATCHED variant's identity keys are sent (filters always are): a caller may hand
+        treg everything it knows — email, LinkedIn URL, name, domain — and a provider that insists on
+        exactly one identifier (tomba: "supply exactly one of email / domain / linkedin") must not
+        receive them all. `variant=None` sends every mapped key (the verifier's fixture path)."""
         query: dict[str, str] = {}
         body: dict[str, Any] = {}
         doc = {"queryParams": query, "body": body}
+        identity_keys = set(variant) if variant is not None else None
         for field_name, target in self.in_map.items():
             v = identity.get(field_name)
             if v is None:
+                continue
+            if identity_keys is not None and field_name not in identity_keys and field_name not in (self._filter_keys or ()):
                 continue
             if target.startswith("pathParams."):
                 # `/v1/email-verifier/{email}`: the call path fills placeholders from the query
@@ -193,6 +202,8 @@ def load_routing(directory: Path, endpoints_by_id: dict[str, dict], read_yaml, r
     for eid, ad in adapters.items():
         ep = endpoints_by_id.get(eid)
         contract = contracts.get((ep or {}).get("capability") or "")
+        if contract is not None:
+            ad = Adapter(**{**ad.__dict__, "_filter_keys": tuple(contract.filters or ())})
         if ep is None or contract is None:
             verified[eid] = Adapter(**{**ad.__dict__, "verified": False, "verify_note": "unknown endpoint or no contract"})
             continue

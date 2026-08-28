@@ -401,3 +401,26 @@ async def test_routed_call_and_access_name_the_providers_dropped_for_this_deploy
     a = await clients.get(f"/catalog/endpoints/{ROUTED}/access")
     assert a.status_code == 200 and a.json()["tier"] == "routed" and a.json()["detail"].startswith("routed — ")
     assert "aviato.people.email.find" in a.json()["detail"]
+
+
+def test_a_caller_may_send_everything_it_knows_and_each_provider_gets_only_its_variant():
+    cat = catalog_store.load()
+    contract = cat.contracts["people.phone.find"]
+    everything = {"email": "p@stripe.com", "linkedin_url": "https://www.linkedin.com/in/p", "full_name": "Patrick Collison", "domain": "stripe.com"}
+    ident, variant = canonical_identity(contract, everything)
+    assert ident["first_name"] == "Patrick"
+    from treg.domain.catalog.routing.contracts import adapter_accepts
+    tomba = cat.adapters["tomba.people.phone.find"]
+    v = adapter_accepts(tomba, ident)
+    q, b = tomba.to_upstream(ident, v)
+    assert q == {"email": "p@stripe.com"}, "tomba insists on exactly one identifier — only the matched variant is sent"
+    lf = cat.adapters["leadsforge.people.phone.find"]
+    q, b = lf.to_upstream(ident, adapter_accepts(lf, ident))
+    assert b == {"firstName": "Patrick", "lastName": "Collison", "companyDomain": "stripe.com"}, "derived names, and not the LinkedIn URL"
+    # filters always travel, whatever the variant
+    kw = cat.contracts["google.keywords.ideas"]
+    req, v = canonical_identity(kw, {"keyword": "coffee", "country": "de"})
+    q, b = cat.adapters["seranking.google.keywords.ideas"].to_upstream(req, v)
+    assert q == {"keyword": "coffee", "source": "de", "limit": "20"}
+    # every adapter still verifies with the change
+    assert all(a.verified for a in cat.adapters.values())

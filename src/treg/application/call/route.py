@@ -229,7 +229,7 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         if options.max_cost_micro is not None and spent + (cand.price_micro or 0) > options.max_cost_micro:
             tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "skipped", None, 0, "would exceed max cost"))
             continue
-        query, body = cand.adapter.to_upstream(plan.identity)
+        query, body = cand.adapter.to_upstream(plan.identity, cand.variant)
         child = CallContext(input=_child_input(parent, cand.endpoint, query, body), call_ref=f"{parent.call_ref}:r{n}", meta=parent.meta)
         try:
             response = await execute_child(child, upstream_client)

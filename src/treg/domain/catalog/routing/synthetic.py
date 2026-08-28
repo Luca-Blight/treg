@@ -41,7 +41,9 @@ def routed_endpoint(contract: Contract, children: list[dict], adapters: dict[str
         "name": f"{cap} — routed: best of {len(kids)} providers, own keys first",
         "summary": contract.summary,
         "input": {"bodyType": "json", "body": body,
-                  "note": (f"Send exactly ONE identity variant: {variants}. "
+                  "note": (f"Send everything you know about the subject — treg derives the rest (full_name ⇄ first+last), "
+                           f"matches each provider on the variants it accepts ({variants}) and sends each provider only "
+                           f"the fields it wants. "
                            "On a miss treg keeps trying providers, cheapest first, within X-Treg-Route-Max-Cost "
                            f"(default ${contract.default_max_cost_usd or 1.00:g} per call; misses on per-success providers are free). Options ride as "
                            "headers, never in the body: X-Treg-Route-Waterfall: 0 (stop at the first miss), "
