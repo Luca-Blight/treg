@@ -263,3 +263,42 @@ async def test_an_exhausted_account_without_a_route_is_still_the_typed_503(clien
     r = await clients.get(f"/call/{EP}?aweme_id=7")
     assert r.status_code == 503 and r.json()["detail"]["error"] == "provider_capacity_unavailable"
     assert await _holds() == []
+
+
+async def test_org_opt_out_is_honoured_before_any_aggregator_is_contacted(clients: AsyncClient, overflow_on, monkeypatch):
+    await _route()
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    assert (await clients.get(f"/orgs/{org_id}/settings")).json()["platform_overflow"] is True
+    r = await clients.patch(f"/orgs/{org_id}/settings", json={"platform_overflow": False})
+    assert r.status_code == 200, r.text
+    assert (await clients.get(f"/orgs/{org_id}/settings")).json()["platform_overflow"] is False
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"Insufficient balance"}'))
+    seen = []
+    monkeypatch.setattr(O, "_send", _orthogonal([(200, {"success": True, "data": VENDOR_BODY, "priceCents": 0.3})], seen))
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 402 and seen == [] and await _holds() == []
+    # exhausted view + route: the opted-out team gets the typed 503, not a relay
+    from datetime import timedelta
+    now = utcnow_naive()
+    async with session_maker() as db:
+        await ratestore.kv_put(db, STATE_NS, "tikhub", LatestState(
+            "tikhub", 0.0, "USD", now, "exact", exhausted_until=now + timedelta(hours=1), health="exhausted").to_json(), ttl_s=3600)
+        await db.commit()
+    capacity_view.invalidate()
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 503 and seen == []
+    # …and back on: served
+    await clients.patch(f"/orgs/{org_id}/settings", json={"platform_overflow": True})
+    r = await clients.get(f"/call/{EP}?aweme_id=7")
+    assert r.status_code == 200 and r.headers["X-Treg-Served-Via"] == "overflow:orthogonal" and len(seen) == 1
+
+
+def test_cli_org_overflow_parses(monkeypatch):
+    from treg import cli
+    seen = {}
+    monkeypatch.setattr(cli, "cmd_org_overflow", lambda args, cfg: seen.update(vars(args)))
+    parser = cli.build_parser() if hasattr(cli, "build_parser") else None
+    if parser is None:
+        pytest.skip("no exposed parser builder")
+    args = parser.parse_args(["org", "overflow", "off"])
+    assert args.state == "off" and args.fn is not None

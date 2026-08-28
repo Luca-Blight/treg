@@ -381,8 +381,9 @@ stricter-schema refusal (`contract`) releases the child and lets the vendor's ow
 and the probe's cost recorded in `OverflowSpend` (treg pays, budget-bounded) — the caller still gets
 the vendor's own error and is charged nothing. This is the week the plan requires before routes serve.
 
-Never on tiers 1/2, a caller-caused 4xx, a 401, a timeout, PUT/PATCH/DELETE, or a route the worker
-has not enabled. Org opt-out (`allow_platform_overflow`) lands with step F.
+Never on tiers 1/2, a caller-caused 4xx, a 401, a timeout, PUT/PATCH/DELETE, a route the worker has
+not enabled, or a team that opted out (`Org.platform_overflow_disabled`, `treg org overflow off`) —
+checked before any aggregator is contacted, on both entry points.
 
 ## treg's own headers never reach the upstream — by PREFIX, not by name
 

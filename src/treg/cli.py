@@ -4053,6 +4053,28 @@ def cmd_org_budgets(args, cfg) -> None:
           f"hard limit.{_R}\n")
 
 
+def cmd_org_overflow(args, cfg) -> None:
+    """Allow or refuse the overflow relay for this team: when treg's own account for a provider is
+    out, a metered call may be served through a treg-owned aggregator account on the SAME endpoint
+    (disclosed via X-Treg-Served-Via, the aggregator's real price). Off = the call is refused
+    (503) instead. Own keys are never relayed either way."""
+    with _client(cfg) as c:
+        org_id = _active_org_id(cfg, c)
+        if org_id is None:
+            sys.exit("no active org")
+        if args.state is None:
+            r = c.get(f"/orgs/{org_id}/settings")
+        else:
+            r = c.patch(f"/orgs/{org_id}/settings", json={"platform_overflow": args.state == "on"})
+    if _JSON_OVERRIDE or r.status_code >= 400:
+        _show(r)
+        return
+    on = r.json().get("platform_overflow", True)
+    print(f"\n  overflow relay: {_A if on else _AM}{'on' if on else 'off'}{_R}"
+          f"  {_M}(when treg's own account is out, serve the same endpoint via a treg-owned "
+          f"aggregator account — disclosed, real price){_R}\n")
+
+
 def cmd_org_budget_set(args, cfg) -> None:
     """Set (or update) one tag's limit. Unsent fields are left alone, so `--block` keeps the caps."""
     body: dict = {}
@@ -5070,6 +5092,10 @@ def build_parser() -> argparse.ArgumentParser:
     orv = mk(og, "revoke", "Revoke a pending invite before it's used.", "treg org revoke 3")
     orv.add_argument("invite_id", type=int, help="the invite id (from `org invites`)"); orv.set_defaults(fn=cmd_org_revoke)
     mk(og, "members", "List the active team's members and their roles.", "treg org members").set_defaults(fn=cmd_org_members)
+    oov = mk(og, "overflow", "Show or set whether a metered call may be served through treg's overflow "
+                             "relay when treg's own account is out (admin+).",
+             "treg org overflow", "treg org overflow off")
+    oov.add_argument("state", nargs="?", choices=["on", "off"], help="omit to show"); oov.set_defaults(fn=cmd_org_overflow)
     osr = mk(og, "set-role", "Change a member's role (owner only).", "treg org set-role 5 admin")
     osr.add_argument("user_id", type=int, help="the member's user id (from `org members`)")
     osr.add_argument("role", choices=["viewer", "member", "admin", "owner"], help="the new role"); osr.set_defaults(fn=cmd_org_set_role)

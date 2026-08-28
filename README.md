@@ -115,7 +115,9 @@ Your own credential always beats treg's, so connecting a key you already pay for
 free of the balance rather than duplicating them. An endpoint treg has no published price for is
 **refused**, not served free — you are told to connect your own key instead. Where several providers
 serve one capability, `treg catalog search` shows them side by side with prices; **choosing is
-yours** — treg does not silently pick or fail over for you.
+yours** — treg does not silently pick or fail over between providers for you. (When treg's own
+account for a provider is out it may serve the *same* endpoint through a treg-owned relay account,
+disclosed on the response; a team can opt out.)
 
 ```bash
 treg balance          # credit left, calls in flight, recent spend

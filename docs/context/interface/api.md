@@ -97,6 +97,9 @@ treg does not call an alternative on the caller's behalf — it names them. Not 
 
 ## `X-Treg-Served-Via` — this answer came through an overflow relay
 
+`GET/PATCH /orgs/{id}/settings` carries `platform_overflow` (default `true`); `false` opts the team out —
+such calls get the `503 provider_capacity_unavailable` below instead of a relay.
+
 `overflow:<aggregator>` on a metered call that treg served through a treg-owned aggregator account
 because its own account for the provider was out. Same request, same vendor body shape (routes are
 verified for that), the caller paid the aggregator's real price (`X-Treg-Cost-Micro`), and

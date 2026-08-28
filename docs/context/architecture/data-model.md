@@ -8,6 +8,7 @@ sources:
   - alembic/versions/0002_capacity_policy_snapshot.py
   - alembic/versions/0003_overflow_route.py
   - alembic/versions/0004_overflow_spend.py
+  - alembic/versions/0005_org_platform_overflow_disabled.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/timeutil.py
@@ -210,6 +211,8 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   treg-owned aggregator account, with the aggregator's price, the price ratio, verification stamp and a
   DERIVED `enabled`. Filled by `treg-worker overflow sync` only (alembic `0003`); read-only for the call
   path. See `ops/capacity.md`.
+- `Org.platform_overflow_disabled` — the team's overflow opt-out (alembic `0005`, legacy `_ensure_bool_col`;
+  the legacy-org backfill INSERT names it explicitly like every NOT NULL column). See `ops/capacity.md`.
 - **`OverflowSpend`** — per aggregator per UTC day: calls, the aggregator's charge, the delta against
   treg's direct price. Written inside the overflow child's settle transaction (and by the shadow probe);
   the $20/day budget reads it. Alembic `0004`. Not a balance.

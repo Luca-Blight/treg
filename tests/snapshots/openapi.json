@@ -631,6 +631,17 @@
             ],
             "title": "Daily Cap Micro"
           },
+          "platform_overflow": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Overflow"
+          },
           "primary_dim": {
             "anyOf": [
               {

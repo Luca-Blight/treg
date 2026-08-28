@@ -149,6 +149,8 @@ async def maybe_overflow(
     mode = settings.overflow_mode
     if mode == "off" or mk.tier != "platform" or method.upper() not in OVERFLOW_METHODS:
         return None
+    if getattr(caller.org, "platform_overflow_disabled", False):
+        return None  # the team opted out: never contact an aggregator on its behalf
     why = force_trigger or _trigger(mk, status, headers, body)
     if why is None:
         return None

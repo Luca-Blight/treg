@@ -179,6 +179,11 @@ If treg's **own** account for a provider is out, a metered call is refused with 
 `resets_at` when known and `alternatives` (other providers for the same capability). Your own key
 for the provider is never affected, and treg does not switch providers on your behalf.
 
+Where the deployment has the overflow relay on, treg may instead serve the **same endpoint** through a
+treg-owned aggregator account — same request, same response shape, the relay's real price (0% markup),
+`X-Treg-Served-Via: overflow:<name>` on the response. `treg org overflow off` opts your team out (calls
+then get the 503 above); `treg org overflow` shows the setting. Own keys are never relayed.
+
 ## Calling
 
 | Command | Options | What it does |

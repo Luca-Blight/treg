@@ -1,6 +1,6 @@
 ---
 title: Provider capacity — knowing what treg's own vendor accounts have left
-status: shipped (steps B, B′, D, D′, E — overflow off by default, shadow week pending)
+status: shipped (steps B–F built; production rollout = the shadow week, then TREG_OVERFLOW_MODE=on)
 sources:
   - src/treg/domain/capacity/__init__.py
   - src/treg/domain/capacity/collectors.py
@@ -18,6 +18,7 @@ sources:
   - src/treg/application/call/overflow.py
   - alembic/versions/0004_overflow_spend.py
   - tests/test_capacity_overflow.py
+  - alembic/versions/0005_org_platform_overflow_disabled.py
   - tests/test_capacity_smoothing.py
   - src/treg/domain/capacity/overflow_seed.json
   - src/treg/infra/upstream/aggregators/__init__.py
@@ -174,8 +175,28 @@ writers. **Rollout (plan §5):** run `shadow` for a week with routes enabled —
 (`credential_tier=platform-overflow`, `error_response="treg overflow: shadow"`) — then switch to
 `on` (step F, which also adds the org opt-out and amends the charter).
 
-## Not built yet (plan steps C–F)
+## Enabling overflow (step F) — the opt-out and the rollout
 
-Forecasts and alerts (C, gated on the `money-funding-transactions` debt); enabling overflow in
-production with the org opt-out (F). Until F ships, `TREG_OVERFLOW_MODE` stays `off`, the charter row
-"not built yet: routing/failover" stands and treg still relays a vendor's 402 unchanged.
+`Org.platform_overflow_disabled` (alembic `0005` + legacy `_ensure_bool_col`; last column in the
+class on purpose — alembic appends and the parity test compares order) is the team opt-out:
+`GET/PATCH /orgs/{id}/settings` carries `platform_overflow` (default true), `treg org overflow
+[on|off]` sets it. Honoured before any aggregator is contacted, on both entry points (the
+post-failure child cycle and the resolver's skip-direct rung); an opted-out team gets the typed 503.
+Own keys are never relayed regardless. The charter's "not built" row, `llms.txt`, `skill.md` (+
+plugin), `README.md` and `USAGE.md` now say what treg may do and how it discloses it.
+
+**Rollout runbook (Jason):** 1. set `TREG_OVERFLOW_KEY_ORTHOGONAL` / `_MONID` (rotated keys) in the
+Render web service; 2. `treg-worker overflow sync` (113 routes enable from the seed; `--live` also
+refreshes prices) and schedule `treg-worker overflow verify` weekly (routes decay off after 7 days
+without it); 3. `TREG_OVERFLOW_MODE=shadow` for a week — watch the `overflow SHADOW` log lines and
+the `platform-overflow` audit rows for shape mismatches and the daily `OverflowSpend`; 4.
+`TREG_OVERFLOW_MODE=on`. Keep the Orthogonal balance ≤ \$20 (ToS risk accepted 2026-08-26).
+Not built: the `overflow_masking` alert (step C, gated on the money-funding-transactions debt) —
+until then, `OverflowSpend` per day is the masking signal to read by hand.
+
+## Not built yet (plan step C)
+
+Forecasts, recharge verification and every alert (`quota_exhausted`, `rate_pressure`, `overflow_masking`,
+…) — step C, gated on the `money-funding-transactions` debt. Until the rollout above flips the mode,
+`TREG_OVERFLOW_MODE` is `off` and treg still relays a vendor's 402 unchanged (or answers the typed 503
+when the account is marked exhausted).

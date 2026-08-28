@@ -436,3 +436,6 @@ client's `Authorization`, into an agent's environment. Unpinned it fails there w
 header invisibly all along.
 
 Switching teams is unaffected: an explicit `X-Treg-Org` header always beats the claim.
+
+`treg org overflow [on|off]` shows or sets the team's overflow-relay opt-out (`PATCH /orgs/{id}/settings`
+`platform_overflow`); see `ops/capacity.md`.

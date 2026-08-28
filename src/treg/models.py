@@ -113,6 +113,13 @@ class Org(SQLModel, table=True):
     first_call_at: datetime | None = Field(default=None)
 
     created_at: datetime = Field(default_factory=_now)
+    # Opt-OUT of overflow (docs/context/ops/capacity.md): when treg's own account for a provider is
+    # out, a metered call may be served through a treg-owned aggregator account on the same endpoint.
+    # Default allowed (disclosed via X-Treg-Served-Via); a team that must not have its requests
+    # relayed through a third party sets this (`treg org overflow off`). Stored as the opt-out so the
+    # column default is the plain `false` the legacy helper adds — and LAST in the class, because
+    # alembic's add_column appends and the schema-parity test compares column order.
+    platform_overflow_disabled: bool = Field(default=False)
 
 
 class User(SQLModel, table=True):

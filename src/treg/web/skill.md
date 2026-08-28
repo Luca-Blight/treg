@@ -97,8 +97,11 @@ Notes:
     so you can build its request. Say which one you switched to.
   - **Never retry a 4xx elsewhere.** A 4xx is usually your parameters; fixing them is the fix, and
     retrying burns the team's money on N providers for one mistake.
-  - treg does **not** choose or fail over for you. That is deliberate: only you know which inputs
-    you hold, and treg relays rather than rewrites your request.
+  - treg does **not** choose or fail over **between providers** for you. That is deliberate: only
+    you know which inputs you hold, and treg relays rather than rewrites your request. If treg's
+    own account for a provider is out it may serve the **same endpoint** through a treg-owned relay
+    (`X-Treg-Served-Via: overflow:<name>`, real price, same shape); a team opts out with
+    `treg org overflow off`.
 - An endpoint with no published price is refused rather than served free; connect your own key.
 
 ## Retrying a call without paying twice

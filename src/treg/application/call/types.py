@@ -122,6 +122,7 @@ class OrgSnapshot:
     slug: str
     demo: bool
     public_demo: bool
+    platform_overflow_disabled: bool
     budget_dims: list | None
     primary_dim: str
     daily_cap_micro: int
@@ -175,6 +176,7 @@ class CallerSnapshot:
                 slug=org.slug,
                 demo=org.demo,
                 public_demo=org.public_demo,
+                platform_overflow_disabled=bool(getattr(org, "platform_overflow_disabled", False)),
                 budget_dims=list(org.budget_dims) if org.budget_dims is not None else None,
                 primary_dim=org.primary_dim,
                 daily_cap_micro=org.daily_cap_micro,

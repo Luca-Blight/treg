@@ -833,7 +833,8 @@ async def _resolve_marketplace_call(
         # signature, or the sweep). Never relay a call we know will 402: with an enabled overflow
         # route the ladder skips straight to the child cycle (plan §4); otherwise refuse BEFORE
         # reserve with a typed 503 naming when and what else (§4.2).
-        if get_settings().overflow_mode == "on" and overflow_routes_view.for_endpoint(ep["id"]):
+        if (get_settings().overflow_mode == "on" and not caller.org.platform_overflow_disabled
+                and overflow_routes_view.for_endpoint(ep["id"])):
             skip_direct = True
         else:
             raise _provider_capacity_unavailable(ep, service, capacity_view.get(service))

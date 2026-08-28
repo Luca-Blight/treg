@@ -187,8 +187,12 @@ you can build its request; tell the human which one you switched to. **Never ret
 elsewhere**: that is usually your parameters, and retrying burns the team's money on N providers for
 one mistake.
 
-treg does **not** choose or fail over for you, by design: only you know which inputs you hold, and
-treg relays your request rather than rewriting it.
+treg does **not** choose or fail over **between providers** for you, by design: only you know which
+inputs you hold, and treg relays your request rather than rewriting it. One thing it may do, and
+tells you when it does: if treg's OWN account for the provider is out, it can serve the **same
+endpoint** through a treg-owned relay account — same request, same response shape, the relay's
+real price — with `X-Treg-Served-Via: overflow:<name>` on the response (a team can opt out with
+`treg org overflow off`). Your own keys are never relayed.
 
 Money notes for agents:
 - The price is visible before you call (`treg catalog get`, or `estimated_cost_usd` in
