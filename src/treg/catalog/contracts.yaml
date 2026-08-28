@@ -593,3 +593,71 @@ contracts:
       published: {type: str}
     miss: "video_id == null"
     idempotent: true
+
+  # ---- batch 7 (2026-08-28) ---------------------------------------------------------------------
+  facebook.post.comments:
+    summary: "Comments on a public Facebook post by post id or URL — provider-native comment rows in `comments`"
+    identity:
+      - {post_id: str}
+      - {url: url}
+    filters: {}
+    output:
+      comments: {type: list, required: true}
+      next_cursor: {type: str}
+    miss: "comments == []"
+    idempotent: true
+
+  amazon.product.detail:
+    summary: "One Amazon product by ASIN — the provider's own product object in `product`"
+    identity:
+      - {asin: str}
+    filters:
+      country: {type: str, default: us, note: "marketplace country; mapped to amazon_domain / country"}
+    output:
+      product: {type: object, required: true}
+    miss: "product == null"
+    idempotent: true
+
+  linkedin.company.profile:
+    summary: "A LinkedIn company page from its URL or handle — treg picks the provider and names the one that served"
+    identity:
+      - {linkedin_url: url}
+      - {linkedin_handle: str}
+    derive:
+      linkedin_url: "fmt('https://www.linkedin.com/company/{}', linkedin_handle)"
+      linkedin_handle: "linkedin_handle(linkedin_url)"
+    filters: {}
+    output:
+      name: {type: str, required: true}
+      description: {type: str}
+      website: {type: str}
+      followers: {type: int}
+      employees: {type: str}
+      location: {type: str}
+      linkedin_url: {type: str}
+    miss: "name == null"
+    idempotent: true
+
+  x.post.comments:
+    summary: "Replies to an X (Twitter) post by tweet id — provider-native rows in `comments`"
+    identity:
+      - {tweet_id: str}
+    filters: {}
+    output:
+      comments: {type: list, required: true}
+      next_cursor: {type: str}
+    miss: "comments == []"
+    idempotent: true
+
+  bing.serp.organic:
+    summary: "Bing organic results for a keyword — provider-native result rows in `results`"
+    identity:
+      - {q: str}
+    filters:
+      country: {type: str, default: us}
+      language: {type: str, default: en}
+    output:
+      results: {type: list, required: true}
+      count: {type: int}
+    miss: "results == []"
+    idempotent: true

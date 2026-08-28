@@ -1159,3 +1159,85 @@ adapters:
   # tiktok.search.hashtags, google.domain.overview: one verifiable provider each — no waterfall yet.
   # reddit.post.comments: tikhub's commentForest.trees and justoneapi's postInfoById are truncated/null in
   # the fixtures; scrapecreators has no example.
+
+  # ---- batch 7 (2026-08-28) ---------------------------------------------------------------------
+  justoneapi.x.facebook-get-post-comments-v1:
+    accepts: [[post_id]]
+    in:  {post_id: queryParams.postId}
+    const: {queryParams.cursor: "0"}
+    out: {comments: data.results, next_cursor: data.cursor}
+    miss: "data.results == []"
+  scrapecreators.x.v1-facebook-post-comments:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {comments: comments, next_cursor: cursor}
+    miss: "comments == []"
+
+  serpapi.x.amazon-product:
+    accepts: [[asin]]
+    in:  {asin: queryParams.asin}
+    const: {queryParams.engine: amazon_product, queryParams.amazon_domain: amazon.com}
+    out: {product: product_results}
+    miss: "product_results == null"
+  justoneapi.x.amazon-get-product-detail-v1:
+    accepts: [[asin]]
+    in:  {asin: queryParams.asin}
+    in_expr: {queryParams.country: "upper(country)"}
+    out: {product: data}
+    miss: "data.asin == null"
+
+  fiber-ai.linkedin.company.profile:
+    accepts: [[linkedin_handle]]
+    in:  {linkedin_handle: body.value}
+    const: {body.type: slug}
+    out: {name: output.company.name, description: output.company.description, followers: output.company.follower_count,
+          employees: output.company.employee_count, linkedin_url: output.company.linkedin_url}
+    miss: "output.company == null"
+  scrapecreators.x.v1-linkedin-company:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: queryParams.url}
+    out: {name: name, description: description, website: website, followers: followers, employees: employeeCount,
+          location: "join(location.city, location.country)", linkedin_url: url}
+    miss: "name == null"
+  tikhub.x.linkedin-web-v2-get-company-profile:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: queryParams.url}
+    out: {name: data.name, description: data.about, followers: data.followers, employees: data.company_size,
+          location: "data.locations[0]"}
+    miss: "data.name == null"
+
+  justoneapi.x.twitter-get-post-comments-v1:
+    accepts: [[tweet_id]]
+    in:  {tweet_id: queryParams.tweetId}
+    const: {queryParams.cursor: "0"}
+    out: {comments: data.timeline, next_cursor: data.next_cursor}
+    miss: "data.timeline == []"
+  tikhub.x.twitter-web-fetch-latest-post-comments:
+    accepts: [[tweet_id]]
+    in:  {tweet_id: queryParams.tweet_id}
+    out: {comments: data.timeline, next_cursor: data.next_cursor}
+    miss: "data.timeline == []"
+
+  dataforseo.x.serp-bing-organic-live-advanced:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language}
+    body_array: true
+    out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
+    miss: "tasks[0].result[0].items == []"
+  dataforseo.x.serp-bing-organic-live-regular:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language}
+    body_array: true
+    out: {results: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
+    miss: "tasks[0].result[0].items == []"
+  serpapi.x.bing-search:
+    accepts: [[q]]
+    in:  {q: queryParams.q}
+    in_expr: {queryParams.cc: "upper(country)"}
+    const: {queryParams.engine: bing}
+    out: {results: organic_results, count: search_information.total_results}
+    miss: "organic_results == []"
+  # x.user.following, x.post.detail, youtube.video.captions, google.domain.competitors, xiaohongshu.search.notes:
+  # one vendor with a usable fixture each (X's own API is an OAuth tool) — no waterfall yet.
