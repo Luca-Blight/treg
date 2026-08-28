@@ -580,8 +580,12 @@ async def _catalog_search_impl(
             # the row is priceable, `platform_key_for` says this deploy actually holds an enabled
             # key. Eligible-but-keyless rows used to advertise `no_key_needed: true` here and then
             # refuse at call time — an agent-facing lie the CLI's /access line never told.
-            "no_key_needed": cat.platform_eligible(ep)
-                             and bool(get_settings().platform_key_for(ep.get("provider"))),
+            # a routed row is servable when any child is: its children carry the keys
+            "no_key_needed": cat.platform_eligible(ep) and (
+                ep.get("kind") == "routed"
+                and any(get_settings().platform_key_for((cat.by_id.get(i) or {}).get("provider"))
+                        for i in ep.get("routed_children") or [])
+                or bool(get_settings().platform_key_for(ep.get("provider")))),
             "score": score,
             # The measured half of the answer, at the step where the agent is choosing. Without it
             # the "your agent picks on evidence" story only came true at catalog_get — one endpoint

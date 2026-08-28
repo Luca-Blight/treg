@@ -4752,7 +4752,7 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
         print(f"\n{_A}ROUTES AMONG{_R}  {_M}in this order; a key of yours for a provider goes first, free{_R}")
         for i, c in enumerate(routing["plan"], 1):
             accepts = " | ".join("+".join(v) for v in (c.get("accepts") or []))
-            price = f"${c['price_micro'] / 1e6:.4g}" if c.get("price_micro") is not None else "—"
+            price = f"${c['usd']:.4g}" if c.get("usd") is not None else "—"
             flag = f"  {_AM}exhausted{_R}" if c.get("exhausted") else ""
             print(f"  {i:<3}{_clip(c['endpoint_id'], 38):<38} {price:<9} {accepts}{flag}")
         _dim("  waterfall on a miss: --header 'X-Treg-Route-Waterfall: 1' --header 'X-Treg-Route-Max-Cost: 0.10'")
