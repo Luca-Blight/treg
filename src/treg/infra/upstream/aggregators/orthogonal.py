@@ -15,7 +15,7 @@ import re
 
 from . import AggregatorRequest, AggregatorResult
 
-BASE = "https://api.orthogonal.dev/v1"
+BASE = "https://api.orthogonal.com/v1"
 NAME = "orthogonal"
 
 

@@ -76,7 +76,11 @@ async def verify_route(client: httpx.AsyncClient, route, *, key: str, direct: tu
     body_doc = test_request.get("body")
     body = json.dumps(body_doc).encode() if body_doc is not None else None
     path_params = test_request.get("pathParams") or {}
-    res = await relay_once(client, route, key, q, body, path_params)
+    try:
+        res = await relay_once(client, route, key, q, body, path_params)
+    except httpx.RequestError as exc:  # a dead aggregator host is a failed verification, not a crash
+        return Verification(route.endpoint_id, route.aggregator, None, None, None, None, None,
+                            note=f"relay unreachable: {type(exc).__name__}: {exc}")
     now = utcnow_naive()
     if res.failure or res.upstream_status is None:
         return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
@@ -85,7 +89,11 @@ async def verify_route(client: httpx.AsyncClient, route, *, key: str, direct: tu
         return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
                             res.cost_micro, None, note="relay ok, direct not attempted")
     url, dq, dbody = direct
-    dr = await client.request(route.method, url, params=dq or None, content=dbody, headers=direct_headers or {})
+    try:
+        dr = await client.request(route.method, url, params=dq or None, content=dbody, headers=direct_headers or {})
+    except httpx.RequestError as exc:
+        return Verification(route.endpoint_id, route.aggregator, None, res.upstream_status, None,
+                            res.cost_micro, None, note=f"direct unreachable: {type(exc).__name__}: {exc}")
     same = shapes_match(dr.content, res.upstream_body) if 200 <= dr.status_code < 300 else None
     return Verification(route.endpoint_id, route.aggregator, dr.status_code, res.upstream_status, same,
                         res.cost_micro, now if same else None,
