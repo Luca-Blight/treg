@@ -25,6 +25,7 @@ sources:
   - src/treg/domain/governance/usage.py
   - src/treg/domain/identity/__init__.py
   - src/treg/domain/money/__init__.py
+  - src/treg/domain/capacity/__init__.py
   - src/treg/infra/upstream/__init__.py
   - src/treg/infra/upstream/injectors.py
   - src/treg/infra/upstream/relay.py
@@ -91,3 +92,8 @@ An ignore covers an entire module edge and therefore cannot detect someone movin
 module scope. `tests.test_import_lightness` closes that gap by starting an isolated Python subprocess,
 importing every lightweight module, and asserting that no server dependency root appears in `sys.modules`.
 Base dependencies such as httpx and questionary remain allowed.
+
+The capacity domain (`treg.domain.capacity`, plan step B) is a leaf like identity: it cannot import
+`treg.api`, `treg.routers`, `treg.application`, `treg.bootstrap`, `treg.audit`, FastAPI or Starlette.
+It reads config and writes only its own tables and ratestore keys, from worker-profile commands
+(`treg-worker`, a separate console script so the light `treg` CLI never gains a DB import).

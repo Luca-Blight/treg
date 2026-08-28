@@ -20,7 +20,7 @@ covers (frontmatter `sources:`). Regenerate this index with
 | [Auth & secrets — injectors, encryption, OAuth freshness, health](architecture/auth-secrets.md) | shipped | injectors.py, injectors.py, ssrf.py, crypto.py, … |
 | [Endpoint catalog — what you can DO with a connected key, and which provider should do it](architecture/catalog.md) | shipped | catalog-drift.yml, catalog_drift.py, catalog_ingest.py, catalog_validate.py, … |
 | [Application composition and deployment roles](architecture/composition.md) | shipped | bootstrap.py, bootstrap_handlers.py, bootstrap_http.py, connect.py, … |
-| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | alembic.ini, env.py, 0001_baseline_current_schema.py, sitetrack.js, … |
+| [Data model — the registry tables, async DB, audit writer](architecture/data-model.md) | shipped | alembic.ini, env.py, 0001_baseline_current_schema.py, 0002_capacity_policy_snapshot.py, … |
 | [Enforced import boundaries](architecture/import-boundaries.md) | shipped | pyproject.toml, ci.yml, __init__.py, __init__.py, … |
 | [Local proxy — catch a program's own outgoing calls (`treg <command>`)](architecture/local-proxy.md) | shipped | localproxy.py, server.js |
 | [Local CLI runs — run a vendor CLI as a dedicated user with a server-held credential (`treg run`)](architecture/local-run.md) | shipped | localrun.py, egress.py, fsjail.py |
@@ -49,7 +49,8 @@ covers (frontmatter `sources:`). Regenerate this index with
 
 | Fragment | Status | Covers |
 |---|---|---|
-| [Running & deploying the server](ops/deploy.md) | shipped | pyproject.toml, __main__.py, selfhost.sh, config.py, … |
+| [Provider capacity — knowing what treg's own vendor accounts have left](ops/capacity.md) | shipped (step B, observe-only) | __init__.py, collectors.py, policy.py, sweep.py, … |
+| [Running & deploying the server](ops/deploy.md) | shipped | pyproject.toml, __main__.py, worker.py, selfhost.sh, … |
 
 ## Reference
 

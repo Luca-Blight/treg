@@ -4,6 +4,7 @@ status: shipped
 sources:
   - pyproject.toml
   - src/treg/__main__.py
+  - src/treg/worker.py
   - src/treg/web/selfhost.sh
   - src/treg/config.py
   - src/treg/db.py
@@ -12,6 +13,7 @@ sources:
   - scripts/dev-local.sh
   - render.yaml
 related:
+  - ops/capacity.md
   - architecture/data-model.md
   - architecture/ads-conversions.md
   - foundation/charter.md
@@ -313,6 +315,15 @@ routes on tier 4. Binding is the plain `x-api-key` header; no `fx.yaml` row beca
 USD. Platform billing settles every call from the response's `costDollars.total`, so a 20-result
 search or a contents call with three content types bills exactly what Exa charged, not the catalog
 base. Verified on the dev server before merge: reserve $0.007 → settle $0.009 on a 12-result search.
+
+## Worker commands and the capacity cron (2026-08-28)
+
+`treg-worker` (console script, `[server]` extra) hosts the scheduled maintainer commands — today
+`capacity sweep` (see `ops/capacity.md`). `render.yaml` runs it as the cron service
+`treg-capacity-sweep` every hour, with the DB URL, Fernet key and every `TREG_PLATFORM_KEY_*` pulled
+from the web service via `fromService` — so a new platform key is added in ONE place. Aggregator keys
+(`TREG_OVERFLOW_KEY_ORTHOGONAL` / `_MONID`) are dashboard-managed on the web service and flow the same
+way; they are declared in `config.py` but nothing serves through them yet.
 
 ## A db.py change needs a Postgres-shaped deploy plan
 

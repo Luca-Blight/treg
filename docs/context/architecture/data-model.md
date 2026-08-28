@@ -5,6 +5,7 @@ sources:
   - alembic.ini
   - alembic/env.py
   - alembic/versions/0001_baseline_current_schema.py
+  - alembic/versions/0002_capacity_policy_snapshot.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/timeutil.py
@@ -197,6 +198,13 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   (member, runtime), the auto-captured half of the agents story. `Membership.created_by` (same
   step) names the admin who minted an agent; `''` for door/invite joins.
 
+- **`CapacityPolicy` / `CapacitySnapshot`** — what each treg-owned vendor account (tier 4) meters and
+  how it is funded, and the append-only observations of what it has left. Written by the worker's
+  `treg-worker capacity sweep` only, never by the call path; the sweep also publishes a per-provider
+  latest state into `Ephemeral` under `capacity:state:<provider>`, which the dataplane will read on a
+  TTL from plan step D. Numbers only — never a credential. See `ops/capacity.md`. Alembic revision
+  `0002` pairs with the `create_all` path for these two tables.
+
 ## Bindings (the multi-credential shape)
 `Tool.bindings` is a JSON list; each entry is
 `{secret_id, injector, location, name, format, secret_field}` — one credential injection. A request
@@ -228,6 +236,10 @@ temporarily as `api._utcnow_naive` and `api._as_naive` during the staged router 
 parameters compared with timestamp columns follow the same constraint as inserted or updated values.
 
 ## Alembic baseline
+
+Revisions after the baseline (`0002` capacity tables) must be paired with the legacy startup path
+until stage 5; the parity test compares a fresh `init_db` schema with `alembic upgrade head`.
+
 
 `alembic/versions/0001_baseline_current_schema.py` is the migration baseline for the current
 `SQLModel.metadata` schema. `alembic/env.py` uses the same async SQLite or Postgres URL as the server

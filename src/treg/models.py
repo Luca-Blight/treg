@@ -1028,3 +1028,65 @@ class SearchMiss(SQLModel, table=True):
     # api (HTTP /catalog/search: web + CLI) | mcp | claude-connector
     source: str = Field(default="api", index=True)
     created_at: datetime = Field(default_factory=_now, index=True)
+
+
+class CapacityPolicy(SQLModel, table=True):
+    """How one treg-owned provider account (tier 4) is funded and metered — written by the capacity
+    worker only (`treg-worker capacity sweep`), never by the call path.
+
+    One row per platform-key slot plus one per overflow aggregator (`overflow:orthogonal`, …): the
+    aggregators are prepaid accounts that run dry exactly like a vendor's. `capacity_type` says what
+    the provider meters (cash, credits, requests, a resetting quota, a flat subscription) and
+    `source` how we learn it (its free account API, response headers, a calculation, a hand entry,
+    nothing). `unknown`/`none` are honest defaults for a provider nobody has classified yet — a
+    sweep flags them rather than inventing a number. Numbers only: no key or payment detail lives
+    here. See docs/PROVIDER-CAPACITY-PLAN.md §2.2.
+    """
+
+    provider: str = Field(primary_key=True)
+    capacity_type: str = Field(default="unknown")  # cash | credits | requests | monthly_quota | subscription | unknown
+    source: str = Field(default="none")             # api | headers | calculated | manual | none
+    funding_mode: str = Field(default="unknown")    # auto_recharge | auto_upgrade | manual | quota_reset | unknown
+    auto_funding_enabled: bool = Field(default=False)
+    auto_funding_verified_at: datetime | None = Field(default=None)
+    auto_trigger_below: float | None = Field(default=None)  # in the provider's own unit
+    auto_amount: float | None = Field(default=None)
+    auto_ceiling: float | None = Field(default=None)
+    target_runway_days: int = Field(default=30)
+    warn_days: int = Field(default=14)
+    urgent_days: int = Field(default=7)
+    critical_days: int = Field(default=3)
+    # micro-USD per provider unit, NULL = unknown (never invent a dollar figure from it)
+    usd_per_unit_micro: int | None = Field(default=None)
+    owner_email: str = Field(default="")
+    dashboard_url: str = Field(default="")
+    runbook: str = Field(default="")
+    overflow_allowed: bool = Field(default=True)
+    # {"limit": int, "window_s": int, "source": "headers|docs|observed"} — the burst limit
+    rate_limit: dict | None = Field(default=None, sa_column=Column("rate_limit", JSON, nullable=True))
+    # {"limit": int, "period": "day|month|billing", "resets_at_rule": str} — the period allowance
+    quota: dict | None = Field(default=None, sa_column=Column("quota", JSON, nullable=True))
+    enabled: bool = Field(default=True)  # a slot with no key in the env is imported disabled
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+
+
+class CapacitySnapshot(SQLModel, table=True):
+    """One observation of what a provider says treg's account has left. Appended by every sweep
+    (and later by header capture); never updated. `remaining`/`total` are in the provider's own
+    `unit` — only DataForSEO and TikHub speak dollars. A failed collector is still a row, with
+    `error` set and `confidence='stale'`, so an outage is visible as a gap in the curve rather than
+    as silence. Contains numbers and a short note only — never a credential or payment detail.
+    """
+
+    id: int | None = Field(default=None, primary_key=True)
+    provider: str = Field(index=True)
+    observed_at: datetime = Field(default_factory=_now, index=True)
+    remaining: float | None = Field(default=None)
+    total: float | None = Field(default=None)
+    unit: str = Field(default="")
+    resets_at: datetime | None = Field(default=None)
+    source: str = Field(default="api")           # api | headers | calculated | manual
+    confidence: str = Field(default="exact")     # exact | estimate | stale
+    note: str = Field(default="")
+    error: str = Field(default="")
