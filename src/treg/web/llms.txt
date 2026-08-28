@@ -199,9 +199,10 @@ real price — with `X-Treg-Served-Via: overflow:<name>` on the response (a team
 `POST /call/treg.people.email.find` with `{full_name, domain}` (or `first_name`+`last_name`+`domain`,
 or `linkedin_url`) and treg runs the best child — your own keys first, then cheapest per hit — and
 answers `{output, raw, _treg: {served_by, tried, charged_micro}}` with `X-Treg-Served-By`. A
-provider error falls back to the next one automatically; a MISS does not unless you send
-`X-Treg-Route-Waterfall: 1` (bounded by `X-Treg-Route-Max-Cost: <usd>`; each miss is settled at its
-real price). `catalog_get` on the routed id shows the ranked plan and prices before you spend.
+provider error OR a miss falls through to the next provider, cheapest first, within
+`X-Treg-Route-Max-Cost` (default $0.10 per call; misses on per-success providers are free) — send
+`X-Treg-Route-Waterfall: 0` to stop at the first miss. `catalog_get` on the routed id shows the
+ranked plan and prices before you spend.
 Call a specific provider's endpoint when you need a particular one.
 
 Money notes for agents:

@@ -9,7 +9,8 @@ core `output` (via the child's adapter), the child's `raw` body, and `_treg: {se
 Fallback follows the overflow rules: on an ERROR (our 5xx/503, a vendor 5xx/429/402) the next
 candidate is tried, at most two extra, idempotent contracts only; a caller-caused refusal (4xx)
 stops at once — it would be the same 4xx everywhere. A MISS (2xx, `adapter.miss`) stops unless the
-caller opted into the waterfall (`X-Treg-Route-Waterfall: 1`), bounded by `X-Treg-Route-Max-Cost`.
+caller turned the waterfall off (`X-Treg-Route-Waterfall: 0`). The waterfall is ON by default —
+the endpoint's job is to find the thing — bounded by `X-Treg-Route-Max-Cost` (default $0.10).
 """
 
 from __future__ import annotations
@@ -45,10 +46,13 @@ _DROP_FROM_CHILD = frozenset({b"content-length", b"content-type", b"transfer-enc
 _CALLER_FAULT = frozenset({400, 401, 403, 404, 405, 409, 422})
 
 
+DEFAULT_MAX_COST_MICRO = 100_000  # $0.10 per routed call unless the caller says otherwise
+
+
 @dataclass
 class RouteOptions:
-    waterfall: bool = False
-    max_cost_micro: int | None = None
+    waterfall: bool = True
+    max_cost_micro: int | None = DEFAULT_MAX_COST_MICRO
     prefer: list[str] = field(default_factory=list)
     exclude: list[str] = field(default_factory=list)
 
@@ -58,11 +62,12 @@ class RouteOptions:
             return [p.strip() for p in (v or "").split(",") if p.strip()]
         mc = get(MAX_COST_HEADER)
         try:
-            max_cost = int(round(float(mc) * 1_000_000)) if mc else None
+            max_cost = int(round(float(mc) * 1_000_000)) if mc else DEFAULT_MAX_COST_MICRO
         except ValueError:
             raise ResolutionFailed("catalog_parameter_invalid", status_code=400,
                                    detail=f"{MAX_COST_HEADER} must be a USD number, got {mc!r}")
-        return cls(waterfall=str(get(WATERFALL_HEADER) or "").lower() in ("1", "true", "yes"),
+        wf = str(get(WATERFALL_HEADER) or "").strip().lower()
+        return cls(waterfall=wf not in ("0", "false", "no", "off"),
                    max_cost_micro=max_cost, prefer=_list(get(PREFER_HEADER)), exclude=_list(get(EXCLUDE_HEADER)))
 
 

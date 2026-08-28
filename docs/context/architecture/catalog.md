@@ -1110,8 +1110,10 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   reserve, relay, settle, audit row and cancellation compensation are the ordinary ones. Vendor
   4xx (not 402/408/429) = caller fault → stop (`route_caller_fault`, the vendor's status). Our
   5xx/503/429 or a vendor 5xx/429/402 = error → next candidate, at most two extra, only for
-  idempotent contracts. A MISS stops unless `X-Treg-Route-Waterfall: 1`; every attempt is settled
-  at its real price and `X-Treg-Route-Max-Cost` bounds the sum before each reserve (a candidate
+  idempotent contracts. A MISS tries the next candidate — the waterfall is ON by default (decided
+  2026-08-28: the endpoint's job is to find the thing, and misses on the per-success children are
+  free); `X-Treg-Route-Waterfall: 0` stops at the first miss. Every attempt is settled at its real
+  price and `X-Treg-Route-Max-Cost` (default $0.10) bounds the sum before each reserve (a candidate
   that would breach it is `skipped`). Response: `{output, raw, _treg: {served_by, provider, tier,
   outcome, tried[], charged_micro}}`, `X-Treg-Served-By`, `X-Treg-Providers-Tried`,
   `X-Treg-Route-Outcome`, `X-Treg-Cost-Micro` = the sum, one `X-Treg-Call-Id`. The parent owns

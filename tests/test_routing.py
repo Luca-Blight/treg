@@ -162,20 +162,21 @@ async def test_error_on_the_first_child_falls_back_to_the_second(clients: AsyncC
     assert seen[1] == ("findymail", "POST", {}, {"name": "Patrick Collison", "domain": "stripe.com"})
 
 
-async def test_miss_stops_unless_waterfall_and_waterfall_respects_max_cost(clients: AsyncClient, enrichment_on, monkeypatch):
+async def test_waterfall_is_on_by_default_can_be_turned_off_and_respects_max_cost(clients: AsyncClient, enrichment_on, monkeypatch):
     miss_tomba = (200, {"data": {"email": None, "score": None, "verification": {"status": None}}})
     seen = []
     monkeypatch.setattr(call_service, "relay", _relay_by_provider({"tomba": [miss_tomba]}, seen))
-    r = await clients.post(f"/call/{ROUTED}", json={"full_name": "Nobody Here", "domain": "stripe.com"})
+    r = await clients.post(f"/call/{ROUTED}", json={"full_name": "Nobody Here", "domain": "stripe.com"},
+                           headers={"X-Treg-Route-Waterfall": "0"})
     assert r.status_code == 200 and r.json()["_treg"]["outcome"] == "miss" and r.json()["output"]["email"] is None
-    assert r.headers["X-Treg-Route-Outcome"] == "miss" and len(seen) == 1
-    # waterfall: miss → next cheapest → hit; skips a candidate that would breach the ceiling
+    assert r.headers["X-Treg-Route-Outcome"] == "miss" and len(seen) == 1, "waterfall off: stop at the first miss"
+    # waterfall (the default): miss → next cheapest → hit; skips a candidate that would breach the ceiling
     seen.clear()
     monkeypatch.setattr(call_service, "relay", _relay_by_provider(
         {"tomba": [miss_tomba], "findymail": [(200, {"contact": {"name": "N H", "email": None}})],
          "hunter": [(200, {"data": {"email": "n@stripe.com", "score": 50, "verification": {"status": "valid"}}})]}, seen))
     r = await clients.post(f"/call/{ROUTED}", json={"full_name": "Nobody Here", "domain": "stripe.com"},
-                           headers={"X-Treg-Route-Waterfall": "1", "X-Treg-Route-Max-Cost": "0.08"})
+                           headers={"X-Treg-Route-Max-Cost": "0.08"})
     assert r.status_code == 200, r.text
     tried = r.json()["_treg"]["tried"]
     assert [t["outcome"] for t in tried] == ["miss", "miss", "hit"] and r.json()["_treg"]["served_by"] == "hunter.people.email.find"
@@ -188,7 +189,7 @@ async def test_miss_stops_unless_waterfall_and_waterfall_respects_max_cost(clien
         {"tomba": [miss_tomba], "findymail": [(200, {"contact": {"name": "N H", "email": None}})],
          "hunter": [(200, {"data": {"email": None, "score": None}})]}, seen))
     r = await clients.post(f"/call/{ROUTED}", json={"full_name": "Nobody Here", "domain": "stripe.com"},
-                           headers={"X-Treg-Route-Waterfall": "1", "X-Treg-Route-Max-Cost": "0.02"})
+                           headers={"X-Treg-Route-Max-Cost": "0.02"})
     assert r.status_code == 200 and r.json()["_treg"]["outcome"] == "miss"
     # free misses do not consume the ceiling, but hunter (2.45¢ > 2¢) and everything dearer is skipped
     assert [p for p, *_ in seen] == ["tomba", "findymail"]
