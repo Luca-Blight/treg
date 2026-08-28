@@ -1143,8 +1143,13 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   rejected request — per_success, free, the org's own key, or per_call ≤ 1¢ (`CHEAP_RETRY_MICRO`)
   — never the same provider again, within the error bound; if every one rejects it, the caller
   gets `route_caller_fault` naming each attempt. Our 5xx/503/429 or a vendor 5xx/429/402 = error →
-  next candidate, at most two extra, only for idempotent contracts. A 2xx whose body lacks a
-  REQUIRED core field is a MISS, not a hit (dataforseo's `result: null` under a 20000 envelope). A
+  next candidate, at most two extra, only for idempotent contracts. A treg-side
+  `tool_access_denied`, `policy_denied`, or `capability_pinned` refusal is local to that child and
+  follows the same error fallback. A platform child's vendor 401/403 also falls back because it
+  indicates treg's provider credential, not the routed caller's request. Balance and spend-cap
+  refusals remain terminal because another provider cannot change the org-wide decision. A 2xx
+  response whose body lacks a REQUIRED core field is a MISS, not a hit (dataforseo's `result: null`
+  under a 20000 envelope). A
   MISS tries the next candidate — the waterfall is ON by default (decided
   2026-08-28: the endpoint's job is to find the thing, and misses on the per-success children are
   free); `X-Treg-Route-Waterfall: 0` stops at the first miss. Every attempt is settled at its real

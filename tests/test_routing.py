@@ -10,7 +10,7 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel import select
 
-from treg import audit
+from treg import audit, ledger
 from treg.application.call import route as call_route
 from treg.application.call import service as call_service
 from treg.application.call.types import UpstreamResponse
@@ -256,6 +256,88 @@ async def test_error_on_the_first_child_falls_back_to_the_second(clients: AsyncC
     assert r.headers["X-Treg-Providers-Tried"] == "tomba,findymail"
     assert before - await _balance(clients) == 19_800, "the failed child released its hold; only findymail charged"
     assert seen[1] == ("findymail", "POST", {}, {"name": "Patrick Collison", "domain": "stripe.com"})
+
+
+async def test_child_capability_pin_refusal_falls_back_to_the_pinned_provider(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    pinned = await clients.post(
+        f"/orgs/{org_id}/pins",
+        json={"capability": "people.email.find", "provider": "hunter"},
+    )
+    assert pinned.status_code == 200, pinned.text
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider({
+        "hunter": [(200, {"data": {
+            "email": "patrick@stripe.com", "score": 90,
+            "verification": {"status": "valid"},
+        }})],
+    }, seen))
+
+    response = await clients.post(
+        f"/call/{ROUTED}",
+        json={"full_name": "Patrick Collison", "domain": "stripe.com"},
+        headers={"X-Treg-Route-Prefer": "tomba,hunter"},
+    )
+
+    assert response.status_code == 200, response.text
+    doc = response.json()
+    assert doc["_treg"]["served_by"] == "hunter.people.email.find"
+    assert [attempt["outcome"] for attempt in doc["_treg"]["tried"]] == ["error", "hit"]
+    assert doc["_treg"]["tried"][0]["endpoint_id"] == "tomba.people.email.find"
+    assert [provider for provider, *_ in seen] == ["hunter"]
+
+
+async def test_platform_vendor_401_falls_back_to_the_next_provider(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    findymail = catalog_store.load().by_id["findymail.search.name"]
+    monkeypatch.setitem(findymail, "cost", {**findymail["cost"], "type": "per_call"})
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider({
+        "tomba": [(401, {"error": "invalid platform key"})],
+        "findymail": [(200, {"contact": {
+            "name": "Patrick Collison", "email": "patrick@stripe.com",
+        }})],
+    }, seen))
+
+    response = await clients.post(
+        f"/call/{ROUTED}",
+        json={"full_name": "Patrick Collison", "domain": "stripe.com"},
+        headers={
+            "X-Treg-Route-Prefer": "tomba,findymail",
+            "X-Treg-Route-Exclude": "hunter,leadmagic,leadsforge,aviato,fiber-ai",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    doc = response.json()
+    assert doc["_treg"]["served_by"] == "findymail.search.name"
+    assert [attempt["outcome"] for attempt in doc["_treg"]["tried"]] == ["error", "hit"]
+    assert [provider for provider, *_ in seen] == ["tomba", "findymail"]
+
+
+async def test_routed_insufficient_balance_still_stops_before_fallback(
+    clients: AsyncClient, enrichment_on, monkeypatch,
+):
+    org_id = (await clients.get("/orgs")).json()[0]["org_id"]
+    async with session_maker() as db:
+        await ledger.reserve(db, org_id, "drain routed balance", 1_000_000)
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider({
+        "tomba": [(200, {"data": {"email": "should-not-run@example.com"}})],
+    }, seen))
+
+    response = await clients.post(
+        f"/call/{ROUTED}",
+        json={"full_name": "Patrick Collison", "domain": "stripe.com"},
+        headers={"X-Treg-Route-Prefer": "tomba,findymail"},
+    )
+
+    assert response.status_code == 402
+    assert response.json()["detail"]["error"] == "insufficient_balance"
+    assert seen == []
 
 
 async def test_waterfall_is_on_by_default_can_be_turned_off_and_respects_max_cost(clients: AsyncClient, enrichment_on, monkeypatch):
