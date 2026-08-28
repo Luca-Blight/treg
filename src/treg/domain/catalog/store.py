@@ -561,11 +561,20 @@ def endpoint_view(ep: dict, provider_display: str, cat: Catalog | None = None) -
     }
 
 
-def group_routed(rows: list[dict], key=lambda r: r) -> list[dict]:
+MAX_ROUTED_CHILDREN = 5  # children shown under a routed parent in discovery; the rest are in `catalog get`
+
+
+def group_routed(rows: list[dict], key=lambda r: r, max_children: int | None = None) -> list[dict]:
     """Discovery order with routed parents FIRST: a capability that has a routed row in `rows` is
     shown as a group — the parent at the position its best member earned, its children (same
     capability) right under it — and everything else keeps its order. Relevance still decides
-    where the group sits; within it, "let treg choose" leads and the specific providers follow."""
+    where the group sits; within it, "let treg choose" leads and the specific providers follow.
+
+    `max_children` caps each group: a search page is a list of JOBS, and one capability's 24
+    providers must not eat the whole result budget (`find leads`, 2026-08-28: people.search's
+    children pushed people.email.find to one line and people.enrich off the page). The children
+    kept are the best-ranked ones; the parent row is stamped `children_hidden` = how many were cut,
+    and the full ranked list is one `catalog get <parent>` away."""
     routed_caps = {key(r)["capability"] for r in rows if key(r).get("kind") == "routed"}
     if not routed_caps:
         return rows
@@ -578,7 +587,25 @@ def group_routed(rows: list[dict], key=lambda r: r) -> list[dict]:
         if v["capability"] in routed_caps:
             return (first_pos[v["capability"]], 0 if v.get("kind") == "routed" else 1, i)
         return (i, 0, i)
-    return [r for _, r in sorted(enumerate(rows), key=_k)]
+    ordered = [r for _, r in sorted(enumerate(rows), key=_k)]
+    if max_children is None:
+        return ordered
+    out: list[dict] = []
+    shown: dict[str, int] = {}
+    parents: dict[str, dict] = {}
+    for r in ordered:
+        v = key(r)
+        cap = v["capability"]
+        if cap in routed_caps and v.get("kind") != "routed":
+            if shown.get(cap, 0) >= max_children:
+                if cap in parents:
+                    parents[cap]["children_hidden"] = parents[cap].get("children_hidden", 0) + 1
+                continue
+            shown[cap] = shown.get(cap, 0) + 1
+        elif v.get("kind") == "routed":
+            parents[cap] = v
+        out.append(r)
+    return out
 
 
 def endpoint_context(ep: dict, cat: Catalog) -> dict:
@@ -844,6 +871,20 @@ def search(query: str, cat: Catalog, limit: int = 25) -> tuple[list[tuple[dict, 
         if sum(1 for i in required if per_tok[i]) < need:
             continue
         scored.append((ep, round(sum(w * idf[i] for i, w in enumerate(per_tok)), 4)))
+    # A routed parent (`treg.<capability>`) rides in whenever one of its children matched, at the
+    # best child's score: `find leads` matches `leadsforge.people.email.find` on the PROVIDER's
+    # name, and the row an agent should see first for that job is the one where treg chooses among
+    # every provider — which contains no word of that query (2026-08-28).
+    present = {ep["id"] for ep, _ in scored}
+    best_child: dict[str, float] = {}
+    for ep, score in scored:
+        parent_id = f"treg.{ep.get('capability')}" if ep.get("capability") else None
+        if parent_id and parent_id not in present and ep.get("kind") != "routed":
+            best_child[parent_id] = max(best_child.get(parent_id, 0.0), score)
+    for parent_id, score in best_child.items():
+        parent = cat.by_id.get(parent_id)
+        if parent is not None and parent.get("kind") == "routed":
+            scored.append((parent, score))
     scored.sort(key=lambda row: (-row[1], row[0]["tier"] != "core", not row[0]["verified"], row[0]["id"]))
     return scored[:max(limit, 0)], len(scored)
 

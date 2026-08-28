@@ -1243,6 +1243,8 @@ async def test_search_survives_missing_a_few_words_of_an_agent_sentence(clients)
     _, all_tiktok = cs.search("tiktok", cat, 1)
     assert 0 < both < all_tiktok
     for ep, _ in cs.search("tiktok comments", cat, 10**6)[0]:
+        if ep.get("kind") == "routed":
+            continue  # a routed parent rides in on a matched child; its own text need not match
         fields = cs._haystacks(ep, cat)
         assert any("tiktok" in t for _, t in fields) and any("comment" in t for _, t in fields)
     # aliases.yaml bridges the agent's word into the catalog's word at the same weight: the catalog

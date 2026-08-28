@@ -206,9 +206,9 @@ capabilities:
 
   # --- Enrichment (B2B data) --------------------------------------------------------------------
   companies.enrich: "Enrich a company from its domain or name"
-  companies.search: "Search companies by industry, size or tech"
+  companies.search: "Search companies by industry, size or tech — account lists for lead generation"
   people.enrich: "Enrich a person from email or LinkedIn"
-  people.search: "Search people by role, company or location"
+  people.search: "Find people by role, company or location — lead lists and prospects (sales leads)"
   people.email.find: "Find someone's work email"
   people.email.verify: "Verify an email address"
 

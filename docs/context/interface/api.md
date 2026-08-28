@@ -318,7 +318,9 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
 - **Catalog discover → inspect** (open, same section): the two routes that complete the loop whose third
   step is `treg call`. `catalog_search` (`GET /catalog/search?q=&limit=` , default 25, capped 100) →
   `{query, count, total, results[], hints[]}`; a result is the endpoint view **plus** `{capability,
-  capability_description, platform, platform_label, score}`. Ranking is plain token containment
+  capability_description, platform, platform_label, score}`; a routed parent (`kind: routed`) rides in
+  whenever one of its children matched and carries `children_hidden` when its group was capped at 5
+  (`catalog_store.MAX_ROUTED_CHILDREN`; the full ranked list is `catalog_get`'s plan). Ranking is plain token containment
   (`catalog_store.search`, no deps, no embeddings): **most** query tokens must match — a query may miss
   one token in three, so a second word still narrows (1–2 words: all required) while an agent's
   seven-word sentence survives its filler. Function words, single letters and tokens matching >25%

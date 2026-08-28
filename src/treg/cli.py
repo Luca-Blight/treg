@@ -4642,7 +4642,8 @@ def _catalog_search(query: str, args, cfg) -> None:
         return
 
     idw = min(max(len(e["id"]) for e in rows), 46)
-    print(f"\n{body['total']} matches for \"{query}\"" + (f" — showing {len(rows)}" if body["total"] > len(rows) else ""))
+    print(f"\n{body['total']} matches for \"{query}\""
+          + (f" — showing {len(rows)} (--limit {min(body['total'], 100)} for more)" if body["total"] > len(rows) else ""))
     connected = _connected_providers(cfg)
     # No PLATFORM/PROVIDER columns: the id spells both (`hunter.people.email.find`), and the width
     # is better spent on the summary an agent actually reads.
@@ -4650,16 +4651,29 @@ def _catalog_search(query: str, args, cfg) -> None:
     # The server groups a capability that has a ROUTED row: the parent first, its children right
     # under it. Draw that as a hierarchy — "let treg choose" leads, the specific providers indent.
     routed_caps = {e["capability"] for e in rows if e.get("kind") == "routed"}
+    open_group: dict | None = None  # the routed parent whose children are printing
+
+    def _close_group() -> None:
+        # the server shows the best few children; the rest are one `catalog get` away
+        if open_group and open_group.get("children_hidden"):
+            _dim(f"    + {open_group['children_hidden']} more providers — treg catalog get {open_group['id']}")
+
     for e in rows:
         if e.get("kind") == "routed":
+            _close_group()
+            open_group = e
             print(f"▸ {_clip(e['id'], idw):<{idw}} {_clip(_cost_usd(e.get('cost')), 16):<16} "
                   f"{'●' if e['provider'] in connected else ' '}  ROUTED — {_clip(e.get('summary', ''), 70)}")
             _dim(f"    treg picks among {len(e.get('routed_children') or [])} providers (own keys first, then cheapest "
                  f"per hit) and names the one that served. To choose the provider yourself, call a child id:")
             continue
+        if open_group and e.get("capability") != open_group.get("capability"):
+            _close_group()
+            open_group = None
         indent = "    " if e.get("capability") in routed_caps else "  "
         print(f"{indent}{_clip(e['id'], idw):<{idw}} {_clip(_cost_usd(e.get('cost')), 16):<16} "
               f"{'●' if e['provider'] in connected else ' '}  {_clip(e.get('summary', ''), 78)}")
+    _close_group()
     _dim(f"\ntreg catalog get {rows[0]['id']}   # params, cost, example response")
 
 

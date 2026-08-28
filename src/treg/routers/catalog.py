@@ -177,9 +177,11 @@ async def catalog_search(q: str = "", limit: int = 25,
     command, since finding the endpoint is never the goal — inspecting or calling it is."""
     cat = catalog_store.load()
     limit = max(1, min(limit, 100))
-    ranked, total, tie_truncated = catalog_store.rank_band(q, cat, limit)
+    # Rank a WIDER band than the page: collapsing a routed group (below) frees rows, and the next
+    # jobs down the ranking should fill them rather than the page coming up short.
+    ranked, total, tie_truncated = catalog_store.rank_band(q, cat, min(100, limit * 4))
     stats = await _observed_or_empty(observations, [ep["id"] for ep, _ in ranked])
-    ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
+    ranked = catalog_store.rerank(ranked, stats, cat)
     results = [
         catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
         | catalog_store.endpoint_context(ep, cat)
@@ -188,7 +190,7 @@ async def catalog_search(q: str = "", limit: int = 25,
         | {"score": score, "observed": stats.get(ep["id"])}
         for ep, score in ranked
     ]
-    results = catalog_store.group_routed(results)
+    results = catalog_store.group_routed(results, max_children=catalog_store.MAX_ROUTED_CHILDREN)[:limit]
     if not q.strip():
         hints = ["pass ?q= — e.g. /catalog/search?q=tiktok+comments"]
     elif not results:

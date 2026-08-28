@@ -1093,6 +1093,26 @@ against the org's OWN tools and 404s without one). A team holding its own key fo
 can still call that provider by URL; that is their credential and their bill, and `DenyRule` —
 host-scoped, applied to every shape of call — is the tool for blocking it.
 
+### Routed groups in discovery — a search page is a list of JOBS (2026-08-28)
+
+Three rules, all in `group_routed` / `search`, shared by `/catalog/search`, MCP `catalog_search`
+and the CLI so the three surfaces cannot disagree:
+
+- **A matched child brings its routed parent.** `find leads` matched `leadsforge.*` on the
+  provider's NAME; the row an agent should see first for that job — `treg.people.search`, where
+  treg chooses among every provider — contained no word of the query. `search` now adds
+  `treg.<capability>` at the best child's score whenever a child matched. The token-filter tests
+  exempt these pulled-in rows: their own text need not contain the query.
+- **Vocabulary before ranking.** The same query first ranked `people.email.find` above
+  `people.search` because `find` is a token of the former's capability NAME (weight 3) and only of
+  the latter's summary (weight 2). The fix was to say in `capabilities.yaml` what the job is —
+  `people.search` is "lead lists and prospects (sales leads)" — not to bend the scorer; `aliases.yaml`
+  then only needs `lead → leads`, `prospect → leads, prospects`.
+- **A group shows its best `MAX_ROUTED_CHILDREN` (5) children.** One capability's 24 providers had
+  eaten the whole 25-row page. The parent is stamped `children_hidden`; the CLI prints
+  `+ N more providers — treg catalog get <parent>`, MCP says so in `routed`. To keep the page full
+  after collapsing, search ranks a band of 4× the page (≤ 100) and cuts to `limit` AFTER grouping.
+
 ## Routing — first-party routed endpoints (`treg.<capability>`)
 
 The one place treg **models** an upstream API, and the explicit opt-in where the caller asks treg
