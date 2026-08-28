@@ -2701,9 +2701,10 @@ AGENTS["grok-bot"] = {
          "below is one call, priced per call."),
         ("What can it not do yet?",
          "It does not send anything: email goes through your sequencer and LinkedIn through your "
-         "own account, on your own key. It cannot search LinkedIn by topic or list a post's likers, "
-         "and it has no page-to-markdown scraper today, so reading a prospect's website is a job for "
-         "a tool you already have. The catalog says so on the page rather than pretending."),
+         "own account, on your own key. LinkedIn post search covers public posts through Google's "
+         "index rather than LinkedIn's own feed, and a post's reactions come back a page at a time. "
+         "There is no raw page-to-markdown scraper; website reading is a named-field extraction by "
+         "domain. The catalog says what each tool covers on the page rather than pretending."),
         ("Is treg.to free to use in Grok Bot?",
          "Adding it is free and every new team starts with $1.00 of calls. After that, each call is "
          "metered from the team's prepaid balance at the provider's own rate, with no markup and no "

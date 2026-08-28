@@ -68,9 +68,9 @@ score += 30 if raised_within_days(RAISED, 180) else 0     # step 7
 # >= 50 → "call them now" (Pierre's step 8)
 ```
 
-## The honest gap
+## The honest scope (corrected after review, 2026-08-28)
 
-Pierre's step 2 — **monitor everyone in your ICP engaging with content around keywords** — is a keyword-level feed across all of LinkedIn. That feed is what Gojiberry and Trigify actually are. The catalog can read the engagers on posts you name (yours, a competitor's, an industry account's) but cannot search LinkedIn by topic today. A `catalog_request` for it is open. Until then, curate 20–30 source posts a week by hand; three competitor pages plus two industry voices covered the vendor in Pierre's story.
+Pierre's step 2, monitoring everyone in your ICP who engages with content around keywords, is a keyword-level feed across all of LinkedIn; that feed is what Gojiberry and Trigify actually are. The catalog gets most of the way there with two calls the first draft of this page wrongly called gaps: `scrapecreators.x.v1-linkedin-search-posts` finds public posts by keyword through Google's index (621 calls measured, 99.7% ok, $0.00188, `date_posted=last-week`), and `aviato.linkedin.post.reactions` lists a post's reactors by URN ($0.02 per success, 100 per page; JustOneAPI is the sibling at $0.03). So the honest pipeline is: scheduled keyword search over public posts → reactions and comments per post → profile → ICP filter → funding check. What it is not: LinkedIn's own feed, private posts, or a real-time stream. Say that on the page.
 
 Also not here: sending. LinkedIn caps sit at ~100 invites per rolling week, 20–25 a day, and browser-click automation gets whole user bases banned. Send by hand, or through HeyReach/Unipile on your own key. The catalog reads; it does not press the button.
 
@@ -82,8 +82,8 @@ Also not here: sending. LinkedIn caps sit at ~100 invites per rolling week, 20�
 
 | | Gojiberry | Trigify | Per-call catalog |
 |---|---|---|---|
-| Keyword monitoring across LinkedIn | Yes | Yes | No (gap stated above) |
-| Engagers on named posts | Likers + commenters | Likers + commenters | Commenters, $0.00188 per post; likers are a gap |
+| Keyword monitoring across LinkedIn | Their own feed | Their own feed | Public posts via Google's index, $0.00188 a search, scheduled by you |
+| Engagers on named posts | Likers + commenters | Likers + commenters | Commenters $0.00188 per post; reactors $0.02 per page of 100 |
 | Profile + company + funding enrichment | Bundled | Bundled | $0.002 + $0.002 + $0.01, itemized |
 | API | No | No | Everything is an API |
 | Pricing | Subscription | Subscription | Per call, prepaid |

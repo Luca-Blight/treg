@@ -37,8 +37,9 @@ real run.
 - `/agents/*` pages (all five) gain a **Workflows** section listing every workflow with its step
   count, plus the `.md` twin. `/agents/grok-bot` now links the lead-gen workflow directly.
 - `AGENTS["grok-bot"].faq` gains three Grok-specific entries: lead generation (points at the
-  workflow), research (the jobs by category), and what it cannot do yet (no sending, no LinkedIn
-  topic search, no likers, no page-to-markdown).
+  workflow), research (the jobs by category), and what it cannot do yet (no sending; LinkedIn post
+  search is public posts via Google's index, reactions come a page at a time; website reading is
+  named-field extraction, not raw markdown).
 
 ## Provider note — why the X-complaint recipe is not a workflow yet
 

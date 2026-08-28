@@ -74,7 +74,7 @@ Examples: [your 25 real first lines]
 
 - **Send.** Deliverability is domains, warmup, 30–40 per inbox per day, and cancelling a domain under 0.7% reply. That is Instantly/Smartlead's job; connect yours as an own-key tool and the calls are never metered.
 - **De-anonymize site visitors.** RB2B / Warmly, own key.
-- **Read a prospect's website.** The catalog has no page-to-markdown tool yet (request open). Firecrawl on your own key for that stage.
+- **Read a prospect's website as free text.** The catalog extracts named fields from a site by domain (`branddev.brand.ai.query`, $0.025) but has no raw page-to-markdown tool; Firecrawl on your own key for prose.
 - **Route between providers.** The script picks the order; treg shows the options.
 
 ## The run receipt

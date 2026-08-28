@@ -78,7 +78,7 @@ Run it over a CSV and you have Clay's "Find work email" waterfall column. Add th
 ## Where Clay is still the right buy
 
 - You want a spreadsheet, not a script. The table is genuinely good.
-- You need Claygent-style "read the website and answer a question per row." The catalog has no website-to-markdown tool today (a `catalog_request` is open); use Firecrawl or Perplexity on your own key for that step.
+- You need Claygent-style "read the website and answer a question per row." The catalog has no raw website-to-markdown tool; it does have named-field extraction by domain (`branddev.brand.ai.query`, $0.025), which covers the structured half. For free-text reading use Firecrawl or Perplexity on your own key.
 - You run 50 tables unattended and want Clay's queueing and rate-limit handling. Here, that's your job.
 - Open-source route: YALC (MIT, CLI-first, runs in Claude Code) does the orchestration half; it still needs a key per provider, which is the half this page replaces.
 
@@ -86,7 +86,7 @@ Run it over a CSV and you have Clay's "Find work email" waterfall column. Add th
 
 ```bash
 curl -fsSL https://treg.to/install.sh | sh     # adds skill.md to Claude Code / Cursor
-treg skill install rebuild-clay                  # the waterfall as a SKILL.md
+# the waterfall script above is the recipe; a packaged skill is not published yet
 ```
 
 Related: [Find and verify decision-makers from one agent prompt](/use-cases/lead-enrichment-for-ai-agents/) · [Email finder API: 6 providers compared](/catalog/email-finder-api) · [Email verification API: 3 verifiers compared](/catalog/email-verification-api) · [Research any company list without buying a database](/use-cases/company-research-for-ai-agents/)
