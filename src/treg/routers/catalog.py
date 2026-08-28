@@ -130,6 +130,21 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     }
 
 
+def _plan_row(c) -> dict:
+    """One quote line, token-frugal: what an agent needs to pick or set a ceiling. Measured rates
+    ride only when they exist; the unmeasured case says nothing rather than four nulls."""
+    row = {"endpoint_id": c.endpoint["id"], "accepts": [list(v) for v in c.adapter.accepts],
+           "usd": (c.price_micro / 1_000_000) if c.price_micro is not None else None}
+    if c.hit_rate is not None:
+        row["hit_rate"] = c.hit_rate
+        row["usd_per_hit"] = c.expected_cost_per_hit / 1_000_000
+    if c.ok_rate is not None:
+        row["works"] = c.ok_rate
+    if c.exhausted:
+        row["exhausted"] = True
+    return row
+
+
 def _per_success(cat, endpoint_ids: list[str]) -> set[str]:
     return {i for i in endpoint_ids if ((cat.by_id.get(i) or {}).get("cost") or {}).get("type") == "per_success"}
 
@@ -268,10 +283,10 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
         routing = {
             "contract": {"identity": [list(v) for v in contract.identity], "output": contract.output,
                          "miss": contract.miss, "derive": contract.derive} if contract else None,
-            "plan": [c.view() | {"accepts": [list(v) for v in c.adapter.accepts]} for c in rank(cands)],
-            "options": {"X-Treg-Route-Waterfall": "1 = keep trying on a miss (opt-in; multiplies cost)",
+            "plan": [_plan_row(c) for c in rank(cands)],
+            "headers": {"X-Treg-Route-Waterfall": "1 = keep trying on a miss (opt-in; each miss settles at its real price)",
                         "X-Treg-Route-Max-Cost": "USD ceiling for the whole call",
-                        "X-Treg-Route-Prefer": "provider[,provider]", "X-Treg-Route-Exclude": "provider[,provider]"},
+                        "X-Treg-Route-Prefer": "provider[,…]", "X-Treg-Route-Exclude": "provider[,…]"},
         }
     return {
         "endpoint": view | ({"routed_children": ep.get("routed_children")} if ep.get("kind") == "routed" else {}),

@@ -558,6 +558,12 @@ async def _catalog_search_impl(
     stats = await _observed_stats([ep["id"] for ep, _ in ranked])
     ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
     results = []
+    # Same order the HTTP route serves: a capability with a ROUTED row shows the parent first and
+    # its children right under it (catalog_store.group_routed), so an agent sees "let treg choose"
+    # before the specific providers.
+    grouped = catalog_store.group_routed(
+        [{"ep": ep, "score": score, "capability": ep.get("capability"), "kind": ep.get("kind")} for ep, score in ranked])
+    ranked = [(r["ep"], r["score"]) for r in grouped]
     for ep, score in ranked:
         obs = stats.get(ep["id"]) or {}
         cost = cat.cost_view(ep.get("cost"), ep.get("provider")) or {}
@@ -565,6 +571,10 @@ async def _catalog_search_impl(
             "endpoint_id": ep["id"],
             "name": ep.get("name") or (ep.get("summary") or "")[:70],
             "provider": ep.get("provider"),
+            # a generated routed row: treg picks among N children (own keys first, then cheapest
+            # per hit) and names the one that served — the children follow in this list
+            **({"routed": f"treg picks among {len(ep.get('routed_children') or [])} providers below"}
+               if ep.get("kind") == "routed" else {}),
             "usd_per_call": cost.get("usd"),
             # BOTH halves of tier 4's own truth, not just the price side: `platform_eligible` says
             # the row is priceable, `platform_key_for` says this deploy actually holds an enabled

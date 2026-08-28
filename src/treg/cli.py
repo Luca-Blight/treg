@@ -4747,24 +4747,18 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
     if routing and routing.get("plan"):
         # The QUOTE: what `treg call` on this routed id will try, in order, at treg's prices. Own
         # keys jump to the front at call time (this route is open, so it cannot know yours).
-        print(f"\n{_A}ROUTING PLAN{_R}  {_M}treg tries these in order — a stored key of yours goes first, free{_R}")
-        print(f"  {'#':<3}{'ENDPOINT':<38} {'ACCEPTS':<28} {'PRICE':<10} {'HIT':<6} {'PER HIT':<10} {'WORKS':<9}")
+        # The QUOTE, kept short: order, what each child accepts, and its price — the number a
+        # max-cost decision needs. Hit rates and expected cost per hit are in --json.
+        print(f"\n{_A}ROUTES AMONG{_R}  {_M}in this order; a key of yours for a provider goes first, free{_R}")
         for i, c in enumerate(routing["plan"], 1):
             accepts = " | ".join("+".join(v) for v in (c.get("accepts") or []))
             price = f"${c['price_micro'] / 1e6:.4g}" if c.get("price_micro") is not None else "—"
-            per_hit = f"${c['expected_cost_per_hit_micro'] / 1e6:.4g}" if c.get("expected_cost_per_hit_micro") is not None else "—"
-            hit = f"{c['hit_rate'] * 100:.0f}%" if c.get("hit_rate") is not None else f"{_M}—{_R}"
-            works = f"{c['ok_rate'] * 100:.0f}%" if c.get("ok_rate") is not None else f"{_M}—{_R}"
             flag = f"  {_AM}exhausted{_R}" if c.get("exhausted") else ""
-            print(f"  {i:<3}{_clip(c['endpoint_id'], 38):<38} {_clip(accepts, 28):<28} {price:<10} {_pad(hit, 6)} {per_hit:<10} {_pad(works, 9)}{flag}")
-        for d in routing.get("dropped") or []:
-            _dim(f"      not a candidate: {d['endpoint_id']} — {d['why']}")
-        contract = routing.get("contract") or {}
-        if contract.get("identity"):
-            _dim("  identity — send exactly one: " + " | ".join("{" + ", ".join(v) + "}" for v in contract["identity"]))
-        _dim("  PER HIT = price × P(billed) / P(hit); HIT — is unmeasured, so the order is by price until traffic decides.")
+            print(f"  {i:<3}{_clip(c['endpoint_id'], 38):<38} {price:<9} {accepts}{flag}")
         _dim("  waterfall on a miss: --header 'X-Treg-Route-Waterfall: 1' --header 'X-Treg-Route-Max-Cost: 0.10'")
     sibs = body.get("siblings") or []
+    if routing and routing.get("plan"):
+        sibs = []  # the plan above IS the comparison; the sibling table would repeat it
     if sibs:
         connected = _connected_providers(cfg)
         pinned = _pinned_provider(cfg, e.get("capability"))
@@ -4772,12 +4766,12 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
         # one you asked about is somewhere above is how you pick the wrong row.
         rows = [dict(e, id=e["id"], provider=e["provider"], observed=e.get("observed"), _me=True)] + \
                [dict(x, _me=False) for x in sibs]
-        print(f"  {'PROVIDER':<12} {'ENDPOINT':<38} {'COST':<15} {'WORKS':<11} {'HIT':<6} {'SPEED':<7} {'LAST OK':<8} ●")
+        print(f"  {'ENDPOINT':<40} {'COST':<15} {'WORKS':<11} {'HIT':<6} {'SPEED':<7} {'LAST OK':<8} ●")
         for s in rows:
             mark = f"{_A}▸{_R}" if s.get("_me") else " "
             if pinned and s["provider"] != pinned:
                 continue          # the team pinned this job elsewhere; these are not callable
-            print(f" {mark}{_clip(s['provider'], 12):<12} {_clip(s['id'], 38):<38} "
+            print(f" {mark}{_clip(s['id'], 40):<40} "
                   f"{_clip(_cost_usd(s.get('cost')), 15):<15} {_pad(_observed_cell(s.get('observed')), 11)} "
                   f"{_pad(_hit_cell(s.get('observed')), 6)} "
                   f"{_pad(_speed_cell(s.get('observed')), 7)} {_pad(_last_ok_cell(s), 8)} "

@@ -233,7 +233,8 @@ async def test_catalog_get_on_the_routed_endpoint_shows_the_plan(clients: AsyncC
     d = r.json()
     assert d["endpoint"]["kind"] == "routed" and d["routing"]["contract"]["identity"]
     plan = d["routing"]["plan"]
-    assert plan and plan[0]["price_micro"] <= plan[-1]["price_micro"]
+    assert plan and plan[0]["usd"] <= plan[-1]["usd"] and plan[0]["accepts"]
+    assert "hit_rate" not in plan[0], "unmeasured says nothing rather than nulls"
     assert {c["endpoint_id"] for c in plan} <= set(d["endpoint"]["routed_children"] if "routed_children" in d["endpoint"] else [c["endpoint_id"] for c in plan])
 
 
@@ -312,7 +313,7 @@ async def test_hit_verdict_is_recorded_and_becomes_a_hit_rate(clients: AsyncClie
     monkeypatch.setattr(stats, "MIN_HIT_SAMPLES", 3)
     r = await clients.get(f"/catalog/endpoints/{ROUTED}")
     tomba = next(c for c in r.json()["routing"]["plan"] if c["endpoint_id"] == "tomba.people.email.find")
-    assert tomba["hit_rate"] == pytest.approx(2 / 3, abs=1e-3) and tomba["confidence"] == "measured"
+    assert tomba["hit_rate"] == pytest.approx(2 / 3, abs=1e-3) and tomba["usd_per_hit"] == pytest.approx(0.0089, abs=1e-4)
 
 
 async def test_a_registered_tool_for_a_provider_ranks_first_and_is_free(clients: AsyncClient, enrichment_on, monkeypatch):
@@ -327,3 +328,13 @@ async def test_a_registered_tool_for_a_provider_ranks_first_and_is_free(clients:
     assert r.status_code == 200, r.text
     assert r.json()["_treg"]["served_by"] == "hunter.people.email.find" and r.json()["_treg"]["tier"] == "tool"
     assert await _balance(clients) == before and r.json()["_treg"]["charged_micro"] == 0
+
+
+async def test_mcp_search_shows_the_routed_parent_first_with_its_children(clients: AsyncClient):
+    from treg import mcp as M
+    out = await M._catalog_search_impl("find work email", 12, surface=M._TEAM_SURFACE) if "surface" in M._catalog_search_impl.__code__.co_varnames else await M._catalog_search_impl("find work email", 12)
+    ids = [r["endpoint_id"] for r in out["results"]]
+    parent = ids.index(ROUTED)
+    kids = [i for i, r in enumerate(out["results"]) if r["provider"] != "treg" and r["endpoint_id"].split(".", 1)[1] in ("people.email.find", "people.email.find.linkedin", "search.name")]
+    assert kids and parent < min(kids)
+    assert out["results"][parent]["routed"].startswith("treg picks among")
