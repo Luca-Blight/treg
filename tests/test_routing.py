@@ -276,6 +276,41 @@ async def test_idempotent_replay_of_a_routed_call_never_calls_a_provider_twice(c
     assert r2.json() == r1.json() and len(seen) == 1
 
 
+@pytest.mark.parametrize(
+    ("terminal", "expected_status", "expected_error"),
+    [
+        ((400, {"message": "invalid email"}), 400, "route_caller_fault"),
+        ((503, {"message": "provider down"}), 502, "route_failed"),
+    ],
+)
+async def test_idempotent_replay_preserves_a_routed_failure_after_partial_charge(
+    clients: AsyncClient, enrichment_on, monkeypatch, terminal, expected_status, expected_error,
+):
+    routed = "treg.people.email.verify"
+    tomba_miss = (200, {"data": {"email": {"status": None, "score": None}}})
+    seen = []
+    monkeypatch.setattr(call_service, "relay", _relay_by_provider(
+        {"tomba": [tomba_miss, tomba_miss], "leadmagic": [terminal, terminal]},
+        seen,
+    ))
+    headers = {
+        "Idempotency-Key": "route-partially-charged-failure",
+        "X-Treg-Route-Prefer": "tomba,leadmagic",
+        "X-Treg-Route-Exclude": "hunter",
+    }
+    before = await _balance(clients)
+
+    r1 = await clients.post(f"/call/{routed}", json={"email": "bad@example.com"}, headers=headers)
+    r2 = await clients.post(f"/call/{routed}", json={"email": "bad@example.com"}, headers=headers)
+
+    assert r1.status_code == expected_status and r1.json()["detail"]["error"] == expected_error
+    assert r2.status_code == r1.status_code and r2.json() == r1.json()
+    assert r2.headers.get("X-Treg-Idempotent-Replay") == "true"
+    assert r1.headers["X-Treg-Cost-Micro"] == r2.headers["X-Treg-Cost-Micro"] == "8900"
+    assert before - await _balance(clients) == 8_900
+    assert [provider for provider, *_ in seen] == ["tomba", "leadmagic"]
+
+
 def test_a_per_success_miss_settles_at_zero_when_the_adapter_can_tell():
     """Live 2026-08-28: the first waterfall charged tomba, findymail and leadsforge for misses the
     catalog calls free. The adapter's `miss` predicate is the missing knowledge."""

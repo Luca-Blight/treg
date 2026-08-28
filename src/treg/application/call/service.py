@@ -341,6 +341,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             media_type=replayed.media_type,
             headers={"X-Treg-Idempotent-Replay": "true",
                      "X-Treg-Cost-Micro": str(replayed.charged_micro),
+                     **({"X-Treg-Error": "1"} if replayed.status_code >= 400 else {}),
                      **({"X-Treg-Call-Id": replayed.call_ref} if replayed.call_ref else {})},
         )
     # Park it so a failure anywhere below can give the label back. Set AFTER the claim succeeds,
@@ -387,6 +388,25 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
             raise
         except CallFailure as exc:
             request.state.call_audited = True
+            charged = (int(exc.detail.get("charged_micro") or 0)
+                       if isinstance(exc.detail, dict) else 0)
+            if exc.kind in ("route_caller_fault", "route_failed"):
+                request.state.call_cost_micro = charged
+            if idem_key and charged > 0 and exc.kind in ("route_caller_fault", "route_failed"):
+                error_body = json.dumps(
+                    {"detail": exc.detail}, ensure_ascii=False, allow_nan=False,
+                    separators=(",", ":"),
+                ).encode()
+                try:
+                    await _store_idempotent(
+                        idem_key, caller, status_code=exc.status_code, body=error_body,
+                        media_type="application/json", charged_micro=charged, metered=True,
+                        call_ref=call_ref, terminal=True,
+                    )
+                except asyncio.CancelledError:
+                    await _finish_cancelled_call(request, None, call_ref)
+                    raise
+                request.state.idem_claim = None
             audit.record_call(
                 org_id=caller.org_id, user_email=caller.email, tool_name=ep["id"],
                 method=request.method, path=rest, status_code=exc.status_code,

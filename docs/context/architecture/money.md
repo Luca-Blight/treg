@@ -524,10 +524,11 @@ correctness feature into a 24-hour cache that quietly serves stale data.
 
 ### What is stored, and for how long
 
-Metered successes only, for 24 hours. A team calling on its **own** key is billed by the provider, so
-there is nothing to protect and no reason to hold their response. A failure is never billed, and
-replaying one would freeze an error the caller should be free to retry out of — so a failed call
-frees its label immediately.
+Metered successes, plus a routed waterfall's terminal failure after one or more paid children, for
+24 hours. A team calling on its **own** key is billed by the provider, so there is nothing to protect
+and no reason to hold their response. An uncharged failure frees its label immediately so the caller
+can retry; a partially charged routed failure stores the same status, `{"detail": ...}` body,
+`charged_micro` and call id, because rerunning its children would pay the providers twice.
 
 That is also what bounds storage: bodies are kept only for calls that actually cost money, for a day.
 
