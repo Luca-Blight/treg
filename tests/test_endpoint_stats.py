@@ -13,7 +13,9 @@ import pytest
 from httpx import AsyncClient
 
 from treg import endpoint_stats
+from treg.api import app
 from treg.db import session_maker
+from treg.infra.catalog_observations import CachedEndpointObservationReader
 from treg.models import CallRecord
 
 EP = "tikhub.tiktok.user.profile"
@@ -147,10 +149,49 @@ async def test_the_catalog_page_carries_the_numbers_for_every_alternative(client
         await _record(EP, 200)
     r = await clients.get(f"/catalog/endpoints/{EP}")
     assert r.status_code == 200, r.text
+    assert r.json()["endpoint"]["observed"] is None, \
+        "cold-start requests degrade without waiting for reliability data"
+    await app.state.endpoint_observation_reader.wait_for_idle()
+    r = await clients.get(f"/catalog/endpoints/{EP}")
     body = r.json()
     assert body["endpoint"]["observed"]["samples"] == 6
     for sib in body["siblings"]:
         assert "observed" in sib          # every alternative is comparable, or the page is useless
+
+
+async def test_a_failed_refresh_still_answers_200_with_the_stale_value(
+    clients: AsyncClient, monkeypatch,
+):
+    now = [0.0]
+
+    class Source:
+        failure = False
+
+        async def get_many(self, endpoint_ids):
+            if self.failure:
+                raise RuntimeError("postgres unavailable")
+            return {
+                endpoint_id: {"samples": 9, "ok_rate": 1.0, "p50_ms": 10,
+                              "p95_ms": 20, "last_ok_days": 0}
+                for endpoint_id in endpoint_ids
+            }
+
+    source = Source()
+    reader = CachedEndpointObservationReader(source, clock=lambda: now[0])
+    monkeypatch.setattr(app.state, "endpoint_observation_reader", reader)
+
+    cold = await clients.get(f"/catalog/endpoints/{EP}")
+    assert cold.status_code == 200 and cold.json()["endpoint"]["observed"] is None
+    await reader.wait_for_idle()
+
+    now[0] = 301
+    source.failure = True
+    stale = await clients.get(f"/catalog/endpoints/{EP}")
+    assert stale.status_code == 200
+    assert stale.json()["endpoint"]["observed"]["samples"] == 9
+    await reader.wait_for_idle()
+    assert reader.counts.refresh_failure == 1
+    await reader.aclose()
 
 
 # ---- the LAST OK column: measurement beats a stamp, and the two never look alike -------------
@@ -287,6 +328,9 @@ async def test_HTTP_search_orders_equal_matches_on_observed_evidence(clients: As
     for status in (200, 200, 200, 200, 503):
         await _record(poor, status)
 
+    cold = await clients.get("/catalog/search", params={"q": "ad library", "limit": 100})
+    assert cold.status_code == 200
+    await app.state.endpoint_observation_reader.wait_for_idle()
     rows = (await clients.get(
         "/catalog/search", params={"q": "ad library", "limit": 100})).json()["results"]
     ids = [row["id"] for row in rows]

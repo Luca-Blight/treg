@@ -5,12 +5,11 @@ from __future__ import annotations
 import json
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import audit, catalog_store, endpoint_stats, oauth_providers
-from ..db import get_session
+from .. import audit, catalog_store, oauth_providers
+from ..domain.catalog import stats as endpoint_stats
 
 
 # The app alias preserves the moved handlers' original @app.get decorator text byte-for-byte.
@@ -129,14 +128,20 @@ async def catalog_platform(slug: str, include_hidden: int = 0) -> dict:
     }
 
 
-async def _observed_or_empty(db: AsyncSession, endpoint_ids: list[str]) -> dict[str, dict]:
+def _endpoint_observation_reader(request: Request) -> endpoint_stats.EndpointObservationReader:
+    return request.app.state.endpoint_observation_reader
+
+
+async def _observed_or_empty(
+    reader: endpoint_stats.EndpointObservationReader, endpoint_ids: list[str],
+) -> endpoint_stats.ObservationSnapshot:
     """What the served calls say about these endpoints — or `{}` if that query is unavailable.
 
     Telemetry must never take the catalog down: the catalog answers signed-out readers and is the
     step every agent starts from, while these numbers are an enrichment on top of it.
     """
     try:
-        return await endpoint_stats.observed(db, endpoint_ids)
+        return await reader.get_many(endpoint_ids)
     except Exception:  # noqa: BLE001
         logging.getLogger("treg.catalog").warning("endpoint stats unavailable", exc_info=True)
         return {}
@@ -144,7 +149,8 @@ async def _observed_or_empty(db: AsyncSession, endpoint_ids: list[str]) -> dict[
 
 @app.get("/catalog/search")
 async def catalog_search(q: str = "", limit: int = 25,
-                         db: AsyncSession = Depends(get_session)) -> dict:
+                         observations: endpoint_stats.EndpointObservationReader = Depends(
+                             _endpoint_observation_reader)) -> dict:
     """Open: free-text search across the whole catalog — the DISCOVER half of the loop.
 
     An agent that knows what it wants ("tiktok comments") shouldn't have to guess which platform
@@ -155,7 +161,7 @@ async def catalog_search(q: str = "", limit: int = 25,
     cat = catalog_store.load()
     limit = max(1, min(limit, 100))
     ranked, total, tie_truncated = catalog_store.rank_band(q, cat, limit)
-    stats = await _observed_or_empty(db, [ep["id"] for ep, _ in ranked])
+    stats = await _observed_or_empty(observations, [ep["id"] for ep, _ in ranked])
     ranked = catalog_store.rerank(ranked, stats, cat)[:limit]
     results = [
         catalog_store.endpoint_view(ep, _provider_display(ep["provider"]), cat)
@@ -201,7 +207,11 @@ async def catalog_search(q: str = "", limit: int = 25,
 
 
 @app.get("/catalog/endpoints/{endpoint_id}")
-async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_session)) -> dict:
+async def catalog_endpoint(
+    endpoint_id: str,
+    observations: endpoint_stats.EndpointObservationReader = Depends(
+        _endpoint_observation_reader),
+) -> dict:
     """Open: everything about ONE endpoint — the INSPECT half of the loop.
 
     Deliberately one round-trip: params, cost, the sibling providers offering the same capability
@@ -235,7 +245,7 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
     # of "compare providers" that only treg can answer (see endpoint_stats + CAPABILITY-CHOICE-PLAN).
     # Attached to the SAME response because the choice is made here; a second round-trip to compare
     # reliability is a round-trip an agent will skip.
-    stats = await _observed_or_empty(db, [endpoint_id] + [s["id"] for s in siblings])
+    stats = await _observed_or_empty(observations, [endpoint_id] + [s["id"] for s in siblings])
     view = view | {"observed": stats.get(endpoint_id)}
     siblings = [s | {"observed": stats.get(s["id"])} for s in siblings]
 
