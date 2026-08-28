@@ -1,6 +1,8 @@
 """`treg-worker` — the scheduled, server-side maintainer commands (the `worker` profile).
 
     treg-worker capacity sweep [--only provider,...] [--json]
+    treg-worker overflow sync [--live]          # seed (+ live aggregator catalogs) → overflow_route
+    treg-worker overflow verify [--all] [--max-usd 0.02]   # weekly re-verify of enabled routes
 
 Not the light `treg` CLI: these need the server extra (DB, platform keys in the env) and make
 outbound calls to third parties, so they run as Render cron jobs with the server's env — never as
@@ -44,6 +46,122 @@ async def _capacity_sweep(args) -> int:
     return 0
 
 
+def _our_endpoints() -> list[dict]:
+    from . import oauth_providers
+    from .domain.catalog import store as catalog_store
+    cat = catalog_store.load()
+    out = []
+    for ep in cat.endpoints:
+        prov = oauth_providers.get(ep["provider"])
+        if prov is None or not prov.base_url:
+            continue
+        out.append({"endpoint_id": ep["id"], "provider": ep["provider"],
+                    "method": (ep.get("method") or "GET").upper(), "path": ep["path"],
+                    "base_url": prov.base_url})
+    return out
+
+
+async def _overflow_sync(args) -> int:
+    from .config import get_settings
+    from .db import init_db, session_maker
+    from .domain.capacity import routes as R
+    from .domain.catalog import store as catalog_store
+
+    await init_db()
+    candidates = R.load_seed()
+    if args.live:
+        import httpx
+        from .infra.upstream.aggregators import catalogs
+        s = get_settings()
+        async with httpx.AsyncClient(timeout=60) as c:
+            orth = await catalogs.orthogonal_apis(c, s.overflow_key_orthogonal) if s.overflow_key_orthogonal else []
+        seeded = {(x["endpoint_id"], x["aggregator"]): x for x in candidates}
+        for row in R.match_catalogs(_our_endpoints(), orthogonal_apis=orth):
+            key = (row["endpoint_id"], row["aggregator"])
+            if key in seeded:
+                seeded[key].update({k: row[k] for k in ("agg_slug", "agg_path", "agg_price_usd") if row.get(k) is not None})
+            else:
+                seeded[key] = {**row, "matched_at": None, "verified_at": None}
+        candidates = list(seeded.values())
+    async with session_maker() as db:
+        result = await R.apply_sync(db, candidates, catalog=catalog_store.load())
+        await db.commit()
+    print(f"overflow routes: {result.rows} rows, {result.enabled} enabled")
+    for reason, n in sorted(result.disabled.items(), key=lambda kv: -kv[1]):
+        print(f"  disabled · {reason}: {n}")
+    return 0
+
+
+async def _overflow_verify(args) -> int:
+    import httpx
+    from sqlalchemy import select
+    from .config import get_settings, platform_setting_name
+    from . import oauth_providers
+    from .db import init_db, session_maker
+    from .domain.capacity import verify as V
+    from .domain.capacity import routes as R
+    from .domain.catalog import store as catalog_store
+    from .models import OverflowRoute
+    from .timeutil import utcnow_naive
+
+    await init_db()
+    s = get_settings()
+    cat = catalog_store.load()
+    by_id = {e["id"]: e for e in cat.endpoints}
+    async with session_maker() as db:
+        rows = (await db.execute(select(OverflowRoute))).scalars().all()
+    todo = [r for r in rows if args.all or r.enabled or r.last_verified_at]
+    keys = {"orthogonal": s.overflow_key_orthogonal, "monid": s.overflow_key_monid}
+    passed = failed = skipped = 0
+    async with httpx.AsyncClient(timeout=60) as c, session_maker() as db:
+        for r in todo:
+            ep = by_id.get(r.endpoint_id)
+            key = keys.get(r.aggregator)
+            tr = (ep or {}).get("test_request")
+            usd = (r.agg_price_micro or 0) / 1e6
+            if not ep or not key or not tr or usd > args.max_usd:
+                skipped += 1
+                continue
+            direct = None
+            prov = oauth_providers.get(ep["provider"])
+            pkey = getattr(s, platform_setting_name(ep["provider"]), "")
+            hdrs = {}
+            if prov is not None and pkey:
+                url = prov.base_url.rstrip("/") + "/" + ep["path"].lstrip("/")
+                for k, v in (tr.get("pathParams") or {}).items():
+                    url = url.replace("{" + k + "}", str(v))
+                q = {k: str(v) for k, v in (tr.get("queryParams") or {}).items()}
+                if prov.token_location == "query":
+                    q[prov.token_param] = (prov.token_format or "{secret}").format(secret=pkey)
+                else:
+                    hdrs[prov.token_header] = (prov.token_format or "{secret}").format(secret=pkey)
+                for name, value in prov.required_headers:
+                    hdrs[name] = value
+                if prov.needs_extra_credential and prov.platform_extra_setting:
+                    extra = getattr(s, prov.platform_extra_setting, "")
+                    if extra:
+                        hdrs[prov.extra_credential_header] = extra
+                body = tr.get("body")
+                direct = (url, q, __import__("json").dumps(body).encode() if body is not None else None)
+                if body is not None:
+                    hdrs["Content-Type"] = "application/json"
+            v = await V.verify_route(c, r, key=key, direct=direct, test_request=tr, direct_headers=hdrs)
+            row = await db.get(OverflowRoute, (r.endpoint_id, r.aggregator))
+            if v.passed:
+                row.last_verified_at = v.verified_at or utcnow_naive()
+                passed += 1
+            else:
+                failed += 1
+                if row.enabled:
+                    row.enabled, row.disabled_reason = False, f"re-verify failed: {v.note}"[:200]
+            row.updated_at = utcnow_naive()
+            print(f"{'ok ' if v.passed else 'FAIL'} {r.endpoint_id} via {r.aggregator} "
+                  f"direct={v.direct_status} relay={v.relay_status} cost={v.cost_micro} {v.note}")
+        await db.commit()
+    print(f"verified {passed}, failed {failed}, skipped {skipped}")
+    return 1 if failed else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="treg-worker", description=__doc__)
     sub = ap.add_subparsers(dest="group", required=True)
@@ -53,6 +171,15 @@ def main(argv: list[str] | None = None) -> int:
     sweep.add_argument("--only", help="comma-separated providers (default: all)")
     sweep.add_argument("--json", action="store_true")
     sweep.set_defaults(fn=_capacity_sweep)
+    ov = sub.add_parser("overflow", help="aggregator overflow routes")
+    ovsub = ov.add_subparsers(dest="cmd", required=True)
+    sync = ovsub.add_parser("sync", help="seed (+ live aggregator catalogs) → overflow_route, derive enabled")
+    sync.add_argument("--live", action="store_true", help="also fetch the aggregators' catalogs (needs keys)")
+    sync.set_defaults(fn=_overflow_sync)
+    ver = ovsub.add_parser("verify", help="re-verify routes with a cheap call (spends money; needs keys)")
+    ver.add_argument("--all", action="store_true", help="every row, not only enabled/previously verified")
+    ver.add_argument("--max-usd", type=float, default=0.02, help="skip routes priced above this")
+    ver.set_defaults(fn=_overflow_verify)
     args = ap.parse_args(argv)
     _need_server()
     return asyncio.run(args.fn(args))

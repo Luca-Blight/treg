@@ -1090,3 +1090,32 @@ class CapacitySnapshot(SQLModel, table=True):
     confidence: str = Field(default="exact")     # exact | estimate | stale
     note: str = Field(default="")
     error: str = Field(default="")
+
+
+class OverflowRoute(SQLModel, table=True):
+    """One `(endpoint_id, aggregator)` pair: the same vendor endpoint served through a treg-owned
+    aggregator account (tier 4b, `platform-overflow`) when our direct account is out.
+
+    Filled by the worker's `treg-worker overflow sync` — never by hand, never by the call path.
+    `enabled` is DERIVED by `domain.capacity.routes.eligible` at sync time (same unit, ratio ≤ 4,
+    platform-eligible, policy allows, verified < 7 days ago); the call path only ever reads it.
+    Prices are the aggregator's list price in micro-USD: the caller pays exactly that, 0% markup,
+    disclosed in-band. See docs/PROVIDER-CAPACITY-PLAN.md §4.3.
+    """
+
+    endpoint_id: str = Field(primary_key=True)
+    aggregator: str = Field(primary_key=True)   # orthogonal | monid
+    provider: str = Field(index=True)
+    method: str
+    path: str
+    agg_slug: str            # the aggregator's name for the vendor (api slug / provider id)
+    agg_path: str            # the aggregator's spelling of the vendor path
+    agg_price_micro: int | None = Field(default=None)
+    agg_unit: str = Field(default="call")       # call | result
+    ratio: float | None = Field(default=None)   # agg price / our per-event price
+    single_result: bool | None = Field(default=None)  # a per-result aggregator route that returns ≤ 1 record
+    enabled: bool = Field(default=False, index=True)
+    disabled_reason: str = Field(default="")
+    matched_at: datetime | None = Field(default=None)
+    last_verified_at: datetime | None = Field(default=None)
+    updated_at: datetime = Field(default_factory=_now)

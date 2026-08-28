@@ -19,6 +19,7 @@ Regenerate via `scripts/build-map.py`.
 | `alembic/env.py` | architecture/data-model.md |
 | `alembic/versions/0001_baseline_current_schema.py` | architecture/data-model.md |
 | `alembic/versions/0002_capacity_policy_snapshot.py` | architecture/data-model.md, ops/capacity.md |
+| `alembic/versions/0003_overflow_route.py` | architecture/data-model.md, ops/capacity.md |
 | `assets/brand/og-card.html` | interface/seo.md |
 | `docs/CLAUDE-CONNECTOR-SUBMISSION.md` | architecture/mcp-oauth.md |
 | `dsh/cordis.patch.yml` | interface/skill.md |
@@ -123,8 +124,12 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/domain/__init__.py` | architecture/import-boundaries.md |
 | `src/treg/domain/capacity/__init__.py` | architecture/import-boundaries.md, ops/capacity.md |
 | `src/treg/domain/capacity/collectors.py` | ops/capacity.md |
+| `src/treg/domain/capacity/overflow_seed.json` | ops/capacity.md |
 | `src/treg/domain/capacity/policy.py` | ops/capacity.md |
+| `src/treg/domain/capacity/routes.py` | ops/capacity.md |
+| `src/treg/domain/capacity/signatures.py` | ops/capacity.md |
 | `src/treg/domain/capacity/sweep.py` | ops/capacity.md |
+| `src/treg/domain/capacity/verify.py` | ops/capacity.md |
 | `src/treg/domain/capacity/view.py` | ops/capacity.md |
 | `src/treg/domain/catalog/__init__.py` | architecture/catalog.md |
 | `src/treg/domain/catalog/stats.py` | architecture/catalog.md |
@@ -157,6 +162,10 @@ Regenerate via `scripts/build-map.py`.
 | `src/treg/infra/oauth_refresh.py` | architecture/auth-secrets.md |
 | `src/treg/infra/stripe.py` | architecture/money.md |
 | `src/treg/infra/upstream/__init__.py` | architecture/import-boundaries.md |
+| `src/treg/infra/upstream/aggregators/__init__.py` | architecture/import-boundaries.md, ops/capacity.md |
+| `src/treg/infra/upstream/aggregators/catalogs.py` | ops/capacity.md |
+| `src/treg/infra/upstream/aggregators/monid.py` | ops/capacity.md |
+| `src/treg/infra/upstream/aggregators/orthogonal.py` | ops/capacity.md |
 | `src/treg/infra/upstream/injectors.py` | architecture/auth-secrets.md, architecture/import-boundaries.md |
 | `src/treg/infra/upstream/relay.py` | architecture/import-boundaries.md, architecture/proxy-model.md, interface/api.md |
 | `src/treg/infra/upstream/ssrf.py` | architecture/auth-secrets.md, architecture/proxy-model.md |
@@ -220,6 +229,7 @@ Regenerate via `scripts/build-map.py`.
 | `tests/test_call_architecture.py` | architecture/import-boundaries.md, architecture/money.md, architecture/proxy-model.md |
 | `tests/test_call_cancellation.py` | architecture/proxy-model.md |
 | `tests/test_capacity_know.py` | ops/capacity.md |
+| `tests/test_capacity_overflow_routes.py` | ops/capacity.md |
 | `tests/test_error_capture.py` | architecture/proxy-model.md |
 | `tests/test_import_lightness.py` | architecture/import-boundaries.md |
 | `tests/test_marketplace_call.py` | architecture/mcp-oauth.md, architecture/proxy-model.md |
@@ -241,8 +251,8 @@ Regenerate via `scripts/build-map.py`.
 | `architecture/auth-secrets.md` | `injectors.py`, `injectors.py`, `ssrf.py`, `crypto.py`, `oauth.py`, `__init__.py`, `refresh.py`, `oauth_refresh.py`, `oauth_providers.py`, `health.py`, `connect.py`, `connections.py`, `resources.py`, `__init__.py`, `bindings.py`, `bundles.py`, `test_oauth_refresh.py` |
 | `architecture/catalog.md` | `catalog-drift.yml`, `catalog_drift.py`, `catalog_ingest.py`, `catalog_validate.py`, `aliases.yaml`, `fx.yaml`, `aviato.yaml`, `crustdata.yaml`, `aviato.companies.acquisitions.json`, `aviato.companies.employees.json`, `aviato.companies.enrich.bulk.json`, `aviato.companies.enrich.json`, `aviato.companies.founders.json`, `aviato.companies.funding_rounds.json`, `aviato.companies.investments.json`, `aviato.companies.outbound_investments.json`, `aviato.companies.search.json`, `aviato.linkedin.company.posts.json`, `aviato.linkedin.post.comments.json`, `aviato.linkedin.post.reactions.json`, `aviato.linkedin.post.reposts.json`, `aviato.linkedin.user.posts.json`, `aviato.people.contact.get.json`, `aviato.people.email.find.json`, `aviato.people.enrich.bulk.json`, `aviato.people.enrich.json`, `aviato.people.phone.find.json`, `aviato.people.search.json`, `aviato.people.search.simple.json`, `crustdata.companies.autocomplete.json`, `crustdata.companies.enrich.json`, `crustdata.companies.identify.json`, `crustdata.companies.jobs.search.json`, `crustdata.companies.search.json`, `crustdata.people.autocomplete.json`, `crustdata.people.enrich.json`, `crustdata.people.search.json`, `google-search-console.yaml`, `google-search-console.extended.yaml`, `google-tag-manager.yaml`, `google-tag-manager.extended.yaml`, `justoneapi.extended.yaml`, `tikhub.extended.yaml`, `__init__.py`, `store.py`, `stats.py`, `catalog_store.py`, `endpoint_stats.py`, `catalog.py` |
 | `architecture/composition.md` | `bootstrap.py`, `bootstrap_handlers.py`, `bootstrap_http.py`, `connect.py`, `mcp_oauth.py`, `session.py`, `admin.py`, `auth.py`, `billing.py`, `call.py`, `connections.py`, `onboard.py`, `orgs.py`, `resources.py`, `referrals.py`, `web.py`, `dump_surface.py` |
-| `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `0002_capacity_policy_snapshot.py`, `sitetrack.js`, `models.py`, `timeutil.py`, `db.py`, `referrals.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py`, `auth.py`, `test_postgres_reset.py` |
-| `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `__init__.py`, `__init__.py`, `authorize.py`, `idempotency.py`, `intake.py`, `resolve.py`, `reserve.py`, `settle.py`, `evidence.py`, `service.py`, `types.py`, `client_identity.py`, `__init__.py`, `__init__.py`, `access.py`, `budgets.py`, `publicdemo.py`, `teams.py`, `usage.py`, `__init__.py`, `__init__.py`, `__init__.py`, `__init__.py`, `injectors.py`, `relay.py`, `test_call_architecture.py`, `test_import_lightness.py` |
+| `architecture/data-model.md` | `alembic.ini`, `env.py`, `0001_baseline_current_schema.py`, `0002_capacity_policy_snapshot.py`, `0003_overflow_route.py`, `sitetrack.js`, `models.py`, `timeutil.py`, `db.py`, `referrals.py`, `referrals.py`, `audit.py`, `analytics.py`, `ratestore.py`, `auth.py`, `test_postgres_reset.py` |
+| `architecture/import-boundaries.md` | `pyproject.toml`, `ci.yml`, `__init__.py`, `__init__.py`, `authorize.py`, `idempotency.py`, `intake.py`, `resolve.py`, `reserve.py`, `settle.py`, `evidence.py`, `service.py`, `types.py`, `client_identity.py`, `__init__.py`, `__init__.py`, `access.py`, `budgets.py`, `publicdemo.py`, `teams.py`, `usage.py`, `__init__.py`, `__init__.py`, `__init__.py`, `__init__.py`, `injectors.py`, `relay.py`, `__init__.py`, `test_call_architecture.py`, `test_import_lightness.py` |
 | `architecture/local-proxy.md` | `localproxy.py`, `server.js` |
 | `architecture/local-run.md` | `localrun.py`, `egress.py`, `fsjail.py` |
 | `architecture/mcp-oauth.md` | `auth.py`, `mcp.py`, `mcp_oauth.py`, `health.py`, `mcp_oauth.py`, `session.py`, `auth.py`, `claude-connector.html`, `connect-demo.html`, `CLAUDE-CONNECTOR-SUBMISSION.md`, `test_mcp.py`, `test_mcp_directory.py`, `test_marketplace_call.py` |
@@ -262,6 +272,6 @@ Regenerate via `scripts/build-map.py`.
 | `interface/seo.md` | `api.py`, `web.py`, `agent_pages.py`, `robots.txt`, `catalog.css`, `index.html`, `landing.html`, `support.html`, `og-card.html` |
 | `interface/shell.md` | `shell.py`, `cli.py` |
 | `interface/skill.md` | `skill.md`, `web.py`, `mcp_install.py`, `build_plugin.py`, `plugin.json`, `marketplace.json`, `plugin.json`, `plugin.json`, `package.json`, `cordis.patch.yml`, `index.js`, `plugin.json`, `minimax_plugin.py` |
-| `ops/capacity.md` | `__init__.py`, `collectors.py`, `policy.py`, `sweep.py`, `view.py`, `worker.py`, `provider_balances.py`, `0002_capacity_policy_snapshot.py`, `test_capacity_know.py` |
+| `ops/capacity.md` | `__init__.py`, `collectors.py`, `policy.py`, `sweep.py`, `view.py`, `routes.py`, `signatures.py`, `verify.py`, `overflow_seed.json`, `__init__.py`, `orthogonal.py`, `monid.py`, `catalogs.py`, `0003_overflow_route.py`, `test_capacity_overflow_routes.py`, `worker.py`, `provider_balances.py`, `0002_capacity_policy_snapshot.py`, `test_capacity_know.py` |
 | `ops/deploy.md` | `pyproject.toml`, `__main__.py`, `worker.py`, `selfhost.sh`, `config.py`, `db.py`, `email.py`, `audit.py`, `dev-local.sh`, `render.yaml` |
 | `reference/glossary.md` | `2026-06-30-jason-tools-registry.md` |

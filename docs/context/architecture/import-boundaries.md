@@ -29,6 +29,7 @@ sources:
   - src/treg/infra/upstream/__init__.py
   - src/treg/infra/upstream/injectors.py
   - src/treg/infra/upstream/relay.py
+  - src/treg/infra/upstream/aggregators/__init__.py
   - tests/test_call_architecture.py
   - tests/test_import_lightness.py
 related:
@@ -96,4 +97,7 @@ Base dependencies such as httpx and questionary remain allowed.
 The capacity domain (`treg.domain.capacity`, plan step B) is a leaf like identity: it cannot import
 `treg.api`, `treg.routers`, `treg.application`, `treg.bootstrap`, `treg.audit`, FastAPI or Starlette.
 It reads config and writes only its own tables and ratestore keys, from worker-profile commands
-(`treg-worker`, a separate console script so the light `treg` CLI never gains a DB import).
+(`treg-worker`, a separate console script so the light `treg` CLI never gains a DB import). The
+aggregator envelopes live under `treg.infra.upstream.aggregators` and inherit the upstream contract
+(no HTTP adapters, no routers); the capacity domain's `verify` module may import them because they are
+pure envelope code, not a web framework.

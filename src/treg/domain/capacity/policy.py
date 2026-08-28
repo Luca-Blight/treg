@@ -70,6 +70,11 @@ def policy_population(configured_keys: set[str] | None = None) -> list[str]:
     return sorted(set(all_platform_providers()) | {f"overflow:{a}" for a in AGGREGATORS})
 
 
+# Decided 2026-08-26/28: tikhub is out of overflow scope (429s, auto top-up works, Monid re-shapes
+# its responses); scrapecreators is funded, not routed (every aggregator route is ~10× our price).
+_NO_OVERFLOW = frozenset({"tikhub", "scrapecreators"})
+
+
 def default_policy(provider: str, *, has_key: bool) -> CapacityPolicy:
     ctype, funding, source = _KNOWN.get(provider, ("unknown", "unknown", "none"))
     if provider in NO_BALANCE_API and source == "api":
@@ -77,6 +82,7 @@ def default_policy(provider: str, *, has_key: bool) -> CapacityPolicy:
     return CapacityPolicy(
         provider=provider, capacity_type=ctype, funding_mode=funding, source=source,
         auto_funding_enabled=funding == "auto_recharge", enabled=has_key,
+        overflow_allowed=provider not in _NO_OVERFLOW,
         quota=_QUOTAS.get(provider), rate_limit=_RATE_LIMITS.get(provider),
     )
 

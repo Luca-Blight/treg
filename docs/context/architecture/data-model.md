@@ -6,6 +6,7 @@ sources:
   - alembic/env.py
   - alembic/versions/0001_baseline_current_schema.py
   - alembic/versions/0002_capacity_policy_snapshot.py
+  - alembic/versions/0003_overflow_route.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/timeutil.py
@@ -204,6 +205,10 @@ SQLModel tables in `src/treg/models.py`. Kept minimal on purpose. Org multi-tena
   latest state into `Ephemeral` under `capacity:state:<provider>`, which the dataplane will read on a
   TTL from plan step D. Numbers only — never a credential. See `ops/capacity.md`. Alembic revision
   `0002` pairs with the `create_all` path for these two tables.
+- **`OverflowRoute`** — one `(endpoint_id, aggregator)` pair: the same vendor endpoint served through a
+  treg-owned aggregator account, with the aggregator's price, the price ratio, verification stamp and a
+  DERIVED `enabled`. Filled by `treg-worker overflow sync` only (alembic `0003`); read-only for the call
+  path. See `ops/capacity.md`.
 
 ## Bindings (the multi-credential shape)
 `Tool.bindings` is a JSON list; each entry is
@@ -237,7 +242,7 @@ parameters compared with timestamp columns follow the same constraint as inserte
 
 ## Alembic baseline
 
-Revisions after the baseline (`0002` capacity tables) must be paired with the legacy startup path
+Revisions after the baseline (`0002` capacity tables, `0003` overflow routes) must be paired with the legacy startup path
 until stage 5; the parity test compares a fresh `init_db` schema with `alembic upgrade head`.
 
 
