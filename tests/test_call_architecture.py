@@ -41,7 +41,7 @@ _DATAPLANE_DERIVED_WRITES = {
     # table) AFTER the settle, so the next call is refused before a hold exists.
     "capacity_exhausted_mark": (
         (settle._note_capacity_signal, "capacity_marks.mark_exhausted"),
-        (overflow.maybe_overflow, "capacity_marks.mark_exhausted"),
+        (overflow._maybe_overflow_attempt, "capacity_marks.mark_exhausted"),
         (capacity_marks.mark_exhausted, "ratestore.kv_put"),
     ),
     # Plan §4.3 step 5: the overflow child's settle folds the aggregator's daily spend delta into
@@ -90,7 +90,7 @@ _EXPECTED_DERIVED_WRITE_SITES = {
     ("application/call/settle.py", "_note_capacity_signal", "capacity_marks.mark_exhausted"),
     ("application/call/settle.py", "_platform_settle", "overflow_spend_ledger.add_in_transaction"),
     ("application/call/settle.py", "_close", "overflow_spend_ledger.add_in_transaction"),
-    ("application/call/overflow.py", "maybe_overflow", "capacity_marks.mark_exhausted"),
+    ("application/call/overflow.py", "_maybe_overflow_attempt", "capacity_marks.mark_exhausted"),
     ("application/call/overflow.py", "_record_shadow", "overflow_spend_ledger.add_in_transaction"),
     ("domain/capacity/marks.py", "mark_exhausted", "ratestore.kv_put"),
     ("domain/governance/publicdemo.py", "enforce_public_demo_ip_cap", "ratestore.rate_check"),

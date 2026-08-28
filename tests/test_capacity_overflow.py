@@ -188,6 +188,30 @@ async def test_contract_refusal_falls_back_to_the_vendor_answer(clients: AsyncCl
     assert await _balance(clients) == before and await _holds() == []
 
 
+async def test_adapter_parse_crash_falls_back_to_vendor_answer_and_releases_child_hold(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    await _route()
+    monkeypatch.setattr(call_service, "relay", _fake_relay(402, b'{"detail":"vendor out"}'))
+    seen = []
+    monkeypatch.setattr(
+        O, "_send",
+        _orthogonal([(200, {"success": True, "data": VENDOR_BODY, "priceCents": 0.3})], seen),
+    )
+
+    def crash_parse(status, body):
+        raise RuntimeError("adapter parse crashed")
+
+    monkeypatch.setattr(O.by_name("orthogonal"), "parse", crash_parse)
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 402
+    assert response.content == b'{"detail":"vendor out"}'
+    assert len(seen) == 1
+    assert not any(hold.call_id.endswith(":overflow") for hold in await _holds())
+
+
 async def test_budget_crossing_skips_overflow(clients: AsyncClient, overflow_on, monkeypatch):
     await _route(price_micro=3_000)
     monkeypatch.setenv("TREG_OVERFLOW_DAILY_BUDGET_USD", "0.004")
@@ -282,6 +306,33 @@ async def test_an_exhausted_account_with_a_route_skips_the_direct_attempt(client
     replay = await clients.get(f"/call/{EP}?aweme_id=7", headers={"Idempotency-Key": "k1"})
     assert replay.status_code == 200 and replay.headers.get("X-Treg-Idempotent-Replay") == "true"
     assert len(seen) == 1, "the replay never touched the aggregator"
+
+
+async def test_skip_direct_spend_lookup_crash_falls_back_to_typed_capacity_503(
+    clients: AsyncClient, overflow_on, monkeypatch,
+):
+    from datetime import timedelta
+
+    await _route(price_micro=3_000)
+    now = utcnow_naive()
+    async with session_maker() as db:
+        await ratestore.kv_put(db, STATE_NS, "tikhub", LatestState(
+            "tikhub", 0.0, "USD", now, "exact", exhausted_until=now + timedelta(hours=1),
+            health="exhausted",
+        ).to_json(), ttl_s=3600)
+        await db.commit()
+    capacity_view.invalidate()
+
+    async def crash_spent_today(db, aggregator, *, day=None):
+        raise RuntimeError("spend lookup crashed")
+
+    monkeypatch.setattr(O.overflow_spend_ledger, "spent_today", crash_spent_today)
+
+    response = await clients.get(f"/call/{EP}?aweme_id=7")
+
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"] == "provider_capacity_unavailable"
+    assert await _holds() == []
 
 
 async def test_an_exhausted_account_without_a_route_is_still_the_typed_503(clients: AsyncClient, overflow_on):

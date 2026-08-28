@@ -137,10 +137,11 @@ async def _record_shadow(aggregator: str, cost_micro: int, delta_micro: int) -> 
         await db.commit()
 
 
-async def maybe_overflow(
+async def _maybe_overflow_attempt(
     *, mk: MarketplaceCall, caller, meta, call_ref: str, status: int, headers, body: bytes,
     method: str, query_items: list[tuple[str, str]], caller_body: bytes, client: httpx.AsyncClient,
     audit_client: str = "", force_trigger: str | None = None,
+    reserved: list[MarketplaceCall],
 ) -> OverflowOutcome | None:
     """After the primary's settle released — or, with `force_trigger`, INSTEAD of a direct attempt
     the resolver already knows would 402 (`mk.skip_direct`). None = nothing to do (the vendor's
@@ -176,6 +177,7 @@ async def maybe_overflow(
     if mode == "on":
         # Child hold: own id, same call_ref family. Insufficient balance here is the normal 402.
         await _platform_reserve(child, caller, meta=meta, call_ref=f"{call_ref}:overflow")
+        reserved.append(child)
     res: AggregatorResult | None = None
     try:
         res = await _run(client, aggregator, route, key, query, caller_body or None, path_params)
@@ -222,6 +224,32 @@ async def maybe_overflow(
     response = _response(res)
     _audit_child(mk, child, call_ref, aggregator, res, charged=charged, client=audit_client)
     return OverflowOutcome(True, response, res.upstream_body, charged, observed, aggregator)
+
+
+async def maybe_overflow(
+    *, mk: MarketplaceCall, caller, meta, call_ref: str, status: int, headers, body: bytes,
+    method: str, query_items: list[tuple[str, str]], caller_body: bytes, client: httpx.AsyncClient,
+    audit_client: str = "", force_trigger: str | None = None,
+) -> OverflowOutcome | None:
+    """Run one optional overflow attempt without letting its infrastructure replace the caller's
+    existing vendor answer. A skip-direct caller interprets None as its original capacity 503."""
+    reserved: list[MarketplaceCall] = []
+    try:
+        return await _maybe_overflow_attempt(
+            mk=mk, caller=caller, meta=meta, call_ref=call_ref, status=status, headers=headers,
+            body=body, method=method, query_items=query_items, caller_body=caller_body,
+            client=client, audit_client=audit_client, force_trigger=force_trigger,
+            reserved=reserved,
+        )
+    except asyncio.CancelledError:
+        raise
+    except CallFailure:
+        raise
+    except Exception:  # noqa: BLE001 - overflow is advisory and must not replace the primary result
+        log.exception("overflow attempt crashed for %s", mk.endpoint_id)
+        if reserved:
+            await _platform_settle(reserved[0], None, reason="overflow_crashed")
+        return None
 
 
 def _audit_child(mk: MarketplaceCall, child: MarketplaceCall, call_ref: str, aggregator: str,

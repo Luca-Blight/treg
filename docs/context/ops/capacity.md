@@ -175,6 +175,11 @@ writers. **Rollout (plan §5):** run `shadow` for a week with routes enabled —
 `overflow SHADOW <endpoint> via <aggregator>: … shape …` and lands a child audit row
 (`credential_tier=platform-overflow`, `error_response="treg overflow: shadow"`) — then switch to
 `on` (step F, which also adds the org opt-out and amends the charter).
+Overflow remains advisory across its full attempt: an unexpected budget, adapter, capacity-mark,
+or settlement-path failure is logged, any reserved child hold is released, and the caller falls
+back to the direct vendor response. A skip-direct call has no direct response, so the same fallback
+returns the original typed `provider_capacity` 503. Cancellation and typed call failures still
+propagate to the call service for their dedicated cleanup and response handling.
 
 ## Enabling overflow (step F) — the opt-out and the rollout
 
