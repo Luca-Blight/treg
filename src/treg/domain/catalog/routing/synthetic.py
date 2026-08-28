@@ -11,6 +11,16 @@ _EXAMPLE_VALUES = {"full_name": "Patrick Collison", "first_name": "Patrick", "la
 ROUTED_PROVIDER = "treg"
 
 
+def _best_variant(contract: Contract, kids: list[dict], adapters: dict[str, Adapter]) -> tuple[str, ...]:
+    """The identity variant the MOST children accept — the example body (and the dry-run) should
+    name a shape that several providers can serve, not the contract's first-listed one: people.search
+    lists `{q}` first, which only exa takes, so the RUN IT line said "no provider can serve this"."""
+    def _n(variant):
+        keys = set(variant)
+        return sum(1 for e in kids for v in (adapters[e["id"]].accepts or ()) if set(v) == keys)
+    return max(contract.identity, key=lambda v: (_n(v), -len(v)))
+
+
 def routed_endpoint(contract: Contract, children: list[dict], adapters: dict[str, Adapter], cost_view) -> dict | None:
     """One row per capability with ≥ 2 verified-adapter children. Price = the children's range."""
     kids = [e for e in children if adapters.get(e["id"]) and adapters[e["id"]].verified and not e.get("status")]
@@ -49,7 +59,7 @@ def routed_endpoint(contract: Contract, children: list[dict], adapters: dict[str
                            "headers, never in the body: X-Treg-Route-Waterfall: 0 (stop at the first miss), "
                            "X-Treg-Route-Max-Cost: <usd>, X-Treg-Route-Prefer / X-Treg-Route-Exclude: <provider>. The "
                            "response is {output, raw, _treg: {served_by, tried}}; X-Treg-Served-By names the child.")},
-        "test_request": {"body": {k: _EXAMPLE_VALUES.get(k, "…") for k in contract.identity[0]}} if contract.identity else {},
+        "test_request": {"body": {k: _EXAMPLE_VALUES.get(k, "…") for k in _best_variant(contract, kids, adapters)}} if contract.identity else {},
         "cost": {"type": "per_success", "value": lo, "currency": "USD", "per": 1, "unit": "call",
                  "source": "inferred", "confidence": "documented", "checked": None,
                  "note": (f"the children's range ${lo:g}–${hi:g} per hit; you pay exactly the child that served, 0% markup"

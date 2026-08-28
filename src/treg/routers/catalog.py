@@ -293,6 +293,11 @@ async def catalog_endpoint(
             "contract": {"identity": [list(v) for v in contract.identity], "output": contract.output,
                          "miss": contract.miss, "derive": contract.derive} if contract else None,
             "plan": [_plan_row(c) for c in rank(cands)],
+            # The same job from providers whose adapter is not (yet) verified: not chosen by the
+            # router, still callable by id — the search page groups them under this row, so the
+            # page it points at must name them too (found 2026-08-28: "+18 more" led to a list of 6).
+            "also": [{"endpoint_id": s["id"], "usd": ((s.get("cost") or {}).get("usd"))}
+                     for s in siblings if s["id"] not in set(ep.get("routed_children") or [])],
             "headers": {"X-Treg-Route-Waterfall": "on by default: a miss tries the next provider; 0 = stop at the first miss",
                         "X-Treg-Route-Max-Cost": "USD ceiling for the whole call (default 1.00)",
                         "X-Treg-Route-Prefer": "provider[,…]", "X-Treg-Route-Exclude": "provider[,…]"},

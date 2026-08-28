@@ -181,15 +181,25 @@ async def catalog_endpoint_access(
     if ep.get("kind") == "routed":
         # The routed row's dry-run IS the plan for this org: which child would go first, and why.
         from ..application.call.route import RouteOptions, build_plan
-        plan = await build_plan(ep, dict(ep.get("test_request", {}).get("body") or {}), caller, RouteOptions.from_headers(lambda k: None))
+        opts = RouteOptions.from_headers(lambda k: None)
+        plan = await build_plan(ep, dict(ep.get("test_request", {}).get("body") or {}), caller, opts)
         if not plan.candidates:
-            return {"tier": "none", "detail": "no provider can serve this identity for your team right now",
+            # The example body is one identity shape; a team may hold keys for providers that take
+            # another. Try each variant of the contract before declaring the job unservable.
+            contract = catalog_store.load().contracts.get(ep.get("capability") or "")
+            for variant in (contract.identity if contract else []):
+                trial = await build_plan(ep, {k: "example" for k in variant}, caller, opts)
+                if trial.candidates:
+                    plan = trial
+                    break
+        if not plan.candidates:
+            return {"tier": "none", "detail": "no provider can serve any identity shape of this job for your team right now",
                     "dropped": plan.dropped}
         first = plan.candidates[0]
         how = ("your registered tool" if first.tier == "tool" else "your own credential" if first.tier == "credential"
                else f"treg's {first.endpoint['provider']} key, ~${(first.price_micro or 0) / 1e6:g}")
         return {"tier": "routed", "detail": f"routed — {len(plan.candidates)} providers callable now; first: "
-                                            f"{first.endpoint['id']} on {how}"
+                                            f"{first.endpoint['id']} on {how} (send {{{', '.join(first.variant)}}})"
                                             + (f"; not available here: {', '.join(d['endpoint_id'] for d in plan.dropped)}" if plan.dropped else ""),
                 "plan": [c.view() for c in plan.candidates], "dropped": plan.dropped}
     provider = oauth_providers.get(service)

@@ -4656,7 +4656,8 @@ def _catalog_search(query: str, args, cfg) -> None:
     def _close_group() -> None:
         # the server shows the best few children; the rest are one `catalog get` away
         if open_group and open_group.get("children_hidden"):
-            _dim(f"    + {open_group['children_hidden']} more providers — treg catalog get {open_group['id']}")
+            _dim(f"    + {open_group['children_hidden']} more do this job — treg catalog get {open_group['id']} lists them all "
+                 f"(routed and by-id)")
 
     for e in rows:
         if e.get("kind") == "routed":
@@ -4771,6 +4772,12 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
             print(f"  {i:<3}{_clip(c['endpoint_id'], 38):<38} {price:<9} {accepts}{flag}")
         _dim("  a miss tries the next one (ceiling $1 per call by default); --header 'X-Treg-Route-Max-Cost: 0.05' to cap it,")
         _dim("  --header 'X-Treg-Route-Waterfall: 0' to stop at the first miss")
+        also = routing.get("also") or []
+        if also:
+            print(f"\n{_A}ALSO{_R}  {_M}the same job from providers treg does not route to (yet) — call them by id{_R}")
+            for a in also:
+                price = "free" if a.get("usd") == 0 else (f"${a['usd']:.4g}" if a.get("usd") is not None else "—")
+                print(f"     {_clip(a['endpoint_id'], 38):<38} {price}")
     sibs = body.get("siblings") or []
     if routing and routing.get("plan"):
         sibs = []  # the plan above IS the comparison; the sibling table would repeat it
