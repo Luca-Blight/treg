@@ -739,3 +739,73 @@ adapters:
   # apollo.companies.search: no adapter — its identity param is `q_organization_domains_list[]`, which the
   # path language reads as an index. diffbot.companies.search (DQL) and coresignal (no example) left out;
   # predictleads.companies.discover takes no identity.
+
+  # ---- google.serp.maps (batch 5) --------------------------------------------------------------
+  dataforseo.x.serp-google-maps-live-advanced:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language}
+    body_array: true
+    out: {places: "tasks[0].result[0].items", count: "tasks[0].result[0].items_count"}
+    miss: "tasks[0].result[0].items == []"
+  serpapi.x.google-maps:
+    accepts: [[q]]
+    in:  {q: queryParams.q}
+    in_expr: {queryParams.gl: "lower(country)", queryParams.hl: language}
+    const: {queryParams.engine: google_maps, queryParams.type: search}
+    out: {places: local_results}
+    miss: "local_results == []"
+
+  # ---- tiktok.user.videos (batch 5) ------------------------------------------------------------
+  justoneapi.tiktok.user.videos:
+    accepts: [[sec_uid]]
+    in:  {sec_uid: queryParams.secUid}
+    const: {queryParams.cursor: "0"}
+    out: {videos: data.aweme_list, next_cursor: data.max_cursor, has_more: data.has_more}
+    miss: "data.aweme_list == []"
+  tikhub.x.tiktok-app-v3-fetch-user-post-videos:
+    accepts: [[sec_uid]]
+    in:  {sec_uid: queryParams.sec_user_id}
+    in_expr: {queryParams.count: limit}
+    out: {videos: data.aweme_list, next_cursor: data.max_cursor, has_more: data.has_more}
+    miss: "data.aweme_list == []"
+  tikhub.x.tiktok-app-v3-fetch-user-post-videos-v2:
+    accepts: [[sec_uid]]
+    in:  {sec_uid: queryParams.sec_user_id}
+    in_expr: {queryParams.count: limit}
+    out: {videos: data.aweme_list, next_cursor: data.max_cursor, has_more: data.has_more}
+    miss: "data.aweme_list == []"
+  # tikhub.x.tiktok-app-v3-fetch-user-post-videos-v3: its example carries no aweme_list — v1/v2 cover the same lookup.
+
+  # ---- linkedin.user.profile (batch 5) ---------------------------------------------------------
+  brightdata.linkedin.user.profile:
+    accepts: [[linkedin_url]]
+    in:  {}
+    in_expr: {body.url: linkedin_url}
+    body_array: true
+    const: {queryParams.dataset_id: gd_l1viktl72bvl7bjuj0, queryParams.format: json}
+    test_identity: {linkedin_url: "https://www.linkedin.com/in/satyanadella"}
+    out: {full_name: "[0].name", first_name: "[0].first_name", last_name: "[0].last_name", headline: "[0].position",
+          location: "[0].city", followers: "[0].followers", connections: "[0].connections", about: "[0].about",
+          linkedin_url: "[0].url"}
+    miss: "[0].name == null"
+  fiber-ai.linkedin.user.profile:
+    accepts: [[linkedin_handle]]
+    in:  {linkedin_handle: body.identifier}
+    out: {full_name: output.profile.name, first_name: output.profile.first_name, last_name: output.profile.last_name,
+          headline: output.profile.headline, location: output.profile.locality, followers: output.profile.follower_count,
+          connections: output.profile.connection_count, about: output.profile.summary, linkedin_url: output.profile.url}
+    miss: "output.found == false"
+  justoneapi.x.linkedin-get-user-detail-v1:
+    accepts: [[linkedin_handle]]
+    in:  {linkedin_handle: queryParams.username}
+    out: {full_name: data.full_name, first_name: data.first_name, last_name: data.last_name, headline: data.headline,
+          location: data.location.city, linkedin_url: "fmt('https://www.linkedin.com/in/{}', data.public_identifier)"}
+    miss: "data.full_name == null"
+  scrapecreators.linkedin.user.profile:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: queryParams.url}
+    out: {full_name: name, location: location, followers: followers, connections: connections, about: about}
+    miss: "name == null"
+  # tikhub.x.linkedin-web-get-user-profile is retired (web → web_v2); web_v2's captured example has data: null,
+  # so its out cannot be verified.

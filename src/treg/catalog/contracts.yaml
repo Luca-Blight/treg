@@ -303,3 +303,51 @@ contracts:
       next_cursor: {type: str}
     miss: "companies == []"
     idempotent: true
+
+  google.serp.maps:
+    summary: "Google Maps places for a keyword — provider-native place rows in `places`"
+    identity:
+      - {q: str}
+    filters:
+      country: {type: str, default: us, note: "ISO country code; mapped to each provider's location code / gl"}
+      language: {type: str, default: en}
+    output:
+      places: {type: list, required: true, note: "the provider's own place rows (title, address, rating, coordinates…) — shapes differ per provider"}
+      count: {type: int}
+    miss: "places == []"
+    idempotent: true
+
+  tiktok.user.videos:
+    summary: "List a TikTok user's recent videos by secUid — provider-native video objects in `videos`"
+    identity:
+      - {sec_uid: str}
+    filters:
+      limit: {type: int, default: 10, note: "videos per page where the provider takes a count"}
+    output:
+      videos: {type: list, required: true, note: "the provider's own aweme objects; raw is the same body"}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "videos == []"
+    idempotent: true
+
+  linkedin.user.profile:
+    summary: "Get a LinkedIn member's public profile from a profile URL or handle — treg picks the provider and names the one that served"
+    identity:
+      - {linkedin_url: url}
+      - {linkedin_handle: str}
+    derive:
+      linkedin_url: "linkedin_url(linkedin_handle)"
+      linkedin_handle: "linkedin_handle(linkedin_url)"
+    filters: {}
+    output:
+      full_name: {type: str, required: true}
+      first_name: {type: str}
+      last_name: {type: str}
+      headline: {type: str}
+      location: {type: str}
+      followers: {type: int}
+      connections: {type: int}
+      about: {type: str}
+      linkedin_url: {type: str}
+    miss: "full_name == null"
+    idempotent: true
