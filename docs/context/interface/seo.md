@@ -474,3 +474,52 @@ and the schema all state them and had drifted apart (2,617/42 and ~2,600/~48). N
 shows the **whole** catalog, not the sum of its tiles: a tile counts only its browse surface, so the
 account/utility endpoints — real inventory, listed on each shelf page — are excluded from tile counts
 by `catalog_store.HIDDEN_KINDS`.
+
+## Discovery — the hubs are linked, not just listed
+
+Search Console on 2026-08-27 showed the 38 job pages, `/workflows` and `/agents` at zero
+impressions, and URL inspection answered "URL is unknown to Google" for
+`/use-cases/find-professional-emails` and `/workflows/find-and-verify-a-lead-list`. They were in
+the sitemap and linked from nothing: the landing linked `/catalog` and `/resources` only, `/catalog`
+linked `/tools/*` only, `/resources` linked the five outcome pages only — and those five were the
+only non-homepage URLs with impressions. A sitemap is not a crawl path.
+
+What links what now, and where it is generated:
+
+| From | To | Where |
+|---|---|---|
+| nav + footer of every server-rendered page | `/use-cases`, `/workflows`, `/agents/claude-code` | `_page()` in `routers/web.py` |
+| the landing and the public catalog (`landing.html`, `index.html` pubnav) | same three | hand-kept markup, so `test_every_surface_links_the_three_hubs` walks `/` and `/catalog` |
+| `/catalog` prerender | both hubs, in a sentence | `catalog_index` |
+| `/tools/<provider>` "Used in" | every job page whose capabilities the provider answers | `_jobs_by_provider()`, cached per process from `USE_CASE_PAGES` × the catalog |
+| `/use-cases/<job>` "Run the full sequence" | every workflow with a step on one of the job's capabilities | `_workflows_by_capability()`, cached from `WORKFLOWS[*].steps` |
+| `llms.txt` | the three indexes, with the `.md` twins | hand-kept |
+
+Both reverse indexes are derived from the same tables the pages render from, so a new job or
+workflow is cross-linked the moment it is routed, and nothing is listed by hand.
+
+### Titles: the pricing intent
+
+The non-brand queries that reach the site are "{provider} api pricing" phrasings ("linkedin api
+pricing", "1688 api pricing" — the one non-brand click in 28 days), not "api for agents". So:
+
+- `/tools/<provider>` titles lead with it: `{Provider} API pricing per call: from $0.0245 | treg.to`
+  (falls back to `{Provider} API pricing per call | treg.to` past 65 characters; own-account
+  providers keep the MCP title). The kicker carries the measured line — calls observed, ok rate,
+  median latency — read through `_observed_or_empty` like the job pages; it is the one fact a
+  vendor's own pricing page cannot print.
+- compare-form job titles get `, from $X` appended when the hand-written title carries no price and
+  the result stays within `_TITLE_MAX` (65); " compared" is dropped to make room.
+
+### IndexNow
+
+`/{INDEXNOW_KEY}.txt` serves the IndexNow key (not a secret: the protocol only checks the key is
+served from the host named in the submission). `scripts/indexnow_submit.py` reads the live sitemap
+and pushes every URL to `api.indexnow.org` (Bing, Yandex, Seznam, Naver share the feed) and pings
+Google's sitemap endpoint. Google's own resubmission goes through Search Console
+(`google-search-console.x.webmasters-sitemaps-submit` in the catalog, owner OAuth). The route is
+registered in `bootstrap.py`'s ownership table like every other public route.
+
+Tests: `test_every_surface_links_the_three_hubs`, `test_provider_page_names_the_jobs_it_serves`,
+`test_job_page_names_the_workflows_that_chain_it`, `test_compare_titles_carry_the_cheapest_price`,
+`test_provider_title_leads_with_pricing`, `test_indexnow_key_is_served_from_the_root`.
