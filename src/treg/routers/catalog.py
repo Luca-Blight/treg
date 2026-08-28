@@ -285,7 +285,7 @@ async def catalog_endpoint(endpoint_id: str, db: AsyncSession = Depends(get_sess
                          "miss": contract.miss, "derive": contract.derive} if contract else None,
             "plan": [_plan_row(c) for c in rank(cands)],
             "headers": {"X-Treg-Route-Waterfall": "on by default: a miss tries the next provider; 0 = stop at the first miss",
-                        "X-Treg-Route-Max-Cost": "USD ceiling for the whole call (default 0.10)",
+                        "X-Treg-Route-Max-Cost": "USD ceiling for the whole call (default 1.00)",
                         "X-Treg-Route-Prefer": "provider[,…]", "X-Treg-Route-Exclude": "provider[,…]"},
         }
     return {

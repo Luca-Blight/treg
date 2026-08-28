@@ -192,7 +192,7 @@ capability whose adapters passed verification. Call one like any endpoint:
 ```bash
 treg call treg.people.email.find --body '{"full_name": "Patrick Collison", "domain": "stripe.com"}'
 treg call treg.people.email.find --body '{"linkedin_url": "https://www.linkedin.com/in/patrickcollison"}' \
-  --header "X-Treg-Route-Max-Cost: 0.25"     # raise the per-call ceiling (default $0.10)
+  --header "X-Treg-Route-Max-Cost: 0.05"     # cap the per-call spend (default ceiling $1)
 treg catalog get treg.people.email.find      # the ranked plan with prices — spends nothing
 ```
 
@@ -200,7 +200,7 @@ treg runs the best child — your own keys first, then the cheapest expected cos
 returns `{output, raw, _treg: {served_by, tried, charged_micro}}` plus `X-Treg-Served-By` and
 `X-Treg-Providers-Tried`. A provider error falls back to the next candidate (at most two extra); a
 vendor 4xx is your request's fault and stops. A **miss** tries the next provider too (the waterfall,
-on by default), cheapest first, within `X-Treg-Route-Max-Cost` (default $0.10 per call); every
+on by default), cheapest first, within `X-Treg-Route-Max-Cost` (default $1 per call); every
 attempt settles at its real price and misses on per-success providers are free. `X-Treg-Route-Waterfall: 0`
 stops at the first miss. `X-Treg-Route-Prefer` / `X-Treg-Route-Exclude` name providers. Vendor endpoints are still relayed verbatim; only `treg.*` rows model an API.
 

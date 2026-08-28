@@ -4755,7 +4755,7 @@ def _catalog_get(endpoint_id: str, cfg) -> None:
             price = f"${c['usd']:.4g}" if c.get("usd") is not None else "—"
             flag = f"  {_AM}exhausted{_R}" if c.get("exhausted") else ""
             print(f"  {i:<3}{_clip(c['endpoint_id'], 38):<38} {price:<9} {accepts}{flag}")
-        _dim("  a miss tries the next one (ceiling $0.10 by default); --header 'X-Treg-Route-Max-Cost: 0.25' to raise it,")
+        _dim("  a miss tries the next one (ceiling $1 per call by default); --header 'X-Treg-Route-Max-Cost: 0.05' to cap it,")
         _dim("  --header 'X-Treg-Route-Waterfall: 0' to stop at the first miss")
     sibs = body.get("siblings") or []
     if routing and routing.get("plan"):

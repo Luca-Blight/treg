@@ -378,7 +378,7 @@ async def test_a_keyless_provider_is_dropped_at_planning_not_failed_at_call_time
 def test_a_contract_may_set_its_own_default_ceiling():
     from treg.application.call.route import RouteOptions, DEFAULT_MAX_COST_MICRO
     cat = catalog_store.load()
-    assert cat.contracts["people.search"].default_max_cost_usd == 0.5
+    assert cat.contracts["people.search"].default_max_cost_usd is None, "the $1 default covers every current ladder"
     assert RouteOptions.from_headers(lambda k: None, 500_000).max_cost_micro == 500_000
     assert RouteOptions.from_headers(lambda k: None).max_cost_micro == DEFAULT_MAX_COST_MICRO
     assert RouteOptions.from_headers(lambda k: "0.02" if k == "x-treg-route-max-cost" else None, 500_000).max_cost_micro == 20_000
@@ -398,5 +398,3 @@ async def test_routed_call_and_access_name_the_providers_dropped_for_this_deploy
     a = await clients.get(f"/catalog/endpoints/{ROUTED}/access")
     assert a.status_code == 200 and a.json()["tier"] == "routed" and a.json()["detail"].startswith("routed — ")
     assert "aviato.people.email.find" in a.json()["detail"]
-    cat = catalog_store.load()
-    assert cat.contracts["people.phone.find"].default_max_cost_usd == 0.25

@@ -10,7 +10,7 @@ Fallback follows the overflow rules: on an ERROR (our 5xx/503, a vendor 5xx/429/
 candidate is tried, at most two extra, idempotent contracts only; a caller-caused refusal (4xx)
 stops at once — it would be the same 4xx everywhere. A MISS (2xx, `adapter.miss`) stops unless the
 caller turned the waterfall off (`X-Treg-Route-Waterfall: 0`). The waterfall is ON by default —
-the endpoint's job is to find the thing — bounded by `X-Treg-Route-Max-Cost` (default $0.10).
+the endpoint's job is to find the thing — bounded by `X-Treg-Route-Max-Cost` (default $1.00).
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ _DROP_FROM_CHILD = frozenset({b"content-length", b"content-type", b"transfer-enc
 _CALLER_FAULT = frozenset({400, 401, 403, 404, 405, 409, 422})
 
 
-DEFAULT_MAX_COST_MICRO = 100_000  # $0.10 per routed call unless the caller says otherwise
+DEFAULT_MAX_COST_MICRO = 1_000_000  # $1.00 per routed call unless the caller says otherwise — a runaway guard, not a budget
 
 
 @dataclass
