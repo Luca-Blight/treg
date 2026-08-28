@@ -7,7 +7,7 @@ import base64
 from httpx import ASGITransport, AsyncClient
 from starlette.responses import PlainTextResponse
 
-from treg.api import (
+from treg.bootstrap_http import (
     _BodyDecodeMiddleware,
     _LegacyHostRedirectMiddleware,
     _SecurityHeadersMiddleware,

@@ -8,7 +8,8 @@ from collections import Counter
 from httpx import AsyncClient
 from sqlmodel import select
 
-from treg import api as A
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
+
 from treg.application.call import service as call_service
 from treg.routers import call as call_routes
 from treg import audit, ledger
@@ -907,7 +908,7 @@ async def test_h1_saturation_503_still_carries_a_call_id_and_a_row(
     await _register_echo(matrix_clients)
 
     async def _no_slot(*args, **kwargs):
-        raise A.PoolTimeoutError("QueuePool limit of size 5 overflow 10 reached, connection timed out")
+        raise PoolTimeoutError("QueuePool limit of size 5 overflow 10 reached, connection timed out")
 
     monkeypatch.setattr(call_service, "_resolve_call", _no_slot)
     before = await snapshot(matrix_clients, fake_provider)

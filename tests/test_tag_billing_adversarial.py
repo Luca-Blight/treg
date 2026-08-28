@@ -14,8 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from starlette.requests import Request
 
-from treg import api as A, audit, crypto, ledger, localproxy
+from treg import audit, crypto, ledger, localproxy
+from treg.application.call import idempotency as call_idem
+from treg.application.call import reserve as call_reserve
 from treg.application.call import service as call_service
+from treg.application.call.intake import CallMeta
 from treg.application.call.types import UpstreamResponse
 from treg.routers import call as call_routes
 from treg.config import get_settings
@@ -64,7 +67,7 @@ def _request_with_meta(value: str) -> Request:
 
 def _assert_meta_rejected(value: str) -> None:
     with pytest.raises(HTTPException) as exc:
-        A._parse_call_meta(_request_with_meta(value))
+        call_routes._parse_call_meta(_request_with_meta(value))
     assert exc.value.status_code == 422
 
 
@@ -91,8 +94,8 @@ async def test_attack_1_all_ingress_paths_reject_storage_key_delimiters(
             budget_policy._validate_tag_pair("customer", value)
         assert exc.value.status_code == 422
 
-    meta = A._parse_call_meta(_request_with_meta("customer=safe_value"))
-    stored_key = A._scoped_idempotency_key("retry-1", meta)
+    meta = call_routes._parse_call_meta(_request_with_meta("customer=safe_value"))
+    stored_key = call_idem._scoped_idempotency_key("retry-1", meta)
     assert stored_key == "safe_value\x1fretry-1"
     assert all(bad not in meta.primary_val for bad in ("\x1f", "\n", ","))
 
@@ -205,7 +208,7 @@ async def test_attack_4_concurrent_prechecks_overshoot_is_bounded_not_exact(
         f"/orgs/{org_id}/budgets/customer/race", json={"daily_cap_micro": cap_micro})
     assert budget.status_code == 200, budget.text
 
-    original = A._enforce_tag_budgets
+    original = call_reserve._enforce_tag_budgets
     ready = 0
     all_prechecked = asyncio.Event()
 
@@ -445,15 +448,15 @@ async def test_review_replay_keeps_the_original_call_id(clients: AsyncClient, pl
 
 def test_review_idempotency_separator_and_post_fingerprint_are_unambiguous():
     scoped = {
-        A._scoped_idempotency_key(key, A.CallMeta(tags={"customer": customer}))
+        call_idem._scoped_idempotency_key(key, CallMeta(tags={"customer": customer}))
         for customer in ("A", "AB", "A-B", "A:B")
-        for key in ("C", f"B{A._IDEM_SCOPE_SEP}C", f"{A._IDEM_SCOPE_SEP}C")
+        for key in ("C", f"B{call_idem._IDEM_SCOPE_SEP}C", f"{call_idem._IDEM_SCOPE_SEP}C")
     }
     assert len(scoped) == 12
-    original = A._request_fingerprint("POST", "endpoint", b'{"amount":1}', "mode=fast")
-    assert original == A._request_fingerprint("post", "endpoint", b'{"amount":1}', "mode=fast")
-    assert original != A._request_fingerprint("POST", "endpoint", b'{"amount":2}', "mode=fast")
-    assert original != A._request_fingerprint("POST", "endpoint", b'{"amount":1}', "mode=slow")
+    original = call_idem._request_fingerprint("POST", "endpoint", b'{"amount":1}', "mode=fast")
+    assert original == call_idem._request_fingerprint("post", "endpoint", b'{"amount":1}', "mode=fast")
+    assert original != call_idem._request_fingerprint("POST", "endpoint", b'{"amount":2}', "mode=fast")
+    assert original != call_idem._request_fingerprint("POST", "endpoint", b'{"amount":1}', "mode=slow")
 
 
 @pytest.mark.anyio

@@ -26,8 +26,8 @@ A caller is a super-admin if EITHER:
 Otherwise 403. The env key bootstraps; `POST /admin/users/{id}/superadmin` then grants named users the
 flag (so a web portal can log in with either). Returns a principal string (for audit).
 
-`api.py` re-exports this dependency during the staged router migration, so compatibility imports refer
-to the same function object.
+The dependency lives in `domain.identity.access` and every consumer imports it from there; the
+transitional `api.py` re-export retired with the rest of the stage-3 compatibility surface.
 
 The cross-tenant read, mutation, and reconciliation handlers live in three ordered blocks in
 `routers.admin`. The mutation block shares the org deletion and member-rule cleanup helpers from

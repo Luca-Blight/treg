@@ -38,7 +38,7 @@ from treg.models import CallRecord, Hold
 from test_marketplace_call import EP, EP_MICRO, platform_on  # noqa: F401 — fixture reuse
 from test_mcp import _call_tool, mcp_session
 
-PoolTimeoutError = A.PoolTimeoutError
+from sqlalchemy.exc import TimeoutError as PoolTimeoutError
 
 
 @pytest.fixture

@@ -17,7 +17,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import update
 
-from treg import api as A
+from treg.application.call import resolve as call_resolution
 from treg.application.call import service as call_service
 from treg.routers import call as call_routes
 from treg import crypto
@@ -205,20 +205,20 @@ async def test_empty_balance_is_an_actionable_402(clients: AsyncClient, billed_o
 
 # ---- pricing units -----------------------------------------------------------------------------
 def test_post_has_link_sniffs_only_the_text_field():
-    assert A._post_has_link(b'{"text": "see https://a.example"}')
-    assert A._post_has_link(b'{"text": "see www.example.com"}')
-    assert not A._post_has_link(b'{"text": "no links here"}')
-    assert not A._post_has_link(b'{"text": "plain", "quote_tweet_id": "123"}')
-    assert not A._post_has_link(b'not json')
-    assert not A._post_has_link(b"")
+    assert call_resolution._post_has_link(b'{"text": "see https://a.example"}')
+    assert call_resolution._post_has_link(b'{"text": "see www.example.com"}')
+    assert not call_resolution._post_has_link(b'{"text": "no links here"}')
+    assert not call_resolution._post_has_link(b'{"text": "plain", "quote_tweet_id": "123"}')
+    assert not call_resolution._post_has_link(b'not json')
+    assert not call_resolution._post_has_link(b"")
 
 
 def test_billed_endpoint_match_prefers_exact_over_template():
-    ep = A._billed_endpoint_match("x", "GET", "/2/users/me")
+    ep = call_resolution._billed_endpoint_match("x", "GET", "/2/users/me")
     assert ep and ep["id"] == "x.x.user.profile"
-    ep = A._billed_endpoint_match("x", "GET", "/2/users/44196397/tweets")
+    ep = call_resolution._billed_endpoint_match("x", "GET", "/2/users/44196397/tweets")
     assert ep and ep["id"] == "x.x.user.posts"
-    assert A._billed_endpoint_match("x", "GET", "/2/no/such/route") is None
+    assert call_resolution._billed_endpoint_match("x", "GET", "/2/no/such/route") is None
 
 
 def _stub_relay(status_code: int, body: bytes):

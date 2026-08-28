@@ -183,8 +183,8 @@ async def test_reliability_section_appears_only_with_traffic(clients: AsyncClien
     html = (await clients.get(USECASE)).text
     assert "Which one is the most reliable" not in html
     import inspect
-    from treg import api
-    src = inspect.getsource(api.use_case_job_page)
+    from treg.routers.web import use_case_job_page
+    src = inspect.getsource(use_case_job_page)
     assert "not a controlled benchmark" in src
 
 
@@ -205,7 +205,7 @@ async def test_use_case_page_prices_come_from_the_catalog(clients: AsyncClient):
            if e["kind"] not in catalog_store.HIDDEN_KINDS]
     lowest = min(c["usd"] for e in eps
                  if (c := cat.cost_view(e.get("cost"), e.get("provider"))) and c["usd"])
-    from treg.api import _usd_short
+    from treg.routers.web import _usd_short
     html = (await clients.get(USECASE)).text
     # the price sits in the hero kicker and the economics block, not the title: a title that fits a
     # search result has no room for it
@@ -327,8 +327,8 @@ async def test_no_agent_or_job_specific_string_is_hardcoded_in_the_route():
     """Everything job-specific comes from the page spec, and the example agent from one constant,
     so writing page 2 is data entry."""
     import inspect
-    from treg import api
-    src = inspect.getsource(api.use_case_job_page)
+    from treg.routers.web import use_case_job_page
+    src = inspect.getsource(use_case_job_page)
     for bad in ("email finder", "found addresses", "an address is found", "email address"):
         assert bad not in src.lower(), bad
     assert src.count("ChatGPT") == 0, "the example agent must come from DEFAULT_AGENT"
@@ -410,7 +410,7 @@ def test_related_cards_resolve_to_the_job_s_own_category():
     """Four categories carry fewer than five jobs, so `related` has to cross categories there.
     Resolving inside the current page's category sent those cards to the wrong anchor under a
     caption naming the wrong category, and no test noticed because the label still existed."""
-    from treg.api import _related_link, _use_case_page_for
+    from treg.routers.web import _related_link, _use_case_page_for
     owner = {lbl: c for c, jobs in agent_pages.USE_CASES for lbl, _ in jobs}
     for key, spec in agent_pages.USE_CASE_PAGES.items():
         for lbl in spec["related"]:

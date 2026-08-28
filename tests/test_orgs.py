@@ -16,7 +16,7 @@ async def test_org_delete_clears_EVERY_org_scoped_table(clients):
     from sqlmodel import SQLModel
 
     from treg import models as m
-    from treg.api import _ORG_SCOPED_MODELS
+    from treg.routers.orgs import _ORG_SCOPED_MODELS
 
     covered = {model.__name__ for model in _ORG_SCOPED_MODELS}
     missing = []
