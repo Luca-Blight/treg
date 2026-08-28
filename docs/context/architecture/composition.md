@@ -117,3 +117,6 @@ Each factory call must produce an independent app whose dependency overrides bel
 at the new FastAPI instance, and rebuilds its request handler. This also avoids the internal
 `_IncludedRouter` wrapper added by the current FastAPI `include_router()` implementation, which would
 otherwise change route inspection and the committed surface snapshot.
+
+Public routes added since: `/{INDEXNOW_KEY}.txt` (`indexnow_key`, `routers/web.py`) — the IndexNow
+key file; listed in the ownership table beside `/sitemap.xml`. See `interface/seo.md` § IndexNow.
