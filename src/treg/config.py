@@ -254,6 +254,20 @@ class Settings(BaseSettings):
     # default; the test suite disables it (its upstream is an in-process ASGI transport, not real DNS).
     proxy_ssrf_check: bool = True
 
+    # The archive's rollout switch (see treg/archive.py): "off" (default) | "shadow" (record +
+    # learn from metered platform responses, serve nothing) | "serve" (shadow + answer eligible
+    # fresh hits from the store). Any other value degrades to "off" — a typo must disable, never
+    # enable. Staged deliberately so production can sit in "shadow" while phase 0 measures.
+    archive_mode: str = "off"
+    # Bodies above this size are hash-counted but never stored (skipped whole, not truncated):
+    # the archive is for API JSON answers, not downloads. Statistics still record size_bytes.
+    archive_max_body_bytes: int = 2_000_000
+    # The refresh worker (serve mode only): how often it scans for due keys, and how many
+    # refresh calls ONE provider may spend per UTC day. A refresh is treg's own vendor spend with
+    # no caller attached, so the cap is the brake — 0 disables refreshing without touching serving.
+    archive_refresh_interval_s: int = 300
+    archive_refresh_daily_cap: int = 50
+
     # Additive Claude directory MCP. Default OFF so deploying code cannot publish a new connector
     # surface before its production Inspector and custom-connector gates have passed.
     claude_connector_enabled: bool = False

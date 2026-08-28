@@ -1,7 +1,7 @@
 """capacity policy + snapshot tables (docs/PROVIDER-CAPACITY-PLAN.md §2)
 
-Revision ID: 0002
-Revises: 0001
+Revision ID: 0005
+Revises: 0004
 Create Date: 2026-08-28
 
 Paired with the legacy startup path (db.init_db → create_all) until stage 5; the baseline parity
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 import sqlmodel
 
 
-revision: str = '0002'
-down_revision: str | Sequence[str] | None = '0001'
+revision: str = '0005'
+down_revision: str | Sequence[str] | None = '0004'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

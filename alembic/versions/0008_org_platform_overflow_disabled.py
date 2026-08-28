@@ -1,7 +1,7 @@
 """org.platform_overflow_disabled — the overflow opt-out (docs/context/ops/capacity.md)
 
-Revision ID: 0005
-Revises: 0004
+Revision ID: 0008
+Revises: 0007
 Create Date: 2026-08-28
 
 Added with a server default so existing rows are valid, then the default is dropped to match the
@@ -14,8 +14,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = '0005'
-down_revision: str | Sequence[str] | None = '0004'
+revision: str = '0008'
+down_revision: str | Sequence[str] | None = '0007'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

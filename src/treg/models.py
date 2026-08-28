@@ -292,6 +292,11 @@ class CallRecord(SQLModel, table=True):
     budget_val: str = Field(default="", index=True)
     tags: dict | None = Field(default=None, sa_column=Column("tags", JSON, nullable=True))
     created_at: datetime = Field(default_factory=_now)
+    # True when the archive served this answer instead of the vendor (X-Treg-Cache: hit).
+    # Money columns stay identical to a live call on purpose — pricing a hit is a deferred
+    # founder decision (docs/context/architecture/archive.md). Declared LAST to match the
+    # migration's ALTER TABLE ADD COLUMN position (the baseline parity test compares order).
+    cached: bool = Field(default=False)
     # Did the provider FIND something? Decided at settle from the response body by the endpoint's
     # routing adapter (`catalog/adapters.yaml` `miss`), never stored as content — only the verdict.
     # NULL = no adapter could tell (or the call failed). Feeds `stats.observed` `hit_rate`, the
@@ -440,10 +445,11 @@ class AdConversion(SQLModel, table=True):
     """One conversion owed to Google Ads — an OUTBOX row, not a log line.
 
     Written synchronously inside the transaction of the event it describes, so the event and its
-    pending conversion commit or fail together — true for `signup` (queued before `ledger.grant`,
-    whose own commit lands both) and `first_call` (queued and committed on its own dedicated
-    session). It is NOT true for `paid`: `ledger.topup()` commits internally before `billing._credit`
-    queues the conversion, so a crash between the two commits loses that conversion permanently. This
+    pending conversion commit or fail together — true for `signup` (queued alongside the grant;
+    `_grant_signup_promo`'s single commit lands both) and `first_call` (queued and committed on its
+    own dedicated session). It is NOT true for `paid`: `_credit` commits the credit immediately after
+    `ledger.topup()` stages it, before queueing the conversion, so a crash between the two commits
+    loses that conversion permanently. This
     gap is a known, accepted trade-off (2026-08-17) rather than a reason to restructure `ledger.py` —
     see `docs/context/architecture/ads-conversions.md`. A background worker uploads every row later;
     until then `uploaded_at` is NULL. The unique constraint on (org_id, action) is what makes every
@@ -1148,3 +1154,91 @@ class OverflowSpend(SQLModel, table=True):
     cost_micro: int = Field(default=0)
     delta_micro: int = Field(default=0)
     updated_at: datetime = Field(default_factory=_now)
+
+
+class ArchiveKey(SQLModel, table=True):
+    """One logical question the platform has answered at least once — the archive's index row.
+
+    The key hash comes from `archive.cache_key`: method + endpoint + canonical URL/query/body,
+    credentials and transport noise excluded. One row carries everything the timer learner and the
+    refresh worker need about this question: when it was last fetched, how it has changed across
+    refetches, how often callers ask (heat), and which JSON paths turned out to be noise.
+
+    **Scoped to the platform, not to an org.** Only metered platform-tier calls are recorded (the
+    module docstring's gate 3): those run on treg's own vendor account, so the answer belongs to
+    the platform and one team's fetch may warm another team's hit. Own-key responses never enter
+    this table — that is the privacy line, drawn at write time, not filtered at read time.
+
+    Timer state is AIMD (grow slowly on stability, shrink fast on change): `ttl_s` is the current
+    per-key timer, adjusted by the learner on every refetch outcome. `change_seen` / `stable_seen`
+    count outcomes so the learner and the admin report can show their evidence. `volatile_paths`
+    holds the learned noisy JSON paths (request ids, server timestamps) excluded from change
+    detection — stored per key, applied before comparing, never applied to stored bytes.
+
+    PR 1 creates the shape only; nothing writes it until the recorder lands (PR 2).
+    """
+
+    __table_args__ = (UniqueConstraint("key_hash", name="uq_archive_key_hash"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    key_hash: str = Field(index=True)              # sha256 from archive.cache_key
+    endpoint_id: str = Field(index=True)           # catalog endpoint id — policy + report joins
+    provider: str = Field(default="", index=True)  # denormalized for per-provider budgets/reports
+    policy: str = Field(default="forbidden")       # effective policy when last written (see archive)
+    # --- timer (AIMD) ---
+    ttl_s: int = Field(default=0)                  # current per-key timer; 0 = no serving opinion yet
+    fetched_at: datetime = Field(default_factory=_now, index=True)  # newest snapshot's fetch time
+    # --- change statistics (the learner's evidence) ---
+    change_seen: int = Field(default=0)            # refetches whose stripped hash differed
+    stable_seen: int = Field(default=0)            # refetches whose stripped hash matched
+    last_changed_at: datetime | None = Field(default=None)
+    volatile_paths: list = Field(default_factory=list, sa_column=Column(JSON))
+    # --- demand (what earns a refresh) ---
+    heat: float = Field(default=0.0)               # decayed request rate, updated on each hit/miss
+    last_requested_at: datetime | None = Field(default=None)
+    created_at: datetime = Field(default_factory=_now)
+    # The pre-injection request shape, stored so the refresh worker can re-ask the exact question.
+    # Credentials cannot appear here: injection happens inside the relay, after this shape is
+    # fixed. Declared LAST to match the migration's ALTER TABLE append position (parity test).
+    req_method: str = Field(default="")
+    req_url: str = Field(default="")
+    req_body: bytes | None = Field(default=None)
+    # Only the headers that KEY (Accept / Accept-Language, when the caller sent them): the worker
+    # must replay them or its recording lands under a different key than the caller's question.
+    req_headers: dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
+class ArchiveSnapshot(SQLModel, table=True):
+    """One stored answer — a version in a key's history. The newest fresh one is the cache.
+
+    Bytes are kept VERBATIM: change detection strips noisy fields on a comparison copy, never on
+    what is stored, so a served hit replays exactly what the vendor sent (relay faithfulness,
+    extended through time). `content_hash` (sha256 of the raw body) deduplicates: consecutive
+    identical answers add a version row but reference the same bytes via `body_of` instead of
+    storing them again — the history of "asked on these dates, same answer" is itself data.
+
+    Bodies live in Postgres, the IdempotentCall precedent (a paid answer worth keeping is already
+    stored there today); `body` is NULL when `body_of` points at the row that carries the bytes.
+    Oversized bodies are skipped by the recorder, not truncated — a half answer is worse than none.
+
+    Old versions of a `transient`-policy key are prunable; an `archive`-policy key keeps its
+    history — that difference is enforced by the (future) worker's pruning pass, not by schema.
+    """
+
+    __table_args__ = (
+        UniqueConstraint("key_id", "version", name="uq_archive_snapshot_version"),
+        Index("ix_archive_snapshot_content", "content_hash"),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+    key_id: int = Field(foreign_key="archivekey.id", index=True)
+    version: int = Field(default=1)                # 1..N within the key, newest = max
+    status_code: int = Field(default=200)
+    media_type: str = Field(default="")
+    content_hash: str                              # sha256 of the RAW body (dedup identity)
+    body: bytes | None = Field(default=None)       # verbatim bytes, or NULL when body_of is set
+    body_of: int | None = Field(default=None, foreign_key="archivesnapshot.id")
+    size_bytes: int = Field(default=0)             # of the raw body, even when deduplicated
+    fetched_at: datetime = Field(default_factory=_now, index=True)
+    # Who triggered the fetch: "caller" (a real request) | "refresh" (worker) | "sample" (learner).
+    origin: str = Field(default="caller")

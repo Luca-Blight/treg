@@ -39,6 +39,16 @@ implied HEAD operations, shared HTTP client creation, startup work, shutdown dra
 conversion worker. Registration order is compatibility behavior. The four stage-0 snapshots stay
 byte-identical for `role="all"` unless that composition intentionally changes.
 
+For every role, the factory wires the Catalog observation port to one process-local
+`CachedEndpointObservationReader` backed by short `session_maker` reads. `all` and `dataplane`
+lifespans inject that exact instance into both mounted MCP catalog surfaces; the HTTP catalog routes
+and the observed-stats prose pages (use-case and workflow) on `all` and `control` read the instance
+from app state. This keeps one cache and one refresh Task per
+process even when HTTP and MCP search concurrently. The refresh Task starts lazily on a miss rather
+than appearing in the role's always-running background-task manifest. The lifespan still owns it:
+shutdown first unbinds it from MCP, then calls `aclose()`, which refuses new refreshes and cancels the
+shared Task before database and HTTP resources disappear.
+
 `bootstrap_handlers.py` owns the app-wide pool-saturation and HTTP-exception adapters. The composition
 root supplies the call-specific `_stamp_call_exit` callback from `routers/call.py` before registration;
 the callback owns call ids, refusal classification, audit fallback, and idempotency-label release.

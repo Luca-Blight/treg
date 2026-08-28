@@ -11,7 +11,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 import httpx
 
-from ... import analytics, audit, catalog_store, oauth
+from ... import analytics, archive, audit, catalog_store, oauth
 from ... import sandbox as demo_sandbox
 from ...client_identity import _norm_client
 from ...config import get_settings
@@ -88,6 +88,27 @@ class _ApplicationRequest:
             call_cost_micro=context.cost_micro,
         )
         self.db = session_maker()
+
+
+def _served_response(served: dict, body: bytes) -> UpstreamResponse:
+    """A stored answer in the relay's own clothes: an already-buffered UpstreamResponse carrying
+    the cache headers. Content-length matches the bytes actually sent; nothing upstream to close."""
+    async def _body():
+        yield body
+
+    async def _close() -> None:
+        return None
+
+    headers = [(b"content-length", str(len(body)).encode())]
+    if served.get("media_type"):
+        headers.append((b"content-type", served["media_type"].encode("latin-1", "replace")))
+    headers += [
+        (b"x-treg-cache", b"hit"),
+        (b"x-treg-fetched-at", (served["fetched_at"].isoformat() + "Z").encode()),
+        (b"x-treg-age", str(served["age_s"]).encode()),
+    ]
+    return UpstreamResponse(status=served["status_code"], raw_headers=tuple(headers),
+                            body_stream=_body(), close=_close)
 
 
 async def execute_call(context: CallContext, upstream_client: httpx.AsyncClient) -> UpstreamResponse:
@@ -327,6 +348,7 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
     request.state.idem_claim = intake.claim
 
     drop_params: set[str] = set()
+    served_hit = False  # a cached hit — set where the archive answers instead of the vendor
     mk: MarketplaceCall | None = None
     own_tool_miss: dict | None = None
     ep: dict | None = None
@@ -483,6 +505,9 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
         if mk is not None:
             telemetry |= {
                 "endpoint_id": mk.endpoint_id, "provider": mk.provider, "credential_tier": mk.tier,
+                # The archive answered instead of the vendor; money columns are identical to a
+                # live call ON PURPOSE (the pricing of a hit is a deferred founder decision).
+                **({"cached": True} if served_hit else {}),
                 # An org credential riding treg's pay-per-use OAuth app: tier stays tool/credential
                 # (the credential IS theirs), this says who the upstream billed.
                 **({"oauth_billed": True} if mk.billed_oauth else {}),
@@ -717,13 +742,34 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                     waited = await provider_limiter.acquire(mk.provider, *rl)
                     if waited:
                         smoothed.append(f"wait={waited}")
-            response = await relay(
-                upstream_request,
-                upstream_url, tool, secrets, upstream_client,
-                drop_params=drop_params or None,
-                force_identity=mk is not None and mk.metered,
-            )
-            if mk is not None and mk.metered:
+            # The archive's serve path (docs/context/architecture/archive.md): a fresh stored
+            # answer replaces ONLY the network trip. Reserve already ran, settle/audit/cost header
+            # run below unchanged — a cached hit is billed exactly like the live call it stands in
+            # for, tagged `cached`; the founder's deferred pricing decision attaches to that tag.
+            served = None
+            if mk is not None and mk.metered and archive.serving():
+                try:
+                    served = await archive.lookup(
+                        method=request.method, endpoint_id=mk.endpoint_id,
+                        url=archive.key_url(upstream_url,
+                                            list(request.query_params.multi_items()),
+                                            drop_params or set()),
+                        caller_body=caller_body, request_headers=request.headers)
+                except Exception:  # noqa: BLE001 — lookup swallows internally; this catches even a
+                    served = None  # fault in its own plumbing. Cache trouble must cost a vendor
+                    #              call, never a 500.
+            if served is not None:
+                body = served["body"]
+                served_hit = True
+                response = _served_response(served, body)
+            else:
+                response = await relay(
+                    upstream_request,
+                    upstream_url, tool, secrets, upstream_client,
+                    drop_params=drop_params or None,
+                    force_identity=mk is not None and mk.metered,
+                )
+            if served is None and mk is not None and mk.metered:
                 # Metered calls don't stream: settling needs the provider's own reported cost, which is
                 # in the body (see _buffer_response). A failure while draining is still an upstream
                 # failure, so it becomes a 502 and the hold goes back.
@@ -740,6 +786,21 @@ async def _execute_call(request: _ApplicationRequest, upstream_client: httpx.Asy
                         drop_params=drop_params or None, force_identity=True)
                     response, body = await _buffer_response(response)
                     smoothed.append("retry=1")
+                # The archive's recorder (docs/context/architecture/archive.md): the body is already
+                # in memory here for the settle, so observing it costs nothing on-request. Metered
+                # 2xx only — gate 3 of eligibility is exactly 'this fact, at this line'. Off unless
+                # TREG_ARCHIVE_MODE says otherwise; record() is fire-and-forget and never raises.
+                if archive.recording() and 200 <= response.status < 300:
+                    _ct = next((v.decode("latin-1") for k, v in response.raw_headers
+                                if k.lower() == b"content-type"), "")
+                    archive.record(
+                        method=request.method, endpoint_id=mk.endpoint_id, provider=mk.provider,
+                        url=archive.key_url(upstream_url,
+                                            list(request.query_params.multi_items()),
+                                            drop_params or set()),
+                        caller_body=caller_body,
+                        headers={k: request.headers.get(k, "") for k in ("accept", "accept-language")},
+                        status_code=response.status, media_type=_ct, body=body)
             elif response.status >= 400:
                 # Preserve streaming for own-key and own-tool calls while retaining only the small
                 # diagnostic head. The replacement response replays every consumed byte verbatim.

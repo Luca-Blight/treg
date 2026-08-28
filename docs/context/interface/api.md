@@ -334,6 +334,11 @@ validated before resolving the shared HTTP client. `/auth/logout` remains an HTT
   the band `rank_band()` returns (the whole equal-scoring group at the cut, capped at `RERANK_BAND`
   with a hint when that cap bites), on **measured reliability, then core-before-extended, then price**, with
   `verified` and id keeping the order total; each result carries the `observed` block that decided it.
+  Reliability is an optional endpoint-level process cache rather than a request DB dependency:
+  entries are fresh for five minutes, served stale while refreshing through thirty minutes, then
+  omitted. Cold-start and database-failure requests still answer 200 without reliability weighting;
+  one process-level refresh Task uses its own short session, so `/catalog/search` checks out zero DB
+  connections regardless of search concurrency.
   See [catalog](../architecture/catalog.md#the-evidence-decides-the-order-not-just-the-detail-page).
   `catalog_endpoint` (`GET /catalog/endpoints/{endpoint_id}`) answers everything in ONE round-trip:
   `{endpoint, provider:{service, display_name, limits?, pricing_url?, docs?}, siblings[], call_template,
@@ -824,4 +829,7 @@ because a cookie is attacker-supplied and this value reaches a query.
 Redemption happens at **first team creation**, in both org-creating doors (`POST /orgs` and the
 legacy `POST /users`), immediately after `_grant_signup_promo` and with the same swallow-and-log
 posture: a referral is a marketing nicety and a signup is not. It must never be why someone cannot
-make a team.
+make a team. A failed grant recovers by rolling the session back, which expires every object it
+tracks - so both doors read their response fields *before* granting, and the redemption revives an
+expired `user`/`org` with `db.refresh` before touching them. The recovery path costs the team its
+credit, never the signup response or the referral attribution.

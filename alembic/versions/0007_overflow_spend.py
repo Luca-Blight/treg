@@ -1,7 +1,7 @@
 """overflow spend accounting (docs/PROVIDER-CAPACITY-PLAN.md §4.3 step 5)
 
-Revision ID: 0004
-Revises: 0003
+Revision ID: 0007
+Revises: 0006
 Create Date: 2026-08-28
 """
 from collections.abc import Sequence
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 import sqlmodel
 
 
-revision: str = '0004'
-down_revision: str | Sequence[str] | None = '0003'
+revision: str = '0007'
+down_revision: str | Sequence[str] | None = '0006'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

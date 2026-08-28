@@ -3,6 +3,7 @@
 import logging
 from urllib.parse import unquote
 
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -65,24 +66,35 @@ async def _grant_signup_promo(db: AsyncSession, org: Org) -> None:
     """
     if org is None or org.id is None or org.demo or org.public_demo:
         return
+    # Read now: the rollback below expires every object this session tracks, and a lazy attribute
+    # load after it is implicit async I/O (MissingGreenlet) - same idiom as money._ClaimedHold.
+    org_id = org.id
     try:
-        # Queue BEFORE granting: adsconv.queue() only adds a row inside a SAVEPOINT, it never commits.
-        # ledger.grant() commits internally, so calling it second is what makes its commit durable for
-        # BOTH rows in one transaction — the event and its conversion must land together (see
-        # adsconv.queue's docstring). Reordering this silently reintroduces a two-transaction gap.
+        # Queue and grant both only STAGE: adsconv.queue() adds a row inside a SAVEPOINT and
+        # ledger.grant() stages the block, balance and entry on this session. The ONE commit below
+        # is what lands the event and its conversion together (see adsconv.queue's docstring).
+        # The queue-first order is kept for the inner-except rationale, not for commit mechanics.
         # Same door, same once-only guarantee: this function is already the single place a brand-new
         # real team comes into existence.
         try:
             await adsconv.queue(db, org, adsconv.ACTION_SIGNUP)
         except Exception as exc:  # noqa: BLE001 — its OWN guard, deliberately, not the outer one
-            # Because the queue now runs FIRST, sharing the outer except would mean an unexpected
-            # failure here (anything but the IntegrityError queue() already absorbs) skips the grant
-            # entirely and costs the team its $1 promotional credit. A marketing metric must not be
-            # able to take away a product benefit: swallow it here so the grant still runs.
-            logging.getLogger("treg").warning("ad conversion queue failed for org %s: %s", org.id, exc)
-        await ledger.grant(db, org.id)  # commits — absorbs the queued conversion row too
+            # Sharing the outer except would mean an unexpected failure here (anything but the
+            # IntegrityError queue() already absorbs) skips the grant entirely and costs the team
+            # its $1 promotional credit. A marketing metric must not be able to take away a product
+            # benefit: swallow it here so the grant still runs.
+            logging.getLogger("treg").warning("ad conversion queue failed for org %s: %s", org_id, exc)
+        await ledger.grant(db, org_id)  # stages only; the commit below lands grant + conversion together
+        # Unconditional, even when grant returned None (retried signup): the queue no-oped too, so
+        # the commit is empty and harmless - simpler than making it conditional.
+        await db.commit()
     except Exception as exc:  # noqa: BLE001 — the team is already created; don't 500 the signup over credit
-        logging.getLogger("treg").warning("promo grant failed for org %s: %s", org.id, exc)
+        # End the transaction the failure poisoned so the referral redemption that follows still has
+        # a working session. The rollback also expires every object this session tracks, which is
+        # why both doors read their response fields BEFORE calling here and why _redeem_referral
+        # revives its arguments.
+        await db.rollback()
+        logging.getLogger("treg").warning("promo grant failed for org %s: %s", org_id, exc)
 
 
 def _ad_attribution_from(raw_cookie: str) -> tuple[str, str, str]:
@@ -137,12 +149,20 @@ async def _redeem_referral(
     A referral is a marketing nicety and a signup is not. Nothing here may ever be the reason
     someone cannot make a team.
     """
+    org_id = None
     try:
+        # A failed promo grant just before this rolled the session back, which expired every object
+        # it tracks; revive both before their first attribute read becomes implicit async I/O
+        # (MissingGreenlet). No-ops on the happy path.
+        for obj in (user, org):
+            if sa_inspect(obj).expired:
+                await db.refresh(obj)
+        org_id = org.id
         code = referrals.normalize_code((raw_cookie or "").strip('"'))
         if code:
             await referrals.attribute(db, user=user, org=org, code=code)
     except Exception as exc:  # noqa: BLE001
-        logging.getLogger("treg").warning("referral attribution failed for org %s: %s", org.id, exc)
+        logging.getLogger("treg").warning("referral attribution failed for org %s: %s", org_id, exc)
 
 
 async def register_user(
@@ -178,10 +198,9 @@ async def register_user(
             await db.commit()
         except IntegrityError as exc:
             raise SignupError("email_exists") from exc
-        await _grant_signup_promo(db, org)
-        # Both org-creating doors redeem because both end with a person owning a fresh team.
-        await _redeem_referral(db, referral_cookie, user, org)
-        return {
+        # Read the response now: a failed promo grant below rolls the session back, which expires
+        # every tracked object, and a lazy reload after that is implicit async I/O (MissingGreenlet).
+        response = {
             "id": user.id,
             "email": user.email,
             "org": org.slug,
@@ -189,6 +208,10 @@ async def register_user(
             "role": "owner",
             "token": token,
         }
+        await _grant_signup_promo(db, org)
+        # Both org-creating doors redeem because both end with a person owning a fresh team.
+        await _redeem_referral(db, referral_cookie, user, org)
+        return response
 
 
 async def create_org(
@@ -219,12 +242,14 @@ async def create_org(
                 await db.rollback()
         else:
             raise SignupError("slug_conflict")
-        await _grant_signup_promo(db, org)
-        await _redeem_referral(db, referral_cookie, user, org)
-        return {
+        # Read the response now, before the grant can roll back and expire it (see register_user).
+        response = {
             "org": org.slug,
             "org_id": org.id,
             "name": org.name,
             "role": "owner",
             "token": token,
         }
+        await _grant_signup_promo(db, org)
+        await _redeem_referral(db, referral_cookie, user, org)
+        return response

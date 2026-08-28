@@ -18,6 +18,7 @@ async def _funded_call(clients: AsyncClient, call_id: str) -> tuple[int, int, Ma
     org_id = (await clients.get("/orgs")).json()[0]["org_id"]
     async with session_maker() as db:
         await ledger.grant(db, org_id, amount_micro=100_000, kind="finalizer_test", once=False)
+        await db.commit()
         before = await ledger.balance_of(db, org_id)
         await ledger.reserve(
             db, org_id, "provider.operation", 1_000,

@@ -1,7 +1,7 @@
 """overflow route table (docs/PROVIDER-CAPACITY-PLAN.md §4.3)
 
-Revision ID: 0003
-Revises: 0002
+Revision ID: 0006
+Revises: 0005
 Create Date: 2026-08-28
 """
 from collections.abc import Sequence
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 import sqlmodel
 
 
-revision: str = '0003'
-down_revision: str | Sequence[str] | None = '0002'
+revision: str = '0006'
+down_revision: str | Sequence[str] | None = '0005'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

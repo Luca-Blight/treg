@@ -5,10 +5,11 @@ sources:
   - alembic.ini
   - alembic/env.py
   - alembic/versions/0001_baseline_current_schema.py
-  - alembic/versions/0002_capacity_policy_snapshot.py
-  - alembic/versions/0003_overflow_route.py
-  - alembic/versions/0004_overflow_spend.py
-  - alembic/versions/0005_org_platform_overflow_disabled.py
+  - alembic/versions/0002_archive_tables.py
+  - alembic/versions/0005_capacity_policy_snapshot.py
+  - alembic/versions/0006_overflow_route.py
+  - alembic/versions/0007_overflow_spend.py
+  - alembic/versions/0008_org_platform_overflow_disabled.py
   - src/treg/web/sitetrack.js
   - src/treg/models.py
   - src/treg/timeutil.py
@@ -21,6 +22,7 @@ sources:
   - src/treg/application/auth.py
   - tests/test_postgres_reset.py
 related:
+  - architecture/archive.md
   - architecture/proxy-model.md
   - architecture/auth-secrets.md
   - architecture/ads-conversions.md

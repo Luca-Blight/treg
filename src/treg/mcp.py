@@ -53,6 +53,7 @@ from mcp.types import METHOD_NOT_FOUND, ToolAnnotations
 
 from . import audit, catalog_store
 from .config import PUBLIC_HOST_ALIASES, get_settings
+from .domain.catalog.stats import EndpointObservationReader
 
 # Every tool must declare what it can DO, and the review process checks these against real behaviour.
 # Read-only means it changes nothing anywhere; open-world means it can change state visible on the
@@ -72,6 +73,20 @@ _CALLS = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world
 # route cheap enough to be the honest choice.
 _INTERNAL_BASE = "http://treg.internal"
 _TIMEOUT = httpx.Timeout(120.0, connect=5.0)
+_endpoint_observation_reader: EndpointObservationReader | None = None
+
+
+def configure_endpoint_observation_reader(reader: EndpointObservationReader) -> None:
+    """Bind the process reader assembled by bootstrap to both MCP catalog surfaces."""
+    global _endpoint_observation_reader
+    _endpoint_observation_reader = reader
+
+
+def clear_endpoint_observation_reader(reader: EndpointObservationReader) -> None:
+    """Unbind only the reader owned by the lifespan that is stopping."""
+    global _endpoint_observation_reader
+    if _endpoint_observation_reader is reader:
+        _endpoint_observation_reader = None
 
 
 @dataclass(frozen=True)
@@ -322,18 +337,17 @@ def _query_values(ep: dict | None, name: str, value: Any) -> list[str]:
 async def _observed_stats(endpoint_ids: list[str]) -> dict[str, dict]:
     """What treg has measured across real calls to these endpoints — `{}` if it can't be read.
 
-    Its own session rather than the caller's client: this is a read of pooled, aggregate telemetry
-    that belongs to no org, and search must keep working when the query does not (the ranking then
-    falls back to the deterministic score order, which is what it always was).
+    HTTP and both MCP surfaces use the exact same process cache assembled by bootstrap. A cold or
+    unavailable reader is optional telemetry: ranking falls back to deterministic score order.
     """
     if not endpoint_ids:
         return {}
+    reader = _endpoint_observation_reader
+    if reader is None:
+        logging.getLogger("treg.mcp").warning("endpoint observation reader is not configured")
+        return {}
     try:
-        from . import endpoint_stats
-        from .db import session_maker
-
-        async with session_maker() as db:
-            return await endpoint_stats.observed(db, endpoint_ids)
+        return await reader.get_many(endpoint_ids)
     except Exception:  # noqa: BLE001 — telemetry must never take search down
         logging.getLogger("treg.mcp").warning("endpoint stats unavailable", exc_info=True)
         return {}

@@ -1,7 +1,7 @@
 """callrecord.hit — the adapter's found/not-found verdict (routing hit rate)
 
-Revision ID: 0006
-Revises: 0005
+Revision ID: 0009
+Revises: 0008
 Create Date: 2026-08-28
 
 Nullable, no default: an instant metadata-only ALTER on Postgres even on the hot audit table.
@@ -12,8 +12,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = '0006'
-down_revision: str | Sequence[str] | None = '0005'
+revision: str = '0009'
+down_revision: str | Sequence[str] | None = '0008'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
