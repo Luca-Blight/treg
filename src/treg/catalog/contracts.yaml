@@ -248,8 +248,10 @@ contracts:
       - {company_domain: str}
       - {title: str, company_domain: str}
       - {title: str}
+      - {full_name: str}
     filters:
       country: {type: str, default: null, note: "ISO country code, where the provider supports it"}
+      location: {type: str, default: null, note: "free-text place ('London, United Kingdom', 'Greater Phoenix') passed through to providers that take one; finer than country, never normalised"}
       limit: {type: int, default: 10, note: "rows to return — THE price dial: most providers bill per row"}
     output:
       people: {type: list, required: true, note: "the provider's own people rows (name, title, profile url, location…) — shapes differ per provider; raw is the same body"}

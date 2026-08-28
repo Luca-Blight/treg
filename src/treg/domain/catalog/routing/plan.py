@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -86,15 +88,37 @@ class Plan:
                 "plan": [c.view() for c in self.candidates], "dropped": self.dropped}
 
 
-def rank(candidates: list[Candidate], *, prefer: list[str] | None = None, exclude: list[str] | None = None) -> list[Candidate]:
+def rank(candidates: list[Candidate], *, prefer: list[str] | None = None, exclude: list[str] | None = None,
+         given: set[str] | frozenset[str] | None = None, derive: dict[str, str] | None = None) -> list[Candidate]:
+    """`given` = the identity keys the CALLER actually sent; `derive` = the contract's derive rules.
+    The specificity tiebreak counts how many of the caller's keys a variant COVERS — a key the
+    variant names, or one it was derived from (`first_name`/`last_name` cover a supplied
+    `full_name`; `domain` covers a supplied `email`). So `{first_name, last_name, domain}` and
+    `{full_name, domain}` are equally specific for a caller who sent a full name and a domain, and
+    price decides between hunter and apollo — while a domain-only variant still ranks below both."""
     prefer = [p.lower() for p in prefer or []]
+    given = set(given or ())
+    derive = derive or {}
+
+    def covers(variant) -> int:
+        covered = set(variant) & given
+        for v in variant:
+            expr = derive.get(v)
+            if expr:
+                covered |= {g for g in given if re.search(rf"\b{re.escape(g)}\b", expr)}
+        return len(covered)
     exclude = {p.lower() for p in exclude or []}
     keep = [c for c in candidates if c.endpoint["provider"].lower() not in exclude and not c.exhausted]
 
     def key(c: Candidate):
         own = 0 if c.tier != "platform" else 1
         pref = prefer.index(c.endpoint["provider"].lower()) if c.endpoint["provider"].lower() in prefer else len(prefer)
-        return (own, pref, c.expected_cost_per_hit, c.p50_ms if c.p50_ms is not None else 10**9,
+        # A provider that USES more of what the caller said answers the question asked: given
+        # {company_domain, title}, a title-aware search outranks a cheaper domain-only one that
+        # would return the whole company (live 2026-08-29: a free domain-only provider won and
+        # answered 100 unnamed rows). Price decides among candidates of equal specificity.
+        specificity = -covers(c.variant) if given else 0
+        return (own, pref, specificity, c.expected_cost_per_hit, c.p50_ms if c.p50_ms is not None else 10**9,
                 c.last_ok_days if c.last_ok_days is not None else 10**6, c.endpoint["id"])
     return sorted(keep, key=key)
 

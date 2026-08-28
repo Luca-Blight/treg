@@ -15,6 +15,8 @@ the endpoint's job is to find the thing — bounded by `X-Treg-Route-Max-Cost` (
 
 from __future__ import annotations
 
+import re
+
 import json
 import logging
 from dataclasses import dataclass, field
@@ -106,10 +108,12 @@ class Attempt:
     status: int | None
     charged_micro: int
     detail: str = ""
+    ignored: tuple[str, ...] = ()  # filters the caller sent that this provider's adapter has no place for
 
     def view(self) -> dict:
         return {"endpoint_id": self.endpoint_id, "provider": self.provider, "outcome": self.outcome,
-                "status": self.status, "charged_micro": self.charged_micro, **({"detail": self.detail} if self.detail else {})}
+                "status": self.status, "charged_micro": self.charged_micro, **({"detail": self.detail} if self.detail else {}),
+                **({"ignored_filters": list(self.ignored)} if self.ignored else {})}
 
 
 async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptions) -> Plan:
@@ -179,7 +183,9 @@ async def build_plan(ep: dict, identity_given: dict, caller, options: RouteOptio
             dropped.append({"endpoint_id": e["id"], "why": "treg's account for this provider is exhausted right now"})
         cands.append(c)
     return Plan(contract=contract, identity=identity, variant=variant,
-                candidates=rank(cands, prefer=options.prefer, exclude=options.exclude), dropped=dropped)
+                candidates=rank(cands, prefer=options.prefer, exclude=options.exclude,
+                                given={k for k, v in (identity_given or {}).items() if v not in (None, "")},
+                                derive=contract.derive), dropped=dropped)
 
 
 def _child_input(parent, ep: dict, query: dict[str, str], body: dict) -> object:
@@ -250,6 +256,11 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
                                  else "not retried on a paid provider (> 1¢/call) after a vendor 4xx"))
             continue
         query, body = cand.adapter.to_upstream(plan.identity, cand.variant)
+        # A filter the caller sent that this adapter never mentions is silently NOT applied — say so
+        # on the attempt (live 2026-08-29: `country: fr` reached icypeas as nothing, rows came from
+        # anywhere; the bench had post-filtered in the agent).
+        used = set(cand.adapter.in_map) | {n for e in (cand.adapter.in_expr or {}).values() for n in re.findall(r"[A-Za-z_]\w*", e)}
+        ignored = tuple(k for k in plan.contract.filters if plan.identity.get(k) not in (None, "") and k not in used)
         child = CallContext(input=_child_input(parent, cand.endpoint, query, body), call_ref=f"{parent.call_ref}:r{n}", meta=parent.meta)
         try:
             response = await execute_child(child, upstream_client)
@@ -301,12 +312,12 @@ async def run_routed(parent: CallContext, ep: dict, body_bytes: bytes, get_heade
         # yahoo task returned `result: null` and was counted a hit).
         empty_core = any(core.get(k) in (None, "", [], {}) for k in plan.contract.required_output)
         if doc is None or cand.adapter.is_miss(doc) or empty_core:
-            tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "miss", response.status, charged))
+            tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "miss", response.status, charged, ignored=ignored))
             if options.waterfall:
                 continue
             winner = (cand, doc if doc is not None else {}, {}, raw)
             break
-        tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "hit", response.status, charged))
+        tried.append(Attempt(cand.endpoint["id"], cand.endpoint["provider"], "hit", response.status, charged, ignored=ignored))
         winner = (cand, doc, core, raw)
         break
     if winner is None:

@@ -1181,6 +1181,33 @@ to choose (`docs/CAPABILITY-ROUTING-PLAN.md`). Everything else in the catalog st
   plus `companies.jobs.search`, `companies.domain.find`, `amazon.product.sellers/variants`,
   `tiktok.video.captions`); untagged platform traffic fell from 12% to 1.4%, and 202 capabilities
   with 2+ eligible providers cover 88% of calls.
+- **Ranking, specificity (2026-08-29)**: among candidates of the same tier, one that USES more of the
+  keys the caller actually sent outranks a cheaper one that uses fewer — `{company_domain, title}`
+  goes to a title-aware search, not a free domain-only one that would answer the whole company.
+  Only caller-supplied keys count (`rank(given=…)`), never keys reached through `derive`. Price
+  decides among equals.
+- **people.\* sweep (2026-08-29)**: people.search 6 → 16 children (aviato dsl/simple, companyenrich
+  scroll, crustdata, fiber-ai, leadsforge, leadmagic search + role-finder, findymail employees +
+  domain — the last retagged from email.find, it returns a list), people.enrich 9 → 14 (aviato bulk,
+  fiber-ai, tomba profile/combined, hunter combined-find), people.email.find 9 → 11 (fiber-ai turbo,
+  leadmagic personal), identity.resolve 3 → 4 (findymail reverse-email); five examples captured live.
+  Still out: apollo/coresignal people.search (no fixture; apollo's `person_titles[]` needs a
+  bracket-safe target), crustdata/diffbot people.enrich (truncated examples), the `*.bulk` jobs
+  (async), hunter multi-domain (masked rows).
+- **Filters reach providers, or say they did not (2026-08-29)**: `country` (ISO code) becomes a name
+  through `country_name` (`catalog/countries.json`, 249 rows generated from pycountry) for providers
+  that filter on a location NAME (icypeas); `location` is a free-text pass-through ("London, United
+  Kingdom", "Europe") for the same providers; a filter the caller sent that an adapter never mentions
+  is listed on the attempt as `ignored_filters` — silently unapplied was the worst outcome (the bench
+  had post-filtered in the agent because of it). Bench re-run, recruiting 30: same icypeas rows as the
+  hand-written policy, one automatic fall-through, region briefs rescued by the pass-through.
+- **What is not routed on purpose**: `*.bulk` endpoints (a routed call is one subject, one answer),
+  and providers whose rows are teasers — hunter multi-domain (masked, no names, ignores limit),
+  apollo people.search (free, but last names obfuscated: a search→reveal CHAIN, which mode C of the
+  bench showed rescues hard B2B briefs and which the router does not do yet). `catalog get` lists
+  them under ALSO with the rest of the same-job endpoints that have no adapter; the search page's
+  "+N more" points there. The routed row's example body and `/access` dry-run use the identity
+  variant MOST children accept, and the dry-run tries every variant before saying "unservable".
 - **Coverage (2026-08-28)**: 74 routed capabilities = 80.9% of 30-day platform calls (88% was the
   routable ceiling). The per-capability ledger — what shipped with which children, what is 🚫 and
   why (one usable vendor, async task-post engines, identity-less feeds), and the 49 zero-traffic

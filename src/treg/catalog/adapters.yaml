@@ -437,10 +437,10 @@ adapters:
     out: {people: results, count: "len(results)"}
     miss: "results == []"
   icypeas.people.search:
-    accepts: [[company_domain, title], [company_domain]]
+    accepts: [[company_domain, title], [company_domain], [title]]
     in:  {company_domain: body.query.currentCompanyWebsite.include, title: body.query.currentJobTitle.include}
     in_expr: {body.query.currentCompanyWebsite.include: "list(company_domain)", body.query.currentJobTitle.include: "list(title)",
-              body.pagination.size: limit}
+              body.query.location.include: "list(coalesce(location, country_name(country)))", body.pagination.size: limit}
     out: {people: leads, count: total, next_cursor: pagination.token}
     miss: "leads == []"
   companyenrich.people.search:
@@ -1831,3 +1831,125 @@ adapters:
   # identity), trustpilot.business.reviews (async task), youtube.channel.shorts, facebook.post.detail,
   # kuaishou.search.videos, amazon.bestsellers.list, instagram.music.posts, bilibili.video.detail (justoneapi's
   # body is a page-state blob): one usable vendor each — not routed. people.signals: not lookup-shaped.
+
+
+  # ---- people.* coverage sweep (2026-08-28): the DSL / list-shaped providers ------------------
+  aviato.people.search:
+    accepts: [[q]]
+    in:  {}
+    in_expr: {body.dsl: "obj('filters', list(obj('headline', obj('operation', 'fts', 'value', q))), 'limit', limit, 'offset', 0, 'sort', [])"}
+    test_identity: {q: software engineer}
+    out: {people: items, count: count.value}
+    miss: "items == []"
+  aviato.people.search.simple:
+    accepts: [[full_name]]
+    in:  {full_name: queryParams.fullName}
+    in_expr: {queryParams.perPage: limit}
+    const: {queryParams.page: "1", queryParams.enrich: "false"}
+    out: {people: items, count: totalResults}
+    miss: "items == []"
+  companyenrich.people.search.scroll:
+    accepts: [[company_domain, title], [company_domain]]
+    in:  {company_domain: body.domains, title: body.positionQuery}
+    in_expr: {body.domains: "list(company_domain)", body.positionQuery: "list(title)", body.pageSize: limit}
+    out: {people: items, count: totalItems, next_cursor: nextCursor}
+    miss: "items == []"
+  crustdata.people.search:
+    accepts: [[full_name]]
+    in:  {full_name: body.filters.value}
+    in_expr: {body.filters: "obj('field', 'basic_profile.name', 'type', '=', 'value', full_name)", body.limit: limit}
+    out: {people: profiles, count: total_count, next_cursor: next_cursor}
+    miss: "profiles == []"
+  fiber-ai.people.search:
+    accepts: [[company_domain]]
+    in:  {}
+    in_expr: {body.currentCompanies: "list(obj('domain', company_domain))", body.pageSize: limit}
+    test_identity: {company_domain: stripe.com}
+    out: {people: output.data, next_cursor: output.nextCursor}
+    miss: "output.data == []"
+  # hunter.x.multi-domain-search: not routed — free, but answers MASKED rows without names (a reveal teaser)
+  # and ignores `limit` (live 2026-08-29: 100 unnamed rows for a 2-row ask); callable by id.
+  leadmagic.x.role-finder:
+    accepts: [[company_domain, title]]
+    in:  {title: body.job_title, company_domain: body.company_domain}
+    out: {people: "list(obj('name', name, 'profile_url', profile_url, 'first_name', first_name, 'last_name', last_name, 'company_name', company_name))", count: "len(list(name))"}
+    miss: "name == null"
+  leadsforge.people.search:
+    accepts: [[company_domain]]
+    in:  {company_domain: body.companyDomains.include}
+    in_expr: {body.companyDomains.include: "list(company_domain)", body.limit: limit}
+    out: {people: leads, next_cursor: cursor}
+    miss: "leads == []"
+  findymail.search.employees:
+    accepts: [[company_domain, title]]
+    in:  {company_domain: body.website, title: body.job_titles}
+    in_expr: {body.job_titles: "list(title)", body.count: limit}
+    out: {people: ".", count: "len(.)"}
+    miss: ". == []"
+  leadmagic.people.search:
+    accepts: [[company_domain, title], [company_domain]]
+    in:  {company_domain: body.company_domain, title: body.titles}
+    in_expr: {body.titles: "list(title)", body.limit: limit}
+    const: {body.include_contact_details: false}
+    out: {people: people, count: count, next_cursor: next_cursor}
+    miss: "people == []"
+  findymail.search.domain:
+    accepts: [[company_domain]]
+    in:  {company_domain: body.domain}
+    out: {people: contacts, count: "len(contacts)"}
+    miss: "contacts == []"
+
+  # *.bulk endpoints are never routed (Jason, 2026-08-29): a routed call is one subject, one answer.
+  fiber-ai.people.enrich:
+    accepts: [[linkedin_url]]
+    in:  {}
+    in_expr: {body.profileIdentifier: "obj('identifier', 'linkedinUrl', 'value', linkedin_url)"}
+    test_identity: {linkedin_url: "https://www.linkedin.com/in/williamhgates"}
+    out: {full_name: "output.data[0].name", first_name: "output.data[0].first_name", last_name: "output.data[0].last_name",
+          title: "output.data[0].headline", location: "output.data[0].locality", linkedin_url: "output.data[0].url"}
+    miss: "output.data == []"
+  tomba.people.enrich.profile:
+    accepts: [[email]]
+    in:  {email: queryParams.email}
+    out: {full_name: data.name.fullName, first_name: data.name.givenName, last_name: data.name.familyName,
+          title: data.employment.title, company: data.employment.name, company_domain: data.employment.domain,
+          location: data.location}
+    miss: "data.name.fullName == null"
+  tomba.people.enrich.combined:
+    accepts: [[email]]
+    in:  {email: queryParams.email}
+    out: {full_name: data.person.name.fullName, first_name: data.person.name.givenName, last_name: data.person.name.familyName,
+          title: data.person.employment.title, company: data.company.name, company_domain: data.company.domain,
+          location: data.person.location}
+    miss: "data.person.name.fullName == null"
+  hunter.x.combined-find:
+    accepts: [[email]]
+    in:  {email: queryParams.email}
+    out: {full_name: data.person.name.fullName, first_name: data.person.name.givenName, last_name: data.person.name.familyName,
+          title: data.person.employment.title, company: data.company.name, company_domain: data.company.domain,
+          location: data.person.location}
+    miss: "data.person.name.fullName == null"
+
+  fiber-ai.people.contacts.turbo:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: body.linkedinUrl}
+    out: {email: "output.profile.emails[0].email", verified: "output.profile.emails[0].status == 'valid'"}
+    miss: "output.profile.emails == []"
+  leadmagic.x.personal-email-finder:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: body.profile_url}
+    out: {email: first_personal_email}
+    miss: "first_personal_email == null"
+
+  findymail.search.reverse-email:
+    accepts: [[email]]
+    in:  {email: body.email}
+    out: {linkedin_url: linkedin_url}
+    miss: "linkedin_url == null"
+  # Still out: apollo.people.search / coresignal.people.search (no fixture; apollo's `person_titles[]` keys need a
+  # bracket-safe target), crustdata/diffbot people.enrich and diffbot.people.search (truncated examples), icypeas
+  # email find/verify and the *.bulk jobs (async: the answer arrives by polling), companyenrich by numeric id.
+
+  # apollo.people.search: not routed — free, but rows come with OBFUSCATED last names (`Sl***a`) and no URL; a
+  # search whose rows need a $0.026 reveal each is a search→reveal chain, not one answer (bench mode C did exactly
+  # that and it rescued 2 of 8 hard queries). Fixture kept; callable by id.

@@ -73,6 +73,11 @@ endpoints:
     docs_url: https://docs.apollo.io/reference/people-enrichment
 
   - id: apollo.people.search
+    test_request:
+      bodyType: json
+      body: {person_titles: ["head of marketing"], q_organization_domains_list: ["stripe.com"], per_page: 3}
+    example_response: examples/apollo.people.search.json
+    verified: '2026-08-29'
     domain: contacts
     capability: people.search
     platform: people

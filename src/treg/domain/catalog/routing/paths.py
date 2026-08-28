@@ -172,6 +172,23 @@ def csv(v: Any) -> str | None:
     return ",".join(str(x) for x in v) if isinstance(v, list) else str(v)
 
 
+_COUNTRIES: dict[str, str] | None = None
+
+
+def country_name(v: Any) -> str | None:
+    """`country_name('fr')` → 'France' — the ISO 3166 alpha-2 table (catalog/countries.json, generated
+    from pycountry, 249 rows, common names). Providers that filter on a location NAME (icypeas,
+    lusha, apollo) get this; code-taking providers keep the code. A name passes through."""
+    global _COUNTRIES
+    if not isinstance(v, str) or not v.strip():
+        return None
+    if _COUNTRIES is None:
+        import json
+        from pathlib import Path
+        _COUNTRIES = json.loads((Path(__file__).resolve().parents[3] / "catalog" / "countries.json").read_text())
+    return _COUNTRIES.get(v.strip().lower(), v if len(v) > 3 else None)
+
+
 def as_list(v: Any) -> Any:
     """A scalar the provider wants as a one-element array (`domains: ["stripe.com"]`)."""
     if v is None:
@@ -182,7 +199,7 @@ def as_list(v: Any) -> Any:
 TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type, "len": length,
               "dfs_location": dfs_location, "seranking_source": seranking_source, "lower": lower, "upper": upper,
               "list": as_list, "at_least": at_least, "linkedin_handle": linkedin_handle, "linkedin_url": linkedin_url,
-              "email_domain": email_domain, "host": host, "fmt": fmt, "obj": obj, "tca_filter": tca_filter, "csv": csv}
+              "email_domain": email_domain, "host": host, "fmt": fmt, "obj": obj, "tca_filter": tca_filter, "csv": csv, "country_name": country_name}
 
 _CALL = re.compile(r"^(\w+)\((.*)\)$")
 _DIV = re.compile(r"^(.+?)\s*/\s*(\d+(?:\.\d+)?)$")

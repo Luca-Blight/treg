@@ -259,6 +259,9 @@ async def test_catalog_get_on_the_routed_endpoint_shows_the_plan(clients: AsyncC
     assert r.status_code == 200, r.text
     d = r.json()
     assert d["endpoint"]["kind"] == "routed" and d["routing"]["contract"]["identity"]
+    # the same job from unrouted providers is named here too — the search page points at this row
+    also = {a["endpoint_id"] for a in d["routing"]["also"]}
+    assert also.isdisjoint(d["endpoint"]["routed_children"]) and all(i.endswith("email.find") or "." in i for i in also)
     plan = d["routing"]["plan"]
     assert plan and plan[0]["usd"] <= plan[-1]["usd"] and plan[0]["accepts"]
     assert "hit_rate" not in plan[0], "unmeasured says nothing rather than nulls"
@@ -455,3 +458,26 @@ def test_a_caller_may_send_everything_it_knows_and_each_provider_gets_only_its_v
     assert q == {"keyword": "coffee", "source": "de", "limit": "20"}
     # every adapter still verifies with the change
     assert all(a.verified for a in cat.adapters.values())
+
+
+def test_rank_prefers_the_candidate_that_uses_more_of_the_identity():
+    """Given {company_domain, title}, a title-aware provider outranks a cheaper domain-only one —
+    the cheaper answer would be to a different question (the whole company)."""
+    from treg.domain.catalog.routing.plan import Candidate, rank
+    def cand(eid, variant, price):
+        return Candidate(endpoint={"id": eid, "provider": eid.split(".")[0], "cost": {"type": "per_result"}}, adapter=None,
+                         variant=variant, tier="platform", price_micro=price, hit_rate=None, ok_rate=None, p50_ms=None, last_ok_days=None)
+    free_domain = cand("hunter.x.multi-domain-search", ("company_domain",), 0)
+    title_aware = cand("icypeas.people.search", ("company_domain", "title"), 380)
+    dearer_title = cand("companyenrich.people.search", ("company_domain", "title"), 19_600)
+    given = {"company_domain", "title"}
+    assert [c.endpoint["id"] for c in rank([free_domain, dearer_title, title_aware], given=given)] == [
+        "icypeas.people.search", "companyenrich.people.search", "hunter.x.multi-domain-search"]
+    # a key the caller did NOT send (reached via derive) earns nothing: price decides again
+    assert rank([free_domain, title_aware], given={"company_domain"})[0] is free_domain
+    # …but a variant DERIVED from what the caller sent covers it: {first,last,domain} from a supplied
+    # full_name is as specific as {full_name, domain}, so the cheaper of the two (hunter) leads
+    derive = {"first_name": "split_first(full_name)", "last_name": "split_last(full_name)"}
+    hunter = cand("hunter.people.email.find", ("first_name", "last_name", "domain"), 4_900)
+    apollo = cand("apollo.people.enrich", ("full_name", "domain"), 26_000)
+    assert rank([apollo, hunter], given={"full_name", "domain"}, derive=derive)[0] is hunter
