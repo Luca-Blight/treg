@@ -52,7 +52,7 @@ async def test_import_creates_one_policy_per_account_and_flags_unknowns_without_
 
 
 def test_snapshot_never_carries_a_credential():
-    snap = snapshot_from("x", {"value": 5, "unit": "credits", "note": "plan pro, key sk_live_abc"})
+    snap = snapshot_from("x", {"value": 5, "unit": "credits", "note": "plan pro, key SECRET-LOOKING-VALUE-abc"})
     assert "sk_live" not in snap.note and snap.remaining == 5.0 and snap.error == ""
     fail = snapshot_from("x", {"value": None, "unit": "", "note": "HTTPStatusError: 401"})
     assert fail.remaining is None and fail.error.startswith("HTTPStatusError") and fail.confidence == "stale"
