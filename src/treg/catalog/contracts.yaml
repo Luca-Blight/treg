@@ -153,3 +153,65 @@ contracts:
       location: {type: str}
     miss: "full_name == null"
     idempotent: true
+
+  # ---- batch 3: social + keywords (2026-08-28) ------------------------------------------------
+  instagram.user.posts:
+    summary: "List an Instagram user's recent posts — provider-native post objects in `posts`"
+    identity:
+      - {username: str}
+      - {user_id: str}
+    filters: {}
+    output:
+      posts: {type: list, required: true, note: "the provider's own post objects; raw is the same body"}
+      next_cursor: {type: str}
+    miss: "posts == []"
+    idempotent: true
+
+  instagram.post.detail:
+    summary: "Get an Instagram post's content & stats from its shortcode, URL or id"
+    identity:
+      - {shortcode: str}
+      - {url: url}
+      - {post_id: str}
+    filters: {}
+    output:
+      id: {type: str, required: true}
+      shortcode: {type: str}
+      caption: {type: str}
+      likes: {type: int}
+      comments: {type: int}
+      owner_username: {type: str}
+    miss: "id == null"
+    idempotent: true
+
+  x.user.profile:
+    summary: "Get an X (Twitter) user's public profile — treg picks the provider and names the one that served"
+    identity:
+      - {username: str}
+      - {user_id: str}
+    filters: {}
+    output:
+      username: {type: str, required: true}
+      user_id: {type: str}
+      name: {type: str}
+      followers: {type: int}
+      following: {type: int}
+      posts_count: {type: int}
+      is_verified: {type: bool}
+      description: {type: str}
+    miss: "username == null"
+    idempotent: true
+
+  google.keywords.ideas:
+    summary: "Related keyword ideas for a seed keyword — provider-native rows in `keywords`; `limit` is the price dial"
+    identity:
+      - {keyword: str}
+    filters:
+      country: {type: str, default: us, note: "ISO country code (us, gb, de, …); mapped to each provider's own database code"}
+      language: {type: str, default: en}
+      limit: {type: int, default: 20, note: "rows to return where the provider bills per row"}
+    output:
+      keywords: {type: list, required: true, note: "the provider's own keyword rows (keyword, volume, cpc, …) — shapes differ per provider"}
+      count: {type: int}
+    miss: "keywords == []"
+    idempotent: true

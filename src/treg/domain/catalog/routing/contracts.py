@@ -31,18 +31,28 @@ class Contract:
 class Adapter:
     endpoint_id: str
     accepts: tuple[tuple[str, ...], ...]       # identity variants (sorted key tuples)
-    in_map: dict[str, str]                     # contract field → `queryParams.x` | `body.x`
-    const: dict[str, Any]                      # fixed provider params (`body.type: work`)
+    in_map: dict[str, str]                     # contract field → `queryParams.x` | `body.x` | `pathParams.x`
     out_map: dict[str, str]                    # core field → expression over the provider body
     miss: str
+    const: dict[str, Any] = field(default_factory=dict)   # fixed provider params (`body.type: work`)
+    in_expr: dict[str, str] = field(default_factory=dict) # provider param ← expression over the request (filters)
+    body_array: bool = False                   # the provider wants `[body]` (DataForSEO's task list)
     verified: bool = False
     verify_note: str = ""
 
-    def to_upstream(self, identity: dict[str, Any]) -> tuple[dict[str, str], dict[str, Any]]:
-        """(query params, JSON body) for this provider from a canonical identity."""
+    def to_upstream(self, identity: dict[str, Any]) -> tuple[dict[str, str], Any]:
+        """(query params, JSON body) for this provider from a canonical request (identity + filters)."""
         query: dict[str, str] = {}
         body: dict[str, Any] = {}
         doc = {"queryParams": query, "body": body}
+        for target, expr in (self.in_expr or {}).items():
+            v = P.evaluate(expr, identity)
+            if v is None:
+                continue
+            if target.startswith("pathParams."):
+                query[target.split(".", 1)[1]] = str(v)
+            else:
+                P.set_path(doc, target, v if target.startswith("body.") else str(v))
         for field_name, target in self.in_map.items():
             v = identity.get(field_name)
             if v is None:
@@ -53,9 +63,9 @@ class Adapter:
                 query[target.split(".", 1)[1]] = str(v)
                 continue
             P.set_path(doc, target, v if target.startswith("body.") else str(v))
-        for target, v in self.const.items():
+        for target, v in (self.const or {}).items():
             P.set_path(doc, target, v)
-        return query, body
+        return query, ([body] if self.body_array else body)
 
     def from_upstream(self, provider_body: Any) -> dict[str, Any]:
         return {k: P.evaluate(expr, provider_body) for k, expr in self.out_map.items()}
@@ -81,7 +91,8 @@ def parse_contracts(doc: dict) -> dict[str, Contract]:
                 types.update({k: str(t) for k, t in v.items()})
         out[cap] = Contract(
             capability=cap, summary=str(c.get("summary") or ""), identity=_variants(c.get("identity")),
-            identity_types=types, derive=dict(c.get("derive") or {}), filters=dict(c.get("filters") or {}),
+            identity_types=types, derive=dict(c.get("derive") or {}),
+            filters={k: (v if isinstance(v, dict) else {"type": str(v)}) for k, v in (c.get("filters") or {}).items()},
             output={k: (v if isinstance(v, dict) else {"type": str(v)}) for k, v in (c.get("output") or {}).items()},
             miss=str(c.get("miss") or ""), idempotent=bool(c.get("idempotent", True)))
     return out
@@ -92,6 +103,7 @@ def parse_adapters(doc: dict) -> dict[str, Adapter]:
     for eid, a in (doc.get("adapters") or {}).items():
         out[eid] = Adapter(
             endpoint_id=eid, accepts=_variants(a.get("accepts")), in_map=dict(a.get("in") or {}),
+            in_expr=dict(a.get("in_expr") or {}), body_array=bool(a.get("body_array")),
             const=dict(a.get("const") or {}), out_map=dict(a.get("out") or {}), miss=str(a.get("miss") or ""))
     return out
 
@@ -111,6 +123,9 @@ def canonical_identity(contract: Contract, given: dict[str, Any]) -> tuple[dict[
                 v = P.evaluate(expr, ident)
                 if v not in (None, ""):
                     ident[k] = v
+    for k, spec in (contract.filters or {}).items():  # shared filters ride with the identity
+        v = given.get(k)
+        ident[k] = v if v not in (None, "") else (spec or {}).get("default")
     return ident, supplied
 
 
@@ -130,7 +145,10 @@ def verify(adapter: Adapter, contract: Contract, endpoint: dict, example: Any) -
     tr = endpoint.get("test_request") or {}
     # Reconstruct the identity from the test request through the adapter's own `in` map.
     ident: dict[str, Any] = {}
-    doc = {"queryParams": tr.get("queryParams") or {}, "body": tr.get("body") or {},
+    tr_body = tr.get("body") or {}
+    if isinstance(tr_body, list):
+        tr_body = tr_body[0] if tr_body and isinstance(tr_body[0], dict) else {}
+    doc = {"queryParams": tr.get("queryParams") or {}, "body": tr_body,
            "pathParams": tr.get("pathParams") or {}}
     for field_name, target in adapter.in_map.items():
         v = P.get_path(doc, target)
@@ -140,13 +158,15 @@ def verify(adapter: Adapter, contract: Contract, endpoint: dict, example: Any) -
     if variant is None or adapter_accepts(adapter, ident) is None:
         return False, "test_request does not express an accepted identity variant"
     q, b = adapter.to_upstream(ident)
+    if isinstance(b, list):
+        b = b[0] if b else {}
     for k, v in (tr.get("pathParams") or {}).items():
         if k in {t.split(".", 1)[1] for t in adapter.in_map.values() if t.startswith("pathParams.")} and str(q.get(k)) != str(v):
             return False, f"in: pathParams.{k} → {q.get(k)!r}, test_request has {v!r}"
     for k, v in (tr.get("queryParams") or {}).items():
         if k in {t.split(".", 1)[1] for t in adapter.in_map.values() if t.startswith("queryParams.")} and str(q.get(k)) != str(v):
             return False, f"in: queryParams.{k} → {q.get(k)!r}, test_request has {v!r}"
-    for k, v in (tr.get("body") or {}).items():
+    for k, v in tr_body.items():
         if k in {t.split(".", 1)[1].split(".")[0] for t in adapter.in_map.values() if t.startswith("body.")} and b.get(k) != v:
             return False, f"in: body.{k} → {b.get(k)!r}, test_request has {v!r}"
     if example is None:

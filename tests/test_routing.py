@@ -339,3 +339,22 @@ async def test_mcp_search_shows_the_routed_parent_first_with_its_children(client
     kids = [i for i, r in enumerate(out["results"]) if r["provider"] != "treg" and r["endpoint_id"].split(".", 1)[1] in ("people.email.find", "people.email.find.linkedin", "search.name")]
     assert kids and parent < min(kids)
     assert out["results"][parent]["routed"].startswith("treg picks among")
+
+
+def test_filters_reach_adapters_through_in_expr_and_array_bodies():
+    cat = catalog_store.load()
+    contract = cat.contracts["google.keywords.ideas"]
+    req, variant = canonical_identity(contract, {"keyword": "coffee"})
+    assert variant == ("keyword",) and req["country"] == "us" and req["limit"] == 20, "filter defaults ride with the identity"
+    req, _ = canonical_identity(contract, {"keyword": "coffee", "country": "GB", "limit": 5})
+    q, b = cat.adapters["dataforseo.google.keywords.ideas"].to_upstream(req)
+    assert b == [{"keyword": "coffee", "location_code": 2826, "language_code": "en", "limit": 5}], "task list body, GB → 2826"
+    q, b = cat.adapters["seranking.google.keywords.ideas"].to_upstream(req)
+    assert q == {"keyword": "coffee", "source": "uk", "limit": "5"}
+    q, b = cat.adapters["serpapi.google.keywords.ideas"].to_upstream(req)
+    assert q == {"q": "coffee", "gl": "gb", "hl": "en", "engine": "google_autocomplete"}
+    q, b = cat.adapters["tomba.people.email.verify"].to_upstream({"email": "a@b.io"})
+    assert q == {"email": "a@b.io"}, "a pathParams target travels as a query value the proxy folds into the path"
+    assert cost_at({"usd": 0.00179, "type": "per_result", "per": 1}, req) == 8_950, "priced at the requested limit"
+    ep = cat.by_id["treg.google.keywords.ideas"]
+    assert ep["input"]["body"]["country"]["note"].startswith("filter — default 'us'")

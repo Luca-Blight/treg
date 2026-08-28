@@ -302,3 +302,92 @@ adapters:
     in:  {linkedin_url: queryParams.linkedinURL, email: queryParams.email}
     out: {full_name: fullName, linkedin_url: URLs.linkedin}
     miss: "fullName == null"
+
+  # ---- instagram.user.posts -----------------------------------------------------------------
+  tikhub.instagram.user.posts:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.user_id}
+    out: {posts: data.items, next_cursor: data.next_max_id}
+    miss: "data.items == []"
+  scrapecreators.instagram.user.posts:
+    accepts: [[username]]
+    in:  {username: queryParams.handle}
+    out: {posts: items, next_cursor: next_max_id}
+    miss: "items == []"
+  justoneapi.instagram.user.posts:
+    accepts: [[username]]
+    in:  {username: queryParams.username}
+    out: {posts: data.data.items, next_cursor: data.data.next_page_token}
+    miss: "data.data.items == []"
+
+  # ---- instagram.post.detail ----------------------------------------------------------------
+  tikhub.x.instagram-v1-fetch-post-by-id:
+    accepts: [[post_id]]
+    in:  {post_id: queryParams.post_id}
+    out: {id: data.id, shortcode: data.shortcode, caption: "data.edge_media_to_caption.edges[0].node.text",
+          likes: data.edge_media_preview_like.count, comments: data.edge_media_preview_comment.count,
+          owner_username: data.owner.username}
+    miss: "data.id == null"
+  tikhub.x.instagram-v1-fetch-post-by-url:
+    accepts: [[url]]
+    in:  {url: queryParams.post_url}
+    out: {id: data.id, shortcode: data.shortcode, caption: "data.edge_media_to_caption.edges[0].node.text",
+          likes: data.edge_media_preview_like.count, comments: data.edge_media_preview_comment.count,
+          owner_username: data.owner.username}
+    miss: "data.id == null"
+  tikhub.x.instagram-v1-fetch-post-by-url-v2:
+    accepts: [[url]]
+    in:  {url: queryParams.post_url}
+    out: {id: data.id, shortcode: data.shortcode, caption: "data.edge_media_to_caption.edges[0].node.text",
+          likes: data.edge_media_preview_like.count, comments: data.edge_media_preview_comment.count,
+          owner_username: data.owner.username}
+    miss: "data.id == null"
+  justoneapi.x.instagram-get-post-detail-v1:
+    accepts: [[shortcode]]
+    in:  {shortcode: queryParams.code}
+    out: {id: data.id, shortcode: data.shortcode, caption: "data.edge_media_to_caption.edges[0].node.text",
+          likes: data.edge_media_preview_like.count, comments: data.edge_media_preview_comment.count,
+          owner_username: data.owner.username}
+    miss: "data.id == null"
+
+  # ---- x.user.profile -----------------------------------------------------------------------
+  tikhub.x.user.profile:
+    accepts: [[username], [user_id]]
+    in:  {username: queryParams.screen_name, user_id: queryParams.rest_id}
+    out: {username: data.profile, user_id: data.rest_id, name: data.name, followers: data.sub_count,
+          following: data.friends, posts_count: data.statuses_count, is_verified: data.blue_verified, description: data.desc}
+    miss: "data.profile == null"
+  justoneapi.x.twitter-get-user-detail-v1:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.restId}
+    out: {username: data.profile, user_id: data.rest_id, name: data.name, followers: data.sub_count,
+          following: data.friends, posts_count: data.statuses_count, is_verified: data.blue_verified, description: data.desc}
+    miss: "data.profile == null"
+  scrapecreators.x.user.profile:
+    accepts: [[username]]
+    in:  {username: queryParams.handle}
+    out: {username: core.screen_name, name: core.name, followers: legacy.followers_count, following: legacy.friends_count,
+          posts_count: legacy.statuses_count, is_verified: is_blue_verified, description: legacy.description}
+    miss: "core.screen_name == null"
+
+  # ---- google.keywords.ideas ----------------------------------------------------------------
+  dataforseo.google.keywords.ideas:
+    accepts: [[keyword]]
+    in:  {keyword: body.keyword}
+    in_expr: {body.location_code: "dfs_location(country)", body.language_code: language, body.limit: limit}
+    body_array: true
+    out: {keywords: "tasks[0].result[0].items", count: "tasks[0].result[0].total_count"}
+    miss: "tasks[0].result[0].items == []"
+  seranking.google.keywords.ideas:
+    accepts: [[keyword]]
+    in:  {keyword: queryParams.keyword}
+    in_expr: {queryParams.source: "seranking_source(country)", queryParams.limit: limit}
+    out: {keywords: keywords, count: total}
+    miss: "keywords == []"
+  serpapi.google.keywords.ideas:
+    accepts: [[keyword]]
+    in:  {keyword: queryParams.q}
+    in_expr: {queryParams.gl: "lower(country)", queryParams.hl: language}
+    const: {queryParams.engine: google_autocomplete}
+    out: {keywords: suggestions, count: "len(suggestions)"}
+    miss: "suggestions == []"

@@ -72,7 +72,29 @@ def length(items: Any) -> int | None:
     return len(items) if isinstance(items, (list, dict, str)) else None
 
 
-TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type, "len": length}
+# The location table, in miniature (routing plan §1.1 names a full one as an R1 deliverable): the
+# countries the SEO providers are actually called for, mapped to each provider's own code.
+_DFS_LOCATION = {"us": 2840, "gb": 2826, "uk": 2826, "ca": 2124, "au": 2036, "de": 2276, "fr": 2250, "es": 2724,
+                 "it": 2380, "nl": 2528, "in": 2356, "br": 2076, "mx": 2484, "jp": 2392, "sg": 2702, "ie": 2372,
+                 "se": 2752, "ch": 2756, "at": 2040, "be": 2056, "pl": 2616, "pt": 2620, "nz": 2554, "za": 2710,
+                 "ae": 2784, "kr": 2410, "tr": 2792, "id": 2360, "ph": 2608, "vn": 2704}
+
+
+def dfs_location(country: Any) -> int:
+    return _DFS_LOCATION.get(str(country or "us").lower(), 2840)
+
+
+def seranking_source(country: Any) -> str:
+    c = str(country or "us").lower()
+    return "uk" if c == "gb" else c
+
+
+def lower(v: Any) -> Any:
+    return v.lower() if isinstance(v, str) else v
+
+
+TRANSFORMS = {"split_first": split_first, "split_last": split_last, "join": join, "has_type": has_type, "len": length,
+              "dfs_location": dfs_location, "seranking_source": seranking_source, "lower": lower}
 
 _CALL = re.compile(r"^(\w+)\((.*)\)$")
 _DIV = re.compile(r"^(.+?)\s*/\s*(\d+(?:\.\d+)?)$")

@@ -24,6 +24,9 @@ def routed_endpoint(contract: Contract, children: list[dict], adapters: dict[str
         for k in variant:
             body.setdefault(k, {"type": contract.identity_types.get(k, "str"), "required": False,
                                 "note": f"identity key (part of {', '.join('+'.join(v) for v in contract.identity if k in v)})"})
+    for k, spec in (contract.filters or {}).items():
+        body.setdefault(k, {"type": (spec or {}).get("type", "str"), "required": False,
+                            "note": f"filter — default {(spec or {}).get('default')!r}" + (f"; {spec.get('note')}" if (spec or {}).get("note") else "")})
     cap = contract.capability
     return {
         "id": f"{ROUTED_PROVIDER}.{cap}",
