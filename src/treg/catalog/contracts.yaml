@@ -661,3 +661,151 @@ contracts:
       count: {type: int}
     miss: "results == []"
     idempotent: true
+
+  # ---- batch 8 (2026-08-28) ---------------------------------------------------------------------
+  instagram.user.reels:
+    summary: "An Instagram account's reels by username or numeric user id — provider-native reel rows in `reels`"
+    identity:
+      - {username: str}
+      - {user_id: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      reels: {type: list, required: true}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "reels == []"
+    idempotent: true
+
+  youtube.channel.videos:
+    summary: "A YouTube channel's recent videos by channel id — provider-native video rows in `videos`"
+    identity:
+      - {channel_id: str}
+    filters: {}
+    output:
+      videos: {type: list, required: true}
+      next_cursor: {type: str}
+    miss: "videos == []"
+    idempotent: true
+
+  web.backlinks.list:
+    summary: "Backlinks pointing at a domain or page — provider-native backlink rows in `backlinks`; `limit` is the price dial"
+    identity:
+      - {target: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      backlinks: {type: list, required: true}
+      count: {type: int}
+      next_cursor: {type: str}
+    miss: "backlinks == []"
+    idempotent: true
+
+  web.url.metrics:
+    summary: "Authority / link metrics for one URL or domain — the provider's own metrics row in `metrics`"
+    identity:
+      - {target: str}
+    filters: {}
+    output:
+      metrics: {type: object, required: true}
+    miss: "metrics == null"
+    idempotent: true
+
+  x.search.posts:
+    summary: "Search X (Twitter) posts by keyword — provider-native rows in `posts`"
+    identity:
+      - {q: str}
+    filters: {}
+    output:
+      posts: {type: list, required: true}
+      next_cursor: {type: str}
+    miss: "posts == []"
+    idempotent: true
+
+  youtube.video.comments:
+    summary: "Comments on a YouTube video by id or URL — provider-native comment rows in `comments`"
+    identity:
+      - {video_id: str}
+      - {url: url}
+    filters: {}
+    output:
+      comments: {type: list, required: true}
+      next_cursor: {type: str}
+    miss: "comments == []"
+    idempotent: true
+
+  linkedin.company.posts:
+    summary: "A LinkedIn company page's recent posts, by page URL or numeric LinkedIn id — provider-native rows in `posts`"
+    identity:
+      - {linkedin_url: url}
+      - {linkedin_id: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      posts: {type: list, required: true}
+      count: {type: int}
+    miss: "posts == []"
+    idempotent: true
+
+  amazon.search.products:
+    summary: "Search Amazon products by keyword — provider-native product rows in `products`"
+    identity:
+      - {q: str}
+    filters:
+      country: {type: str, default: us, note: "marketplace country"}
+    output:
+      products: {type: list, required: true}
+      count: {type: int}
+    miss: "products == []"
+    idempotent: true
+
+  facebook.user.posts:
+    summary: "A public Facebook profile's or page's posts, by profile id or URL — provider-native rows in `posts`"
+    identity:
+      - {profile_id: str}
+      - {url: url}
+    filters: {}
+    output:
+      posts: {type: list, required: true}
+      next_cursor: {type: str}
+    miss: "posts == []"
+    idempotent: true
+
+  facebook.user.profile:
+    summary: "A public Facebook profile or page by URL or profile id — treg picks the provider and names the one that served"
+    identity:
+      - {url: url}
+      - {profile_id: str}
+    filters: {}
+    output:
+      name: {type: str, required: true}
+      id: {type: str}
+      url: {type: str}
+    miss: "name == null"
+    idempotent: true
+
+  douyin.search.videos:
+    summary: "Search Douyin videos by keyword — provider-native rows in `videos`"
+    identity:
+      - {q: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      videos: {type: list, required: true}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "videos == []"
+    idempotent: true
+
+  douyin.search.users:
+    summary: "Search Douyin accounts by keyword — provider-native rows in `users`"
+    identity:
+      - {q: str}
+    filters:
+      limit: {type: int, default: 10}
+    output:
+      users: {type: list, required: true}
+      next_cursor: {type: str}
+      has_more: {type: bool}
+    miss: "users == []"
+    idempotent: true

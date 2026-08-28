@@ -1241,3 +1241,213 @@ adapters:
     miss: "organic_results == []"
   # x.user.following, x.post.detail, youtube.video.captions, google.domain.competitors, xiaohongshu.search.notes:
   # one vendor with a usable fixture each (X's own API is an OAuth tool) — no waterfall yet.
+
+  # ---- batch 8 (2026-08-28) ---------------------------------------------------------------------
+  scrapecreators.x.v1-instagram-user-reels:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.user_id}
+    out: {reels: items, has_more: paging_info.more_available}
+    miss: "items == []"
+  tikhub.x.instagram-v1-fetch-user-reels:
+    accepts: [[user_id]]
+    in:  {user_id: queryParams.user_id}
+    in_expr: {queryParams.count: limit}
+    out: {reels: data.items, next_cursor: data.paging_info.max_id, has_more: data.paging_info.more_available}
+    miss: "data.items == []"
+  tikhub.x.instagram-v2-fetch-user-reels:
+    accepts: [[username], [user_id]]
+    in:  {username: queryParams.username, user_id: queryParams.user_id}
+    out: {reels: data.data.items, next_cursor: data.pagination_token}
+    miss: "data.data.items == []"
+  tikhub.x.instagram-v3-get-user-reels:
+    accepts: [[username]]
+    in:  {username: queryParams.username}
+    in_expr: {queryParams.page_size: limit}
+    out: {reels: data.items, next_cursor: data.next_max_id}
+    miss: "data.items == []"
+
+  justoneapi.x.youtube-get-channel-videos-v1:
+    accepts: [[channel_id]]
+    in:  {channel_id: queryParams.channelId}
+    const: {queryParams.cursor: "0"}
+    out: {videos: data.videos, next_cursor: data.continuation_token}
+    miss: "data.videos == []"
+  tikhub.youtube.channel.videos:
+    accepts: [[channel_id]]
+    in:  {channel_id: queryParams.channel_id}
+    out: {videos: data.videos, next_cursor: data.continuation_token}
+    miss: "data.videos == []"
+
+  dataforseo.web.backlinks.list:
+    accepts: [[target]]
+    in:  {target: body.target}
+    in_expr: {body.limit: limit}
+    const: {body.mode: one_per_domain}
+    body_array: true
+    out: {backlinks: "tasks[0].result[0].items", count: "tasks[0].result[0].total_count", next_cursor: "tasks[0].result[0].search_after_token"}
+    miss: "tasks[0].result[0].items == []"
+  moz.web.backlinks.list:
+    accepts: [[target]]
+    in:  {target: body.target}
+    in_expr: {body.limit: limit}
+    const: {body.target_scope: page, body.filter: external}
+    out: {backlinks: results, next_cursor: next_token}
+    miss: "results == []"
+  seranking.web.backlinks.list:
+    accepts: [[target]]
+    in:  {target: queryParams.target}
+    in_expr: {queryParams.limit: limit}
+    const: {queryParams.mode: domain}
+    out: {backlinks: backlinks}
+    miss: "backlinks == []"
+
+  dataforseo.web.url.metrics:
+    accepts: [[target]]
+    in:  {target: body.targets}
+    in_expr: {body.targets: "list(target)"}
+    const: {body.rank_scale: one_hundred}
+    body_array: true
+    out: {metrics: "tasks[0].result[0].items[0]"}
+    miss: "tasks[0].result[0].items == []"
+  moz.web.url.metrics:
+    accepts: [[target]]
+    in:  {target: body.targets}
+    in_expr: {body.targets: "list(target)"}
+    out: {metrics: "results[0]"}
+    miss: "results == []"
+  seranking.web.url.metrics:
+    accepts: [[target]]
+    in:  {target: queryParams.target}
+    out: {metrics: "pages[0]"}
+    miss: "pages == []"
+
+  justoneapi.x.twitter-search-v1:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    const: {queryParams.searchType: Top, queryParams.cursor: "0"}
+    out: {posts: data.timeline, next_cursor: data.next_cursor}
+    miss: "data.timeline == []"
+  tikhub.x.twitter-web-fetch-search-timeline:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    const: {queryParams.search_type: Top}
+    out: {posts: data.timeline, next_cursor: data.next_cursor}
+    miss: "data.timeline == []"
+
+  scrapecreators.youtube.video.comments:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {comments: comments, next_cursor: continuationToken}
+    miss: "comments == []"
+  tikhub.youtube.video.comments:
+    accepts: [[video_id]]
+    in:  {video_id: queryParams.video_id}
+    out: {comments: data.comments, next_cursor: data.continuation_token}
+    miss: "data.comments == []"
+
+  aviato.linkedin.company.posts:
+    accepts: [[linkedin_id]]
+    in:  {linkedin_id: queryParams.linkedinNumID}
+    in_expr: {queryParams.perPage: limit}
+    const: {queryParams.page: "1"}
+    out: {posts: results, count: totalResults}
+    miss: "results == []"
+  scrapecreators.x.v1-linkedin-company-posts:
+    accepts: [[linkedin_url]]
+    in:  {linkedin_url: queryParams.url}
+    out: {posts: posts}
+    miss: "posts == []"
+
+  justoneapi.x.amazon-search-products-v1:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    in_expr: {queryParams.country: "upper(country)"}
+    out: {products: data.products, count: data.total_products}
+    miss: "data.products == []"
+  serpapi.x.amazon-search:
+    accepts: [[q]]
+    in:  {q: queryParams.k}
+    const: {queryParams.engine: amazon, queryParams.amazon_domain: amazon.com}
+    out: {products: organic_results, count: search_information.total_results}
+    miss: "organic_results == []"
+
+  justoneapi.x.facebook-get-profile-posts-v1:
+    accepts: [[profile_id]]
+    in:  {profile_id: queryParams.profileId}
+    const: {queryParams.cursor: "0"}
+    out: {posts: data.results, next_cursor: data.cursor}
+    miss: "data.results == []"
+  scrapecreators.x.v1-facebook-profile-posts:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {posts: posts, next_cursor: cursor}
+    miss: "posts == []"
+
+  brightdata.x.facebook-profiles:
+    accepts: [[url]]
+    in:  {}
+    in_expr: {body.url: url}
+    body_array: true
+    const: {queryParams.dataset_id: gd_mf0urb782734ik94dz, queryParams.format: json}
+    test_identity: {url: "https://www.facebook.com/facebook"}
+    out: {name: "[0].name", id: "[0].id", url: "[0].url"}
+    miss: "[0].name == null"
+  scrapecreators.x.v1-facebook-profile:
+    accepts: [[url]]
+    in:  {url: queryParams.url}
+    out: {name: name, id: id, url: url}
+    miss: "name == null"
+  serpapi.x.facebook-profile:
+    accepts: [[profile_id]]
+    in:  {profile_id: queryParams.profile_id}
+    const: {queryParams.engine: facebook_profile}
+    out: {name: profile_results.name, id: profile_results.id, url: profile_results.link}
+    miss: "profile_results == null"
+
+  justoneapi.x.douyin-hot-search-v1:
+    accepts: [[q]]
+    in:  {q: queryParams.keyword}
+    const: {queryParams.contentType: ALL, queryParams.videoType: ALL, queryParams.sortType: COMPREHENSIVE, queryParams.page: "1"}
+    out: {videos: data.content_list, has_more: data.pagination.has_more}
+    miss: "data.content_list == []"
+  tikhub.x.douyin-douplus-search-video:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.count: limit, body.cursor: "0"}
+    out: {videos: data.data.itemList, next_cursor: data.data.cursor, has_more: data.data.hasMore}
+    miss: "data.data.itemList == []"
+  tikhub.x.douyin-search-fetch-video-search-v1:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.cursor: "0"}
+    const: {body.sort_type: "0", body.publish_time: "0", body.filter_duration: "0", body.content_type: "0"}
+    out: {videos: data.data, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.data == []"
+
+  tikhub.x.douyin-creator-fetch-user-search:
+    accepts: [[q]]
+    in:  {q: queryParams.user_name}
+    out: {users: data.user_infos}
+    miss: "data.user_infos == []"
+  tikhub.x.douyin-douplus-search-user:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.count: limit, body.cursor: "0"}
+    out: {users: data.user_list, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.user_list == []"
+  tikhub.x.douyin-douplus-search-user-v2:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.count: limit, body.cursor: "0"}
+    const: {body.scope: 1}
+    out: {users: data.data.userList, next_cursor: data.data.cursor, has_more: data.data.hasMore}
+    miss: "data.data.userList == []"
+  tikhub.x.douyin-search-fetch-user-search:
+    accepts: [[q]]
+    in:  {q: body.keyword}
+    in_expr: {body.cursor: "0"}
+    out: {users: data.user_list, next_cursor: data.cursor, has_more: data.has_more}
+    miss: "data.user_list == []"
+  # creators.search (influencersclub's fixture carries a follower floor the contract has no field for),
+  # x.user.followers, linkedin.search.jobs, reddit.subreddit.info, tiktok.search.general: one verifiable
+  # vendor each — no waterfall yet.
