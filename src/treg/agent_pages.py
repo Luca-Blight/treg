@@ -4873,3 +4873,123 @@ USE_CASE_PAGES["build-a-company-list-by-industry-size-or-tech"] = {
     "related": ("Enrich a company from its domain", "Find people by role, company or location",
                 "Count the matches before you pay for rows", "Find companies that use a given technology"),
 }
+
+
+USE_CASE_PAGES["job-postings-across-companies"] = {
+    "label": "Job postings across companies",
+    "sentence": "LinkedIn jobs API and job scraper: job postings across companies as rows your agent can read",
+    "title": "Jobs API: LinkedIn job postings and company openings | treg.to",
+    "lede": (
+        "Search job postings by title, keyword, company or location and get them back as "
+        "rows, for hiring signals, market research or a job board of your own. {n} providers "
+        "answer through one treg.to key on two shelves: LinkedIn job search from a tenth of a "
+        "cent per posting, and company level openings from the firmographic databases, each "
+        "at its own rate with $0.000 added. Two things this page will not pretend: there is "
+        "no Indeed row in the catalog, so the 720 people a month searching for an Indeed API "
+        "will not find one here, and no row here removes duplicates, ghost jobs or stale "
+        "dates. The postings arrive as the platform shows them."),
+    "prompt": "Using treg, find every posting for a data engineer in Berlin published in the "
+              "last week, show me the price per 100 postings from each provider first, cap "
+              "the run at 500 rows, then give me a table of company, title, date posted and "
+              "link, deduped on the posting URL, and say how many rows came back.",
+    "prompt_why": [
+        ("Give the title and the place", "The LinkedIn rows take a keyword and a location; the company rows take a company or a filter. Say which you have."),
+        ("Cap the run", "The Apify row bills per posting it returns and a broad search returns thousands. A maxItems cap is the difference between a cent and a dollar."),
+        ("Ask for the date and the link", "The date posted is the field nobody trusts and the link is the one that lets you check. Both belong on the table."),
+        ("Dedupe on the posting URL", "The same job is reposted, cross-posted and recycled. No row here dedupes for you; the agent has to."),
+    ],
+    "result_noun": "posting",
+    "result_image": None,
+    "q_cheapest": "What do job postings cost, per shelf?",
+    "q_reliable": "Which jobs API is the most reliable?",
+    "q_compare": "How do the two shelves compare?",
+    "what_is_heading": "What is a jobs API?",
+    "what_is": (
+        "It is a call that searches job postings and returns them as structured rows: title, "
+        "company, location, date, description, link. The boards themselves mostly do not "
+        "offer one to the public any more, which is why the searches for an Indeed API keep "
+        "landing on scrapers. The rows here come in two shapes. The LinkedIn shelf searches "
+        "LinkedIn's postings by keyword and location and returns the postings, priced per "
+        "posting or per call. The companies shelf comes from the firmographic databases, "
+        "which index job openings per company as a hiring signal, so the natural question "
+        "there is which companies are hiring for what, rather than which jobs match a title."),
+    "notes": [
+        "Two shelves, two prices. On LinkedIn, Apify's job search actor bills a tenth of a "
+        "cent per posting returned with no platform charge on top, and TikHub's LinkedIn row "
+        "bills a tenth of a cent per successful call, which on a big search is the cheaper of "
+        "the two. On the companies shelf Crustdata bills under a cent per result, LeadMagic "
+        "two and a half cents, and PredictLeads four cents a call for a company's openings "
+        "and a credit per record for a filtered search. All of it is the provider's own rate "
+        "with $0.000 added. The row labelled treg is the routed endpoint: the explicit opt "
+        "in where you ask treg.to to choose among the company rows, your own keys first, and "
+        "it names the provider that served and bills that provider's rate.",
+        "The cap is the budget. The Apify row is charged per dataset item it produces, so a "
+        "search that matches four thousand postings costs four dollars unless maxItems says "
+        "otherwise; set it on every call and read the run's usage afterwards. Per call rows "
+        "have the opposite shape: one page costs the same whatever it holds, so page size is "
+        "free and pagination is the cost.",
+        "What no row here does, said plainly: nothing dedupes across boards, nothing checks "
+        "whether a posting is still live or was ever real, nothing crawls a company's own "
+        "careers page, and there is no Indeed, Glassdoor or Naukri row. The date posted is "
+        "the platform's date, which the research says is the field people trust least. "
+        "TikHub's LinkedIn job search has not been called live through treg.to yet and is "
+        "marked unverified in the table; run one search before an agent runs a hundred.",
+    ],
+    "faq": [
+        ("Is there an Indeed API here?",
+         "No. Indeed closed its publisher API and the catalog carries no Indeed row, scraped "
+         "or official. The LinkedIn rows are the closest thing on this page, and the company "
+         "rows answer a different question: who is hiring, not which jobs match a title."),
+        ("Will I get duplicates and ghost jobs?",
+         "Yes, as many as the platform shows. No row here dedupes across reposts or checks "
+         "that a posting is real, and this page will not claim otherwise. Dedupe on the "
+         "posting URL in the agent, and treat the date posted as the platform's claim."),
+        ("How much does a big pull cost?",
+         "On the per posting row, the number of postings times a tenth of a cent, which is why "
+         "the prompt caps the run. On the per call rows, the number of pages. Ask the agent "
+         "to print the price for your cap on every row before it runs."),
+        ("Can I get a company's openings as a hiring signal?",
+         "That is what the companies shelf is for. PredictLeads, Crustdata and LeadMagic index "
+         "openings per company, so an agent can ask which of your two hundred target accounts "
+         "opened an engineering role this month, without searching a board at all."),
+    ],
+    "voices_intro": (
+        "Of the ~210 Reddit and X posts read in August 2026 roughly half were on the job, the "
+        "densest corpus behind any of these pages, and five vendor clusters were excluded, "
+        "including one launch story reposted to three subreddits with the AI tool's name "
+        "swapped each time. These five are people fighting the boards."),
+    "voices": [
+        ("The boards fight back",
+         "Since when did Indeed start injecting invisible fake job cards as a scraper honeypot?",
+         "X, 189 likes", "https://x.com/i/status/2057908987845300478",
+         "Which is why there is no Indeed row here and this page says so in its first "
+         "paragraph. The LinkedIn rows exist because a provider absorbs that fight on its "
+         "side; on Indeed nobody in the catalog does."),
+        ("The filters are the problem, not the data",
+         "I hate LinkedIn and Indeed. Filters don't work well, search experience is terrible, and the sites are contaminated with so many offshore agencies.",
+         "r/findapath, 745 points", "https://www.reddit.com/r/findapath/comments/1eqn8xm/i_decided_to_scrape_15_million_job_postings_using/",
+         "Rows fix the filter half: once the postings are data, your agent filters them by "
+         "whatever rule you like. The contamination half arrives with the data, and the "
+         "agent is the filter for that too."),
+        ("The date is the field nobody trusts",
+         "Not being able to trust the date posted of any job. Being shown too many irrelevant jobs.",
+         "r/leetcode, 401 points", "https://www.reddit.com/r/leetcode/comments/1itbh82/i_scraped_2500_software_engineering_jobs_from/",
+         "No row here fixes the date; it returns what the platform shows. What a daily pull "
+         "gives you is your own first seen date, which is the only one you can trust, and "
+         "that costs a tenth of a cent a posting."),
+        ("Half the postings are gone in a month",
+         "Half are gone by day 28, and almost all of that drop happens in a single week.",
+         "r/jobsearchhacks, 376 points", "https://www.reddit.com/r/jobsearchhacks/comments/1vujb75/i_tracked_165m_job_postings_daily_for_two_months/",
+         "That poster tracked over a million postings a day to learn it, and the method is "
+         "the point: a repeated pull is what turns postings into a signal. The rows here "
+         "make the pull cheap; the tracking is the agent's job."),
+        ("The old way was cheaper and about as good",
+         "Everyone in this community is bragging about AI-powered automations or seemingly simple workflows that call overpriced APIs to parse a page.",
+         "r/n8n, 307 points", "https://www.reddit.com/r/n8n/comments/1op8oho/scraping_linkedin_jobs_no_ai_no_paid_apis/",
+         "Fair, and a tenth of a cent per posting is the answer to overpriced rather than to "
+         "free. The self written scraper wins until LinkedIn changes something; the row wins "
+         "the day after."),
+    ],
+    "related": ("Hiring, headcount and news signals", "Employee reviews of a company",
+                "Get a company's LinkedIn page", "Build a company list by industry, size or tech"),
+}
